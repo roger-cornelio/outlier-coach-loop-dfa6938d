@@ -30,6 +30,20 @@ export type AthleteConfig = {
 };
 
 /**
+ * Normaliza o limite de tempo para um número válido.
+ * Aceita número ou string (ex: "60min", "90", "1h").
+ * Retorna 60 como fallback seguro.
+ */
+export function normalizeTimeLimit(input: any): number {
+  if (typeof input === "number") return input;
+  if (typeof input === "string") {
+    const n = Number(input.replace(/[^\d]/g, ""));
+    return Number.isFinite(n) && n > 0 ? n : 60;
+  }
+  return 60;
+}
+
+/**
  * MET base por tipo de bloco (ajuste fino depois, mas isso já fica consistente)
  */
 const DEFAULT_MET: Record<BlockType, number> = {
