@@ -305,12 +305,9 @@ export function Dashboard() {
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
-                  const estimatedTime = athleteConfig 
-                    ? getEstimatedTimeForLevel(block, athleteConfig.level)
-                    : null;
-                  const calories = athleteConfig 
-                    ? calculateCalories(block, athleteConfig, estimatedTime)
-                    : null;
+                  const level = athleteConfig?.level || 'intermediario';
+                  const estimatedTime = getEstimatedTimeForLevel(block, level);
+                  const calories = calculateCalories(block, athleteConfig, estimatedTime);
 
                   return (
                     <motion.div
@@ -345,7 +342,7 @@ export function Dashboard() {
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span className="text-muted-foreground">
-                                Tempo esperado ({athleteConfig?.level.replace('_', ' ')}):
+                                Tempo esperado ({level.replace('_', ' ')}):
                               </span>
                               <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
                             </div>
