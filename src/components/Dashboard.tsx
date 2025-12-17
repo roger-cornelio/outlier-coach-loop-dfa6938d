@@ -534,10 +534,22 @@ export function Dashboard() {
               </div>
 
               {/* Empty State */}
-              <div className="min-h-[300px] flex items-center justify-center">
-                <p className="text-muted-foreground/50 text-center">
-                  Nenhum treino inserido
+              <div className="min-h-[300px] flex flex-col items-center justify-center gap-4">
+                <p className="text-muted-foreground text-center text-lg">
+                  Nenhum treino inserido para este dia.
                 </p>
+                {!hasAnyWorkouts && (
+                  <p className="text-muted-foreground/60 text-center text-sm max-w-md">
+                    A planilha semanal ainda não foi inserida pelo administrador.
+                  </p>
+                )}
+                <button
+                  onClick={() => setCurrentView('admin')}
+                  className="mt-4 px-6 py-3 rounded-lg border border-border hover:bg-secondary transition-colors text-sm flex items-center gap-2"
+                >
+                  <FileEdit className="w-4 h-4" />
+                  Inserir Planilha (Admin)
+                </button>
               </div>
             </motion.div>
           )}
