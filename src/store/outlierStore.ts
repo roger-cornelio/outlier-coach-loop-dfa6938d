@@ -7,7 +7,7 @@ interface OutlierState {
   athleteConfig: AthleteConfig | null;
   workoutResults: WorkoutResult[];
   weeklyWorkouts: DayWorkout[];
-  currentView: 'welcome' | 'config' | 'dashboard' | 'workout' | 'result' | 'feedback' | 'admin' | 'users';
+  currentView: 'welcome' | 'config' | 'dashboard' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement';
   selectedDay: string | null;
   selectedWorkout: DayWorkout | null;
   

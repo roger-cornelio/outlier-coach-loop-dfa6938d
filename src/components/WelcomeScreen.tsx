@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import type { CoachStyle } from '@/types/outlier';
-import { Flame, Heart, Zap, UserCog } from 'lucide-react';
+import { Flame, Heart, Zap, UserCog, Shield } from 'lucide-react';
 
 const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; description: string }[] = [
   {
@@ -29,7 +29,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
-  const { user, canManageWorkouts, loading: authLoading } = useAuth();
+  const { user, canManageWorkouts, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectCoach = (style: CoachStyle) => {
@@ -58,6 +58,22 @@ export function WelcomeScreen() {
     navigate('/auth?next=admin');
   };
 
+  const handleAdminAccess = () => {
+    if (authLoading) return;
+
+    if (user && isAdmin) {
+      setCurrentView('userManagement');
+      return;
+    }
+
+    if (user && !isAdmin) {
+      toast.error('Acesso restrito: apenas administradores');
+      return;
+    }
+
+    navigate('/auth?next=userManagement');
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Background glow effect */}
@@ -66,17 +82,34 @@ export function WelcomeScreen() {
         style={{ background: 'var(--gradient-glow)' }}
       />
 
-      {/* Coach Admin Button */}
-      <motion.button
-        onClick={handleCoachAccess}
-        className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-      >
-        <UserCog className="w-4 h-4" />
-        <span className="hidden sm:inline">Coach</span>
-      </motion.button>
+      {/* Top buttons container */}
+      <div className="absolute top-6 right-6 z-50 flex items-center gap-2">
+        {/* Admin Button - only visible for admins */}
+        {isAdmin && (
+          <motion.button
+            onClick={handleAdminAccess}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary hover:text-primary transition-all text-sm border border-primary/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1 }}
+          >
+            <Shield className="w-4 h-4" />
+            <span className="hidden sm:inline">Admin</span>
+          </motion.button>
+        )}
+
+        {/* Coach Button */}
+        <motion.button
+          onClick={handleCoachAccess}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+        >
+          <UserCog className="w-4 h-4" />
+          <span className="hidden sm:inline">Coach</span>
+        </motion.button>
+      </div>
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}

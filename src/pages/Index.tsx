@@ -29,6 +29,7 @@ const Index = () => {
       case 'admin':
         return <AdminSpreadsheet />;
       case 'users':
+      case 'userManagement':
         return <UserManagement />;
       default:
         return <WelcomeScreen />;
