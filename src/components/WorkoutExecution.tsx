@@ -4,6 +4,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame } from 'lucide-react';
 import { getEstimatedTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { toast } from 'sonner';
 
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -13,6 +14,55 @@ const blockTypeColors: Record<string, string> = {
   core: 'border-l-blue-500',
   corrida: 'border-l-green-500',
   notas: 'border-l-muted-foreground',
+};
+
+// Coach-specific motivational messages for block completion
+const getCompletionMessage = (coachStyle: string | undefined, blockType: string, blocksRemaining: number) => {
+  const isLastBlock = blocksRemaining === 0;
+  
+  const messages = {
+    IRON: {
+      aquecimento: ['Aquecimento feito. Agora o trabalho começa.', 'Corpo preparado. Foco no que vem.'],
+      conditioning: ['Etapa concluída. Mantenha o ritmo.', 'Bloco finalizado. Sem tempo pra descanso mental.'],
+      forca: ['Força registrada. Continue construindo.', 'Bloco de força completo. Isso soma.'],
+      especifico: ['Trabalho específico feito. É isso que diferencia.', 'Etapa crítica concluída.'],
+      core: ['Core ativado. Fundação sólida.', 'Estabilidade garantida. Próximo.'],
+      corrida: ['Corrida concluída. Pernas prontas.', 'Cardio na conta. Siga em frente.'],
+      default: ['Feito. Próximo.', 'Concluído. Continue.'],
+      final: ['Treino completo. Você fez o que precisava.', 'Missão cumprida. Descanse com mérito.']
+    },
+    SPARK: {
+      aquecimento: ['Aquecimento check! 🔥 Bora pro show!', 'Corpo ligado! ✨ Vamos nessa!'],
+      conditioning: ['ISSO AÍ! 💪 Arrasou no conditioning!', 'Boaaa! 🚀 Tá voando!'],
+      forca: ['Força mode ON! 💪 Que fase!', 'Pesado demais! 🔥 Continua assim!'],
+      especifico: ['Específico DONE! 🎯 Foco total!', 'Mandou bem! 🚀 É assim que se faz!'],
+      core: ['Core ativado! 💪 Barriga de aço!', 'Check no core! ✨ Firme e forte!'],
+      corrida: ['Corrida check! 🏃 Tá on fire!', 'Cardio feito! 🔥 Energia pura!'],
+      default: ['Mais um! 💪 Vamo que vamo!', 'Check! ✨ Tá demais!'],
+      final: ['TREINO COMPLETO! 🎉🔥 Você é incrível!', 'FINALIZOU! 🚀 Isso foi LINDO!']
+    },
+    PULSE: {
+      aquecimento: ['Aquecimento concluído. Seu corpo agradece esse cuidado.', 'Boa preparação. Agora você está pronto.'],
+      conditioning: ['Ótimo trabalho no conditioning. Você está construindo resistência.', 'Bloco desafiador concluído. Isso é consistência.'],
+      forca: ['Força feita com presença. Cada rep conta.', 'Bloco de força completo. Você está mais forte.'],
+      especifico: ['Trabalho específico feito. Evolução acontecendo.', 'Etapa importante concluída. Continue assim.'],
+      core: ['Core trabalhado. Base sólida pra tudo.', 'Estabilidade em dia. Bom trabalho.'],
+      corrida: ['Corrida concluída. Coração mais forte.', 'Cardio feito. Cada passo importa.'],
+      default: ['Mais um bloco feito. Continue presente.', 'Concluído. Você está no caminho certo.'],
+      final: ['Treino completo. Você apareceu e entregou. Isso é o que importa.', 'Finalizado. Descanse bem, você merece.']
+    }
+  };
+
+  const style = coachStyle as keyof typeof messages || 'PULSE';
+  const coachMessages = messages[style] || messages.PULSE;
+  
+  if (isLastBlock) {
+    const finalMessages = coachMessages.final;
+    return finalMessages[Math.floor(Math.random() * finalMessages.length)];
+  }
+  
+  const typeMessages = coachMessages[blockType as keyof typeof coachMessages] || coachMessages.default;
+  return typeMessages[Math.floor(Math.random() * typeMessages.length)];
 };
 
 export function WorkoutExecution() {
@@ -25,12 +75,27 @@ export function WorkoutExecution() {
     return null;
   }
 
-  const toggleBlockComplete = (blockId: string) => {
+  const toggleBlockComplete = (blockId: string, blockType: string) => {
+    const isCompleting = !completedBlocks.includes(blockId);
+    
     setCompletedBlocks((prev) =>
       prev.includes(blockId)
         ? prev.filter((id) => id !== blockId)
         : [...prev, blockId]
     );
+
+    // Show motivational toast when completing a block
+    if (isCompleting) {
+      const newCompletedCount = completedBlocks.length + 1;
+      const blocksRemaining = selectedWorkout.blocks.length - newCompletedCount;
+      const message = getCompletionMessage(athleteConfig?.coachStyle, blockType, blocksRemaining);
+      
+      const toastStyle = athleteConfig?.coachStyle === 'SPARK' 
+        ? { duration: 2500 }
+        : { duration: 2000 };
+      
+      toast.success(message, toastStyle);
+    }
   };
 
   const mainWod = selectedWorkout.blocks.find((b) => b.isMainWod);
@@ -109,7 +174,7 @@ export function WorkoutExecution() {
                 <div className="flex items-start gap-4">
                   <button
                     onClick={() => {
-                      toggleBlockComplete(block.id);
+                      toggleBlockComplete(block.id, block.type);
                       if (!isComplete && index === currentBlockIndex) {
                         setCurrentBlockIndex(Math.min(index + 1, selectedWorkout.blocks.length - 1));
                       }
