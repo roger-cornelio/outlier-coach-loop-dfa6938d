@@ -107,7 +107,9 @@ export function AdminSpreadsheet() {
 
   const handleClearWorkouts = () => {
     setWeeklyWorkouts([]);
+    setSpreadsheetText('');
     setSuccess(null);
+    setError(null);
   };
 
   const processSpreadsheet = async () => {
