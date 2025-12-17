@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2 } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
-import { getEstimatedTimeForLevel, calculateCalories, calculateTotalWorkoutCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { formatBlockTime } from '@/utils/workoutCalculations';
+import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -166,13 +167,25 @@ export function Dashboard() {
 
   const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
 
-  // Calculate total calories for current workout
-  const totalCalories = currentWorkout && athleteConfig 
-    ? calculateTotalWorkoutCalories(currentWorkout.blocks, athleteConfig)
-    : 0;
+  // Calculate metrics using the workout engine
+  const workoutMetrics = useMemo(() => {
+    if (!currentWorkout || !athleteConfig) {
+      return { totalMinutes: 0, totalKcal: 0, blockMetrics: [] };
+    }
+    return calculateBlockMetricsWithEngine(
+      currentWorkout.blocks.map(b => ({ type: b.type, content: b.content })),
+      {
+        level: athleteConfig.level,
+        sessionDuration: athleteConfig.sessionDuration,
+        peso: athleteConfig.peso,
+        idade: athleteConfig.idade,
+        sexo: athleteConfig.sexo,
+      }
+    );
+  }, [currentWorkout, athleteConfig]);
 
-  // Calculate total time for current workout
-  const totalTime = currentWorkout?.estimatedTime || 0;
+  const totalCalories = workoutMetrics.totalKcal;
+  const totalTime = workoutMetrics.totalMinutes || currentWorkout?.estimatedTime || 0;
 
   // Fallback objective if AI fails
   const getFallbackObjective = (): string => {
@@ -442,8 +455,9 @@ export function Dashboard() {
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
                   const level = athleteConfig?.level || 'intermediario';
-                  const estimatedTime = getEstimatedTimeForLevel(block, level);
-                  const calories = calculateCalories(block, athleteConfig, estimatedTime);
+                  const blockMetric = workoutMetrics.blockMetrics[index];
+                  const estimatedTime = blockMetric?.minutes || 0;
+                  const calories = blockMetric?.kcal || 0;
 
                   return (
                     <motion.div
@@ -474,11 +488,11 @@ export function Dashboard() {
                       {/* Block Stats */}
                       {block.type !== 'notas' && (
                         <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-                          {estimatedTime && (
+                          {estimatedTime > 0 && (
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span className="text-muted-foreground">
-                                Tempo esperado ({level.replace('_', ' ')}):
+                                Tempo ({level.replace('_', ' ')}):
                               </span>
                               <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
                             </div>
@@ -486,7 +500,7 @@ export function Dashboard() {
                           <div className="flex items-center gap-2 text-sm">
                             <Flame className="w-4 h-4 text-orange-500" />
                             <span className="text-orange-500 font-medium">
-                              {calories ? `~${calories} kcal` : '-'}
+                              {calories > 0 ? `~${calories} kcal` : '-'}
                             </span>
                           </div>
                         </div>
