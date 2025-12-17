@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, FileText, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2 } from 'lucide-react';
 
 export function AdminSpreadsheet() {
-  const { setCurrentView } = useOutlierStore();
+  const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleClearWorkouts = () => {
+    setWeeklyWorkouts([]);
+  };
 
   const processSpreadsheet = async () => {
     if (!spreadsheetText.trim()) {
@@ -128,6 +132,15 @@ export function AdminSpreadsheet() {
           >
             Cancelar
           </button>
+          {weeklyWorkouts.length > 0 && (
+            <button
+              onClick={handleClearWorkouts}
+              className="px-8 py-5 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors font-body flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-5 h-5" />
+              Limpar Planilha
+            </button>
+          )}
         </motion.div>
 
         {/* Info Card */}
