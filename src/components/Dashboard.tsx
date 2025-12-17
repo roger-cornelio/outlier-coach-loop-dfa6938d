@@ -23,6 +23,40 @@ const blockTypeColors: Record<string, string> = {
   notas: 'border-l-muted-foreground',
 };
 
+// Coach-specific summary language
+const getCoachSummaryStyle = (coachStyle: string | undefined) => {
+  switch (coachStyle) {
+    case 'IRON':
+      return {
+        title: 'BRIEFING DO TREINO',
+        timeLabel: 'Tempo de execução:',
+        caloriesLabel: 'Gasto calórico:',
+        objectiveLabel: 'Missão do dia:',
+        emptyState: 'Aguardando programação.',
+        icon: '⚔️'
+      };
+    case 'SPARK':
+      return {
+        title: '🔥 SEU TREINO DE HOJE',
+        timeLabel: 'Duração estimada:',
+        caloriesLabel: 'Vai queimar:',
+        objectiveLabel: 'Bora lá! Hoje é dia de:',
+        emptyState: 'Ainda sem treino por aqui! 😅',
+        icon: '🚀'
+      };
+    case 'PULSE':
+    default:
+      return {
+        title: 'RESUMO DO TREINO',
+        timeLabel: 'Tempo total:',
+        caloriesLabel: 'Calorias estimadas:',
+        objectiveLabel: 'O foco de hoje:',
+        emptyState: 'Aguardando treinos do seu coach.',
+        icon: '💪'
+      };
+  }
+};
+
 export function Dashboard() {
   const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
   const { user, isAdmin, canManageWorkouts, loading: authLoading, signOut } = useAuth();
@@ -398,42 +432,53 @@ export function Dashboard() {
               </div>
 
               {/* Workout Summary Block */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="card-elevated p-6 border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent mb-4"
-              >
-                <h3 className="font-display text-xl mb-4 text-primary">RESUMO DO TREINO</h3>
-                
-                <div className="flex flex-wrap items-center gap-6 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    <span className="text-muted-foreground">Tempo total:</span>
-                    <span className="font-display text-lg text-foreground">{formatTime(totalTime)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-orange-500" />
-                    <span className="text-muted-foreground">Calorias estimadas:</span>
-                    <span className="font-display text-lg text-orange-500">
-                      {totalCalories > 0 ? `~${totalCalories} kcal` : '-'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-border/50">
-                  <p className="text-sm text-muted-foreground font-medium mb-1">
-                    Objetivo do dia ({athleteConfig?.coachStyle || 'PULSE'}):
-                  </p>
-                  {isLoadingFeedback ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Gerando feedback...</span>
+              {(() => {
+                const summaryStyle = getCoachSummaryStyle(athleteConfig?.coachStyle);
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="card-elevated p-6 border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent mb-4"
+                  >
+                    <h3 className="font-display text-xl mb-4 text-primary">
+                      {summaryStyle.title}
+                    </h3>
+                    
+                    <div className="flex flex-wrap items-center gap-6 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <span className="text-muted-foreground">{summaryStyle.timeLabel}</span>
+                        <span className="font-display text-lg text-foreground">{formatTime(totalTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Flame className="w-5 h-5 text-orange-500" />
+                        <span className="text-muted-foreground">{summaryStyle.caloriesLabel}</span>
+                        <span className="font-display text-lg text-orange-500">
+                          {totalCalories > 0 ? `~${totalCalories} kcal` : '-'}
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-foreground">{workoutFeedback || getFallbackObjective()}</p>
-                  )}
-                </div>
-              </motion.div>
+
+                    <div className="pt-3 border-t border-border/50">
+                      <p className="text-sm text-muted-foreground font-medium mb-1">
+                        {summaryStyle.objectiveLabel}
+                      </p>
+                      {isLoadingFeedback ? (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">
+                            {athleteConfig?.coachStyle === 'SPARK' ? 'Preparando motivação... 🔥' : 
+                             athleteConfig?.coachStyle === 'IRON' ? 'Processando...' : 
+                             'Gerando feedback...'}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-foreground">{workoutFeedback || getFallbackObjective()}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })()}
 
               {/* Adapted Workout Block - Show when adaptations are active */}
               {hasAdaptations && (
