@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench, Flame } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench, Flame, ArrowLeft } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { getEstimatedTimeForLevel, calculateCalories, calculateTotalWorkoutCalories, formatBlockTime } from '@/utils/workoutCalculations';
 
@@ -60,13 +60,22 @@ export function Dashboard() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
-              {athleteConfig && (
-                <p className="text-sm text-muted-foreground">
-                  Coach {athleteConfig.coachStyle} • {athleteConfig.level.replace('_', ' ').toUpperCase()}
-                </p>
-              )}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setCurrentView('welcome')}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+                title="Voltar"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
+                {athleteConfig && (
+                  <p className="text-sm text-muted-foreground">
+                    Coach {athleteConfig.coachStyle} • {athleteConfig.level.replace('_', ' ').toUpperCase()}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
