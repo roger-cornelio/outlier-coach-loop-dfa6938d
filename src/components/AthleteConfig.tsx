@@ -13,10 +13,19 @@ const durationOptions: { value: SessionDuration; label: string }[] = [
   { value: 'ilimitado', label: 'Ilimitado' },
 ];
 
+const sexOptions = [
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+];
+
 export function AthleteConfig() {
   const { coachStyle, setAthleteConfig, setCurrentView } = useOutlierStore();
   const [level, setLevel] = useState<AthleteLevel>('intermediario');
   const [duration, setDuration] = useState<SessionDuration>(60);
+  const [altura, setAltura] = useState('');
+  const [peso, setPeso] = useState('');
+  const [idade, setIdade] = useState('');
+  const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>('');
 
   const handleSubmit = () => {
     if (coachStyle) {
@@ -25,6 +34,10 @@ export function AthleteConfig() {
         sessionDuration: duration,
         equipment: [],
         coachStyle,
+        altura: altura ? parseInt(altura) : undefined,
+        peso: peso ? parseFloat(peso) : undefined,
+        idade: idade ? parseInt(idade) : undefined,
+        sexo: sexo || undefined,
       });
       setCurrentView('dashboard');
     }
@@ -50,11 +63,87 @@ export function AthleteConfig() {
         </div>
       </motion.div>
 
-      {/* Level Selection */}
+      {/* Athlete Data */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <h2 className="font-display text-2xl mb-4">DADOS DO ATLETA</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Altura */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Altura (cm)</label>
+            <input
+              type="number"
+              value={altura}
+              onChange={(e) => setAltura(e.target.value)}
+              placeholder="175"
+              min="100"
+              max="250"
+              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+            />
+          </div>
+
+          {/* Peso */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Peso (kg)</label>
+            <input
+              type="number"
+              value={peso}
+              onChange={(e) => setPeso(e.target.value)}
+              placeholder="75"
+              min="30"
+              max="200"
+              step="0.1"
+              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+            />
+          </div>
+
+          {/* Idade */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Idade</label>
+            <input
+              type="number"
+              value={idade}
+              onChange={(e) => setIdade(e.target.value)}
+              placeholder="30"
+              min="14"
+              max="100"
+              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+            />
+          </div>
+
+          {/* Sexo */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Sexo</label>
+            <div className="flex gap-2">
+              {sexOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSexo(option.value as 'masculino' | 'feminino')}
+                  className={`
+                    flex-1 px-3 py-3 rounded-lg border transition-all duration-200 text-sm
+                    ${sexo === option.value
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border bg-card hover:border-muted-foreground/50'
+                    }
+                  `}
+                >
+                  {option.label.charAt(0)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Level Selection */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="mb-8"
       >
         <h2 className="font-display text-2xl mb-4">NÍVEL DO ATLETA</h2>
@@ -81,7 +170,7 @@ export function AthleteConfig() {
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
         className="mb-12"
       >
         <h2 className="font-display text-2xl mb-4">TEMPO DISPONÍVEL</h2>
@@ -108,7 +197,7 @@ export function AthleteConfig() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
         className="flex flex-col sm:flex-row gap-4"
       >
         <button
