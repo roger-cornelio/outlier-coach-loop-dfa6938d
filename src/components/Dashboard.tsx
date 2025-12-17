@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2 } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { getEstimatedTimeForLevel, calculateCalories, calculateTotalWorkoutCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -23,9 +25,50 @@ export function Dashboard() {
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
   const [adaptations, setAdaptations] = useState<AdaptationConfig | null>(null);
+  const [workoutFeedback, setWorkoutFeedback] = useState<string | null>(null);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = weeklyWorkouts.length > 0;
+
+  // Fetch AI feedback when workout or coach style changes
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      if (!currentWorkout || !athleteConfig?.coachStyle) {
+        setWorkoutFeedback(null);
+        return;
+      }
+
+      setIsLoadingFeedback(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-workout-feedback', {
+          body: {
+            coachStyle: athleteConfig.coachStyle,
+            blocks: currentWorkout.blocks.map(b => ({
+              type: b.type,
+              title: b.title,
+              content: b.content,
+            })),
+            dayName: DAY_NAMES[currentWorkout.day],
+          },
+        });
+
+        if (error) throw error;
+        
+        if (data?.feedback) {
+          setWorkoutFeedback(data.feedback);
+        }
+      } catch (err) {
+        console.error('Error fetching feedback:', err);
+        // Fallback to static message
+        setWorkoutFeedback(null);
+      } finally {
+        setIsLoadingFeedback(false);
+      }
+    };
+
+    fetchFeedback();
+  }, [currentWorkout?.day, athleteConfig?.coachStyle]);
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -57,44 +100,22 @@ export function Dashboard() {
   // Calculate total time for current workout
   const totalTime = currentWorkout?.estimatedTime || 0;
 
-  // Generate workout objective based on blocks
-  const getWorkoutObjective = (): string => {
+  // Fallback objective if AI fails
+  const getFallbackObjective = (): string => {
     if (!currentWorkout) return '';
     
     const blockTypes = currentWorkout.blocks.map(b => b.type);
     const hasForce = blockTypes.includes('forca');
     const hasConditioning = blockTypes.includes('conditioning');
-    const hasEspecifico = blockTypes.includes('especifico');
-    const hasCorrida = blockTypes.includes('corrida');
-    const hasCore = blockTypes.includes('core');
 
-    const objectives: string[] = [];
-    
     if (hasForce && hasConditioning) {
-      objectives.push('Desenvolver força funcional combinada com capacidade cardiorrespiratória');
+      return 'Desenvolver força funcional combinada com capacidade cardiorrespiratória.';
     } else if (hasForce) {
-      objectives.push('Foco em desenvolvimento de força e potência muscular');
+      return 'Foco em desenvolvimento de força e potência muscular.';
     } else if (hasConditioning) {
-      objectives.push('Melhorar condicionamento e resistência metabólica');
+      return 'Melhorar condicionamento e resistência metabólica.';
     }
-    
-    if (hasEspecifico) {
-      objectives.push('Trabalho específico para competição HYROX');
-    }
-    
-    if (hasCorrida) {
-      objectives.push('Desenvolver capacidade aeróbica e eficiência de corrida');
-    }
-    
-    if (hasCore && objectives.length === 0) {
-      objectives.push('Fortalecer o core e estabilidade corporal');
-    }
-
-    if (objectives.length === 0) {
-      return 'Treino completo para desenvolvimento atlético geral';
-    }
-
-    return objectives.join('. ') + '.';
+    return 'Treino completo para desenvolvimento atlético geral.';
   };
 
   return (
@@ -267,8 +288,17 @@ export function Dashboard() {
                 </div>
 
                 <div className="pt-3 border-t border-border/50">
-                  <p className="text-sm text-muted-foreground font-medium mb-1">Objetivo do dia:</p>
-                  <p className="text-foreground">{getWorkoutObjective()}</p>
+                  <p className="text-sm text-muted-foreground font-medium mb-1">
+                    Objetivo do dia ({athleteConfig?.coachStyle || 'PULSE'}):
+                  </p>
+                  {isLoadingFeedback ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Gerando feedback...</span>
+                    </div>
+                  ) : (
+                    <p className="text-foreground">{workoutFeedback || getFallbackObjective()}</p>
+                  )}
                 </div>
               </motion.div>
 
