@@ -41,10 +41,16 @@ export function WelcomeScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+      {/* Background glow effect */}
+      <div 
+        className="absolute inset-0 opacity-30 pointer-events-none"
+        style={{ background: 'var(--gradient-glow)' }}
+      />
+
       {/* Coach Admin Button */}
       <motion.button
         onClick={() => navigate('/auth')}
-        className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
+        className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2 }}
@@ -52,12 +58,6 @@ export function WelcomeScreen() {
         <UserCog className="w-4 h-4" />
         <span className="hidden sm:inline">Coach</span>
       </motion.button>
-
-      {/* Background glow effect */}
-      <div 
-        className="absolute inset-0 opacity-30"
-        style={{ background: 'var(--gradient-glow)' }}
-      />
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
