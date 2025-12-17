@@ -278,13 +278,13 @@ export function Dashboard() {
                     <span className="text-muted-foreground">Tempo total:</span>
                     <span className="font-display text-lg text-foreground">{formatTime(totalTime)}</span>
                   </div>
-                  {totalCalories > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Flame className="w-5 h-5 text-orange-500" />
-                      <span className="text-muted-foreground">Calorias estimadas:</span>
-                      <span className="font-display text-lg text-orange-500">~{totalCalories} kcal</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-5 h-5 text-orange-500" />
+                    <span className="text-muted-foreground">Calorias estimadas:</span>
+                    <span className="font-display text-lg text-orange-500">
+                      {totalCalories > 0 ? `~${totalCalories} kcal` : '-'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="pt-3 border-t border-border/50">
@@ -336,7 +336,7 @@ export function Dashboard() {
                       </pre>
 
                       {/* Block Stats */}
-                      {(estimatedTime || calories) && block.type !== 'notas' && (
+                      {block.type !== 'notas' && (
                         <div className="flex items-center gap-4 pt-3 border-t border-border/50">
                           {estimatedTime && (
                             <div className="flex items-center gap-2 text-sm">
@@ -347,12 +347,12 @@ export function Dashboard() {
                               <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
                             </div>
                           )}
-                          {calories && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Flame className="w-4 h-4 text-orange-500" />
-                              <span className="text-orange-500 font-medium">~{calories} kcal</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            <span className="text-orange-500 font-medium">
+                              {calories ? `~${calories} kcal` : '-'}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </motion.div>

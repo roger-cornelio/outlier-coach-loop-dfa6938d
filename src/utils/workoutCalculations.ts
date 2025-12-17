@@ -81,10 +81,11 @@ export function calculateCalories(
   athleteConfig: AthleteConfig | null,
   durationMinutes: number | null
 ): number | null {
-  if (!durationMinutes) return null;
+  if (!athleteConfig || !durationMinutes) return null;
   
-  // Use default weight of 70kg if not configured
-  const weight = athleteConfig?.peso || 70;
+  // Need weight to calculate calories
+  const weight = athleteConfig.peso;
+  if (!weight) return null;
 
   const met = MET_VALUES[block.type] || 5.0;
   const durationHours = durationMinutes / 60;
@@ -93,7 +94,7 @@ export function calculateCalories(
   let calories = met * weight * durationHours;
 
   // Adjust for age (metabolism decreases with age)
-  if (athleteConfig?.idade) {
+  if (athleteConfig.idade) {
     const ageMultiplier = athleteConfig.idade < 30 ? 1.05 : 
                           athleteConfig.idade < 40 ? 1.0 :
                           athleteConfig.idade < 50 ? 0.95 : 0.90;
@@ -101,7 +102,7 @@ export function calculateCalories(
   }
 
   // Adjust for sex (men typically burn ~10% more)
-  if (athleteConfig?.sexo === 'masculino') {
+  if (athleteConfig.sexo === 'masculino') {
     calories *= 1.1;
   }
 
@@ -115,12 +116,11 @@ export function calculateTotalWorkoutCalories(
   blocks: WorkoutBlock[],
   athleteConfig: AthleteConfig | null
 ): number {
-  // Use default level if not configured
-  const level = athleteConfig?.level || 'intermediario';
+  if (!athleteConfig || !athleteConfig.peso) return 0;
 
   let total = 0;
   for (const block of blocks) {
-    const duration = getEstimatedTimeForLevel(block, level);
+    const duration = getEstimatedTimeForLevel(block, athleteConfig.level);
     const calories = calculateCalories(block, athleteConfig, duration);
     if (calories) total += calories;
   }
