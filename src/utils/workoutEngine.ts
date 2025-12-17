@@ -55,6 +55,131 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+// ===========================
+// ESTIMATIVA DE TEMPO (ADMIN)
+// ===========================
+
+function extractFirstNumber(line: string): number | null {
+  const m = line.match(/(\d{1,4})/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function estimateLineMinutes(line: string): number {
+  const s = line.toLowerCase();
+
+  // Corrida / trote
+  // 1000m trote ~ 6-7min leve
+  if (s.includes("trote") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 3;
+    return (n / 1000) * 6.5;
+  }
+
+  // Row / Remo (erg)
+  // 1000m ~ 4.5min / 2000m ~ 9min
+  if (s.includes("remo") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 4;
+    return (n / 1000) * 4.5;
+  }
+
+  // SkiErg
+  // 1000m ~ 4.5min / 2000m ~ 9min
+  if (s.includes("skierg") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 4;
+    return (n / 1000) * 4.5;
+  }
+
+  // Air Bike calories
+  // 50 cal ~ 2.5-4 min (depende muito)
+  if (s.includes("air bike") && s.includes("cal")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 3;
+    return (n / 50) * 3.2;
+  }
+
+  // Wall balls
+  // 50 WB ~ 2.5-4 min
+  if (s.includes("wall ball")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 3;
+    return (n / 50) * 3.2;
+  }
+
+  // Farmer carry (metros)
+  // 100m ~ 1.5-2.5min
+  if (s.includes("farmer") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 2;
+    return (n / 100) * 2.0;
+  }
+
+  // Lunges (metros)
+  // 100m sandbag lunge ~ 4-6min
+  if (s.includes("lunge") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 5;
+    return (n / 100) * 5.0;
+  }
+
+  // Burpee broad jump (metros)
+  // 80m ~ 5-7min
+  if (s.includes("burpee") && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 6;
+    return (n / 80) * 6.0;
+  }
+
+  // Sled push/pull (metros)
+  // 15-40m ~ 1.5-5min dependendo de carga
+  if ((s.includes("sled push") || s.includes("sled pull")) && s.includes("m")) {
+    const n = extractFirstNumber(s);
+    if (!n) return 4;
+    return (n / 40) * 4.5;
+  }
+
+  // Core / acessórios (heurística)
+  // "50 abdominal..." ~ 2-4min
+  if (s.includes("abdominal") || s.includes("prancha") || s.includes("russian twist")) {
+    return 3;
+  }
+
+  // Linhas genéricas de reps (push-ups, squats etc.)
+  // assume ~1-2min por linha
+  if (s.match(/\b(push|agach|squat|swing|press|superman|calf|panturr|plank|prancha)\b/)) {
+    return 1.5;
+  }
+
+  // Default conservador
+  return 1.5;
+}
+
+function estimateBlockMinutesFromItems(block: WorkoutBlock): number {
+  const itemsText = block.items.join("\n").toLowerCase();
+
+  // Detectar "3 rounds", "4 rounds", "5 rounds"
+  const roundsMatch = itemsText.match(/(\d+)\s*(round|rounds)/);
+  const rounds = roundsMatch ? Number(roundsMatch[1]) : 1;
+
+  let sum = 0;
+  for (const line of block.items) sum += estimateLineMinutes(line);
+
+  // Se for bloco com rounds, multiplica (mas não exagera)
+  if (rounds > 1) sum = sum * clamp(rounds, 1, 10);
+
+  // Conditioning costuma ter transições -> +10%
+  if (block.type === "conditioning") sum *= 1.10;
+
+  return Math.max(1, Math.round(sum));
+}
+
+function estimateAdminMinutes(blocks: WorkoutBlock[]): number {
+  return blocks.reduce((acc, b) => acc + estimateBlockMinutesFromItems(b), 0);
+}
+
 function clampInt(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
@@ -308,18 +433,11 @@ export function buildDayWithAccurateMetrics(
   blocks: WorkoutBlock[],
   athlete: AthleteConfig
 ): WorkoutDay {
-  const budget = getTimeBudgetByLevel(athlete.timeLimitMin, athlete.level);
-
   // 1) Scaling por nível
   const levelScaled = applyLevelScaling(blocks, athlete.level);
 
-  // 2) Tempo "desejado" pré-corte (o orçamento base por bloco)
-  const preCutTotalMin =
-    (budget.warmup ?? 0) +
-    (budget.strength ?? 0) +
-    (budget.conditioning ?? 0) +
-    (budget.core ?? 0) +
-    (budget.run ?? 0);
+  // 2) Estimar tempo baseado no CONTEÚDO real (antes do condense)
+  const preCutTotalMin = estimateAdminMinutes(levelScaled);
 
   // 3) Condense mode (somente HYROX_PRO + falta de tempo)
   const condenseResult = applyCondenseMode(levelScaled, {
@@ -332,10 +450,10 @@ export function buildDayWithAccurateMetrics(
   const metDensityMult = condenseResult.metDensityMult;
   const condenseMode = condenseResult.condense;
 
-  // 4) Minutos por bloco determinísticos
+  // 4) Minutos por bloco baseados no CONTEÚDO (não budget fixo)
   const planned: WorkoutBlock[] = scaledBlocks.map((b) => ({
     ...b,
-    targetMinutes: budget[b.type] ?? 0,
+    targetMinutes: estimateBlockMinutesFromItems(b),
     met: DEFAULT_MET[b.type] ?? 6.0,
   }));
 
@@ -347,20 +465,7 @@ export function buildDayWithAccurateMetrics(
     }
   });
 
-  // 6) Se faltou algum bloco, redistribui tempo pro conditioning (sem inventar)
-  const presentTypes = new Set(planned.map((b) => b.type));
-  const missingWarmup = !presentTypes.has("warmup");
-  const missingStrength = !presentTypes.has("strength");
-  const missingCore = !presentTypes.has("core");
-
-  const conditioningIdx = planned.findIndex((b) => b.type === "conditioning");
-  if (conditioningIdx >= 0) {
-    let extra = 0;
-    if (missingWarmup) extra += budget.warmup;
-    if (missingStrength) extra += budget.strength;
-    if (missingCore) extra += budget.core;
-    planned[conditioningIdx].targetMinutes = (planned[conditioningIdx].targetMinutes ?? 0) + extra;
-  }
+  // 6) Não precisa mais redistribuir budget - tempo é baseado no conteúdo real
 
   // 7) Garantia: nunca estourar o tempo escolhido
   const sumMinutes = () => planned.reduce((acc, b) => acc + (b.targetMinutes ?? 0), 0);
