@@ -54,6 +54,49 @@ export function Dashboard() {
     ? calculateTotalWorkoutCalories(currentWorkout.blocks, athleteConfig)
     : 0;
 
+  // Calculate total time for current workout
+  const totalTime = currentWorkout?.estimatedTime || 0;
+
+  // Generate workout objective based on blocks
+  const getWorkoutObjective = (): string => {
+    if (!currentWorkout) return '';
+    
+    const blockTypes = currentWorkout.blocks.map(b => b.type);
+    const hasForce = blockTypes.includes('forca');
+    const hasConditioning = blockTypes.includes('conditioning');
+    const hasEspecifico = blockTypes.includes('especifico');
+    const hasCorrida = blockTypes.includes('corrida');
+    const hasCore = blockTypes.includes('core');
+
+    const objectives: string[] = [];
+    
+    if (hasForce && hasConditioning) {
+      objectives.push('Desenvolver força funcional combinada com capacidade cardiorrespiratória');
+    } else if (hasForce) {
+      objectives.push('Foco em desenvolvimento de força e potência muscular');
+    } else if (hasConditioning) {
+      objectives.push('Melhorar condicionamento e resistência metabólica');
+    }
+    
+    if (hasEspecifico) {
+      objectives.push('Trabalho específico para competição HYROX');
+    }
+    
+    if (hasCorrida) {
+      objectives.push('Desenvolver capacidade aeróbica e eficiência de corrida');
+    }
+    
+    if (hasCore && objectives.length === 0) {
+      objectives.push('Fortalecer o core e estabilidade corporal');
+    }
+
+    if (objectives.length === 0) {
+      return 'Treino completo para desenvolvimento atlético geral';
+    }
+
+    return objectives.join('. ') + '.';
+  };
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -200,6 +243,35 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* Workout Summary Block */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card-elevated p-6 border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent mb-4"
+              >
+                <h3 className="font-display text-xl mb-4 text-primary">RESUMO DO TREINO</h3>
+                
+                <div className="flex flex-wrap items-center gap-6 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    <span className="text-muted-foreground">Tempo total:</span>
+                    <span className="font-display text-lg text-foreground">{formatTime(totalTime)}</span>
+                  </div>
+                  {totalCalories > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Flame className="w-5 h-5 text-orange-500" />
+                      <span className="text-muted-foreground">Calorias estimadas:</span>
+                      <span className="font-display text-lg text-orange-500">~{totalCalories} kcal</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-border/50">
+                  <p className="text-sm text-muted-foreground font-medium mb-1">Objetivo do dia:</p>
+                  <p className="text-foreground">{getWorkoutObjective()}</p>
+                </div>
+              </motion.div>
+
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
@@ -215,7 +287,7 @@ export function Dashboard() {
                       key={block.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ delay: (index + 1) * 0.1 }}
                       className={`
                         card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
                         ${block.isMainWod ? 'ring-1 ring-primary/30' : ''}
