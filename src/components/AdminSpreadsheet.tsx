@@ -1,16 +1,113 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle } from 'lucide-react';
+import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+
+const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
+  { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
+  { pattern: /terça|ter[cç]a|ter\b|tuesday|tue\b/i, day: 'ter' },
+  { pattern: /quarta|qua\b|wednesday|wed\b/i, day: 'qua' },
+  { pattern: /quinta|qui\b|thursday|thu\b/i, day: 'qui' },
+  { pattern: /sexta|sex\b|friday|fri\b/i, day: 'sex' },
+  { pattern: /s[aá]bado|sab\b|saturday|sat\b/i, day: 'sab' },
+  { pattern: /domingo|dom\b|sunday|sun\b/i, day: 'dom' },
+];
+
+const BLOCK_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
+  { pattern: /aquecimento|warm[- ]?up|🔥/i, type: 'aquecimento' },
+  { pattern: /conditioning|condicionamento|⚡/i, type: 'conditioning' },
+  { pattern: /for[cç]a|strength|💪/i, type: 'forca' },
+  { pattern: /espec[ií]fico|specific|hyrox|🛷/i, type: 'especifico' },
+  { pattern: /core|abdominal|🎯/i, type: 'core' },
+  { pattern: /corrida|running|run|🏃/i, type: 'corrida' },
+  { pattern: /notas?|notes?|obs|📝/i, type: 'notas' },
+];
+
+function parseSpreadsheet(text: string): DayWorkout[] {
+  const lines = text.split('\n');
+  const workouts: DayWorkout[] = [];
+  
+  let currentDay: DayOfWeek | null = null;
+  let currentBlocks: WorkoutBlock[] = [];
+  let currentBlockType: WorkoutBlock['type'] | null = null;
+  let currentBlockContent: string[] = [];
+  let currentBlockTitle = '';
+
+  const saveCurrentBlock = () => {
+    if (currentBlockType && currentBlockContent.length > 0) {
+      currentBlocks.push({
+        id: `${currentDay}-${currentBlockType}-${currentBlocks.length}`,
+        type: currentBlockType,
+        title: currentBlockTitle || currentBlockType.toUpperCase(),
+        content: currentBlockContent.join('\n').trim(),
+      });
+    }
+    currentBlockContent = [];
+    currentBlockTitle = '';
+  };
+
+  const saveCurrentDay = () => {
+    saveCurrentBlock();
+    if (currentDay && currentBlocks.length > 0) {
+      workouts.push({
+        day: currentDay,
+        stimulus: '',
+        estimatedTime: 60,
+        blocks: [...currentBlocks],
+      });
+    }
+    currentBlocks = [];
+    currentBlockType = null;
+  };
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Check if it's a day header
+    const dayMatch = DAY_PATTERNS.find(p => p.pattern.test(trimmedLine));
+    if (dayMatch && (trimmedLine.length < 50 || /^[📅🗓️]/.test(trimmedLine))) {
+      saveCurrentDay();
+      currentDay = dayMatch.day;
+      continue;
+    }
+
+    // Check if it's a block header
+    const blockMatch = BLOCK_PATTERNS.find(p => p.pattern.test(trimmedLine));
+    if (blockMatch && trimmedLine.length < 80) {
+      saveCurrentBlock();
+      currentBlockType = blockMatch.type;
+      currentBlockTitle = trimmedLine;
+      continue;
+    }
+
+    // Add content to current block
+    if (currentDay && currentBlockType && trimmedLine) {
+      currentBlockContent.push(trimmedLine);
+    } else if (currentDay && !currentBlockType && trimmedLine) {
+      // No block type yet, assume conditioning as default
+      currentBlockType = 'conditioning';
+      currentBlockTitle = 'TREINO';
+      currentBlockContent.push(trimmedLine);
+    }
+  }
+
+  // Save last day/block
+  saveCurrentDay();
+
+  return workouts;
+}
 
 export function AdminSpreadsheet() {
   const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleClearWorkouts = () => {
     setWeeklyWorkouts([]);
+    setSuccess(null);
   };
 
   const processSpreadsheet = async () => {
@@ -21,15 +118,22 @@ export function AdminSpreadsheet() {
 
     setIsProcessing(true);
     setError(null);
+    setSuccess(null);
 
-    // Simulating processing - in production this would parse the spreadsheet
-    // and potentially call an API to process with AI
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // For now, we'll just show success and go to dashboard
-    // In production, this would parse the text and update weeklyWorkouts
+    const parsedWorkouts = parseSpreadsheet(spreadsheetText);
+
+    if (parsedWorkouts.length === 0) {
+      setError('Não foi possível identificar treinos na planilha. Verifique se os dias da semana estão identificados (Segunda, Terça, etc.).');
+      setIsProcessing(false);
+      return;
+    }
+
+    setWeeklyWorkouts(parsedWorkouts);
     setIsProcessing(false);
-    setCurrentView('dashboard');
+    setSuccess(`${parsedWorkouts.length} dia(s) de treino processado(s) com sucesso!`);
+    setSpreadsheetText('');
   };
 
   return (
@@ -77,6 +181,18 @@ export function AdminSpreadsheet() {
             {spreadsheetText.length} caracteres
           </p>
         </motion.section>
+
+        {/* Success Message */}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3"
+          >
+            <CheckCircle className="w-5 h-5 text-primary" />
+            <p className="text-sm text-primary">{success}</p>
+          </motion.div>
+        )}
 
         {/* Error Message */}
         {error && (
