@@ -20,7 +20,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const { user, canManageWorkouts, loading: authLoading, signIn, signUp } = useAuth();
+  const { user, canManageWorkouts, isAdmin, loading: authLoading, signIn, signUp } = useAuth();
   const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -46,8 +46,23 @@ export default function Auth() {
       return;
     }
 
+    if (next === 'userManagement') {
+      if (isAdmin) {
+        setCurrentView('userManagement');
+        navigate('/');
+      } else {
+        toast({
+          title: 'Acesso negado',
+          description: 'Sua conta não tem permissão de administrador.',
+          variant: 'destructive',
+        });
+        navigate('/');
+      }
+      return;
+    }
+
     navigate('/');
-  }, [user, authLoading, canManageWorkouts, next, navigate, setCurrentView, toast]);
+  }, [user, authLoading, canManageWorkouts, isAdmin, next, navigate, setCurrentView, toast]);
 
   const validateForm = () => {
     try {

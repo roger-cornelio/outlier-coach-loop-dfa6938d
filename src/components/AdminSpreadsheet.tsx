@@ -219,7 +219,7 @@ export function AdminSpreadsheet() {
               <div>
                 <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
                 <p className="text-sm text-muted-foreground">
-                  Área restrita - {isAdmin ? 'Administrador' : 'Coach'}
+                  Área restrita para Coach
                 </p>
               </div>
             </div>
