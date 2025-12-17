@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench } from 'lucide-react';
+import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -19,6 +20,8 @@ const blockTypeColors: Record<string, string> = {
 export function Dashboard() {
   const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
+  const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
+  const [adaptations, setAdaptations] = useState<AdaptationConfig | null>(null);
 
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = weeklyWorkouts.length > 0;
@@ -30,6 +33,10 @@ export function Dashboard() {
     }
   };
 
+  const handleSaveAdaptations = (config: AdaptationConfig) => {
+    setAdaptations(config);
+  };
+
   const formatTime = (minutes: number) => {
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
@@ -38,6 +45,8 @@ export function Dashboard() {
     }
     return `${minutes}min`;
   };
+
+  const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
 
   return (
     <div className="min-h-screen">
@@ -55,6 +64,22 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setIsAdaptModalOpen(true)}
+                className={`
+                  p-3 rounded-lg transition-colors relative
+                  ${hasAdaptations 
+                    ? 'bg-primary/20 text-primary hover:bg-primary/30' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                  }
+                `}
+                title="Adaptar Treino"
+              >
+                <Wrench className="w-5 h-5" />
+                {hasAdaptations && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                )}
+              </button>
+              <button
                 onClick={() => setCurrentView('admin')}
                 className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
                 title="Inserir Planilha (Admin)"
@@ -71,6 +96,31 @@ export function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Adaptations Banner */}
+      {hasAdaptations && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="max-w-6xl mx-auto px-6 py-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Wrench className="w-4 h-4 text-primary" />
+              <span className="text-primary font-medium">Adaptações ativas:</span>
+              <span className="text-muted-foreground">
+                {adaptations.unavailableEquipment.length > 0 && (
+                  <>Sem {adaptations.unavailableEquipment.map(e => e.toUpperCase()).join(', ')}</>
+                )}
+                {adaptations.unavailableEquipment.length > 0 && adaptations.otherNotes && ' • '}
+                {adaptations.otherNotes && <>{adaptations.otherNotes.slice(0, 30)}...</>}
+              </span>
+              <button
+                onClick={() => setIsAdaptModalOpen(true)}
+                className="ml-auto text-primary hover:underline"
+              >
+                Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Day Tabs */}
       <div className="sticky top-[73px] z-40 bg-background border-b border-border overflow-x-auto">
@@ -201,6 +251,13 @@ export function Dashboard() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Adapt Workout Modal */}
+      <AdaptWorkoutModal
+        isOpen={isAdaptModalOpen}
+        onClose={() => setIsAdaptModalOpen(false)}
+        onSave={handleSaveAdaptations}
+      />
     </div>
   );
 }
