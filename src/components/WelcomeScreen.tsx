@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import type { CoachStyle } from '@/types/outlier';
-import { Flame, Heart, Zap, UserCog, Shield } from 'lucide-react';
+import { Flame, Heart, Zap, UserCog, Shield, Clock, LogOut } from 'lucide-react';
 
 const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; description: string }[] = [
   {
@@ -29,7 +29,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
-  const { user, canManageWorkouts, isAdmin, loading: authLoading } = useAuth();
+  const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectCoach = (style: CoachStyle) => {
@@ -45,17 +45,20 @@ export function WelcomeScreen() {
   const handleCoachAccess = () => {
     if (authLoading) return;
 
+    // If logged in and is coach or admin, go to admin panel
     if (user && canManageWorkouts) {
       setCurrentView('admin');
       return;
     }
 
+    // If logged in but waiting for approval (has user role only)
     if (user && !canManageWorkouts) {
-      toast.error('Acesso restrito: apenas coaches e administradores');
+      toast.info('Aguardando aprovação do administrador para acessar como coach.');
       return;
     }
 
-    navigate('/auth?next=admin');
+    // Not logged in - go to auth page
+    navigate('/auth?next=coach');
   };
 
   const handleAdminAccess = () => {
@@ -73,6 +76,24 @@ export function WelcomeScreen() {
 
     navigate('/auth?next=userManagement');
   };
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success('Logout realizado com sucesso');
+  };
+
+  // Determine coach button state
+  const getCoachButtonState = () => {
+    if (!user) {
+      return { label: 'Coach', variant: 'default' as const };
+    }
+    if (canManageWorkouts) {
+      return { label: 'Painel Coach', variant: 'active' as const };
+    }
+    return { label: 'Aguardando...', variant: 'pending' as const };
+  };
+
+  const coachButtonState = getCoachButtonState();
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
@@ -101,14 +122,38 @@ export function WelcomeScreen() {
         {/* Coach Button */}
         <motion.button
           onClick={handleCoachAccess}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
+            coachButtonState.variant === 'active'
+              ? 'bg-green-500/20 hover:bg-green-500/30 text-green-500 border border-green-500/30'
+              : coachButtonState.variant === 'pending'
+              ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 cursor-default'
+              : 'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+          }`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
         >
-          <UserCog className="w-4 h-4" />
-          <span className="hidden sm:inline">Coach</span>
+          {coachButtonState.variant === 'pending' ? (
+            <Clock className="w-4 h-4" />
+          ) : (
+            <UserCog className="w-4 h-4" />
+          )}
+          <span className="hidden sm:inline">{coachButtonState.label}</span>
         </motion.button>
+
+        {/* Logout Button - only if logged in */}
+        {user && (
+          <motion.button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all text-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.3 }}
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </motion.button>
+        )}
       </div>
       
       <motion.div

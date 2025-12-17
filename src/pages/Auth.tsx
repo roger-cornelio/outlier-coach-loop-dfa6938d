@@ -46,6 +46,21 @@ export default function Auth() {
       return;
     }
 
+    if (next === 'coach') {
+      if (canManageWorkouts) {
+        setCurrentView('admin');
+        navigate('/');
+      } else {
+        // User is logged in but not a coach yet - waiting for approval
+        toast({
+          title: 'Cadastro realizado!',
+          description: 'Aguarde a aprovação do administrador para acessar como coach.',
+        });
+        navigate('/');
+      }
+      return;
+    }
+
     if (next === 'userManagement') {
       if (isAdmin) {
         setCurrentView('userManagement');

@@ -185,7 +185,7 @@ export function UserManagement() {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setCurrentView('admin')}
+              onClick={() => setCurrentView('welcome')}
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
