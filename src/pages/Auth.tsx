@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
+import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
@@ -18,16 +19,35 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  
-  const { user, signIn, signUp } = useAuth();
+
+  const { user, isAdmin, loading: authLoading, signIn, signUp } = useAuth();
+  const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const next = new URLSearchParams(location.search).get('next');
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (!user || authLoading) return;
+
+    if (next === 'admin') {
+      if (isAdmin) {
+        setCurrentView('admin');
+        navigate('/');
+      } else {
+        toast({
+          title: 'Acesso negado',
+          description: 'Sua conta não tem permissão de administrador.',
+          variant: 'destructive',
+        });
+        navigate('/');
+      }
+      return;
     }
-  }, [user, navigate]);
+
+    navigate('/');
+  }, [user, authLoading, isAdmin, next, navigate, setCurrentView, toast]);
 
   const validateForm = () => {
     try {
@@ -76,7 +96,7 @@ export default function Auth() {
             title: 'Login realizado!',
             description: 'Bem-vindo de volta.',
           });
-          navigate('/');
+          // Redirect handled by useEffect (supports /auth?next=admin)
         }
       } else {
         const { error } = await signUp(email, password);
