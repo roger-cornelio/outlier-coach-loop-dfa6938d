@@ -67,6 +67,7 @@ export function Dashboard() {
       toast.error('Erro ao sair');
     } else {
       toast.success('Logout realizado');
+      setCurrentView('welcome'); // Volta para tela inicial
     }
   };
 

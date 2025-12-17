@@ -210,7 +210,7 @@ export function AdminSpreadsheet() {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => setCurrentView('welcome')}
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -312,10 +312,10 @@ export function AdminSpreadsheet() {
             )}
           </button>
           <button
-            onClick={() => setCurrentView('dashboard')}
+            onClick={() => setCurrentView('welcome')}
             className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
           >
-            Cancelar
+            Voltar
           </button>
           {weeklyWorkouts.length > 0 && (
             <button
