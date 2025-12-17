@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { EQUIPMENT_LIST, LEVEL_NAMES, type AthleteLevel, type SessionDuration } from '@/types/outlier';
-import { ArrowLeft, Check } from 'lucide-react';
+import { LEVEL_NAMES, type AthleteLevel, type SessionDuration } from '@/types/outlier';
+import { ArrowLeft } from 'lucide-react';
 
 const levelOptions: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
 const durationOptions: { value: SessionDuration; label: string }[] = [
@@ -17,20 +17,13 @@ export function AthleteConfig() {
   const { coachStyle, setAthleteConfig, setCurrentView } = useOutlierStore();
   const [level, setLevel] = useState<AthleteLevel>('intermediario');
   const [duration, setDuration] = useState<SessionDuration>(60);
-  const [equipment, setEquipment] = useState<string[]>([]);
-
-  const toggleEquipment = (id: string) => {
-    setEquipment((prev) =>
-      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
-    );
-  };
 
   const handleSubmit = () => {
     if (coachStyle) {
       setAthleteConfig({
         level,
         sessionDuration: duration,
-        equipment,
+        equipment: [],
         coachStyle,
       });
       setCurrentView('dashboard');
@@ -89,7 +82,7 @@ export function AthleteConfig() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mb-8"
+        className="mb-12"
       >
         <h2 className="font-display text-2xl mb-4">TEMPO DISPONÍVEL</h2>
         <div className="flex flex-wrap gap-3">
@@ -111,42 +104,11 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Equipment Selection */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mb-12"
-      >
-        <h2 className="font-display text-2xl mb-4">EQUIPAMENTOS DISPONÍVEIS</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {EQUIPMENT_LIST.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => toggleEquipment(item.id)}
-              className={`
-                p-4 rounded-lg border transition-all duration-200 text-left flex items-center gap-3
-                ${equipment.includes(item.id)
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border bg-card hover:border-muted-foreground/50'
-                }
-              `}
-            >
-              <span className="text-2xl">{item.emoji}</span>
-              <span className="font-body text-sm flex-1">{item.name}</span>
-              {equipment.includes(item.id) && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
-            </button>
-          ))}
-        </div>
-      </motion.section>
-
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.3 }}
         className="flex flex-col sm:flex-row gap-4"
       >
         <button
