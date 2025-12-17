@@ -399,6 +399,7 @@ export function Dashboard() {
         isOpen={isAdaptModalOpen}
         onClose={() => setIsAdaptModalOpen(false)}
         onSave={handleSaveAdaptations}
+        activeDay={activeDay}
       />
     </div>
   );
