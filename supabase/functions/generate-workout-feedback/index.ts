@@ -24,6 +24,66 @@ const INTENSITY_CONTEXT = {
   hard: 'TREINO INTENSO (alta demanda física e mental)'
 };
 
+// Auto-detect workout intensity based on content analysis
+function detectIntensity(blocks: WorkoutBlock[]): 'easy' | 'medium' | 'hard' {
+  const allContent = blocks.map(b => `${b.type} ${b.title} ${b.content}`).join(' ').toLowerCase();
+  
+  // High intensity indicators
+  const hardKeywords = [
+    'amrap', 'emom', 'for time', 'max effort', 'max reps', 'pesado', 'heavy',
+    'sprint', 'all out', 'máximo', 'intenso', 'death by', 'tabata',
+    'chipper', 'hero wod', 'benchmark', '100%', 'failure', 'falha',
+    'complexo', 'cluster', 'touch and go', 'unbroken'
+  ];
+  
+  // Low intensity indicators
+  const easyKeywords = [
+    'mobilidade', 'alongamento', 'técnica', 'recuperação', 'ativo', 'leve',
+    'aquecimento', 'warm up', 'cooldown', 'stretching', 'foam roller',
+    'mobility', 'skill', 'drill', 'prática', 'técnico', 'relaxamento',
+    'respiração', 'yoga', 'pilates', 'descanso'
+  ];
+  
+  let hardScore = 0;
+  let easyScore = 0;
+  
+  hardKeywords.forEach(keyword => {
+    if (allContent.includes(keyword)) hardScore += 2;
+  });
+  
+  easyKeywords.forEach(keyword => {
+    if (allContent.includes(keyword)) easyScore += 2;
+  });
+  
+  // Analyze block types
+  const blockTypes = blocks.map(b => b.type.toLowerCase());
+  const hasConditioning = blockTypes.some(t => t.includes('conditioning') || t.includes('wod'));
+  const hasStrength = blockTypes.some(t => t.includes('força') || t.includes('strength'));
+  const hasSpecific = blockTypes.some(t => t.includes('específico') || t.includes('hyrox'));
+  const onlyWarmup = blockTypes.every(t => t.includes('aquecimento') || t.includes('warmup') || t.includes('mobilidade'));
+  
+  if (hasConditioning) hardScore += 2;
+  if (hasStrength) hardScore += 1;
+  if (hasSpecific) hardScore += 2;
+  if (onlyWarmup) easyScore += 3;
+  
+  // Analyze volume (high reps/rounds patterns)
+  const highVolumePattern = /(\d{2,})\s*(rounds?|reps?|cal|calorias)/gi;
+  const matches = allContent.match(highVolumePattern);
+  if (matches && matches.length >= 2) hardScore += 2;
+  
+  // Number of blocks
+  if (blocks.length >= 4) hardScore += 1;
+  if (blocks.length <= 2) easyScore += 1;
+  
+  const netScore = hardScore - easyScore;
+  console.log(`Intensity detection - Hard: ${hardScore}, Easy: ${easyScore}, Net: ${netScore}`);
+  
+  if (netScore >= 4) return 'hard';
+  if (netScore <= -2) return 'easy';
+  return 'medium';
+}
+
 const COACH_PROMPTS = {
   IRON: `Você é o COACH IRON — sério, direto, exigente. Tom de comandante experiente, poucas palavras, verdade crua.
 
@@ -101,17 +161,21 @@ serve(async (req) => {
   }
 
   try {
-    const { coachStyle, blocks, dayName, intensity = 'medium' }: RequestBody = await req.json();
+    const { coachStyle, blocks, dayName, intensity }: RequestBody = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Auto-detect intensity if not provided
+    const detectedIntensity = intensity || detectIntensity(blocks);
+    console.log(`Using intensity: ${detectedIntensity} (provided: ${intensity || 'auto-detected'})`);
+
     // Build workout summary for context
     const blockTypes = blocks.map(b => b.type);
     const blockTitles = blocks.map(b => b.title).join(', ');
-    const intensityContext = INTENSITY_CONTEXT[intensity] || INTENSITY_CONTEXT.medium;
+    const intensityContext = INTENSITY_CONTEXT[detectedIntensity] || INTENSITY_CONTEXT.medium;
     
     const systemPrompt = COACH_PROMPTS[coachStyle] || COACH_PROMPTS.PULSE;
     
