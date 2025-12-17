@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
@@ -100,10 +102,73 @@ function parseSpreadsheet(text: string): DayWorkout[] {
 
 export function AdminSpreadsheet() {
   const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="card-elevated p-8 rounded-xl text-center">
+          <p className="text-muted-foreground">Verificando acesso…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="card-elevated p-8 rounded-xl text-center max-w-md w-full">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-7 h-7 text-primary/60" />
+          </div>
+          <h1 className="font-display text-2xl text-foreground mb-2">Área restrita</h1>
+          <p className="text-muted-foreground mb-6">
+            Faça login com uma conta de administrador para inserir a planilha.
+          </p>
+          <button
+            onClick={() => navigate('/auth?next=admin')}
+            className="w-full px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4" />
+            Fazer login
+          </button>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mt-3 w-full px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="card-elevated p-8 rounded-xl text-center max-w-md w-full">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-7 h-7 text-primary/60" />
+          </div>
+          <h1 className="font-display text-2xl text-foreground mb-2">Acesso negado</h1>
+          <p className="text-muted-foreground mb-6">
+            Sua conta não tem permissão de administrador.
+          </p>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="w-full px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleClearWorkouts = () => {
     setWeeklyWorkouts([]);
