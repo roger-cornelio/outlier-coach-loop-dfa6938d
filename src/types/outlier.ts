@@ -17,6 +17,10 @@ export interface AthleteConfig {
   sessionDuration: SessionDuration;
   equipment: string[];
   coachStyle: CoachStyle;
+  altura?: number;
+  peso?: number;
+  idade?: number;
+  sexo?: 'masculino' | 'feminino';
 }
 
 export interface WorkoutBlock {
