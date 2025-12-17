@@ -146,6 +146,14 @@ Adapte o treino do admin para caber no time_limit_min e seguir o nível do atlet
 - NÃO adicione exercícios que não estão no treino original.
 - NÃO adicione equipamentos que não estão no treino original.
 - NÃO faça sugestões ou comentários.
+
+🏆 REGRA ESPECIAL - HYROX_PRO:
+Se o nível do atleta for HYROX_PRO:
+- NUNCA reduza o volume abaixo do treino base original.
+- NUNCA simplifique movimentos (mantenha exatamente como está).
+- NUNCA reduza cargas ou intensidades.
+- O atleta HYROX_PRO deve executar o treino na íntegra, sem adaptações de dificuldade.
+- Apenas ajuste tempo se absolutamente necessário, mantendo a estrutura completa.
 ${adaptations.unavailableEquipment.length > 0 ? `
 SUBSTITUIÇÕES DE EQUIPAMENTO (APENAS se o equipamento estiver no treino original):
 ${equipmentRules}` : ''}

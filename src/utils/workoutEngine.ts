@@ -78,10 +78,11 @@ export function getTimeBudget(timeLimitMin: number): Record<BlockType, number> {
  */
 export function getLevelMultipliers(level: AthleteLevel) {
   switch (level) {
-    case "INICIANTE": return { volume: 0.70, load: 0.75, intensity: 0.85 };
-    case "INTERMEDIARIO": return { volume: 1.00, load: 1.00, intensity: 1.00 };
-    case "AVANCADO": return { volume: 1.15, load: 1.05, intensity: 1.05 };
-    case "HYROX_PRO": return { volume: 1.25, load: 1.10, intensity: 1.10 };
+    case "INICIANTE": return { volume: 0.70, load: 0.75, intensity: 0.85, canReduce: true, canSimplify: true };
+    case "INTERMEDIARIO": return { volume: 1.00, load: 1.00, intensity: 1.00, canReduce: true, canSimplify: false };
+    case "AVANCADO": return { volume: 1.15, load: 1.05, intensity: 1.05, canReduce: true, canSimplify: false };
+    // HYROX_PRO: nunca reduzir volume abaixo do base, nunca simplificar movimentos
+    case "HYROX_PRO": return { volume: 1.25, load: 1.10, intensity: 1.10, canReduce: false, canSimplify: false };
   }
 }
 
