@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench, Flame, ArrowLeft } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { getEstimatedTimeForLevel, calculateCalories, calculateTotalWorkoutCalories, formatBlockTime } from '@/utils/workoutCalculations';
 
@@ -278,29 +278,18 @@ export function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="p-6 rounded-full bg-secondary mb-6">
-                <FileQuestion className="w-12 h-12 text-muted-foreground" />
+              {/* Day Header */}
+              <div className="mb-8">
+                <h2 className="font-display text-4xl mb-2 text-muted-foreground/50">{DAY_NAMES[activeDay]}</h2>
               </div>
-              <h2 className="font-display text-3xl mb-2">
-                {hasAnyWorkouts ? 'SEM TREINO HOJE' : 'NENHUMA PLANILHA'}
-              </h2>
-              <p className="text-muted-foreground max-w-md mb-8">
-                {hasAnyWorkouts
-                  ? `Não há treino programado para ${DAY_NAMES[activeDay].toLowerCase()}. Selecione outro dia ou aguarde a atualização da planilha.`
-                  : 'A planilha semanal ainda não foi inserida pelo administrador. Aguarde a publicação dos treinos.'
-                }
-              </p>
-              {!hasAnyWorkouts && (
-                <button
-                  onClick={() => setCurrentView('admin')}
-                  className="font-display text-lg tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-2"
-                >
-                  <FileEdit className="w-5 h-5" />
-                  INSERIR PLANILHA (ADMIN)
-                </button>
-              )}
+
+              {/* Empty State */}
+              <div className="min-h-[300px] flex items-center justify-center">
+                <p className="text-muted-foreground/50 text-center">
+                  Nenhum treino inserido
+                </p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
