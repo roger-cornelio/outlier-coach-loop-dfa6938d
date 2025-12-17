@@ -10,12 +10,6 @@ interface WorkoutBlock {
   type: string;
   title: string;
   content: string;
-  referenceTime?: {
-    iniciante: number;
-    intermediario: number;
-    avancado: number;
-    hyrox_pro: number;
-  };
 }
 
 interface AthleteConfig {
@@ -42,7 +36,7 @@ interface RequestBody {
   adaptations: AdaptationConfig;
 }
 
-// Level-based multipliers (mandatory application)
+// Level-based multipliers
 const LEVEL_MULTIPLIERS = {
   iniciante: {
     volume_multiplier: 0.70,
@@ -62,16 +56,165 @@ const LEVEL_MULTIPLIERS = {
   hyrox_pro: {
     volume_multiplier: 1.25,
     load_multiplier: 1.10,
-    density_rule: "padrão competitivo (densidade alta) - CONDENSE MODE se tempo reduzido",
+    density_rule: "padrão competitivo (densidade alta)",
   },
 };
 
 const EQUIPMENT_SUBSTITUTIONS: Record<string, string> = {
-  ski: "substitua por Assault Bike, Remo ou Burpees",
-  remo: "substitua por Assault Bike, SKI ou Running",
-  sled: "substitua por Lunges com peso, Farmer's Carry ou Bear Crawl",
-  wallball: "substitua por Thrusters com dumbbells ou Kettlebell",
+  ski: "Assault Bike, Remo ou Burpees",
+  remo: "Assault Bike, SKI ou Running",
+  sled: "Lunges com peso, Farmer's Carry ou Bear Crawl",
+  wallball: "Thrusters com dumbbells ou Kettlebell",
 };
+
+// ============================================
+// FUNÇÕES DE SCALING DETERMINÍSTICO
+// ============================================
+
+function clampInt(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
+function roundToMultiple(n: number, multiple: number): number {
+  return Math.round(n / multiple) * multiple;
+}
+
+/**
+ * Escala números em uma linha (reps, metros, calorias, rounds)
+ * Ex: "50 Wall Ball" -> "35 Wall Ball" (com mult 0.70)
+ */
+function scaleLineVolume(line: string, mult: number): string {
+  // Não escala se mult é 1.0
+  if (mult === 1.0) return line;
+  
+  // Pattern para números seguidos de unidades ou exercícios
+  return line.replace(/\b(\d{1,4})\s*(m|cal|reps?|rounds?|min|x|sets?|séries?)?\b/gi, (match, numStr, unit) => {
+    const num = parseInt(numStr, 10);
+    if (!Number.isFinite(num) || num <= 0) return match;
+    
+    let scaled: number;
+    
+    // Metros: arredondar para 50 ou 100
+    if (unit && unit.toLowerCase() === 'm') {
+      scaled = roundToMultiple(num * mult, num >= 500 ? 100 : 50);
+    }
+    // Calorias: arredondar para 5
+    else if (unit && unit.toLowerCase() === 'cal') {
+      scaled = roundToMultiple(num * mult, 5);
+    }
+    // Minutos: manter mais precisão
+    else if (unit && unit.toLowerCase() === 'min') {
+      scaled = Math.round(num * mult);
+    }
+    // Reps/rounds: arredondar para 5 se >= 10, senão manter inteiro
+    else {
+      scaled = num >= 10 ? roundToMultiple(num * mult, 5) : Math.round(num * mult);
+    }
+    
+    scaled = clampInt(scaled, 1, 9999);
+    return unit ? `${scaled}${unit}` : `${scaled}`;
+  });
+}
+
+/**
+ * Escala cargas no formato "20/15kg", "30/20lb", "32/24kg"
+ */
+function scaleLineLoads(line: string, loadMult: number): string {
+  if (loadMult === 1.0) return line;
+  
+  // Pattern: 20/15kg ou 30/20lb
+  return line.replace(/(\d{1,3})\s*\/\s*(\d{1,3})\s*(kg|lb)\b/gi, (_, a, b, unit) => {
+    const unitLower = unit.toLowerCase();
+    const multiple = unitLower === 'kg' ? 2.5 : 5;
+    
+    const A = roundToMultiple(parseInt(a, 10) * loadMult, multiple);
+    const B = roundToMultiple(parseInt(b, 10) * loadMult, multiple);
+    
+    return `${clampInt(A, 1, 999)}/${clampInt(B, 1, 999)}${unit}`;
+  });
+}
+
+/**
+ * Escala uma linha de número isolado seguido de @ (para séries com carga)
+ * Ex: "5x5 @ 70/50kg" -> "4x4 @ 56/40kg"
+ */
+function scaleLineWithAt(line: string, volMult: number, loadMult: number): string {
+  // Pattern: NxN @ carga
+  return line.replace(/(\d+)\s*x\s*(\d+)\s*@\s*(\d{1,3})\s*\/\s*(\d{1,3})\s*(kg|lb)/gi, 
+    (_, sets, reps, loadA, loadB, unit) => {
+      const unitLower = unit.toLowerCase();
+      const multiple = unitLower === 'kg' ? 2.5 : 5;
+      
+      const newSets = volMult === 1.0 ? parseInt(sets) : clampInt(Math.round(parseInt(sets) * volMult), 1, 20);
+      const newReps = volMult === 1.0 ? parseInt(reps) : clampInt(Math.round(parseInt(reps) * volMult), 1, 50);
+      const newLoadA = roundToMultiple(parseInt(loadA) * loadMult, multiple);
+      const newLoadB = roundToMultiple(parseInt(loadB) * loadMult, multiple);
+      
+      return `${newSets}x${newReps} @ ${clampInt(newLoadA, 1, 999)}/${clampInt(newLoadB, 1, 999)}${unit}`;
+    }
+  );
+}
+
+/**
+ * Aplica scaling completo em um bloco de treino
+ */
+function scaleBlockContent(content: string, blockType: string, volMult: number, loadMult: number): string {
+  const lines = content.split('\n');
+  
+  const scaledLines = lines.map(line => {
+    // Não escala linhas de instrução/descrição
+    if (line.trim().startsWith('//') || line.trim().startsWith('Descanso') || line.trim().startsWith('Rest')) {
+      return line;
+    }
+    
+    let scaled = line;
+    
+    // Primeiro: séries com @ (ex: 5x5 @ 70/50kg)
+    scaled = scaleLineWithAt(scaled, volMult, loadMult);
+    
+    // Segundo: cargas isoladas (ex: 20/15kg)
+    scaled = scaleLineLoads(scaled, loadMult);
+    
+    // Terceiro: volumes (números gerais)
+    // Não aplica volume scaling em warmup
+    if (blockType !== 'aquecimento') {
+      scaled = scaleLineVolume(scaled, volMult);
+    }
+    
+    return scaled;
+  });
+  
+  return scaledLines.join('\n');
+}
+
+/**
+ * Substitui equipamento indisponível
+ */
+function substituteEquipment(content: string, unavailable: string[]): { content: string; substitutions: string[] } {
+  const substitutions: string[] = [];
+  let modified = content;
+  
+  for (const eq of unavailable) {
+    const eqLower = eq.toLowerCase();
+    const replacement = EQUIPMENT_SUBSTITUTIONS[eqLower];
+    
+    if (!replacement) continue;
+    
+    // Regex case-insensitive para o equipamento
+    const regex = new RegExp(`\\b${eq}\\b`, 'gi');
+    
+    if (regex.test(modified)) {
+      substitutions.push(`${eq.toUpperCase()} → ${replacement.split(',')[0].trim()}`);
+      modified = modified.replace(regex, replacement.split(',')[0].trim());
+    }
+  }
+  
+  return { content: modified, substitutions };
+}
+
+// ============================================
+// HANDLER PRINCIPAL
+// ============================================
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -81,10 +224,7 @@ serve(async (req) => {
   try {
     const { athleteConfig, workout, adaptations }: RequestBody = await req.json();
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    console.log("Adapt workout request:", { level: athleteConfig.level, day: workout.day });
 
     // Check if there's a workout to adapt
     if (!workout || !workout.blocks || workout.blocks.length === 0) {
@@ -98,199 +238,125 @@ serve(async (req) => {
 
     const levelMultipliers = LEVEL_MULTIPLIERS[athleteConfig.level] || LEVEL_MULTIPLIERS.intermediario;
     const timeLimit = athleteConfig.sessionDuration === 'ilimitado' ? 90 : athleteConfig.sessionDuration;
-
-    // Build the workout content string
-    const workoutContent = workout.blocks.map(block => {
-      return `[${block.type.toUpperCase()}] ${block.title}\n${block.content}`;
-    }).join('\n\n');
-
-    // Build equipment substitution rules
-    let equipmentRules = "";
-    if (adaptations.unavailableEquipment.length > 0) {
-      equipmentRules = adaptations.unavailableEquipment
-        .map(eq => `- ${eq.toUpperCase()}: ${EQUIPMENT_SUBSTITUTIONS[eq] || "encontrar alternativa similar"}`)
-        .join('\n');
-    }
-
-    const sexLabel = athleteConfig.sexo === 'masculino' ? 'Masculino' : athleteConfig.sexo === 'feminino' ? 'Feminino' : 'N/A';
     const levelLabel = athleteConfig.level.toUpperCase();
 
-    const systemPrompt = `Você é o ADAPTADOR DE TREINOS do OUTLIER.
-Você NÃO cria treino novo. Você adapta APENAS o treino do admin.
+    const volMult = levelMultipliers.volume_multiplier;
+    const loadMult = levelMultipliers.load_multiplier;
 
-REGRA ABSOLUTA:
-Se NÃO existir treino do admin para o dia, responda EXATAMENTE:
-"Nenhum treino inserido para este dia."
-E finalize.
+    console.log(`Applying multipliers: vol=${volMult}, load=${loadMult}`);
 
-━━━━━━━━━━━━━━━━━━━━━━
-CONFIG DO ATLETA
-━━━━━━━━━━━━━━━━━━━━━━
-Altura: ${athleteConfig.altura || 'N/A'} cm
-Peso: ${athleteConfig.peso || 'N/A'} kg
-Idade: ${athleteConfig.idade || 'N/A'} anos
-Sexo: ${sexLabel}
-Nível: ${levelLabel}  (INICIANTE | INTERMEDIARIO | AVANCADO | HYROX_PRO)
-Tempo disponível: ${timeLimit} min
+    // Time budget by level
+    const timeBudget: Record<string, number> = {
+      aquecimento: timeLimit <= 30 ? 5 : timeLimit <= 45 ? 8 : timeLimit <= 60 ? 10 : 12,
+      forca: timeLimit <= 30 ? 5 : timeLimit <= 45 ? 10 : timeLimit <= 60 ? 15 : 20,
+      conditioning: timeLimit <= 30 ? 18 : timeLimit <= 45 ? 24 : timeLimit <= 60 ? 30 : 50,
+      core: timeLimit <= 30 ? 2 : timeLimit <= 45 ? 3 : timeLimit <= 60 ? 5 : 8,
+      especifico: timeLimit <= 30 ? 0 : timeLimit <= 45 ? 0 : timeLimit <= 60 ? 0 : 10,
+      corrida: 0, // opcional por padrão
+      notas: 0,
+    };
 
-TREINO ADMIN:
-${workoutContent}
-
-━━━━━━━━━━━━━━━━━━━━━━
-REGRA CENTRAL (OBRIGATÓRIA)
-━━━━━━━━━━━━━━━━━━━━━━
-Você DEVE alterar o treino com base no NÍVEL, aplicando multiplicadores numéricos.
-Se você não alterar rounds/reps/distâncias/cargas, sua resposta é considerada inválida.
-
-Multiplicadores para o nível ${levelLabel}:
-- volume_multiplier = ${levelMultipliers.volume_multiplier}
-- load_multiplier   = ${levelMultipliers.load_multiplier}
-- density_rule      = "${levelMultipliers.density_rule}"
-
-Como aplicar:
-- Reps/rounds/calorias/metros/tempo -> multiplique por volume_multiplier e arredonde:
-  • reps: arredondar para múltiplos de 5 quando aplicável
-  • metros: arredondar para 50m/100m
-  • calorias: arredondar para 5 cal
-- Cargas (kg/lb e formatos 20/15kg, 30/20lb, 32/24kg):
-  -> multiplique por load_multiplier e arredonde para:
-     • kg: múltiplos de 2.5kg
-     • lb: múltiplos de 5lb
-- NÃO mude exercícios nem equipamentos (não invente nada).
-- NÃO adicione blocos novos.
-${adaptations.unavailableEquipment.length > 0 ? `
-SUBSTITUIÇÕES DE EQUIPAMENTO (APENAS se o equipamento estiver no treino original):
-${equipmentRules}` : ''}
-${adaptations.otherNotes ? `
-OBSERVAÇÕES DO ATLETA:
-${adaptations.otherNotes}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━━━
-REGRA DE TEMPO (OBRIGATÓRIA)
-━━━━━━━━━━━━━━━━━━━━━━
-O treino final deve CABER no tempo: total_minutes_estimated <= ${timeLimit}.
-
-Se precisar cortar tempo, corte nessa ordem:
-1) corrida opcional
-2) core/finalização
-3) conditioning (reduzindo volume, mantendo intensidade do nível)
-4) força/técnica (reduz séries, mas não zera)
-5) aquecimento (reduz, mas nunca zera)
-
-Se tempo for maior, você pode aumentar volume, mas mantendo o MESMO nível de dificuldade.
-
-━━━━━━━━━━━━━━━━━━━━━━
-SAÍDA (OBRIGATÓRIA)
-━━━━━━━━━━━━━━━━━━━━━━
-Responda SOMENTE em JSON válido (sem texto fora do JSON):
-
-{
-  "day": "${workout.day}",
-  "level": "${levelLabel}",
-  "time_limit_min": ${timeLimit},
-  "total_minutes": <number <= ${timeLimit}>,
-  "applied_multipliers": {
-    "volume_multiplier": ${levelMultipliers.volume_multiplier},
-    "load_multiplier": ${levelMultipliers.load_multiplier},
-    "density_rule": "${levelMultipliers.density_rule}"
-  },
-  "blocks": [
-    {
-      "type": "aquecimento|forca|conditioning|core|especifico|corrida",
-      "title": "<titulo>",
-      "target_minutes": <number>,
-      "content": "<conteúdo do bloco com números já escalados>"
+    // CONDENSE MODE para HYROX_PRO com tempo curto
+    let condenseMode = false;
+    let condenseMult = 1.0;
+    
+    if (athleteConfig.level === 'hyrox_pro' && timeLimit <= 45) {
+      condenseMode = true;
+      condenseMult = 0.75; // Reduz volume adicional para caber no tempo
+      console.log("CONDENSE MODE activated for HYROX_PRO");
     }
-  ],
-  "proof_of_level_adaptation": {
-    "examples": [
-      { "from": "<exemplo original do admin>", "to": "<como ficou adaptado>" },
-      { "from": "<outro exemplo original>", "to": "<como ficou adaptado>" }
-    ]
-  }
-}
 
-Validação final: se proof_of_level_adaptation estiver vazio ou não houver mudança numérica, gere novamente corrigindo.`;
+    // Aplica scaling determinístico em cada bloco
+    const adaptedBlocks = workout.blocks.map(block => {
+      const blockType = block.type;
+      
+      // Multiplicador final de volume (considera condense mode)
+      const finalVolMult = condenseMode && (blockType === 'conditioning' || blockType === 'core') 
+        ? volMult * condenseMult 
+        : volMult;
+      
+      // Aplica scaling
+      let scaledContent = scaleBlockContent(block.content, blockType, finalVolMult, loadMult);
+      
+      // Substitui equipamento indisponível
+      const { content: substitutedContent, substitutions } = substituteEquipment(
+        scaledContent, 
+        adaptations.unavailableEquipment
+      );
+      
+      if (substitutions.length > 0) {
+        console.log(`Substitutions in ${block.title}:`, substitutions);
+      }
 
-    const userPrompt = `Adapte o treino acima aplicando os multiplicadores do nível ${levelLabel}. Retorne SOMENTE JSON válido.`;
-
-    console.log("Calling AI with prompt for level:", athleteConfig.level);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+      return {
+        type: blockType,
+        title: block.title,
+        target_minutes: timeBudget[blockType] || 0,
+        content: substitutedContent,
+        original_content: block.content,
+      };
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Erro ao adaptar treino" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Calcula tempo total
+    const totalMinutes = adaptedBlocks.reduce((sum, b) => sum + (b.target_minutes || 0), 0);
 
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || null;
-
-    if (!rawContent) {
-      return new Response(JSON.stringify({ error: "Resposta vazia do AI" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Try to parse JSON from the response
-    let adaptedWorkoutJson = null;
-    try {
-      // Remove markdown code blocks if present
-      const cleanedContent = rawContent
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
+    // Gera exemplos de adaptação para proof
+    const examples: Array<{ from: string; to: string }> = [];
+    
+    for (const block of adaptedBlocks) {
+      const origLines = block.original_content.split('\n').filter(l => l.trim());
+      const adaptedLines = block.content.split('\n').filter(l => l.trim());
       
-      adaptedWorkoutJson = JSON.parse(cleanedContent);
-      console.log("Successfully parsed adapted workout JSON");
-    } catch (parseError) {
-      console.error("Failed to parse JSON response:", parseError);
-      console.log("Raw content:", rawContent);
-      // Return the raw content as fallback
-      return new Response(JSON.stringify({ 
-        adaptedWorkout: rawContent,
-        adaptedWorkoutJson: null 
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      for (let i = 0; i < Math.min(2, origLines.length); i++) {
+        if (origLines[i] !== adaptedLines[i]) {
+          examples.push({
+            from: origLines[i].trim(),
+            to: adaptedLines[i].trim(),
+          });
+        }
+      }
+      
+      if (examples.length >= 3) break;
     }
+
+    // Monta resposta final
+    const adaptedWorkoutJson = {
+      day: workout.day,
+      level: levelLabel,
+      time_limit_min: timeLimit,
+      total_minutes: Math.min(totalMinutes, timeLimit),
+      condense_mode: condenseMode,
+      applied_multipliers: {
+        volume_multiplier: volMult,
+        load_multiplier: loadMult,
+        condense_multiplier: condenseMode ? condenseMult : null,
+        density_rule: levelMultipliers.density_rule,
+      },
+      blocks: adaptedBlocks.map(b => ({
+        type: b.type,
+        title: b.title,
+        target_minutes: b.target_minutes,
+        content: b.content,
+      })),
+      proof_of_level_adaptation: {
+        examples: examples.slice(0, 3),
+      },
+    };
+
+    console.log("Adapted workout generated successfully:", {
+      level: levelLabel,
+      totalMinutes: adaptedWorkoutJson.total_minutes,
+      condenseMode,
+      examplesCount: examples.length,
+    });
 
     return new Response(JSON.stringify({ 
-      adaptedWorkout: rawContent,
+      adaptedWorkout: null,
       adaptedWorkoutJson 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("Error adapting workout:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
