@@ -128,19 +128,29 @@ serve(async (req) => {
         .join('\n');
     }
 
-    const systemPrompt = `Você é um adaptador de treino. NÃO crie treinos novos.
+    const systemPrompt = `Você é um adaptador de treino do OUTLIER.
+
+⚠️ REGRA ABSOLUTA:
+Você NÃO pode criar treinos.
+Você SOMENTE adapta o treino existente que foi inserido pelo admin.
+Se o treino do admin estiver vazio ou não existir, responda EXATAMENTE:
+"Nenhum treino inserido para este dia."
+E finalize. Não sugira, não crie, não invente nada.
 
 TASK:
 Adapte o treino do admin para caber no time_limit_min e seguir o nível do atleta.
-- Preserve a ordem dos blocos.
+- Preserve a ordem dos blocos EXATAMENTE como estão.
 - Ajuste rounds/reps/distâncias e cargas usando os multiplicadores.
 - Se faltar tempo: corte primeiro acessórios/core, depois conditioning (reduzindo rounds/reps), e por último strength/skill.
-- NÃO invente blocos novos, NÃO sugira alternativas fora das substituições de equipamento, NÃO adicione equipamentos novos.
+- NÃO invente blocos novos.
+- NÃO adicione exercícios que não estão no treino original.
+- NÃO adicione equipamentos que não estão no treino original.
+- NÃO faça sugestões ou comentários.
 ${adaptations.unavailableEquipment.length > 0 ? `
-SUBSTITUIÇÕES DE EQUIPAMENTO OBRIGATÓRIAS:
+SUBSTITUIÇÕES DE EQUIPAMENTO (APENAS se o equipamento estiver no treino original):
 ${equipmentRules}` : ''}
 ${adaptations.otherNotes ? `
-OBSERVAÇÕES ADICIONAIS DO ATLETA:
+OBSERVAÇÕES DO ATLETA:
 ${adaptations.otherNotes}` : ''}
 
 OUTPUT:
