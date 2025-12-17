@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { sampleWeeklyWorkouts } from '@/data/sampleWorkouts';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit } from 'lucide-react';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -59,12 +59,21 @@ export function Dashboard() {
                 </p>
               )}
             </div>
-            <button
-              onClick={() => setCurrentView('config')}
-              className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentView('admin')}
+                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+                title="Inserir Planilha (Admin)"
+              >
+                <FileEdit className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setCurrentView('config')}
+                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>

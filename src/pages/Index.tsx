@@ -5,6 +5,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { WorkoutExecution } from '@/components/WorkoutExecution';
 import { ResultRecording } from '@/components/ResultRecording';
 import { PerformanceFeedback } from '@/components/PerformanceFeedback';
+import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Index = () => {
@@ -24,6 +25,8 @@ const Index = () => {
         return <ResultRecording />;
       case 'feedback':
         return <PerformanceFeedback />;
+      case 'admin':
+        return <AdminSpreadsheet />;
       default:
         return <WelcomeScreen />;
     }
