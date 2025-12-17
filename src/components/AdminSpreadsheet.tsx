@@ -1,38 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { EQUIPMENT_LIST } from '@/types/outlier';
-import { ArrowLeft, Check, FileText, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle } from 'lucide-react';
 
 export function AdminSpreadsheet() {
-  const { setCurrentView, setWeeklyWorkouts } = useOutlierStore();
+  const { setCurrentView } = useOutlierStore();
   const [spreadsheetText, setSpreadsheetText] = useState('');
-  const [availableEquipment, setAvailableEquipment] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const toggleEquipment = (id: string) => {
-    setAvailableEquipment((prev) =>
-      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
-    );
-  };
-
-  const selectAllEquipment = () => {
-    setAvailableEquipment(EQUIPMENT_LIST.map((e) => e.id));
-  };
-
-  const clearAllEquipment = () => {
-    setAvailableEquipment([]);
-  };
 
   const processSpreadsheet = async () => {
     if (!spreadsheetText.trim()) {
       setError('Cole a planilha semanal no campo de texto.');
-      return;
-    }
-
-    if (availableEquipment.length === 0) {
-      setError('Selecione pelo menos um equipamento disponível.');
       return;
     }
 
@@ -70,61 +49,10 @@ export function AdminSpreadsheet() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Equipment Selection */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl">EQUIPAMENTOS DISPONÍVEIS</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={selectAllEquipment}
-                className="px-3 py-1 text-sm rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                Todos
-              </button>
-              <button
-                onClick={clearAllEquipment}
-                className="px-3 py-1 text-sm rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                Limpar
-              </button>
-            </div>
-          </div>
-          <p className="text-muted-foreground text-sm mb-4">
-            Selecione os equipamentos que estarão disponíveis para os atletas nesta semana.
-            Isso ajudará a filtrar exercícios incompatíveis.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {EQUIPMENT_LIST.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => toggleEquipment(item.id)}
-                className={`
-                  p-4 rounded-lg border transition-all duration-200 text-left flex items-center gap-3
-                  ${availableEquipment.includes(item.id)
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border bg-card hover:border-muted-foreground/50'
-                  }
-                `}
-              >
-                <span className="text-2xl">{item.emoji}</span>
-                <span className="font-body text-sm flex-1">{item.name}</span>
-                {availableEquipment.includes(item.id) && (
-                  <Check className="w-4 h-4 text-primary" />
-                )}
-              </button>
-            ))}
-          </div>
-        </motion.section>
-
         {/* Spreadsheet Input */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
           className="mb-8"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -162,7 +90,7 @@ export function AdminSpreadsheet() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1 }}
           className="flex flex-col sm:flex-row gap-4"
         >
           <button
@@ -206,7 +134,7 @@ export function AdminSpreadsheet() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.2 }}
           className="mt-8 p-6 rounded-lg bg-card border border-border"
         >
           <h3 className="font-display text-lg mb-3">📋 FORMATO ESPERADO</h3>
