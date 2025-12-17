@@ -595,7 +595,7 @@ export function Dashboard() {
                 ) : (
                   <>
                     <h3 className="font-display text-xl text-foreground">
-                      Aguardando treinos do administrador
+                      Aguardando treino do coach
                     </h3>
                     <p className="text-muted-foreground text-center text-sm max-w-md">
                       A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que um coach configurá-los.
