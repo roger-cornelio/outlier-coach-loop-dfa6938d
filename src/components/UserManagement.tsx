@@ -3,14 +3,14 @@ import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus } from 'lucide-react';
+import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserWithRole {
   id: string;
   email: string;
   created_at: string;
-  isAdmin: boolean;
+  role: 'admin' | 'coach' | 'user';
 }
 
 export function UserManagement() {
@@ -37,21 +37,30 @@ export function UserManagement() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all admin roles
-      const { data: adminRoles, error: rolesError } = await supabase
+      // Fetch all roles
+      const { data: allRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
+        .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      const adminUserIds = new Set(adminRoles?.map(r => r.user_id) || []);
+      // Build a map of user roles (prioritize admin > coach > user)
+      const userRoleMap = new Map<string, 'admin' | 'coach' | 'user'>();
+      (allRoles || []).forEach(r => {
+        const roleStr = String(r.role);
+        const currentRole = userRoleMap.get(r.user_id);
+        if (roleStr === 'admin') {
+          userRoleMap.set(r.user_id, 'admin');
+        } else if (roleStr === 'coach' && currentRole !== 'admin') {
+          userRoleMap.set(r.user_id, 'coach');
+        }
+      });
 
       const usersWithRoles: UserWithRole[] = (profiles || []).map(p => ({
         id: p.user_id,
         email: p.email || 'Email não disponível',
         created_at: p.created_at,
-        isAdmin: adminUserIds.has(p.user_id),
+        role: userRoleMap.get(p.user_id) || 'user',
       }));
 
       setUsers(usersWithRoles);
@@ -63,32 +72,37 @@ export function UserManagement() {
     }
   };
 
-  const toggleAdminRole = async (userId: string, currentlyAdmin: boolean) => {
+  const toggleCoachRole = async (userId: string, currentRole: 'admin' | 'coach' | 'user') => {
     if (userId === user?.id) {
-      toast.error('Você não pode remover seu próprio acesso admin');
+      toast.error('Você não pode alterar seu próprio acesso');
+      return;
+    }
+
+    if (currentRole === 'admin') {
+      toast.error('Não é possível remover outro administrador');
       return;
     }
 
     setUpdating(userId);
     try {
-      if (currentlyAdmin) {
-        // Remove admin role
+      if (currentRole === 'coach') {
+        // Remove coach role
         const { error } = await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', userId)
-          .eq('role', 'admin');
+          .filter('role', 'eq', 'coach');
 
         if (error) throw error;
-        toast.success('Acesso admin removido');
+        toast.success('Acesso de coach removido');
       } else {
-        // Add admin role
+        // Add coach role
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role: 'admin' });
+          .insert({ user_id: userId, role: 'coach' as any });
 
         if (error) throw error;
-        toast.success('Usuário promovido a admin');
+        toast.success('Usuário autorizado como coach');
       }
 
       // Refresh list
@@ -118,7 +132,7 @@ export function UserManagement() {
           </div>
           <h1 className="font-display text-2xl text-foreground mb-2">Acesso negado</h1>
           <p className="text-muted-foreground mb-6">
-            Apenas administradores podem gerenciar usuários.
+            Apenas o administrador pode gerenciar coaches.
           </p>
           <button
             onClick={() => setCurrentView('dashboard')}
@@ -130,6 +144,39 @@ export function UserManagement() {
       </div>
     );
   }
+
+  const getRoleIcon = (role: 'admin' | 'coach' | 'user') => {
+    switch (role) {
+      case 'admin':
+        return <ShieldCheck className="w-5 h-5 text-primary" />;
+      case 'coach':
+        return <Dumbbell className="w-5 h-5 text-green-500" />;
+      default:
+        return <Shield className="w-5 h-5 text-muted-foreground" />;
+    }
+  };
+
+  const getRoleLabel = (role: 'admin' | 'coach' | 'user') => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'coach':
+        return 'Coach';
+      default:
+        return 'Usuário';
+    }
+  };
+
+  const getRoleBorderColor = (role: 'admin' | 'coach' | 'user') => {
+    switch (role) {
+      case 'admin':
+        return 'border-l-primary';
+      case 'coach':
+        return 'border-l-green-500';
+      default:
+        return '';
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -144,8 +191,8 @@ export function UserManagement() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-display text-2xl">GERENCIAR USUÁRIOS</h1>
-              <p className="text-sm text-muted-foreground">Promover ou remover administradores</p>
+              <h1 className="font-display text-2xl">GERENCIAR COACHES</h1>
+              <p className="text-sm text-muted-foreground">Autorizar ou remover coaches</p>
             </div>
           </div>
         </div>
@@ -156,26 +203,48 @@ export function UserManagement() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 gap-4 mb-8"
+          className="grid grid-cols-3 gap-4 mb-8"
         >
           <div className="card-elevated p-4 rounded-xl">
             <div className="flex items-center gap-3">
-              <Users className="w-6 h-6 text-primary" />
+              <Users className="w-6 h-6 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-display">{users.length}</p>
-                <p className="text-sm text-muted-foreground">Total de usuários</p>
+                <p className="text-sm text-muted-foreground">Total</p>
               </div>
             </div>
           </div>
           <div className="card-elevated p-4 rounded-xl">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-6 h-6 text-green-500" />
+              <Dumbbell className="w-6 h-6 text-green-500" />
               <div>
-                <p className="text-2xl font-display">{users.filter(u => u.isAdmin).length}</p>
-                <p className="text-sm text-muted-foreground">Administradores</p>
+                <p className="text-2xl font-display">{users.filter(u => u.role === 'coach').length}</p>
+                <p className="text-sm text-muted-foreground">Coaches</p>
               </div>
             </div>
           </div>
+          <div className="card-elevated p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+              <div>
+                <p className="text-2xl font-display">{users.filter(u => u.role === 'admin').length}</p>
+                <p className="text-sm text-muted-foreground">Admin</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Info Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20"
+        >
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-primary">Coaches</strong> podem inserir planilhas de treino. 
+            Apenas você (<strong>Admin</strong>) pode autorizar novos coaches.
+          </p>
         </motion.div>
 
         {/* User List */}
@@ -205,55 +274,56 @@ export function UserManagement() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className={`card-elevated p-4 rounded-xl flex items-center justify-between ${
-                    u.isAdmin ? 'border-l-4 border-l-green-500' : ''
+                    u.role !== 'user' ? `border-l-4 ${getRoleBorderColor(u.role)}` : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${u.isAdmin ? 'bg-green-500/20' : 'bg-secondary'}`}>
-                      {u.isAdmin ? (
-                        <ShieldCheck className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Shield className="w-5 h-5 text-muted-foreground" />
-                      )}
+                    <div className={`p-2 rounded-lg ${
+                      u.role === 'admin' ? 'bg-primary/20' : 
+                      u.role === 'coach' ? 'bg-green-500/20' : 'bg-secondary'
+                    }`}>
+                      {getRoleIcon(u.role)}
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{u.email}</p>
                       <p className="text-xs text-muted-foreground">
-                        {u.isAdmin ? 'Administrador' : 'Usuário'} • Desde {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                        {getRoleLabel(u.role)} • Desde {new Date(u.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                   </div>
 
-                  {u.id !== user?.id && (
+                  {u.id === user?.id ? (
+                    <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
+                      Você
+                    </span>
+                  ) : u.role === 'admin' ? (
+                    <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-lg">
+                      Admin
+                    </span>
+                  ) : (
                     <button
-                      onClick={() => toggleAdminRole(u.id, u.isAdmin)}
+                      onClick={() => toggleCoachRole(u.id, u.role)}
                       disabled={updating === u.id}
                       className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
-                        u.isAdmin
+                        u.role === 'coach'
                           ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
                           : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
                       }`}
                     >
                       {updating === u.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : u.isAdmin ? (
+                      ) : u.role === 'coach' ? (
                         <>
                           <UserMinus className="w-4 h-4" />
-                          Remover admin
+                          Remover coach
                         </>
                       ) : (
                         <>
                           <UserPlus className="w-4 h-4" />
-                          Tornar admin
+                          Autorizar coach
                         </>
                       )}
                     </button>
-                  )}
-
-                  {u.id === user?.id && (
-                    <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
-                      Você
-                    </span>
                   )}
                 </motion.div>
               ))}

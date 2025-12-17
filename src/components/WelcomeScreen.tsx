@@ -29,7 +29,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, canManageWorkouts, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectCoach = (style: CoachStyle) => {
@@ -45,13 +45,13 @@ export function WelcomeScreen() {
   const handleCoachAccess = () => {
     if (authLoading) return;
 
-    if (user && isAdmin) {
+    if (user && canManageWorkouts) {
       setCurrentView('admin');
       return;
     }
 
-    if (user && !isAdmin) {
-      toast.error('Acesso restrito: apenas administradores');
+    if (user && !canManageWorkouts) {
+      toast.error('Acesso restrito: apenas coaches e administradores');
       return;
     }
 
