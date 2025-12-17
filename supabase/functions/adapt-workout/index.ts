@@ -42,43 +42,27 @@ interface RequestBody {
   adaptations: AdaptationConfig;
 }
 
-// Level-based multipliers and rules
-const LEVEL_CONFIG = {
+// Level-based multipliers (mandatory application)
+const LEVEL_MULTIPLIERS = {
   iniciante: {
-    vol_mult: 0.6,
-    load_mult: 0.5,
-    complexity: "simplificar movimentos complexos, substituir por variações mais acessíveis",
-    time_warmup: 10,
-    time_strength: 15,
-    time_conditioning: 15,
-    time_core: 5,
+    volume_multiplier: 0.70,
+    load_multiplier: 0.80,
+    density_rule: "mais descanso/menos densidade",
   },
   intermediario: {
-    vol_mult: 0.85,
-    load_mult: 0.75,
-    complexity: "manter estrutura, ajustar cargas moderadamente",
-    time_warmup: 8,
-    time_strength: 18,
-    time_conditioning: 20,
-    time_core: 6,
+    volume_multiplier: 1.00,
+    load_multiplier: 1.00,
+    density_rule: "densidade padrão",
   },
   avancado: {
-    vol_mult: 1.0,
-    load_mult: 1.0,
-    complexity: "manter estímulo original e intensidade",
-    time_warmup: 6,
-    time_strength: 20,
-    time_conditioning: 25,
-    time_core: 8,
+    volume_multiplier: 1.15,
+    load_multiplier: 1.05,
+    density_rule: "menos descanso/mais densidade",
   },
   hyrox_pro: {
-    vol_mult: 1.1,
-    load_mult: 1.1,
-    complexity: "manter padrão competitivo HYROX, sem simplificação",
-    time_warmup: 5,
-    time_strength: 20,
-    time_conditioning: 30,
-    time_core: 10,
+    volume_multiplier: 1.25,
+    load_multiplier: 1.10,
+    density_rule: "padrão competitivo (densidade alta)",
   },
 };
 
@@ -112,7 +96,7 @@ serve(async (req) => {
       });
     }
 
-    const levelConfig = LEVEL_CONFIG[athleteConfig.level] || LEVEL_CONFIG.intermediario;
+    const levelMultipliers = LEVEL_MULTIPLIERS[athleteConfig.level] || LEVEL_MULTIPLIERS.intermediario;
     const timeLimit = athleteConfig.sessionDuration === 'ilimitado' ? 90 : athleteConfig.sessionDuration;
 
     // Build the workout content string
@@ -132,111 +116,103 @@ serve(async (req) => {
     const levelLabel = athleteConfig.level.toUpperCase();
 
     const systemPrompt = `Você é o ADAPTADOR DE TREINOS do OUTLIER.
-
-Você NÃO cria treinos novos. Você SOMENTE adapta o treino inserido pelo admin.
+Você NÃO cria treino novo. Você adapta APENAS o treino do admin.
 
 REGRA ABSOLUTA:
-Se NÃO existir treino inserido pelo admin para o dia selecionado, responda EXATAMENTE:
+Se NÃO existir treino do admin para o dia, responda EXATAMENTE:
 "Nenhum treino inserido para este dia."
-E finalize. Não sugira nada.
+E finalize.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-CONFIGURAÇÕES DO ATLETA
+CONFIG DO ATLETA
 ━━━━━━━━━━━━━━━━━━━━━━
 Altura: ${athleteConfig.altura || 'N/A'} cm
 Peso: ${athleteConfig.peso || 'N/A'} kg
 Idade: ${athleteConfig.idade || 'N/A'} anos
 Sexo: ${sexLabel}
-Nível do atleta: ${levelLabel}   (INICIANTE | INTERMEDIARIO | AVANCADO | HYROX_PRO)
+Nível: ${levelLabel}  (INICIANTE | INTERMEDIARIO | AVANCADO | HYROX_PRO)
 Tempo disponível: ${timeLimit} min
 
-━━━━━━━━━━━━━━━━━━━━━━
-TREINO BASE (ADMIN)
-━━━━━━━━━━━━━━━━━━━━━━
+TREINO ADMIN:
 ${workoutContent}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-OBJETIVO DA ADAPTAÇÃO
+REGRA CENTRAL (OBRIGATÓRIA)
 ━━━━━━━━━━━━━━━━━━━━━━
-1) O NÍVEL DO ATLETA define o nível do treino (volume, carga e complexidade).
-2) O TEMPO escolhido define o quanto o treino deve ser condensado/expandido.
-3) Ao mudar o tempo, você deve ajustar volume e estrutura para CABER no tempo, mas manter a DIFICULDADE equivalente ao nível selecionado.
-   - Ex.: reduzir tempo NÃO pode "facilitar" o treino; deve condensar mantendo intensidade (menos volume, mesma exigência).
-   - Ex.: aumentar tempo NÃO pode "virar passeio"; deve aumentar volume mantendo o mesmo padrão de esforço do nível.
+Você DEVE alterar o treino com base no NÍVEL, aplicando multiplicadores numéricos.
+Se você não alterar rounds/reps/distâncias/cargas, sua resposta é considerada inválida.
 
-━━━━━━━━━━━━━━━━━━━━━━
-REGRAS DE ADAPTAÇÃO (OBRIGATÓRIAS)
-━━━━━━━━━━━━━━━━━━━━━━
-A) Preserve a ordem dos blocos sempre:
-Aquecimento → Força/Técnica → Conditioning → Core/Finalização → Corrida (se existir)
+Multiplicadores para o nível ${levelLabel}:
+- volume_multiplier = ${levelMultipliers.volume_multiplier}
+- load_multiplier   = ${levelMultipliers.load_multiplier}
+- density_rule      = "${levelMultipliers.density_rule}"
 
-B) Adaptação por NÍVEL (aplique de forma objetiva):
-- INICIANTE:
-  • reduzir complexidade e impacto
-  • reduzir volume total
-  • cargas moderadas e reps mais controladas
-- INTERMEDIÁRIO:
-  • manter estrutura base
-  • ajustar carga/reps para esforço consistente
-- AVANÇADO:
-  • aumentar exigência (volume ou densidade) sem bagunçar a estrutura
-- HYROX_PRO:
-  • padrão competitivo: densidade alta, pouca "facilitação"
-  • manter estímulo específico HYROX
-  • NUNCA reduzir volume abaixo do base
-  • NUNCA simplificar movimentos
-
-C) Adaptação por TEMPO (principal regra):
-- O treino final deve ter tempo total <= ${timeLimit} min.
-- Se precisar cortar tempo, corte nesta ordem:
-  1) Corrida opcional
-  2) Core/Finalização
-  3) Conditioning (reduzindo rounds/reps/distâncias mantendo intensidade)
-  4) Força/Técnica (reduz séries, não remover completamente)
-  5) Aquecimento (reduzir, mas nunca zerar)
-- Se precisar expandir tempo (tempo maior), aumente volume mantendo o mesmo padrão do nível.
-
-D) NÃO invente:
-- Não criar exercícios que não existam no treino do admin.
-- Não adicionar equipamentos novos.
-- Não inventar "treino alternativo".
-- Não adicionar blocos extras.
+Como aplicar:
+- Reps/rounds/calorias/metros/tempo -> multiplique por volume_multiplier e arredonde:
+  • reps: arredondar para múltiplos de 5 quando aplicável
+  • metros: arredondar para 50m/100m
+  • calorias: arredondar para 5 cal
+- Cargas (kg/lb e formatos 20/15kg, 30/20lb, 32/24kg):
+  -> multiplique por load_multiplier e arredonde para:
+     • kg: múltiplos de 2.5kg
+     • lb: múltiplos de 5lb
+- NÃO mude exercícios nem equipamentos (não invente nada).
+- NÃO adicione blocos novos.
 ${adaptations.unavailableEquipment.length > 0 ? `
-E) SUBSTITUIÇÕES DE EQUIPAMENTO (APENAS se o equipamento estiver no treino original):
+SUBSTITUIÇÕES DE EQUIPAMENTO (APENAS se o equipamento estiver no treino original):
 ${equipmentRules}` : ''}
 ${adaptations.otherNotes ? `
-F) OBSERVAÇÕES DO ATLETA:
+OBSERVAÇÕES DO ATLETA:
 ${adaptations.otherNotes}` : ''}
 
-G) Saída SEM texto motivacional e SEM explicações.
-Você apenas entrega o treino adaptado final.
+━━━━━━━━━━━━━━━━━━━━━━
+REGRA DE TEMPO (OBRIGATÓRIA)
+━━━━━━━━━━━━━━━━━━━━━━
+O treino final deve CABER no tempo: total_minutes_estimated <= ${timeLimit}.
+
+Se precisar cortar tempo, corte nessa ordem:
+1) corrida opcional
+2) core/finalização
+3) conditioning (reduzindo volume, mantendo intensidade do nível)
+4) força/técnica (reduz séries, mas não zera)
+5) aquecimento (reduz, mas nunca zera)
+
+Se tempo for maior, você pode aumentar volume, mas mantendo o MESMO nível de dificuldade.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-FORMATO DE SAÍDA (OBRIGATÓRIO)
+SAÍDA (OBRIGATÓRIA)
 ━━━━━━━━━━━━━━━━━━━━━━
-Responda SOMENTE com JSON válido (sem texto fora do JSON), no formato:
+Responda SOMENTE em JSON válido (sem texto fora do JSON):
 
 {
   "day": "${workout.day}",
   "level": "${levelLabel}",
   "time_limit_min": ${timeLimit},
   "total_minutes": <number <= ${timeLimit}>,
-  "difficulty_note": "dificuldade equivalente ao nível ${levelLabel}",
+  "applied_multipliers": {
+    "volume_multiplier": ${levelMultipliers.volume_multiplier},
+    "load_multiplier": ${levelMultipliers.load_multiplier},
+    "density_rule": "${levelMultipliers.density_rule}"
+  },
   "blocks": [
     {
       "type": "aquecimento|forca|conditioning|core|especifico|corrida",
       "title": "<titulo>",
       "target_minutes": <number>,
-      "content": "<conteúdo do bloco com quebras de linha>"
+      "content": "<conteúdo do bloco com números já escalados>"
     }
-  ]
+  ],
+  "proof_of_level_adaptation": {
+    "examples": [
+      { "from": "<exemplo original do admin>", "to": "<como ficou adaptado>" },
+      { "from": "<outro exemplo original>", "to": "<como ficou adaptado>" }
+    ]
+  }
 }
 
-Validação final obrigatória:
-- total_minutes <= ${timeLimit}
-Se não conseguir, reduza novamente o conditioning até caber.`;
+Validação final: se proof_of_level_adaptation estiver vazio ou não houver mudança numérica, gere novamente corrigindo.`;
 
-    const userPrompt = `Adapte o treino acima seguindo TODAS as regras. Retorne SOMENTE JSON válido.`;
+    const userPrompt = `Adapte o treino acima aplicando os multiplicadores do nível ${levelLabel}. Retorne SOMENTE JSON válido.`;
 
     console.log("Calling AI with prompt for level:", athleteConfig.level);
 
