@@ -103,11 +103,20 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setRole('user');
+    // Always clear local state, even if server returns an error
+    // (e.g., session already expired/doesn't exist)
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.warn('SignOut error (session may already be invalid):', error);
     }
-    return { error };
+    
+    // Clear state regardless of server response
+    setSession(null);
+    setUser(null);
+    setRole('user');
+    
+    return { error: null };
   };
 
   return {
