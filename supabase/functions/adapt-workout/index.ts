@@ -47,7 +47,7 @@ const LEVEL_MULTIPLIERS = {
   iniciante: {
     volume_multiplier: 0.70,
     load_multiplier: 0.80,
-    density_rule: "mais descanso/menos densidade",
+    density_rule: "mais controle/menos densidade",
   },
   intermediario: {
     volume_multiplier: 1.00,
@@ -57,12 +57,12 @@ const LEVEL_MULTIPLIERS = {
   avancado: {
     volume_multiplier: 1.15,
     load_multiplier: 1.05,
-    density_rule: "menos descanso/mais densidade",
+    density_rule: "mais densidade/menos descanso",
   },
   hyrox_pro: {
-    volume_multiplier: 0.75, // 65-80% do volume original
-    load_multiplier: 1.05,   // 100-110% da intensidade
-    density_rule: "densidade máxima (↑↑) - menos descanso, ritmo competitivo",
+    volume_multiplier: 1.25,
+    load_multiplier: 1.10,
+    density_rule: "padrão competitivo (densidade alta) - CONDENSE MODE se tempo reduzido",
   },
 };
 
