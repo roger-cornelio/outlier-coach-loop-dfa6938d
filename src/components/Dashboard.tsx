@@ -534,22 +534,36 @@ export function Dashboard() {
               </div>
 
               {/* Empty State */}
-              <div className="min-h-[300px] flex flex-col items-center justify-center gap-4">
-                <p className="text-muted-foreground text-center text-lg">
-                  Nenhum treino inserido para este dia.
-                </p>
-                {!hasAnyWorkouts && (
-                  <p className="text-muted-foreground/60 text-center text-sm max-w-md">
-                    A planilha semanal ainda não foi inserida pelo administrador.
-                  </p>
+              <div className="min-h-[300px] flex flex-col items-center justify-center gap-4 card-elevated p-8 rounded-xl">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                  <Clock className="w-8 h-8 text-primary/60" />
+                </div>
+                {hasAnyWorkouts ? (
+                  <>
+                    <p className="text-muted-foreground text-center text-lg">
+                      Nenhum treino para {DAY_NAMES[activeDay].toLowerCase()}.
+                    </p>
+                    <p className="text-muted-foreground/60 text-center text-sm">
+                      Aproveite para descansar ou confira outro dia.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-display text-xl text-foreground">
+                      Aguardando treinos do administrador
+                    </h3>
+                    <p className="text-muted-foreground text-center text-sm max-w-md">
+                      A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que o administrador configurá-los.
+                    </p>
+                    <button
+                      onClick={() => setCurrentView('admin')}
+                      className="mt-4 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
+                    >
+                      <FileEdit className="w-4 h-4" />
+                      Inserir Planilha (Admin)
+                    </button>
+                  </>
                 )}
-                <button
-                  onClick={() => setCurrentView('admin')}
-                  className="mt-4 px-6 py-3 rounded-lg border border-border hover:bg-secondary transition-colors text-sm flex items-center gap-2"
-                >
-                  <FileEdit className="w-4 h-4" />
-                  Inserir Planilha (Admin)
-                </button>
               </div>
             </motion.div>
           )}
