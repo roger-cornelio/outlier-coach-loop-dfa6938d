@@ -19,13 +19,15 @@ const sexOptions = [
 ];
 
 export function AthleteConfig() {
-  const { coachStyle, setAthleteConfig, setCurrentView } = useOutlierStore();
-  const [level, setLevel] = useState<AthleteLevel>('intermediario');
-  const [duration, setDuration] = useState<SessionDuration>(60);
-  const [altura, setAltura] = useState('');
-  const [peso, setPeso] = useState('');
-  const [idade, setIdade] = useState('');
-  const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>('');
+  const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView } = useOutlierStore();
+  
+  // Use existing values as defaults
+  const [level, setLevel] = useState<AthleteLevel>(athleteConfig?.level || 'intermediario');
+  const [duration, setDuration] = useState<SessionDuration>(athleteConfig?.sessionDuration || 60);
+  const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
+  const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
+  const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
+  const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>(athleteConfig?.sexo || '');
 
   const handleSubmit = () => {
     if (coachStyle) {
