@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2 } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -23,6 +25,8 @@ const blockTypeColors: Record<string, string> = {
 
 export function Dashboard() {
   const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
+  const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
   const [adaptations, setAdaptations] = useState<AdaptationConfig | null>(null);
@@ -43,6 +47,28 @@ export function Dashboard() {
 
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = weeklyWorkouts.length > 0;
+
+  const handleAdminAccess = () => {
+    if (!user) {
+      toast.info('Faça login para acessar o painel admin');
+      navigate('/auth');
+      return;
+    }
+    if (!isAdmin) {
+      toast.error('Apenas administradores podem inserir planilhas');
+      return;
+    }
+    setCurrentView('admin');
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Erro ao sair');
+    } else {
+      toast.success('Logout realizado');
+    }
+  };
 
   // Fetch AI feedback when workout or coach style changes
   useEffect(() => {
@@ -246,11 +272,13 @@ export function Dashboard() {
                 )}
               </button>
               <button
-                onClick={() => setCurrentView('admin')}
-                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                title="Inserir Planilha (Admin)"
+                onClick={handleAdminAccess}
+                className={`p-3 rounded-lg transition-colors relative ${
+                  isAdmin ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30' : 'bg-secondary hover:bg-secondary/80'
+                }`}
+                title={isAdmin ? 'Inserir Planilha (Admin)' : 'Área restrita - Admin'}
               >
-                <FileEdit className="w-5 h-5" />
+                {isAdmin ? <FileEdit className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setCurrentView('config')}
@@ -258,6 +286,23 @@ export function Dashboard() {
               >
                 <Settings className="w-5 h-5" />
               </button>
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+                  title={`Sair (${user.email})`}
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/auth')}
+                  className="p-3 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+                  title="Fazer login"
+                >
+                  <LogIn className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -556,11 +601,11 @@ export function Dashboard() {
                       A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que o administrador configurá-los.
                     </p>
                     <button
-                      onClick={() => setCurrentView('admin')}
+                      onClick={handleAdminAccess}
                       className="mt-4 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
                     >
-                      <FileEdit className="w-4 h-4" />
-                      Inserir Planilha (Admin)
+                      {isAdmin ? <FileEdit className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                      {isAdmin ? 'Inserir Planilha (Admin)' : 'Área Admin (Login necessário)'}
                     </button>
                   </>
                 )}
