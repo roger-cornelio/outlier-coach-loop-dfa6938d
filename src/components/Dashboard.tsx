@@ -28,6 +28,16 @@ export function Dashboard() {
   const [workoutFeedback, setWorkoutFeedback] = useState<string | null>(null);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
   const [adaptedWorkoutContent, setAdaptedWorkoutContent] = useState<string | null>(null);
+  const [adaptedWorkoutJson, setAdaptedWorkoutJson] = useState<{
+    day: string;
+    total_minutes: number;
+    blocks: Array<{
+      type: string;
+      title: string;
+      target_minutes: number;
+      content: string;
+    }>;
+  } | null>(null);
   const [isAdapting, setIsAdapting] = useState(false);
 
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
@@ -75,6 +85,7 @@ export function Dashboard() {
   // Clear adapted workout when day changes
   useEffect(() => {
     setAdaptedWorkoutContent(null);
+    setAdaptedWorkoutJson(null);
   }, [activeDay]);
 
   const handleStartWorkout = () => {
@@ -90,6 +101,7 @@ export function Dashboard() {
     // If adaptations are cleared, reset adapted workout
     if (!config.unavailableEquipment.length && !config.otherNotes) {
       setAdaptedWorkoutContent(null);
+      setAdaptedWorkoutJson(null);
       return;
     }
 
@@ -121,11 +133,17 @@ export function Dashboard() {
 
         if (error) throw error;
 
-        if (data?.adaptedWorkout) {
+        if (data?.adaptedWorkoutJson) {
+          setAdaptedWorkoutJson(data.adaptedWorkoutJson);
+          setAdaptedWorkoutContent(null);
+          toast.success('Treino adaptado com sucesso!');
+        } else if (data?.adaptedWorkout) {
           setAdaptedWorkoutContent(data.adaptedWorkout);
+          setAdaptedWorkoutJson(null);
           toast.success('Treino adaptado com sucesso!');
         } else if (data?.message) {
           setAdaptedWorkoutContent(null);
+          setAdaptedWorkoutJson(null);
           toast.info(data.message);
         }
       } catch (err) {
@@ -365,15 +383,48 @@ export function Dashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   className="card-elevated p-6 border-l-4 border-l-green-500 bg-gradient-to-r from-green-500/5 to-transparent mb-4"
                 >
-                  <h3 className="font-display text-xl mb-4 text-green-500 flex items-center gap-2">
-                    <Wrench className="w-5 h-5" />
-                    TREINO ADAPTADO
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display text-xl text-green-500 flex items-center gap-2">
+                      <Wrench className="w-5 h-5" />
+                      TREINO ADAPTADO
+                    </h3>
+                    {adaptedWorkoutJson && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        <span>{adaptedWorkoutJson.total_minutes} min</span>
+                      </div>
+                    )}
+                  </div>
                   
                   {isAdapting ? (
                     <div className="flex items-center gap-2 text-muted-foreground py-4">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Adaptando treino...</span>
+                    </div>
+                  ) : adaptedWorkoutJson ? (
+                    <div className="space-y-4">
+                      {adaptedWorkoutJson.blocks.map((block, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-4 rounded-lg bg-secondary/30 border-l-2 ${
+                            block.type === 'aquecimento' ? 'border-l-amber-500' :
+                            block.type === 'forca' ? 'border-l-red-500' :
+                            block.type === 'conditioning' ? 'border-l-primary' :
+                            block.type === 'core' ? 'border-l-blue-500' :
+                            block.type === 'especifico' ? 'border-l-purple-500' :
+                            block.type === 'corrida' ? 'border-l-green-500' :
+                            'border-l-muted-foreground'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-display text-lg">{block.title}</h4>
+                            <span className="text-xs text-muted-foreground">{block.target_minutes} min</span>
+                          </div>
+                          <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                            {block.content}
+                          </pre>
+                        </div>
+                      ))}
                     </div>
                   ) : adaptedWorkoutContent ? (
                     <pre className="font-body text-sm text-foreground whitespace-pre-wrap leading-relaxed">
