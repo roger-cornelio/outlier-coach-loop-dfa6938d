@@ -27,7 +27,7 @@ export const useOutlierStore = create<OutlierState>()(
       coachStyle: null,
       athleteConfig: null,
       workoutResults: [],
-      weeklyWorkouts: [],
+      weeklyWorkouts: [], // Sempre começa vazio - só preenchido pelo admin
       currentView: 'welcome',
       selectedDay: null,
       selectedWorkout: null,
@@ -44,6 +44,12 @@ export const useOutlierStore = create<OutlierState>()(
     }),
     {
       name: 'outlier-storage',
+      // Persistir apenas configurações do atleta - treinos são limpos a cada sessão
+      partialize: (state) => ({
+        coachStyle: state.coachStyle,
+        athleteConfig: state.athleteConfig,
+        workoutResults: state.workoutResults,
+      }),
     }
   )
 );
