@@ -340,7 +340,7 @@ export function Dashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>{formatTime(currentWorkout.estimatedTime)}</span>
+                    <span>{formatTime(totalTime)}</span>
                   </div>
                   {totalCalories > 0 && (
                     <div className="flex items-center gap-2">
