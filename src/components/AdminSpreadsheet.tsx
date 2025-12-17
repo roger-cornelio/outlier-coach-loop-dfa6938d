@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Users } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
@@ -208,17 +208,27 @@ export function AdminSpreadsheet() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
-              <p className="text-sm text-muted-foreground">Área restrita - Administrador</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
+                <p className="text-sm text-muted-foreground">Área restrita - Administrador</p>
+              </div>
             </div>
+            <button
+              onClick={() => setCurrentView('users')}
+              className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2"
+              title="Gerenciar usuários"
+            >
+              <Users className="w-5 h-5" />
+              <span className="hidden sm:inline text-sm">Usuários</span>
+            </button>
           </div>
         </div>
       </header>

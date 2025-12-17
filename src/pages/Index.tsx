@@ -6,6 +6,7 @@ import { WorkoutExecution } from '@/components/WorkoutExecution';
 import { ResultRecording } from '@/components/ResultRecording';
 import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
+import { UserManagement } from '@/components/UserManagement';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Index = () => {
@@ -27,6 +28,8 @@ const Index = () => {
         return <PerformanceFeedback />;
       case 'admin':
         return <AdminSpreadsheet />;
+      case 'users':
+        return <UserManagement />;
       default:
         return <WelcomeScreen />;
     }
