@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { sampleWeeklyWorkouts } from '@/data/sampleWorkouts';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion } from 'lucide-react';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -18,16 +17,11 @@ const blockTypeColors: Record<string, string> = {
 };
 
 export function Dashboard() {
-  const { setCurrentView, setSelectedWorkout, setWeeklyWorkouts, weeklyWorkouts, athleteConfig } = useOutlierStore();
+  const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
 
-  useEffect(() => {
-    if (weeklyWorkouts.length === 0) {
-      setWeeklyWorkouts(sampleWeeklyWorkouts);
-    }
-  }, [weeklyWorkouts, setWeeklyWorkouts]);
-
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
+  const hasAnyWorkouts = weeklyWorkouts.length > 0;
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -82,21 +76,29 @@ export function Dashboard() {
       <div className="sticky top-[73px] z-40 bg-background border-b border-border overflow-x-auto">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex gap-1 py-2">
-            {dayTabs.map((day) => (
-              <button
-                key={day}
-                onClick={() => setActiveDay(day)}
-                className={`
-                  px-4 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap
-                  ${activeDay === day
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                  }
-                `}
-              >
-                {DAY_NAMES[day].slice(0, 3).toUpperCase()}
-              </button>
-            ))}
+            {dayTabs.map((day) => {
+              const hasWorkout = weeklyWorkouts.some((w) => w.day === day);
+              return (
+                <button
+                  key={day}
+                  onClick={() => setActiveDay(day)}
+                  className={`
+                    px-4 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap relative
+                    ${activeDay === day
+                      ? 'bg-primary text-primary-foreground'
+                      : hasWorkout
+                        ? 'text-foreground hover:bg-secondary'
+                        : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary'
+                    }
+                  `}
+                >
+                  {DAY_NAMES[day].slice(0, 3).toUpperCase()}
+                  {hasWorkout && activeDay !== day && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -104,7 +106,7 @@ export function Dashboard() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
-          {currentWorkout && (
+          {currentWorkout ? (
             <motion.div
               key={activeDay}
               initial={{ opacity: 0, x: 20 }}
@@ -165,6 +167,36 @@ export function Dashboard() {
                 INICIAR TREINO
                 <ChevronRight className="w-6 h-6" />
               </motion.button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center py-20 text-center"
+            >
+              <div className="p-6 rounded-full bg-secondary mb-6">
+                <FileQuestion className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <h2 className="font-display text-3xl mb-2">
+                {hasAnyWorkouts ? 'SEM TREINO HOJE' : 'NENHUMA PLANILHA'}
+              </h2>
+              <p className="text-muted-foreground max-w-md mb-8">
+                {hasAnyWorkouts
+                  ? `Não há treino programado para ${DAY_NAMES[activeDay].toLowerCase()}. Selecione outro dia ou aguarde a atualização da planilha.`
+                  : 'A planilha semanal ainda não foi inserida pelo administrador. Aguarde a publicação dos treinos.'
+                }
+              </p>
+              {!hasAnyWorkouts && (
+                <button
+                  onClick={() => setCurrentView('admin')}
+                  className="font-display text-lg tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-2"
+                >
+                  <FileEdit className="w-5 h-5" />
+                  INSERIR PLANILHA (ADMIN)
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
