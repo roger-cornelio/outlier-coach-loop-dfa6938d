@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, FileQuestion, Wrench, Flame } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
+import { getEstimatedTimeForLevel, calculateCalories, calculateTotalWorkoutCalories, formatBlockTime } from '@/utils/workoutCalculations';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -47,6 +48,11 @@ export function Dashboard() {
   };
 
   const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
+
+  // Calculate total calories for current workout
+  const totalCalories = currentWorkout && athleteConfig 
+    ? calculateTotalWorkoutCalories(currentWorkout.blocks, athleteConfig)
+    : 0;
 
   return (
     <div className="min-h-screen">
@@ -176,35 +182,74 @@ export function Dashboard() {
                     <Clock className="w-4 h-4" />
                     <span>{formatTime(currentWorkout.estimatedTime)}</span>
                   </div>
+                  {totalCalories > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-orange-500" />
+                      <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
-                {currentWorkout.blocks.map((block, index) => (
-                  <motion.div
-                    key={block.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`
-                      card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
-                      ${block.isMainWod ? 'ring-1 ring-primary/30' : ''}
-                    `}
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <h3 className="font-display text-xl">{block.title}</h3>
-                      {block.isMainWod && (
-                        <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">
-                          WOD PRINCIPAL
-                        </span>
+                {currentWorkout.blocks.map((block, index) => {
+                  const estimatedTime = athleteConfig 
+                    ? getEstimatedTimeForLevel(block, athleteConfig.level)
+                    : null;
+                  const calories = athleteConfig 
+                    ? calculateCalories(block, athleteConfig, estimatedTime)
+                    : null;
+
+                  return (
+                    <motion.div
+                      key={block.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className={`
+                        card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
+                        ${block.isMainWod ? 'ring-1 ring-primary/30' : ''}
+                      `}
+                    >
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <h3 className="font-display text-xl">{block.title}</h3>
+                        <div className="flex items-center gap-2">
+                          {block.isMainWod && (
+                            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">
+                              WOD PRINCIPAL
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed mb-4">
+                        {block.content}
+                      </pre>
+
+                      {/* Block Stats */}
+                      {(estimatedTime || calories) && block.type !== 'notas' && (
+                        <div className="flex items-center gap-4 pt-3 border-t border-border/50">
+                          {estimatedTime && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Tempo esperado ({athleteConfig?.level.replace('_', ' ')}):
+                              </span>
+                              <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
+                            </div>
+                          )}
+                          {calories && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Flame className="w-4 h-4 text-orange-500" />
+                              <span className="text-orange-500 font-medium">~{calories} kcal</span>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
-                    <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {block.content}
-                    </pre>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
 
               {/* Start Workout Button */}

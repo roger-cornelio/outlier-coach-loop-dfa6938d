@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame } from 'lucide-react';
+import { getEstimatedTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
 
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -15,7 +16,7 @@ const blockTypeColors: Record<string, string> = {
 };
 
 export function WorkoutExecution() {
-  const { selectedWorkout, setCurrentView } = useOutlierStore();
+  const { selectedWorkout, setCurrentView, athleteConfig } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
 
@@ -85,6 +86,12 @@ export function WorkoutExecution() {
           {selectedWorkout.blocks.map((block, index) => {
             const isComplete = completedBlocks.includes(block.id);
             const isCurrent = index === currentBlockIndex;
+            const estimatedTime = athleteConfig 
+              ? getEstimatedTimeForLevel(block, athleteConfig.level)
+              : null;
+            const calories = athleteConfig 
+              ? calculateCalories(block, athleteConfig, estimatedTime)
+              : null;
 
             return (
               <motion.div
@@ -132,6 +139,25 @@ export function WorkoutExecution() {
                     <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                       {block.content}
                     </pre>
+
+                    {/* Block Stats */}
+                    {(estimatedTime || calories) && block.type !== 'notas' && (
+                      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/50">
+                        {estimatedTime && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Tempo:</span>
+                            <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
+                          </div>
+                        )}
+                        {calories && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            <span className="text-orange-500 font-medium">~{calories} kcal</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
