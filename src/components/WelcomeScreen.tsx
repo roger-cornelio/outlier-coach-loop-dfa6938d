@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import type { CoachStyle } from '@/types/outlier';
-import { Flame, Heart, Zap } from 'lucide-react';
+import { Flame, Heart, Zap, UserCog } from 'lucide-react';
 
 const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; description: string }[] = [
   {
@@ -26,6 +27,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
+  const navigate = useNavigate();
 
   const handleSelectCoach = (style: CoachStyle) => {
     setCoachStyle(style);
@@ -39,6 +41,18 @@ export function WelcomeScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+      {/* Coach Admin Button */}
+      <motion.button
+        onClick={() => navigate('/auth')}
+        className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+      >
+        <UserCog className="w-4 h-4" />
+        <span className="hidden sm:inline">Coach</span>
+      </motion.button>
+
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30"
