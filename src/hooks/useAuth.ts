@@ -2,11 +2,18 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+export type UserRole = 'admin' | 'coach' | 'user';
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(true);
+
+  // Computed properties
+  const isAdmin = role === 'admin';
+  const isCoach = role === 'coach';
+  const canManageWorkouts = role === 'admin' || role === 'coach';
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -18,10 +25,10 @@ export function useAuth() {
         // Defer role check with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id);
+            checkUserRole(session.user.id);
           }, 0);
         } else {
-          setIsAdmin(false);
+          setRole('user');
           setLoading(false);
         }
       }
@@ -33,7 +40,7 @@ export function useAuth() {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkAdminRole(session.user.id);
+        checkUserRole(session.user.id);
       } else {
         setLoading(false);
       }
@@ -42,24 +49,33 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminRole = async (userId: string) => {
+  const checkUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Check for admin first, then coach
+      const { data: roles, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error checking admin role:', error);
-        setIsAdmin(false);
+        console.error('Error checking user role:', error);
+        setRole('user');
+      } else if (roles && roles.length > 0) {
+        // Prioritize admin over coach - cast to string for comparison
+        const roleNames = roles.map(r => String(r.role));
+        if (roleNames.includes('admin')) {
+          setRole('admin');
+        } else if (roleNames.includes('coach')) {
+          setRole('coach');
+        } else {
+          setRole('user');
+        }
       } else {
-        setIsAdmin(!!data);
+        setRole('user');
       }
     } catch (err) {
-      console.error('Error in checkAdminRole:', err);
-      setIsAdmin(false);
+      console.error('Error in checkUserRole:', err);
+      setRole('user');
     } finally {
       setLoading(false);
     }
@@ -89,7 +105,7 @@ export function useAuth() {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
-      setIsAdmin(false);
+      setRole('user');
     }
     return { error };
   };
@@ -97,7 +113,10 @@ export function useAuth() {
   return {
     user,
     session,
+    role,
     isAdmin,
+    isCoach,
+    canManageWorkouts,
     loading,
     signIn,
     signUp,

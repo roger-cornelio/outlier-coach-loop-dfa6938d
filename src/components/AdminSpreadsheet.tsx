@@ -102,7 +102,7 @@ function parseSpreadsheet(text: string): DayWorkout[] {
 
 export function AdminSpreadsheet() {
   const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, canManageWorkouts, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -128,7 +128,7 @@ export function AdminSpreadsheet() {
           </div>
           <h1 className="font-display text-2xl text-foreground mb-2">Área restrita</h1>
           <p className="text-muted-foreground mb-6">
-            Faça login com uma conta de administrador para inserir a planilha.
+            Faça login com uma conta de coach ou administrador.
           </p>
           <button
             onClick={() => navigate('/auth?next=admin')}
@@ -148,7 +148,7 @@ export function AdminSpreadsheet() {
     );
   }
 
-  if (!isAdmin) {
+  if (!canManageWorkouts) {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="card-elevated p-8 rounded-xl text-center max-w-md w-full">
@@ -157,7 +157,7 @@ export function AdminSpreadsheet() {
           </div>
           <h1 className="font-display text-2xl text-foreground mb-2">Acesso negado</h1>
           <p className="text-muted-foreground mb-6">
-            Sua conta não tem permissão de administrador.
+            Sua conta não tem permissão de coach ou administrador.
           </p>
           <button
             onClick={() => setCurrentView('dashboard')}
@@ -218,17 +218,21 @@ export function AdminSpreadsheet() {
               </button>
               <div>
                 <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
-                <p className="text-sm text-muted-foreground">Área restrita - Administrador</p>
+                <p className="text-sm text-muted-foreground">
+                  Área restrita - {isAdmin ? 'Administrador' : 'Coach'}
+                </p>
               </div>
             </div>
-            <button
-              onClick={() => setCurrentView('users')}
-              className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2"
-              title="Gerenciar usuários"
-            >
-              <Users className="w-5 h-5" />
-              <span className="hidden sm:inline text-sm">Usuários</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentView('users')}
+                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2"
+                title="Gerenciar coaches"
+              >
+                <Users className="w-5 h-5" />
+                <span className="hidden sm:inline text-sm">Coaches</span>
+              </button>
+            )}
           </div>
         </div>
       </header>

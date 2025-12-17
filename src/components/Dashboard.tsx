@@ -25,7 +25,7 @@ const blockTypeColors: Record<string, string> = {
 
 export function Dashboard() {
   const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
-  const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const { user, isAdmin, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
@@ -50,12 +50,12 @@ export function Dashboard() {
 
   const handleAdminAccess = () => {
     if (!user) {
-      toast.info('Faça login para acessar o painel admin');
+      toast.info('Faça login para acessar o painel');
       navigate('/auth');
       return;
     }
-    if (!isAdmin) {
-      toast.error('Apenas administradores podem inserir planilhas');
+    if (!canManageWorkouts) {
+      toast.error('Acesso restrito: apenas coaches e administradores');
       return;
     }
     setCurrentView('admin');
@@ -274,11 +274,11 @@ export function Dashboard() {
               <button
                 onClick={handleAdminAccess}
                 className={`p-3 rounded-lg transition-colors relative ${
-                  isAdmin ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30' : 'bg-secondary hover:bg-secondary/80'
+                  canManageWorkouts ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30' : 'bg-secondary hover:bg-secondary/80'
                 }`}
-                title={isAdmin ? 'Inserir Planilha (Admin)' : 'Área restrita - Admin'}
+                title={canManageWorkouts ? 'Inserir Planilha' : 'Área restrita'}
               >
-                {isAdmin ? <FileEdit className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+                {canManageWorkouts ? <FileEdit className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setCurrentView('config')}
@@ -598,14 +598,14 @@ export function Dashboard() {
                       Aguardando treinos do administrador
                     </h3>
                     <p className="text-muted-foreground text-center text-sm max-w-md">
-                      A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que o administrador configurá-los.
+                      A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que um coach configurá-los.
                     </p>
                     <button
                       onClick={handleAdminAccess}
                       className="mt-4 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
                     >
-                      {isAdmin ? <FileEdit className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                      {isAdmin ? 'Inserir Planilha (Admin)' : 'Área Admin (Login necessário)'}
+                      {canManageWorkouts ? <FileEdit className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                      {canManageWorkouts ? 'Inserir Planilha' : 'Área Coach (Login necessário)'}
                     </button>
                   </>
                 )}
