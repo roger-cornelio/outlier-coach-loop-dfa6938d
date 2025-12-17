@@ -138,35 +138,7 @@ export function AdminSpreadsheet() {
           <textarea
             value={spreadsheetText}
             onChange={(e) => setSpreadsheetText(e.target.value)}
-            placeholder={`Exemplo:
-
-📅 SEGUNDA-FEIRA
-Estímulo: Força + Capacidade Aeróbia
-
-🔥 AQUECIMENTO
-3 Rounds:
-• 500m Row
-• 10 Air Squats
-• 10 Push-ups
-
-💪 FORÇA - Back Squat
-5x5 @ 75-80%
-Rest 2-3min
-
-⚡ CONDITIONING
-For Time:
-21-15-9
-Thrusters (42.5/30kg)
-Pull-ups
-CAP: 12 min
-
-📝 NOTAS
-Foco na técnica de transição.
-
----
-
-📅 TERÇA-FEIRA
-...`}
+            placeholder="Cole aqui a planilha semanal completa..."
             className="w-full h-96 px-4 py-4 rounded-lg bg-secondary border border-border font-body text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
           />
           <p className="text-muted-foreground text-xs mt-2">
