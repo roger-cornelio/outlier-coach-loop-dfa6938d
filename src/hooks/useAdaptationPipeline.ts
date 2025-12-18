@@ -1,19 +1,21 @@
 import { useCallback } from 'react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { 
-  adaptWorkout, 
-  type MandatoryAthleteParams, 
-  type WorkoutBlockInput,
-  type TrainingLevel 
-} from '@/utils/mandatoryAdaptationEngine';
-import type { DayWorkout, WorkoutBlock } from '@/types/outlier';
+  adaptWorkoutText, 
+  computeMultiplier, 
+  type LevelKey, 
+  type SexKey,
+  LEVEL_MULT,
+  SEX_MULT
+} from '@/lib/adaptation/adaptWorkoutText';
+import type { DayWorkout, WorkoutBlock, AthleteConfig } from '@/types/outlier';
 import { toast } from 'sonner';
 
 // ============================================
 // HOOK PARA PIPELINE DE ADAPTAÇÃO OBRIGATÓRIA
 // ============================================
-// Garante que o treino exibido seja sempre adaptado
-// ao nível/sexo/tempo/equipamentos do atleta
+// Usa adaptação baseada em texto puro
+// Aplica multiplicador (nível × sexo) em reps, metros, rounds, cal
 // ============================================
 
 interface AdaptationPipelineResult {
@@ -24,47 +26,47 @@ interface AdaptationPipelineResult {
     totalAdaptedMinutes: number;
     levelMultiplier: number;
     genderMultiplier: number;
+    combinedMultiplier: number;
   };
 }
 
-// Mapear tipo de bloco do app para tipo do motor
-function mapBlockType(type: string): WorkoutBlockInput['type'] {
-  const mapping: Record<string, WorkoutBlockInput['type']> = {
-    'aquecimento': 'aquecimento',
-    'conditioning': 'conditioning',
-    'forca': 'forca',
-    'corrida': 'corrida',
-    'core': 'core',
-    'especifico': 'especifico',
-    'notas': 'notas',
-  };
-  return mapping[type] || 'conditioning';
+interface GenerateOptions {
+  overrideConfig?: AthleteConfig;
 }
 
-// Converter bloco do app para input do motor
-function convertToEngineBlock(block: WorkoutBlock): WorkoutBlockInput {
+// Mapear level do app para LevelKey do motor
+function mapLevel(level: string): LevelKey {
+  const upper = level?.toUpperCase();
+  if (upper === 'BASE') return 'BASE';
+  if (upper === 'PROGRESSIVO') return 'PROGRESSIVO';
+  return 'PERFORMANCE';
+}
+
+// Mapear sexo do app para SexKey
+function mapSex(sexo: string): SexKey {
+  const lower = sexo?.toLowerCase();
+  return lower === 'feminino' ? 'F' : 'M';
+}
+
+// Adaptar conteúdo de um bloco
+function adaptBlockContent(block: WorkoutBlock, multiplier: number): WorkoutBlock {
+  const isWarmup = block.type === 'aquecimento';
+  
+  const adaptedContent = adaptWorkoutText({
+    text: block.content,
+    multiplier,
+    adaptWarmup: false, // nunca adaptar aquecimento
+  });
+
+  // Estimar duração adaptada proporcionalmente
+  const adaptedDuration = isWarmup 
+    ? block.durationMinutes 
+    : Math.max(1, Math.floor(block.durationMinutes * multiplier));
+
   return {
-    id: block.id,
-    type: mapBlockType(block.type),
-    title: block.title,
-    content: block.content,
-    estimatedMinutes: block.durationMinutes,
-    isBenchmark: block.isBenchmark,
-    benchmarkId: block.benchmarkId,
-  };
-}
-
-// Converter output do motor de volta para bloco do app
-function convertFromEngineBlock(
-  adaptedBlock: any, 
-  originalBlock: WorkoutBlock
-): WorkoutBlock {
-  return {
-    ...originalBlock,
-    // Substituir conteúdo pelo adaptado
-    content: adaptedBlock.adaptedContent || adaptedBlock.content,
-    // Atualizar duração estimada
-    durationMinutes: adaptedBlock.finalEstimatedMinutes || originalBlock.durationMinutes,
+    ...block,
+    content: adaptedContent,
+    durationMinutes: adaptedDuration,
   };
 }
 
@@ -79,38 +81,48 @@ export function useAdaptationPipeline() {
 
   /**
    * Gera treino adaptado para o atleta com base na planilha do coach
-   * Aplica: nível → gênero → tempo → equipamentos
+   * Aplica: nível × sexo (texto direto)
+   * @param options.overrideConfig - Config a usar (evita race condition)
    */
-  const generateAdaptedWorkouts = useCallback((): AdaptationPipelineResult => {
+  const generateAdaptedWorkouts = useCallback((options?: GenerateOptions): AdaptationPipelineResult => {
+    const config = options?.overrideConfig || athleteConfig;
+    
     // Validar que temos base e config
     if (!baseWorkouts || baseWorkouts.length === 0) {
       console.log('❌ Sem planilha base para adaptar');
       return { success: false, adaptedWorkouts: [] };
     }
 
-    if (!athleteConfig) {
+    if (!config) {
       console.log('❌ Sem configuração do atleta');
       return { success: false, adaptedWorkouts: [] };
     }
 
-    console.log('🔄 Iniciando pipeline de adaptação...');
-    console.log('Config:', {
-      level: athleteConfig.trainingLevel,
-      sexo: athleteConfig.sexo,
-      duration: athleteConfig.sessionDuration,
-    });
+    const level = mapLevel(config.trainingLevel);
+    const sex = mapSex(config.sexo || 'masculino');
+    const multiplier = computeMultiplier(level, sex);
 
-    // Preparar parâmetros obrigatórios
-    const engineParams: MandatoryAthleteParams = {
-      level: athleteConfig.trainingLevel as TrainingLevel,
-      gender: athleteConfig.sexo || 'masculino',
-      availableTimeMinutes: athleteConfig.sessionDuration === 'ilimitado' 
-        ? 9999 
-        : athleteConfig.sessionDuration,
-      availableEquipment: athleteConfig.equipment || [],
-    };
+    console.log('🔄 Iniciando adaptação de texto...');
+    console.log(`Level: ${level} (${LEVEL_MULT[level]})`);
+    console.log(`Sexo: ${sex} (${SEX_MULT[sex]})`);
+    console.log(`Multiplicador final: ${multiplier}`);
 
-    console.log('Motor params:', engineParams);
+    // Fast path: PERFORMANCE + M = 1.0 → sem alterações
+    if (multiplier === 1.0) {
+      console.log('✅ PERFORMANCE M - usando planilha base sem alterações');
+      setAdaptedWorkouts(baseWorkouts);
+      return {
+        success: true,
+        adaptedWorkouts: baseWorkouts,
+        summary: {
+          totalOriginalMinutes: baseWorkouts.reduce((sum, d) => sum + (d.estimatedTime || 0), 0),
+          totalAdaptedMinutes: baseWorkouts.reduce((sum, d) => sum + (d.estimatedTime || 0), 0),
+          levelMultiplier: LEVEL_MULT[level],
+          genderMultiplier: SEX_MULT[sex],
+          combinedMultiplier: multiplier,
+        },
+      };
+    }
 
     // Processar cada dia
     const adaptedDays: DayWorkout[] = [];
@@ -118,32 +130,23 @@ export function useAdaptationPipeline() {
     let totalAdaptedMin = 0;
 
     for (const dayWorkout of baseWorkouts) {
-      // Converter blocos para formato do motor
-      const engineBlocks = dayWorkout.blocks.map(convertToEngineBlock);
-
-      // Chamar motor de adaptação
-      const result = adaptWorkout(engineBlocks, engineParams);
-
-      if (!result.success) {
-        console.error('❌ Falha na adaptação do dia', dayWorkout.day, result.validationErrors);
-        // Usar original se falhar
-        adaptedDays.push(dayWorkout);
-        continue;
-      }
-
-      totalOriginalMin += result.summary.totalOriginalMinutes;
-      totalAdaptedMin += result.summary.totalAdaptedMinutes;
-
-      // Converter blocos adaptados de volta
-      const adaptedBlocks = result.blocks.map((adaptedBlock, index) => 
-        convertFromEngineBlock(adaptedBlock, dayWorkout.blocks[index])
+      // Adaptar cada bloco
+      const adaptedBlocks = dayWorkout.blocks.map(block => 
+        adaptBlockContent(block, multiplier)
       );
+
+      // Calcular tempos
+      const originalTime = dayWorkout.blocks.reduce((sum, b) => sum + b.durationMinutes, 0);
+      const adaptedTime = adaptedBlocks.reduce((sum, b) => sum + b.durationMinutes, 0);
+      
+      totalOriginalMin += originalTime;
+      totalAdaptedMin += adaptedTime;
 
       // Criar dia adaptado
       adaptedDays.push({
         ...dayWorkout,
         blocks: adaptedBlocks,
-        estimatedTime: result.summary.totalAdaptedMinutes,
+        estimatedTime: adaptedTime,
       });
     }
 
@@ -159,10 +162,9 @@ export function useAdaptationPipeline() {
       summary: {
         totalOriginalMinutes: totalOriginalMin,
         totalAdaptedMinutes: totalAdaptedMin,
-        levelMultiplier: engineParams.level === 'base' ? 0.65 
-          : engineParams.level === 'progressivo' ? 0.80 
-          : 1.00,
-        genderMultiplier: engineParams.gender === 'feminino' ? 0.85 : 1.00,
+        levelMultiplier: LEVEL_MULT[level],
+        genderMultiplier: SEX_MULT[sex],
+        combinedMultiplier: multiplier,
       },
     };
   }, [baseWorkouts, athleteConfig, setAdaptedWorkouts]);
@@ -174,8 +176,9 @@ export function useAdaptationPipeline() {
     if (adaptationPending && baseWorkouts.length > 0 && athleteConfig) {
       const result = generateAdaptedWorkouts();
       if (result.success) {
+        const pct = Math.round((result.summary?.combinedMultiplier || 1) * 100);
         toast.success('Treino adaptado ao seu nível', {
-          description: `${result.summary?.levelMultiplier === 1 ? '100%' : Math.round((result.summary?.levelMultiplier || 1) * 100) + '%'} do volume`,
+          description: `${pct}% do volume`,
         });
       }
       return result;

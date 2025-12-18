@@ -79,20 +79,15 @@ export function AthleteConfig() {
     setAthleteConfig(newConfig);
 
     // Gerar treino adaptado se houver planilha base
+    // Passa config diretamente para evitar race condition com o store
     if (hasBaseWorkouts) {
-      // Pequeno delay para garantir que o store atualizou
-      setTimeout(() => {
-        const result = generateAdaptedWorkouts();
-        if (result.success && result.summary) {
-          const levelPercent = Math.round(result.summary.levelMultiplier * 100);
-          const genderPercent = Math.round(result.summary.genderMultiplier * 100);
-          const finalPercent = Math.round(result.summary.levelMultiplier * result.summary.genderMultiplier * 100);
-          
-          toast.success('Treino adaptado!', {
-            description: `${finalPercent}% do volume (${trainingLevel.toUpperCase()} + ${sexo === 'feminino' ? 'F' : 'M'})`,
-          });
-        }
-      }, 100);
+      const result = generateAdaptedWorkouts({ overrideConfig: newConfig });
+      if (result.success && result.summary) {
+        const finalPercent = Math.round(result.summary.combinedMultiplier * 100);
+        toast.success('Treino adaptado!', {
+          description: `${finalPercent}% do volume (${trainingLevel.toUpperCase()} + ${sexo === 'feminino' ? 'F' : 'M'})`,
+        });
+      }
     }
 
     setCurrentView('dashboard');
