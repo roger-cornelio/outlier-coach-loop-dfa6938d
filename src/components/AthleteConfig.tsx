@@ -6,27 +6,24 @@ import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 
-// NOVO: Níveis de treino baseados no prompt OUTLIER
-const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; multiplier: string; icon: typeof Zap }[] = [
+// Níveis de treino - sem métricas visíveis
+const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
   { 
     value: 'base', 
     label: 'BASE', 
-    description: 'Volume reduzido, movimentos simplificados, mais controle',
-    multiplier: '65%',
+    description: 'Movimentos fundamentais com foco em técnica e controle',
     icon: Target
   },
   { 
     value: 'progressivo', 
     label: 'PROGRESSIVO', 
-    description: 'Ritmo consistente, estímulo sustentável e evolutivo',
-    multiplier: '80%',
+    description: 'Ritmo consistente com estímulo sustentável e evolutivo',
     icon: TrendingUp
   },
   { 
     value: 'performance', 
     label: 'PERFORMANCE', 
-    description: 'Alta densidade, ritmos agressivos, estímulo máximo',
-    multiplier: '100%',
+    description: 'Alta intensidade com desafio máximo',
     icon: Zap
   },
 ];
@@ -39,8 +36,8 @@ const durationOptions: { value: SessionDuration; label: string }[] = [
 ];
 
 const sexOptions = [
-  { value: 'masculino', label: 'Masculino', multiplier: '100%' },
-  { value: 'feminino', label: 'Feminino', multiplier: '85%' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
 ];
 
 export function AthleteConfig() {
@@ -82,11 +79,8 @@ export function AthleteConfig() {
     // Passa config diretamente para evitar race condition com o store
     if (hasBaseWorkouts) {
       const result = generateAdaptedWorkouts({ overrideConfig: newConfig });
-      if (result.success && result.summary) {
-        const finalPercent = Math.round(result.summary.combinedMultiplier * 100);
-        toast.success('Treino adaptado!', {
-          description: `${finalPercent}% do volume (${trainingLevel.toUpperCase()} + ${sexo === 'feminino' ? 'F' : 'M'})`,
-        });
+      if (result.success) {
+        toast.success('Treino calibrado para você!');
       }
     }
 
@@ -100,11 +94,6 @@ export function AthleteConfig() {
         : [...prev, equipId]
     );
   };
-
-  // Calcular multiplicador final para preview
-  const levelMult = trainingLevel === 'base' ? 0.65 : trainingLevel === 'progressivo' ? 0.80 : 1.00;
-  const genderMult = sexo === 'feminino' ? 0.85 : 1.00;
-  const finalMult = Math.round(levelMult * genderMult * 100);
 
   return (
     <div className="min-h-screen px-6 py-8 max-w-4xl mx-auto">
@@ -126,28 +115,6 @@ export function AthleteConfig() {
         </div>
       </motion.div>
 
-      {/* Volume Preview Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 p-4 rounded-lg bg-primary/10 border border-primary/20"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Volume do seu treino</p>
-              <p className="font-display text-2xl text-primary">{finalMult}%</p>
-            </div>
-          </div>
-          <div className="text-right text-sm text-muted-foreground">
-            <p>{trainingLevel.toUpperCase()}: {Math.round(levelMult * 100)}%</p>
-            <p>{sexo === 'feminino' ? 'Feminino' : 'Masculino'}: {Math.round(genderMult * 100)}%</p>
-          </div>
-        </div>
-      </motion.div>
 
       {/* Warning if no base workouts */}
       {!hasBaseWorkouts && (
@@ -227,7 +194,7 @@ export function AthleteConfig() {
                   key={option.value}
                   onClick={() => setSexo(option.value as 'masculino' | 'feminino')}
                   className={`
-                    flex-1 px-3 py-3 rounded-lg border transition-all duration-200 text-sm relative
+                    flex-1 px-3 py-3 rounded-lg border transition-all duration-200 text-sm
                     ${sexo === option.value
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border bg-card hover:border-muted-foreground/50'
@@ -235,11 +202,6 @@ export function AthleteConfig() {
                   `}
                 >
                   {option.label.charAt(0)}
-                  {sexo === option.value && (
-                    <span className="absolute -top-2 -right-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
-                      {option.multiplier}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -256,7 +218,7 @@ export function AthleteConfig() {
       >
         <h2 className="font-display text-2xl mb-2">NÍVEL DO TREINO</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          A planilha do coach representa PERFORMANCE (100%). Escolha seu nível para hoje.
+          Escolha o estímulo ideal para você hoje.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {trainingLevelOptions.map((option) => {
@@ -266,7 +228,7 @@ export function AthleteConfig() {
                 key={option.value}
                 onClick={() => setTrainingLevel(option.value)}
                 className={`
-                  p-4 rounded-lg border transition-all duration-200 text-left relative
+                  p-4 rounded-lg border transition-all duration-200 text-left
                   ${trainingLevel === option.value
                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
                     : 'border-border bg-card hover:border-muted-foreground/50'
@@ -276,9 +238,6 @@ export function AthleteConfig() {
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className={`w-5 h-5 ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className="font-display text-lg">{option.label}</span>
-                  <span className={`ml-auto text-sm font-mono ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {option.multiplier}
-                  </span>
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
               </button>

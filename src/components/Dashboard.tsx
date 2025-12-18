@@ -94,15 +94,6 @@ export function Dashboard() {
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
-  // Calcular multiplicador atual
-  const currentMultiplier = useMemo(() => {
-    if (!athleteConfig) return 100;
-    const levelMult = athleteConfig.trainingLevel === 'base' ? 0.65 
-      : athleteConfig.trainingLevel === 'progressivo' ? 0.80 
-      : 1.00;
-    const genderMult = athleteConfig.sexo === 'feminino' ? 0.85 : 1.00;
-    return Math.round(levelMult * genderMult * 100);
-  }, [athleteConfig]);
 
   // Auto-adaptar ao montar se necessário
   useEffect(() => {
@@ -267,9 +258,9 @@ export function Dashboard() {
               </button>
               <div>
                 <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
-                {athleteConfig && (
+              {athleteConfig && (
                   <p className="text-sm text-muted-foreground">
-                    Coach {athleteConfig.coachStyle} • {athleteConfig.trainingLevel?.toUpperCase()} ({currentMultiplier}%)
+                    Coach {athleteConfig.coachStyle}
                   </p>
                 )}
               </div>
@@ -326,69 +317,64 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Adaptation Status Banner */}
-      {hasBaseWorkouts && (
-        <div className={`border-b ${isShowingAdapted ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+      {/* Adaptation Status Banner - Texto fixo sem métricas */}
+      {hasBaseWorkouts && isShowingAdapted && (
+        <div className="border-b bg-primary/5 border-primary/10">
           <div className="max-w-6xl mx-auto px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {isShowingAdapted ? (
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Treino calibrado para você.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Cada bloco foi ajustado para entregar o estímulo certo — nem mais, nem menos — para que você evolua de forma sustentável.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCurrentView('config')}
+                className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors text-sm"
+              >
+                Ajustes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warning banner when not adapted yet */}
+      {hasBaseWorkouts && !isShowingAdapted && hasAthleteConfig && (
+        <div className="border-b bg-amber-500/10 border-amber-500/20">
+          <div className="max-w-6xl mx-auto px-6 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-500">
+                    Ajuste seu treino para gerar a versão personalizada
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleGenerateAdaptation}
+                disabled={isGeneratingAdaptation}
+                className="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-sm flex items-center gap-2"
+              >
+                {isGeneratingAdaptation ? (
                   <>
-                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-green-500">
-                        Treino adaptado ao seu nível
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {athleteConfig?.trainingLevel?.toUpperCase()} • {athleteConfig?.sexo === 'feminino' ? 'F' : 'M'} • {currentMultiplier}% do volume
-                      </p>
-                    </div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Gerando...
                   </>
                 ) : (
-                  <>
-                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                      <AlertCircle className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-amber-500">
-                        Treino não adaptado
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Exibindo planilha base do coach (100%)
-                      </p>
-                    </div>
-                  </>
+                  'Gerar Treino'
                 )}
-              </div>
-              {!isShowingAdapted && hasAthleteConfig && (
-                <button
-                  onClick={handleGenerateAdaptation}
-                  disabled={isGeneratingAdaptation}
-                  className="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-sm flex items-center gap-2"
-                >
-                  {isGeneratingAdaptation ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      Adaptar Treino
-                    </>
-                  )}
-                </button>
-              )}
-              {isShowingAdapted && (
-                <button
-                  onClick={() => setCurrentView('config')}
-                  className="px-4 py-2 rounded-lg border border-green-500/30 text-green-500 hover:bg-green-500/10 transition-colors text-sm"
-                >
-                  Alterar Nível
-                </button>
-              )}
+              </button>
             </div>
           </div>
         </div>
@@ -453,11 +439,6 @@ export function Dashboard() {
                       <Flame className="w-4 h-4 text-orange-500" />
                       <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
                     </div>
-                  )}
-                  {isShowingAdapted && (
-                    <span className="px-2 py-1 rounded bg-green-500/20 text-green-500 text-xs font-medium">
-                      ADAPTADO {currentMultiplier}%
-                    </span>
                   )}
                 </div>
               </div>
