@@ -35,6 +35,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const { athleteConfig, setCurrentView, triggerExternalResultsRefresh } = useOutlierStore();
   const [open, setOpen] = useState(false);
   const [resultType, setResultType] = useState<ResultType>('simulado');
+  const [raceCategory, setRaceCategory] = useState<'OPEN' | 'PRO'>('OPEN');
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [hours, setHours] = useState('');
@@ -197,6 +198,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           event_date: eventDate || null,
           time_in_seconds: totalSeconds,
           screenshot_url: screenshotUrl,
+          race_category: resultType === 'prova_oficial' ? raceCategory : null,
           completed: true,
           block_id: `${resultType}_${Date.now()}`,
           workout_id: `${resultType}_${Date.now()}`,
@@ -217,6 +219,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setHours('');
       setMinutes('');
       setSeconds('');
+      setRaceCategory('OPEN');
       setExtractionConfidence(null);
       removeScreenshot();
       setOpen(false);
@@ -285,6 +288,58 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
               );
             })}
           </div>
+
+          {/* Race Category Selection - Only for official races */}
+          {resultType === 'prova_oficial' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-2"
+            >
+              <Label className="text-sm">Categoria da Prova</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setRaceCategory('OPEN')}
+                  className={`
+                    p-3 rounded-xl border-2 text-center transition-all
+                    ${raceCategory === 'OPEN'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-border hover:border-muted-foreground/50'
+                    }
+                  `}
+                >
+                  <p className={`font-semibold ${raceCategory === 'OPEN' ? 'text-purple-500' : 'text-foreground'}`}>OPEN</p>
+                  <p className="text-xs text-muted-foreground">Categoria padrão</p>
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setRaceCategory('PRO')}
+                  className={`
+                    p-3 rounded-xl border-2 text-center transition-all
+                    ${raceCategory === 'PRO'
+                      ? 'border-amber-500 bg-amber-500/10'
+                      : 'border-border hover:border-muted-foreground/50'
+                    }
+                  `}
+                >
+                  <p className={`font-semibold ${raceCategory === 'PRO' ? 'text-amber-500' : 'text-foreground'}`}>PRO</p>
+                  <p className="text-xs text-muted-foreground">Cargas maiores</p>
+                </motion.button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {raceCategory === 'PRO' 
+                  ? 'Tempo PRO será normalizado (~5-6% mais difícil que OPEN)'
+                  : 'Tempo OPEN usado diretamente como referência'
+                }
+              </p>
+            </motion.div>
+          )}
 
           {/* Gender Warning for Official Competition */}
           {needsGenderForProva && (

@@ -89,16 +89,30 @@ export function StatusDisplay() {
           <div className="flex items-center gap-2 text-amber-500 text-sm font-medium mb-1">
             <Trophy className="w-4 h-4" />
             <span>Prova Oficial</span>
+            {statusData.validatingCompetition.race_category && (
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                statusData.validatingCompetition.race_category === 'PRO' 
+                  ? 'bg-amber-500/20 text-amber-400' 
+                  : 'bg-purple-500/20 text-purple-400'
+              }`}>
+                {statusData.validatingCompetition.race_category}
+              </span>
+            )}
           </div>
           <div className="text-xs text-muted-foreground space-y-1">
             {statusData.validatingCompetition.event_name && (
               <p>{statusData.validatingCompetition.event_name}</p>
             )}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formatOfficialTime(statusData.validatingCompetition.time_in_seconds)}
               </span>
+              {statusData.validatingCompetition.race_category === 'PRO' && (
+                <span className="text-amber-500/80">
+                  (≈ {formatOfficialTime(statusData.validatingCompetition.open_equivalent_seconds)} Open-eq)
+                </span>
+              )}
               {statusData.validatingCompetition.event_date && (
                 <span>
                   {new Date(statusData.validatingCompetition.event_date).toLocaleDateString('pt-BR')}
