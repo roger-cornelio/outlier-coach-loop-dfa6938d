@@ -1,4 +1,17 @@
-// Layout aprovado: Welcome Screen v1.0
+/**
+ * WELCOME SCREEN - LAYOUT OFICIAL ATIVO
+ * Versão: 1.0.0 (GLOBAL)
+ * Status: APROVADO E VIGENTE
+ * Data: 2025-12-18
+ * 
+ * Elementos fixos:
+ * - Logo OUTLIER (laranja)
+ * - Slogan "Be the Outlier"
+ * - 3 cards de coach (IRON, PULSE, SPARK)
+ * - CTA "PRONTO PARA PERFORMAR" (laranja com glow)
+ * 
+ * NÃO MODIFICAR SEM APROVAÇÃO EXPLÍCITA
+ */
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
