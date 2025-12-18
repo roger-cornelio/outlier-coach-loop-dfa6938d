@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Trophy, TrendingUp, TrendingDown, Minus, Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import type { WorkoutBlock, WorkoutResult, PerformanceBucket } from '@/types/outlier';
-import { getEffectiveTargetRange } from '@/utils/benchmarkVariants';
+import type { WorkoutBlock, WorkoutResult, PerformanceBucket, BenchmarkDirection } from '@/types/outlier';
+import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetricInfo } from '@/utils/benchmarkVariants';
 
 interface BenchmarkData {
   block: WorkoutBlock;
   results: WorkoutResult[];
-  bestTime: number | null;
-  lastTime: number | null;
+  bestValue: number | null;
+  lastValue: number | null;
   trend: 'improving' | 'declining' | 'stable' | 'new';
   improvement: number | null;
 }
@@ -26,27 +26,55 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-function getBucketForTime(time: number, block: WorkoutBlock, athleteLevel?: string): PerformanceBucket {
-  // Get effective target range based on athlete level using utility
+function getBucketForValue(
+  value: number, 
+  block: WorkoutBlock, 
+  athleteLevel?: string
+): PerformanceBucket {
   const effectiveRange = getEffectiveTargetRange(block, athleteLevel as any);
+  const direction = block.benchmarkDirection || 'lower_is_better';
   
   if (effectiveRange && effectiveRange.min > 0 && effectiveRange.max > 0) {
-    const mid = (effectiveRange.min + effectiveRange.max) / 2;
-    if (time <= effectiveRange.min) return 'ELITE';
-    if (time <= mid) return 'STRONG';
-    if (time <= effectiveRange.max) return 'OK';
-    return 'TOUGH';
+    return classifyBenchmarkPerformance(value, effectiveRange, direction);
   }
   
+  // Fallback for legacy time-based
   if (block.targetSeconds) {
-    const ratio = time / block.targetSeconds;
-    if (ratio <= 0.85) return 'ELITE';
-    if (ratio <= 0.95) return 'STRONG';
-    if (ratio <= 1.10) return 'OK';
-    return 'TOUGH';
+    const ratio = value / block.targetSeconds;
+    if (direction === 'lower_is_better') {
+      if (ratio <= 0.85) return 'ELITE';
+      if (ratio <= 0.95) return 'STRONG';
+      if (ratio <= 1.10) return 'OK';
+      return 'TOUGH';
+    } else {
+      if (ratio >= 1.15) return 'ELITE';
+      if (ratio >= 1.05) return 'STRONG';
+      if (ratio >= 0.90) return 'OK';
+      return 'TOUGH';
+    }
   }
   
   return 'OK';
+}
+
+/**
+ * Get the best value based on direction
+ */
+function getBestValue(values: number[], direction: BenchmarkDirection): number {
+  return direction === 'lower_is_better' 
+    ? Math.min(...values) 
+    : Math.max(...values);
+}
+
+/**
+ * Calculate improvement percentage based on direction
+ */
+function calculateImprovement(first: number, last: number, direction: BenchmarkDirection): number {
+  if (direction === 'lower_is_better') {
+    return ((first - last) / first) * 100; // Positive = improved (faster)
+  } else {
+    return ((last - first) / first) * 100; // Positive = improved (more reps/distance)
+  }
 }
 
 const bucketColors: Record<PerformanceBucket, string> = {
@@ -74,16 +102,17 @@ export function BenchmarkHistory() {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
           if (results.length > 0) {
-            const times = results.map(r => r.timeInSeconds!);
-            const bestTime = Math.min(...times);
-            const lastTime = times[times.length - 1];
-            const firstTime = times[0];
+            const values = results.map(r => r.timeInSeconds!);
+            const direction = block.benchmarkDirection || 'lower_is_better';
+            const bestValue = getBestValue(values, direction);
+            const lastValue = values[values.length - 1];
+            const firstValue = values[0];
 
             let trend: BenchmarkData['trend'] = 'new';
             let improvement: number | null = null;
 
             if (results.length > 1) {
-              improvement = ((firstTime - lastTime) / firstTime) * 100;
+              improvement = calculateImprovement(firstValue, lastValue, direction);
               if (improvement > 2) trend = 'improving';
               else if (improvement < -2) trend = 'declining';
               else trend = 'stable';
@@ -92,8 +121,8 @@ export function BenchmarkHistory() {
             benchmarks.push({
               block,
               results,
-              bestTime,
-              lastTime,
+              bestValue,
+              lastValue,
               trend,
               improvement,
             });
@@ -128,11 +157,13 @@ export function BenchmarkHistory() {
 
       {benchmarkData.map((data) => {
         const isExpanded = expandedBenchmark === data.block.id;
+        const direction = data.block.benchmarkDirection || 'lower_is_better';
+        const metricInfo = getBenchmarkMetricInfo(data.block.benchmarkMetric || 'time_seconds');
         const chartData = data.results.map(r => ({
           date: formatDate(r.date),
           time: r.timeInSeconds!,
-          timeFormatted: formatTime(r.timeInSeconds!),
-          bucket: getBucketForTime(r.timeInSeconds!, data.block, athleteConfig?.level),
+          timeFormatted: metricInfo.format(r.timeInSeconds!),
+          bucket: getBucketForValue(r.timeInSeconds!, data.block, athleteConfig?.level),
         }));
 
         return (
@@ -155,10 +186,10 @@ export function BenchmarkHistory() {
                   <h4 className="font-display text-sm">{data.block.title}</h4>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{data.results.length} registro(s)</span>
-                    {data.bestTime && (
+                    {data.bestValue && (
                       <>
                         <span>•</span>
-                        <span>PR: {formatTime(data.bestTime)}</span>
+                        <span>PR: {metricInfo.format(data.bestValue)}</span>
                       </>
                     )}
                   </div>
@@ -293,14 +324,14 @@ export function BenchmarkHistory() {
                         <Clock className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">Melhor</p>
                         <p className="font-display text-sm text-status-excellent">
-                          {data.bestTime ? formatTime(data.bestTime) : '-'}
+                          {data.bestValue ? metricInfo.format(data.bestValue) : '-'}
                         </p>
                       </div>
                       <div className="p-3 rounded-lg bg-secondary/50 text-center">
                         <Calendar className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">Último</p>
                         <p className="font-display text-sm">
-                          {data.lastTime ? formatTime(data.lastTime) : '-'}
+                          {data.lastValue ? metricInfo.format(data.lastValue) : '-'}
                         </p>
                       </div>
                       <div className="p-3 rounded-lg bg-secondary/50 text-center">
