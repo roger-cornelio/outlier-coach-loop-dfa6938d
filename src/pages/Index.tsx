@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useAuth } from '@/hooks/useAuth';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { AthleteConfig } from '@/components/AthleteConfig';
 import { Dashboard } from '@/components/Dashboard';
@@ -11,13 +14,48 @@ import { BenchmarksScreen } from '@/components/BenchmarksScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
 import { useLevelTheme } from '@/hooks/useLevelTheme';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  const { currentView } = useOutlierStore();
+  const { currentView, setCurrentView } = useOutlierStore();
+  const { user, loading: authLoading, canManageWorkouts, isAdmin } = useAuth();
+  const navigate = useNavigate();
   
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
+
+  // Protect admin views
+  useEffect(() => {
+    if (authLoading) return;
+    
+    // Redirect to auth if trying to access protected views without login
+    if (!user && (currentView === 'admin' || currentView === 'userManagement')) {
+      navigate('/auth');
+      return;
+    }
+    
+    // Redirect non-coaches away from admin
+    if (user && currentView === 'admin' && !canManageWorkouts) {
+      setCurrentView('dashboard');
+      return;
+    }
+    
+    // Redirect non-admins away from user management
+    if (user && currentView === 'userManagement' && !isAdmin) {
+      setCurrentView('dashboard');
+      return;
+    }
+  }, [user, authLoading, currentView, canManageWorkouts, isAdmin, navigate, setCurrentView]);
+
+  // Show loading while checking auth for protected views
+  if (authLoading && (currentView === 'admin' || currentView === 'userManagement')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {
@@ -34,10 +72,10 @@ const Index = () => {
       case 'feedback':
         return <PerformanceFeedback />;
       case 'admin':
-        return <AdminSpreadsheet />;
+        return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
       case 'users':
       case 'userManagement':
-        return <UserManagement />;
+        return isAdmin ? <UserManagement /> : <Dashboard />;
       case 'benchmarks':
         return <BenchmarksScreen />;
       default:
