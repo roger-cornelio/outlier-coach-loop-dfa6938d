@@ -23,6 +23,7 @@ export interface ExternalResult {
   event_name?: string;
   event_date?: string;
   screenshot_url?: string;
+  race_category?: 'OPEN' | 'PRO';
   created_at: string;
 }
 
@@ -65,7 +66,7 @@ export function useBenchmarkResults() {
       if (user?.id) {
         const { data, error } = await supabase
           .from('benchmark_results')
-          .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, created_at')
+          .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, race_category, created_at')
           .eq('user_id', user.id)
           .in('result_type', ['simulado', 'prova_oficial'])
           .order('created_at', { ascending: false });
@@ -124,7 +125,7 @@ export function useBenchmarkResults() {
 
     const { data, error } = await supabase
       .from('benchmark_results')
-      .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, created_at')
+      .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, race_category, created_at')
       .eq('user_id', user.id)
       .in('result_type', ['simulado', 'prova_oficial'])
       .order('created_at', { ascending: false });

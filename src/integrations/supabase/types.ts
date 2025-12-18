@@ -25,6 +25,7 @@ export type Database = {
           event_date: string | null
           event_name: string | null
           id: string
+          race_category: string | null
           result_type: string | null
           score: number | null
           screenshot_url: string | null
@@ -42,6 +43,7 @@ export type Database = {
           event_date?: string | null
           event_name?: string | null
           id?: string
+          race_category?: string | null
           result_type?: string | null
           score?: number | null
           screenshot_url?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           event_date?: string | null
           event_name?: string | null
           id?: string
+          race_category?: string | null
           result_type?: string | null
           score?: number | null
           screenshot_url?: string | null

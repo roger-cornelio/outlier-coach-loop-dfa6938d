@@ -10,36 +10,27 @@ export const STATUS_THRESHOLDS = {
   hyrox_pro: { min: 90, max: 100 },
 };
 
-// HYROX official competition time thresholds by gender (in seconds)
-// Based on ability to compete in category, not podium placement
-export const HYROX_TIME_THRESHOLDS = {
-  masculino: {
-    // >1h50 (>6600s) = Iniciante
-    // 1h35–1h50 (5700-6600s) = Intermediário
-    // 1h20–1h35 (4800-5700s) = Avançado
-    // 1h05–1h20 (3900-4800s) = Open
-    // <1h05 (<3900s) = Pro
-    hyrox_pro: { maxTime: 3900 },      // < 1h05
-    hyrox_open: { maxTime: 4800 },     // 1h05-1h20
-    avancado: { maxTime: 5700 },       // 1h20-1h35
-    intermediario: { maxTime: 6600 },  // 1h35-1h50
-    iniciante: { maxTime: Infinity },  // > 1h50
-  },
-  feminino: {
-    // >1h55 (>6900s) = Iniciante
-    // 1h40–1h55 (6000-6900s) = Intermediário
-    // 1h25–1h40 (5100-6000s) = Avançado
-    // 1h10–1h25 (4200-5100s) = Open
-    // <1h10 (<4200s) = Pro
-    hyrox_pro: { maxTime: 4200 },      // < 1h10
-    hyrox_open: { maxTime: 5100 },     // 1h10-1h25
-    avancado: { maxTime: 6000 },       // 1h25-1h40
-    intermediario: { maxTime: 6900 },  // 1h40-1h55
-    iniciante: { maxTime: Infinity },  // > 1h55
-  },
+export type AthleteGender = 'masculino' | 'feminino';
+export type RaceCategory = 'OPEN' | 'PRO';
+
+/**
+ * PRO-to-OPEN normalization factors:
+ * PRO category is harder (heavier sleds, etc), so we convert PRO times to "Open-equivalent"
+ * by multiplying by a factor < 1.
+ */
+const PRO_TO_OPEN_EQUIV_FACTOR: Record<AthleteGender, number> = {
+  masculino: 0.94,  // PRO male ~6% harder
+  feminino: 0.95,   // PRO female ~5% harder
 };
 
-export type AthleteGender = 'masculino' | 'feminino';
+/**
+ * Thresholds (in minutes) for classifying level by "Open-equivalent" time.
+ * These are for "ability to compete", not podium placement.
+ */
+const THRESHOLDS_OPEN_EQ_MIN: Record<AthleteGender, { pro: number; open: number; adv: number; inter: number }> = {
+  masculino: { pro: 80, open: 95, adv: 110, inter: 125 },   // <80 PRO; <95 OPEN; <110 ADV; <125 INTER; else INIC
+  feminino: { pro: 85, open: 100, adv: 115, inter: 130 },
+};
 
 // Official competition validity period (18 months in days)
 const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30;
@@ -66,6 +57,8 @@ export type StatusSource = 'prova_oficial' | 'estimado';
 export interface OfficialCompetitionResult {
   id: string;
   time_in_seconds: number;
+  open_equivalent_seconds: number;
+  race_category: RaceCategory;
   event_name?: string;
   event_date?: string;
   created_at: string;
@@ -102,14 +95,38 @@ export interface CalculatedStatus {
   consistencyScore: number;
 }
 
-// Get status from HYROX official competition time based on gender
-export function getStatusFromOfficialTime(timeInSeconds: number, gender: AthleteGender = 'masculino'): AthleteStatus {
-  const thresholds = HYROX_TIME_THRESHOLDS[gender];
+/**
+ * Convert finish time to "Open-equivalent" seconds
+ * - If race was OPEN: stays the same
+ * - If race was PRO: reduce time via factor (same time in PRO is worth more)
+ */
+export function toOpenEquivalentSeconds(
+  timeInSeconds: number,
+  gender: AthleteGender,
+  raceCategory: RaceCategory = 'OPEN'
+): number {
+  if (raceCategory === 'OPEN') return timeInSeconds;
+  const factor = PRO_TO_OPEN_EQUIV_FACTOR[gender];
+  return Math.round(timeInSeconds * factor);
+}
+
+/**
+ * Get status from HYROX official competition time using Open-equivalent normalization
+ * The race category only influences time normalization, not automatic level assignment
+ */
+export function getStatusFromOfficialTime(
+  timeInSeconds: number,
+  gender: AthleteGender = 'masculino',
+  raceCategory: RaceCategory = 'OPEN'
+): AthleteStatus {
+  const openEqSec = toOpenEquivalentSeconds(timeInSeconds, gender, raceCategory);
+  const openEqMin = openEqSec / 60;
+  const t = THRESHOLDS_OPEN_EQ_MIN[gender];
   
-  if (timeInSeconds <= thresholds.hyrox_pro.maxTime) return 'hyrox_pro';
-  if (timeInSeconds <= thresholds.hyrox_open.maxTime) return 'hyrox_open';
-  if (timeInSeconds <= thresholds.avancado.maxTime) return 'avancado';
-  if (timeInSeconds <= thresholds.intermediario.maxTime) return 'intermediario';
+  if (openEqMin < t.pro) return 'hyrox_pro';
+  if (openEqMin < t.open) return 'hyrox_open';
+  if (openEqMin < t.adv) return 'avancado';
+  if (openEqMin < t.inter) return 'intermediario';
   return 'iniciante';
 }
 
@@ -128,15 +145,21 @@ export function processOfficialCompetitions(
 ): { valid: OfficialCompetitionResult | null; historical: OfficialCompetitionResult[] } {
   const processed: OfficialCompetitionResult[] = officialResults
     .filter(r => r.time_in_seconds && r.time_in_seconds > 0)
-    .map(r => ({
-      id: r.id,
-      time_in_seconds: r.time_in_seconds!,
-      event_name: r.event_name,
-      event_date: r.event_date,
-      created_at: r.created_at,
-      isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
-      derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!, gender),
-    }))
+    .map(r => {
+      const raceCategory: RaceCategory = r.race_category || 'OPEN';
+      const openEqSec = toOpenEquivalentSeconds(r.time_in_seconds!, gender, raceCategory);
+      return {
+        id: r.id,
+        time_in_seconds: r.time_in_seconds!,
+        open_equivalent_seconds: openEqSec,
+        race_category: raceCategory,
+        event_name: r.event_name,
+        event_date: r.event_date,
+        created_at: r.created_at,
+        isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
+        derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory),
+      };
+    })
     .sort((a, b) => {
       // Sort by event_date or created_at, most recent first
       const dateA = a.event_date ? new Date(a.event_date) : new Date(a.created_at);
