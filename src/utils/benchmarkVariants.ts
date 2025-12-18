@@ -1,4 +1,4 @@
-import type { WorkoutBlock, AthleteLevel, LevelVariant, TargetTimeRange } from '@/types/outlier';
+import type { WorkoutBlock, AthleteLevel, LevelVariant, TargetTimeRange, BenchmarkDirection, BenchmarkMetric, PerformanceBucket } from '@/types/outlier';
 
 /**
  * Get the effective workout content for an athlete's level
@@ -115,6 +115,128 @@ export function formatPace(paceMinutes: number): string {
   const secs = Math.round((paceMinutes - mins) * 60);
   return `${mins}:${String(secs).padStart(2, '0')}/km`;
 }
+
+// =============================================================================
+// BENCHMARK SCORING SYSTEM
+// =============================================================================
+
+/**
+ * Get benchmark metric info (label and unit)
+ */
+export function getBenchmarkMetricInfo(metric: BenchmarkMetric): { label: string; unit: string; format: (value: number) => string } {
+  switch (metric) {
+    case 'time_seconds':
+      return {
+        label: 'Tempo',
+        unit: '',
+        format: (v) => {
+          const mins = Math.floor(v / 60);
+          const secs = v % 60;
+          return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+      };
+    case 'reps':
+      return { label: 'Reps', unit: 'reps', format: (v) => `${v} reps` };
+    case 'distance_meters':
+      return { label: 'Distância', unit: 'm', format: (v) => `${v}m` };
+    case 'load_kg':
+      return { label: 'Carga', unit: 'kg', format: (v) => `${v}kg` };
+    case 'rounds':
+      return { label: 'Rounds', unit: 'rounds', format: (v) => `${v} rounds` };
+    default:
+      return { label: 'Valor', unit: '', format: (v) => `${v}` };
+  }
+}
+
+/**
+ * Classify performance into bucket based on metric direction
+ * For lower_is_better: value <= min is ELITE, value > max is TOUGH
+ * For higher_is_better: value >= max is ELITE, value < min is TOUGH
+ */
+export function classifyBenchmarkPerformance(
+  value: number,
+  targetRange: TargetTimeRange,
+  direction: BenchmarkDirection = 'lower_is_better'
+): PerformanceBucket {
+  const { min, max } = targetRange;
+  const mid = (min + max) / 2;
+
+  if (direction === 'lower_is_better') {
+    // Time-based: lower is better
+    if (value <= min) return 'ELITE';
+    if (value <= mid) return 'STRONG';
+    if (value <= max) return 'OK';
+    return 'TOUGH';
+  } else {
+    // Reps/distance/load: higher is better
+    if (value >= max) return 'ELITE';
+    if (value >= mid) return 'STRONG';
+    if (value >= min) return 'OK';
+    return 'TOUGH';
+  }
+}
+
+/**
+ * Calculate performance score (0-100) based on result and targets
+ */
+export function calculateBenchmarkScore(
+  value: number,
+  targetRange: TargetTimeRange,
+  direction: BenchmarkDirection = 'lower_is_better',
+  weight: number = 1.0
+): number {
+  const { min, max } = targetRange;
+  
+  let score: number;
+  
+  if (direction === 'lower_is_better') {
+    // Score = 100 when value <= min (ELITE), 0 when value >= 2*max
+    if (value <= min) {
+      score = 100;
+    } else if (value >= max * 2) {
+      score = 0;
+    } else {
+      // Linear interpolation
+      score = 100 - ((value - min) / (max * 2 - min)) * 100;
+    }
+  } else {
+    // Score = 100 when value >= max (ELITE), 0 when value <= 0
+    if (value >= max) {
+      score = 100;
+    } else if (value <= 0) {
+      score = 0;
+    } else {
+      score = (value / max) * 100;
+    }
+  }
+  
+  return Math.round(Math.max(0, Math.min(100, score)) * weight);
+}
+
+/**
+ * Get default direction based on metric type
+ */
+export function getDefaultDirection(metric: BenchmarkMetric): BenchmarkDirection {
+  switch (metric) {
+    case 'time_seconds':
+      return 'lower_is_better';
+    case 'reps':
+    case 'distance_meters':
+    case 'load_kg':
+    case 'rounds':
+      return 'higher_is_better';
+    default:
+      return 'lower_is_better';
+  }
+}
+
+/**
+ * Format benchmark result based on metric
+ */
+export function formatBenchmarkResult(value: number, metric: BenchmarkMetric): string {
+  return getBenchmarkMetricInfo(metric).format(value);
+}
+
 
 // Example benchmark templates
 export const BENCHMARK_EXAMPLES = {

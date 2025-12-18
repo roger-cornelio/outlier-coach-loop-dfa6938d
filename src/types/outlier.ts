@@ -25,6 +25,10 @@ export interface AthleteConfig {
 
 export type WodType = 'engine' | 'strength' | 'skill' | 'mixed' | 'hyrox' | 'benchmark';
 
+// Benchmark metric types
+export type BenchmarkMetric = 'time_seconds' | 'reps' | 'distance_meters' | 'load_kg' | 'rounds';
+export type BenchmarkDirection = 'lower_is_better' | 'higher_is_better';
+
 export interface TargetTimeRange {
   min: number; // seconds
   max: number; // seconds
@@ -71,6 +75,11 @@ export interface WorkoutBlock {
   // Intensity guidance
   pse?: number; // Perceived Subjective Exertion (1-10 scale)
   referencePaceMinutes?: number; // Reference pace per km/500m
+  // Benchmark configuration
+  benchmarkId?: string; // Unique identifier for benchmark tracking
+  benchmarkMetric?: BenchmarkMetric; // What metric is measured
+  benchmarkDirection?: BenchmarkDirection; // lower_is_better or higher_is_better
+  benchmarkWeight?: number; // Weight for composite scoring (default 1.0)
   referenceTime?: {
     iniciante: number;
     intermediario: number;
