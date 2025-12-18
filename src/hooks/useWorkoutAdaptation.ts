@@ -119,14 +119,20 @@ export function validateAthleteParams(params: Partial<MandatoryAthleteParams>): 
 
 export const ENGINE_INFO = {
   name: 'OUTLIER_MANDATORY_ADAPTATION',
-  version: '1.1.0',
-  description: 'Planilha do coach = PRO (100%). Sistema escala apenas para BAIXO.',
+  version: '1.2.0',
+  description: 'Planilha do coach = PRO (100%). Sistema escala apenas para BAIXO. Multiplicador final NUNCA excede 1.0.',
+  criticalRules: {
+    tetoMaximo: 'Planilha do coach é o TETO MÁXIMO (100%)',
+    semAumento: 'Sistema NUNCA aumenta volume acima da planilha',
+    proIdentico: 'PRO + Masculino + tempo suficiente = conteúdo IDÊNTICO à planilha',
+    clampFinal: 'Todos os multiplicadores são limitados a max 1.0',
+  },
   multipliers: {
     level: {
       iniciante: 0.65,      // 60-65%
       intermediario: 0.80,  // 75-80%
       avancado: 0.90,       // 90%
-      pro: 1.00,            // 100% (TETO MÁXIMO)
+      pro: 1.00,            // 100% (TETO MÁXIMO - nunca mais)
     },
     gender: {
       masculino: 1.00,
@@ -135,14 +141,16 @@ export const ENGINE_INFO = {
   },
   calculationOrder: [
     '1. Tipo de bloco',
-    '2. Nível do atleta',
-    '3. Gênero',
-    '4. Tempo disponível',
-    '5. Equipamentos',
+    '2. Nível do atleta (clamp max 1.0)',
+    '3. Gênero (clamp max 1.0)',
+    '4. Tempo disponível (clamp max 1.0)',
+    '5. Multiplicador final = min(1.0, nivel × genero × tempo)',
+    '6. Equipamentos (substituição)',
   ],
   rules: {
-    conditioning: 'volume_final = volume_base × nivel × gênero × tempo',
-    forca: 'mantém %1RM, ajusta séries por gênero, reps iguais',
-    corrida: 'ajusta distância por gênero e tempo, mantém pace',
+    conditioning: 'volume_final = min(1.0, nivel × genero × tempo) × volume_base',
+    forca: 'mantém %1RM, ajusta séries por min(1.0, genero), reps iguais',
+    corrida: 'distância_final = min(1.0, genero × tempo) × distância_base',
+    proFullVolume: 'PRO + Masculino + tempo ok → conteúdo original sem alteração',
   },
 };
