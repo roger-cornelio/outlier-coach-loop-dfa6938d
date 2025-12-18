@@ -5,7 +5,7 @@ import { Trophy, ChevronDown, Loader2 } from 'lucide-react';
 import type { PerformanceBucket } from '@/types/outlier';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
-import { ProgressRuler } from './ProgressRuler';
+import { LevelProgress } from './LevelProgress';
 
 export function EvolutionMilestones() {
   const { athleteConfig } = useOutlierStore();
@@ -27,7 +27,7 @@ export function EvolutionMilestones() {
           <div className="p-2 rounded-lg bg-primary/20">
             <Trophy className="w-5 h-5 text-primary" />
           </div>
-          <h3 className="font-display text-xl">Progresso</h3>
+          <h3 className="font-display text-xl">Sua Jornada</h3>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -62,11 +62,11 @@ export function EvolutionMilestones() {
         <div className="p-2 rounded-lg bg-primary/20">
           <Trophy className="w-5 h-5 text-primary" />
         </div>
-        <h3 className="font-display text-xl">Progresso</h3>
+        <h3 className="font-display text-xl">Sua Jornada</h3>
       </div>
 
-      {/* Main Progress - Always visible */}
-      <ProgressRuler />
+      {/* Main Level Progress - Gamified View */}
+      <LevelProgress />
 
       {/* Details Toggle */}
       {totalBenchmarks > 0 && (
@@ -75,7 +75,7 @@ export function EvolutionMilestones() {
             onClick={() => setShowDetails(!showDetails)}
             className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <span>Detalhes</span>
+            <span>Ver estatísticas detalhadas</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
           </button>
 

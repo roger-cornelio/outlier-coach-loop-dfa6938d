@@ -31,7 +31,8 @@ const LEVEL_TIME_MULTIPLIERS: Record<AthleteLevel, number> = {
   iniciante: 1.3,
   intermediario: 1.0,
   avancado: 0.85,
-  hyrox_pro: 0.75,
+  hyrox_open: 0.78,
+  hyrox_pro: 0.72,
 };
 
 /**

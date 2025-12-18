@@ -1,7 +1,7 @@
 export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 
 // Status is now calculated from benchmarks, not user-defined
-export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_pro';
+export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_open' | 'hyrox_pro';
 
 // User preference for workout difficulty (offset applied to calculated status)
 export type TrainingDifficulty = 'leve' | 'padrao' | 'forte';
@@ -152,6 +152,7 @@ export const LEVEL_NAMES: Record<AthleteStatus, string> = {
   iniciante: 'Iniciante',
   intermediario: 'Intermediário',
   avancado: 'Avançado',
+  hyrox_open: 'HYROX OPEN',
   hyrox_pro: 'HYROX PRO',
 };
 
@@ -161,4 +162,4 @@ export const DIFFICULTY_NAMES: Record<TrainingDifficulty, string> = {
   forte: 'Forte',
 };
 
-export const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+export const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];

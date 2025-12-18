@@ -3,10 +3,11 @@ import type { BenchmarkResult } from '@/hooks/useBenchmarkResults';
 
 // Status score thresholds (0-100 scale)
 export const STATUS_THRESHOLDS = {
-  iniciante: { min: 0, max: 40 },
-  intermediario: { min: 40, max: 65 },
-  avancado: { min: 65, max: 85 },
-  hyrox_pro: { min: 85, max: 100 },
+  iniciante: { min: 0, max: 35 },
+  intermediario: { min: 35, max: 55 },
+  avancado: { min: 55, max: 75 },
+  hyrox_open: { min: 75, max: 90 },
+  hyrox_pro: { min: 90, max: 100 },
 };
 
 // Hysteresis margin to prevent oscillation (need to score X points above threshold to promote)
@@ -91,6 +92,7 @@ function getScoreFromBucket(bucket: string | null | undefined): number {
 // Get status from raw score (without hysteresis)
 function getStatusFromScore(score: number): AthleteStatus {
   if (score >= STATUS_THRESHOLDS.hyrox_pro.min) return 'hyrox_pro';
+  if (score >= STATUS_THRESHOLDS.hyrox_open.min) return 'hyrox_open';
   if (score >= STATUS_THRESHOLDS.avancado.min) return 'avancado';
   if (score >= STATUS_THRESHOLDS.intermediario.min) return 'intermediario';
   return 'iniciante';
@@ -98,14 +100,14 @@ function getStatusFromScore(score: number): AthleteStatus {
 
 // Get next status in progression
 function getNextStatus(current: AthleteStatus): AthleteStatus | null {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
   const index = order.indexOf(current);
   return index < order.length - 1 ? order[index + 1] : null;
 }
 
 // Get previous status
 function getPrevStatus(current: AthleteStatus): AthleteStatus | null {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
   const index = order.indexOf(current);
   return index > 0 ? order[index - 1] : null;
 }
@@ -263,7 +265,7 @@ export function getEffectiveLevel(
   status: AthleteStatus,
   difficulty: TrainingDifficulty
 ): AthleteStatus {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
   const currentIndex = order.indexOf(status);
   
   let offset = 0;
