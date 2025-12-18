@@ -674,10 +674,15 @@ export function AdminSpreadsheet() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
-                <p className="text-sm text-muted-foreground">
-                  {user?.email || 'Coach'}
-                </p>
+                <h1 className="font-display text-2xl font-bold tracking-wide">CENTRAL DO COACH</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm text-muted-foreground">
+                    Coach Roger Cornélio
+                  </p>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                    HYROX | Cross | Endurance
+                  </span>
+                </div>
               </div>
             </div>
             <button
