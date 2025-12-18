@@ -86,9 +86,9 @@ export function validateAthleteParams(params: Partial<MandatoryAthleteParams>): 
   const errors: string[] = [];
 
   if (!params.level) {
-    errors.push('Nível do atleta é obrigatório');
-  } else if (!['iniciante', 'intermediario', 'avancado', 'pro'].includes(params.level)) {
-    errors.push('Nível inválido');
+    errors.push('Nível do treino é obrigatório');
+  } else if (!['base', 'progressivo', 'performance'].includes(params.level)) {
+    errors.push('Nível inválido (use: base, progressivo, performance)');
   }
 
   if (!params.gender) {
@@ -119,20 +119,24 @@ export function validateAthleteParams(params: Partial<MandatoryAthleteParams>): 
 
 export const ENGINE_INFO = {
   name: 'OUTLIER_MANDATORY_ADAPTATION',
-  version: '1.2.0',
-  description: 'Planilha do coach = PRO (100%). Sistema escala apenas para BAIXO. Multiplicador final NUNCA excede 1.0.',
+  version: '2.0.0',
+  description: 'Planilha do coach = PERFORMANCE (100%). Sistema escala apenas para BAIXO.',
+  uiMapping: {
+    'BASE → 65%': 'Redução significativa de volume para iniciantes',
+    'PROGRESSIVO → 80%': 'Redução moderada para nível intermediário',
+    'PERFORMANCE → 100%': 'Volume integral da planilha (teto máximo)',
+  },
   criticalRules: {
     tetoMaximo: 'Planilha do coach é o TETO MÁXIMO (100%)',
     semAumento: 'Sistema NUNCA aumenta volume acima da planilha',
-    proIdentico: 'PRO + Masculino + tempo suficiente = conteúdo IDÊNTICO à planilha',
+    performanceIdentico: 'PERFORMANCE + Masculino + tempo suficiente = conteúdo IDÊNTICO à planilha',
     clampFinal: 'Todos os multiplicadores são limitados a max 1.0',
   },
   multipliers: {
     level: {
-      iniciante: 0.65,      // 60-65%
-      intermediario: 0.80,  // 75-80%
-      avancado: 0.90,       // 90%
-      pro: 1.00,            // 100% (TETO MÁXIMO - nunca mais)
+      base: 0.65,         // 65% - UI: BASE
+      progressivo: 0.80,  // 80% - UI: PROGRESSIVO
+      performance: 1.00,  // 100% - UI: PERFORMANCE (TETO)
     },
     gender: {
       masculino: 1.00,
@@ -141,9 +145,9 @@ export const ENGINE_INFO = {
   },
   calculationOrder: [
     '1. Tipo de bloco',
-    '2. Nível do atleta (clamp max 1.0)',
-    '3. Gênero (clamp max 1.0)',
-    '4. Tempo disponível (clamp max 1.0)',
+    '2. Nível do treino (base/progressivo/performance)',
+    '3. Gênero (masculino/feminino)',
+    '4. Tempo disponível',
     '5. Multiplicador final = min(1.0, nivel × genero × tempo)',
     '6. Equipamentos (substituição)',
   ],
@@ -151,6 +155,6 @@ export const ENGINE_INFO = {
     conditioning: 'volume_final = min(1.0, nivel × genero × tempo) × volume_base',
     forca: 'mantém %1RM, ajusta séries por min(1.0, genero), reps iguais',
     corrida: 'distância_final = min(1.0, genero × tempo) × distância_base',
-    proFullVolume: 'PRO + Masculino + tempo ok → conteúdo original sem alteração',
+    performanceFullVolume: 'PERFORMANCE + Masculino + tempo ok → conteúdo original sem alteração',
   },
 };

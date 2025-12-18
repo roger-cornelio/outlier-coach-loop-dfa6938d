@@ -15,12 +15,19 @@ const corsHeaders = {
 // 4. Ordem de cálculo: tipo → nível → gênero → tempo → equipamentos
 // ============================================
 
-type AthleteLevel = 'iniciante' | 'intermediario' | 'avancado' | 'pro';
+// ============================================
+// TIPOS DO MOTOR
+// ============================================
+// TrainingLevel da UI mapeia DIRETAMENTE para multiplicadores
+// BASE → 65% | PROGRESSIVO → 80% | PERFORMANCE → 100%
+// ============================================
+
+type TrainingLevel = 'base' | 'progressivo' | 'performance';
 type Gender = 'masculino' | 'feminino';
 type BlockType = 'conditioning' | 'forca' | 'corrida' | 'aquecimento' | 'core' | 'especifico' | 'notas';
 
 interface MandatoryAthleteParams {
-  level: AthleteLevel;
+  level: TrainingLevel; // Direto da UI: base, progressivo, performance
   gender: Gender;
   availableTimeMinutes: number;
   availableEquipment: string[];
@@ -45,15 +52,19 @@ interface RequestBody {
 // ============================================
 // MULTIPLICADORES OBRIGATÓRIOS (NÃO ALTERAR)
 // ============================================
-// A planilha do coach representa o nível PRO (100%)
+// A planilha do coach representa o nível PERFORMANCE (100%)
 // Nenhum nível pode gerar volume ACIMA da planilha base
 // O sistema apenas escala para BAIXO a partir da base
 // ============================================
-const LEVEL_MULTIPLIERS: Record<AthleteLevel, number> = {
-  iniciante: 0.65,      // 60-65% da planilha base
-  intermediario: 0.80,  // 75-80% da planilha base
-  avancado: 0.90,       // 90% da planilha base
-  pro: 1.00,            // 100% da planilha base (TETO MÁXIMO)
+// MAPEAMENTO DIRETO DA UI:
+// - BASE → 65% (redução significativa de volume)
+// - PROGRESSIVO → 80% (redução moderada de volume)
+// - PERFORMANCE → 100% (volume integral da planilha)
+// ============================================
+const LEVEL_MULTIPLIERS: Record<TrainingLevel, number> = {
+  base: 0.65,         // 65% da planilha (redução VISÍVEL)
+  progressivo: 0.80,  // 80% da planilha (redução moderada)
+  performance: 1.00,  // 100% da planilha (TETO MÁXIMO)
 };
 
 const GENDER_MULTIPLIERS: Record<Gender, number> = {
@@ -206,8 +217,8 @@ function substituteEquipment(content: string, unavailable: string[]): { content:
 function validateParams(params: MandatoryAthleteParams): string[] {
   const errors: string[] = [];
   
-  if (!params.level || !['iniciante', 'intermediario', 'avancado', 'pro'].includes(params.level)) {
-    errors.push('Nível do atleta é obrigatório (iniciante, intermediario, avancado, pro)');
+  if (!params.level || !['base', 'progressivo', 'performance'].includes(params.level)) {
+    errors.push('Nível do treino é obrigatório (base, progressivo, performance)');
   }
   
   if (!params.gender || !['masculino', 'feminino'].includes(params.gender)) {
@@ -314,18 +325,18 @@ serve(async (req) => {
     const adaptedBlocks = [];
     let totalEquipmentSubstitutions = 0;
 
-    // Verificação especial: PRO + Masculino + tempo suficiente = conteúdo idêntico
-    const isPROWithFullVolume = athleteParams.level === 'pro' && 
+    // Verificação especial: PERFORMANCE + Masculino + tempo suficiente = conteúdo idêntico
+    const isPerformanceWithFullVolume = athleteParams.level === 'performance' && 
                                  athleteParams.gender === 'masculino' && 
                                  !timeWasLimiting;
 
     for (const block of blocks) {
       let adaptedContent: string;
       
-      // REGRA ESPECIAL: PRO + Masculino + tempo suficiente = planilha original
-      if (isPROWithFullVolume) {
+      // REGRA ESPECIAL: PERFORMANCE + Masculino + tempo suficiente = planilha original
+      if (isPerformanceWithFullVolume) {
         adaptedContent = block.content; // EXATAMENTE igual à planilha do coach
-        console.log(`[${block.type}] PRO + Masculino: usando conteúdo ORIGINAL`);
+        console.log(`[${block.type}] PERFORMANCE + Masculino: usando conteúdo ORIGINAL`);
       } else {
         // ORDEM: tipo → nível → gênero → tempo
         switch (block.type) {
@@ -380,15 +391,15 @@ serve(async (req) => {
           timeAdjustment,
           finalVolumeMult,
           equipmentSubstitutions: substitutions,
-          isPROWithFullVolume,
+          isPerformanceWithFullVolume,
         },
       });
     }
 
     const totalAdaptedMinutes = adaptedBlocks.reduce((sum, b) => sum + (b.estimatedMinutes || 0), 0);
 
-    // VALIDAÇÃO FINAL: PRO + Masculino + tempo suficiente deve ter conteúdo idêntico
-    if (isPROWithFullVolume) {
+    // VALIDAÇÃO FINAL: PERFORMANCE + Masculino + tempo suficiente deve ter conteúdo idêntico
+    if (isPerformanceWithFullVolume) {
       const contentMatches = adaptedBlocks.every((block, i) => {
         // Comparar sem substituição de equipamentos
         const originalContent = blocks[i].content;
@@ -399,12 +410,12 @@ serve(async (req) => {
         }
         return true; // Com substituições, ok ser diferente
       });
-      console.log(`VALIDAÇÃO PRO: Conteúdo idêntico à planilha = ${contentMatches}`);
+      console.log(`VALIDAÇÃO PERFORMANCE: Conteúdo idêntico à planilha = ${contentMatches}`);
     }
 
     console.log("=== ADAPTAÇÃO COMPLETA ===");
     console.log(`Original: ${totalOriginalMinutes}min → Adaptado: ${totalAdaptedMinutes}min`);
-    console.log(`PRO com volume total: ${isPROWithFullVolume}`);
+    console.log(`PERFORMANCE com volume total: ${isPerformanceWithFullVolume}`);
     console.log(`Substituições de equipamento: ${totalEquipmentSubstitutions}`);
 
     return new Response(JSON.stringify({
