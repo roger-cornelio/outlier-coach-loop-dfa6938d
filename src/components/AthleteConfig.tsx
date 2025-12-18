@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { type TrainingLevel, type SessionDuration, EQUIPMENT_LIST } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
+import { type TrainingLevel, type SessionDuration, OPTIONAL_EQUIPMENT_LIST } from '@/types/outlier';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Settings2, ChevronDown } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 
@@ -53,7 +53,9 @@ export function AthleteConfig() {
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
-  const [selectedEquipment, setSelectedEquipment] = useState<string[]>(athleteConfig?.equipment || []);
+  // Equipamentos opcionais que o atleta NÃO possui (por padrão assume que tem todos)
+  const [unavailableEquipment, setUnavailableEquipment] = useState<string[]>(athleteConfig?.unavailableEquipment || []);
+  const [showEquipmentSettings, setShowEquipmentSettings] = useState(false);
 
   const handleSubmit = () => {
     if (!coachStyle) {
@@ -61,11 +63,15 @@ export function AthleteConfig() {
       return;
     }
 
-    // Salvar configuração
+    // Salvar configuração - assume todos equipamentos disponíveis por padrão
+    const allEquipmentIds = OPTIONAL_EQUIPMENT_LIST.map(e => e.id);
+    const availableEquipment = allEquipmentIds.filter(id => !unavailableEquipment.includes(id));
+    
     const newConfig = {
       trainingLevel,
       sessionDuration: duration,
-      equipment: selectedEquipment,
+      equipment: availableEquipment, // Equipamentos que o atleta TEM
+      unavailableEquipment, // Equipamentos que o atleta NÃO tem
       coachStyle,
       altura: altura ? parseInt(altura) : undefined,
       peso: peso ? parseFloat(peso) : undefined,
@@ -87,11 +93,12 @@ export function AthleteConfig() {
     setCurrentView('dashboard');
   };
 
-  const toggleEquipment = (equipId: string) => {
-    setSelectedEquipment(prev => 
+  // Toggle de equipamento indisponível (marca/desmarca como NÃO disponível)
+  const toggleUnavailableEquipment = (equipId: string) => {
+    setUnavailableEquipment(prev => 
       prev.includes(equipId) 
-        ? prev.filter(id => id !== equipId)
-        : [...prev, equipId]
+        ? prev.filter(id => id !== equipId) // Agora tem o equipamento
+        : [...prev, equipId] // Não tem o equipamento
     );
   };
 
@@ -273,37 +280,61 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Equipment Selection */}
+      {/* Optional Equipment Settings (collapsed by default) */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="mb-12"
       >
-        <h2 className="font-display text-2xl mb-2">EQUIPAMENTOS DISPONÍVEIS</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Marque os equipamentos que você tem acesso hoje.
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {EQUIPMENT_LIST.map((equip) => (
-            <button
-              key={equip.id}
-              onClick={() => toggleEquipment(equip.id)}
-              className={`
-                p-3 rounded-lg border transition-all duration-200 text-left
-                ${selectedEquipment.includes(equip.id)
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border bg-card hover:border-muted-foreground/50 opacity-60'
-                }
-              `}
+        <button
+          onClick={() => setShowEquipmentSettings(!showEquipmentSettings)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <Settings2 className="w-4 h-4" />
+          <span className="text-sm">Ajustes de equipamento (opcional)</span>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showEquipmentSettings ? 'rotate-180' : ''}`} />
+        </button>
+        
+        <AnimatePresence>
+          {showEquipmentSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{equip.emoji}</span>
-                <span className="text-sm">{equip.name}</span>
+              <p className="text-xs text-muted-foreground mt-4 mb-3">
+                Por padrão, assumimos que você tem acesso a todos os equipamentos HYROX. 
+                Desmarque apenas os que você não possui.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {OPTIONAL_EQUIPMENT_LIST.map((equip) => {
+                  const isAvailable = !unavailableEquipment.includes(equip.id);
+                  return (
+                    <button
+                      key={equip.id}
+                      onClick={() => toggleUnavailableEquipment(equip.id)}
+                      className={`
+                        p-3 rounded-lg border transition-all duration-200 text-left
+                        ${isAvailable
+                          ? 'border-primary/50 bg-primary/5 text-foreground'
+                          : 'border-border bg-card text-muted-foreground opacity-50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{equip.emoji}</span>
+                        <span className="text-sm">{equip.name}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </button>
-          ))}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.section>
 
       {/* Actions */}

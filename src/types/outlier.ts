@@ -26,7 +26,8 @@ export interface AthleteConfig {
   // Legacy alias for compatibility
   trainingDifficulty?: TrainingLevel;
   sessionDuration: SessionDuration;
-  equipment: string[];
+  equipment: string[]; // Equipamentos disponíveis
+  unavailableEquipment?: string[]; // Equipamentos que o atleta NÃO possui
   coachStyle: CoachStyle;
   altura?: number;
   peso?: number;
@@ -126,6 +127,15 @@ export interface PerformanceFeedback {
   suggestions: string[];
 }
 
+// Equipamentos opcionais (ajustes secundários) - apenas os 4 específicos
+export const OPTIONAL_EQUIPMENT_LIST: Equipment[] = [
+  { id: 'skierg', name: 'SkiErg', emoji: '⛷️' },
+  { id: 'rower', name: 'Remo Ergômetro', emoji: '🚣' },
+  { id: 'bike', name: 'Assault Bike', emoji: '🚴' },
+  { id: 'sled', name: 'Sled (Push/Pull)', emoji: '🛷' },
+];
+
+// Legacy: lista completa de equipamentos (para compatibilidade)
 export const EQUIPMENT_LIST: Equipment[] = [
   { id: 'rower', name: 'Remo Ergômetro', emoji: '🚣' },
   { id: 'skierg', name: 'SkiErg', emoji: '⛷️' },
