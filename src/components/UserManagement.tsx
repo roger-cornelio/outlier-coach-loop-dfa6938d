@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell, Link2, Unlink, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserWithRole {
@@ -13,16 +13,27 @@ interface UserWithRole {
   role: 'admin' | 'coach' | 'user';
 }
 
+interface CoachAthlete {
+  id: string;
+  coach_id: string;
+  athlete_id: string;
+  created_at: string;
+}
+
 export function UserManagement() {
   const { setCurrentView } = useOutlierStore();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [coachAthletes, setCoachAthletes] = useState<CoachAthlete[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [expandedCoach, setExpandedCoach] = useState<string | null>(null);
+  const [linkingAthlete, setLinkingAthlete] = useState<{ coachId: string; athleteId: string } | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+      fetchCoachAthletes();
     }
   }, [isAdmin]);
 
@@ -72,6 +83,20 @@ export function UserManagement() {
     }
   };
 
+  const fetchCoachAthletes = async () => {
+    try {
+      // Note: coach_athletes table may not be in generated types yet
+      const { data, error } = await (supabase as any)
+        .from('coach_athletes')
+        .select('*');
+
+      if (error) throw error;
+      setCoachAthletes((data || []) as CoachAthlete[]);
+    } catch (err) {
+      console.error('Error fetching coach athletes:', err);
+    }
+  };
+
   const toggleCoachRole = async (userId: string, currentRole: 'admin' | 'coach' | 'user') => {
     if (userId === user?.id) {
       toast.error('Você não pode alterar seu próprio acesso');
@@ -94,6 +119,13 @@ export function UserManagement() {
           .filter('role', 'eq', 'coach');
 
         if (error) throw error;
+        
+        // Also remove all athlete assignments for this coach
+        await (supabase as any)
+          .from('coach_athletes')
+          .delete()
+          .eq('coach_id', userId);
+          
         toast.success('Acesso de coach removido');
       } else {
         // Add coach role
@@ -105,14 +137,71 @@ export function UserManagement() {
         toast.success('Usuário autorizado como coach');
       }
 
-      // Refresh list
+      // Refresh lists
       await fetchUsers();
+      await fetchCoachAthletes();
     } catch (err) {
       console.error('Error updating role:', err);
       toast.error('Erro ao atualizar permissão');
     } finally {
       setUpdating(null);
     }
+  };
+
+  const assignAthleteToCoach = async (coachId: string, athleteId: string) => {
+    setLinkingAthlete({ coachId, athleteId });
+    try {
+      const { error } = await (supabase as any)
+        .from('coach_athletes')
+        .insert({ coach_id: coachId, athlete_id: athleteId });
+
+      if (error) throw error;
+      toast.success('Atleta vinculado ao coach');
+      await fetchCoachAthletes();
+    } catch (err: any) {
+      console.error('Error assigning athlete:', err);
+      if (err.code === '23505') {
+        toast.error('Este atleta já está vinculado a este coach');
+      } else {
+        toast.error('Erro ao vincular atleta');
+      }
+    } finally {
+      setLinkingAthlete(null);
+    }
+  };
+
+  const removeAthleteFromCoach = async (coachId: string, athleteId: string) => {
+    setLinkingAthlete({ coachId, athleteId });
+    try {
+      const { error } = await (supabase as any)
+        .from('coach_athletes')
+        .delete()
+        .eq('coach_id', coachId)
+        .eq('athlete_id', athleteId);
+
+      if (error) throw error;
+      toast.success('Atleta desvinculado do coach');
+      await fetchCoachAthletes();
+    } catch (err) {
+      console.error('Error removing athlete:', err);
+      toast.error('Erro ao desvincular atleta');
+    } finally {
+      setLinkingAthlete(null);
+    }
+  };
+
+  const getCoachAthletes = (coachId: string) => {
+    const athleteIds = coachAthletes
+      .filter(ca => ca.coach_id === coachId)
+      .map(ca => ca.athlete_id);
+    return users.filter(u => athleteIds.includes(u.id));
+  };
+
+  const getUnassignedAthletes = (coachId: string) => {
+    const assignedIds = coachAthletes
+      .filter(ca => ca.coach_id === coachId)
+      .map(ca => ca.athlete_id);
+    return users.filter(u => u.role === 'user' && !assignedIds.includes(u.id));
   };
 
   if (authLoading) {
@@ -178,6 +267,9 @@ export function UserManagement() {
     }
   };
 
+  const coaches = users.filter(u => u.role === 'coach');
+  const regularUsers = users.filter(u => u.role === 'user');
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -191,8 +283,8 @@ export function UserManagement() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-display text-2xl">GERENCIAR COACHES</h1>
-              <p className="text-sm text-muted-foreground">Autorizar ou remover coaches</p>
+              <h1 className="font-display text-2xl">GERENCIAR PERMISSÕES</h1>
+              <p className="text-sm text-muted-foreground">Coaches, atletas e vínculos</p>
             </div>
           </div>
         </div>
@@ -218,17 +310,17 @@ export function UserManagement() {
             <div className="flex items-center gap-3">
               <Dumbbell className="w-6 h-6 text-green-500" />
               <div>
-                <p className="text-2xl font-display">{users.filter(u => u.role === 'coach').length}</p>
+                <p className="text-2xl font-display">{coaches.length}</p>
                 <p className="text-sm text-muted-foreground">Coaches</p>
               </div>
             </div>
           </div>
           <div className="card-elevated p-4 rounded-xl">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-6 h-6 text-primary" />
+              <Link2 className="w-6 h-6 text-blue-500" />
               <div>
-                <p className="text-2xl font-display">{users.filter(u => u.role === 'admin').length}</p>
-                <p className="text-sm text-muted-foreground">Admin</p>
+                <p className="text-2xl font-display">{coachAthletes.length}</p>
+                <p className="text-sm text-muted-foreground">Vínculos</p>
               </div>
             </div>
           </div>
@@ -242,20 +334,160 @@ export function UserManagement() {
           className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20"
         >
           <p className="text-sm text-muted-foreground">
-            <strong className="text-primary">Coaches</strong> podem inserir planilhas de treino. 
-            Apenas você (<strong>Admin</strong>) pode autorizar novos coaches.
+            <strong className="text-primary">Coaches</strong> podem inserir planilhas e ver dados dos atletas vinculados a eles.
+            <strong className="text-primary"> Admin</strong> vê todos os dados.
+            <strong className="text-foreground"> Usuários</strong> veem apenas seus próprios dados.
           </p>
         </motion.div>
 
-        {/* User List */}
+        {/* Coaches Section */}
+        {coaches.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <h2 className="font-display text-xl mb-4 flex items-center gap-2">
+              <Dumbbell className="w-5 h-5 text-green-500" />
+              COACHES E ATLETAS VINCULADOS
+            </h2>
+
+            <div className="space-y-3">
+              {coaches.map((coach) => {
+                const coachAthletesList = getCoachAthletes(coach.id);
+                const unassigned = getUnassignedAthletes(coach.id);
+                const isExpanded = expandedCoach === coach.id;
+
+                return (
+                  <motion.div
+                    key={coach.id}
+                    className="card-elevated rounded-xl border-l-4 border-l-green-500 overflow-hidden"
+                  >
+                    {/* Coach Header */}
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-secondary/30 transition-colors"
+                      onClick={() => setExpandedCoach(isExpanded ? null : coach.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-500/20">
+                          <Dumbbell className="w-5 h-5 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{coach.email}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {coachAthletesList.length} atleta{coachAthletesList.length !== 1 ? 's' : ''} vinculado{coachAthletesList.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {coach.id !== user?.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCoachRole(coach.id, 'coach');
+                            }}
+                            disabled={updating === coach.id}
+                            className="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                          >
+                            {updating === coach.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Remover coach'}
+                          </button>
+                        )}
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="border-t border-border"
+                        >
+                          <div className="p-4 space-y-4">
+                            {/* Linked Athletes */}
+                            {coachAthletesList.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Atletas vinculados</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {coachAthletesList.map(athlete => (
+                                    <div
+                                      key={athlete.id}
+                                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-sm"
+                                    >
+                                      <span className="text-foreground">{athlete.email.split('@')[0]}</span>
+                                      <button
+                                        onClick={() => removeAthleteFromCoach(coach.id, athlete.id)}
+                                        disabled={linkingAthlete?.athleteId === athlete.id}
+                                        className="text-red-500 hover:text-red-400"
+                                      >
+                                        {linkingAthlete?.athleteId === athlete.id ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Unlink className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Available Athletes */}
+                            {unassigned.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Vincular atleta</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {unassigned.map(athlete => (
+                                    <button
+                                      key={athlete.id}
+                                      onClick={() => assignAthleteToCoach(coach.id, athlete.id)}
+                                      disabled={linkingAthlete?.athleteId === athlete.id}
+                                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm transition-colors"
+                                    >
+                                      {linkingAthlete?.athleteId === athlete.id ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Link2 className="w-3 h-3 text-green-500" />
+                                      )}
+                                      <span>{athlete.email.split('@')[0]}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {coachAthletesList.length === 0 && unassigned.length === 0 && (
+                              <p className="text-sm text-muted-foreground text-center py-2">
+                                Nenhum atleta disponível para vincular
+                              </p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* All Users List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
         >
           <h2 className="font-display text-xl mb-4 flex items-center gap-2">
             <Users className="w-5 h-5" />
-            USUÁRIOS CADASTRADOS
+            TODOS OS USUÁRIOS
           </h2>
 
           {loading ? (
