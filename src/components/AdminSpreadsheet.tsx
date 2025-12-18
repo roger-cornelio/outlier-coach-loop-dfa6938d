@@ -683,6 +683,7 @@ export function AdminSpreadsheet() {
             <button
               onClick={async () => {
                 await signOut();
+                navigate('/');
                 setCurrentView('welcome');
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm"
