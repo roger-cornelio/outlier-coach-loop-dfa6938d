@@ -274,7 +274,14 @@ serve(async (req) => {
     const levelMult = LEVEL_MULTIPLIERS[athleteParams.level];
     const genderMult = GENDER_MULTIPLIERS[athleteParams.gender];
     
-    console.log(`Multiplicadores: level=${levelMult}, gender=${genderMult}`);
+    // ============================================
+    // REGRA CRÍTICA: MULTIPLICADOR FINAL NUNCA > 1.0
+    // A planilha do coach é o TETO MÁXIMO (PRO = 100%)
+    // ============================================
+    const rawCombinedMult = levelMult * genderMult;
+    const safeCombinedMult = Math.min(1.0, rawCombinedMult); // CLAMP: nunca > 1.0
+    
+    console.log(`Multiplicadores: level=${levelMult}, gender=${genderMult}, combined=${safeCombinedMult} (clamped to max 1.0)`);
 
     // 3. CALCULAR TEMPO TOTAL ORIGINAL
     let totalOriginalMinutes = 0;
@@ -282,15 +289,20 @@ serve(async (req) => {
       totalOriginalMinutes += block.estimatedMinutes || estimateBlockMinutes(block.content, block.type);
     }
 
-    // 4. CALCULAR AJUSTE POR TEMPO
-    const timeAdjustment = totalOriginalMinutes <= athleteParams.availableTimeMinutes
+    // 4. CALCULAR AJUSTE POR TEMPO (também nunca > 1.0)
+    const rawTimeAdjustment = totalOriginalMinutes <= athleteParams.availableTimeMinutes
       ? 1.0
       : Math.max(0.50, athleteParams.availableTimeMinutes / totalOriginalMinutes);
+    const timeAdjustment = Math.min(1.0, rawTimeAdjustment); // CLAMP: nunca > 1.0
     
     const timeWasLimiting = timeAdjustment < 1.0;
     console.log(`Tempo: original=${totalOriginalMinutes}min, disponível=${athleteParams.availableTimeMinutes}min, ajuste=${timeAdjustment}`);
 
-    // 5. DETERMINAR EQUIPAMENTOS INDISPONÍVEIS
+    // 5. CALCULAR MULTIPLICADOR FINAL (SEMPRE <= 1.0)
+    const finalVolumeMult = Math.min(1.0, safeCombinedMult * timeAdjustment);
+    console.log(`Multiplicador FINAL de volume: ${finalVolumeMult} (garantido <= 1.0)`);
+
+    // 6. DETERMINAR EQUIPAMENTOS INDISPONÍVEIS
     const allEquipment = Object.keys(EQUIPMENT_SUBSTITUTIONS);
     const unavailableEquipment = allEquipment.filter(
       eq => !athleteParams.availableEquipment.some(
@@ -298,39 +310,52 @@ serve(async (req) => {
       )
     );
 
-    // 6. ADAPTAR CADA BLOCO
+    // 7. ADAPTAR CADA BLOCO
     const adaptedBlocks = [];
     let totalEquipmentSubstitutions = 0;
+
+    // Verificação especial: PRO + Masculino + tempo suficiente = conteúdo idêntico
+    const isPROWithFullVolume = athleteParams.level === 'pro' && 
+                                 athleteParams.gender === 'masculino' && 
+                                 !timeWasLimiting;
 
     for (const block of blocks) {
       let adaptedContent: string;
       
-      // ORDEM: tipo → nível → gênero → tempo
-      switch (block.type) {
-        case 'conditioning':
-          adaptedContent = scaleVolumeNumbers(block.content, levelMult * genderMult * timeAdjustment);
-          break;
-          
-        case 'forca':
-          adaptedContent = scaleStrengthSets(block.content, genderMult);
-          break;
-          
-        case 'corrida':
-          adaptedContent = scaleDistance(block.content, genderMult * timeAdjustment);
-          break;
-          
-        case 'aquecimento':
-          adaptedContent = timeWasLimiting
-            ? scaleVolumeNumbers(block.content, timeAdjustment)
-            : block.content;
-          break;
-          
-        case 'core':
-          adaptedContent = scaleVolumeNumbers(block.content, levelMult * genderMult * timeAdjustment);
-          break;
-          
-        default:
-          adaptedContent = block.content;
+      // REGRA ESPECIAL: PRO + Masculino + tempo suficiente = planilha original
+      if (isPROWithFullVolume) {
+        adaptedContent = block.content; // EXATAMENTE igual à planilha do coach
+        console.log(`[${block.type}] PRO + Masculino: usando conteúdo ORIGINAL`);
+      } else {
+        // ORDEM: tipo → nível → gênero → tempo
+        switch (block.type) {
+          case 'conditioning':
+            adaptedContent = scaleVolumeNumbers(block.content, finalVolumeMult);
+            break;
+            
+          case 'forca':
+            // Força: ajuste de séries por gênero (nunca > 1.0)
+            adaptedContent = scaleStrengthSets(block.content, Math.min(1.0, genderMult));
+            break;
+            
+          case 'corrida':
+            // Corrida: gênero + tempo (nunca > 1.0)
+            adaptedContent = scaleDistance(block.content, Math.min(1.0, genderMult * timeAdjustment));
+            break;
+            
+          case 'aquecimento':
+            adaptedContent = timeWasLimiting
+              ? scaleVolumeNumbers(block.content, timeAdjustment)
+              : block.content;
+            break;
+            
+          case 'core':
+            adaptedContent = scaleVolumeNumbers(block.content, finalVolumeMult);
+            break;
+            
+          default:
+            adaptedContent = block.content;
+        }
       }
 
       // 7. SUBSTITUIÇÃO DE EQUIPAMENTOS (APÓS adaptação de volume)
@@ -353,15 +378,33 @@ serve(async (req) => {
           levelMultiplier: levelMult,
           genderMultiplier: genderMult,
           timeAdjustment,
+          finalVolumeMult,
           equipmentSubstitutions: substitutions,
+          isPROWithFullVolume,
         },
       });
     }
 
     const totalAdaptedMinutes = adaptedBlocks.reduce((sum, b) => sum + (b.estimatedMinutes || 0), 0);
 
+    // VALIDAÇÃO FINAL: PRO + Masculino + tempo suficiente deve ter conteúdo idêntico
+    if (isPROWithFullVolume) {
+      const contentMatches = adaptedBlocks.every((block, i) => {
+        // Comparar sem substituição de equipamentos
+        const originalContent = blocks[i].content;
+        const adaptedWithoutSubs = block.content;
+        // Se não houve substituições, deve ser idêntico
+        if (block.adaptationApplied.equipmentSubstitutions.length === 0) {
+          return adaptedWithoutSubs === originalContent;
+        }
+        return true; // Com substituições, ok ser diferente
+      });
+      console.log(`VALIDAÇÃO PRO: Conteúdo idêntico à planilha = ${contentMatches}`);
+    }
+
     console.log("=== ADAPTAÇÃO COMPLETA ===");
     console.log(`Original: ${totalOriginalMinutes}min → Adaptado: ${totalAdaptedMinutes}min`);
+    console.log(`PRO com volume total: ${isPROWithFullVolume}`);
     console.log(`Substituições de equipamento: ${totalEquipmentSubstitutions}`);
 
     return new Response(JSON.stringify({

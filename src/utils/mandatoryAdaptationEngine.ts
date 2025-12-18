@@ -286,7 +286,9 @@ function adaptConditioningBlock(
   timeAdjustment: number
 ): string {
   // volume_final = volume_base × multiplicador_nível × multiplicador_gênero × ajuste_por_tempo
-  const finalMultiplier = levelMult * genderMult * timeAdjustment;
+  // REGRA CRÍTICA: NUNCA > 1.0 (planilha do coach é o TETO)
+  const rawMultiplier = levelMult * genderMult * timeAdjustment;
+  const finalMultiplier = Math.min(1.0, rawMultiplier); // CLAMP: nunca > 1.0
   
   let adapted = content;
   
@@ -305,7 +307,8 @@ function adaptStrengthBlock(
   // Mantém porcentagem de carga (%1RM ou intensidade relativa)
   // Ajusta número de séries conforme multiplicador de gênero
   // Reps permanecem as mesmas
-  adapted = scaleStrengthSets(adapted, genderMult);
+  // REGRA CRÍTICA: NUNCA > 1.0
+  adapted = scaleStrengthSets(adapted, Math.min(1.0, genderMult));
   
   // Cargas já estão no formato M/F na planilha
   adapted = scaleLoads(adapted);
@@ -320,7 +323,9 @@ function adaptRunningBlock(
 ): string {
   // Ajustar distância conforme multiplicador de gênero e tempo
   // Manter pace relativo e estímulo cardiorrespiratório
-  const finalMultiplier = genderMult * timeAdjustment;
+  // REGRA CRÍTICA: NUNCA > 1.0 (planilha do coach é o TETO)
+  const rawMultiplier = genderMult * timeAdjustment;
+  const finalMultiplier = Math.min(1.0, rawMultiplier); // CLAMP: nunca > 1.0
   
   let adapted = content;
   adapted = scaleDistance(adapted, finalMultiplier);
@@ -418,6 +423,13 @@ export function adaptWorkout(
   const levelMult = LEVEL_MULTIPLIERS[athleteParams.level];
   const genderMult = GENDER_MULTIPLIERS[athleteParams.gender];
   
+  // ============================================
+  // REGRA CRÍTICA: MULTIPLICADOR FINAL NUNCA > 1.0
+  // A planilha do coach é o TETO MÁXIMO (PRO = 100%)
+  // ============================================
+  const rawCombinedMult = levelMult * genderMult;
+  const safeCombinedMult = Math.min(1.0, rawCombinedMult); // CLAMP: nunca > 1.0
+  
   // 3. CALCULAR TEMPO TOTAL ORIGINAL
   let totalOriginalMinutes = 0;
   for (const block of blocks) {
@@ -425,11 +437,15 @@ export function adaptWorkout(
     totalOriginalMinutes += minutes;
   }
   
-  // 4. CALCULAR AJUSTE POR TEMPO
-  const timeAdjustment = calculateTimeAdjustment(totalOriginalMinutes, athleteParams.availableTimeMinutes);
+  // 4. CALCULAR AJUSTE POR TEMPO (também nunca > 1.0)
+  const rawTimeAdjustment = calculateTimeAdjustment(totalOriginalMinutes, athleteParams.availableTimeMinutes);
+  const timeAdjustment = Math.min(1.0, rawTimeAdjustment); // CLAMP: nunca > 1.0
   const timeWasLimiting = timeAdjustment < 1.0;
   
-  // 5. DETERMINAR EQUIPAMENTOS INDISPONÍVEIS
+  // 5. CALCULAR MULTIPLICADOR FINAL (SEMPRE <= 1.0)
+  const finalVolumeMult = Math.min(1.0, safeCombinedMult * timeAdjustment);
+  
+  // 6. DETERMINAR EQUIPAMENTOS INDISPONÍVEIS
   const allEquipment = Object.keys(EQUIPMENT_SUBSTITUTIONS);
   const unavailableEquipment = allEquipment.filter(
     eq => !athleteParams.availableEquipment.some(
@@ -437,65 +453,72 @@ export function adaptWorkout(
     )
   );
   
-  // 6. ADAPTAR CADA BLOCO (ORDEM: tipo → nível → gênero → tempo → equipamentos)
+  // 7. ADAPTAR CADA BLOCO (ORDEM: tipo → nível → gênero → tempo → equipamentos)
   const adaptedBlocks: AdaptedWorkoutBlock[] = [];
   let totalEquipmentSubstitutions = 0;
+  
+  // Verificação especial: PRO + Masculino + tempo suficiente = conteúdo idêntico
+  const isPROWithFullVolume = athleteParams.level === 'pro' && 
+                               athleteParams.gender === 'masculino' && 
+                               !timeWasLimiting;
   
   for (const block of blocks) {
     let adaptedContent: string;
     
-    // ORDEM DE CÁLCULO:
-    // 1. Tipo de bloco (determina regras)
-    // 2. Nível do atleta
-    // 3. Gênero
-    // 4. Tempo disponível
-    
-    switch (block.type) {
-      case 'conditioning':
-        adaptedContent = adaptConditioningBlock(
-          block.content,
-          levelMult,
-          genderMult,
-          timeAdjustment
-        );
-        break;
-        
-      case 'forca':
-        adaptedContent = adaptStrengthBlock(
-          block.content,
-          genderMult
-        );
-        break;
-        
-      case 'corrida':
-        adaptedContent = adaptRunningBlock(
-          block.content,
-          genderMult,
-          timeAdjustment
-        );
-        break;
-        
-      case 'aquecimento':
-        // Aquecimento: aplicar apenas ajuste de tempo se necessário
-        adaptedContent = timeWasLimiting
-          ? scaleVolumeNumbers(block.content, timeAdjustment)
-          : block.content;
-        break;
-        
-      case 'core':
-        // Core: aplicar multiplicadores de nível e gênero
-        adaptedContent = scaleVolumeNumbers(
-          block.content,
-          levelMult * genderMult * timeAdjustment
-        );
-        break;
-        
-      default:
-        // Outros tipos: manter original
-        adaptedContent = block.content;
+    // REGRA ESPECIAL: PRO + Masculino + tempo suficiente = planilha original
+    if (isPROWithFullVolume) {
+      adaptedContent = block.content; // EXATAMENTE igual à planilha do coach
+    } else {
+      // ORDEM DE CÁLCULO:
+      // 1. Tipo de bloco (determina regras)
+      // 2. Nível do atleta
+      // 3. Gênero
+      // 4. Tempo disponível
+      
+      switch (block.type) {
+        case 'conditioning':
+          adaptedContent = adaptConditioningBlock(
+            block.content,
+            Math.min(1.0, levelMult),
+            Math.min(1.0, genderMult),
+            timeAdjustment
+          );
+          break;
+          
+        case 'forca':
+          adaptedContent = adaptStrengthBlock(
+            block.content,
+            Math.min(1.0, genderMult) // Nunca > 1.0
+          );
+          break;
+          
+        case 'corrida':
+          adaptedContent = adaptRunningBlock(
+            block.content,
+            Math.min(1.0, genderMult), // Nunca > 1.0
+            timeAdjustment
+          );
+          break;
+          
+        case 'aquecimento':
+          // Aquecimento: aplicar apenas ajuste de tempo se necessário
+          adaptedContent = timeWasLimiting
+            ? scaleVolumeNumbers(block.content, timeAdjustment)
+            : block.content;
+          break;
+          
+        case 'core':
+          // Core: aplicar multiplicador final (garantido <= 1.0)
+          adaptedContent = scaleVolumeNumbers(block.content, finalVolumeMult);
+          break;
+          
+        default:
+          // Outros tipos: manter original
+          adaptedContent = block.content;
+      }
     }
     
-    // 5. SUBSTITUIÇÃO DE EQUIPAMENTOS (APÓS adaptação de volume)
+    // 8. SUBSTITUIÇÃO DE EQUIPAMENTOS (APÓS adaptação de volume)
     const { content: finalContent, substitutions } = substituteEquipmentInContent(
       adaptedContent,
       unavailableEquipment
@@ -520,7 +543,7 @@ export function adaptWorkout(
     });
   }
   
-  // 7. CALCULAR TOTAIS
+  // 9. CALCULAR TOTAIS
   const totalAdaptedMinutes = adaptedBlocks.reduce((sum, b) => sum + b.finalEstimatedMinutes, 0);
   
   return {
@@ -532,7 +555,7 @@ export function adaptWorkout(
       appliedMultipliers: {
         level: levelMult,
         gender: genderMult,
-        finalVolume: levelMult * genderMult * timeAdjustment,
+        finalVolume: finalVolumeMult, // Garantido <= 1.0
       },
       timeWasLimiting,
       equipmentSubstitutionsCount: totalEquipmentSubstitutions,
