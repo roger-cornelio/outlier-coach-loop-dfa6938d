@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3, Loader2 } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3, Loader2, Gauge } from 'lucide-react';
 import type { AthleteLevel, PerformanceBucket } from '@/types/outlier';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
+import { ProgressRuler } from './ProgressRuler';
+import { calculateProgress } from '@/utils/progressSystem';
 
 interface MilestoneData {
   id: string;
@@ -29,44 +31,36 @@ export function EvolutionMilestones() {
   const { athleteConfig } = useOutlierStore();
   const { 
     loading, 
+    results,
     getWeeklyResults, 
     getBucketCounts, 
     getAverageScore,
     totalBenchmarks 
   } = useBenchmarkResults();
-  const [activeTab, setActiveTab] = useState<'milestones' | 'chart'>('milestones');
+  const [activeTab, setActiveTab] = useState<'progress' | 'milestones' | 'chart'>('progress');
+
+  const progressData = useMemo(() => {
+    if (!athleteConfig?.level) return null;
+    return calculateProgress(results, athleteConfig.level);
+  }, [results, athleteConfig]);
 
   const evolutionData = useMemo(() => {
-    if (!athleteConfig) return null;
+    if (!athleteConfig || !progressData) return null;
 
     const bucketCounts = getBucketCounts() as Record<PerformanceBucket, number>;
-    const avgScore = getAverageScore();
-
-    // Calculate evolution level based on performance
-    const currentLevelIndex = LEVEL_ORDER.indexOf(athleteConfig.level);
-    let suggestedLevelIndex = currentLevelIndex;
-    
-    if (avgScore >= 90 && bucketCounts.ELITE >= 2) {
-      suggestedLevelIndex = Math.min(currentLevelIndex + 1, LEVEL_ORDER.length - 1);
-    } else if (avgScore < 40 && bucketCounts.TOUGH + bucketCounts.DNF > bucketCounts.ELITE + bucketCounts.STRONG) {
-      suggestedLevelIndex = Math.max(currentLevelIndex - 1, 0);
-    }
-
-    // Progress to next level (0-100)
-    const progressToNextLevel = currentLevelIndex < LEVEL_ORDER.length - 1
-      ? Math.min(100, (avgScore / 90) * 100)
-      : 100;
 
     return {
-      avgScore,
+      avgScore: progressData.globalScore,
       bucketCounts,
       totalBenchmarks,
       currentLevel: athleteConfig.level,
-      suggestedLevel: LEVEL_ORDER[suggestedLevelIndex],
-      progressToNextLevel,
-      shouldEvolve: suggestedLevelIndex > currentLevelIndex,
+      suggestedLevel: progressData.readyToAdvance && progressData.nextLevel 
+        ? progressData.nextLevel 
+        : athleteConfig.level,
+      progressToNextLevel: progressData.progressToNextLevel,
+      shouldEvolve: progressData.readyToAdvance,
     };
-  }, [athleteConfig, getBucketCounts, getAverageScore, totalBenchmarks]);
+  }, [athleteConfig, progressData, getBucketCounts, totalBenchmarks]);
 
   // Get chart data from hook
   const chartData = useMemo(() => getWeeklyResults(), [getWeeklyResults]);
@@ -204,12 +198,24 @@ export function EvolutionMilestones() {
         {/* Tab Toggle */}
         <div className="flex bg-secondary/50 rounded-lg p-1">
           <button
+            onClick={() => setActiveTab('progress')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              activeTab === 'progress'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="Régua de Progresso"
+          >
+            <Gauge className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setActiveTab('milestones')}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
               activeTab === 'milestones'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
+            title="Marcos"
           >
             <Trophy className="w-4 h-4" />
           </button>
@@ -220,63 +226,17 @@ export function EvolutionMilestones() {
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
+            title="Gráfico"
           >
             <BarChart3 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Level Progress */}
-      <div className="mb-6 p-4 rounded-xl bg-secondary/50">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className={`px-2 py-1 rounded-md text-xs font-bold ${currentLevelInfo.bgColor} ${currentLevelInfo.color}`}>
-              {currentLevelInfo.name}
-            </span>
-          </div>
-          {nextLevelInfo && (
-            <div className="flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <span className={`px-2 py-1 rounded-md text-xs font-medium ${nextLevelInfo.bgColor} ${nextLevelInfo.color} opacity-60`}>
-                {nextLevelInfo.name}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        <div className="relative h-3 bg-secondary rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${evolutionData.progressToNextLevel}%` }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/60 rounded-full"
-          />
-        </div>
-        
-        <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-          <span>Score médio: {Math.round(evolutionData.avgScore)}%</span>
-          {nextLevelInfo && (
-            <span>{Math.round(evolutionData.progressToNextLevel)}% para {nextLevelInfo.name}</span>
-          )}
-        </div>
-
-        {evolutionData.shouldEvolve && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-3 p-3 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30"
-          >
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium text-amber-500">
-                Você está pronto para evoluir para {LEVEL_DISPLAY[evolutionData.suggestedLevel].name}!
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {activeTab === 'chart' ? (
+      {activeTab === 'progress' ? (
+        /* Progress Ruler View */
+        <ProgressRuler />
+      ) : activeTab === 'chart' ? (
         /* Evolution Chart */
         <motion.div
           initial={{ opacity: 0 }}
