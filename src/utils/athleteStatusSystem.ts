@@ -1,5 +1,5 @@
 import type { AthleteStatus, TrainingDifficulty } from '@/types/outlier';
-import type { BenchmarkResult } from '@/hooks/useBenchmarkResults';
+import type { BenchmarkResult, ExternalResult } from '@/hooks/useBenchmarkResults';
 
 // Status score thresholds (0-100 scale)
 export const STATUS_THRESHOLDS = {
@@ -9,6 +9,19 @@ export const STATUS_THRESHOLDS = {
   hyrox_open: { min: 75, max: 90 },
   hyrox_pro: { min: 90, max: 100 },
 };
+
+// HYROX official competition time ranges (in seconds) for each level
+// Based on typical HYROX competition times
+export const HYROX_TIME_THRESHOLDS = {
+  hyrox_pro: { maxTime: 4200 },      // < 70 min = PRO
+  hyrox_open: { maxTime: 5400 },     // 70-90 min = OPEN
+  avancado: { maxTime: 6600 },       // 90-110 min = Avançado
+  intermediario: { maxTime: 7800 },  // 110-130 min = Intermediário
+  iniciante: { maxTime: Infinity },  // > 130 min = Iniciante
+};
+
+// Official competition validity period (18 months in days)
+const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30;
 
 // Hysteresis margin to prevent oscillation (need to score X points above threshold to promote)
 const PROMOTION_HYSTERESIS = 5;
@@ -27,6 +40,17 @@ const DECAY_HALF_LIFE_DAYS = 30;
 const MIN_WEIGHT = 0.1;
 
 export type StatusConfidence = 'baixa' | 'media' | 'alta';
+export type StatusSource = 'prova_oficial' | 'estimado';
+
+export interface OfficialCompetitionResult {
+  id: string;
+  time_in_seconds: number;
+  event_name?: string;
+  event_date?: string;
+  created_at: string;
+  isExpired: boolean;
+  derivedStatus: AthleteStatus;
+}
 
 export interface CalculatedStatus {
   // Current status (with hysteresis applied)
@@ -35,6 +59,12 @@ export interface CalculatedStatus {
   rulerScore: number;
   // Confidence level
   confidence: StatusConfidence;
+  // Source of status determination
+  statusSource: StatusSource;
+  // Official competition that defined the status (if any)
+  validatingCompetition: OfficialCompetitionResult | null;
+  // Historical official competitions (expired)
+  historicalCompetitions: OfficialCompetitionResult[];
   // Progress within current status (0-100%)
   progressInStatus: number;
   // How close to promotion (0-100%)
@@ -44,11 +74,56 @@ export interface CalculatedStatus {
   // Whether athlete is eligible for promotion (score + consistency)
   eligibleForPromotion: boolean;
   // What's blocking promotion
-  promotionBlocker: 'score' | 'consistency' | 'weeks' | null;
+  promotionBlocker: 'score' | 'consistency' | 'weeks' | 'prova_required' | null;
   // Stats
   benchmarksUsed: number;
   weeksWithGoodPerformance: number;
   consistencyScore: number;
+}
+
+// Get status from HYROX official competition time
+export function getStatusFromOfficialTime(timeInSeconds: number): AthleteStatus {
+  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.hyrox_pro.maxTime) return 'hyrox_pro';
+  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.hyrox_open.maxTime) return 'hyrox_open';
+  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.avancado.maxTime) return 'avancado';
+  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.intermediario.maxTime) return 'intermediario';
+  return 'iniciante';
+}
+
+// Check if official competition is still valid (< 18 months old)
+function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: string): boolean {
+  const date = eventDate ? new Date(eventDate) : new Date(createdAt);
+  const now = new Date();
+  const daysDiff = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+  return daysDiff <= OFFICIAL_COMPETITION_VALIDITY_DAYS;
+}
+
+// Process official competitions and find the most recent valid one
+export function processOfficialCompetitions(
+  officialResults: ExternalResult[]
+): { valid: OfficialCompetitionResult | null; historical: OfficialCompetitionResult[] } {
+  const processed: OfficialCompetitionResult[] = officialResults
+    .filter(r => r.time_in_seconds && r.time_in_seconds > 0)
+    .map(r => ({
+      id: r.id,
+      time_in_seconds: r.time_in_seconds!,
+      event_name: r.event_name,
+      event_date: r.event_date,
+      created_at: r.created_at,
+      isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
+      derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!),
+    }))
+    .sort((a, b) => {
+      // Sort by event_date or created_at, most recent first
+      const dateA = a.event_date ? new Date(a.event_date) : new Date(a.created_at);
+      const dateB = b.event_date ? new Date(b.event_date) : new Date(b.created_at);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+  const valid = processed.find(c => !c.isExpired) || null;
+  const historical = processed.filter(c => c.isExpired);
+
+  return { valid, historical };
 }
 
 // Calculate temporal weight for benchmark
@@ -156,20 +231,76 @@ function calculateConsistency(results: BenchmarkResult[]): number {
   return Math.max(0, 100 - (stdDev / 30) * 100);
 }
 
+// Convert status to ruler score (for positioning within validated level)
+function statusToRulerScore(status: AthleteStatus): number {
+  const thresholds = STATUS_THRESHOLDS[status];
+  // Return the middle of the status range
+  return (thresholds.min + thresholds.max) / 2;
+}
+
 // Main function to calculate athlete status
 export function calculateAthleteStatus(
-  results: BenchmarkResult[],
+  benchmarkResults: BenchmarkResult[],
+  officialResults: ExternalResult[],
   previousStatus?: AthleteStatus
 ): CalculatedStatus {
-  const validResults = results.filter(r => r.completed);
-  const benchmarksUsed = validResults.length;
-  
-  // Default status for new athletes
+  // Process official competitions first
+  const { valid: validatingCompetition, historical: historicalCompetitions } = 
+    processOfficialCompetitions(officialResults);
+
+  const validBenchmarks = benchmarkResults.filter(r => r.completed);
+  const benchmarksUsed = validBenchmarks.length;
+
+  // If we have a valid official competition, it defines the status
+  if (validatingCompetition) {
+    const status = validatingCompetition.derivedStatus;
+    const currentThresholds = STATUS_THRESHOLDS[status];
+    
+    // Calculate ruler score from benchmarks/simulados for progress within the level
+    const rulerScore = benchmarksUsed > 0 
+      ? calculateWeightedScore(validBenchmarks)
+      : statusToRulerScore(status);
+    
+    // Clamp ruler score within the validated level
+    const clampedScore = Math.max(
+      currentThresholds.min,
+      Math.min(currentThresholds.max, rulerScore)
+    );
+    
+    const statusRange = currentThresholds.max - currentThresholds.min;
+    const progressInStatus = Math.max(0, Math.min(100, 
+      ((clampedScore - currentThresholds.min) / statusRange) * 100
+    ));
+
+    const nextStatus = getNextStatus(status);
+    
+    return {
+      status,
+      rulerScore: Math.round(clampedScore * 10) / 10,
+      confidence: 'alta', // Official competition = high confidence
+      statusSource: 'prova_oficial',
+      validatingCompetition,
+      historicalCompetitions,
+      progressInStatus: Math.round(progressInStatus),
+      progressToNextStatus: Math.round(progressInStatus), // Within current level
+      nextStatus,
+      eligibleForPromotion: false, // Need new official competition to promote
+      promotionBlocker: 'prova_required',
+      benchmarksUsed,
+      weeksWithGoodPerformance: calculateWeeksWithGoodPerformance(validBenchmarks),
+      consistencyScore: Math.round(calculateConsistency(validBenchmarks)),
+    };
+  }
+
+  // No valid official competition - use benchmark-based calculation
   if (benchmarksUsed === 0) {
     return {
       status: previousStatus || 'iniciante',
       rulerScore: 0,
       confidence: 'baixa',
+      statusSource: 'estimado',
+      validatingCompetition: null,
+      historicalCompetitions,
       progressInStatus: 0,
       progressToNextStatus: 0,
       nextStatus: 'intermediario',
@@ -181,13 +312,13 @@ export function calculateAthleteStatus(
     };
   }
 
-  // Calculate raw score
-  const rulerScore = calculateWeightedScore(validResults);
+  // Calculate raw score from benchmarks
+  const rulerScore = calculateWeightedScore(validBenchmarks);
   const scoreBasedStatus = getStatusFromScore(rulerScore);
   
   // Calculate additional metrics
-  const weeksWithGoodPerformance = calculateWeeksWithGoodPerformance(validResults);
-  const consistencyScore = calculateConsistency(validResults);
+  const weeksWithGoodPerformance = calculateWeeksWithGoodPerformance(validBenchmarks);
+  const consistencyScore = calculateConsistency(validBenchmarks);
   const confidence = getConfidence(benchmarksUsed);
   
   // Apply hysteresis for status changes
@@ -204,7 +335,7 @@ export function calculateAthleteStatus(
   const meetsConsistencyForPromotion = consistencyScore >= 60;
   
   // Determine promotion blocker
-  let promotionBlocker: 'score' | 'consistency' | 'weeks' | null = null;
+  let promotionBlocker: 'score' | 'consistency' | 'weeks' | 'prova_required' | null = null;
   if (!meetsScoreForPromotion) {
     promotionBlocker = 'score';
   } else if (!meetsConsistencyForPromotion) {
@@ -249,6 +380,9 @@ export function calculateAthleteStatus(
     status,
     rulerScore: Math.round(rulerScore * 10) / 10,
     confidence,
+    statusSource: 'estimado',
+    validatingCompetition: null,
+    historicalCompetitions,
     progressInStatus: Math.round(progressInStatus),
     progressToNextStatus: Math.round(progressToNextStatus),
     nextStatus: updatedNextStatus,
@@ -288,3 +422,20 @@ export const CONFIDENCE_COLORS: Record<StatusConfidence, string> = {
   media: 'text-blue-500',
   alta: 'text-green-500',
 };
+
+export const STATUS_SOURCE_LABELS: Record<StatusSource, string> = {
+  prova_oficial: 'Validado por Prova',
+  estimado: 'Estimado por Benchmarks',
+};
+
+// Format time in seconds to readable format
+export function formatOfficialTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h${minutes.toString().padStart(2, '0')}m${secs.toString().padStart(2, '0')}s`;
+  }
+  return `${minutes}m${secs.toString().padStart(2, '0')}s`;
+}

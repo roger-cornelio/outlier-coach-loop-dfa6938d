@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useOutlierStore } from '@/store/outlierStore';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export interface BenchmarkResult {
   id: string;
@@ -11,6 +13,16 @@ export interface BenchmarkResult {
   score?: number;
   bucket?: string;
   athlete_level?: string;
+  created_at: string;
+}
+
+export interface ExternalResult {
+  id: string;
+  result_type: 'simulado' | 'prova_oficial';
+  time_in_seconds?: number;
+  event_name?: string;
+  event_date?: string;
+  screenshot_url?: string;
   created_at: string;
 }
 
@@ -37,15 +49,47 @@ const saveToStorage = (results: BenchmarkResult[]) => {
 
 export function useBenchmarkResults() {
   const { athleteConfig, addWorkoutResult } = useOutlierStore();
+  const { user } = useAuth();
   const [results, setResults] = useState<BenchmarkResult[]>([]);
+  const [externalResults, setExternalResults] = useState<ExternalResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load results from localStorage on mount
+  // Load results from localStorage and Supabase on mount
   useEffect(() => {
-    const stored = loadFromStorage();
-    setResults(stored);
-    setLoading(false);
-  }, []);
+    const loadResults = async () => {
+      // Load local benchmark results
+      const stored = loadFromStorage();
+      setResults(stored);
+
+      // Load external results (simulados/provas) from Supabase if user is logged in
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('benchmark_results')
+          .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, created_at')
+          .eq('user_id', user.id)
+          .in('result_type', ['simulado', 'prova_oficial'])
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          setExternalResults(data as ExternalResult[]);
+        }
+      }
+
+      setLoading(false);
+    };
+
+    loadResults();
+  }, [user?.id]);
+
+  // Get only official competition results
+  const getOfficialCompetitions = useCallback((): ExternalResult[] => {
+    return externalResults.filter(r => r.result_type === 'prova_oficial');
+  }, [externalResults]);
+
+  // Get only simulado results
+  const getSimulados = useCallback((): ExternalResult[] => {
+    return externalResults.filter(r => r.result_type === 'simulado');
+  }, [externalResults]);
 
   // Save a new benchmark result
   const saveBenchmarkResult = useCallback((result: Omit<BenchmarkResult, 'id' | 'created_at'>) => {
@@ -53,7 +97,7 @@ export function useBenchmarkResults() {
       ...result,
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
-      athlete_level: result.athlete_level, // Now passed explicitly
+      athlete_level: result.athlete_level,
     };
 
     setResults(prev => {
@@ -73,6 +117,22 @@ export function useBenchmarkResults() {
 
     return newResult;
   }, [athleteConfig, addWorkoutResult]);
+
+  // Refresh external results from Supabase
+  const refreshExternalResults = useCallback(async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from('benchmark_results')
+      .select('id, result_type, time_in_seconds, event_name, event_date, screenshot_url, created_at')
+      .eq('user_id', user.id)
+      .in('result_type', ['simulado', 'prova_oficial'])
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setExternalResults(data as ExternalResult[]);
+    }
+  }, [user?.id]);
 
   // Get results grouped by week
   const getWeeklyResults = useCallback(() => {
@@ -136,11 +196,15 @@ export function useBenchmarkResults() {
 
   return {
     results,
+    externalResults,
     loading,
     saveBenchmarkResult,
     getWeeklyResults,
     getBucketCounts,
     getAverageScore,
+    getOfficialCompetitions,
+    getSimulados,
+    refreshExternalResults,
     totalBenchmarks: results.length,
     clearHistory,
   };

@@ -36,17 +36,18 @@ function saveStatus(status: AthleteStatus): void {
 }
 
 export function useAthleteStatus() {
-  const { results, loading } = useBenchmarkResults();
+  const { results, getOfficialCompetitions, loading } = useBenchmarkResults();
   
   const calculatedStatus = useMemo<CalculatedStatus>(() => {
     const previousStatus = loadPreviousStatus();
-    const status = calculateAthleteStatus(results, previousStatus);
+    const officialCompetitions = getOfficialCompetitions();
+    const status = calculateAthleteStatus(results, officialCompetitions, previousStatus);
     
     // Save for hysteresis on next calculation
     saveStatus(status.status);
     
     return status;
-  }, [results]);
+  }, [results, getOfficialCompetitions]);
   
   // Get effective level for workout prescription
   const getEffectiveLevelForWorkout = (difficulty: TrainingDifficulty): AthleteStatus => {
