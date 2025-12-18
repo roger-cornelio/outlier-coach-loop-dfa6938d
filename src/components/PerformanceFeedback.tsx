@@ -83,13 +83,18 @@ export function PerformanceFeedback() {
       .map((r) => r.timeInSeconds!)
       .slice(0, 10);
 
+    // Get effective target range based on athlete level
+    const levelTargetRanges = mainWod.levelTargetRanges;
+    const effectiveTargetRange = levelTargetRanges?.[athleteConfig.level] || mainWod.targetRange;
+
     return {
       mainWod,
       result: latestResult,
       previousTimes,
       isBenchmark: mainWod.isBenchmark,
       targetSeconds: mainWod.targetSeconds,
-      targetRange: mainWod.targetRange,
+      targetRange: effectiveTargetRange,
+      levelTargetRanges,
       wodType: mainWod.wodType,
       durationMinutes: mainWod.durationMinutes,
       referenceTime: mainWod.referenceTime?.[athleteConfig.level],
