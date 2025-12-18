@@ -119,13 +119,14 @@ export function validateAthleteParams(params: Partial<MandatoryAthleteParams>): 
 
 export const ENGINE_INFO = {
   name: 'OUTLIER_MANDATORY_ADAPTATION',
-  version: '1.0.0',
+  version: '1.1.0',
+  description: 'Planilha do coach = PRO (100%). Sistema escala apenas para BAIXO.',
   multipliers: {
     level: {
-      iniciante: 0.65,
-      intermediario: 0.80,
-      avancado: 1.00,
-      pro: 1.10,
+      iniciante: 0.65,      // 60-65%
+      intermediario: 0.80,  // 75-80%
+      avancado: 0.90,       // 90%
+      pro: 1.00,            // 100% (TETO MÁXIMO)
     },
     gender: {
       masculino: 1.00,
