@@ -105,19 +105,21 @@ export function WelcomeScreen() {
 
       {/* Top buttons container */}
       <div className="absolute top-6 right-6 z-50 flex items-center gap-2">
-        {/* Admin Button - only visible for admins */}
-        {isAdmin && (
-          <motion.button
-            onClick={handleAdminAccess}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary hover:text-primary transition-all text-sm border border-primary/30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.1 }}
-          >
-            <Shield className="w-4 h-4" />
-            <span className="hidden sm:inline">Admin</span>
-          </motion.button>
-        )}
+        {/* Admin Button - always visible for admin login/access */}
+        <motion.button
+          onClick={handleAdminAccess}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm border ${
+            isAdmin
+              ? 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'
+              : 'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground border-transparent'
+          }`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1 }}
+        >
+          <Shield className="w-4 h-4" />
+          <span className="hidden sm:inline">Admin</span>
+        </motion.button>
 
         {/* Coach Button */}
         <motion.button
