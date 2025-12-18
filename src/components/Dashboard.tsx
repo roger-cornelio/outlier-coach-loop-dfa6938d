@@ -321,15 +321,6 @@ export function Dashboard() {
                 )}
               </button>
               <button
-                onClick={handleAdminAccess}
-                className={`p-3 rounded-lg transition-colors relative ${
-                  canManageWorkouts ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30' : 'bg-secondary hover:bg-secondary/80'
-                }`}
-                title={canManageWorkouts ? 'Inserir Planilha' : 'Área restrita'}
-              >
-                {canManageWorkouts ? <FileEdit className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
-              </button>
-              <button
                 onClick={() => setCurrentView('config')}
                 className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
               >
