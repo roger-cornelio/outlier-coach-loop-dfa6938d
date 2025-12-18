@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Trophy, Medal, Timer, Upload, X, Camera, 
-  CheckCircle, Loader2, Calendar, FileText, Sparkles, Wand2
+  CheckCircle, Loader2, Calendar, FileText, Sparkles, Wand2, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
 
 export type ResultType = 'benchmark' | 'simulado' | 'prova_oficial';
@@ -31,6 +32,7 @@ const RESULT_TYPES = [
 
 export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const { user } = useAuth();
+  const { athleteConfig, setCurrentView } = useOutlierStore();
   const [open, setOpen] = useState(false);
   const [resultType, setResultType] = useState<ResultType>('simulado');
   const [eventName, setEventName] = useState('');
@@ -44,6 +46,10 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionConfidence, setExtractionConfidence] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if gender is configured
+  const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
+  const needsGenderForProva = resultType === 'prova_oficial' && !hasGenderConfigured;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,6 +144,12 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const handleSubmit = async () => {
     if (!user) {
       toast.error('Você precisa estar logado para adicionar resultados');
+      return;
+    }
+
+    // Validate gender for official competitions
+    if (resultType === 'prova_oficial' && !hasGenderConfigured) {
+      toast.error('Configure seu sexo no perfil antes de registrar uma prova oficial');
       return;
     }
 
@@ -272,6 +284,37 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
               );
             })}
           </div>
+
+          {/* Gender Warning for Official Competition */}
+          {needsGenderForProva && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-500">Configuração necessária</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Para registrar uma prova oficial, é necessário configurar seu sexo no perfil. 
+                    Os tempos de referência são diferentes para masculino e feminino.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                    onClick={() => {
+                      setOpen(false);
+                      setCurrentView('config');
+                    }}
+                  >
+                    Configurar Perfil
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Screenshot Upload - Moved to top for AI extraction flow */}
           <div className="space-y-2">
@@ -454,7 +497,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           {/* Submit Button */}
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || (!calculateTotalSeconds() && !screenshotFile)}
+            disabled={isSubmitting || needsGenderForProva || (!calculateTotalSeconds() && !screenshotFile)}
             className="w-full gap-2"
           >
             {isSubmitting ? (
