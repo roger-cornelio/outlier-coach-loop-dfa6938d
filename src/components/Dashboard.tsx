@@ -646,13 +646,15 @@ export function Dashboard() {
                     <p className="text-muted-foreground text-center text-sm max-w-md">
                       A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que um coach configurá-los.
                     </p>
-                    <button
-                      onClick={handleAdminAccess}
-                      className="mt-4 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
-                    >
-                      {canManageWorkouts ? <FileEdit className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                      {canManageWorkouts ? 'Inserir Planilha' : 'Área Coach (Login necessário)'}
-                    </button>
+                    {canManageWorkouts && (
+                      <button
+                        onClick={handleAdminAccess}
+                        className="mt-4 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
+                      >
+                        <FileEdit className="w-4 h-4" />
+                        Inserir Planilha
+                      </button>
+                    )}
                   </>
                 )}
               </div>
