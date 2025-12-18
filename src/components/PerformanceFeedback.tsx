@@ -5,6 +5,7 @@ import type { PerformanceBucket, CoachStyle } from '@/types/outlier';
 import { Flame, CheckCircle, AlertTriangle, XCircle, ArrowLeft, Home, Settings, Crown, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getEffectiveContent, getEffectiveTargetRange } from '@/utils/benchmarkVariants';
 
 const bucketConfig: Record<PerformanceBucket, { icon: React.ReactNode; label: string; colorClass: string }> = {
   ELITE: {
@@ -83,9 +84,9 @@ export function PerformanceFeedback() {
       .map((r) => r.timeInSeconds!)
       .slice(0, 10);
 
-    // Get effective target range based on athlete level
-    const levelTargetRanges = mainWod.levelTargetRanges;
-    const effectiveTargetRange = levelTargetRanges?.[athleteConfig.level] || mainWod.targetRange;
+    // Get effective variant based on athlete level (using utility)
+    const effectiveContent = getEffectiveContent(mainWod, athleteConfig.level);
+    const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig.level);
 
     return {
       mainWod,
@@ -94,7 +95,7 @@ export function PerformanceFeedback() {
       isBenchmark: mainWod.isBenchmark,
       targetSeconds: mainWod.targetSeconds,
       targetRange: effectiveTargetRange,
-      levelTargetRanges,
+      effectiveContent,
       wodType: mainWod.wodType,
       durationMinutes: mainWod.durationMinutes,
       referenceTime: mainWod.referenceTime?.[athleteConfig.level],
