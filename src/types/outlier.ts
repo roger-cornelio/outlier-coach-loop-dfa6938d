@@ -29,6 +29,8 @@ export interface WorkoutBlock {
   title: string;
   content: string;
   isMainWod?: boolean;
+  isBenchmark?: boolean;
+  targetSeconds?: number;
   referenceTime?: {
     iniciante: number;
     intermediario: number;
@@ -36,6 +38,9 @@ export interface WorkoutBlock {
     hyrox_pro: number;
   };
 }
+
+// Performance classification buckets
+export type PerformanceBucket = 'ELITE' | 'STRONG' | 'OK' | 'TOUGH' | 'DNF';
 
 export interface DayWorkout {
   day: DayOfWeek;
@@ -56,6 +61,7 @@ export type PerformanceRating = 'excellent' | 'good' | 'attention' | 'below';
 
 export interface PerformanceFeedback {
   rating: PerformanceRating;
+  bucket?: PerformanceBucket;
   message: string;
   suggestions: string[];
 }

@@ -1,1 +1,10 @@
 project_id = "hfcpwmzmymkibrvsbgry"
+
+[functions.generate-workout-feedback]
+verify_jwt = false
+
+[functions.generate-performance-feedback]
+verify_jwt = false
+
+[functions.adapt-workout]
+verify_jwt = false
