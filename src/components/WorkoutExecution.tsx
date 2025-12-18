@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame } from 'lucide-react';
@@ -69,11 +69,70 @@ export function WorkoutExecution() {
   const { selectedWorkout, setCurrentView, athleteConfig } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
+  const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
 
   if (!selectedWorkout) {
     setCurrentView('dashboard');
     return null;
   }
+
+  // Get animation variants based on coach style
+  const getCompletionAnimation = (coachStyle: string | undefined) => {
+    switch (coachStyle) {
+      case 'IRON':
+        return {
+          initial: { scale: 1 },
+          complete: { 
+            scale: [1, 0.98, 1],
+            transition: { duration: 0.2 }
+          }
+        };
+      case 'SPARK':
+        return {
+          initial: { scale: 1, rotate: 0 },
+          complete: { 
+            scale: [1, 1.05, 0.95, 1.02, 1],
+            rotate: [0, -2, 2, -1, 0],
+            transition: { duration: 0.5 }
+          }
+        };
+      case 'PULSE':
+      default:
+        return {
+          initial: { scale: 1 },
+          complete: { 
+            scale: [1, 1.02, 1],
+            opacity: [1, 0.8, 0.6],
+            transition: { duration: 0.4 }
+          }
+        };
+    }
+  };
+
+  // Get checkbox animation based on coach style
+  const getCheckboxAnimation = (coachStyle: string | undefined, isComplete: boolean) => {
+    if (!isComplete) return { scale: 1, opacity: 1 };
+    
+    switch (coachStyle) {
+      case 'IRON':
+        return {
+          scale: [0, 1.1, 1],
+          transition: { duration: 0.15 }
+        };
+      case 'SPARK':
+        return {
+          scale: [0, 1.3, 0.9, 1.1, 1],
+          rotate: [0, 10, -10, 5, 0],
+          transition: { duration: 0.4 }
+        };
+      case 'PULSE':
+      default:
+        return {
+          scale: [0, 1.05, 1],
+          transition: { duration: 0.3 }
+        };
+    }
+  };
 
   const toggleBlockComplete = (blockId: string, blockType: string) => {
     const isCompleting = !completedBlocks.includes(blockId);
@@ -84,8 +143,11 @@ export function WorkoutExecution() {
         : [...prev, blockId]
     );
 
-    // Show motivational toast when completing a block
+    // Show motivational toast and trigger animation when completing a block
     if (isCompleting) {
+      setJustCompletedBlock(blockId);
+      setTimeout(() => setJustCompletedBlock(null), 600);
+      
       const newCompletedCount = completedBlocks.length + 1;
       const blocksRemaining = selectedWorkout.blocks.length - newCompletedCount;
       const message = getCompletionMessage(athleteConfig?.coachStyle, blockType, blocksRemaining);
@@ -151,28 +213,32 @@ export function WorkoutExecution() {
           {selectedWorkout.blocks.map((block, index) => {
             const isComplete = completedBlocks.includes(block.id);
             const isCurrent = index === currentBlockIndex;
+            const isJustCompleted = justCompletedBlock === block.id;
             const estimatedTime = athleteConfig 
               ? getEstimatedTimeForLevel(block, athleteConfig.level)
               : null;
             const calories = athleteConfig 
               ? calculateCalories(block, athleteConfig, estimatedTime)
               : null;
+            
+            const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
 
             return (
               <motion.div
                 key={block.id}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={isJustCompleted ? completionAnim.complete : { opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={`
                   card-elevated p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
                   ${isComplete ? 'opacity-60' : ''}
                   ${block.isMainWod ? 'ring-2 ring-primary/50' : ''}
+                  ${isJustCompleted && athleteConfig?.coachStyle === 'SPARK' ? 'ring-2 ring-yellow-400/50' : ''}
                 `}
               >
                 <div className="flex items-start gap-4">
-                  <button
+                  <motion.button
                     onClick={() => {
                       toggleBlockComplete(block.id, block.type);
                       if (!isComplete && index === currentBlockIndex) {
@@ -182,13 +248,28 @@ export function WorkoutExecution() {
                     className={`
                       mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
                       ${isComplete
-                        ? 'bg-primary border-primary text-primary-foreground'
+                        ? athleteConfig?.coachStyle === 'SPARK' 
+                          ? 'bg-yellow-500 border-yellow-500 text-black'
+                          : athleteConfig?.coachStyle === 'IRON'
+                            ? 'bg-zinc-700 border-zinc-700 text-white'
+                            : 'bg-primary border-primary text-primary-foreground'
                         : 'border-muted-foreground/30 hover:border-primary'
                       }
                     `}
+                    whileTap={{ scale: 0.9 }}
                   >
-                    {isComplete && <Check className="w-4 h-4" />}
-                  </button>
+                    <AnimatePresence mode="wait">
+                      {isComplete && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={getCheckboxAnimation(athleteConfig?.coachStyle, true)}
+                          exit={{ scale: 0, opacity: 0 }}
+                        >
+                          <Check className="w-4 h-4" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
 
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-4 mb-3">
