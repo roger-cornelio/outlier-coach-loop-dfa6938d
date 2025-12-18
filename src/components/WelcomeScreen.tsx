@@ -1,16 +1,16 @@
 /**
  * WELCOME SCREEN - LAYOUT OFICIAL ATIVO
- * Versão: 1.0.0 (GLOBAL)
+ * Versão: 1.1.0 (GLOBAL - FINAL)
  * Status: APROVADO E VIGENTE
  * Data: 2025-12-18
  * 
  * Elementos fixos:
- * - Logo OUTLIER (laranja)
+ * - Logo OUTLIER (LARANJA FIXO - text-gradient-logo)
  * - Slogan "Be the Outlier"
  * - 3 cards de coach (IRON, PULSE, SPARK)
  * - CTA "PRONTO PARA PERFORMAR" (laranja com glow)
  * 
- * NÃO MODIFICAR SEM APROVAÇÃO EXPLÍCITA
+ * VERSÃO FINAL APROVADA - NÃO MODIFICAR
  */
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
