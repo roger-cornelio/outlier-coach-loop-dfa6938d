@@ -25,13 +25,19 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // Protect admin views
+  // Protect admin views and auto-redirect coaches
   useEffect(() => {
     if (authLoading) return;
     
     // Redirect to auth if trying to access protected views without login
     if (!user && (currentView === 'admin' || currentView === 'userManagement')) {
       navigate('/auth');
+      return;
+    }
+    
+    // Auto-redirect coaches/admins to admin panel on login (only from welcome screen)
+    if (user && canManageWorkouts && currentView === 'welcome') {
+      setCurrentView('admin');
       return;
     }
     
