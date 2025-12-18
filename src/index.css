@@ -247,6 +247,60 @@
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 25 95% 53%;
   }
+
+  /* ============================================
+     ATHLETE LEVEL THEMES - Radical Visual Changes
+     ============================================ */
+  
+  /* INICIANTE - Clean, Fresh, Encouraging */
+  .level-iniciante {
+    --level-primary: 199 89% 48%;
+    --level-secondary: 187 85% 43%;
+    --level-accent: 172 66% 50%;
+    --level-glow: 199 89% 48%;
+    --level-bg-from: 199 50% 8%;
+    --level-bg-to: 210 50% 4%;
+  }
+
+  /* INTERMEDIÁRIO - Growth, Energy, Green Power */
+  .level-intermediario {
+    --level-primary: 142 71% 45%;
+    --level-secondary: 158 64% 52%;
+    --level-accent: 120 60% 50%;
+    --level-glow: 142 71% 45%;
+    --level-bg-from: 142 30% 8%;
+    --level-bg-to: 150 30% 4%;
+  }
+
+  /* AVANÇADO - Fire, Intensity, Orange Blaze */
+  .level-avancado {
+    --level-primary: 25 95% 53%;
+    --level-secondary: 38 92% 50%;
+    --level-accent: 15 90% 55%;
+    --level-glow: 25 95% 53%;
+    --level-bg-from: 25 40% 8%;
+    --level-bg-to: 15 40% 4%;
+  }
+
+  /* HYROX OPEN - Royal, Prestigious, Purple */
+  .level-hyrox_open {
+    --level-primary: 270 70% 60%;
+    --level-secondary: 290 60% 55%;
+    --level-accent: 320 70% 60%;
+    --level-glow: 270 70% 60%;
+    --level-bg-from: 270 30% 10%;
+    --level-bg-to: 280 30% 5%;
+  }
+
+  /* HYROX PRO - Elite, Gold, Champion */
+  .level-hyrox_pro {
+    --level-primary: 45 93% 47%;
+    --level-secondary: 38 92% 50%;
+    --level-accent: 30 100% 50%;
+    --level-glow: 45 93% 47%;
+    --level-bg-from: 40 30% 10%;
+    --level-bg-to: 35 30% 5%;
+  }
 }
 
 @layer base {
@@ -346,5 +400,57 @@
   @keyframes bounce-subtle {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
+  }
+
+  /* Level-specific glow */
+  .level-glow {
+    box-shadow: 0 0 80px hsl(var(--level-glow) / 0.4),
+                0 0 120px hsl(var(--level-glow) / 0.2);
+  }
+
+  .level-glow-intense {
+    box-shadow: 0 0 100px hsl(var(--level-glow) / 0.5),
+                0 0 200px hsl(var(--level-glow) / 0.3),
+                inset 0 0 60px hsl(var(--level-glow) / 0.1);
+  }
+
+  @keyframes level-pulse {
+    0%, 100% {
+      box-shadow: 0 0 40px hsl(var(--level-glow) / 0.3);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 80px hsl(var(--level-glow) / 0.5);
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-level-pulse {
+    animation: level-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes crown-float {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-8px) rotate(3deg); }
+  }
+
+  .animate-crown-float {
+    animation: crown-float 4s ease-in-out infinite;
+  }
+
+  @keyframes fire-flicker {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    25% { opacity: 0.9; transform: scale(1.05); }
+    50% { opacity: 1; transform: scale(0.98); }
+    75% { opacity: 0.95; transform: scale(1.02); }
+  }
+
+  .animate-fire-flicker {
+    animation: fire-flicker 0.5s ease-in-out infinite;
+  }
+
+  @keyframes particle-rise {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-100px) scale(0); opacity: 0; }
   }
 }

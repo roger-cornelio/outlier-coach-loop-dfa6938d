@@ -64,6 +64,12 @@ export default {
           attention: "hsl(var(--status-attention))",
           below: "hsl(var(--status-below))",
         },
+        level: {
+          primary: "hsl(var(--level-primary))",
+          secondary: "hsl(var(--level-secondary))",
+          accent: "hsl(var(--level-accent))",
+          glow: "hsl(var(--level-glow))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
