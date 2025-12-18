@@ -1,12 +1,13 @@
 export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 
-// Status is now calculated from benchmarks, not user-defined
+// Status is now calculated internally (INVISIBLE to user) from benchmarks
 export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_open' | 'hyrox_pro';
 
-// User preference for workout difficulty (offset applied to calculated status)
-export type TrainingDifficulty = 'leve' | 'padrao' | 'forte';
+// NOVO: Nível de treino escolhido pelo usuário (define a intenção do treino de hoje)
+export type TrainingLevel = 'base' | 'progressivo' | 'performance';
 
 // Legacy type alias for compatibility
+export type TrainingDifficulty = TrainingLevel; // Backward compatibility
 export type AthleteLevel = AthleteStatus;
 
 export type SessionDuration = 30 | 45 | 60 | 90 | 'ilimitado';
@@ -22,8 +23,10 @@ export interface Equipment {
 export type AthleteCountry = 'BR' | 'US' | 'DE' | 'UK' | 'ES' | 'FR' | 'IT' | 'PT' | 'OTHER';
 
 export interface AthleteConfig {
-  // User preference - NOT the actual status
-  trainingDifficulty: TrainingDifficulty;
+  // Nível de treino escolhido pelo usuário (BASE / PROGRESSIVO / PERFORMANCE)
+  trainingLevel: TrainingLevel;
+  // Legacy alias for compatibility
+  trainingDifficulty?: TrainingLevel;
   sessionDuration: SessionDuration;
   equipment: string[];
   coachStyle: CoachStyle;
@@ -159,10 +162,14 @@ export const LEVEL_NAMES: Record<AthleteStatus, string> = {
   hyrox_pro: 'HYROX PRO',
 };
 
-export const DIFFICULTY_NAMES: Record<TrainingDifficulty, string> = {
-  leve: 'Leve',
-  padrao: 'Padrão',
-  forte: 'Forte',
+// Nomes dos níveis de treino (escolha do usuário)
+export const TRAINING_LEVEL_NAMES: Record<TrainingLevel, string> = {
+  base: 'Base',
+  progressivo: 'Progressivo',
+  performance: 'Performance',
 };
+
+// Legacy alias
+export const DIFFICULTY_NAMES = TRAINING_LEVEL_NAMES;
 
 export const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];

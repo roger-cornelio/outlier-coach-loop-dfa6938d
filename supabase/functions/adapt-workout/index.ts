@@ -13,7 +13,7 @@ interface WorkoutBlock {
 }
 
 interface AthleteConfig {
-  level: 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_pro';
+  trainingLevel: 'base' | 'progressivo' | 'performance';
   sessionDuration: number | 'ilimitado';
   altura?: number;
   peso?: number;
@@ -36,27 +36,22 @@ interface RequestBody {
   adaptations: AdaptationConfig;
 }
 
-// Level-based multipliers
-const LEVEL_MULTIPLIERS = {
-  iniciante: {
+// OUTLIER Training Level multipliers (base reference is always PRO)
+const TRAINING_LEVEL_MULTIPLIERS = {
+  base: {
     volume_multiplier: 0.70,
     load_multiplier: 0.80,
-    density_rule: "mais controle/menos densidade",
+    density_rule: "volume reduzido, mais controle, pausas ampliadas",
   },
-  intermediario: {
+  progressivo: {
+    volume_multiplier: 0.90,
+    load_multiplier: 0.95,
+    density_rule: "densidade moderada, estímulo sustentável",
+  },
+  performance: {
     volume_multiplier: 1.00,
     load_multiplier: 1.00,
-    density_rule: "densidade padrão",
-  },
-  avancado: {
-    volume_multiplier: 1.15,
-    load_multiplier: 1.05,
-    density_rule: "mais densidade/menos descanso",
-  },
-  hyrox_pro: {
-    volume_multiplier: 1.25,
-    load_multiplier: 1.10,
-    density_rule: "padrão competitivo (densidade alta)",
+    density_rule: "alta densidade, ritmos agressivos, estímulo máximo",
   },
 };
 
@@ -224,7 +219,7 @@ serve(async (req) => {
   try {
     const { athleteConfig, workout, adaptations }: RequestBody = await req.json();
     
-    console.log("Adapt workout request:", { level: athleteConfig.level, day: workout.day });
+    console.log("Adapt workout request:", { trainingLevel: athleteConfig.trainingLevel, day: workout.day });
 
     // Check if there's a workout to adapt
     if (!workout || !workout.blocks || workout.blocks.length === 0) {
@@ -236,34 +231,37 @@ serve(async (req) => {
       });
     }
 
-    const levelMultipliers = LEVEL_MULTIPLIERS[athleteConfig.level] || LEVEL_MULTIPLIERS.intermediario;
+    const trainingLevel = athleteConfig.trainingLevel || 'progressivo';
+    const levelMultipliers = TRAINING_LEVEL_MULTIPLIERS[trainingLevel] || TRAINING_LEVEL_MULTIPLIERS.progressivo;
     const timeLimit = athleteConfig.sessionDuration === 'ilimitado' ? 90 : athleteConfig.sessionDuration;
-    const levelLabel = athleteConfig.level.toUpperCase();
+    const levelLabel = trainingLevel.toUpperCase();
 
+    // Ajuste por sexo (proporcional, não "mais fácil")
+    const sexLoadAdjust = athleteConfig.sexo === 'feminino' ? 0.85 : 1.0;
     const volMult = levelMultipliers.volume_multiplier;
-    const loadMult = levelMultipliers.load_multiplier;
+    const loadMult = levelMultipliers.load_multiplier * sexLoadAdjust;
 
-    console.log(`Applying multipliers: vol=${volMult}, load=${loadMult}`);
+    console.log(`OUTLIER Engine: trainingLevel=${trainingLevel}, vol=${volMult}, load=${loadMult}`);
 
-    // Time budget by level
+    // Time budget by training level
     const timeBudget: Record<string, number> = {
-      aquecimento: timeLimit <= 30 ? 5 : timeLimit <= 45 ? 8 : timeLimit <= 60 ? 10 : 12,
-      forca: timeLimit <= 30 ? 5 : timeLimit <= 45 ? 10 : timeLimit <= 60 ? 15 : 20,
-      conditioning: timeLimit <= 30 ? 18 : timeLimit <= 45 ? 24 : timeLimit <= 60 ? 30 : 50,
-      core: timeLimit <= 30 ? 2 : timeLimit <= 45 ? 3 : timeLimit <= 60 ? 5 : 8,
-      especifico: timeLimit <= 30 ? 0 : timeLimit <= 45 ? 0 : timeLimit <= 60 ? 0 : 10,
-      corrida: 0, // opcional por padrão
+      aquecimento: timeLimit <= 45 ? 8 : timeLimit <= 60 ? 10 : 12,
+      forca: timeLimit <= 45 ? 10 : timeLimit <= 60 ? 15 : 20,
+      conditioning: timeLimit <= 45 ? 24 : timeLimit <= 60 ? 30 : 50,
+      core: timeLimit <= 45 ? 3 : timeLimit <= 60 ? 5 : 8,
+      especifico: timeLimit <= 60 ? 0 : 10,
+      corrida: 0,
       notas: 0,
     };
 
-    // CONDENSE MODE para HYROX_PRO com tempo curto
+    // CONDENSE MODE - compressão inteligente quando tempo é curto
     let condenseMode = false;
     let condenseMult = 1.0;
     
-    if (athleteConfig.level === 'hyrox_pro' && timeLimit <= 45) {
+    if (trainingLevel === 'performance' && timeLimit <= 45) {
       condenseMode = true;
-      condenseMult = 0.75; // Reduz volume adicional para caber no tempo
-      console.log("CONDENSE MODE activated for HYROX_PRO");
+      condenseMult = 0.75;
+      console.log("CONDENSE MODE activated for PERFORMANCE level");
     }
 
     // Aplica scaling determinístico em cada bloco
