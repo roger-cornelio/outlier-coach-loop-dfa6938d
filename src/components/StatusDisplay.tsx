@@ -5,9 +5,9 @@ import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { 
   CONFIDENCE_LABELS, 
   CONFIDENCE_COLORS,
-  STATUS_THRESHOLDS,
   STATUS_SOURCE_LABELS,
   formatOfficialTime,
+  getLevelScoreDescription,
   type StatusSource
 } from '@/utils/athleteStatusSystem';
 
@@ -28,9 +28,9 @@ function getPromotionBlockerMessage(
   
   switch (blocker) {
     case 'score':
-      const nextThreshold = data.nextStatus ? STATUS_THRESHOLDS[data.nextStatus].min + 5 : 100;
-      const pointsNeeded = Math.ceil(nextThreshold - data.rulerScore);
-      return `+${pointsNeeded} pts para promoção`;
+      // Score now is 0-100 within level, need ~80+ for promotion consideration
+      const pointsNeeded = Math.max(0, Math.ceil(80 - data.rulerScore));
+      return pointsNeeded > 0 ? `+${pointsNeeded} pts para promoção` : 'Mantenha a performance';
     case 'consistency':
       return 'Mantenha resultados estáveis';
     case 'weeks':

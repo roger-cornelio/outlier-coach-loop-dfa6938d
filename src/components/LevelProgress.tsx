@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
-import { STATUS_THRESHOLDS, CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
+import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
 
 // Level configuration with radical visual identity
 const LEVEL_CONFIG: Record<AthleteStatus, {
