@@ -32,7 +32,7 @@ const RESULT_TYPES = [
 
 export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const { user } = useAuth();
-  const { athleteConfig, setCurrentView } = useOutlierStore();
+  const { athleteConfig, setCurrentView, triggerExternalResultsRefresh } = useOutlierStore();
   const [open, setOpen] = useState(false);
   const [resultType, setResultType] = useState<ResultType>('simulado');
   const [eventName, setEventName] = useState('');
@@ -220,6 +220,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setExtractionConfidence(null);
       removeScreenshot();
       setOpen(false);
+      triggerExternalResultsRefresh();
       onResultAdded?.();
     } catch (error) {
       console.error('Error adding result:', error);

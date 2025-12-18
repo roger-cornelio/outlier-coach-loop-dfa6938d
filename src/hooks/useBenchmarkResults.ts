@@ -48,13 +48,13 @@ const saveToStorage = (results: BenchmarkResult[]) => {
 };
 
 export function useBenchmarkResults() {
-  const { athleteConfig, addWorkoutResult } = useOutlierStore();
+  const { athleteConfig, addWorkoutResult, externalResultsRefreshKey } = useOutlierStore();
   const { user } = useAuth();
   const [results, setResults] = useState<BenchmarkResult[]>([]);
   const [externalResults, setExternalResults] = useState<ExternalResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load results from localStorage and Supabase on mount
+  // Load results from localStorage and Supabase on mount and when refresh key changes
   useEffect(() => {
     const loadResults = async () => {
       // Load local benchmark results
@@ -79,7 +79,7 @@ export function useBenchmarkResults() {
     };
 
     loadResults();
-  }, [user?.id]);
+  }, [user?.id, externalResultsRefreshKey]);
 
   // Get only official competition results
   const getOfficialCompetitions = useCallback((): ExternalResult[] => {
