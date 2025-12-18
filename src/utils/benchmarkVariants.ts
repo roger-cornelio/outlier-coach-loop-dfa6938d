@@ -49,6 +49,26 @@ export function getEffectiveNotes(block: WorkoutBlock, level?: AthleteLevel): st
 }
 
 /**
+ * Get the effective PSE (Perceived Subjective Exertion) for an athlete's level
+ */
+export function getEffectivePSE(block: WorkoutBlock, level?: AthleteLevel): number | undefined {
+  if (!level) return block.pse;
+  
+  const variant = block.levelVariants?.[level];
+  return variant?.pse || block.pse;
+}
+
+/**
+ * Get the effective reference pace for an athlete's level
+ */
+export function getEffectiveReferencePace(block: WorkoutBlock, level?: AthleteLevel): number | undefined {
+  if (!level) return block.referencePaceMinutes;
+  
+  const variant = block.levelVariants?.[level];
+  return variant?.referencePaceMinutes || block.referencePaceMinutes;
+}
+
+/**
  * Check if a block has level-specific variants
  */
 export function hasLevelVariants(block: WorkoutBlock): boolean {
@@ -63,13 +83,37 @@ export function getEffectiveVariant(block: WorkoutBlock, level?: AthleteLevel): 
   targetRange?: TargetTimeRange;
   durationMinutes?: number;
   notes?: string;
+  pse?: number;
+  referencePaceMinutes?: number;
 } {
   return {
     content: getEffectiveContent(block, level),
     targetRange: getEffectiveTargetRange(block, level),
     durationMinutes: getEffectiveDuration(block, level),
     notes: getEffectiveNotes(block, level),
+    pse: getEffectivePSE(block, level),
+    referencePaceMinutes: getEffectiveReferencePace(block, level),
   };
+}
+
+/**
+ * Get PSE label and color
+ */
+export function getPSEInfo(pse: number): { label: string; colorClass: string } {
+  if (pse <= 3) return { label: 'Leve', colorClass: 'text-green-500' };
+  if (pse <= 5) return { label: 'Moderado', colorClass: 'text-yellow-500' };
+  if (pse <= 7) return { label: 'Intenso', colorClass: 'text-orange-500' };
+  if (pse <= 9) return { label: 'Muito Intenso', colorClass: 'text-red-500' };
+  return { label: 'Máximo', colorClass: 'text-red-600' };
+}
+
+/**
+ * Format reference pace
+ */
+export function formatPace(paceMinutes: number): string {
+  const mins = Math.floor(paceMinutes);
+  const secs = Math.round((paceMinutes - mins) * 60);
+  return `${mins}:${String(secs).padStart(2, '0')}/km`;
 }
 
 // Example benchmark templates

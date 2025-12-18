@@ -36,6 +36,8 @@ export interface LevelVariant {
   notes?: string; // e.g., "ritmo confortável, foco em constância"
   targetRange?: TargetTimeRange;
   durationMinutes?: number;
+  pse?: number; // Perceived Subjective Exertion (1-10)
+  referencePaceMinutes?: number; // Reference pace per km/500m
 }
 
 export interface LevelVariants {
@@ -66,6 +68,9 @@ export interface WorkoutBlock {
   targetRange?: TargetTimeRange;
   levelTargetRanges?: LevelTargetRanges; // Legacy: target times per level
   levelVariants?: LevelVariants; // Full variants per level (content + targets)
+  // Intensity guidance
+  pse?: number; // Perceived Subjective Exertion (1-10 scale)
+  referencePaceMinutes?: number; // Reference pace per km/500m
   referenceTime?: {
     iniciante: number;
     intermediario: number;

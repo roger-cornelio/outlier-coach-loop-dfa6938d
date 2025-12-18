@@ -4,7 +4,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info } from 'lucide-react';
 import { getEstimatedTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
-import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes } from '@/utils/benchmarkVariants';
+import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 
 const blockTypeColors: Record<string, string> = {
@@ -220,6 +220,9 @@ export function WorkoutExecution() {
             const effectiveContent = getEffectiveContent(block, athleteConfig?.level);
             const effectiveNotes = getEffectiveNotes(block, athleteConfig?.level);
             const effectiveTargetRange = getEffectiveTargetRange(block, athleteConfig?.level);
+            const effectivePSE = getEffectivePSE(block, athleteConfig?.level);
+            const effectivePace = getEffectiveReferencePace(block, athleteConfig?.level);
+            const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
             const estimatedTime = athleteConfig 
               ? getEstimatedTimeForLevel(block, athleteConfig.level)
@@ -302,8 +305,8 @@ export function WorkoutExecution() {
                     )}
 
                     {/* Block Stats */}
-                    {(estimatedTime || calories) && block.type !== 'notas' && (
-                      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/50">
+                    {(estimatedTime || calories || pseInfo || effectivePace) && block.type !== 'notas' && (
+                      <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-border/50">
                         {estimatedTime && (
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-muted-foreground" />
@@ -315,6 +318,20 @@ export function WorkoutExecution() {
                           <div className="flex items-center gap-2 text-sm">
                             <Flame className="w-4 h-4 text-orange-500" />
                             <span className="text-orange-500 font-medium">~{calories} kcal</span>
+                          </div>
+                        )}
+                        {pseInfo && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">PSE:</span>
+                            <span className={`font-medium ${pseInfo.colorClass}`}>
+                              {effectivePSE}/10 ({pseInfo.label})
+                            </span>
+                          </div>
+                        )}
+                        {effectivePace && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">Pace:</span>
+                            <span className="font-medium text-foreground">{formatPace(effectivePace)}</span>
                           </div>
                         )}
                       </div>
