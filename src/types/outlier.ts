@@ -26,8 +26,9 @@ export interface AthleteConfig {
   // Legacy alias for compatibility
   trainingDifficulty?: TrainingLevel;
   sessionDuration: SessionDuration;
-  equipment: string[]; // Equipamentos disponíveis
+  equipment?: string[]; // Legacy: Equipamentos disponíveis (opcional)
   unavailableEquipment?: string[]; // Equipamentos que o atleta NÃO possui
+  equipmentNotes?: string; // Notas adicionais sobre equipamentos
   coachStyle: CoachStyle;
   altura?: number;
   peso?: number;
