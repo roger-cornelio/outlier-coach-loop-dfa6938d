@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3 } from 'lucide-react';
 import { classifyBenchmarkPerformance, calculateBenchmarkScore } from '@/utils/benchmarkVariants';
 import type { AthleteLevel, PerformanceBucket } from '@/types/outlier';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 interface BenchmarkResult {
   blockId: string;
@@ -43,6 +44,7 @@ const BUCKET_SCORES: Record<PerformanceBucket, number> = {
 
 export function EvolutionMilestones() {
   const { workoutResults, weeklyWorkouts, athleteConfig } = useOutlierStore();
+  const [activeTab, setActiveTab] = useState<'milestones' | 'chart'>('milestones');
 
   const evolutionData = useMemo(() => {
     if (!athleteConfig) return null;
@@ -125,6 +127,37 @@ export function EvolutionMilestones() {
       shouldEvolve: suggestedLevelIndex > currentLevelIndex,
     };
   }, [workoutResults, weeklyWorkouts, athleteConfig]);
+
+  // Calculate weekly chart data
+  const chartData = useMemo(() => {
+    if (!evolutionData || evolutionData.benchmarkResults.length === 0) return [];
+
+    // Group by week
+    const weeklyData: Record<string, { scores: number[]; date: Date }> = {};
+    
+    evolutionData.benchmarkResults.forEach(r => {
+      const date = new Date(r.date);
+      // Get week start (Monday)
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay() + 1);
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { scores: [], date: weekStart };
+      }
+      if (r.score) weeklyData[weekKey].scores.push(r.score);
+    });
+
+    // Convert to chart format and sort by date
+    return Object.entries(weeklyData)
+      .map(([key, data]) => ({
+        week: key,
+        weekLabel: `${data.date.getDate()}/${data.date.getMonth() + 1}`,
+        avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+        benchmarks: data.scores.length,
+      }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+  }, [evolutionData]);
 
   const milestones = useMemo((): MilestoneData[] => {
     if (!evolutionData) return [];
@@ -209,17 +242,57 @@ export function EvolutionMilestones() {
   const nextLevel = LEVEL_ORDER[LEVEL_ORDER.indexOf(evolutionData.currentLevel) + 1];
   const nextLevelInfo = nextLevel ? LEVEL_DISPLAY[nextLevel] : null;
 
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-background/95 backdrop-blur border border-border rounded-lg p-3 shadow-xl">
+          <p className="text-xs text-muted-foreground mb-1">Semana de {data.weekLabel}</p>
+          <p className="font-display text-lg text-primary">{data.avgScore}%</p>
+          <p className="text-xs text-muted-foreground">{data.benchmarks} benchmark{data.benchmarks !== 1 ? 's' : ''}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="card-elevated p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-lg bg-primary/20">
-          <Trophy className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/20">
+            <Trophy className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-display text-xl">Marcos de Evolução</h3>
+            <p className="text-sm text-muted-foreground">
+              {evolutionData.totalBenchmarks} benchmark{evolutionData.totalBenchmarks !== 1 ? 's' : ''} completado{evolutionData.totalBenchmarks !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-display text-xl">Marcos de Evolução</h3>
-          <p className="text-sm text-muted-foreground">
-            {evolutionData.totalBenchmarks} benchmark{evolutionData.totalBenchmarks !== 1 ? 's' : ''} completado{evolutionData.totalBenchmarks !== 1 ? 's' : ''}
-          </p>
+        
+        {/* Tab Toggle */}
+        <div className="flex bg-secondary/50 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('milestones')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              activeTab === 'milestones'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveTab('chart')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              activeTab === 'chart'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -273,80 +346,165 @@ export function EvolutionMilestones() {
         )}
       </div>
 
-      {/* Performance Summary */}
-      <div className="grid grid-cols-5 gap-2 mb-6">
-        {(['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'] as PerformanceBucket[]).map((bucket) => {
-          const count = evolutionData.bucketCounts[bucket];
-          const colors: Record<PerformanceBucket, string> = {
-            ELITE: 'bg-gradient-to-b from-amber-500/30 to-amber-600/30 text-amber-500 border-amber-500/30',
-            STRONG: 'bg-gradient-to-b from-green-500/30 to-green-600/30 text-green-500 border-green-500/30',
-            OK: 'bg-gradient-to-b from-blue-500/30 to-blue-600/30 text-blue-500 border-blue-500/30',
-            TOUGH: 'bg-gradient-to-b from-orange-500/30 to-orange-600/30 text-orange-500 border-orange-500/30',
-            DNF: 'bg-gradient-to-b from-red-500/30 to-red-600/30 text-red-500 border-red-500/30',
-          };
-          return (
-            <div
-              key={bucket}
-              className={`p-2 rounded-lg border text-center ${count > 0 ? colors[bucket] : 'bg-secondary/30 text-muted-foreground border-border/50'}`}
-            >
-              <div className="font-display text-xl">{count}</div>
-              <div className="text-[10px] uppercase tracking-wide opacity-80">{bucket}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Milestones */}
-      <div className="space-y-3">
-        {milestones.map((milestone, index) => (
-          <motion.div
-            key={milestone.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`p-3 rounded-lg border transition-all ${
-              milestone.achieved
-                ? 'bg-gradient-to-r from-primary/10 to-transparent border-primary/30'
-                : 'bg-secondary/30 border-border/50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                milestone.achieved
-                  ? `bg-gradient-to-br ${getLevelColor(milestone.level)} text-white`
-                  : 'bg-secondary text-muted-foreground'
-              }`}>
-                {milestone.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`font-medium text-sm ${milestone.achieved ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    {milestone.title}
-                  </span>
-                  {milestone.achieved && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-                      ✓ Desbloqueado
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">{milestone.description}</p>
-                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${milestone.progress}%` }}
-                    transition={{ duration: 0.8, delay: index * 0.1 }}
-                    className={`h-full rounded-full ${
-                      milestone.achieved
-                        ? `bg-gradient-to-r ${getLevelColor(milestone.level)}`
-                        : 'bg-muted-foreground/50'
-                    }`}
+      {activeTab === 'chart' ? (
+        /* Evolution Chart */
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Score Médio por Semana</span>
+          </div>
+          
+          {chartData.length > 1 ? (
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="weekLabel" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   />
-                </div>
-              </div>
+                  <YAxis 
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="avgScore"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#scoreGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </motion.div>
-        ))}
-      </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center bg-secondary/30 rounded-lg">
+              <p className="text-sm text-muted-foreground text-center">
+                Complete benchmarks em mais semanas<br />para ver seu gráfico de evolução.
+              </p>
+            </div>
+          )}
+
+          {/* Performance Summary */}
+          <div className="grid grid-cols-5 gap-2">
+            {(['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'] as PerformanceBucket[]).map((bucket) => {
+              const count = evolutionData.bucketCounts[bucket];
+              const colors: Record<PerformanceBucket, string> = {
+                ELITE: 'bg-gradient-to-b from-amber-500/30 to-amber-600/30 text-amber-500 border-amber-500/30',
+                STRONG: 'bg-gradient-to-b from-green-500/30 to-green-600/30 text-green-500 border-green-500/30',
+                OK: 'bg-gradient-to-b from-blue-500/30 to-blue-600/30 text-blue-500 border-blue-500/30',
+                TOUGH: 'bg-gradient-to-b from-orange-500/30 to-orange-600/30 text-orange-500 border-orange-500/30',
+                DNF: 'bg-gradient-to-b from-red-500/30 to-red-600/30 text-red-500 border-red-500/30',
+              };
+              return (
+                <div
+                  key={bucket}
+                  className={`p-2 rounded-lg border text-center ${count > 0 ? colors[bucket] : 'bg-secondary/30 text-muted-foreground border-border/50'}`}
+                >
+                  <div className="font-display text-lg">{count}</div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-80">{bucket}</div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      ) : (
+        /* Milestones View */
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {/* Performance Summary */}
+          <div className="grid grid-cols-5 gap-2 mb-6">
+            {(['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'] as PerformanceBucket[]).map((bucket) => {
+              const count = evolutionData.bucketCounts[bucket];
+              const colors: Record<PerformanceBucket, string> = {
+                ELITE: 'bg-gradient-to-b from-amber-500/30 to-amber-600/30 text-amber-500 border-amber-500/30',
+                STRONG: 'bg-gradient-to-b from-green-500/30 to-green-600/30 text-green-500 border-green-500/30',
+                OK: 'bg-gradient-to-b from-blue-500/30 to-blue-600/30 text-blue-500 border-blue-500/30',
+                TOUGH: 'bg-gradient-to-b from-orange-500/30 to-orange-600/30 text-orange-500 border-orange-500/30',
+                DNF: 'bg-gradient-to-b from-red-500/30 to-red-600/30 text-red-500 border-red-500/30',
+              };
+              return (
+                <div
+                  key={bucket}
+                  className={`p-2 rounded-lg border text-center ${count > 0 ? colors[bucket] : 'bg-secondary/30 text-muted-foreground border-border/50'}`}
+                >
+                  <div className="font-display text-xl">{count}</div>
+                  <div className="text-[10px] uppercase tracking-wide opacity-80">{bucket}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Milestones */}
+          <div className="space-y-3">
+            {milestones.map((milestone, index) => (
+              <motion.div
+                key={milestone.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`p-3 rounded-lg border transition-all ${
+                  milestone.achieved
+                    ? 'bg-gradient-to-r from-primary/10 to-transparent border-primary/30'
+                    : 'bg-secondary/30 border-border/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    milestone.achieved
+                      ? `bg-gradient-to-br ${getLevelColor(milestone.level)} text-white`
+                      : 'bg-secondary text-muted-foreground'
+                  }`}>
+                    {milestone.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-medium text-sm ${milestone.achieved ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {milestone.title}
+                      </span>
+                      {milestone.achieved && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+                          ✓ Desbloqueado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">{milestone.description}</p>
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${milestone.progress}%` }}
+                        transition={{ duration: 0.8, delay: index * 0.1 }}
+                        className={`h-full rounded-full ${
+                          milestone.achieved
+                            ? `bg-gradient-to-r ${getLevelColor(milestone.level)}`
+                            : 'bg-muted-foreground/50'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
