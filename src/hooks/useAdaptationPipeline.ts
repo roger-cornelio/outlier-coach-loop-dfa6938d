@@ -10,6 +10,7 @@ import {
 } from '@/lib/adaptation/adaptWorkoutText';
 import type { DayWorkout, WorkoutBlock, AthleteConfig } from '@/types/outlier';
 import { toast } from 'sonner';
+import { estimateDayWorkoutTime } from '@/utils/estimateWorkoutTime';
 
 // ============================================
 // HOOK PARA PIPELINE DE ADAPTAÇÃO OBRIGATÓRIA
@@ -107,16 +108,25 @@ export function useAdaptationPipeline() {
     console.log(`Sexo: ${sex} (${SEX_MULT[sex]})`);
     console.log(`Multiplicador final: ${multiplier}`);
 
-    // Fast path: PERFORMANCE + M = 1.0 → sem alterações
+    // Fast path: PERFORMANCE + M = 1.0 → sem alterações de conteúdo, mas recalcula tempo
     if (multiplier === 1.0) {
-      console.log('✅ PERFORMANCE M - usando planilha base sem alterações');
-      setAdaptedWorkouts(baseWorkouts);
+      console.log('✅ PERFORMANCE M - usando planilha base sem alterações de conteúdo');
+      
+      // Recalcular tempo estimado para cada dia
+      const workoutsWithTime = baseWorkouts.map(day => ({
+        ...day,
+        estimatedTime: estimateDayWorkoutTime(day),
+      }));
+      
+      const totalEstimated = workoutsWithTime.reduce((sum, d) => sum + (d.estimatedTime || 0), 0);
+      
+      setAdaptedWorkouts(workoutsWithTime);
       return {
         success: true,
-        adaptedWorkouts: baseWorkouts,
+        adaptedWorkouts: workoutsWithTime,
         summary: {
-          totalOriginalMinutes: baseWorkouts.reduce((sum, d) => sum + (d.estimatedTime || 0), 0),
-          totalAdaptedMinutes: baseWorkouts.reduce((sum, d) => sum + (d.estimatedTime || 0), 0),
+          totalOriginalMinutes: totalEstimated,
+          totalAdaptedMinutes: totalEstimated,
           levelMultiplier: LEVEL_MULT[level],
           genderMultiplier: SEX_MULT[sex],
           combinedMultiplier: multiplier,
@@ -135,23 +145,26 @@ export function useAdaptationPipeline() {
         adaptBlockContent(block, multiplier)
       );
 
-      // Calcular tempos
-      const originalTime = dayWorkout.blocks.reduce((sum, b) => sum + b.durationMinutes, 0);
-      const adaptedTime = adaptedBlocks.reduce((sum, b) => sum + b.durationMinutes, 0);
-      
-      totalOriginalMin += originalTime;
-      totalAdaptedMin += adaptedTime;
-
-      // Criar dia adaptado
-      adaptedDays.push({
+      // Criar dia adaptado com tempo recalculado baseado no conteúdo
+      const adaptedDay: DayWorkout = {
         ...dayWorkout,
         blocks: adaptedBlocks,
-        estimatedTime: adaptedTime,
-      });
+        estimatedTime: 0, // Placeholder, será calculado abaixo
+      };
+      
+      // Calcular tempo estimado baseado no conteúdo adaptado
+      const estimatedTime = estimateDayWorkoutTime(adaptedDay);
+      adaptedDay.estimatedTime = estimatedTime;
+
+      const originalDuration = dayWorkout.blocks.reduce((sum, b) => sum + (b.durationMinutes || 0), 0);
+      totalOriginalMin += originalDuration;
+      totalAdaptedMin += estimatedTime;
+
+      adaptedDays.push(adaptedDay);
     }
 
     console.log('✅ Adaptação concluída');
-    console.log(`Original: ${totalOriginalMin}min → Adaptado: ${totalAdaptedMin}min`);
+    console.log(`Tempo estimado total: ${totalAdaptedMin}min`);
 
     // Salvar no store
     setAdaptedWorkouts(adaptedDays);

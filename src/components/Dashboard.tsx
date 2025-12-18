@@ -204,7 +204,13 @@ export function Dashboard() {
 
   const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
 
-  // Calculate metrics using the workout engine
+  // ============================================
+  // REGRA: Tempo vem EXCLUSIVAMENTE do estimatedTime do adaptedWorkout
+  // Nunca de workoutEngine, nunca de valores fixos
+  // ============================================
+  const totalTime = currentWorkout?.estimatedTime || 0;
+  
+  // Calculate calories using the workout engine (only for kcal, not time)
   const workoutMetrics = useMemo(() => {
     if (!currentWorkout || !athleteConfig) {
       return { totalMinutes: 0, totalKcal: 0, blockMetrics: [] };
@@ -222,7 +228,6 @@ export function Dashboard() {
   }, [currentWorkout, athleteConfig, effectiveLevel]);
 
   const totalCalories = workoutMetrics.totalKcal;
-  const totalTime = workoutMetrics.totalMinutes || currentWorkout?.estimatedTime || 0;
 
   // Fallback objective if AI fails
   const getFallbackObjective = (): string => {
@@ -453,7 +458,7 @@ export function Dashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>{formatTime(totalTime)}</span>
+                    <span>{totalTime > 0 ? formatTime(totalTime) : 'Estimando…'}</span>
                   </div>
                   {totalCalories > 0 && (
                     <div className="flex items-center gap-2">
