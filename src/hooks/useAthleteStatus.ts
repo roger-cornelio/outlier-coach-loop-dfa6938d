@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useBenchmarkResults } from './useBenchmarkResults';
 import { useOutlierStore } from '@/store/outlierStore';
 import { 
@@ -39,6 +39,15 @@ function saveStatus(status: AthleteStatus): void {
   }
 }
 
+// Clear status from localStorage
+export function clearStatusHistory(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore errors
+  }
+}
+
 // Calculate approximate birth date from current age
 function getBirthDateFromAge(age: number): Date {
   const today = new Date();
@@ -49,7 +58,7 @@ function getBirthDateFromAge(age: number): Date {
 
 export function useAthleteStatus() {
   const { results, getOfficialCompetitions, loading } = useBenchmarkResults();
-  const { athleteConfig } = useOutlierStore();
+  const { athleteConfig, externalResultsRefreshKey } = useOutlierStore();
   
   // Map sexo to AthleteGender type
   const gender: AthleteGender = athleteConfig?.sexo === 'feminino' ? 'feminino' : 'masculino';
@@ -60,7 +69,10 @@ export function useAthleteStatus() {
     : undefined;
   
   const calculatedStatus = useMemo<CalculatedStatus>(() => {
-    const previousStatus = loadPreviousStatus();
+    // Check if there are any results - if not, don't use previous status
+    const hasAnyResults = results.length > 0;
+    const previousStatus = hasAnyResults ? loadPreviousStatus() : undefined;
+    
     const officialCompetitions = getOfficialCompetitions();
     const status = calculateAthleteStatus(
       results, 
@@ -70,16 +82,18 @@ export function useAthleteStatus() {
       athleteBirthDate
     );
     
-    // Save for hysteresis on next calculation
-    saveStatus(status.status);
+    // Only save status if there are results
+    if (hasAnyResults) {
+      saveStatus(status.status);
+    }
     
     return status;
-  }, [results, getOfficialCompetitions, gender, athleteBirthDate]);
+  }, [results, getOfficialCompetitions, gender, athleteBirthDate, externalResultsRefreshKey]);
   
   // Get effective level for workout prescription
-  const getEffectiveLevelForWorkout = (difficulty: TrainingDifficulty): AthleteStatus => {
+  const getEffectiveLevelForWorkout = useCallback((difficulty: TrainingDifficulty): AthleteStatus => {
     return getEffectiveLevel(calculatedStatus.status, difficulty);
-  };
+  }, [calculatedStatus.status]);
   
   // Get current athlete age bracket (for display)
   const currentAgeBracket: HyroxAgeBracket | undefined = athleteConfig?.idade 
