@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -146,6 +146,7 @@ export function AdminSpreadsheet() {
   const [programPeriod, setProgramPeriod] = useState('');
   const [targetAudience, setTargetAudience] = useState<'all' | 'specific'>('all');
   const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
   if (authLoading) {
     return (
@@ -392,9 +393,25 @@ export function AdminSpreadsheet() {
       return;
     }
     
-    // Proceed to detailed review phase with parsedWorkouts
+    setError(null);
+    setShowSaveConfirmation(true);
+  };
+
+  const goToReviewPhase = () => {
+    setShowSaveConfirmation(false);
     setShowConfig(false);
     // parsedWorkouts remains set, so it will show the review phase
+  };
+
+  const goBackToCoachCentral = () => {
+    setShowSaveConfirmation(false);
+    setShowConfig(false);
+    setParsedWorkouts(null);
+    setSpreadsheetText('');
+    setProgramName('');
+    setProgramPeriod('');
+    setTargetAudience('all');
+    setProgramStatus('draft');
   };
 
   const formatTargetTime = (totalSeconds?: number) => {
@@ -575,6 +592,44 @@ export function AdminSpreadsheet() {
     );
   }
 
+  // Save Confirmation UI
+  if (parsedWorkouts && showSaveConfirmation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full p-8 rounded-2xl bg-card border border-border text-center"
+        >
+          <div className="w-16 h-16 rounded-full bg-status-excellent/20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-8 h-8 text-status-excellent" />
+          </div>
+          <h2 className="font-display text-2xl mb-2">Programação Salva!</h2>
+          <p className="text-muted-foreground text-sm mb-8">
+            {programStatus === 'draft' 
+              ? 'Programação salva como rascunho. Você pode editar ou publicar quando quiser.'
+              : 'Programação publicada com sucesso. Os atletas já podem visualizar.'}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={goToReviewPhase}
+              className="w-full font-display text-base tracking-wider px-6 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-2"
+            >
+              <Eye className="w-5 h-5" />
+              Ver programação
+            </button>
+            <button
+              onClick={goBackToCoachCentral}
+              className="w-full px-6 py-4 rounded-lg border border-border hover:bg-secondary transition-colors font-body text-sm"
+            >
+              Voltar à Central do Coach
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Config phase UI
   if (parsedWorkouts && showConfig) {
     return (
@@ -592,7 +647,7 @@ export function AdminSpreadsheet() {
               <div>
                 <h1 className="font-display text-2xl font-bold tracking-wide">CONFIGURAR PROGRAMAÇÃO</h1>
                 <p className="text-sm text-muted-foreground">
-                  Defina nome, período e visibilidade
+                  Defina como essa programação será salva e disponibilizada.
                 </p>
               </div>
             </div>
@@ -626,7 +681,7 @@ export function AdminSpreadsheet() {
                 type="text"
                 value={programName}
                 onChange={(e) => setProgramName(e.target.value)}
-                placeholder="Ex: Semana 12 – Base HYROX"
+                placeholder="Ex: Semana 12 – HYROX PRO | Base Aeróbica"
                 className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
               />
             </div>
@@ -659,16 +714,17 @@ export function AdminSpreadsheet() {
                   />
                   <span className="text-sm">Todos os atletas</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer opacity-60">
+                <label className="flex items-center gap-3 cursor-not-allowed opacity-50">
                   <input
                     type="radio"
                     name="audience"
-                    checked={targetAudience === 'specific'}
-                    onChange={() => setTargetAudience('specific')}
-                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
+                    disabled
+                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary cursor-not-allowed"
                   />
-                  <span className="text-sm">Grupo específico</span>
-                  <span className="text-xs text-muted-foreground">(em breve)</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm">Grupo específico</span>
+                    <span className="text-xs text-muted-foreground">Disponível em breve para times e categorias</span>
+                  </div>
                 </label>
               </div>
             </div>
@@ -685,8 +741,11 @@ export function AdminSpreadsheet() {
                     onChange={() => setProgramStatus('draft')}
                     className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
                   />
-                  <div>
-                    <span className="text-sm">Salvar como rascunho</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">Salvar como rascunho</span>
+                      <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">Recomendado</span>
+                    </div>
                     <p className="text-xs text-muted-foreground">Não será visível para os atletas ainda</p>
                   </div>
                 </label>
