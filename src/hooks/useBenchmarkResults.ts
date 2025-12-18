@@ -1,12 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
-import { toast } from 'sonner';
 
 export interface BenchmarkResult {
-  id?: string;
-  user_id?: string;
+  id: string;
   workout_id: string;
   block_id: string;
   benchmark_id?: string;
@@ -15,111 +11,74 @@ export interface BenchmarkResult {
   score?: number;
   bucket?: string;
   athlete_level?: string;
-  created_at?: string;
+  created_at: string;
 }
 
+const STORAGE_KEY = 'outlier-benchmark-history';
+
+// Load from localStorage
+const loadFromStorage = (): BenchmarkResult[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Save to localStorage
+const saveToStorage = (results: BenchmarkResult[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+  } catch (err) {
+    console.error('Error saving to localStorage:', err);
+  }
+};
+
 export function useBenchmarkResults() {
-  const { user } = useAuth();
-  const { athleteConfig, workoutResults, addWorkoutResult } = useOutlierStore();
-  const [dbResults, setDbResults] = useState<BenchmarkResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { athleteConfig, addWorkoutResult } = useOutlierStore();
+  const [results, setResults] = useState<BenchmarkResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch benchmark results from database
-  const fetchResults = useCallback(async () => {
-    if (!user) {
-      setDbResults([]);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('benchmark_results')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setDbResults(data || []);
-    } catch (err) {
-      console.error('Error fetching benchmark results:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  // Load results on mount and when user changes
+  // Load results from localStorage on mount
   useEffect(() => {
-    fetchResults();
-  }, [fetchResults]);
+    const stored = loadFromStorage();
+    setResults(stored);
+    setLoading(false);
+  }, []);
 
   // Save a new benchmark result
-  const saveBenchmarkResult = useCallback(async (result: Omit<BenchmarkResult, 'id' | 'user_id' | 'created_at'>) => {
-    if (!user) {
-      // If not logged in, just save to local store
-      addWorkoutResult({
-        workoutId: result.workout_id,
-        blockId: result.block_id,
-        completed: result.completed,
-        timeInSeconds: result.time_in_seconds,
-        date: new Date().toISOString(),
-      });
-      return null;
-    }
+  const saveBenchmarkResult = useCallback((result: Omit<BenchmarkResult, 'id' | 'created_at'>) => {
+    const newResult: BenchmarkResult = {
+      ...result,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      athlete_level: athleteConfig?.level,
+    };
 
-    try {
-      const { data, error } = await supabase
-        .from('benchmark_results')
-        .insert({
-          user_id: user.id,
-          workout_id: result.workout_id,
-          block_id: result.block_id,
-          benchmark_id: result.benchmark_id,
-          completed: result.completed,
-          time_in_seconds: result.time_in_seconds,
-          score: result.score,
-          bucket: result.bucket,
-          athlete_level: athleteConfig?.level,
-        })
-        .select()
-        .single();
+    setResults(prev => {
+      const updated = [newResult, ...prev];
+      saveToStorage(updated);
+      return updated;
+    });
 
-      if (error) throw error;
+    // Also save to store for immediate UI update
+    addWorkoutResult({
+      workoutId: result.workout_id,
+      blockId: result.block_id,
+      completed: result.completed,
+      timeInSeconds: result.time_in_seconds,
+      date: new Date().toISOString(),
+    });
 
-      // Also save to local store for immediate UI update
-      addWorkoutResult({
-        workoutId: result.workout_id,
-        blockId: result.block_id,
-        completed: result.completed,
-        timeInSeconds: result.time_in_seconds,
-        date: new Date().toISOString(),
-      });
-
-      // Refresh results from DB
-      await fetchResults();
-      
-      return data;
-    } catch (err) {
-      console.error('Error saving benchmark result:', err);
-      toast.error('Erro ao salvar resultado');
-      return null;
-    }
-  }, [user, athleteConfig, addWorkoutResult, fetchResults]);
-
-  // Get all results (combined from DB and local)
-  const allResults = user ? dbResults : workoutResults.map(r => ({
-    workout_id: r.workoutId,
-    block_id: r.blockId,
-    completed: r.completed,
-    time_in_seconds: r.timeInSeconds,
-    created_at: r.date,
-  }));
+    return newResult;
+  }, [athleteConfig, addWorkoutResult]);
 
   // Get results grouped by week
   const getWeeklyResults = useCallback(() => {
     const weeklyData: Record<string, { scores: number[]; date: Date }> = {};
     
-    dbResults.forEach(r => {
+    results.forEach(r => {
       if (!r.created_at || r.score === null || r.score === undefined) return;
       
       const date = new Date(r.created_at);
@@ -141,7 +100,7 @@ export function useBenchmarkResults() {
         benchmarks: data.scores.length,
       }))
       .sort((a, b) => a.week.localeCompare(b.week));
-  }, [dbResults]);
+  }, [results]);
 
   // Get performance bucket counts
   const getBucketCounts = useCallback(() => {
@@ -153,31 +112,36 @@ export function useBenchmarkResults() {
       DNF: 0,
     };
 
-    dbResults.forEach(r => {
+    results.forEach(r => {
       if (r.bucket && counts[r.bucket] !== undefined) {
         counts[r.bucket]++;
       }
     });
 
     return counts;
-  }, [dbResults]);
+  }, [results]);
 
   // Get average score
   const getAverageScore = useCallback(() => {
-    const scores = dbResults.filter(r => r.score !== null && r.score !== undefined);
+    const scores = results.filter(r => r.score !== null && r.score !== undefined);
     if (scores.length === 0) return 0;
     return scores.reduce((sum, r) => sum + Number(r.score || 0), 0) / scores.length;
-  }, [dbResults]);
+  }, [results]);
+
+  // Clear all history
+  const clearHistory = useCallback(() => {
+    setResults([]);
+    saveToStorage([]);
+  }, []);
 
   return {
-    results: dbResults,
-    allResults,
+    results,
     loading,
     saveBenchmarkResult,
-    fetchResults,
     getWeeklyResults,
     getBucketCounts,
     getAverageScore,
-    totalBenchmarks: dbResults.length,
+    totalBenchmarks: results.length,
+    clearHistory,
   };
 }

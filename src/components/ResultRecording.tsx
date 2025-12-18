@@ -34,7 +34,7 @@ export function ResultRecording() {
   const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig?.level);
   const hasTargetTime = effectiveTargetRange?.max && effectiveTargetRange.max > 0;
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (completed === null || isSaving) return;
 
     // For benchmarks, time is required when completed
@@ -66,7 +66,7 @@ export function ResultRecording() {
       );
     }
 
-    await saveBenchmarkResult({
+    saveBenchmarkResult({
       workout_id: selectedWorkout.day,
       block_id: mainWod.id,
       benchmark_id: mainWod.benchmarkId,
