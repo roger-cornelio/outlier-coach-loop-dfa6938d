@@ -1,27 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target } from 'lucide-react';
+import { type TrainingLevel, type SessionDuration, EQUIPMENT_LIST } from '@/types/outlier';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
+import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
+import { toast } from 'sonner';
 
 // NOVO: Níveis de treino baseados no prompt OUTLIER
-const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
+const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; multiplier: string; icon: typeof Zap }[] = [
   { 
     value: 'base', 
     label: 'BASE', 
     description: 'Volume reduzido, movimentos simplificados, mais controle',
+    multiplier: '65%',
     icon: Target
   },
   { 
     value: 'progressivo', 
     label: 'PROGRESSIVO', 
     description: 'Ritmo consistente, estímulo sustentável e evolutivo',
+    multiplier: '80%',
     icon: TrendingUp
   },
   { 
     value: 'performance', 
     label: 'PERFORMANCE', 
     description: 'Alta densidade, ritmos agressivos, estímulo máximo',
+    multiplier: '100%',
     icon: Zap
   },
 ];
@@ -34,12 +39,13 @@ const durationOptions: { value: SessionDuration; label: string }[] = [
 ];
 
 const sexOptions = [
-  { value: 'masculino', label: 'Masculino' },
-  { value: 'feminino', label: 'Feminino' },
+  { value: 'masculino', label: 'Masculino', multiplier: '100%' },
+  { value: 'feminino', label: 'Feminino', multiplier: '85%' },
 ];
 
 export function AthleteConfig() {
-  const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView } = useOutlierStore();
+  const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView, baseWorkouts } = useOutlierStore();
+  const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
   
   // Use existing values as defaults
   const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>(
@@ -49,23 +55,61 @@ export function AthleteConfig() {
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
-  const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>(athleteConfig?.sexo || '');
+  const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>(athleteConfig?.equipment || []);
 
   const handleSubmit = () => {
-    if (coachStyle) {
-      setAthleteConfig({
-        trainingLevel,
-        sessionDuration: duration,
-        equipment: [],
-        coachStyle,
-        altura: altura ? parseInt(altura) : undefined,
-        peso: peso ? parseFloat(peso) : undefined,
-        idade: idade ? parseInt(idade) : undefined,
-        sexo: sexo || undefined,
-      });
-      setCurrentView('dashboard');
+    if (!coachStyle) {
+      toast.error('Selecione um estilo de coach primeiro');
+      return;
     }
+
+    // Salvar configuração
+    const newConfig = {
+      trainingLevel,
+      sessionDuration: duration,
+      equipment: selectedEquipment,
+      coachStyle,
+      altura: altura ? parseInt(altura) : undefined,
+      peso: peso ? parseFloat(peso) : undefined,
+      idade: idade ? parseInt(idade) : undefined,
+      sexo,
+    };
+    
+    setAthleteConfig(newConfig);
+
+    // Gerar treino adaptado se houver planilha base
+    if (hasBaseWorkouts) {
+      // Pequeno delay para garantir que o store atualizou
+      setTimeout(() => {
+        const result = generateAdaptedWorkouts();
+        if (result.success && result.summary) {
+          const levelPercent = Math.round(result.summary.levelMultiplier * 100);
+          const genderPercent = Math.round(result.summary.genderMultiplier * 100);
+          const finalPercent = Math.round(result.summary.levelMultiplier * result.summary.genderMultiplier * 100);
+          
+          toast.success('Treino adaptado!', {
+            description: `${finalPercent}% do volume (${trainingLevel.toUpperCase()} + ${sexo === 'feminino' ? 'F' : 'M'})`,
+          });
+        }
+      }, 100);
+    }
+
+    setCurrentView('dashboard');
   };
+
+  const toggleEquipment = (equipId: string) => {
+    setSelectedEquipment(prev => 
+      prev.includes(equipId) 
+        ? prev.filter(id => id !== equipId)
+        : [...prev, equipId]
+    );
+  };
+
+  // Calcular multiplicador final para preview
+  const levelMult = trainingLevel === 'base' ? 0.65 : trainingLevel === 'progressivo' ? 0.80 : 1.00;
+  const genderMult = sexo === 'feminino' ? 0.85 : 1.00;
+  const finalMult = Math.round(levelMult * genderMult * 100);
 
   return (
     <div className="min-h-screen px-6 py-8 max-w-4xl mx-auto">
@@ -86,6 +130,46 @@ export function AthleteConfig() {
           <p className="text-muted-foreground">Ajuste seu treino</p>
         </div>
       </motion.div>
+
+      {/* Volume Preview Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 p-4 rounded-lg bg-primary/10 border border-primary/20"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Volume do seu treino</p>
+              <p className="font-display text-2xl text-primary">{finalMult}%</p>
+            </div>
+          </div>
+          <div className="text-right text-sm text-muted-foreground">
+            <p>{trainingLevel.toUpperCase()}: {Math.round(levelMult * 100)}%</p>
+            <p>{sexo === 'feminino' ? 'Feminino' : 'Masculino'}: {Math.round(genderMult * 100)}%</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Warning if no base workouts */}
+      {!hasBaseWorkouts && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3"
+        >
+          <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-amber-500">Sem treinos disponíveis</p>
+            <p className="text-sm text-muted-foreground">
+              Aguarde seu coach publicar a programação da semana.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Athlete Data */}
       <motion.section
@@ -148,7 +232,7 @@ export function AthleteConfig() {
                   key={option.value}
                   onClick={() => setSexo(option.value as 'masculino' | 'feminino')}
                   className={`
-                    flex-1 px-3 py-3 rounded-lg border transition-all duration-200 text-sm
+                    flex-1 px-3 py-3 rounded-lg border transition-all duration-200 text-sm relative
                     ${sexo === option.value
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border bg-card hover:border-muted-foreground/50'
@@ -156,6 +240,11 @@ export function AthleteConfig() {
                   `}
                 >
                   {option.label.charAt(0)}
+                  {sexo === option.value && (
+                    <span className="absolute -top-2 -right-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                      {option.multiplier}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -172,7 +261,7 @@ export function AthleteConfig() {
       >
         <h2 className="font-display text-2xl mb-2">NÍVEL DO TREINO</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Como você quer treinar hoje? A base é sempre PRO — ajustamos para você.
+          A planilha do coach representa PERFORMANCE (100%). Escolha seu nível para hoje.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {trainingLevelOptions.map((option) => {
@@ -182,7 +271,7 @@ export function AthleteConfig() {
                 key={option.value}
                 onClick={() => setTrainingLevel(option.value)}
                 className={`
-                  p-4 rounded-lg border transition-all duration-200 text-left
+                  p-4 rounded-lg border transition-all duration-200 text-left relative
                   ${trainingLevel === option.value
                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
                     : 'border-border bg-card hover:border-muted-foreground/50'
@@ -192,6 +281,9 @@ export function AthleteConfig() {
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className={`w-5 h-5 ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className="font-display text-lg">{option.label}</span>
+                  <span className={`ml-auto text-sm font-mono ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {option.multiplier}
+                  </span>
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
               </button>
@@ -205,7 +297,7 @@ export function AthleteConfig() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mb-12"
+        className="mb-8"
       >
         <h2 className="font-display text-2xl mb-4">TEMPO DISPONÍVEL</h2>
         <div className="flex flex-wrap gap-3">
@@ -227,18 +319,51 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
+      {/* Equipment Selection */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mb-12"
+      >
+        <h2 className="font-display text-2xl mb-2">EQUIPAMENTOS DISPONÍVEIS</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Marque os equipamentos que você tem acesso hoje.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {EQUIPMENT_LIST.map((equip) => (
+            <button
+              key={equip.id}
+              onClick={() => toggleEquipment(equip.id)}
+              className={`
+                p-3 rounded-lg border transition-all duration-200 text-left
+                ${selectedEquipment.includes(equip.id)
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border bg-card hover:border-muted-foreground/50 opacity-60'
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{equip.emoji}</span>
+                <span className="text-sm">{equip.name}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </motion.section>
+
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.5 }}
         className="flex flex-col sm:flex-row gap-4"
       >
         <button
           onClick={handleSubmit}
           className="flex-1 font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
-          IR PARA DASHBOARD
+          {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'IR PARA DASHBOARD'}
         </button>
         <button
           onClick={() => setCurrentView('dashboard')}
