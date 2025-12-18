@@ -8,7 +8,14 @@
 // 4. Ordem de cálculo: tipo → nível → gênero → tempo → equipamentos
 // ============================================
 
-export type AthleteLevel = 'iniciante' | 'intermediario' | 'avancado' | 'pro';
+// ============================================
+// TIPOS DO MOTOR
+// ============================================
+// TrainingLevel da UI mapeia DIRETAMENTE para multiplicadores
+// BASE → 65% | PROGRESSIVO → 80% | PERFORMANCE → 100%
+// ============================================
+
+export type TrainingLevel = 'base' | 'progressivo' | 'performance';
 export type Gender = 'masculino' | 'feminino';
 export type BlockType = 'conditioning' | 'forca' | 'corrida' | 'aquecimento' | 'core' | 'especifico' | 'notas';
 
@@ -16,7 +23,7 @@ export type BlockType = 'conditioning' | 'forca' | 'corrida' | 'aquecimento' | '
 // PARÂMETROS OBRIGATÓRIOS DO USUÁRIO
 // ============================================
 export interface MandatoryAthleteParams {
-  level: AthleteLevel;
+  level: TrainingLevel; // Direto da UI: base, progressivo, performance
   gender: Gender;
   availableTimeMinutes: number;
   availableEquipment: string[];
@@ -67,15 +74,19 @@ export interface AdaptationResult {
 // ============================================
 // MULTIPLICADORES OBRIGATÓRIOS (NÃO ALTERAR)
 // ============================================
-// A planilha do coach representa o nível PRO (100%)
+// A planilha do coach representa o nível PERFORMANCE (100%)
 // Nenhum nível pode gerar volume ACIMA da planilha base
 // O sistema apenas escala para BAIXO a partir da base
 // ============================================
-const LEVEL_MULTIPLIERS: Record<AthleteLevel, number> = {
-  iniciante: 0.65,      // 60-65% da planilha base
-  intermediario: 0.80,  // 75-80% da planilha base
-  avancado: 0.90,       // 90% da planilha base
-  pro: 1.00,            // 100% da planilha base (TETO MÁXIMO)
+// MAPEAMENTO DIRETO DA UI:
+// - BASE → 65% (redução significativa de volume)
+// - PROGRESSIVO → 80% (redução moderada de volume)
+// - PERFORMANCE → 100% (volume integral da planilha)
+// ============================================
+const LEVEL_MULTIPLIERS: Record<TrainingLevel, number> = {
+  base: 0.65,         // 65% da planilha (redução VISÍVEL)
+  progressivo: 0.80,  // 80% da planilha (redução moderada)
+  performance: 1.00,  // 100% da planilha (TETO MÁXIMO)
 };
 
 const GENDER_MULTIPLIERS: Record<Gender, number> = {
@@ -219,9 +230,9 @@ export function validateMandatoryParams(params: Partial<MandatoryAthleteParams>)
   const errors: string[] = [];
   
   if (!params.level) {
-    errors.push('Nível do atleta é obrigatório (iniciante, intermediario, avancado, pro)');
-  } else if (!['iniciante', 'intermediario', 'avancado', 'pro'].includes(params.level)) {
-    errors.push('Nível inválido. Use: iniciante, intermediario, avancado ou pro');
+    errors.push('Nível do treino é obrigatório (base, progressivo, performance)');
+  } else if (!['base', 'progressivo', 'performance'].includes(params.level)) {
+    errors.push('Nível inválido. Use: base, progressivo ou performance');
   }
   
   if (!params.gender) {
@@ -457,16 +468,16 @@ export function adaptWorkout(
   const adaptedBlocks: AdaptedWorkoutBlock[] = [];
   let totalEquipmentSubstitutions = 0;
   
-  // Verificação especial: PRO + Masculino + tempo suficiente = conteúdo idêntico
-  const isPROWithFullVolume = athleteParams.level === 'pro' && 
+  // Verificação especial: PERFORMANCE + Masculino + tempo suficiente = conteúdo idêntico
+  const isPerformanceWithFullVolume = athleteParams.level === 'performance' && 
                                athleteParams.gender === 'masculino' && 
                                !timeWasLimiting;
   
   for (const block of blocks) {
     let adaptedContent: string;
     
-    // REGRA ESPECIAL: PRO + Masculino + tempo suficiente = planilha original
-    if (isPROWithFullVolume) {
+    // REGRA ESPECIAL: PERFORMANCE + Masculino + tempo suficiente = planilha original
+    if (isPerformanceWithFullVolume) {
       adaptedContent = block.content; // EXATAMENTE igual à planilha do coach
     } else {
       // ORDEM DE CÁLCULO:
@@ -569,7 +580,7 @@ export function adaptWorkout(
 // ============================================
 
 export interface BenchmarkTargets {
-  level: AthleteLevel;
+  level: TrainingLevel;
   gender: Gender;
   targetTimeSeconds?: number;
   targetReps?: number;
@@ -585,7 +596,7 @@ export function adaptBenchmark(
   const genderMult = GENDER_MULTIPLIERS[athleteParams.gender];
   
   if (metric === 'time') {
-    // Para tempo: iniciante tem MAIS tempo, pro tem MENOS tempo
+    // Para tempo: base tem MAIS tempo, performance tem MENOS tempo
     // Invertemos o multiplicador
     return Math.round(originalTarget / (levelMult * genderMult));
   } else {
