@@ -111,7 +111,9 @@ const bucketColors: Record<PerformanceBucket, string> = {
 };
 
 export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) {
-  const { weeklyWorkouts, workoutResults, athleteConfig } = useOutlierStore();
+  const { adaptedWorkouts, baseWorkouts, workoutResults, athleteConfig } = useOutlierStore();
+  // Usar treinos adaptados quando disponíveis, senão base
+  const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
   const { user } = useAuth();
   const [expandedBenchmark, setExpandedBenchmark] = useState<string | null>(null);
   const [externalResults, setExternalResults] = useState<ExternalResult[]>([]);
@@ -158,7 +160,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
     
     const benchmarks: BenchmarkData[] = [];
 
-    weeklyWorkouts.forEach(workout => {
+    displayWorkouts.forEach(workout => {
       workout.blocks.forEach(block => {
         if (block.isBenchmark && block.isMainWod) {
           const results = workoutResults
@@ -196,7 +198,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
     });
 
     return benchmarks;
-  }, [weeklyWorkouts, workoutResults, filterType]);
+  }, [displayWorkouts, workoutResults, filterType]);
 
   const hasContent = benchmarkData.length > 0 || filteredExternalResults.length > 0;
 

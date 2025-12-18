@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { StatusDisplay } from './StatusDisplay';
+import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -60,33 +61,57 @@ const getCoachSummaryStyle = (coachStyle: string | undefined) => {
 };
 
 export function Dashboard() {
-  const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
+  const { 
+    setCurrentView, 
+    setSelectedWorkout, 
+    baseWorkouts,
+    adaptedWorkouts,
+    adaptationPending,
+    athleteConfig 
+  } = useOutlierStore();
+  
   const { user, isAdmin, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
+  const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const navigate = useNavigate();
+  
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
   const [adaptations, setAdaptations] = useState<AdaptationConfig | null>(null);
   const [workoutFeedback, setWorkoutFeedback] = useState<string | null>(null);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
-  const [adaptedWorkoutContent, setAdaptedWorkoutContent] = useState<string | null>(null);
-  const [adaptedWorkoutJson, setAdaptedWorkoutJson] = useState<{
-    day: string;
-    total_minutes: number;
-    blocks: Array<{
-      type: string;
-      title: string;
-      target_minutes: number;
-      content: string;
-    }>;
-  } | null>(null);
-  const [isAdapting, setIsAdapting] = useState(false);
+  const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
 
+  // ============================================
+  // REGRA: Usar SEMPRE adaptedWorkouts quando existir
+  // ============================================
+  const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
+  const isShowingAdapted = adaptedWorkouts.length > 0;
+  
   // Get effective level for workout prescription
   const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
   
-  const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
-  const hasAnyWorkouts = weeklyWorkouts.length > 0;
+  const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+  const hasAnyWorkouts = displayWorkouts.length > 0;
+
+  // Calcular multiplicador atual
+  const currentMultiplier = useMemo(() => {
+    if (!athleteConfig) return 100;
+    const levelMult = athleteConfig.trainingLevel === 'base' ? 0.65 
+      : athleteConfig.trainingLevel === 'progressivo' ? 0.80 
+      : 1.00;
+    const genderMult = athleteConfig.sexo === 'feminino' ? 0.85 : 1.00;
+    return Math.round(levelMult * genderMult * 100);
+  }, [athleteConfig]);
+
+  // Auto-adaptar ao montar se necessário
+  useEffect(() => {
+    if (adaptationPending && hasBaseWorkouts && hasAthleteConfig) {
+      setIsGeneratingAdaptation(true);
+      const result = ensureAdapted();
+      setIsGeneratingAdaptation(false);
+    }
+  }, [adaptationPending, hasBaseWorkouts, hasAthleteConfig, ensureAdapted]);
 
   const handleAdminAccess = () => {
     if (!user) {
@@ -107,7 +132,7 @@ export function Dashboard() {
       toast.error('Erro ao sair');
     } else {
       toast.success('Logout realizado');
-      setCurrentView('welcome'); // Volta para tela inicial
+      setCurrentView('welcome');
     }
   };
 
@@ -141,7 +166,6 @@ export function Dashboard() {
         }
       } catch (err) {
         console.error('Error fetching feedback:', err);
-        // Fallback to static message
         setWorkoutFeedback(null);
       } finally {
         setIsLoadingFeedback(false);
@@ -149,13 +173,7 @@ export function Dashboard() {
     };
 
     fetchFeedback();
-  }, [currentWorkout?.day, athleteConfig?.coachStyle]);
-
-  // Clear adapted workout when day changes
-  useEffect(() => {
-    setAdaptedWorkoutContent(null);
-    setAdaptedWorkoutJson(null);
-  }, [activeDay]);
+  }, [currentWorkout?.day, athleteConfig?.coachStyle, isShowingAdapted]);
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -164,63 +182,23 @@ export function Dashboard() {
     }
   };
 
+  const handleGenerateAdaptation = () => {
+    setIsGeneratingAdaptation(true);
+    const result = forceRegenerate();
+    setIsGeneratingAdaptation(false);
+    
+    if (result.success) {
+      toast.success('Treino adaptado com sucesso!');
+    } else {
+      toast.error('Erro ao adaptar treino');
+    }
+  };
+
   const handleSaveAdaptations = async (config: AdaptationConfig) => {
     setAdaptations(config);
-    
-    // If adaptations are cleared, reset adapted workout
-    if (!config.unavailableEquipment.length && !config.otherNotes) {
-      setAdaptedWorkoutContent(null);
-      setAdaptedWorkoutJson(null);
-      return;
-    }
-
-    // Call AI to adapt workout
-    if (currentWorkout && athleteConfig) {
-      setIsAdapting(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('adapt-workout', {
-          body: {
-            athleteConfig: {
-              level: effectiveLevel,
-              sessionDuration: athleteConfig.sessionDuration,
-              altura: athleteConfig.altura,
-              peso: athleteConfig.peso,
-              idade: athleteConfig.idade,
-              sexo: athleteConfig.sexo,
-            },
-            workout: {
-              day: DAY_NAMES[currentWorkout.day],
-              stimulus: currentWorkout.stimulus,
-              blocks: currentWorkout.blocks,
-            },
-            adaptations: {
-              unavailableEquipment: config.unavailableEquipment,
-              otherNotes: config.otherNotes,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        if (data?.adaptedWorkoutJson) {
-          setAdaptedWorkoutJson(data.adaptedWorkoutJson);
-          setAdaptedWorkoutContent(null);
-          toast.success('Treino adaptado com sucesso!');
-        } else if (data?.adaptedWorkout) {
-          setAdaptedWorkoutContent(data.adaptedWorkout);
-          setAdaptedWorkoutJson(null);
-          toast.success('Treino adaptado com sucesso!');
-        } else if (data?.message) {
-          setAdaptedWorkoutContent(null);
-          setAdaptedWorkoutJson(null);
-          toast.info(data.message);
-        }
-      } catch (err) {
-        console.error('Error adapting workout:', err);
-        toast.error('Erro ao adaptar treino');
-      } finally {
-        setIsAdapting(false);
-      }
+    // A adaptação agora é feita pelo motor determinístico, não por IA
+    if (config.unavailableEquipment.length > 0) {
+      toast.info('Equipamentos marcados como indisponíveis. Reconfigure seu treino para aplicar substituições.');
     }
   };
 
@@ -291,7 +269,7 @@ export function Dashboard() {
                 <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
                 {athleteConfig && (
                   <p className="text-sm text-muted-foreground">
-                    Coach {athleteConfig.coachStyle} • {LEVEL_NAMES[status]} ({DIFFICULTY_NAMES[athleteConfig.trainingDifficulty]})
+                    Coach {athleteConfig.coachStyle} • {athleteConfig.trainingLevel?.toUpperCase()} ({currentMultiplier}%)
                   </p>
                 )}
               </div>
@@ -348,26 +326,69 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Adaptations Banner */}
-      {hasAdaptations && (
-        <div className="bg-primary/10 border-b border-primary/20">
+      {/* Adaptation Status Banner */}
+      {hasBaseWorkouts && (
+        <div className={`border-b ${isShowingAdapted ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
           <div className="max-w-6xl mx-auto px-6 py-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Wrench className="w-4 h-4 text-primary" />
-              <span className="text-primary font-medium">Adaptações ativas:</span>
-              <span className="text-muted-foreground">
-                {adaptations.unavailableEquipment.length > 0 && (
-                  <>Sem {adaptations.unavailableEquipment.map(e => e.toUpperCase()).join(', ')}</>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isShowingAdapted ? (
+                  <>
+                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-green-500">
+                        Treino adaptado ao seu nível
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {athleteConfig?.trainingLevel?.toUpperCase()} • {athleteConfig?.sexo === 'feminino' ? 'F' : 'M'} • {currentMultiplier}% do volume
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-amber-500">
+                        Treino não adaptado
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Exibindo planilha base do coach (100%)
+                      </p>
+                    </div>
+                  </>
                 )}
-                {adaptations.unavailableEquipment.length > 0 && adaptations.otherNotes && ' • '}
-                {adaptations.otherNotes && <>{adaptations.otherNotes.slice(0, 30)}...</>}
-              </span>
-              <button
-                onClick={() => setIsAdaptModalOpen(true)}
-                className="ml-auto text-primary hover:underline"
-              >
-                Editar
-              </button>
+              </div>
+              {!isShowingAdapted && hasAthleteConfig && (
+                <button
+                  onClick={handleGenerateAdaptation}
+                  disabled={isGeneratingAdaptation}
+                  className="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-sm flex items-center gap-2"
+                >
+                  {isGeneratingAdaptation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Adaptar Treino
+                    </>
+                  )}
+                </button>
+              )}
+              {isShowingAdapted && (
+                <button
+                  onClick={() => setCurrentView('config')}
+                  className="px-4 py-2 rounded-lg border border-green-500/30 text-green-500 hover:bg-green-500/10 transition-colors text-sm"
+                >
+                  Alterar Nível
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -378,7 +399,7 @@ export function Dashboard() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex gap-1 py-2">
             {dayTabs.map((day) => {
-              const hasWorkout = weeklyWorkouts.some((w) => w.day === day);
+              const hasWorkout = displayWorkouts.some((w) => w.day === day);
               return (
                 <button
                   key={day}
@@ -433,6 +454,11 @@ export function Dashboard() {
                       <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
                     </div>
                   )}
+                  {isShowingAdapted && (
+                    <span className="px-2 py-1 rounded bg-green-500/20 text-green-500 text-xs font-medium">
+                      ADAPTADO {currentMultiplier}%
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -485,68 +511,6 @@ export function Dashboard() {
                 );
               })()}
 
-              {/* Adapted Workout Block - Show when adaptations are active */}
-              {hasAdaptations && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="card-elevated p-6 border-l-4 border-l-green-500 bg-gradient-to-r from-green-500/5 to-transparent mb-4"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-xl text-green-500 flex items-center gap-2">
-                      <Wrench className="w-5 h-5" />
-                      TREINO ADAPTADO
-                    </h3>
-                    {adaptedWorkoutJson && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span>{adaptedWorkoutJson.total_minutes} min</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {isAdapting ? (
-                    <div className="flex items-center gap-2 text-muted-foreground py-4">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Adaptando treino...</span>
-                    </div>
-                  ) : adaptedWorkoutJson ? (
-                    <div className="space-y-4">
-                      {adaptedWorkoutJson.blocks.map((block, index) => (
-                        <div 
-                          key={index} 
-                          className={`p-4 rounded-lg bg-secondary/30 border-l-2 ${
-                            block.type === 'aquecimento' ? 'border-l-amber-500' :
-                            block.type === 'forca' ? 'border-l-red-500' :
-                            block.type === 'conditioning' ? 'border-l-primary' :
-                            block.type === 'core' ? 'border-l-blue-500' :
-                            block.type === 'especifico' ? 'border-l-purple-500' :
-                            block.type === 'corrida' ? 'border-l-green-500' :
-                            'border-l-muted-foreground'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-display text-lg">{block.title}</h4>
-                            <span className="text-xs text-muted-foreground">{block.target_minutes} min</span>
-                          </div>
-                          <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                            {block.content}
-                          </pre>
-                        </div>
-                      ))}
-                    </div>
-                  ) : adaptedWorkoutContent ? (
-                    <pre className="font-body text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                      {adaptedWorkoutContent}
-                    </pre>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">
-                      Clique em "Editar" no banner acima para configurar as adaptações.
-                    </p>
-                  )}
-                </motion.div>
-              )}
-
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
@@ -588,7 +552,7 @@ export function Dashboard() {
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span className="text-muted-foreground">
-                                Tempo ({level.replace('_', ' ')}):
+                                Tempo:
                               </span>
                               <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
                             </div>
