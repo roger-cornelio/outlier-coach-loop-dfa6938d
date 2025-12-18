@@ -4,14 +4,19 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { ArrowLeft, Check, X, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, classifyBenchmarkPerformance, calculateBenchmarkScore } from '@/utils/benchmarkVariants';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 
 export function ResultRecording() {
   const { selectedWorkout, setCurrentView, athleteConfig } = useOutlierStore();
   const { saveBenchmarkResult } = useBenchmarkResults();
+  const { status, getEffectiveLevelForWorkout } = useAthleteStatus();
   const [completed, setCompleted] = useState<boolean | null>(null);
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Get effective level for workout
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
 
   if (!selectedWorkout) {
     setCurrentView('dashboard');
@@ -28,10 +33,10 @@ export function ResultRecording() {
   // Check if this is a benchmark WOD
   const isBenchmark = mainWod.isBenchmark || false;
   
-  // Get effective variant based on athlete level
-  const effectiveContent = getEffectiveContent(mainWod, athleteConfig?.level);
-  const effectiveNotes = getEffectiveNotes(mainWod, athleteConfig?.level);
-  const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig?.level);
+  // Get effective variant based on calculated status
+  const effectiveContent = getEffectiveContent(mainWod, effectiveLevel);
+  const effectiveNotes = getEffectiveNotes(mainWod, effectiveLevel);
+  const effectiveTargetRange = getEffectiveTargetRange(mainWod, effectiveLevel);
   const hasTargetTime = effectiveTargetRange?.max && effectiveTargetRange.max > 0;
 
   const handleSubmit = () => {
@@ -229,10 +234,10 @@ export function ResultRecording() {
               </div>
               
               {/* Reference time display */}
-              {mainWod.referenceTime && athleteConfig && (
+              {mainWod.referenceTime && effectiveLevel && (
                 <p className="text-sm text-muted-foreground mt-3">
-                  Referência para {athleteConfig.level.replace('_', ' ')}: {' '}
-                  {Math.floor(mainWod.referenceTime[athleteConfig.level] / 60)}:{String(mainWod.referenceTime[athleteConfig.level] % 60).padStart(2, '0')}
+                  Referência para {effectiveLevel.replace('_', ' ')}: {' '}
+                  {Math.floor(mainWod.referenceTime[effectiveLevel as keyof typeof mainWod.referenceTime] / 60)}:{String(mainWod.referenceTime[effectiveLevel as keyof typeof mainWod.referenceTime] % 60).padStart(2, '0')}
                 </p>
               )}
 

@@ -6,6 +6,7 @@ import { Flame, CheckCircle, AlertTriangle, XCircle, ArrowLeft, Home, Settings, 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getEffectiveContent, getEffectiveTargetRange } from '@/utils/benchmarkVariants';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 
 const bucketConfig: Record<PerformanceBucket, { icon: React.ReactNode; label: string; colorClass: string }> = {
   ELITE: {
@@ -125,7 +126,7 @@ export function PerformanceFeedback() {
             durationMinutes: resultData.durationMinutes,
             workoutTitle: resultData.mainWod.title,
             workoutContent: resultData.mainWod.content,
-            athleteLevel: athleteConfig.level,
+            athleteLevel: effectiveLevel,
             previousTimes: resultData.previousTimes,
           },
         });

@@ -53,7 +53,7 @@ export function useBenchmarkResults() {
       ...result,
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
-      athlete_level: athleteConfig?.level,
+      athlete_level: result.athlete_level, // Now passed explicitly
     };
 
     setResults(prev => {

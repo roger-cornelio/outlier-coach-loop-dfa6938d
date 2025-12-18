@@ -163,7 +163,7 @@ export function BenchmarkHistory() {
           date: formatDate(r.date),
           time: r.timeInSeconds!,
           timeFormatted: metricInfo.format(r.timeInSeconds!),
-          bucket: getBucketForValue(r.timeInSeconds!, data.block, athleteConfig?.level),
+          bucket: getBucketForValue(r.timeInSeconds!, data.block, 'intermediario'),
         }));
 
         return (

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, ArrowRight, TrendingUp, Calendar, Target } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { 
   calculateProgress, 
   getProgressGradient,
@@ -71,11 +72,12 @@ function getNextStepRecommendation(data: ProgressData): string {
 export function ProgressRuler() {
   const { athleteConfig } = useOutlierStore();
   const { results, loading } = useBenchmarkResults();
+  const { status } = useAthleteStatus();
 
   const progressData = useMemo<ProgressData | null>(() => {
-    if (!athleteConfig?.level) return null;
-    return calculateProgress(results, athleteConfig.level);
-  }, [results, athleteConfig]);
+    if (!status) return null;
+    return calculateProgress(results, status);
+  }, [results, status]);
 
   if (loading || !progressData || !athleteConfig) {
     return null;

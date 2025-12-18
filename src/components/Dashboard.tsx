@@ -2,14 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy } from 'lucide-react';
+import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { StatusDisplay } from './StatusDisplay';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -60,6 +62,7 @@ const getCoachSummaryStyle = (coachStyle: string | undefined) => {
 export function Dashboard() {
   const { setCurrentView, setSelectedWorkout, weeklyWorkouts, athleteConfig } = useOutlierStore();
   const { user, isAdmin, canManageWorkouts, loading: authLoading, signOut } = useAuth();
+  const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const navigate = useNavigate();
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
@@ -79,6 +82,9 @@ export function Dashboard() {
   } | null>(null);
   const [isAdapting, setIsAdapting] = useState(false);
 
+  // Get effective level for workout prescription
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
+  
   const currentWorkout = weeklyWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = weeklyWorkouts.length > 0;
 
@@ -175,7 +181,7 @@ export function Dashboard() {
         const { data, error } = await supabase.functions.invoke('adapt-workout', {
           body: {
             athleteConfig: {
-              level: athleteConfig.level,
+              level: effectiveLevel,
               sessionDuration: athleteConfig.sessionDuration,
               altura: athleteConfig.altura,
               peso: athleteConfig.peso,
@@ -237,14 +243,14 @@ export function Dashboard() {
     return calculateBlockMetricsWithEngine(
       currentWorkout.blocks.map(b => ({ type: b.type, content: b.content })),
       {
-        level: athleteConfig.level,
+        level: effectiveLevel,
         sessionDuration: athleteConfig.sessionDuration,
         peso: athleteConfig.peso,
         idade: athleteConfig.idade,
         sexo: athleteConfig.sexo,
       }
     );
-  }, [currentWorkout, athleteConfig]);
+  }, [currentWorkout, athleteConfig, effectiveLevel]);
 
   const totalCalories = workoutMetrics.totalKcal;
   const totalTime = workoutMetrics.totalMinutes || currentWorkout?.estimatedTime || 0;
@@ -285,7 +291,7 @@ export function Dashboard() {
                 <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
                 {athleteConfig && (
                   <p className="text-sm text-muted-foreground">
-                    Coach {athleteConfig.coachStyle} • {athleteConfig.level.replace('_', ' ').toUpperCase()}
+                    Coach {athleteConfig.coachStyle} • {LEVEL_NAMES[status]} ({DIFFICULTY_NAMES[athleteConfig.trainingDifficulty]})
                   </p>
                 )}
               </div>
@@ -553,7 +559,7 @@ export function Dashboard() {
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
-                  const level = athleteConfig?.level || 'intermediario';
+                  const level = effectiveLevel;
                   const blockMetric = workoutMetrics.blockMetrics[index];
                   const estimatedTime = blockMetric?.minutes || 0;
                   const calories = blockMetric?.kcal || 0;

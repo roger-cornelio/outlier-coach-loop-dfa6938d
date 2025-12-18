@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { LEVEL_NAMES, type AthleteLevel, type SessionDuration } from '@/types/outlier';
+import { DIFFICULTY_NAMES, type TrainingDifficulty, type SessionDuration } from '@/types/outlier';
 import { ArrowLeft } from 'lucide-react';
 
-const levelOptions: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+const difficultyOptions: { value: TrainingDifficulty; label: string; description: string }[] = [
+  { value: 'leve', label: 'Leve', description: 'Volume e intensidade reduzidos' },
+  { value: 'padrao', label: 'Padrão', description: 'Conforme seu status atual' },
+  { value: 'forte', label: 'Forte', description: 'Volume e intensidade aumentados' },
+];
+
 const durationOptions: { value: SessionDuration; label: string }[] = [
   { value: 30, label: '30 min' },
   { value: 45, label: '45 min' },
@@ -22,7 +27,7 @@ export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView } = useOutlierStore();
   
   // Use existing values as defaults
-  const [level, setLevel] = useState<AthleteLevel>(athleteConfig?.level || 'intermediario');
+  const [difficulty, setDifficulty] = useState<TrainingDifficulty>(athleteConfig?.trainingDifficulty || 'padrao');
   const [duration, setDuration] = useState<SessionDuration>(athleteConfig?.sessionDuration || 60);
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
@@ -32,7 +37,7 @@ export function AthleteConfig() {
   const handleSubmit = () => {
     if (coachStyle) {
       setAthleteConfig({
-        level,
+        trainingDifficulty: difficulty,
         sessionDuration: duration,
         equipment: [],
         coachStyle,
@@ -141,28 +146,32 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Level Selection */}
+      {/* Difficulty Selection */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="mb-8"
       >
-        <h2 className="font-display text-2xl mb-4">NÍVEL DO ATLETA</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {levelOptions.map((option) => (
+        <h2 className="font-display text-2xl mb-2">DIFICULDADE DO TREINO</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Ajusta volume e intensidade em relação ao seu status calculado
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {difficultyOptions.map((option) => (
             <button
-              key={option}
-              onClick={() => setLevel(option)}
+              key={option.value}
+              onClick={() => setDifficulty(option.value)}
               className={`
-                p-4 rounded-lg border transition-all duration-200
-                ${level === option
+                p-4 rounded-lg border transition-all duration-200 text-left
+                ${difficulty === option.value
                   ? 'border-primary bg-primary/10 text-foreground'
                   : 'border-border bg-card hover:border-muted-foreground/50'
                 }
               `}
             >
-              <span className="font-display text-lg">{LEVEL_NAMES[option]}</span>
+              <span className="font-display text-lg block">{option.label}</span>
+              <span className="text-xs text-muted-foreground">{option.description}</span>
             </button>
           ))}
         </div>
