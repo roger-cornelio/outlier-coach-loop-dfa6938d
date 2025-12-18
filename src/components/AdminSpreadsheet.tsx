@@ -139,6 +139,13 @@ export function AdminSpreadsheet() {
   const [parsedWorkouts, setParsedWorkouts] = useState<DayWorkout[] | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<DayOfWeek>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  
+  // Config form state
+  const [programName, setProgramName] = useState('');
+  const [programPeriod, setProgramPeriod] = useState('');
+  const [targetAudience, setTargetAudience] = useState<'all' | 'specific'>('all');
+  const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
 
   if (authLoading) {
     return (
@@ -206,6 +213,11 @@ export function AdminSpreadsheet() {
     setSpreadsheetText('');
     setParsedWorkouts(null);
     setShowPreview(false);
+    setShowConfig(false);
+    setProgramName('');
+    setProgramPeriod('');
+    setTargetAudience('all');
+    setProgramStatus('draft');
     setSuccess(null);
     setError(null);
   };
@@ -366,7 +378,23 @@ export function AdminSpreadsheet() {
 
   const confirmPreview = () => {
     setShowPreview(false);
+    setShowConfig(true);
+  };
+
+  const backToPreview = () => {
+    setShowConfig(false);
+    setShowPreview(true);
+  };
+
+  const saveProgram = () => {
+    if (!programName.trim()) {
+      setError('Informe o nome da programação.');
+      return;
+    }
+    
     // Proceed to detailed review phase with parsedWorkouts
+    setShowConfig(false);
+    // parsedWorkouts remains set, so it will show the review phase
   };
 
   const formatTargetTime = (totalSeconds?: number) => {
@@ -541,6 +569,159 @@ export function AdminSpreadsheet() {
             <p className="text-xs text-muted-foreground text-center">
               Ao confirmar, você poderá revisar e configurar benchmarks em cada bloco.
             </p>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // Config phase UI
+  if (parsedWorkouts && showConfig) {
+    return (
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={backToPreview}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-2xl font-bold tracking-wide">CONFIGURAR PROGRAMAÇÃO</h1>
+                <p className="text-sm text-muted-foreground">
+                  Defina nome, período e visibilidade
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-destructive" />
+              <p className="text-sm text-destructive">{error}</p>
+            </motion.div>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Program Name */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <label className="block font-display text-lg mb-3">
+                Nome da Programação <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                placeholder="Ex: Semana 12 – Base HYROX"
+                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            {/* Period */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <label className="block font-display text-lg mb-3">
+                Período <span className="text-muted-foreground text-sm font-normal">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={programPeriod}
+                onChange={(e) => setProgramPeriod(e.target.value)}
+                placeholder="Ex: 10/03 a 16/03"
+                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            {/* Target Audience */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <label className="block font-display text-lg mb-4">Público</label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="audience"
+                    checked={targetAudience === 'all'}
+                    onChange={() => setTargetAudience('all')}
+                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
+                  />
+                  <span className="text-sm">Todos os atletas</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer opacity-60">
+                  <input
+                    type="radio"
+                    name="audience"
+                    checked={targetAudience === 'specific'}
+                    onChange={() => setTargetAudience('specific')}
+                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
+                  />
+                  <span className="text-sm">Grupo específico</span>
+                  <span className="text-xs text-muted-foreground">(em breve)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <label className="block font-display text-lg mb-4">Status</label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    checked={programStatus === 'draft'}
+                    onChange={() => setProgramStatus('draft')}
+                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
+                  />
+                  <div>
+                    <span className="text-sm">Salvar como rascunho</span>
+                    <p className="text-xs text-muted-foreground">Não será visível para os atletas ainda</p>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    checked={programStatus === 'published'}
+                    onChange={() => setProgramStatus('published')}
+                    className="w-5 h-5 text-primary bg-secondary border-border focus:ring-primary"
+                  />
+                  <div>
+                    <span className="text-sm">Publicar agora</span>
+                    <p className="text-xs text-muted-foreground">Atletas poderão ver imediatamente</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <button
+                onClick={saveProgram}
+                className="flex-1 font-display text-lg tracking-wider px-8 py-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-3"
+              >
+                <Save className="w-5 h-5" />
+                Salvar Programação
+              </button>
+              <button
+                onClick={backToPreview}
+                className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
+              >
+                Voltar
+              </button>
+            </div>
           </motion.div>
         </main>
       </div>
