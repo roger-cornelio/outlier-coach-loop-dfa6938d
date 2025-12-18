@@ -1,17 +1,32 @@
 import type { AthleteConfig, WorkoutBlock, AthleteLevel } from '@/types/outlier';
+import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
 
-// MET values for different workout types (Metabolic Equivalent of Task)
-const MET_VALUES: Record<string, number> = {
-  aquecimento: 4.0,
-  conditioning: 8.0,
-  forca: 6.0,
-  especifico: 9.0,
-  core: 3.5,
-  corrida: 7.0,
-  notas: 1.0,
+// Base kcal per minute for different workout types
+const BASE_KCAL_PER_MIN: Record<string, number> = {
+  aquecimento: 6.0,   // ~360 kcal/h
+  conditioning: 12.0,  // ~720 kcal/h
+  forca: 8.0,         // ~480 kcal/h
+  especifico: 14.0,   // ~840 kcal/h (HYROX specific)
+  core: 5.0,          // ~300 kcal/h
+  corrida: 10.0,      // ~600 kcal/h
+  notas: 0,
 };
 
-// Time multipliers by level (relative to intermediate)
+// PSE factor multipliers (base = PSE 5)
+const PSE_FACTORS: Record<number, number> = {
+  1: 0.5,   // Very light
+  2: 0.6,
+  3: 0.7,   // Light
+  4: 0.85,
+  5: 1.0,   // Moderate (base)
+  6: 1.1,
+  7: 1.2,   // Vigorous
+  8: 1.35,
+  9: 1.5,   // Very hard
+  10: 1.7,  // Maximum
+};
+
+// Time multipliers by level (for reference time estimation only)
 const LEVEL_TIME_MULTIPLIERS: Record<AthleteLevel, number> = {
   iniciante: 1.3,
   intermediario: 1.0,
@@ -20,20 +35,33 @@ const LEVEL_TIME_MULTIPLIERS: Record<AthleteLevel, number> = {
 };
 
 /**
- * Calculate estimated time for a workout block based on athlete level
- * If the block has referenceTime, use it; otherwise estimate based on content
+ * Get the block's actual duration in minutes
+ * This is the ONLY value used for calorie calculation
  */
-export function getEstimatedTimeForLevel(
+export function getBlockDuration(block: WorkoutBlock, level?: AthleteLevel): number | null {
+  // Use effective duration based on level variants
+  const effectiveDuration = getEffectiveDuration(block, level);
+  if (effectiveDuration && effectiveDuration > 0) {
+    return effectiveDuration;
+  }
+  return null;
+}
+
+/**
+ * Get REFERENCE time (informational only, NOT for calories)
+ * This shows the athlete how long the workout typically takes
+ */
+export function getReferenceTimeForLevel(
   block: WorkoutBlock,
   level: AthleteLevel
 ): number | null {
-  // If block has reference times, use them
+  // If block has explicit reference times, use them
   if (block.referenceTime) {
-    return Math.round(block.referenceTime[level] / 60); // Convert to minutes
+    return Math.round(block.referenceTime[level] / 60);
   }
 
-  // Otherwise, estimate based on block type and content
-  const baseMinutes = estimateBaseMinutes(block);
+  // Estimate from content patterns
+  const baseMinutes = estimateFromContent(block);
   if (baseMinutes === null) return null;
 
   const multiplier = LEVEL_TIME_MULTIPLIERS[level];
@@ -41,12 +69,27 @@ export function getEstimatedTimeForLevel(
 }
 
 /**
- * Estimate base minutes from block content
+ * Legacy function for backward compatibility
+ * Uses block duration if available, otherwise estimates
  */
-function estimateBaseMinutes(block: WorkoutBlock): number | null {
+export function getEstimatedTimeForLevel(
+  block: WorkoutBlock,
+  level: AthleteLevel
+): number | null {
+  // First try block duration
+  const duration = getBlockDuration(block, level);
+  if (duration) return duration;
+  
+  // Fall back to reference time estimation
+  return getReferenceTimeForLevel(block, level);
+}
+
+/**
+ * Estimate time from block content (for reference only)
+ */
+function estimateFromContent(block: WorkoutBlock): number | null {
   const content = block.content.toLowerCase();
   
-  // Look for explicit time caps or durations
   const capMatch = content.match(/cap[:\s]*(\d+)/i);
   if (capMatch) return parseInt(capMatch[1]);
 
@@ -59,7 +102,7 @@ function estimateBaseMinutes(block: WorkoutBlock): number | null {
   const emomMatch = content.match(/emom\s*(\d+)/i);
   if (emomMatch) return parseInt(emomMatch[1]);
 
-  // Estimate based on block type
+  // Default estimates by block type
   switch (block.type) {
     case 'aquecimento': return 10;
     case 'forca': return 20;
@@ -73,39 +116,48 @@ function estimateBaseMinutes(block: WorkoutBlock): number | null {
 }
 
 /**
- * Calculate estimated calories burned
- * Uses the formula: Calories = MET × Weight (kg) × Duration (hours)
+ * Calculate calories using ONLY block duration
+ * Formula: duration_min × base_kcal_per_min × pse_factor × weight_factor × age_factor × sex_factor
  */
 export function calculateCalories(
   block: WorkoutBlock,
   athleteConfig: AthleteConfig | null,
-  durationMinutes: number | null
+  _legacyDuration?: number | null // Ignored, kept for backward compatibility
 ): number | null {
-  if (!athleteConfig || !durationMinutes) return null;
+  if (!athleteConfig) return null;
+  
+  // CRITICAL: Use ONLY block.durationMinutes for calories
+  const duration = getBlockDuration(block, athleteConfig.level);
+  if (!duration || duration <= 0) return null;
   
   // Need weight to calculate calories
   const weight = athleteConfig.peso;
   if (!weight) return null;
 
-  const met = MET_VALUES[block.type] || 5.0;
-  const durationHours = durationMinutes / 60;
+  // Base kcal per minute for this block type
+  const baseKcal = BASE_KCAL_PER_MIN[block.type] || 8.0;
   
-  // Base calculation
-  let calories = met * weight * durationHours;
-
-  // Adjust for age (metabolism decreases with age)
+  // PSE factor (default to PSE 5 = factor 1.0)
+  const pse = getEffectivePSE(block, athleteConfig.level) || 5;
+  const pseFactor = PSE_FACTORS[Math.min(10, Math.max(1, Math.round(pse)))] || 1.0;
+  
+  // Weight factor (normalized to 70kg baseline)
+  const weightFactor = weight / 70;
+  
+  // Age factor (metabolism decreases with age)
+  let ageFactor = 1.0;
   if (athleteConfig.idade) {
-    const ageMultiplier = athleteConfig.idade < 30 ? 1.05 : 
-                          athleteConfig.idade < 40 ? 1.0 :
-                          athleteConfig.idade < 50 ? 0.95 : 0.90;
-    calories *= ageMultiplier;
+    ageFactor = athleteConfig.idade < 30 ? 1.05 : 
+                athleteConfig.idade < 40 ? 1.0 :
+                athleteConfig.idade < 50 ? 0.95 : 0.90;
   }
 
-  // Adjust for sex (men typically burn ~10% more)
-  if (athleteConfig.sexo === 'masculino') {
-    calories *= 1.1;
-  }
+  // Sex factor (men ~10% higher metabolic rate)
+  const sexFactor = athleteConfig.sexo === 'masculino' ? 1.1 : 1.0;
 
+  // Final calculation
+  const calories = duration * baseKcal * pseFactor * weightFactor * ageFactor * sexFactor;
+  
   return Math.round(calories);
 }
 
@@ -120,8 +172,7 @@ export function calculateTotalWorkoutCalories(
 
   let total = 0;
   for (const block of blocks) {
-    const duration = getEstimatedTimeForLevel(block, athleteConfig.level);
-    const calories = calculateCalories(block, athleteConfig, duration);
+    const calories = calculateCalories(block, athleteConfig);
     if (calories) total += calories;
   }
   return total;
