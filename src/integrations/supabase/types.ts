@@ -22,8 +22,12 @@ export type Database = {
           bucket: string | null
           completed: boolean
           created_at: string
+          event_date: string | null
+          event_name: string | null
           id: string
+          result_type: string | null
           score: number | null
+          screenshot_url: string | null
           time_in_seconds: number | null
           user_id: string
           workout_id: string
@@ -35,8 +39,12 @@ export type Database = {
           bucket?: string | null
           completed?: boolean
           created_at?: string
+          event_date?: string | null
+          event_name?: string | null
           id?: string
+          result_type?: string | null
           score?: number | null
+          screenshot_url?: string | null
           time_in_seconds?: number | null
           user_id: string
           workout_id: string
@@ -48,8 +56,12 @@ export type Database = {
           bucket?: string | null
           completed?: boolean
           created_at?: string
+          event_date?: string | null
+          event_name?: string | null
           id?: string
+          result_type?: string | null
           score?: number | null
+          screenshot_url?: string | null
           time_in_seconds?: number | null
           user_id?: string
           workout_id?: string
