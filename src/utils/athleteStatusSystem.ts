@@ -10,15 +10,36 @@ export const STATUS_THRESHOLDS = {
   hyrox_pro: { min: 90, max: 100 },
 };
 
-// HYROX official competition time ranges (in seconds) for each level
-// Based on typical HYROX competition times
+// HYROX official competition time thresholds by gender (in seconds)
+// Based on ability to compete in category, not podium placement
 export const HYROX_TIME_THRESHOLDS = {
-  hyrox_pro: { maxTime: 4200 },      // < 70 min = PRO
-  hyrox_open: { maxTime: 5400 },     // 70-90 min = OPEN
-  avancado: { maxTime: 6600 },       // 90-110 min = Avançado
-  intermediario: { maxTime: 7800 },  // 110-130 min = Intermediário
-  iniciante: { maxTime: Infinity },  // > 130 min = Iniciante
+  masculino: {
+    // >1h50 (>6600s) = Iniciante
+    // 1h35–1h50 (5700-6600s) = Intermediário
+    // 1h20–1h35 (4800-5700s) = Avançado
+    // 1h05–1h20 (3900-4800s) = Open
+    // <1h05 (<3900s) = Pro
+    hyrox_pro: { maxTime: 3900 },      // < 1h05
+    hyrox_open: { maxTime: 4800 },     // 1h05-1h20
+    avancado: { maxTime: 5700 },       // 1h20-1h35
+    intermediario: { maxTime: 6600 },  // 1h35-1h50
+    iniciante: { maxTime: Infinity },  // > 1h50
+  },
+  feminino: {
+    // >1h55 (>6900s) = Iniciante
+    // 1h40–1h55 (6000-6900s) = Intermediário
+    // 1h25–1h40 (5100-6000s) = Avançado
+    // 1h10–1h25 (4200-5100s) = Open
+    // <1h10 (<4200s) = Pro
+    hyrox_pro: { maxTime: 4200 },      // < 1h10
+    hyrox_open: { maxTime: 5100 },     // 1h10-1h25
+    avancado: { maxTime: 6000 },       // 1h25-1h40
+    intermediario: { maxTime: 6900 },  // 1h40-1h55
+    iniciante: { maxTime: Infinity },  // > 1h55
+  },
 };
+
+export type AthleteGender = 'masculino' | 'feminino';
 
 // Official competition validity period (18 months in days)
 const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30;
@@ -81,12 +102,14 @@ export interface CalculatedStatus {
   consistencyScore: number;
 }
 
-// Get status from HYROX official competition time
-export function getStatusFromOfficialTime(timeInSeconds: number): AthleteStatus {
-  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.hyrox_pro.maxTime) return 'hyrox_pro';
-  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.hyrox_open.maxTime) return 'hyrox_open';
-  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.avancado.maxTime) return 'avancado';
-  if (timeInSeconds <= HYROX_TIME_THRESHOLDS.intermediario.maxTime) return 'intermediario';
+// Get status from HYROX official competition time based on gender
+export function getStatusFromOfficialTime(timeInSeconds: number, gender: AthleteGender = 'masculino'): AthleteStatus {
+  const thresholds = HYROX_TIME_THRESHOLDS[gender];
+  
+  if (timeInSeconds <= thresholds.hyrox_pro.maxTime) return 'hyrox_pro';
+  if (timeInSeconds <= thresholds.hyrox_open.maxTime) return 'hyrox_open';
+  if (timeInSeconds <= thresholds.avancado.maxTime) return 'avancado';
+  if (timeInSeconds <= thresholds.intermediario.maxTime) return 'intermediario';
   return 'iniciante';
 }
 
@@ -100,7 +123,8 @@ function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: st
 
 // Process official competitions and find the most recent valid one
 export function processOfficialCompetitions(
-  officialResults: ExternalResult[]
+  officialResults: ExternalResult[],
+  gender: AthleteGender = 'masculino'
 ): { valid: OfficialCompetitionResult | null; historical: OfficialCompetitionResult[] } {
   const processed: OfficialCompetitionResult[] = officialResults
     .filter(r => r.time_in_seconds && r.time_in_seconds > 0)
@@ -111,7 +135,7 @@ export function processOfficialCompetitions(
       event_date: r.event_date,
       created_at: r.created_at,
       isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
-      derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!),
+      derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!, gender),
     }))
     .sort((a, b) => {
       // Sort by event_date or created_at, most recent first
@@ -242,11 +266,12 @@ function statusToRulerScore(status: AthleteStatus): number {
 export function calculateAthleteStatus(
   benchmarkResults: BenchmarkResult[],
   officialResults: ExternalResult[],
+  gender: AthleteGender = 'masculino',
   previousStatus?: AthleteStatus
 ): CalculatedStatus {
-  // Process official competitions first
+  // Process official competitions first (using gender-specific thresholds)
   const { valid: validatingCompetition, historical: historicalCompetitions } = 
-    processOfficialCompetitions(officialResults);
+    processOfficialCompetitions(officialResults, gender);
 
   const validBenchmarks = benchmarkResults.filter(r => r.completed);
   const benchmarksUsed = validBenchmarks.length;
