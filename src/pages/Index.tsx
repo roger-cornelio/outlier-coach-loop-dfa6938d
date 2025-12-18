@@ -8,7 +8,6 @@ import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { UserManagement } from '@/components/UserManagement';
 import { BenchmarksScreen } from '@/components/BenchmarksScreen';
-import { LevelBackground } from '@/components/LevelBackground';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
 import { useLevelTheme } from '@/hooks/useLevelTheme';
@@ -16,7 +15,7 @@ import { useLevelTheme } from '@/hooks/useLevelTheme';
 const Index = () => {
   const { currentView } = useOutlierStore();
   
-  // Apply coach theme and level theme to the document
+  // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
 
@@ -47,7 +46,7 @@ const Index = () => {
   };
 
   return (
-    <LevelBackground>
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}
@@ -60,7 +59,7 @@ const Index = () => {
           {renderView()}
         </motion.div>
       </AnimatePresence>
-    </LevelBackground>
+    </div>
   );
 };
 
