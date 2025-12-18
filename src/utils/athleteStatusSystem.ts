@@ -1,53 +1,91 @@
-import type { AthleteStatus, TrainingDifficulty } from '@/types/outlier';
+import type { AthleteStatus, TrainingDifficulty, AthleteCountry } from '@/types/outlier';
 import type { BenchmarkResult, ExternalResult } from '@/hooks/useBenchmarkResults';
 
-// Status score thresholds (0-100 scale)
-export const STATUS_THRESHOLDS = {
-  iniciante: { min: 0, max: 35 },
-  intermediario: { min: 35, max: 55 },
-  avancado: { min: 55, max: 75 },
-  hyrox_open: { min: 75, max: 90 },
-  hyrox_pro: { min: 90, max: 100 },
-};
+// ============================================================
+// TIPOS
+// ============================================================
 
 export type AthleteGender = 'masculino' | 'feminino';
 export type RaceCategory = 'OPEN' | 'PRO';
 
-/**
- * Official HYROX age brackets
- */
 export type HyroxAgeBracket = 
   | '16-24' | '25-29' | '30-34' | '35-39' | '40-44' 
   | '45-49' | '50-54' | '55-59' | '60-64' | '65-69' | '70+';
 
+export type StatusConfidence = 'baixa' | 'media' | 'alta';
+export type StatusSource = 'prova_oficial' | 'estimado';
+
+// ============================================================
+// CONSTANTES - CLASSIFICAÇÃO DE STATUS (MINUTOS, BASE 30-34)
+// ============================================================
+
 /**
- * PRO-to-OPEN normalization factors:
- * PRO category is harder (heavier sleds, etc), so we convert PRO times to "Open-equivalent"
- * by multiplying by a factor < 1.
+ * Limiares para CLASSIFICAÇÃO de status baseado em tempo de prova oficial.
+ * Estes definem "onde o atleta compete hoje".
+ * Base: faixa 30-34 anos.
  */
-const PRO_TO_OPEN_EQUIV_FACTOR: Record<AthleteGender, number> = {
-  masculino: 0.94,  // PRO male ~6% harder
-  feminino: 0.95,   // PRO female ~5% harder
+const STATUS_TIME_THRESHOLDS: Record<AthleteGender, {
+  pro: number;      // < pro = HYROX PRO
+  open: number;     // < open = HYROX OPEN
+  avancado: number; // < avancado = AVANÇADO
+  inter: number;    // < inter = INTERMEDIÁRIO
+  // >= inter = INICIANTE
+}> = {
+  masculino: { pro: 80, open: 95, avancado: 110, inter: 125 },
+  feminino: { pro: 85, open: 100, avancado: 115, inter: 130 },
 };
 
 /**
- * Base thresholds (in minutes) for classifying level by "Open-equivalent" time.
- * These are for "ability to compete", not podium placement.
- * Base reference: 30-34 age bracket
+ * Limiares de TOPO do nível (em minutos) - quando o atleta está no 95-100 do score.
+ * Representa "pronto para subir de nível" ou "topo real daquele nível".
+ * Base: faixa 30-34 anos.
  */
-const THRESHOLDS_OPEN_EQ_MIN: Record<AthleteGender, { pro: number; open: number; adv: number; inter: number }> = {
-  masculino: { pro: 80, open: 95, adv: 110, inter: 125 },   // <80 PRO; <95 OPEN; <110 ADV; <125 INTER; else INIC
-  feminino: { pro: 85, open: 100, adv: 115, inter: 130 },
+const LEVEL_TOP_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
+  masculino: {
+    iniciante: 95,      // ≤1h35 = topo iniciante (pronto para inter)
+    intermediario: 80,  // ≤1h20 = topo inter (pronto para avançado)
+    avancado: 70,       // ≤1h10 = topo avançado (pronto para OPEN)
+    hyrox_open: 66,     // ≤1h06 = topo OPEN (top nacional)
+    hyrox_pro: 66,      // ≤1h06 = pódio nacional (usa régua PRO separada)
+  },
+  feminino: {
+    iniciante: 100,     // ≤1h40 = topo iniciante
+    intermediario: 85,  // ≤1h25 = topo inter
+    avancado: 75,       // ≤1h15 = topo avançado
+    hyrox_open: 70,     // ≤1h10 = topo OPEN
+    hyrox_pro: 70,      // ≤1h10 = pódio nacional
+  },
 };
 
 /**
- * Age tolerance adjustments (in minutes) applied to base thresholds.
- * Older athletes get more time tolerance.
+ * Limiares de BASE do nível (em minutos) - quando o atleta está no score ~0-10 do nível.
+ * Representa "acabou de entrar no nível".
  */
+const LEVEL_BASE_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
+  masculino: {
+    iniciante: 150,     // >2h30 = base iniciante
+    intermediario: 125, // ~2h05 = base inter
+    avancado: 110,      // ~1h50 = base avançado
+    hyrox_open: 95,     // ~1h35 = base OPEN
+    hyrox_pro: 85,      // ~1h25 = base PRO (entry level)
+  },
+  feminino: {
+    iniciante: 155,     // >2h35 = base iniciante
+    intermediario: 130, // ~2h10 = base inter
+    avancado: 115,      // ~1h55 = base avançado
+    hyrox_open: 100,    // ~1h40 = base OPEN
+    hyrox_pro: 92,      // ~1h32 = base PRO
+  },
+};
+
+// ============================================================
+// TOLERÂNCIA POR IDADE (MINUTOS ADICIONAIS)
+// ============================================================
+
 const AGE_TOLERANCE_MINUTES: Record<HyroxAgeBracket, number> = {
   '16-24': 0,
   '25-29': 0,
-  '30-34': 0,  // Base reference
+  '30-34': 0,  // Base de referência
   '35-39': 2,
   '40-44': 4,
   '45-49': 6,
@@ -58,9 +96,79 @@ const AGE_TOLERANCE_MINUTES: Record<HyroxAgeBracket, number> = {
   '70+': 20,
 };
 
-/**
- * Calculate age at a specific date
- */
+// ============================================================
+// NORMALIZAÇÃO PRO → OPEN EQUIVALENTE
+// ============================================================
+
+const PRO_TO_OPEN_FACTOR: Record<AthleteGender, number> = {
+  masculino: 0.94,  // PRO masculino ~6% mais difícil
+  feminino: 0.95,   // PRO feminino ~5% mais difícil
+};
+
+// ============================================================
+// CONFIGURAÇÕES DE BENCHMARK
+// ============================================================
+
+const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30; // 18 meses
+const DECAY_HALF_LIFE_DAYS = 30;
+const MIN_WEIGHT = 0.1;
+const MIN_BENCHMARKS_MEDIUM_CONFIDENCE = 4;
+const MIN_BENCHMARKS_HIGH_CONFIDENCE = 8;
+const MIN_WEEKS_FOR_PROMOTION = 2;
+
+// ============================================================
+// INTERFACES
+// ============================================================
+
+export interface OfficialCompetitionResult {
+  id: string;
+  time_in_seconds: number;
+  open_equivalent_seconds: number;
+  race_category: RaceCategory;
+  event_name?: string;
+  event_date?: string;
+  created_at: string;
+  isExpired: boolean;
+  derivedStatus: AthleteStatus;
+  levelScore: number; // Score 0-100 DENTRO do nível
+  ageAtRace?: number;
+  ageBracket?: HyroxAgeBracket;
+  cappedFromPro?: boolean;
+  cappedReason?: string;
+}
+
+export interface CalculatedStatus {
+  status: AthleteStatus;
+  /** Score 0-100 dentro do nível atual */
+  rulerScore: number;
+  confidence: StatusConfidence;
+  statusSource: StatusSource;
+  validatingCompetition: OfficialCompetitionResult | null;
+  historicalCompetitions: OfficialCompetitionResult[];
+  /** Progresso dentro do status (0-100%) */
+  progressInStatus: number;
+  /** Progresso para o próximo status (0-100%) */
+  progressToNextStatus: number;
+  nextStatus: AthleteStatus | null;
+  eligibleForPromotion: boolean;
+  promotionBlocker: 'score' | 'consistency' | 'weeks' | 'prova_required' | null;
+  benchmarksUsed: number;
+  weeksWithGoodPerformance: number;
+  consistencyScore: number;
+  athleteAgeBracket?: HyroxAgeBracket;
+}
+
+export interface LevelClassificationResult {
+  status: AthleteStatus;
+  levelScore: number;
+  cappedFromPro: boolean;
+  cappedReason?: string;
+}
+
+// ============================================================
+// FUNÇÕES DE IDADE
+// ============================================================
+
 export function calculateAgeAtDate(birthDate: Date, targetDate: Date): number {
   let age = targetDate.getFullYear() - birthDate.getFullYear();
   const monthDiff = targetDate.getMonth() - birthDate.getMonth();
@@ -70,9 +178,6 @@ export function calculateAgeAtDate(birthDate: Date, targetDate: Date): number {
   return age;
 }
 
-/**
- * Get HYROX age bracket from age
- */
 export function getAgeBracket(age: number): HyroxAgeBracket {
   if (age < 25) return '16-24';
   if (age < 30) return '25-29';
@@ -87,105 +192,17 @@ export function getAgeBracket(age: number): HyroxAgeBracket {
   return '70+';
 }
 
-/**
- * Get age tolerance in minutes for a given age bracket
- */
 export function getAgeTolerance(ageBracket: HyroxAgeBracket): number {
   return AGE_TOLERANCE_MINUTES[ageBracket];
 }
 
-/**
- * Get adjusted thresholds for a specific age bracket
- */
-export function getAdjustedThresholds(
-  gender: AthleteGender,
-  ageBracket: HyroxAgeBracket
-): { pro: number; open: number; adv: number; inter: number } {
-  const base = THRESHOLDS_OPEN_EQ_MIN[gender];
-  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
-  
-  return {
-    pro: base.pro + tolerance,
-    open: base.open + tolerance,
-    adv: base.adv + tolerance,
-    inter: base.inter + tolerance,
-  };
-}
-
-// Official competition validity period (18 months in days)
-const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30;
-
-// Hysteresis margin to prevent oscillation (need to score X points above threshold to promote)
-const PROMOTION_HYSTERESIS = 5;
-const DEMOTION_HYSTERESIS = 8;
-
-// Minimum benchmarks for reliable status
-const MIN_BENCHMARKS_LOW_CONFIDENCE = 1;
-const MIN_BENCHMARKS_MEDIUM_CONFIDENCE = 4;
-const MIN_BENCHMARKS_HIGH_CONFIDENCE = 8;
-
-// Minimum weeks with consistent performance for promotion
-const MIN_WEEKS_FOR_PROMOTION = 2;
-
-// Temporal decay
-const DECAY_HALF_LIFE_DAYS = 30;
-const MIN_WEIGHT = 0.1;
-
-export type StatusConfidence = 'baixa' | 'media' | 'alta';
-export type StatusSource = 'prova_oficial' | 'estimado';
-
-export interface OfficialCompetitionResult {
-  id: string;
-  time_in_seconds: number;
-  open_equivalent_seconds: number;
-  race_category: RaceCategory;
-  event_name?: string;
-  event_date?: string;
-  created_at: string;
-  isExpired: boolean;
-  derivedStatus: AthleteStatus;
-  // Age-related fields
-  ageAtRace?: number;
-  ageBracket?: HyroxAgeBracket;
-  cappedFromPro?: boolean; // True if athlete was capped from PRO due to age (60+)
-  cappedReason?: string;
-}
-
-export interface CalculatedStatus {
-  // Current status (with hysteresis applied)
-  status: AthleteStatus;
-  // Raw score 0-100 (continuous ruler)
-  rulerScore: number;
-  // Confidence level
-  confidence: StatusConfidence;
-  // Source of status determination
-  statusSource: StatusSource;
-  // Official competition that defined the status (if any)
-  validatingCompetition: OfficialCompetitionResult | null;
-  // Historical official competitions (expired)
-  historicalCompetitions: OfficialCompetitionResult[];
-  // Progress within current status (0-100%)
-  progressInStatus: number;
-  // How close to promotion (0-100%)
-  progressToNextStatus: number;
-  // Next status if any
-  nextStatus: AthleteStatus | null;
-  // Whether athlete is eligible for promotion (score + consistency)
-  eligibleForPromotion: boolean;
-  // What's blocking promotion
-  promotionBlocker: 'score' | 'consistency' | 'weeks' | 'prova_required' | null;
-  // Stats
-  benchmarksUsed: number;
-  weeksWithGoodPerformance: number;
-  consistencyScore: number;
-  // Age bracket info
-  athleteAgeBracket?: HyroxAgeBracket;
-}
+// ============================================================
+// NORMALIZAÇÃO E AJUSTES
+// ============================================================
 
 /**
- * Convert finish time to "Open-equivalent" seconds
- * - If race was OPEN: stays the same
- * - If race was PRO: reduce time via factor (same time in PRO is worth more)
+ * Converte tempo de prova para Open-equivalente.
+ * PRO é mais pesado, então o tempo é multiplicado pelo fator.
  */
 export function toOpenEquivalentSeconds(
   timeInSeconds: number,
@@ -193,20 +210,54 @@ export function toOpenEquivalentSeconds(
   raceCategory: RaceCategory = 'OPEN'
 ): number {
   if (raceCategory === 'OPEN') return timeInSeconds;
-  const factor = PRO_TO_OPEN_EQUIV_FACTOR[gender];
-  return Math.round(timeInSeconds * factor);
-}
-
-export interface LevelClassificationResult {
-  status: AthleteStatus;
-  cappedFromPro: boolean;
-  cappedReason?: string;
+  return Math.round(timeInSeconds * PRO_TO_OPEN_FACTOR[gender]);
 }
 
 /**
- * Get status from HYROX official competition time using Open-equivalent normalization
- * With age-adjusted thresholds.
- * Special rule: Athletes 60+ cannot be classified as PRO (capped at OPEN)
+ * Obtém limiares de status ajustados por idade.
+ */
+export function getAdjustedStatusThresholds(
+  gender: AthleteGender,
+  ageBracket: HyroxAgeBracket
+): { pro: number; open: number; avancado: number; inter: number } {
+  const base = STATUS_TIME_THRESHOLDS[gender];
+  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
+  
+  return {
+    pro: base.pro + tolerance,
+    open: base.open + tolerance,
+    avancado: base.avancado + tolerance,
+    inter: base.inter + tolerance,
+  };
+}
+
+/**
+ * Obtém limiares de topo/base do nível ajustados por idade.
+ */
+function getAdjustedLevelThresholds(
+  gender: AthleteGender,
+  status: AthleteStatus,
+  ageBracket: HyroxAgeBracket
+): { top: number; base: number } {
+  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
+  return {
+    top: LEVEL_TOP_THRESHOLDS[gender][status] + tolerance,
+    base: LEVEL_BASE_THRESHOLDS[gender][status] + tolerance,
+  };
+}
+
+// ============================================================
+// CLASSIFICAÇÃO DE STATUS POR TEMPO
+// ============================================================
+
+/**
+ * Classifica o STATUS do atleta baseado no tempo de prova oficial.
+ * O status define "onde o atleta compete hoje".
+ * 
+ * REGRAS:
+ * - Usa tempo Open-equivalente (PRO normalizado)
+ * - Ajusta limiares por idade
+ * - Atletas 60+ NÃO podem ser PRO (capped em OPEN)
  */
 export function getStatusFromOfficialTime(
   timeInSeconds: number,
@@ -217,32 +268,104 @@ export function getStatusFromOfficialTime(
   const openEqSec = toOpenEquivalentSeconds(timeInSeconds, gender, raceCategory);
   const openEqMin = openEqSec / 60;
   
-  // Get age bracket and adjusted thresholds
   const ageBracket = ageAtRace !== undefined ? getAgeBracket(ageAtRace) : '30-34';
-  const t = getAdjustedThresholds(gender, ageBracket);
+  const t = getAdjustedStatusThresholds(gender, ageBracket);
   
-  // Determine raw status from time
+  // Determina status pelo tempo
   let status: AthleteStatus;
   if (openEqMin < t.pro) status = 'hyrox_pro';
   else if (openEqMin < t.open) status = 'hyrox_open';
-  else if (openEqMin < t.adv) status = 'avancado';
+  else if (openEqMin < t.avancado) status = 'avancado';
   else if (openEqMin < t.inter) status = 'intermediario';
   else status = 'iniciante';
   
-  // Special rule: Athletes 60+ cannot be PRO
+  // Regra especial: 60+ não podem ser PRO
   let cappedFromPro = false;
   let cappedReason: string | undefined;
   
   if (ageAtRace !== undefined && ageAtRace >= 60 && status === 'hyrox_pro') {
     status = 'hyrox_open';
     cappedFromPro = true;
-    cappedReason = `Atletas com 60+ anos são classificados no máximo como OPEN (tempo seria PRO)`;
+    cappedReason = `Atletas 60+ são classificados como HYROX OPEN (tempo seria PRO)`;
   }
   
-  return { status, cappedFromPro, cappedReason };
+  // Calcula o score DENTRO do nível
+  const levelScore = calculateLevelScore(openEqMin, gender, status, ageBracket);
+  
+  return { status, levelScore, cappedFromPro, cappedReason };
 }
 
-// Check if official competition is still valid (< 18 months old)
+// ============================================================
+// SCORE DENTRO DO NÍVEL (0-100)
+// ============================================================
+
+/**
+ * Calcula o score 0-100 DENTRO de um nível específico.
+ * 
+ * REGRA DE OURO:
+ * - Cada status tem sua própria régua interna
+ * - 95-100 = TOPO REAL do nível (pronto para subir)
+ * - 0-10 = Acabou de entrar no nível
+ * 
+ * O score é baseado na posição do tempo entre base e topo do nível.
+ */
+export function calculateLevelScore(
+  timeInMinutes: number,
+  gender: AthleteGender,
+  status: AthleteStatus,
+  ageBracket: HyroxAgeBracket = '30-34'
+): number {
+  const { top, base } = getAdjustedLevelThresholds(gender, status, ageBracket);
+  
+  // Se tempo <= top, está no topo (95-100)
+  if (timeInMinutes <= top) {
+    // Linear de 95 a 100 para tempos ainda melhores que o top
+    const bestPossible = top - 10; // ~10 min melhor que top = 100
+    if (timeInMinutes <= bestPossible) return 100;
+    const ratio = (top - timeInMinutes) / (top - bestPossible);
+    return 95 + (ratio * 5);
+  }
+  
+  // Se tempo >= base, está na base (0-10)
+  if (timeInMinutes >= base) {
+    // Linear de 10 a 0 para tempos ainda piores que base
+    const worstInLevel = base + 15; // ~15 min pior que base = 0
+    if (timeInMinutes >= worstInLevel) return 0;
+    const ratio = (worstInLevel - timeInMinutes) / (worstInLevel - base);
+    return ratio * 10;
+  }
+  
+  // Entre base e top: interpolação linear (10-95)
+  const range = base - top;
+  const position = base - timeInMinutes;
+  const ratio = position / range;
+  
+  return 10 + (ratio * 85); // 10 a 95
+}
+
+/**
+ * Calcula score de benchmark para posição dentro do nível.
+ * Usado quando não há prova oficial.
+ */
+function calculateBenchmarkLevelScore(
+  benchmarkScore: number,
+  status: AthleteStatus
+): number {
+  // Benchmark scores são 0-100 globais
+  // Precisamos mapear para o contexto do nível atual
+  
+  // Se benchmark indica performance de elite, mapeia para topo do nível
+  if (benchmarkScore >= 90) return 85 + ((benchmarkScore - 90) / 10) * 15; // 85-100
+  if (benchmarkScore >= 75) return 60 + ((benchmarkScore - 75) / 15) * 25; // 60-85
+  if (benchmarkScore >= 50) return 30 + ((benchmarkScore - 50) / 25) * 30; // 30-60
+  if (benchmarkScore >= 25) return 10 + ((benchmarkScore - 25) / 25) * 20; // 10-30
+  return (benchmarkScore / 25) * 10; // 0-10
+}
+
+// ============================================================
+// PROCESSAMENTO DE PROVAS OFICIAIS
+// ============================================================
+
 function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: string): boolean {
   const date = eventDate ? new Date(eventDate) : new Date(createdAt);
   const now = new Date();
@@ -250,7 +373,6 @@ function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: st
   return daysDiff <= OFFICIAL_COMPETITION_VALIDITY_DAYS;
 }
 
-// Process official competitions and find the most recent valid one
 export function processOfficialCompetitions(
   officialResults: ExternalResult[],
   gender: AthleteGender = 'masculino',
@@ -262,7 +384,6 @@ export function processOfficialCompetitions(
       const raceCategory: RaceCategory = r.race_category || 'OPEN';
       const openEqSec = toOpenEquivalentSeconds(r.time_in_seconds!, gender, raceCategory);
       
-      // Calculate age at race date
       let ageAtRace: number | undefined;
       let ageBracket: HyroxAgeBracket | undefined;
       
@@ -272,7 +393,6 @@ export function processOfficialCompetitions(
         ageBracket = getAgeBracket(ageAtRace);
       }
       
-      // Get status with age adjustments
       const classification = getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory, ageAtRace);
       
       return {
@@ -285,6 +405,7 @@ export function processOfficialCompetitions(
         created_at: r.created_at,
         isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
         derivedStatus: classification.status,
+        levelScore: classification.levelScore,
         ageAtRace,
         ageBracket,
         cappedFromPro: classification.cappedFromPro,
@@ -292,7 +413,6 @@ export function processOfficialCompetitions(
       };
     })
     .sort((a, b) => {
-      // Sort by event_date or created_at, most recent first
       const dateA = a.event_date ? new Date(a.event_date) : new Date(a.created_at);
       const dateB = b.event_date ? new Date(b.event_date) : new Date(b.created_at);
       return dateB.getTime() - dateA.getTime();
@@ -304,7 +424,10 @@ export function processOfficialCompetitions(
   return { valid, historical };
 }
 
-// Calculate temporal weight for benchmark
+// ============================================================
+// FUNÇÕES DE BENCHMARK
+// ============================================================
+
 function calculateTemporalWeight(createdAt: string): number {
   const now = new Date();
   const created = new Date(createdAt);
@@ -313,8 +436,18 @@ function calculateTemporalWeight(createdAt: string): number {
   return Math.max(MIN_WEIGHT, weight);
 }
 
-// Calculate weighted average score from benchmarks
-function calculateWeightedScore(results: BenchmarkResult[]): number {
+function getScoreFromBucket(bucket: string | null | undefined): number {
+  switch (bucket) {
+    case 'ELITE': return 95;
+    case 'STRONG': return 80;
+    case 'OK': return 60;
+    case 'TOUGH': return 40;
+    case 'DNF': return 15;
+    default: return 50;
+  }
+}
+
+function calculateWeightedBenchmarkScore(results: BenchmarkResult[]): number {
   if (results.length === 0) return 0;
 
   let totalWeight = 0;
@@ -330,49 +463,6 @@ function calculateWeightedScore(results: BenchmarkResult[]): number {
   return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
-// Convert bucket to score
-function getScoreFromBucket(bucket: string | null | undefined): number {
-  switch (bucket) {
-    case 'ELITE': return 95;
-    case 'STRONG': return 80;
-    case 'OK': return 60;
-    case 'TOUGH': return 40;
-    case 'DNF': return 15;
-    default: return 50;
-  }
-}
-
-// Get status from raw score (without hysteresis)
-function getStatusFromScore(score: number): AthleteStatus {
-  if (score >= STATUS_THRESHOLDS.hyrox_pro.min) return 'hyrox_pro';
-  if (score >= STATUS_THRESHOLDS.hyrox_open.min) return 'hyrox_open';
-  if (score >= STATUS_THRESHOLDS.avancado.min) return 'avancado';
-  if (score >= STATUS_THRESHOLDS.intermediario.min) return 'intermediario';
-  return 'iniciante';
-}
-
-// Get next status in progression
-function getNextStatus(current: AthleteStatus): AthleteStatus | null {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
-  const index = order.indexOf(current);
-  return index < order.length - 1 ? order[index + 1] : null;
-}
-
-// Get previous status
-function getPrevStatus(current: AthleteStatus): AthleteStatus | null {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
-  const index = order.indexOf(current);
-  return index > 0 ? order[index - 1] : null;
-}
-
-// Calculate confidence based on benchmark count
-function getConfidence(benchmarkCount: number): StatusConfidence {
-  if (benchmarkCount >= MIN_BENCHMARKS_HIGH_CONFIDENCE) return 'alta';
-  if (benchmarkCount >= MIN_BENCHMARKS_MEDIUM_CONFIDENCE) return 'media';
-  return 'baixa';
-}
-
-// Calculate weeks with good performance (STRONG+ in majority of benchmarks)
 function calculateWeeksWithGoodPerformance(results: BenchmarkResult[]): number {
   const weekMap = new Map<string, { good: number; total: number }>();
   
@@ -393,7 +483,6 @@ function calculateWeeksWithGoodPerformance(results: BenchmarkResult[]): number {
   return Array.from(weekMap.values()).filter(w => w.good / w.total >= 0.6).length;
 }
 
-// Calculate consistency (inverse of standard deviation)
 function calculateConsistency(results: BenchmarkResult[]): number {
   const scores = results
     .filter(r => r.score !== null && r.score !== undefined)
@@ -405,18 +494,44 @@ function calculateConsistency(results: BenchmarkResult[]): number {
   const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
   const stdDev = Math.sqrt(variance);
 
-  // Convert to 0-100 where lower stdDev = higher consistency
   return Math.max(0, 100 - (stdDev / 30) * 100);
 }
 
-// Convert status to ruler score (for positioning within validated level)
-function statusToRulerScore(status: AthleteStatus): number {
-  const thresholds = STATUS_THRESHOLDS[status];
-  // Return the middle of the status range
-  return (thresholds.min + thresholds.max) / 2;
+function getConfidence(benchmarkCount: number): StatusConfidence {
+  if (benchmarkCount >= MIN_BENCHMARKS_HIGH_CONFIDENCE) return 'alta';
+  if (benchmarkCount >= MIN_BENCHMARKS_MEDIUM_CONFIDENCE) return 'media';
+  return 'baixa';
 }
 
-// Main function to calculate athlete status
+// ============================================================
+// FUNÇÕES DE NAVEGAÇÃO DE STATUS
+// ============================================================
+
+const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
+
+function getNextStatus(current: AthleteStatus): AthleteStatus | null {
+  const index = STATUS_ORDER.indexOf(current);
+  return index < STATUS_ORDER.length - 1 ? STATUS_ORDER[index + 1] : null;
+}
+
+function getPrevStatus(current: AthleteStatus): AthleteStatus | null {
+  const index = STATUS_ORDER.indexOf(current);
+  return index > 0 ? STATUS_ORDER[index - 1] : null;
+}
+
+function getStatusFromBenchmarkScore(score: number): AthleteStatus {
+  // Benchmarks estimam status com limiares conservadores
+  if (score >= 90) return 'hyrox_pro';
+  if (score >= 75) return 'hyrox_open';
+  if (score >= 55) return 'avancado';
+  if (score >= 35) return 'intermediario';
+  return 'iniciante';
+}
+
+// ============================================================
+// FUNÇÃO PRINCIPAL - CALCULAR STATUS DO ATLETA
+// ============================================================
+
 export function calculateAthleteStatus(
   benchmarkResults: BenchmarkResult[],
   officialResults: ExternalResult[],
@@ -424,52 +539,35 @@ export function calculateAthleteStatus(
   previousStatus?: AthleteStatus,
   athleteBirthDate?: Date
 ): CalculatedStatus {
-  // Calculate current athlete age bracket
   const athleteAgeBracket = athleteBirthDate 
     ? getAgeBracket(calculateAgeAtDate(athleteBirthDate, new Date()))
     : undefined;
 
-  // Process official competitions first (using gender-specific thresholds and age)
   const { valid: validatingCompetition, historical: historicalCompetitions } = 
     processOfficialCompetitions(officialResults, gender, athleteBirthDate);
 
   const validBenchmarks = benchmarkResults.filter(r => r.completed);
   const benchmarksUsed = validBenchmarks.length;
 
-  // If we have a valid official competition, it defines the status
+  // ================================================================
+  // CASO 1: Prova oficial válida define o STATUS
+  // ================================================================
   if (validatingCompetition) {
     const status = validatingCompetition.derivedStatus;
-    const currentThresholds = STATUS_THRESHOLDS[status];
-    
-    // Calculate ruler score from benchmarks/simulados for progress within the level
-    const rulerScore = benchmarksUsed > 0 
-      ? calculateWeightedScore(validBenchmarks)
-      : statusToRulerScore(status);
-    
-    // Clamp ruler score within the validated level
-    const clampedScore = Math.max(
-      currentThresholds.min,
-      Math.min(currentThresholds.max, rulerScore)
-    );
-    
-    const statusRange = currentThresholds.max - currentThresholds.min;
-    const progressInStatus = Math.max(0, Math.min(100, 
-      ((clampedScore - currentThresholds.min) / statusRange) * 100
-    ));
-
+    const rulerScore = validatingCompetition.levelScore;
     const nextStatus = getNextStatus(status);
     
     return {
       status,
-      rulerScore: Math.round(clampedScore * 10) / 10,
-      confidence: 'alta', // Official competition = high confidence
+      rulerScore: Math.round(rulerScore * 10) / 10,
+      confidence: 'alta',
       statusSource: 'prova_oficial',
       validatingCompetition,
       historicalCompetitions,
-      progressInStatus: Math.round(progressInStatus),
-      progressToNextStatus: Math.round(progressInStatus), // Within current level
+      progressInStatus: Math.round(rulerScore),
+      progressToNextStatus: Math.round(rulerScore),
       nextStatus,
-      eligibleForPromotion: false, // Need new official competition to promote
+      eligibleForPromotion: false, // Precisa de nova prova oficial
       promotionBlocker: 'prova_required',
       benchmarksUsed,
       weeksWithGoodPerformance: calculateWeeksWithGoodPerformance(validBenchmarks),
@@ -478,10 +576,13 @@ export function calculateAthleteStatus(
     };
   }
 
-  // No valid official competition - use benchmark-based calculation
+  // ================================================================
+  // CASO 2: Sem prova oficial - usar benchmarks (estimativa)
+  // ================================================================
   if (benchmarksUsed === 0) {
+    const status = previousStatus || 'iniciante';
     return {
-      status: previousStatus || 'iniciante',
+      status,
       rulerScore: 0,
       confidence: 'baixa',
       statusSource: 'estimado',
@@ -489,7 +590,7 @@ export function calculateAthleteStatus(
       historicalCompetitions,
       progressInStatus: 0,
       progressToNextStatus: 0,
-      nextStatus: 'intermediario',
+      nextStatus: getNextStatus(status),
       eligibleForPromotion: false,
       promotionBlocker: 'score',
       benchmarksUsed: 0,
@@ -499,69 +600,44 @@ export function calculateAthleteStatus(
     };
   }
 
-  // Calculate raw score from benchmarks
-  const rulerScore = calculateWeightedScore(validBenchmarks);
-  const scoreBasedStatus = getStatusFromScore(rulerScore);
-  
-  // Calculate additional metrics
+  // Calcula score médio ponderado dos benchmarks
+  const benchmarkScore = calculateWeightedBenchmarkScore(validBenchmarks);
   const weeksWithGoodPerformance = calculateWeeksWithGoodPerformance(validBenchmarks);
   const consistencyScore = calculateConsistency(validBenchmarks);
   const confidence = getConfidence(benchmarksUsed);
   
-  // Apply hysteresis for status changes
-  let status = previousStatus || scoreBasedStatus;
+  // Determina status baseado nos benchmarks (conservador)
+  const estimatedStatus = getStatusFromBenchmarkScore(benchmarkScore);
+  
+  // Aplica hysteresis com status anterior
+  let status = previousStatus || estimatedStatus;
   const nextStatus = getNextStatus(status);
   const prevStatus = getPrevStatus(status);
   
-  // Check for promotion
-  const promotionThreshold = nextStatus 
-    ? STATUS_THRESHOLDS[nextStatus].min + PROMOTION_HYSTERESIS 
-    : 100;
-  const meetsScoreForPromotion = rulerScore >= promotionThreshold;
+  // Verifica promoção (precisa de score alto + consistência + semanas)
+  const meetsScoreForPromotion = benchmarkScore >= 80;
   const meetsWeeksForPromotion = weeksWithGoodPerformance >= MIN_WEEKS_FOR_PROMOTION;
   const meetsConsistencyForPromotion = consistencyScore >= 60;
   
-  // Determine promotion blocker
   let promotionBlocker: 'score' | 'consistency' | 'weeks' | 'prova_required' | null = null;
-  if (!meetsScoreForPromotion) {
-    promotionBlocker = 'score';
-  } else if (!meetsConsistencyForPromotion) {
-    promotionBlocker = 'consistency';
-  } else if (!meetsWeeksForPromotion) {
-    promotionBlocker = 'weeks';
-  }
+  if (!meetsScoreForPromotion) promotionBlocker = 'score';
+  else if (!meetsConsistencyForPromotion) promotionBlocker = 'consistency';
+  else if (!meetsWeeksForPromotion) promotionBlocker = 'weeks';
   
   const eligibleForPromotion = meetsScoreForPromotion && meetsWeeksForPromotion && meetsConsistencyForPromotion;
   
-  // Apply promotion if eligible
+  // Aplica promoção se elegível
   if (eligibleForPromotion && nextStatus) {
     status = nextStatus;
   }
   
-  // Check for demotion (needs to be significantly below threshold)
-  if (prevStatus) {
-    const demotionThreshold = STATUS_THRESHOLDS[status].min - DEMOTION_HYSTERESIS;
-    if (rulerScore < demotionThreshold && benchmarksUsed >= MIN_BENCHMARKS_MEDIUM_CONFIDENCE) {
-      status = prevStatus;
-    }
+  // Verifica rebaixamento (precisa de performance consistentemente baixa)
+  if (prevStatus && benchmarkScore < 30 && benchmarksUsed >= MIN_BENCHMARKS_MEDIUM_CONFIDENCE) {
+    status = prevStatus;
   }
   
-  // Calculate progress within current status
-  const currentThresholds = STATUS_THRESHOLDS[status];
-  const statusRange = currentThresholds.max - currentThresholds.min;
-  const progressInStatus = Math.max(0, Math.min(100, 
-    ((rulerScore - currentThresholds.min) / statusRange) * 100
-  ));
-  
-  // Calculate progress to next status
-  const updatedNextStatus = getNextStatus(status);
-  let progressToNextStatus = 0;
-  if (updatedNextStatus) {
-    const nextThreshold = STATUS_THRESHOLDS[updatedNextStatus].min + PROMOTION_HYSTERESIS;
-    progressToNextStatus = Math.min(100, (rulerScore / nextThreshold) * 100);
-  } else {
-    progressToNextStatus = 100;
-  }
+  // Calcula ruler score dentro do nível atual
+  const rulerScore = calculateBenchmarkLevelScore(benchmarkScore, status);
   
   return {
     status,
@@ -570,9 +646,9 @@ export function calculateAthleteStatus(
     statusSource: 'estimado',
     validatingCompetition: null,
     historicalCompetitions,
-    progressInStatus: Math.round(progressInStatus),
-    progressToNextStatus: Math.round(progressToNextStatus),
-    nextStatus: updatedNextStatus,
+    progressInStatus: Math.round(rulerScore),
+    progressToNextStatus: Math.round(rulerScore),
+    nextStatus: getNextStatus(status),
     eligibleForPromotion,
     promotionBlocker,
     benchmarksUsed,
@@ -582,23 +658,28 @@ export function calculateAthleteStatus(
   };
 }
 
-// Get effective level for workout prescription (status + difficulty offset)
+// ============================================================
+// NÍVEL EFETIVO PARA PRESCRIÇÃO DE TREINO
+// ============================================================
+
 export function getEffectiveLevel(
   status: AthleteStatus,
   difficulty: TrainingDifficulty
 ): AthleteStatus {
-  const order: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
-  const currentIndex = order.indexOf(status);
+  const currentIndex = STATUS_ORDER.indexOf(status);
   
   let offset = 0;
   if (difficulty === 'leve') offset = -1;
   if (difficulty === 'forte') offset = 1;
   
-  const newIndex = Math.max(0, Math.min(order.length - 1, currentIndex + offset));
-  return order[newIndex];
+  const newIndex = Math.max(0, Math.min(STATUS_ORDER.length - 1, currentIndex + offset));
+  return STATUS_ORDER[newIndex];
 }
 
-// Display helpers
+// ============================================================
+// HELPERS DE EXIBIÇÃO
+// ============================================================
+
 export const CONFIDENCE_LABELS: Record<StatusConfidence, string> = {
   baixa: 'Baixa',
   media: 'Média',
@@ -612,11 +693,10 @@ export const CONFIDENCE_COLORS: Record<StatusConfidence, string> = {
 };
 
 export const STATUS_SOURCE_LABELS: Record<StatusSource, string> = {
-  prova_oficial: 'Validado por Prova',
+  prova_oficial: 'Validado por Prova Oficial',
   estimado: 'Estimado por Benchmarks',
 };
 
-// Format time in seconds to readable format
 export function formatOfficialTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -626,4 +706,25 @@ export function formatOfficialTime(seconds: number): string {
     return `${hours}h${minutes.toString().padStart(2, '0')}m${secs.toString().padStart(2, '0')}s`;
   }
   return `${minutes}m${secs.toString().padStart(2, '0')}s`;
+}
+
+/**
+ * Obtém descrição textual do score dentro do nível
+ */
+export function getLevelScoreDescription(score: number): string {
+  if (score >= 95) return 'Topo do Nível';
+  if (score >= 80) return 'Muito Forte';
+  if (score >= 60) return 'Sólido';
+  if (score >= 40) return 'Em Evolução';
+  if (score >= 20) return 'Base do Nível';
+  return 'Iniciando';
+}
+
+// Backwards compatibility - deprecated, use getAdjustedStatusThresholds
+export function getAdjustedThresholds(
+  gender: AthleteGender,
+  ageBracket: HyroxAgeBracket
+): { pro: number; open: number; adv: number; inter: number } {
+  const t = getAdjustedStatusThresholds(gender, ageBracket);
+  return { pro: t.pro, open: t.open, adv: t.avancado, inter: t.inter };
 }
