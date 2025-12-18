@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Dark athletic theme */
+    /* Default/PULSE Theme - Warm, Human, Balanced */
     --background: 0 0% 4%;
     --foreground: 0 0% 98%;
 
@@ -57,9 +55,9 @@
     --shadow-glow: 0 0 60px hsl(25 95% 53% / 0.3);
     --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.4);
 
-    /* Typography */
+    /* Typography - Default PULSE */
     --font-display: 'Bebas Neue', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --font-body: 'Nunito', sans-serif;
 
     --sidebar-background: 0 0% 6%;
     --sidebar-foreground: 0 0% 98%;
@@ -69,6 +67,155 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 25 95% 53%;
+  }
+
+  /* ============================================
+     COACH IRON THEME - Military, Serious, Sharp
+     ============================================ */
+  .theme-iron {
+    --background: 220 15% 6%;
+    --foreground: 220 10% 95%;
+
+    --card: 220 15% 9%;
+    --card-foreground: 220 10% 95%;
+
+    --popover: 220 15% 9%;
+    --popover-foreground: 220 10% 95%;
+
+    /* Steel Blue Primary */
+    --primary: 210 40% 50%;
+    --primary-foreground: 220 10% 98%;
+
+    --secondary: 220 15% 14%;
+    --secondary-foreground: 220 10% 95%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 55%;
+
+    /* Cold accent */
+    --accent: 200 50% 45%;
+    --accent-foreground: 220 10% 98%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 220 10% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 15%;
+    --ring: 210 40% 50%;
+
+    /* Status colors - muted */
+    --status-excellent: 210 40% 50%;
+    --status-good: 160 40% 40%;
+    --status-attention: 45 60% 45%;
+    --status-below: 0 50% 45%;
+
+    /* Typography */
+    --font-display: 'Oswald', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+    /* Gradients */
+    --gradient-fire: linear-gradient(135deg, hsl(210 40% 50%) 0%, hsl(200 50% 45%) 100%);
+    --shadow-glow: 0 0 40px hsl(210 40% 50% / 0.2);
+  }
+
+  /* ============================================
+     COACH SPARK THEME - Energetic, Fun, Vibrant
+     ============================================ */
+  .theme-spark {
+    --background: 30 20% 5%;
+    --foreground: 45 100% 98%;
+
+    --card: 30 20% 8%;
+    --card-foreground: 45 100% 98%;
+
+    --popover: 30 20% 8%;
+    --popover-foreground: 45 100% 98%;
+
+    /* Vibrant Yellow/Orange */
+    --primary: 45 100% 55%;
+    --primary-foreground: 30 20% 8%;
+
+    --secondary: 30 20% 14%;
+    --secondary-foreground: 45 100% 98%;
+
+    --muted: 30 15% 18%;
+    --muted-foreground: 30 20% 60%;
+
+    /* Hot Orange accent */
+    --accent: 25 100% 55%;
+    --accent-foreground: 30 20% 8%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 45 100% 98%;
+
+    --border: 30 15% 22%;
+    --input: 30 15% 15%;
+    --ring: 45 100% 55%;
+
+    /* Status colors - vibrant */
+    --status-excellent: 45 100% 55%;
+    --status-good: 120 70% 50%;
+    --status-attention: 35 100% 55%;
+    --status-below: 0 85% 55%;
+
+    /* Typography */
+    --font-display: 'Fredoka', sans-serif;
+    --font-body: 'Fredoka', sans-serif;
+
+    /* Gradients */
+    --gradient-fire: linear-gradient(135deg, hsl(45 100% 55%) 0%, hsl(25 100% 55%) 100%);
+    --shadow-glow: 0 0 60px hsl(45 100% 55% / 0.35);
+
+    --radius: 1rem;
+  }
+
+  /* ============================================
+     COACH PULSE THEME - Human, Warm, Balanced
+     ============================================ */
+  .theme-pulse {
+    --background: 15 10% 5%;
+    --foreground: 20 10% 96%;
+
+    --card: 15 10% 8%;
+    --card-foreground: 20 10% 96%;
+
+    --popover: 15 10% 8%;
+    --popover-foreground: 20 10% 96%;
+
+    /* Warm Orange */
+    --primary: 25 95% 53%;
+    --primary-foreground: 15 10% 5%;
+
+    --secondary: 15 10% 13%;
+    --secondary-foreground: 20 10% 96%;
+
+    --muted: 15 8% 16%;
+    --muted-foreground: 15 10% 58%;
+
+    /* Amber accent */
+    --accent: 38 92% 50%;
+    --accent-foreground: 15 10% 5%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 20 10% 96%;
+
+    --border: 15 8% 20%;
+    --input: 15 8% 14%;
+    --ring: 25 95% 53%;
+
+    /* Status colors */
+    --status-excellent: 25 95% 53%;
+    --status-good: 142 71% 45%;
+    --status-attention: 45 93% 47%;
+    --status-below: 0 72% 51%;
+
+    /* Typography */
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+
+    /* Gradients */
+    --gradient-fire: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(38 92% 50%) 100%);
+    --shadow-glow: 0 0 50px hsl(25 95% 53% / 0.25);
   }
 
   .dark {
@@ -110,11 +257,25 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     letter-spacing: 0.02em;
+  }
+
+  /* IRON specific typography */
+  .theme-iron h1, .theme-iron h2, .theme-iron h3, 
+  .theme-iron h4, .theme-iron h5, .theme-iron h6 {
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* SPARK specific typography */
+  .theme-spark h1, .theme-spark h2, .theme-spark h3, 
+  .theme-spark h4, .theme-spark h5, .theme-spark h6 {
+    letter-spacing: 0;
   }
 }
 
@@ -131,6 +292,20 @@
   .card-elevated {
     @apply bg-card border border-border rounded-lg;
     box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+  }
+
+  /* Theme-specific button styles */
+  .theme-iron .btn-primary {
+    @apply font-semibold tracking-widest uppercase;
+  }
+
+  .theme-spark .btn-primary {
+    @apply font-bold rounded-2xl;
+  }
+
+  .theme-spark .card-elevated {
+    @apply rounded-2xl;
   }
 }
 
@@ -141,10 +316,10 @@
 
   @keyframes pulse-glow {
     0%, 100% {
-      box-shadow: 0 0 20px hsl(25 95% 53% / 0.3);
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
     }
     50% {
-      box-shadow: 0 0 40px hsl(25 95% 53% / 0.5);
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.5);
     }
   }
 
@@ -161,5 +336,15 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* SPARK bounce animation */
+  .theme-spark .animate-bounce-subtle {
+    animation: bounce-subtle 1s ease-in-out infinite;
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
   }
 }
