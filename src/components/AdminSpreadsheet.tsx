@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
@@ -122,7 +122,7 @@ function parseSpreadsheet(text: string): DayWorkout[] {
 
 export function AdminSpreadsheet() {
   const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
-  const { user, canManageWorkouts, loading: authLoading } = useAuth();
+  const { user, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -665,19 +665,31 @@ export function AdminSpreadsheet() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setCurrentView('welcome')}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
-              <p className="text-sm text-muted-foreground">
-                Área restrita para Coach
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setCurrentView('welcome')}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-2xl">INSERIR PLANILHA</h1>
+                <p className="text-sm text-muted-foreground">
+                  Área restrita para Coach
+                </p>
+              </div>
             </div>
+            <button
+              onClick={async () => {
+                await signOut();
+                setCurrentView('welcome');
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
           </div>
         </div>
       </header>
