@@ -339,6 +339,12 @@
     background-image: var(--gradient-fire);
   }
 
+  /* Logo OUTLIER - Sempre laranja (cor oficial aprovada) */
+  .text-gradient-logo {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(38 92% 50%) 100%);
+  }
+
   .glow-effect {
     box-shadow: var(--shadow-glow);
   }
