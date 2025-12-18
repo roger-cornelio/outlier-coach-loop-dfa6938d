@@ -10,6 +10,7 @@ interface OutlierState {
   currentView: 'welcome' | 'config' | 'dashboard' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks';
   selectedDay: string | null;
   selectedWorkout: DayWorkout | null;
+  externalResultsRefreshKey: number;
   
   setCoachStyle: (style: CoachStyle) => void;
   setAthleteConfig: (config: AthleteConfig) => void;
@@ -18,6 +19,7 @@ interface OutlierState {
   setCurrentView: (view: OutlierState['currentView']) => void;
   setSelectedDay: (day: string | null) => void;
   setSelectedWorkout: (workout: DayWorkout | null) => void;
+  triggerExternalResultsRefresh: () => void;
   resetConfig: () => void;
 }
 
@@ -31,6 +33,7 @@ export const useOutlierStore = create<OutlierState>()(
       currentView: 'welcome',
       selectedDay: null,
       selectedWorkout: null,
+      externalResultsRefreshKey: 0,
 
       setCoachStyle: (style) => set({ coachStyle: style }),
       setAthleteConfig: (config) => set({ athleteConfig: config }),
@@ -40,6 +43,7 @@ export const useOutlierStore = create<OutlierState>()(
       setCurrentView: (view) => set({ currentView: view }),
       setSelectedDay: (day) => set({ selectedDay: day }),
       setSelectedWorkout: (workout) => set({ selectedWorkout: workout }),
+      triggerExternalResultsRefresh: () => set((state) => ({ externalResultsRefreshKey: state.externalResultsRefreshKey + 1 })),
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
     }),
     {

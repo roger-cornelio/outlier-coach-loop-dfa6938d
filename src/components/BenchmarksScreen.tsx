@@ -26,7 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 export function BenchmarksScreen() {
-  const { setCurrentView, athleteConfig } = useOutlierStore();
+  const { setCurrentView, athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
   const { status } = useAthleteStatus();
   const { clearHistory } = useBenchmarkResults();
   const { user } = useAuth();
@@ -34,6 +34,7 @@ export function BenchmarksScreen() {
   const [isClearing, setIsClearing] = useState(false);
 
   const handleResultAdded = () => {
+    triggerExternalResultsRefresh();
     setRefreshKey(prev => prev + 1);
   };
 
