@@ -63,9 +63,13 @@ const fallbackMessages: Record<CoachStyle, Record<PerformanceBucket, string>> = 
 
 export function PerformanceFeedback() {
   const { selectedWorkout, workoutResults, athleteConfig, setCurrentView } = useOutlierStore();
+  const { getEffectiveLevelForWorkout } = useAthleteStatus();
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [aiBucket, setAiBucket] = useState<PerformanceBucket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get effective level from calculated status
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
 
   const resultData = useMemo(() => {
     if (!selectedWorkout || !athleteConfig) return null;
@@ -85,9 +89,9 @@ export function PerformanceFeedback() {
       .map((r) => r.timeInSeconds!)
       .slice(0, 10);
 
-    // Get effective variant based on athlete level (using utility)
-    const effectiveContent = getEffectiveContent(mainWod, athleteConfig.level);
-    const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig.level);
+    // Get effective variant based on calculated status
+    const effectiveContent = getEffectiveContent(mainWod, effectiveLevel);
+    const effectiveTargetRange = getEffectiveTargetRange(mainWod, effectiveLevel);
 
     return {
       mainWod,
@@ -99,9 +103,9 @@ export function PerformanceFeedback() {
       effectiveContent,
       wodType: mainWod.wodType,
       durationMinutes: mainWod.durationMinutes,
-      referenceTime: mainWod.referenceTime?.[athleteConfig.level],
+      referenceTime: mainWod.referenceTime?.[effectiveLevel as keyof typeof mainWod.referenceTime],
     };
-  }, [selectedWorkout, workoutResults, athleteConfig]);
+  }, [selectedWorkout, workoutResults, athleteConfig, effectiveLevel]);
 
   // Fetch AI-generated feedback
   useEffect(() => {
