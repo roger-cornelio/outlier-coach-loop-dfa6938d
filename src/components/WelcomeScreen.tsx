@@ -11,19 +11,19 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
     style: 'IRON',
     icon: <Flame className="w-8 h-8" />,
     title: 'IRON',
-    description: 'Sério, direto e exigente. Sem desculpas.',
+    description: 'Direto. Exigente. Sem desculpas.',
   },
   {
     style: 'PULSE',
     icon: <Heart className="w-8 h-8" />,
     title: 'PULSE',
-    description: 'Motivador, humano e consistente.',
+    description: 'Humano. Consistente. Confiável.',
   },
   {
     style: 'SPARK',
     icon: <Zap className="w-8 h-8" />,
     title: 'SPARK',
-    description: 'Leve, entusiasta e bem-humorado.',
+    description: 'Leve. Energético. Inspirador.',
   },
 ];
 
@@ -207,17 +207,17 @@ export function WelcomeScreen() {
               className={`
                 card-elevated p-6 text-left transition-all duration-300
                 ${coachStyle === option.style 
-                  ? 'border-primary glow-effect' 
-                  : 'hover:border-muted-foreground/50'
+                  ? 'border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/20 scale-[1.02]' 
+                  : 'hover:border-muted-foreground/50 opacity-80 hover:opacity-100'
                 }
               `}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: coachStyle === option.style ? 1.02 : 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className={`
-                mb-4 inline-flex p-3 rounded-lg
+                mb-4 inline-flex p-3 rounded-lg transition-all duration-300
                 ${coachStyle === option.style 
-                  ? 'bg-primary text-primary-foreground' 
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30' 
                   : 'bg-secondary text-foreground'
                 }
               `}>
@@ -234,10 +234,10 @@ export function WelcomeScreen() {
           onClick={handleContinue}
           disabled={!coachStyle}
           className={`
-            font-display text-xl tracking-wider px-12 py-4 rounded-lg
+            font-display text-xl tracking-wider px-14 py-5 rounded-lg
             transition-all duration-300
             ${coachStyle 
-              ? 'bg-primary text-primary-foreground hover:opacity-90 animate-pulse-glow' 
+              ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/30 ring-1 ring-primary/50' 
               : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
