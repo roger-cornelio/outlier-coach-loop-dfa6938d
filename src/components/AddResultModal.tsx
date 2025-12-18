@@ -115,6 +115,11 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         if (data.event_date && !eventDate) {
           setEventDate(data.event_date);
         }
+        
+        // Auto-set race category if detected and we're in prova_oficial mode
+        if (data.race_category && resultType === 'prova_oficial') {
+          setRaceCategory(data.race_category as 'OPEN' | 'PRO');
+        }
 
         const confidenceLabel = {
           high: 'alta',
@@ -122,7 +127,14 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           low: 'baixa'
         }[data.confidence] || 'média';
 
-        toast.success(`Tempo extraído: ${data.formatted_time} (confiança ${confidenceLabel})`);
+        // Build success message with detected fields
+        let successMsg = `Tempo extraído: ${data.formatted_time}`;
+        if (data.race_category) {
+          successMsg += ` | Categoria: ${data.race_category}`;
+        }
+        successMsg += ` (confiança ${confidenceLabel})`;
+
+        toast.success(successMsg);
       } else {
         toast.error('Não foi possível identificar o tempo na imagem');
       }

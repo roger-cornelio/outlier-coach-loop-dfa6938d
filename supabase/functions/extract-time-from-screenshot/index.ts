@@ -37,10 +37,12 @@ serve(async (req) => {
           {
             role: "system",
             content: `You are an expert at reading competition results from screenshots. 
-Your task is to extract the final time from HYROX or similar fitness competition result screenshots.
+Your task is to extract the final time and race category from HYROX or similar fitness competition result screenshots.
 The time format is typically HH:MM:SS or MM:SS or H:MM:SS.
 Look for labels like "Final Time", "Finish Time", "Total Time", "Tempo Final", "Tempo Total", or similar.
-Return ONLY the extracted time in seconds as a JSON object.
+Also look for the race category which is typically "OPEN" or "PRO" (also called "HYROX PRO" or "HYROX OPEN").
+The category might appear near the athlete's name, division, or category field.
+Return ONLY the extracted data as a JSON object.
 If you cannot find a valid time, return an error message.`
           },
           {
@@ -48,7 +50,7 @@ If you cannot find a valid time, return an error message.`
             content: [
               {
                 type: "text",
-                text: "Extract the final competition time from this result screenshot. Return JSON with format: {\"time_in_seconds\": number, \"formatted_time\": \"HH:MM:SS\", \"confidence\": \"high\"|\"medium\"|\"low\", \"event_name\": \"string or null\", \"event_date\": \"YYYY-MM-DD or null\"}. If you can also identify the event name or date, include them."
+                text: "Extract the final competition time and race category from this result screenshot. Return JSON with format: {\"time_in_seconds\": number, \"formatted_time\": \"HH:MM:SS\", \"confidence\": \"high\"|\"medium\"|\"low\", \"event_name\": \"string or null\", \"event_date\": \"YYYY-MM-DD or null\", \"race_category\": \"OPEN\"|\"PRO\"|null}. If you can identify the race category (OPEN or PRO), include it."
               },
               {
                 type: "image_url",
@@ -64,7 +66,7 @@ If you cannot find a valid time, return an error message.`
             type: "function",
             function: {
               name: "extract_competition_result",
-              description: "Extract competition time and details from a screenshot",
+              description: "Extract competition time, race category and details from a screenshot",
               parameters: {
                 type: "object",
                 properties: {
@@ -88,6 +90,11 @@ If you cannot find a valid time, return an error message.`
                   event_date: {
                     type: "string",
                     description: "Date of the event in YYYY-MM-DD format if visible"
+                  },
+                  race_category: {
+                    type: "string",
+                    enum: ["OPEN", "PRO"],
+                    description: "Race category: OPEN or PRO (HYROX division)"
                   },
                   error: {
                     type: "string",
