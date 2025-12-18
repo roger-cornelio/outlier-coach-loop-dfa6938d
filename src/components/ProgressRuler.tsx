@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, ArrowRight, TrendingUp, Calendar, Target } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowRight, TrendingUp, Calendar, Target, Trophy, Flag } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
@@ -10,7 +10,14 @@ import {
   MIN_STRONG_WEEKS,
   type ProgressData 
 } from '@/utils/progressSystem';
-import type { AthleteLevel } from '@/types/outlier';
+import { 
+  calculateProRulerScore, 
+  getProScoreDescription, 
+  getNationalThresholds,
+  COUNTRY_NAMES 
+} from '@/utils/nationalPodiumThresholds';
+import type { AthleteLevel, AthleteCountry } from '@/types/outlier';
+import type { AthleteGender } from '@/utils/athleteStatusSystem';
 
 const LEVEL_DISPLAY: Record<AthleteLevel, string> = {
   iniciante: 'Iniciante',
@@ -70,17 +77,156 @@ function getNextStepRecommendation(data: ProgressData): string {
   }
 }
 
+// Format time for display
+function formatTimeMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.floor(minutes % 60);
+  if (h > 0) {
+    return `${h}h${m.toString().padStart(2, '0')}`;
+  }
+  return `${m}min`;
+}
+
+// PRO Ruler Component
+function ProRulerDisplay({ 
+  timeInSeconds, 
+  country, 
+  gender 
+}: { 
+  timeInSeconds: number; 
+  country: AthleteCountry; 
+  gender: AthleteGender;
+}) {
+  const proScore = calculateProRulerScore(timeInSeconds, country, gender);
+  const scoreDescription = getProScoreDescription(proScore);
+  const thresholds = getNationalThresholds(country, gender);
+  
+  // Get gradient based on PRO score
+  const getProGradient = (score: number): string => {
+    if (score >= 95) return 'from-amber-400 to-yellow-300';
+    if (score >= 88) return 'from-purple-500 to-pink-400';
+    if (score >= 80) return 'from-blue-500 to-cyan-400';
+    if (score >= 72) return 'from-green-500 to-emerald-400';
+    return 'from-orange-500 to-amber-400';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground uppercase tracking-wide">
+        <Flag className="w-3 h-3" />
+        <span>Régua PRO - {COUNTRY_NAMES[country]}</span>
+      </div>
+      
+      {/* Score display */}
+      <div className="text-center">
+        <div className={`text-5xl font-display font-bold bg-gradient-to-r ${getProGradient(proScore)} bg-clip-text text-transparent`}>
+          {Math.round(proScore)}
+        </div>
+        <div className="text-sm text-foreground mt-1 font-medium">
+          {scoreDescription}
+        </div>
+      </div>
+
+      {/* Progress bar with markers */}
+      <div className="relative">
+        <div className="relative h-4 bg-secondary/50 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(proScore, 100)}%` }}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProGradient(proScore)} rounded-full`}
+          />
+          
+          {/* Threshold markers */}
+          <div className="absolute top-0 bottom-0 w-0.5 bg-amber-400/50" style={{ left: '95%' }} title="Pódio" />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-purple-400/50" style={{ left: '88%' }} title="Elite" />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-blue-400/50" style={{ left: '80%' }} title="Competitivo" />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-green-400/50" style={{ left: '72%' }} title="Sólido" />
+        </div>
+        
+        {/* Labels */}
+        <div className="flex justify-between text-[9px] text-muted-foreground mt-1 px-1">
+          <span>65</span>
+          <span>72</span>
+          <span>80</span>
+          <span>88</span>
+          <span>95</span>
+          <span>100</span>
+        </div>
+      </div>
+
+      {/* National thresholds info */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20">
+          <Trophy className="w-3 h-3 text-amber-500" />
+          <div>
+            <span className="text-amber-500 font-medium">Pódio</span>
+            <span className="text-muted-foreground ml-1">≤{formatTimeMinutes(thresholds.podium)}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 p-2 rounded bg-purple-500/10 border border-purple-500/20">
+          <Target className="w-3 h-3 text-purple-500" />
+          <div>
+            <span className="text-purple-500 font-medium">Elite</span>
+            <span className="text-muted-foreground ml-1">≤{formatTimeMinutes(thresholds.elite)}</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground/70 text-center">
+        Calibrado pelo pódio nacional {gender === 'feminino' ? 'feminino' : 'masculino'}
+      </p>
+    </div>
+  );
+}
+
 export function ProgressRuler() {
   const { athleteConfig } = useOutlierStore();
-  const { results, loading } = useBenchmarkResults();
-  const { status } = useAthleteStatus();
+  const { results, loading, getOfficialCompetitions } = useBenchmarkResults();
+  const { status, validatingCompetition, statusSource } = useAthleteStatus();
+  
+  // Get latest official competition time for PRO ruler
+  const officialCompetitions = getOfficialCompetitions();
+  const latestOfficialTime = officialCompetitions.length > 0 
+    ? officialCompetitions.sort((a, b) => 
+        new Date(b.event_date || b.created_at).getTime() - 
+        new Date(a.event_date || a.created_at).getTime()
+      )[0]?.time_in_seconds
+    : null;
 
   const progressData = useMemo<ProgressData | null>(() => {
     if (!status) return null;
     return calculateProgress(results, status);
   }, [results, status]);
 
-  if (loading || !progressData || !athleteConfig) {
+  // Determine if we should show PRO ruler
+  const isProAthlete = status === 'hyrox_pro';
+  const hasOfficialTime = latestOfficialTime && latestOfficialTime > 0;
+  const showProRuler = isProAthlete && hasOfficialTime;
+
+  if (loading || !athleteConfig) {
+    return null;
+  }
+
+  // Show PRO ruler if athlete is PRO with official time
+  if (showProRuler && latestOfficialTime) {
+    const gender: AthleteGender = athleteConfig.sexo === 'feminino' ? 'feminino' : 'masculino';
+    const country: AthleteCountry = athleteConfig.pais || 'BR';
+    
+    return (
+      <div className="space-y-5">
+        <ProRulerDisplay 
+          timeInSeconds={latestOfficialTime} 
+          country={country}
+          gender={gender}
+        />
+      </div>
+    );
+  }
+
+  // Standard progression ruler for non-PRO athletes
+  if (!progressData) {
     return null;
   }
 
