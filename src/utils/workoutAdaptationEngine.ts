@@ -35,16 +35,16 @@ interface MovementTimeRef {
 // TABELA DE REFERÊNCIA - ATLETA INTERMEDIÁRIO HYROX
 // ============================================
 // Valores calibrados para atleta intermediário masculino
-// Unidades: 100m, 10 reps, 10 cal
+// Unidades padrão conforme especificação
 
 const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
-  // === CARDIO MACHINES ===
+  // === CARDIO / MONOESTRUTURAL ===
   {
     name: 'Remo',
     category: 'cardio_machine',
     unit: 'm',
     baseUnit: 100,
-    baseSeconds: 26, // 2:10/500m ≈ 26s/100m
+    baseSeconds: 25, // 100m = 25s
     patterns: ['remo', 'row', 'rower', 'ergometer'],
   },
   {
@@ -52,7 +52,7 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'cardio_machine',
     unit: 'm',
     baseUnit: 100,
-    baseSeconds: 28, // 2:20/500m ≈ 28s/100m
+    baseSeconds: 27, // 100m = 27s
     patterns: ['skierg', 'ski erg', 'ski-erg', 'ski'],
   },
   {
@@ -60,17 +60,23 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'cardio_machine',
     unit: 'cal',
     baseUnit: 10,
-    baseSeconds: 50, // ~12 cal/min = 50s/10cal
-    patterns: ['bike', 'assault', 'echo', 'air bike', 'airbike'],
+    baseSeconds: 22, // 10 cal = 22s
+    patterns: ['assault bike', 'assault'],
   },
-  
-  // === CORRIDA ===
+  {
+    name: 'Air Bike',
+    category: 'cardio_machine',
+    unit: 'cal',
+    baseUnit: 10,
+    baseSeconds: 24, // 10 cal = 24s
+    patterns: ['air bike', 'airbike', 'echo', 'echo bike', 'bike'],
+  },
   {
     name: 'Corrida',
     category: 'cardio_run',
     unit: 'm',
     baseUnit: 100,
-    baseSeconds: 36, // 6:00/km = 36s/100m
+    baseSeconds: 30, // 100m = 30s
     patterns: ['corrida', 'run', 'running', 'sprint'],
   },
   {
@@ -78,17 +84,17 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'cardio_run',
     unit: 'm',
     baseUnit: 100,
-    baseSeconds: 42, // 7:00/km = 42s/100m (ritmo leve)
+    baseSeconds: 36, // ritmo leve ~6:00/km
     patterns: ['trote', 'jog', 'jogging'],
   },
   
-  // === SLED ===
+  // === CARGA / DESLOCAMENTO (HYROX) ===
   {
     name: 'Sled Push',
     category: 'sled',
     unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 360, // ~17m/min = 360s/100m
+    baseUnit: 10,
+    baseSeconds: 18, // 10m = 18s (pesado)
     patterns: ['sled push', 'push sled'],
     requiresLoadAdjust: true,
   },
@@ -96,48 +102,64 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     name: 'Sled Pull',
     category: 'sled',
     unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 360,
+    baseUnit: 10,
+    baseSeconds: 20, // 10m = 20s (pesado)
     patterns: ['sled pull', 'pull sled'],
-    requiresLoadAdjust: true,
-  },
-  
-  // === CARRY ===
-  {
-    name: 'Farmer Carry',
-    category: 'carry',
-    unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 180, // ~33m/min = 180s/100m
-    patterns: ['farmer', 'carry', 'farmers walk'],
     requiresLoadAdjust: true,
   },
   {
     name: 'Sandbag Lunge',
     category: 'carry',
     unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 270, // ~22m/min = 270s/100m
-    patterns: ['lunge', 'afundo', 'walking lunge', 'sandbag lunge'],
+    baseUnit: 10,
+    baseSeconds: 22, // 10m = 22s
+    patterns: ['sandbag lunge', 'lunge sandbag', 'walking lunge sandbag'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Farmer Carry',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 50,
+    baseSeconds: 20, // 50m = 20s
+    patterns: ['farmer', 'farmer carry', 'farmers walk', 'carry'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Dumbbell Lunge',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 10,
+    baseSeconds: 20, // 10m = 20s
+    patterns: ['dumbbell lunge', 'db lunge', 'lunge'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Kettlebell Carry',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 50,
+    baseSeconds: 22, // 50m = 22s
+    patterns: ['kettlebell carry', 'kb carry'],
     requiresLoadAdjust: true,
   },
   {
     name: 'Sandbag Carry',
     category: 'carry',
     unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 200,
-    patterns: ['sandbag', 'saco'],
+    baseUnit: 50,
+    baseSeconds: 25, // estimativa
+    patterns: ['sandbag carry', 'sandbag', 'saco'],
     requiresLoadAdjust: true,
   },
   
-  // === GYM MOVEMENTS ===
+  // === GINÁSTICOS ===
   {
     name: 'Wall Ball',
     category: 'gym',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 35, // ~17 reps/min = 35s/10 reps
+    baseSeconds: 18, // 10 reps = 18s
     patterns: ['wall ball', 'wallball', 'wb'],
     requiresLoadAdjust: true,
   },
@@ -146,49 +168,23 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'gym',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 50, // 12 reps/min = 50s/10 reps
-    patterns: ['burpee', 'burpees', 'bar facing', 'box jump over'],
+    baseSeconds: 30, // 10 reps = 30s
+    patterns: ['burpee', 'burpees', 'bar facing burpee'],
   },
   {
     name: 'Burpee Broad Jump',
     category: 'gym',
     unit: 'm',
-    baseUnit: 100,
-    baseSeconds: 450, // ~13m/min
+    baseUnit: 10,
+    baseSeconds: 30, // 10m = 30s
     patterns: ['burpee broad jump', 'broad jump'],
-  },
-  {
-    name: 'Box Jump',
-    category: 'gym',
-    unit: 'reps',
-    baseUnit: 10,
-    baseSeconds: 40, // ~15 reps/min
-    patterns: ['box jump', 'box step'],
-  },
-  {
-    name: 'Kettlebell Swing',
-    category: 'gym',
-    unit: 'reps',
-    baseUnit: 10,
-    baseSeconds: 25, // ~24 reps/min
-    patterns: ['swing', 'kb swing', 'kettlebell'],
-    requiresLoadAdjust: true,
-  },
-  {
-    name: 'Thruster',
-    category: 'gym',
-    unit: 'reps',
-    baseUnit: 10,
-    baseSeconds: 45, // ~13 reps/min
-    patterns: ['thruster'],
-    requiresLoadAdjust: true,
   },
   {
     name: 'Push-up',
     category: 'gym',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 20, // ~30 reps/min
+    baseSeconds: 20, // 10 reps = 20s
     patterns: ['push-up', 'pushup', 'push up', 'flexão', 'flexao'],
   },
   {
@@ -196,15 +192,49 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'gym',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 35, // ~17 reps/min
+    baseSeconds: 35, // 10 reps = 35s
     patterns: ['pull-up', 'pullup', 'pull up', 'barra'],
+  },
+  {
+    name: 'Toes to Bar',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 28, // 10 reps = 28s
+    patterns: ['toes to bar', 't2b', 'ttb'],
+  },
+  {
+    name: 'Box Jump',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 25,
+    patterns: ['box jump', 'box step'],
+  },
+  {
+    name: 'Kettlebell Swing',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 20,
+    patterns: ['swing', 'kb swing', 'kettlebell swing'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Thruster',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 35,
+    patterns: ['thruster'],
+    requiresLoadAdjust: true,
   },
   {
     name: 'Squat',
     category: 'gym',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 25, // ~24 reps/min
+    baseSeconds: 18,
     patterns: ['squat', 'agachamento', 'air squat'],
   },
   
@@ -214,7 +244,7 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'strength',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 50, // ~12 reps/min (inclui setup)
+    baseSeconds: 40,
     patterns: ['deadlift', 'levantamento terra', 'dl'],
     requiresLoadAdjust: true,
   },
@@ -223,7 +253,7 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'strength',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 55,
+    baseSeconds: 45,
     patterns: ['clean', 'power clean', 'hang clean'],
     requiresLoadAdjust: true,
   },
@@ -232,7 +262,7 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'strength',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 60,
+    baseSeconds: 50,
     patterns: ['snatch', 'power snatch'],
     requiresLoadAdjust: true,
   },
@@ -241,35 +271,43 @@ const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
     category: 'strength',
     unit: 'reps',
     baseUnit: 10,
-    baseSeconds: 40,
+    baseSeconds: 35,
     patterns: ['press', 'shoulder press', 'overhead'],
     requiresLoadAdjust: true,
   },
   
-  // === CORE ===
+  // === CORE / ACESSÓRIOS ===
   {
     name: 'Sit-up',
     category: 'core',
     unit: 'reps',
-    baseUnit: 10,
-    baseSeconds: 20, // ~30 reps/min
-    patterns: ['sit-up', 'situp', 'abdominal', 'crunch'],
+    baseUnit: 20,
+    baseSeconds: 25, // 20 reps = 25s
+    patterns: ['sit-up', 'situp', 'abdominal', 'abmat', 'crunch'],
   },
   {
     name: 'Russian Twist',
     category: 'core',
     unit: 'reps',
-    baseUnit: 10,
-    baseSeconds: 18,
+    baseUnit: 20,
+    baseSeconds: 30, // 20 reps = 30s
     patterns: ['russian twist', 'twist'],
   },
   {
     name: 'Plank',
     category: 'core',
-    unit: 'reps', // tratamos segundos como "reps"
-    baseUnit: 10,
-    baseSeconds: 10, // 1:1 para segundos
+    unit: 'reps', // segundos tratados como unidade
+    baseUnit: 30,
+    baseSeconds: 30, // 30s = 30s (1:1)
     patterns: ['plank', 'prancha'],
+  },
+  {
+    name: 'Hollow Hold',
+    category: 'core',
+    unit: 'reps', // segundos tratados como unidade
+    baseUnit: 30,
+    baseSeconds: 30, // 30s = 30s (1:1)
+    patterns: ['hollow hold', 'hollow'],
   },
 ];
 
