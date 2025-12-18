@@ -5,7 +5,6 @@ import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3, 
 import type { AthleteLevel, PerformanceBucket } from '@/types/outlier';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
-import { useAuth } from '@/hooks/useAuth';
 
 interface MilestoneData {
   id: string;
@@ -28,9 +27,7 @@ const LEVEL_DISPLAY: Record<AthleteLevel, { name: string; color: string; bgColor
 
 export function EvolutionMilestones() {
   const { athleteConfig } = useOutlierStore();
-  const { user } = useAuth();
   const { 
-    results: dbResults, 
     loading, 
     getWeeklyResults, 
     getBucketCounts, 
@@ -156,9 +153,7 @@ export function EvolutionMilestones() {
           <h3 className="font-display text-xl">Marcos de Evolução</h3>
         </div>
         <p className="text-muted-foreground text-sm">
-          {user 
-            ? 'Complete benchmarks para acompanhar sua evolução e desbloquear marcos.'
-            : 'Faça login para salvar e acompanhar seu histórico de benchmarks.'}
+          Complete benchmarks para acompanhar sua evolução e desbloquear marcos.
         </p>
       </div>
     );
