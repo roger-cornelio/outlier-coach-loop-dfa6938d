@@ -23,6 +23,13 @@ export interface AthleteConfig {
   sexo?: 'masculino' | 'feminino';
 }
 
+export type WodType = 'engine' | 'strength' | 'skill' | 'mixed' | 'hyrox' | 'benchmark';
+
+export interface TargetTimeRange {
+  min: number; // seconds
+  max: number; // seconds
+}
+
 export interface WorkoutBlock {
   id: string;
   type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
@@ -30,7 +37,10 @@ export interface WorkoutBlock {
   content: string;
   isMainWod?: boolean;
   isBenchmark?: boolean;
+  wodType?: WodType;
+  durationMinutes?: number;
   targetSeconds?: number;
+  targetRange?: TargetTimeRange;
   referenceTime?: {
     iniciante: number;
     intermediario: number;
