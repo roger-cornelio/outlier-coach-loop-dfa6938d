@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info } from 'lucide-react';
-import { getEstimatedTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Timer, Target } from 'lucide-react';
+import { getBlockDuration, getReferenceTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
 import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 
@@ -224,11 +224,19 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, athleteConfig?.level);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            const estimatedTime = athleteConfig 
-              ? getEstimatedTimeForLevel(block, athleteConfig.level)
+            // Block duration (used for calories) - from durationMinutes
+            const blockDuration = athleteConfig 
+              ? getBlockDuration(block, athleteConfig.level)
               : null;
+            
+            // Reference time (informational only) - estimated from content
+            const referenceTime = athleteConfig 
+              ? getReferenceTimeForLevel(block, athleteConfig.level)
+              : null;
+            
+            // Calories use ONLY blockDuration
             const calories = athleteConfig 
-              ? calculateCalories(block, athleteConfig, estimatedTime)
+              ? calculateCalories(block, athleteConfig)
               : null;
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
@@ -305,29 +313,46 @@ export function WorkoutExecution() {
                     )}
 
                     {/* Block Stats */}
-                    {(estimatedTime || calories || pseInfo || effectivePace) && block.type !== 'notas' && (
-                      <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-border/50">
-                        {estimatedTime && (
+                    {(blockDuration || referenceTime || calories || pseInfo || effectivePace) && block.type !== 'notas' && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-border/50">
+                        {/* Block Duration - used for calories */}
+                        {blockDuration && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Tempo:</span>
-                            <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
+                            <Timer className="w-4 h-4 text-primary" />
+                            <span className="text-muted-foreground">Duração:</span>
+                            <span className="font-medium text-foreground">{formatBlockTime(blockDuration)}</span>
                           </div>
                         )}
+                        
+                        {/* Reference Time - informational only */}
+                        {referenceTime && !blockDuration && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Ref:</span>
+                            <span className="text-muted-foreground italic">~{formatBlockTime(referenceTime)}</span>
+                          </div>
+                        )}
+                        
+                        {/* Calories - only shown if blockDuration exists */}
                         {calories && (
                           <div className="flex items-center gap-2 text-sm">
                             <Flame className="w-4 h-4 text-orange-500" />
                             <span className="text-orange-500 font-medium">~{calories} kcal</span>
                           </div>
                         )}
+                        
+                        {/* PSE */}
                         {pseInfo && (
                           <div className="flex items-center gap-2 text-sm">
+                            <Target className="w-4 h-4 text-muted-foreground" />
                             <span className="text-muted-foreground">PSE:</span>
                             <span className={`font-medium ${pseInfo.colorClass}`}>
-                              {effectivePSE}/10 ({pseInfo.label})
+                              {effectivePSE}/10
                             </span>
                           </div>
                         )}
+                        
+                        {/* Pace */}
                         {effectivePace && (
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-muted-foreground">Pace:</span>
