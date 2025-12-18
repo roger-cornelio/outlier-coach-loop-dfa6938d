@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Star, Zap, Crown, Flame, Lock, ChevronRight, 
@@ -141,20 +140,6 @@ export function LevelProgress() {
   const currentIndex = LEVELS_ORDER.indexOf(status);
   const isElite = status === 'hyrox_pro';
   const isHyrox = status === 'hyrox_open' || status === 'hyrox_pro';
-
-  // Apply level theme class to document
-  useEffect(() => {
-    const levelClass = `level-${status}`;
-    document.documentElement.classList.forEach(cls => {
-      if (cls.startsWith('level-')) {
-        document.documentElement.classList.remove(cls);
-      }
-    });
-    document.documentElement.classList.add(levelClass);
-    return () => {
-      document.documentElement.classList.remove(levelClass);
-    };
-  }, [status]);
 
   return (
     <div className="space-y-6">
@@ -397,10 +382,10 @@ export function LevelProgress() {
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: TrendingUp, value: benchmarksUsed, label: 'Benchmarks', delay: 0.4 },
-          { icon: Flame, value: weeksWithGoodPerformance, label: 'Semanas STRONG+', delay: 0.5 },
-          { icon: Shield, value: CONFIDENCE_LABELS[confidence], label: 'Confiança', delay: 0.6 },
-        ].map((stat, i) => (
+          { Icon: TrendingUp, value: benchmarksUsed, label: 'Benchmarks', delay: 0.4 },
+          { Icon: Flame, value: weeksWithGoodPerformance, label: 'Semanas STRONG+', delay: 0.5 },
+          { Icon: Shield, value: CONFIDENCE_LABELS[confidence], label: 'Confiança', delay: 0.6 },
+        ].map((stat) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
@@ -408,7 +393,7 @@ export function LevelProgress() {
             transition={{ delay: stat.delay }}
             className={`p-4 rounded-2xl ${currentConfig.cardStyle} border ${currentConfig.borderStyle} text-center`}
           >
-            <stat.icon className={`w-5 h-5 mx-auto mb-2 bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text`} style={{ color: 'transparent', backgroundClip: 'text', WebkitBackgroundClip: 'text' }} />
+            <stat.Icon className={`w-5 h-5 mx-auto mb-2`} />
             <p className="font-display text-2xl">{stat.value}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</p>
           </motion.div>
