@@ -45,11 +45,15 @@ interface RequestBody {
 // ============================================
 // MULTIPLICADORES OBRIGATÓRIOS (NÃO ALTERAR)
 // ============================================
+// A planilha do coach representa o nível PRO (100%)
+// Nenhum nível pode gerar volume ACIMA da planilha base
+// O sistema apenas escala para BAIXO a partir da base
+// ============================================
 const LEVEL_MULTIPLIERS: Record<AthleteLevel, number> = {
-  iniciante: 0.65,
-  intermediario: 0.80,
-  avancado: 1.00,
-  pro: 1.10,
+  iniciante: 0.65,      // 60-65% da planilha base
+  intermediario: 0.80,  // 75-80% da planilha base
+  avancado: 0.90,       // 90% da planilha base
+  pro: 1.00,            // 100% da planilha base (TETO MÁXIMO)
 };
 
 const GENDER_MULTIPLIERS: Record<Gender, number> = {
