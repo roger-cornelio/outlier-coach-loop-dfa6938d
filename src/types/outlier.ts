@@ -20,8 +20,6 @@ export interface Equipment {
   emoji: string;
 }
 
-export type AthleteCountry = 'BR' | 'US' | 'DE' | 'UK' | 'ES' | 'FR' | 'IT' | 'PT' | 'OTHER';
-
 export interface AthleteConfig {
   // Nível de treino escolhido pelo usuário (BASE / PROGRESSIVO / PERFORMANCE)
   trainingLevel: TrainingLevel;
@@ -34,7 +32,6 @@ export interface AthleteConfig {
   peso?: number;
   idade?: number;
   sexo?: 'masculino' | 'feminino';
-  pais?: AthleteCountry;
 }
 
 export type WodType = 'engine' | 'strength' | 'skill' | 'mixed' | 'hyrox' | 'benchmark';

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { type TrainingLevel, type SessionDuration, type AthleteCountry } from '@/types/outlier';
-import { COUNTRY_NAMES } from '@/utils/nationalPodiumThresholds';
+import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
 import { ArrowLeft, Zap, TrendingUp, Target } from 'lucide-react';
 
 // NOVO: Níveis de treino baseados no prompt OUTLIER
@@ -39,10 +38,6 @@ const sexOptions = [
   { value: 'feminino', label: 'Feminino' },
 ];
 
-const countryOptions: { value: AthleteCountry; label: string }[] = Object.entries(COUNTRY_NAMES).map(
-  ([value, label]) => ({ value: value as AthleteCountry, label })
-);
-
 export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView } = useOutlierStore();
   
@@ -55,7 +50,6 @@ export function AthleteConfig() {
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>(athleteConfig?.sexo || '');
-  const [pais, setPais] = useState<AthleteCountry>(athleteConfig?.pais || 'BR');
 
   const handleSubmit = () => {
     if (coachStyle) {
@@ -68,7 +62,6 @@ export function AthleteConfig() {
         peso: peso ? parseFloat(peso) : undefined,
         idade: idade ? parseInt(idade) : undefined,
         sexo: sexo || undefined,
-        pais,
       });
       setCurrentView('dashboard');
     }
@@ -166,31 +159,6 @@ export function AthleteConfig() {
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* País */}
-          <div className="col-span-2 md:col-span-4">
-            <label className="block text-sm text-muted-foreground mb-2">País (para régua PRO)</label>
-            <div className="flex flex-wrap gap-2">
-              {countryOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setPais(option.value)}
-                  className={`
-                    px-4 py-2 rounded-lg border transition-all duration-200 text-sm
-                    ${pais === option.value
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border bg-card hover:border-muted-foreground/50'
-                    }
-                  `}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              A régua de atletas PRO é calibrada pelo pódio nacional do seu país
-            </p>
           </div>
         </div>
       </motion.section>

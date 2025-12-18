@@ -1,4 +1,4 @@
-import type { AthleteStatus, TrainingDifficulty, AthleteCountry } from '@/types/outlier';
+import type { AthleteStatus, TrainingDifficulty } from '@/types/outlier';
 import type { BenchmarkResult, ExternalResult } from '@/hooks/useBenchmarkResults';
 
 // ============================================================
