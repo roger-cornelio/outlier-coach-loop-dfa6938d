@@ -166,7 +166,7 @@ export function WelcomeScreen() {
       >
         {/* Logo */}
         <motion.h1 
-          className="font-display text-7xl md:text-9xl tracking-wider text-gradient mb-2"
+          className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient mb-3"
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -175,7 +175,7 @@ export function WelcomeScreen() {
         </motion.h1>
         
         <motion.p 
-          className="text-xl md:text-2xl font-display text-muted-foreground tracking-wide mb-4"
+          className="text-xl md:text-2xl font-display text-muted-foreground tracking-wide mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
@@ -184,7 +184,7 @@ export function WelcomeScreen() {
         </motion.p>
         
         <motion.p 
-          className="text-muted-foreground mb-12 max-w-md mx-auto"
+          className="text-muted-foreground mb-14 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
@@ -195,7 +195,7 @@ export function WelcomeScreen() {
 
         {/* Coach Selection */}
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12"
+          className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
@@ -205,26 +205,26 @@ export function WelcomeScreen() {
               key={option.style}
               onClick={() => handleSelectCoach(option.style)}
               className={`
-                card-elevated p-6 text-left transition-all duration-300
+                card-elevated p-7 text-left transition-all duration-300
                 ${coachStyle === option.style 
-                  ? 'border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/20 scale-[1.02]' 
-                  : 'hover:border-muted-foreground/50 opacity-80 hover:opacity-100'
+                  ? 'border-primary ring-2 ring-primary/50 shadow-xl shadow-primary/25 scale-[1.03]' 
+                  : 'hover:border-muted-foreground/50 opacity-70 hover:opacity-100 shadow-md'
                 }
               `}
-              whileHover={{ scale: coachStyle === option.style ? 1.02 : 1.03 }}
+              whileHover={{ scale: coachStyle === option.style ? 1.03 : 1.04 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className={`
-                mb-4 inline-flex p-3 rounded-lg transition-all duration-300
+                mb-4 inline-flex p-3.5 rounded-xl transition-all duration-300
                 ${coachStyle === option.style 
-                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30' 
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/40' 
                   : 'bg-secondary text-foreground'
                 }
               `}>
                 {option.icon}
               </div>
-              <h3 className="font-display text-2xl mb-2">{option.title}</h3>
-              <p className="text-sm text-muted-foreground">{option.description}</p>
+              <h3 className="font-display text-2xl mb-2 tracking-wide">{option.title}</h3>
+              <p className="text-sm text-muted-foreground leading-snug">{option.description}</p>
             </motion.button>
           ))}
         </motion.div>
@@ -234,10 +234,10 @@ export function WelcomeScreen() {
           onClick={handleContinue}
           disabled={!coachStyle}
           className={`
-            font-display text-xl tracking-wider px-14 py-5 rounded-lg
+            font-display text-xl tracking-widest px-16 py-6 rounded-xl
             transition-all duration-300
             ${coachStyle 
-              ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/30 ring-1 ring-primary/50' 
+              ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
               : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
