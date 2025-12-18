@@ -1,22 +1,37 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { DIFFICULTY_NAMES, type TrainingDifficulty, type SessionDuration, type AthleteCountry } from '@/types/outlier';
+import { type TrainingLevel, type SessionDuration, type AthleteCountry } from '@/types/outlier';
 import { COUNTRY_NAMES } from '@/utils/nationalPodiumThresholds';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Target } from 'lucide-react';
 
-const difficultyOptions: { value: TrainingDifficulty; label: string; description: string }[] = [
-  { value: 'leve', label: 'Leve', description: 'Volume e intensidade reduzidos' },
-  { value: 'padrao', label: 'Padrão', description: 'Conforme seu status atual' },
-  { value: 'forte', label: 'Forte', description: 'Volume e intensidade aumentados' },
+// NOVO: Níveis de treino baseados no prompt OUTLIER
+const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
+  { 
+    value: 'base', 
+    label: 'BASE', 
+    description: 'Volume reduzido, movimentos simplificados, mais controle',
+    icon: Target
+  },
+  { 
+    value: 'progressivo', 
+    label: 'PROGRESSIVO', 
+    description: 'Ritmo consistente, estímulo sustentável e evolutivo',
+    icon: TrendingUp
+  },
+  { 
+    value: 'performance', 
+    label: 'PERFORMANCE', 
+    description: 'Alta densidade, ritmos agressivos, estímulo máximo',
+    icon: Zap
+  },
 ];
 
 const durationOptions: { value: SessionDuration; label: string }[] = [
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-  { value: 60, label: '60 min' },
-  { value: 90, label: '90 min' },
-  { value: 'ilimitado', label: 'Ilimitado' },
+  { value: 45, label: 'até 45 min' },
+  { value: 60, label: 'até 60 min' },
+  { value: 90, label: 'até 90 min' },
+  { value: 'ilimitado', label: 'Sem limite' },
 ];
 
 const sexOptions = [
@@ -32,7 +47,9 @@ export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView } = useOutlierStore();
   
   // Use existing values as defaults
-  const [difficulty, setDifficulty] = useState<TrainingDifficulty>(athleteConfig?.trainingDifficulty || 'padrao');
+  const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>(
+    athleteConfig?.trainingLevel || athleteConfig?.trainingDifficulty || 'progressivo'
+  );
   const [duration, setDuration] = useState<SessionDuration>(athleteConfig?.sessionDuration || 60);
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
@@ -43,7 +60,7 @@ export function AthleteConfig() {
   const handleSubmit = () => {
     if (coachStyle) {
       setAthleteConfig({
-        trainingDifficulty: difficulty,
+        trainingLevel,
         sessionDuration: duration,
         equipment: [],
         coachStyle,
@@ -178,34 +195,40 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Difficulty Selection */}
+      {/* Training Level Selection - NOVO SISTEMA OUTLIER */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="mb-8"
       >
-        <h2 className="font-display text-2xl mb-2">DIFICULDADE DO TREINO</h2>
+        <h2 className="font-display text-2xl mb-2">NÍVEL DO TREINO</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Ajusta volume e intensidade em relação ao seu status calculado
+          Como você quer treinar hoje? A base é sempre PRO — ajustamos para você.
         </p>
-        <div className="grid grid-cols-3 gap-3">
-          {difficultyOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setDifficulty(option.value)}
-              className={`
-                p-4 rounded-lg border transition-all duration-200 text-left
-                ${difficulty === option.value
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border bg-card hover:border-muted-foreground/50'
-                }
-              `}
-            >
-              <span className="font-display text-lg block">{option.label}</span>
-              <span className="text-xs text-muted-foreground">{option.description}</span>
-            </button>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {trainingLevelOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.value}
+                onClick={() => setTrainingLevel(option.value)}
+                className={`
+                  p-4 rounded-lg border transition-all duration-200 text-left
+                  ${trainingLevel === option.value
+                    ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
+                    : 'border-border bg-card hover:border-muted-foreground/50'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className={`w-5 h-5 ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className="font-display text-lg">{option.label}</span>
+                </div>
+                <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
+              </button>
+            );
+          })}
         </div>
       </motion.section>
 

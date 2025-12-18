@@ -217,9 +217,9 @@ export function WorkoutExecution() {
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
             
-            // Get effective level from status system
-            const effectiveLevel = athleteConfig?.trainingDifficulty === 'leve' ? 'iniciante' : 
-                                   athleteConfig?.trainingDifficulty === 'forte' ? 'avancado' : 'intermediario';
+            // Get effective level from training level
+            const effectiveLevel = athleteConfig?.trainingLevel === 'base' ? 'iniciante' : 
+                                   athleteConfig?.trainingLevel === 'performance' ? 'avancado' : 'intermediario';
             
             // Get effective content and notes based on athlete level
             const effectiveContent = getEffectiveContent(block, effectiveLevel);

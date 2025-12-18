@@ -1,13 +1,18 @@
-// workoutEngine.ts
-// ✅ Parse do treino do admin (texto -> blocos)
-// ✅ Adaptação por NÍVEL (multiplicadores numéricos em reps/metros/cal + cargas kg/lb)
-// ✅ CONDENSE MODE (HYROX_PRO + pouco tempo = mesma dificuldade em menos tempo)
-// ✅ Orçamento de tempo por bloco (depende do tempo escolhido + nível)
-// ✅ Corte para CABER no tempo escolhido (sempre <= timeLimitMin)
-// ✅ Cálculo determinístico de kcal (MET x peso x minutos)
+// workoutEngine.ts - OUTLIER TRAINING ENGINE
+// ============================================
+// PRINCÍPIOS FUNDAMENTAIS:
+// 1. A base de referência é sempre PRO
+// 2. O nível do treino (BASE/PROGRESSIVO/PERFORMANCE) define a intenção, não o status real
+// 3. Nunca superestimar o atleta
+// 4. O treino deve ser difícil, mas executável
+// ============================================
 
-export type AthleteLevel = "INICIANTE" | "INTERMEDIARIO" | "AVANCADO" | "HYROX_PRO";
-export type BlockType = "warmup" | "strength" | "conditioning" | "core" | "run";
+export type TrainingLevel = 'base' | 'progressivo' | 'performance';
+export type BlockType = 'warmup' | 'strength' | 'conditioning' | 'core' | 'run';
+
+// Status Outlier (INTERNO - INVISÍVEL ao usuário)
+// Calculado para proteger o atleta de excessos
+type InternalStatusOutlier = 'baixo' | 'medio' | 'alto' | 'elite';
 
 export type WorkoutBlock = {
   type: BlockType;
@@ -25,6 +30,7 @@ export type WorkoutDay = {
   totalKcal: number;
   flags?: {
     condenseMode?: boolean;
+    trainingLevel?: TrainingLevel;
   };
 };
 
@@ -32,9 +38,9 @@ export type AthleteConfig = {
   weightKg: number;
   heightCm?: number;
   age?: number;
-  sex?: "M" | "F";
-  level: AthleteLevel;
-  timeLimitMin: number; // 30/45/60/90/9999 (ilimitado)
+  sex?: 'M' | 'F';
+  trainingLevel: TrainingLevel; // Escolha do usuário para HOJE
+  timeLimitMin: number; // 45/60/90/9999 (ilimitado)
 };
 
 /** MET base por bloco (determinístico) */
@@ -184,34 +190,111 @@ function clampInt(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
 
-/** Multiplicadores por nível (objetivo) */
-export function getLevelMultipliers(level: AthleteLevel) {
+// ============================================
+// STATUS OUTLIER (CÁLCULO INTERNO - INVISÍVEL)
+// ============================================
+
+/** 
+ * Calcula o Status Outlier INTERNO baseado nos dados do atleta
+ * Este status NUNCA é mostrado ao usuário - serve apenas para proteger de excessos
+ */
+function calculateInternalStatus(athlete: AthleteConfig): InternalStatusOutlier {
+  const { weightKg, heightCm, age, sex } = athlete;
+  
+  // Força relativa (peso x altura dá uma ideia de composição corporal)
+  const height = heightCm || 170;
+  const bmi = weightKg / Math.pow(height / 100, 2);
+  
+  // Idade influencia capacidade de recuperação
+  const ageScore = age ? (age < 30 ? 1.0 : age < 40 ? 0.95 : age < 50 ? 0.85 : 0.75) : 0.9;
+  
+  // Mulheres têm multiplicadores de carga diferentes
+  const sexMultiplier = sex === 'F' ? 0.85 : 1.0;
+  
+  // Score combinado (heurística conservadora)
+  const score = (bmi > 18 && bmi < 30 ? 1 : 0.8) * ageScore * sexMultiplier;
+  
+  if (score >= 0.95) return 'elite';
+  if (score >= 0.85) return 'alto';
+  if (score >= 0.70) return 'medio';
+  return 'baixo';
+}
+
+// ============================================
+// MULTIPLICADORES POR NÍVEL DE TREINO
+// ============================================
+
+/** 
+ * Multiplicadores baseados no NÍVEL DE TREINO escolhido pelo usuário
+ * A base é sempre PRO - os níveis ajustam para baixo ou mantêm
+ */
+export function getTrainingLevelMultipliers(level: TrainingLevel, internalStatus: InternalStatusOutlier) {
+  // Proteção baseada no status interno (nunca mostrado)
+  const statusProtection = {
+    baixo: { maxVolume: 0.75, maxLoad: 0.80 },
+    medio: { maxVolume: 0.90, maxLoad: 0.95 },
+    alto: { maxVolume: 1.00, maxLoad: 1.00 },
+    elite: { maxVolume: 1.10, maxLoad: 1.05 },
+  }[internalStatus];
+
   switch (level) {
-    case "INICIANTE":
-      return { volume: 0.70, load: 0.80, intensity: 0.92, densityRule: "mais controle/menos densidade", canReduce: true, canSimplify: true };
-    case "INTERMEDIARIO":
-      return { volume: 1.00, load: 1.00, intensity: 1.00, densityRule: "densidade padrão", canReduce: true, canSimplify: false };
-    case "AVANCADO":
-      return { volume: 1.15, load: 1.05, intensity: 1.05, densityRule: "mais densidade/menos descanso", canReduce: true, canSimplify: false };
-    case "HYROX_PRO":
-      return { volume: 1.25, load: 1.10, intensity: 1.08, densityRule: "padrão competitivo (densidade alta)", canReduce: false, canSimplify: false };
+    case 'base':
+      // Reduz volume, cargas, simplifica movimentos, mais pausas
+      return { 
+        volume: Math.min(0.70, statusProtection.maxVolume), 
+        load: Math.min(0.80, statusProtection.maxLoad), 
+        intensity: 0.85, 
+        restMultiplier: 1.3,
+        densityRule: 'mais controle, pausas ampliadas' 
+      };
+    case 'progressivo':
+      // Volume e cargas compatíveis com status interno, ritmo consistente
+      return { 
+        volume: Math.min(0.90, statusProtection.maxVolume), 
+        load: Math.min(0.95, statusProtection.maxLoad), 
+        intensity: 0.95, 
+        restMultiplier: 1.0,
+        densityRule: 'densidade moderada, estímulo sustentável' 
+      };
+    case 'performance':
+      // Alta densidade, ritmos agressivos, poucas pausas
+      return { 
+        volume: Math.min(1.00, statusProtection.maxVolume), 
+        load: Math.min(1.00, statusProtection.maxLoad), 
+        intensity: 1.05, 
+        restMultiplier: 0.8,
+        densityRule: 'alta densidade, estímulo máximo' 
+      };
   }
+}
+
+// Legacy function for compatibility
+export function getLevelMultipliers(level: string) {
+  // Map old level names to new training levels
+  const levelMap: Record<string, TrainingLevel> = {
+    'INICIANTE': 'base',
+    'INTERMEDIARIO': 'progressivo',
+    'AVANCADO': 'performance',
+    'HYROX_PRO': 'performance',
+  };
+  const trainingLevel = levelMap[level] || 'progressivo';
+  return getTrainingLevelMultipliers(trainingLevel, 'medio');
 }
 
 /** Orçamento base por tempo escolhido (sempre soma <= timeLimit) */
 export function getTimeBudget(timeLimitMin: number): Record<BlockType, number> {
   if (timeLimitMin >= 9999) return { warmup: 12, strength: 20, conditioning: 60, core: 10, run: 0 };
-  if (timeLimitMin <= 30) return { warmup: 5, strength: 5, conditioning: 18, core: 2, run: 0 };
   if (timeLimitMin <= 45) return { warmup: 8, strength: 10, conditioning: 24, core: 3, run: 0 };
   if (timeLimitMin <= 60) return { warmup: 10, strength: 15, conditioning: 30, core: 5, run: 0 };
   return { warmup: 12, strength: 20, conditioning: 50, core: 8, run: 0 };
 }
 
-/** Ajusta o orçamento conforme nível (HYROX_PRO puxa mais conditioning; iniciante puxa mais técnica) */
-export function getTimeBudgetByLevel(timeLimitMin: number, level: AthleteLevel): Record<BlockType, number> {
+/** Ajusta o orçamento conforme nível de treino */
+export function getTimeBudgetByLevel(timeLimitMin: number, level: TrainingLevel): Record<BlockType, number> {
   const base = getTimeBudget(timeLimitMin);
 
-  if (level === "HYROX_PRO") {
+  if (level === 'performance') {
+    // Performance puxa mais conditioning
     const shift = Math.min(8, Math.floor(base.strength * 0.4));
     return {
       ...base,
@@ -220,7 +303,8 @@ export function getTimeBudgetByLevel(timeLimitMin: number, level: AthleteLevel):
     };
   }
 
-  if (level === "INICIANTE") {
+  if (level === 'base') {
+    // Base puxa mais aquecimento e técnica
     const shift = Math.min(6, Math.floor(base.conditioning * 0.2));
     return {
       ...base,
@@ -230,16 +314,7 @@ export function getTimeBudgetByLevel(timeLimitMin: number, level: AthleteLevel):
     };
   }
 
-  if (level === "AVANCADO") {
-    const shift = Math.min(4, Math.floor(base.core * 0.5));
-    return {
-      ...base,
-      core: Math.max(0, base.core - shift),
-      conditioning: base.conditioning + shift,
-    };
-  }
-
-  return base; // intermediário
+  return base; // progressivo
 }
 
 /** Escala um token numérico isolado */
@@ -264,18 +339,23 @@ function scaleLoads(line: string, loadMult: number) {
   });
 }
 
-/** Aplica scaling por nível (volume/carga) em todo o treino (sem inventar exercícios) */
-export function applyLevelScaling(blocks: WorkoutBlock[], level: AthleteLevel) {
-  const { volume, load } = getLevelMultipliers(level);
+/** Aplica scaling por nível de treino em todo o treino */
+export function applyTrainingLevelScaling(blocks: WorkoutBlock[], athlete: AthleteConfig) {
+  const internalStatus = calculateInternalStatus(athlete);
+  const { volume, load } = getTrainingLevelMultipliers(athlete.trainingLevel, internalStatus);
+
+  // Ajuste adicional por sexo (proporcional, não "mais fácil")
+  const sexLoadAdjust = athlete.sex === 'F' ? 0.85 : 1.0;
+  const finalLoad = load * sexLoadAdjust;
 
   return blocks.map((b) => {
     const volumeMult =
-      b.type === "warmup" ? 1.0 :
-      b.type === "strength" ? Math.max(0.80, volume) :
+      b.type === 'warmup' ? 1.0 :
+      b.type === 'strength' ? Math.max(0.80, volume) :
       volume;
 
     const loadMult =
-      (b.type === "strength" || b.type === "conditioning") ? load : 1.0;
+      (b.type === 'strength' || b.type === 'conditioning') ? finalLoad : 1.0;
 
     const scaledItems = b.items.map((line) => {
       let out = line;
@@ -288,34 +368,52 @@ export function applyLevelScaling(blocks: WorkoutBlock[], level: AthleteLevel) {
   });
 }
 
+// Legacy alias
+export function applyLevelScaling(blocks: WorkoutBlock[], level: string) {
+  const levelMap: Record<string, TrainingLevel> = {
+    'INICIANTE': 'base',
+    'INTERMEDIARIO': 'progressivo', 
+    'AVANCADO': 'performance',
+    'HYROX_PRO': 'performance',
+  };
+  const athlete: AthleteConfig = {
+    weightKg: 70,
+    trainingLevel: levelMap[level] || 'progressivo',
+    timeLimitMin: 60,
+  };
+  return applyTrainingLevelScaling(blocks, athlete);
+}
+
 /**
- * CONDENSE MODE:
- * HYROX_PRO + treino não cabe no tempo -> reduzir volume, manter/elevar carga e aumentar densidade (MET)
+ * CONDENSE MODE (COMPRESSÃO INTELIGENTE):
+ * Quando o tempo disponível é menor que o ideal PRO,
+ * comprime o treino mantendo a mesma dificuldade percebida
  */
 function applyCondenseMode(
   blocks: WorkoutBlock[],
-  opts: { level: AthleteLevel; preCutTotalMin: number; timeLimitMin: number }
+  opts: { trainingLevel: TrainingLevel; preCutTotalMin: number; timeLimitMin: number }
 ) {
-  const { level, preCutTotalMin, timeLimitMin } = opts;
+  const { trainingLevel, preCutTotalMin, timeLimitMin } = opts;
 
-  if (level !== "HYROX_PRO") return { blocks, condense: false, metDensityMult: 1 };
-
+  // Condense mode só é necessário quando o tempo não é suficiente
   if (preCutTotalMin <= timeLimitMin) return { blocks, condense: false, metDensityMult: 1 };
 
   const ratioRaw = timeLimitMin / Math.max(1, preCutTotalMin);
 
-  // Volume alvo: 50%–80%
+  // Volume alvo: 50%–80% (compressão inteligente)
   const volumeRatio = clamp(ratioRaw, 0.50, 0.80);
 
-  // Load: mantém e pode subir até +10%
-  const loadBoost = clamp(1 + (1 - ratioRaw) * 0.20, 1.00, 1.10);
+  // Load: mantém e pode subir levemente para manter estímulo
+  const loadBoost = trainingLevel === 'performance' 
+    ? clamp(1 + (1 - ratioRaw) * 0.15, 1.00, 1.10) 
+    : 1.0;
 
-  // Densidade (MET): sobe até +15%
-  const metDensityMult = clamp(1 + (1 - ratioRaw) * 0.35, 1.00, 1.15);
+  // Densidade (MET): sobe para manter intensidade relativa
+  const metDensityMult = clamp(1 + (1 - ratioRaw) * 0.25, 1.00, 1.15);
 
   const condensed = blocks.map((b) => {
-    const shouldScaleVolume = b.type === "conditioning" || b.type === "core" || b.type === "run";
-    const shouldBoostLoad = b.type === "conditioning" || b.type === "strength";
+    const shouldScaleVolume = b.type === 'conditioning' || b.type === 'core' || b.type === 'run';
+    const shouldBoostLoad = b.type === 'conditioning' || b.type === 'strength';
 
     const scaledItems = b.items.map((line) => {
       let out = line;
@@ -433,15 +531,15 @@ export function buildDayWithAccurateMetrics(
   blocks: WorkoutBlock[],
   athlete: AthleteConfig
 ): WorkoutDay {
-  // 1) Scaling por nível
-  const levelScaled = applyLevelScaling(blocks, athlete.level);
+  // 1) Scaling por nível de treino
+  const levelScaled = applyTrainingLevelScaling(blocks, athlete);
 
   // 2) Estimar tempo baseado no CONTEÚDO real (antes do condense)
   const preCutTotalMin = estimateAdminMinutes(levelScaled);
 
-  // 3) Condense mode (somente HYROX_PRO + falta de tempo)
+  // 3) Condense mode (compressão inteligente quando tempo é curto)
   const condenseResult = applyCondenseMode(levelScaled, {
-    level: athlete.level,
+    trainingLevel: athlete.trainingLevel,
     preCutTotalMin,
     timeLimitMin: athlete.timeLimitMin,
   });
@@ -459,15 +557,13 @@ export function buildDayWithAccurateMetrics(
 
   // 5) Corrida opcional: se texto mencionar "opcional", zera por padrão
   planned.forEach((b) => {
-    if (b.type === "run") {
-      const joined = b.items.join(" ").toLowerCase();
-      if (joined.includes("opcional")) b.targetMinutes = 0;
+    if (b.type === 'run') {
+      const joined = b.items.join(' ').toLowerCase();
+      if (joined.includes('opcional')) b.targetMinutes = 0;
     }
   });
 
-  // 6) Não precisa mais redistribuir budget - tempo é baseado no conteúdo real
-
-  // 7) Garantia: nunca estourar o tempo escolhido
+  // 6) Garantia: nunca estourar o tempo escolhido
   const sumMinutes = () => planned.reduce((acc, b) => acc + (b.targetMinutes ?? 0), 0);
 
   let total = sumMinutes();
@@ -478,7 +574,7 @@ export function buildDayWithAccurateMetrics(
 
     // Ordem de corte (para caber):
     // run -> core -> conditioning -> strength -> warmup
-    const cutOrder: BlockType[] = ["run", "core", "conditioning", "strength", "warmup"];
+    const cutOrder: BlockType[] = ['run', 'core', 'conditioning', 'strength', 'warmup'];
 
     for (const t of cutOrder) {
       if (overflow <= 0) break;
@@ -494,12 +590,13 @@ export function buildDayWithAccurateMetrics(
     }
   }
 
-  // 8) Calcular kcal por bloco (determinístico) + ajuste por nível + densidade do condense
+  // 7) Calcular kcal por bloco (determinístico) + ajuste por nível + densidade do condense
+  const internalStatus = calculateInternalStatus(athlete);
+  const { intensity } = getTrainingLevelMultipliers(athlete.trainingLevel, internalStatus);
+  
   planned.forEach((b) => {
     const mins = b.targetMinutes ?? 0;
     const baseMet = b.met ?? 6.0;
-
-    const { intensity } = getLevelMultipliers(athlete.level);
 
     // Condense mode aumenta densidade/intensidade (mesma pancada em menos tempo)
     const metAdjusted = baseMet * intensity * metDensityMult;
@@ -516,7 +613,7 @@ export function buildDayWithAccurateMetrics(
     blocks: planned,
     totalMinutes,
     totalKcal,
-    flags: { condenseMode },
+    flags: { condenseMode, trainingLevel: athlete.trainingLevel },
   };
 }
 
@@ -530,14 +627,18 @@ export function normalizeTimeLimit(input: any): number {
   return 60;
 }
 
-/** Mapeia o nível do app para o nível do engine */
-export function mapAppLevelToEngine(level: string): AthleteLevel {
+/** Mapeia o nível do app para o nível de treino do engine */
+export function mapAppLevelToEngine(level: string): TrainingLevel {
   switch (level) {
-    case 'iniciante': return 'INICIANTE';
-    case 'intermediario': return 'INTERMEDIARIO';
-    case 'avancado': return 'AVANCADO';
-    case 'hyrox_pro': return 'HYROX_PRO';
-    default: return 'INTERMEDIARIO';
+    case 'iniciante': return 'base';
+    case 'intermediario': return 'progressivo';
+    case 'avancado': return 'performance';
+    case 'hyrox_pro': return 'performance';
+    case 'hyrox_open': return 'progressivo';
+    case 'base': return 'base';
+    case 'progressivo': return 'progressivo';
+    case 'performance': return 'performance';
+    default: return 'progressivo';
   }
 }
 
@@ -559,14 +660,17 @@ export function mapAppBlockTypeToEngine(type: string): BlockType {
 export function calculateBlockMetricsWithEngine(
   blocks: Array<{ type: string; content: string }>,
   athleteConfig: {
-    level: string;
+    level?: string;
+    trainingLevel?: string;
     sessionDuration: number | 'ilimitado';
     peso?: number;
     idade?: number;
     sexo?: 'masculino' | 'feminino';
   }
 ): { totalMinutes: number; totalKcal: number; blockMetrics: Array<{ minutes: number; kcal: number }> } {
-  const engineLevel = mapAppLevelToEngine(athleteConfig.level);
+  // Support both old 'level' and new 'trainingLevel' for compatibility
+  const levelInput = athleteConfig.trainingLevel || athleteConfig.level || 'progressivo';
+  const engineLevel = mapAppLevelToEngine(levelInput);
   const timeLimitMin = athleteConfig.sessionDuration === 'ilimitado' ? 9999 : athleteConfig.sessionDuration;
   const weightKg = athleteConfig.peso || 70;
   
@@ -580,7 +684,7 @@ export function calculateBlockMetricsWithEngine(
     weightKg,
     age: athleteConfig.idade,
     sex: athleteConfig.sexo === 'masculino' ? 'M' : athleteConfig.sexo === 'feminino' ? 'F' : undefined,
-    level: engineLevel,
+    trainingLevel: engineLevel,
     timeLimitMin,
   };
 
