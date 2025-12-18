@@ -14,6 +14,13 @@ export type AthleteGender = 'masculino' | 'feminino';
 export type RaceCategory = 'OPEN' | 'PRO';
 
 /**
+ * Official HYROX age brackets
+ */
+export type HyroxAgeBracket = 
+  | '16-24' | '25-29' | '30-34' | '35-39' | '40-44' 
+  | '45-49' | '50-54' | '55-59' | '60-64' | '65-69' | '70+';
+
+/**
  * PRO-to-OPEN normalization factors:
  * PRO category is harder (heavier sleds, etc), so we convert PRO times to "Open-equivalent"
  * by multiplying by a factor < 1.
@@ -24,13 +31,86 @@ const PRO_TO_OPEN_EQUIV_FACTOR: Record<AthleteGender, number> = {
 };
 
 /**
- * Thresholds (in minutes) for classifying level by "Open-equivalent" time.
+ * Base thresholds (in minutes) for classifying level by "Open-equivalent" time.
  * These are for "ability to compete", not podium placement.
+ * Base reference: 30-34 age bracket
  */
 const THRESHOLDS_OPEN_EQ_MIN: Record<AthleteGender, { pro: number; open: number; adv: number; inter: number }> = {
   masculino: { pro: 80, open: 95, adv: 110, inter: 125 },   // <80 PRO; <95 OPEN; <110 ADV; <125 INTER; else INIC
   feminino: { pro: 85, open: 100, adv: 115, inter: 130 },
 };
+
+/**
+ * Age tolerance adjustments (in minutes) applied to base thresholds.
+ * Older athletes get more time tolerance.
+ */
+const AGE_TOLERANCE_MINUTES: Record<HyroxAgeBracket, number> = {
+  '16-24': 0,
+  '25-29': 0,
+  '30-34': 0,  // Base reference
+  '35-39': 2,
+  '40-44': 4,
+  '45-49': 6,
+  '50-54': 8,
+  '55-59': 10,
+  '60-64': 13,
+  '65-69': 16,
+  '70+': 20,
+};
+
+/**
+ * Calculate age at a specific date
+ */
+export function calculateAgeAtDate(birthDate: Date, targetDate: Date): number {
+  let age = targetDate.getFullYear() - birthDate.getFullYear();
+  const monthDiff = targetDate.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && targetDate.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/**
+ * Get HYROX age bracket from age
+ */
+export function getAgeBracket(age: number): HyroxAgeBracket {
+  if (age < 25) return '16-24';
+  if (age < 30) return '25-29';
+  if (age < 35) return '30-34';
+  if (age < 40) return '35-39';
+  if (age < 45) return '40-44';
+  if (age < 50) return '45-49';
+  if (age < 55) return '50-54';
+  if (age < 60) return '55-59';
+  if (age < 65) return '60-64';
+  if (age < 70) return '65-69';
+  return '70+';
+}
+
+/**
+ * Get age tolerance in minutes for a given age bracket
+ */
+export function getAgeTolerance(ageBracket: HyroxAgeBracket): number {
+  return AGE_TOLERANCE_MINUTES[ageBracket];
+}
+
+/**
+ * Get adjusted thresholds for a specific age bracket
+ */
+export function getAdjustedThresholds(
+  gender: AthleteGender,
+  ageBracket: HyroxAgeBracket
+): { pro: number; open: number; adv: number; inter: number } {
+  const base = THRESHOLDS_OPEN_EQ_MIN[gender];
+  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
+  
+  return {
+    pro: base.pro + tolerance,
+    open: base.open + tolerance,
+    adv: base.adv + tolerance,
+    inter: base.inter + tolerance,
+  };
+}
 
 // Official competition validity period (18 months in days)
 const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30;
@@ -64,6 +144,11 @@ export interface OfficialCompetitionResult {
   created_at: string;
   isExpired: boolean;
   derivedStatus: AthleteStatus;
+  // Age-related fields
+  ageAtRace?: number;
+  ageBracket?: HyroxAgeBracket;
+  cappedFromPro?: boolean; // True if athlete was capped from PRO due to age (60+)
+  cappedReason?: string;
 }
 
 export interface CalculatedStatus {
@@ -93,6 +178,8 @@ export interface CalculatedStatus {
   benchmarksUsed: number;
   weeksWithGoodPerformance: number;
   consistencyScore: number;
+  // Age bracket info
+  athleteAgeBracket?: HyroxAgeBracket;
 }
 
 /**
@@ -110,24 +197,49 @@ export function toOpenEquivalentSeconds(
   return Math.round(timeInSeconds * factor);
 }
 
+export interface LevelClassificationResult {
+  status: AthleteStatus;
+  cappedFromPro: boolean;
+  cappedReason?: string;
+}
+
 /**
  * Get status from HYROX official competition time using Open-equivalent normalization
- * The race category only influences time normalization, not automatic level assignment
+ * With age-adjusted thresholds.
+ * Special rule: Athletes 60+ cannot be classified as PRO (capped at OPEN)
  */
 export function getStatusFromOfficialTime(
   timeInSeconds: number,
   gender: AthleteGender = 'masculino',
-  raceCategory: RaceCategory = 'OPEN'
-): AthleteStatus {
+  raceCategory: RaceCategory = 'OPEN',
+  ageAtRace?: number
+): LevelClassificationResult {
   const openEqSec = toOpenEquivalentSeconds(timeInSeconds, gender, raceCategory);
   const openEqMin = openEqSec / 60;
-  const t = THRESHOLDS_OPEN_EQ_MIN[gender];
   
-  if (openEqMin < t.pro) return 'hyrox_pro';
-  if (openEqMin < t.open) return 'hyrox_open';
-  if (openEqMin < t.adv) return 'avancado';
-  if (openEqMin < t.inter) return 'intermediario';
-  return 'iniciante';
+  // Get age bracket and adjusted thresholds
+  const ageBracket = ageAtRace !== undefined ? getAgeBracket(ageAtRace) : '30-34';
+  const t = getAdjustedThresholds(gender, ageBracket);
+  
+  // Determine raw status from time
+  let status: AthleteStatus;
+  if (openEqMin < t.pro) status = 'hyrox_pro';
+  else if (openEqMin < t.open) status = 'hyrox_open';
+  else if (openEqMin < t.adv) status = 'avancado';
+  else if (openEqMin < t.inter) status = 'intermediario';
+  else status = 'iniciante';
+  
+  // Special rule: Athletes 60+ cannot be PRO
+  let cappedFromPro = false;
+  let cappedReason: string | undefined;
+  
+  if (ageAtRace !== undefined && ageAtRace >= 60 && status === 'hyrox_pro') {
+    status = 'hyrox_open';
+    cappedFromPro = true;
+    cappedReason = `Atletas com 60+ anos são classificados no máximo como OPEN (tempo seria PRO)`;
+  }
+  
+  return { status, cappedFromPro, cappedReason };
 }
 
 // Check if official competition is still valid (< 18 months old)
@@ -141,13 +253,28 @@ function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: st
 // Process official competitions and find the most recent valid one
 export function processOfficialCompetitions(
   officialResults: ExternalResult[],
-  gender: AthleteGender = 'masculino'
+  gender: AthleteGender = 'masculino',
+  athleteBirthDate?: Date
 ): { valid: OfficialCompetitionResult | null; historical: OfficialCompetitionResult[] } {
   const processed: OfficialCompetitionResult[] = officialResults
     .filter(r => r.time_in_seconds && r.time_in_seconds > 0)
     .map(r => {
       const raceCategory: RaceCategory = r.race_category || 'OPEN';
       const openEqSec = toOpenEquivalentSeconds(r.time_in_seconds!, gender, raceCategory);
+      
+      // Calculate age at race date
+      let ageAtRace: number | undefined;
+      let ageBracket: HyroxAgeBracket | undefined;
+      
+      if (athleteBirthDate) {
+        const raceDate = r.event_date ? new Date(r.event_date) : new Date(r.created_at);
+        ageAtRace = calculateAgeAtDate(athleteBirthDate, raceDate);
+        ageBracket = getAgeBracket(ageAtRace);
+      }
+      
+      // Get status with age adjustments
+      const classification = getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory, ageAtRace);
+      
       return {
         id: r.id,
         time_in_seconds: r.time_in_seconds!,
@@ -157,7 +284,11 @@ export function processOfficialCompetitions(
         event_date: r.event_date,
         created_at: r.created_at,
         isExpired: !isOfficialCompetitionValid(r.event_date, r.created_at),
-        derivedStatus: getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory),
+        derivedStatus: classification.status,
+        ageAtRace,
+        ageBracket,
+        cappedFromPro: classification.cappedFromPro,
+        cappedReason: classification.cappedReason,
       };
     })
     .sort((a, b) => {
@@ -290,11 +421,17 @@ export function calculateAthleteStatus(
   benchmarkResults: BenchmarkResult[],
   officialResults: ExternalResult[],
   gender: AthleteGender = 'masculino',
-  previousStatus?: AthleteStatus
+  previousStatus?: AthleteStatus,
+  athleteBirthDate?: Date
 ): CalculatedStatus {
-  // Process official competitions first (using gender-specific thresholds)
+  // Calculate current athlete age bracket
+  const athleteAgeBracket = athleteBirthDate 
+    ? getAgeBracket(calculateAgeAtDate(athleteBirthDate, new Date()))
+    : undefined;
+
+  // Process official competitions first (using gender-specific thresholds and age)
   const { valid: validatingCompetition, historical: historicalCompetitions } = 
-    processOfficialCompetitions(officialResults, gender);
+    processOfficialCompetitions(officialResults, gender, athleteBirthDate);
 
   const validBenchmarks = benchmarkResults.filter(r => r.completed);
   const benchmarksUsed = validBenchmarks.length;
@@ -337,6 +474,7 @@ export function calculateAthleteStatus(
       benchmarksUsed,
       weeksWithGoodPerformance: calculateWeeksWithGoodPerformance(validBenchmarks),
       consistencyScore: Math.round(calculateConsistency(validBenchmarks)),
+      athleteAgeBracket,
     };
   }
 
@@ -357,6 +495,7 @@ export function calculateAthleteStatus(
       benchmarksUsed: 0,
       weeksWithGoodPerformance: 0,
       consistencyScore: 0,
+      athleteAgeBracket,
     };
   }
 
@@ -439,6 +578,7 @@ export function calculateAthleteStatus(
     benchmarksUsed,
     weeksWithGoodPerformance,
     consistencyScore: Math.round(consistencyScore),
+    athleteAgeBracket,
   };
 }
 

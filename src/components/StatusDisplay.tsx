@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, TrendingUp, Target, Calendar, Activity, Trophy, Clock } from 'lucide-react';
+import { CheckCircle2, AlertCircle, TrendingUp, Target, Calendar, Activity, Trophy, Clock, User } from 'lucide-react';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { 
@@ -74,12 +74,20 @@ export function StatusDisplay() {
           </h2>
         </div>
         
-        {/* Confidence Badge */}
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground mb-1">Confiança</p>
-          <span className={`text-sm font-medium ${CONFIDENCE_COLORS[statusData.confidence]}`}>
-            {CONFIDENCE_LABELS[statusData.confidence]}
-          </span>
+        {/* Age Bracket & Confidence */}
+        <div className="text-right space-y-1">
+          {statusData.currentAgeBracket && (
+            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+              <User className="w-3 h-3" />
+              <span>Faixa: {statusData.currentAgeBracket}</span>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground">Confiança</p>
+            <span className={`text-sm font-medium ${CONFIDENCE_COLORS[statusData.confidence]}`}>
+              {CONFIDENCE_LABELS[statusData.confidence]}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -119,9 +127,32 @@ export function StatusDisplay() {
                 </span>
               )}
             </div>
+            {/* Age at race info */}
+            {statusData.validatingCompetition.ageAtRace && statusData.validatingCompetition.ageBracket && (
+              <div className="flex items-center gap-1 mt-1">
+                <User className="w-3 h-3" />
+                <span>
+                  Idade na prova: {statusData.validatingCompetition.ageAtRace} anos 
+                  (Faixa {statusData.validatingCompetition.ageBracket})
+                </span>
+              </div>
+            )}
+            {/* Capped from PRO notice */}
+            {statusData.validatingCompetition.cappedFromPro && statusData.validatingCompetition.cappedReason && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1 mt-2">
+                <span className="text-blue-400 text-xs">
+                  ℹ️ {statusData.validatingCompetition.cappedReason}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* Level Classification Explanation */}
+      <div className="text-xs text-muted-foreground/80 bg-secondary/30 rounded-lg px-3 py-2">
+        <p>O nível indica a categoria em que você compete hoje, não sua colocação final.</p>
+      </div>
 
       {/* Progress Ruler */}
       {hasEnoughData ? (
