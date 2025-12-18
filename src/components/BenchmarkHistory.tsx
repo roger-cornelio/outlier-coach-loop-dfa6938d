@@ -25,12 +25,16 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-function getBucketForTime(time: number, block: WorkoutBlock): PerformanceBucket {
-  if (block.targetRange && block.targetRange.min > 0 && block.targetRange.max > 0) {
-    const mid = (block.targetRange.min + block.targetRange.max) / 2;
-    if (time <= block.targetRange.min) return 'ELITE';
+function getBucketForTime(time: number, block: WorkoutBlock, athleteLevel?: string): PerformanceBucket {
+  // Get effective target range based on athlete level
+  const levelRange = athleteLevel && block.levelTargetRanges?.[athleteLevel as keyof typeof block.levelTargetRanges];
+  const effectiveRange = levelRange || block.targetRange;
+  
+  if (effectiveRange && effectiveRange.min > 0 && effectiveRange.max > 0) {
+    const mid = (effectiveRange.min + effectiveRange.max) / 2;
+    if (time <= effectiveRange.min) return 'ELITE';
     if (time <= mid) return 'STRONG';
-    if (time <= block.targetRange.max) return 'OK';
+    if (time <= effectiveRange.max) return 'OK';
     return 'TOUGH';
   }
   
@@ -54,7 +58,7 @@ const bucketColors: Record<PerformanceBucket, string> = {
 };
 
 export function BenchmarkHistory() {
-  const { weeklyWorkouts, workoutResults } = useOutlierStore();
+  const { weeklyWorkouts, workoutResults, athleteConfig } = useOutlierStore();
   const [expandedBenchmark, setExpandedBenchmark] = useState<string | null>(null);
 
   // Find all benchmark blocks and their results
@@ -128,7 +132,7 @@ export function BenchmarkHistory() {
           date: formatDate(r.date),
           time: r.timeInSeconds!,
           timeFormatted: formatTime(r.timeInSeconds!),
-          bucket: getBucketForTime(r.timeInSeconds!, data.block),
+          bucket: getBucketForTime(r.timeInSeconds!, data.block, athleteConfig?.level),
         }));
 
         return (

@@ -30,6 +30,13 @@ export interface TargetTimeRange {
   max: number; // seconds
 }
 
+export interface LevelTargetRanges {
+  iniciante?: TargetTimeRange;
+  intermediario?: TargetTimeRange;
+  avancado?: TargetTimeRange;
+  hyrox_pro?: TargetTimeRange;
+}
+
 export interface WorkoutBlock {
   id: string;
   type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
@@ -41,6 +48,7 @@ export interface WorkoutBlock {
   durationMinutes?: number;
   targetSeconds?: number;
   targetRange?: TargetTimeRange;
+  levelTargetRanges?: LevelTargetRanges;
   referenceTime?: {
     iniciante: number;
     intermediario: number;

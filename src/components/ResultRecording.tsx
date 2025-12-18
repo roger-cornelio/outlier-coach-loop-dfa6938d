@@ -23,7 +23,11 @@ export function ResultRecording() {
 
   // Check if this is a benchmark WOD
   const isBenchmark = mainWod.isBenchmark || false;
-  const hasTargetTime = mainWod.targetSeconds !== undefined;
+  
+  // Get effective target range based on athlete level
+  const levelTargetRange = athleteConfig?.level && mainWod.levelTargetRanges?.[athleteConfig.level];
+  const effectiveTargetRange = levelTargetRange || mainWod.targetRange;
+  const hasTargetTime = effectiveTargetRange?.max && effectiveTargetRange.max > 0;
 
   const handleSubmit = () => {
     if (completed === null) return;
@@ -102,10 +106,12 @@ export function ResultRecording() {
             <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
               {mainWod.content}
             </pre>
-            {hasTargetTime && mainWod.targetSeconds && (
+            {hasTargetTime && effectiveTargetRange && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-sm text-muted-foreground">
-                  Tempo alvo: <span className="font-display text-foreground">{formatTargetTime(mainWod.targetSeconds)}</span>
+                  Tempo alvo: <span className="font-display text-foreground">
+                    {formatTargetTime(effectiveTargetRange.min)} - {formatTargetTime(effectiveTargetRange.max)}
+                  </span>
                 </p>
               </div>
             )}

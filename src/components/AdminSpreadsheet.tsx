@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target } from 'lucide-react';
-import { DayOfWeek, DayWorkout, WorkoutBlock, WodType } from '@/types/outlier';
+import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -305,6 +305,26 @@ export function AdminSpreadsheet() {
     setParsedWorkouts(updated);
   };
 
+  const updateLevelTargetRange = (dayIndex: number, blockIndex: number, level: AthleteLevel, field: 'min' | 'max', minutes: number, seconds: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const block = updated[dayIndex].blocks[blockIndex];
+    const totalSeconds = (minutes * 60) + seconds;
+    
+    if (!block.levelTargetRanges) {
+      block.levelTargetRanges = {};
+    }
+    
+    if (!block.levelTargetRanges[level]) {
+      block.levelTargetRanges[level] = { min: 0, max: 0 };
+    }
+    
+    block.levelTargetRanges[level]![field] = totalSeconds;
+    
+    setParsedWorkouts(updated);
+  };
+
   const updateTargetTime = (dayIndex: number, blockIndex: number, minutes: number, seconds: number) => {
     if (!parsedWorkouts) return;
     
@@ -505,89 +525,100 @@ export function AdminSpreadsheet() {
                                 </div>
                               </label>
 
-                              {/* Target time range (only if benchmark) */}
+                              {/* Target time ranges by level (only if benchmark) */}
                               {block.isBenchmark && (
                                 <motion.div
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
-                                  className="ml-7 space-y-3"
+                                  className="ml-7 space-y-4"
                                 >
-                                  {/* Target range inputs */}
                                   <div className="flex flex-wrap items-center gap-4">
                                     <Target className="w-4 h-4 text-status-excellent" />
-                                    <span className="text-sm text-muted-foreground">Faixa de tempo alvo:</span>
+                                    <span className="text-sm text-muted-foreground">Faixa de tempo alvo por nível:</span>
                                   </div>
                                   
-                                  <div className="flex flex-wrap items-center gap-3 ml-6">
-                                    {/* Min time */}
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs text-muted-foreground">Min:</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="180"
-                                        value={block.targetRange?.min ? Math.floor(block.targetRange.min / 60) : ''}
-                                        onChange={(e) => {
-                                          const mins = parseInt(e.target.value) || 0;
-                                          const secs = block.targetRange?.min ? block.targetRange.min % 60 : 0;
-                                          updateTargetRange(dayIndex, blockIndex, 'min', mins, secs);
-                                        }}
-                                        placeholder="00"
-                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                                      />
-                                      <span className="text-muted-foreground">:</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="59"
-                                        value={block.targetRange?.min ? String(block.targetRange.min % 60).padStart(2, '0') : ''}
-                                        onChange={(e) => {
-                                          const secs = parseInt(e.target.value) || 0;
-                                          const mins = block.targetRange?.min ? Math.floor(block.targetRange.min / 60) : 0;
-                                          updateTargetRange(dayIndex, blockIndex, 'min', mins, secs);
-                                        }}
-                                        placeholder="00"
-                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                                      />
-                                    </div>
+                                  {/* Level-based target ranges */}
+                                  <div className="grid gap-3 ml-6">
+                                    {(['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as AthleteLevel[]).map((level) => {
+                                      const levelRange = block.levelTargetRanges?.[level];
+                                      return (
+                                        <div key={level} className="flex flex-wrap items-center gap-3 p-2 rounded bg-secondary/50">
+                                          <span className="text-xs font-medium w-24 text-muted-foreground">
+                                            {LEVEL_NAMES[level]}:
+                                          </span>
+                                          
+                                          {/* Min time */}
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-muted-foreground">Min:</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="180"
+                                              value={levelRange?.min ? Math.floor(levelRange.min / 60) : ''}
+                                              onChange={(e) => {
+                                                const mins = parseInt(e.target.value) || 0;
+                                                const secs = levelRange?.min ? levelRange.min % 60 : 0;
+                                                updateLevelTargetRange(dayIndex, blockIndex, level, 'min', mins, secs);
+                                              }}
+                                              placeholder="00"
+                                              className="w-10 px-1 py-0.5 text-center text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                            />
+                                            <span className="text-muted-foreground text-xs">:</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="59"
+                                              value={levelRange?.min ? String(levelRange.min % 60).padStart(2, '0') : ''}
+                                              onChange={(e) => {
+                                                const secs = parseInt(e.target.value) || 0;
+                                                const mins = levelRange?.min ? Math.floor(levelRange.min / 60) : 0;
+                                                updateLevelTargetRange(dayIndex, blockIndex, level, 'min', mins, secs);
+                                              }}
+                                              placeholder="00"
+                                              className="w-10 px-1 py-0.5 text-center text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                            />
+                                          </div>
 
-                                    <span className="text-muted-foreground">→</span>
+                                          <span className="text-muted-foreground text-xs">→</span>
 
-                                    {/* Max time */}
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs text-muted-foreground">Max:</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="180"
-                                        value={block.targetRange?.max ? Math.floor(block.targetRange.max / 60) : ''}
-                                        onChange={(e) => {
-                                          const mins = parseInt(e.target.value) || 0;
-                                          const secs = block.targetRange?.max ? block.targetRange.max % 60 : 0;
-                                          updateTargetRange(dayIndex, blockIndex, 'max', mins, secs);
-                                        }}
-                                        placeholder="00"
-                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                                      />
-                                      <span className="text-muted-foreground">:</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="59"
-                                        value={block.targetRange?.max ? String(block.targetRange.max % 60).padStart(2, '0') : ''}
-                                        onChange={(e) => {
-                                          const secs = parseInt(e.target.value) || 0;
-                                          const mins = block.targetRange?.max ? Math.floor(block.targetRange.max / 60) : 0;
-                                          updateTargetRange(dayIndex, blockIndex, 'max', mins, secs);
-                                        }}
-                                        placeholder="00"
-                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                                      />
-                                    </div>
+                                          {/* Max time */}
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-muted-foreground">Max:</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="180"
+                                              value={levelRange?.max ? Math.floor(levelRange.max / 60) : ''}
+                                              onChange={(e) => {
+                                                const mins = parseInt(e.target.value) || 0;
+                                                const secs = levelRange?.max ? levelRange.max % 60 : 0;
+                                                updateLevelTargetRange(dayIndex, blockIndex, level, 'max', mins, secs);
+                                              }}
+                                              placeholder="00"
+                                              className="w-10 px-1 py-0.5 text-center text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                            />
+                                            <span className="text-muted-foreground text-xs">:</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="59"
+                                              value={levelRange?.max ? String(levelRange.max % 60).padStart(2, '0') : ''}
+                                              onChange={(e) => {
+                                                const secs = parseInt(e.target.value) || 0;
+                                                const mins = levelRange?.max ? Math.floor(levelRange.max / 60) : 0;
+                                                updateLevelTargetRange(dayIndex, blockIndex, level, 'max', mins, secs);
+                                              }}
+                                              placeholder="00"
+                                              className="w-10 px-1 py-0.5 text-center text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
 
                                   <p className="text-xs text-muted-foreground ml-6">
-                                    ↳ Exigir tempo do atleta • Classificação: ELITE ≤ min, STRONG ≤ média, OK ≤ max, TOUGH &gt; max
+                                    ↳ Cada nível tem sua faixa • ELITE ≤ min, STRONG ≤ média, OK ≤ max, TOUGH &gt; max
                                   </p>
                                 </motion.div>
                               )}
