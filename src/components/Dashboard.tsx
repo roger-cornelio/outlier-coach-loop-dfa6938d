@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
@@ -375,6 +375,27 @@ export function Dashboard() {
                   'Gerar Treino'
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Equipment Adaptation Banner */}
+      {hasAdaptations && adaptations?.unavailableEquipment && adaptations.unavailableEquipment.length > 0 && (
+        <div className="border-b bg-blue-500/5 border-blue-500/10">
+          <div className="max-w-6xl mx-auto px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <RefreshCcw className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  🔁 Treino ajustado conforme sua realidade de hoje
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Mantivemos o estímulo principal do treino, mesmo com adaptações de equipamento.
+                </p>
+              </div>
             </div>
           </div>
         </div>
