@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Trophy, Medal, Timer, Upload, X, Camera, 
-  CheckCircle, Loader2, Calendar, FileText
+  CheckCircle, Loader2, Calendar, FileText, Sparkles, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -48,6 +41,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionConfidence, setExtractionConfidence] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +53,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         return;
       }
       setScreenshotFile(file);
+      setExtractionConfidence(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setScreenshotPreview(reader.result as string);
@@ -69,8 +65,65 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const removeScreenshot = () => {
     setScreenshotFile(null);
     setScreenshotPreview(null);
+    setExtractionConfidence(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const extractTimeFromScreenshot = async () => {
+    if (!screenshotPreview) {
+      toast.error('Faça upload de uma imagem primeiro');
+      return;
+    }
+
+    setIsExtracting(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-time-from-screenshot', {
+        body: { imageUrl: screenshotPreview }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data.time_in_seconds) {
+        const totalSecs = data.time_in_seconds;
+        const h = Math.floor(totalSecs / 3600);
+        const m = Math.floor((totalSecs % 3600) / 60);
+        const s = totalSecs % 60;
+        
+        setHours(h > 0 ? h.toString() : '');
+        setMinutes(m.toString());
+        setSeconds(s.toString());
+        setExtractionConfidence(data.confidence);
+
+        if (data.event_name && !eventName) {
+          setEventName(data.event_name);
+        }
+        if (data.event_date && !eventDate) {
+          setEventDate(data.event_date);
+        }
+
+        const confidenceLabel = {
+          high: 'alta',
+          medium: 'média', 
+          low: 'baixa'
+        }[data.confidence] || 'média';
+
+        toast.success(`Tempo extraído: ${data.formatted_time} (confiança ${confidenceLabel})`);
+      } else {
+        toast.error('Não foi possível identificar o tempo na imagem');
+      }
+    } catch (error) {
+      console.error('Extraction error:', error);
+      toast.error('Erro ao extrair tempo da imagem');
+    } finally {
+      setIsExtracting(false);
     }
   };
 
@@ -152,6 +205,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setHours('');
       setMinutes('');
       setSeconds('');
+      setExtractionConfidence(null);
       removeScreenshot();
       setOpen(false);
       onResultAdded?.();
@@ -181,7 +235,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           Adicionar Resultado
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />
@@ -217,6 +271,105 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
                 </motion.button>
               );
             })}
+          </div>
+
+          {/* Screenshot Upload - Moved to top for AI extraction flow */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Print do Resultado
+              <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                IA extrai o tempo automaticamente
+              </span>
+            </Label>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            <AnimatePresence mode="wait">
+              {screenshotPreview ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="space-y-3"
+                >
+                  <div className="relative rounded-xl overflow-hidden border border-border">
+                    <img 
+                      src={screenshotPreview} 
+                      alt="Preview" 
+                      className="w-full h-40 object-cover"
+                    />
+                    <button
+                      onClick={removeScreenshot}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    {extractionConfidence && (
+                      <div className={`absolute bottom-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${
+                        extractionConfidence === 'high' ? 'bg-green-500/90 text-white' :
+                        extractionConfidence === 'medium' ? 'bg-amber-500/90 text-white' :
+                        'bg-red-500/90 text-white'
+                      }`}>
+                        Confiança {extractionConfidence === 'high' ? 'alta' : extractionConfidence === 'medium' ? 'média' : 'baixa'}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* AI Extract Button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={extractTimeFromScreenshot}
+                    disabled={isExtracting}
+                    className="w-full gap-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Analisando imagem...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4" />
+                        Extrair Tempo com IA
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-32 border-2 border-dashed border-amber-500/30 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-amber-500/60 hover:bg-amber-500/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-6 h-6 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Faça upload do print</p>
+                  <p className="text-xs text-amber-500">IA extrai o tempo automaticamente</p>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">ou insira manualmente</span>
+            </div>
           </div>
 
           {/* Event Name */}
@@ -296,57 +449,6 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
             <p className="text-center font-mono text-lg text-primary">
               {formatTimeDisplay()}
             </p>
-          </div>
-
-          {/* Screenshot Upload */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Camera className="w-4 h-4" />
-              Print do Resultado (opcional)
-            </Label>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            <AnimatePresence mode="wait">
-              {screenshotPreview ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative rounded-xl overflow-hidden border border-border"
-                >
-                  <img 
-                    src={screenshotPreview} 
-                    alt="Preview" 
-                    className="w-full h-40 object-cover"
-                  />
-                  <button
-                    onClick={removeScreenshot}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                >
-                  <Upload className="w-8 h-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Clique para upload</p>
-                  <p className="text-xs text-muted-foreground/60">PNG, JPG até 5MB</p>
-                </motion.button>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Submit Button */}
