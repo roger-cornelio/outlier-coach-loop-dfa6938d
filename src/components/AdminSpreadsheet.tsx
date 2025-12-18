@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
@@ -26,6 +26,16 @@ const BLOCK_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /notas?|notes?|obs|📝/i, type: 'notas' },
 ];
 
+const DAY_NAMES: Record<DayOfWeek, string> = {
+  seg: 'Segunda',
+  ter: 'Terça',
+  qua: 'Quarta',
+  qui: 'Quinta',
+  sex: 'Sexta',
+  sab: 'Sábado',
+  dom: 'Domingo',
+};
+
 function parseSpreadsheet(text: string): DayWorkout[] {
   const lines = text.split('\n');
   const workouts: DayWorkout[] = [];
@@ -43,6 +53,7 @@ function parseSpreadsheet(text: string): DayWorkout[] {
         type: currentBlockType,
         title: currentBlockTitle || currentBlockType.toUpperCase(),
         content: currentBlockContent.join('\n').trim(),
+        isMainWod: currentBlockType === 'conditioning' || currentBlockType === 'especifico',
       });
     }
     currentBlockContent = [];
@@ -108,6 +119,10 @@ export function AdminSpreadsheet() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Review phase state
+  const [parsedWorkouts, setParsedWorkouts] = useState<DayWorkout[] | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<DayOfWeek>>(new Set());
 
   if (authLoading) {
     return (
@@ -173,6 +188,7 @@ export function AdminSpreadsheet() {
   const handleClearWorkouts = () => {
     setWeeklyWorkouts([]);
     setSpreadsheetText('');
+    setParsedWorkouts(null);
     setSuccess(null);
     setError(null);
   };
@@ -189,20 +205,301 @@ export function AdminSpreadsheet() {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const parsedWorkouts = parseSpreadsheet(spreadsheetText);
+    const parsed = parseSpreadsheet(spreadsheetText);
 
-    if (parsedWorkouts.length === 0) {
+    if (parsed.length === 0) {
       setError('Não foi possível identificar treinos na planilha. Verifique se os dias da semana estão identificados (Segunda, Terça, etc.).');
       setIsProcessing(false);
       return;
     }
 
-    setWeeklyWorkouts(parsedWorkouts);
+    // Move to review phase instead of saving directly
+    setParsedWorkouts(parsed);
+    setExpandedDays(new Set(parsed.map(w => w.day)));
     setIsProcessing(false);
-    setSuccess(`${parsedWorkouts.length} dia(s) de treino processado(s) com sucesso!`);
+  };
+
+  const toggleDayExpanded = (day: DayOfWeek) => {
+    setExpandedDays(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(day)) {
+        newSet.delete(day);
+      } else {
+        newSet.add(day);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleBlockBenchmark = (dayIndex: number, blockIndex: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const block = updated[dayIndex].blocks[blockIndex];
+    block.isBenchmark = !block.isBenchmark;
+    
+    // If unchecking benchmark, clear target time
+    if (!block.isBenchmark) {
+      block.targetSeconds = undefined;
+    }
+    
+    setParsedWorkouts(updated);
+  };
+
+  const toggleBlockMainWod = (dayIndex: number, blockIndex: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const block = updated[dayIndex].blocks[blockIndex];
+    block.isMainWod = !block.isMainWod;
+    
+    setParsedWorkouts(updated);
+  };
+
+  const updateTargetTime = (dayIndex: number, blockIndex: number, minutes: number, seconds: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const totalSeconds = (minutes * 60) + seconds;
+    updated[dayIndex].blocks[blockIndex].targetSeconds = totalSeconds > 0 ? totalSeconds : undefined;
+    
+    setParsedWorkouts(updated);
+  };
+
+  const saveWorkouts = () => {
+    if (!parsedWorkouts) return;
+    
+    setWeeklyWorkouts(parsedWorkouts);
+    setSuccess(`${parsedWorkouts.length} dia(s) de treino salvo(s) com sucesso!`);
+    setParsedWorkouts(null);
     setSpreadsheetText('');
   };
 
+  const cancelReview = () => {
+    setParsedWorkouts(null);
+  };
+
+  const formatTargetTime = (totalSeconds?: number) => {
+    if (!totalSeconds) return { minutes: '', seconds: '' };
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return { minutes: mins.toString(), seconds: secs.toString().padStart(2, '0') };
+  };
+
+  // Review phase UI
+  if (parsedWorkouts) {
+    return (
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={cancelReview}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-2xl">REVISAR TREINOS</h1>
+                <p className="text-sm text-muted-foreground">
+                  Configure benchmarks e WODs principais
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          {/* Info banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20"
+          >
+            <p className="text-sm text-primary">
+              <Trophy className="w-4 h-4 inline mr-2" />
+              Marque WODs como <strong>benchmark</strong> para rastrear evolução. Benchmarks exigem tempo do atleta.
+            </p>
+          </motion.div>
+
+          {/* Days list */}
+          <div className="space-y-4">
+            {parsedWorkouts.map((workout, dayIndex) => (
+              <motion.div
+                key={workout.day}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: dayIndex * 0.05 }}
+                className="card-elevated rounded-lg overflow-hidden"
+              >
+                {/* Day header */}
+                <button
+                  onClick={() => toggleDayExpanded(workout.day)}
+                  className="w-full px-6 py-4 flex items-center justify-between bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-display text-xl">{DAY_NAMES[workout.day]}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {workout.blocks.length} bloco(s)
+                    </span>
+                    {workout.blocks.some(b => b.isBenchmark) && (
+                      <span className="px-2 py-0.5 text-xs font-bold bg-status-excellent/20 text-status-excellent rounded">
+                        BENCHMARK
+                      </span>
+                    )}
+                  </div>
+                  {expandedDays.has(workout.day) ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+
+                {/* Blocks */}
+                <AnimatePresence>
+                  {expandedDays.has(workout.day) && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 space-y-4">
+                        {workout.blocks.map((block, blockIndex) => (
+                          <div
+                            key={block.id}
+                            className={`p-4 rounded-lg border ${
+                              block.isBenchmark 
+                                ? 'border-status-excellent/50 bg-status-excellent/5' 
+                                : 'border-border'
+                            }`}
+                          >
+                            {/* Block header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-display text-sm">{block.title}</span>
+                                <span className="px-2 py-0.5 text-xs bg-secondary rounded text-muted-foreground">
+                                  {block.type}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Block content preview */}
+                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap mb-4 max-h-32 overflow-y-auto">
+                              {block.content}
+                            </pre>
+
+                            {/* Block options */}
+                            <div className="space-y-3 pt-3 border-t border-border">
+                              {/* Main WOD toggle */}
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={block.isMainWod || false}
+                                  onChange={() => toggleBlockMainWod(dayIndex, blockIndex)}
+                                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                />
+                                <span className="text-sm">WOD principal do dia</span>
+                              </label>
+
+                              {/* Benchmark toggle */}
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={block.isBenchmark || false}
+                                  onChange={() => toggleBlockBenchmark(dayIndex, blockIndex)}
+                                  className="w-4 h-4 rounded border-border text-status-excellent focus:ring-status-excellent"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-status-excellent" />
+                                  <span className="text-sm">WOD é benchmark (mede evolução)</span>
+                                </div>
+                              </label>
+
+                              {/* Target time (only if benchmark) */}
+                              {block.isBenchmark && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  className="ml-7 mt-2"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Clock className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">Tempo alvo:</span>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="180"
+                                        value={formatTargetTime(block.targetSeconds).minutes}
+                                        onChange={(e) => {
+                                          const mins = parseInt(e.target.value) || 0;
+                                          const secs = block.targetSeconds ? block.targetSeconds % 60 : 0;
+                                          updateTargetTime(dayIndex, blockIndex, mins, secs);
+                                        }}
+                                        placeholder="00"
+                                        className="w-16 px-2 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                      />
+                                      <span className="text-muted-foreground">:</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="59"
+                                        value={formatTargetTime(block.targetSeconds).seconds}
+                                        onChange={(e) => {
+                                          const secs = parseInt(e.target.value) || 0;
+                                          const mins = block.targetSeconds ? Math.floor(block.targetSeconds / 60) : 0;
+                                          updateTargetTime(dayIndex, blockIndex, mins, secs);
+                                        }}
+                                        placeholder="00"
+                                        className="w-16 px-2 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                      />
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-2 ml-7">
+                                    ↳ Exigir tempo do atleta para gerar feedback
+                                  </p>
+                                </motion.div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 flex flex-col sm:flex-row gap-4"
+          >
+            <button
+              onClick={saveWorkouts}
+              className="flex-1 font-display text-xl tracking-wider px-8 py-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-3"
+            >
+              <Save className="w-5 h-5" />
+              SALVAR TREINOS
+            </button>
+            <button
+              onClick={cancelReview}
+              className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
+            >
+              Voltar e Editar
+            </button>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // Input phase UI
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -342,6 +639,25 @@ export function AdminSpreadsheet() {
             <li>• Use <strong>---</strong> ou linha em branco para separar dias</li>
             <li>• Inclua CAP e referências de tempo para WODs principais</li>
             <li>• Emojis e formatação livre são aceitos</li>
+          </ul>
+        </motion.div>
+
+        {/* Benchmark info */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-4 p-6 rounded-lg bg-status-excellent/10 border border-status-excellent/20"
+        >
+          <h3 className="font-display text-lg mb-3 flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-status-excellent" />
+            BENCHMARKS
+          </h3>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>• Após processar, você poderá marcar WODs como <strong>benchmark</strong></li>
+            <li>• Benchmarks rastreiam evolução do atleta ao longo do tempo</li>
+            <li>• Atletas são obrigados a registrar tempo em benchmarks</li>
+            <li>• Configure um tempo alvo para classificação de performance</li>
           </ul>
         </motion.div>
       </main>
