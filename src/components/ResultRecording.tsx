@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
 
 export function ResultRecording() {
   const { selectedWorkout, setCurrentView, addWorkoutResult, athleteConfig } = useOutlierStore();
@@ -21,8 +21,17 @@ export function ResultRecording() {
     return null;
   }
 
+  // Check if this is a benchmark WOD
+  const isBenchmark = mainWod.isBenchmark || false;
+  const hasTargetTime = mainWod.targetSeconds !== undefined;
+
   const handleSubmit = () => {
     if (completed === null) return;
+
+    // For benchmarks, time is required when completed
+    if (isBenchmark && completed && !isValidTime()) {
+      return;
+    }
 
     const timeInSeconds = completed
       ? (parseInt(minutes || '0') * 60) + parseInt(seconds || '0')
@@ -44,6 +53,16 @@ export function ResultRecording() {
     const mins = parseInt(minutes || '0');
     const secs = parseInt(seconds || '0');
     return mins > 0 || secs > 0;
+  };
+
+  // For benchmarks, always show time input when completed
+  const showTimeInput = completed === true;
+  const timeRequired = isBenchmark && completed;
+
+  const formatTargetTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
   };
 
   return (
@@ -71,11 +90,25 @@ export function ResultRecording() {
           className="w-full max-w-md"
         >
           {/* WOD Info */}
-          <div className="card-elevated p-6 mb-8 border-l-4 border-l-primary">
-            <h3 className="font-display text-xl mb-2">{mainWod.title}</h3>
+          <div className={`card-elevated p-6 mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-display text-xl">{mainWod.title}</h3>
+              {isBenchmark && (
+                <span className="px-2 py-0.5 text-xs font-bold bg-status-excellent/20 text-status-excellent rounded">
+                  BENCHMARK
+                </span>
+              )}
+            </div>
             <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
               {mainWod.content}
             </pre>
+            {hasTargetTime && mainWod.targetSeconds && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Tempo alvo: <span className="font-display text-foreground">{formatTargetTime(mainWod.targetSeconds)}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Completed Question */}
@@ -112,13 +145,21 @@ export function ResultRecording() {
           </div>
 
           {/* Time Input (only if completed) */}
-          {completed && (
+          {showTimeInput && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               className="mb-8"
             >
-              <h2 className="font-display text-2xl mb-4">TEMPO DO WOD</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="font-display text-2xl">TEMPO DO WOD</h2>
+                {timeRequired && (
+                  <span className="flex items-center gap-1 text-xs text-status-attention">
+                    <AlertCircle className="w-3 h-3" />
+                    obrigatório
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <label className="text-sm text-muted-foreground mb-2 block">Minutos</label>
@@ -146,10 +187,27 @@ export function ResultRecording() {
                   />
                 </div>
               </div>
+              
+              {/* Reference time display */}
               {mainWod.referenceTime && athleteConfig && (
                 <p className="text-sm text-muted-foreground mt-3">
                   Referência para {athleteConfig.level.replace('_', ' ')}: {' '}
                   {Math.floor(mainWod.referenceTime[athleteConfig.level] / 60)}:{String(mainWod.referenceTime[athleteConfig.level] % 60).padStart(2, '0')}
+                </p>
+              )}
+
+              {/* Target time display for benchmarks */}
+              {hasTargetTime && mainWod.targetSeconds && !mainWod.referenceTime && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  Tempo alvo: {formatTargetTime(mainWod.targetSeconds)}
+                </p>
+              )}
+
+              {/* Benchmark time requirement warning */}
+              {timeRequired && !isValidTime() && (
+                <p className="text-sm text-status-attention mt-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Benchmarks requerem registro de tempo para gerar feedback
                 </p>
               )}
             </motion.div>
@@ -158,16 +216,16 @@ export function ResultRecording() {
           {/* Submit Button */}
           <motion.button
             onClick={handleSubmit}
-            disabled={completed === null || (completed && !isValidTime())}
+            disabled={completed === null || (timeRequired && !isValidTime())}
             className={`
               w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all
-              ${completed !== null && (completed ? isValidTime() : true)
+              ${completed !== null && (!timeRequired || isValidTime())
                 ? 'bg-primary text-primary-foreground hover:opacity-90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'
               }
             `}
-            whileHover={completed !== null ? { scale: 1.01 } : {}}
-            whileTap={completed !== null ? { scale: 0.99 } : {}}
+            whileHover={completed !== null && (!timeRequired || isValidTime()) ? { scale: 1.01 } : {}}
+            whileTap={completed !== null && (!timeRequired || isValidTime()) ? { scale: 0.99 } : {}}
           >
             VER FEEDBACK
           </motion.button>

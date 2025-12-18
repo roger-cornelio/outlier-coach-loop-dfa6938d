@@ -1,93 +1,71 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import type { PerformanceRating, CoachStyle } from '@/types/outlier';
-import { Flame, CheckCircle, AlertTriangle, XCircle, ArrowLeft, Home, Settings } from 'lucide-react';
+import type { PerformanceBucket, CoachStyle } from '@/types/outlier';
+import { Flame, CheckCircle, AlertTriangle, XCircle, ArrowLeft, Home, Settings, Crown, Zap, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-const ratingConfig: Record<PerformanceRating, { icon: React.ReactNode; label: string; colorClass: string }> = {
-  excellent: {
-    icon: <Flame className="w-12 h-12" />,
-    label: 'EXCELENTE',
+const bucketConfig: Record<PerformanceBucket, { icon: React.ReactNode; label: string; colorClass: string }> = {
+  ELITE: {
+    icon: <Crown className="w-12 h-12" />,
+    label: 'ELITE',
     colorClass: 'text-status-excellent',
   },
-  good: {
-    icon: <CheckCircle className="w-12 h-12" />,
-    label: 'DENTRO DO ESPERADO',
+  STRONG: {
+    icon: <Flame className="w-12 h-12" />,
+    label: 'STRONG',
     colorClass: 'text-status-good',
   },
-  attention: {
+  OK: {
+    icon: <CheckCircle className="w-12 h-12" />,
+    label: 'OK',
+    colorClass: 'text-primary',
+  },
+  TOUGH: {
     icon: <AlertTriangle className="w-12 h-12" />,
-    label: 'ATENÇÃO',
+    label: 'TOUGH',
     colorClass: 'text-status-attention',
   },
-  below: {
+  DNF: {
     icon: <XCircle className="w-12 h-12" />,
-    label: 'ABAIXO DO ESPERADO',
+    label: 'DNF',
     colorClass: 'text-status-below',
   },
 };
 
-const coachMessages: Record<CoachStyle, Record<PerformanceRating, { main: string; suggestions: string[] }>> = {
+// Fallback messages when AI is unavailable
+const fallbackMessages: Record<CoachStyle, Record<PerformanceBucket, string>> = {
   IRON: {
-    excellent: {
-      main: 'Resultado sólido. Você provou que está no caminho certo. Não relaxe.',
-      suggestions: ['Mantenha a consistência', 'Aumente a intensidade no próximo ciclo', 'Registre esse benchmark'],
-    },
-    good: {
-      main: 'Aceitável. Você cumpriu o esperado. Agora é hora de superar.',
-      suggestions: ['Revise seu pacing', 'Trabalhe os pontos fracos', 'Próximo treino: sem desculpas'],
-    },
-    attention: {
-      main: 'Não foi bom o suficiente. Identifique onde perdeu tempo e corrija.',
-      suggestions: ['Analise cada transição', 'Foque na respiração', 'Descanse adequadamente'],
-    },
-    below: {
-      main: 'Abaixo do aceitável. Você é melhor que isso. Prove.',
-      suggestions: ['Revise alimentação e sono', 'Considere reduzir volume temporariamente', 'Foco total no próximo'],
-    },
+    ELITE: 'Performance sólida. Você provou que está no caminho certo. Não relaxe.',
+    STRONG: 'Você fez o que precisava ser feito. Agora é hora de superar.',
+    OK: 'Aceitável. Mas aceitável não é o objetivo.',
+    TOUGH: 'Treino pesado. Se você sobreviveu, está mais forte.',
+    DNF: 'Você não terminou. Identifique onde perdeu e corrija.',
   },
   PULSE: {
-    excellent: {
-      main: 'Incrível! Você se superou hoje. Esse é o resultado de consistência e dedicação.',
-      suggestions: ['Celebre essa conquista', 'Use isso como motivação', 'Continue o bom trabalho'],
-    },
-    good: {
-      main: 'Bom trabalho! Você está evoluindo no ritmo certo. Continue firme.',
-      suggestions: ['Pequenos ajustes fazem diferença', 'Confie no processo', 'O próximo vai ser ainda melhor'],
-    },
-    attention: {
-      main: 'Dia difícil, mas você terminou. Isso já é uma vitória. Vamos analisar juntos.',
-      suggestions: ['Todo treino ensina algo', 'Como estava seu corpo hoje?', 'Descanso é parte do treino'],
-    },
-    below: {
-      main: 'Nem todo dia é perfeito, e tudo bem. O importante é não desistir.',
-      suggestions: ['Ouça seu corpo', 'Amanhã é uma nova chance', 'Você é mais forte do que pensa'],
-    },
+    ELITE: 'Incrível! Você se superou hoje. Esse é o resultado de consistência e dedicação.',
+    STRONG: 'Bom trabalho! Você está evoluindo no ritmo certo. Continue firme.',
+    OK: 'Você completou, e isso já conta. O próximo vai ser melhor.',
+    TOUGH: 'Dia difícil, mas você terminou. Isso já é uma vitória.',
+    DNF: 'Nem todo dia é perfeito, e tudo bem. O importante é não desistir.',
   },
   SPARK: {
-    excellent: {
-      main: '🔥 BOOOOM! Você destruiu esse WOD! Isso sim é performance de outlier!',
-      suggestions: ['Hora de comemorar! 🎉', 'Print no story, você merece', 'Próximo desafio: manter esse nível'],
-    },
-    good: {
-      main: 'Muito bom! Treino sólido, atleta! Você está no jogo! 💪',
-      suggestions: ['Bora para o próximo!', 'Cada treino conta', 'A evolução é real'],
-    },
-    attention: {
-      main: 'Ei, nem todo dia a gente arrebenta, né? Faz parte! O importante é ter feito. 🤝',
-      suggestions: ['Descansa direito hoje', 'Hidratação em dia?', 'Amanhã você volta mais forte'],
-    },
-    below: {
-      main: 'Opa, dia complicado! Mas calma, campeão não é feito em um dia. 💫',
-      suggestions: ['Respira fundo', 'Analisa o que rolou', 'Volta com tudo no próximo!'],
-    },
+    ELITE: '🔥 BOOOOM! Você destruiu esse WOD! Isso sim é performance de outlier!',
+    STRONG: 'Muito bom! 💪 Treino sólido, atleta! Você está no jogo!',
+    OK: 'Check feito! 💪 Treino completado, é isso que importa.',
+    TOUGH: 'Ufa 😅 treino puxado! Mas você passou por ele!',
+    DNF: 'Dia complicado! Mas calma, campeão não é feito em um dia. 💫',
   },
 };
 
 export function PerformanceFeedback() {
   const { selectedWorkout, workoutResults, athleteConfig, setCurrentView } = useOutlierStore();
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [aiBucket, setAiBucket] = useState<PerformanceBucket | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const feedback = useMemo(() => {
+  const resultData = useMemo(() => {
     if (!selectedWorkout || !athleteConfig) return null;
 
     const mainWod = selectedWorkout.blocks.find((b) => b.isMainWod);
@@ -99,32 +77,87 @@ export function PerformanceFeedback() {
 
     if (!latestResult) return null;
 
-    let rating: PerformanceRating = 'good';
-
-    if (!latestResult.completed) {
-      rating = 'below';
-    } else if (latestResult.timeInSeconds && mainWod.referenceTime) {
-      const reference = mainWod.referenceTime[athleteConfig.level];
-      const ratio = latestResult.timeInSeconds / reference;
-
-      if (ratio <= 0.9) rating = 'excellent';
-      else if (ratio <= 1.1) rating = 'good';
-      else if (ratio <= 1.3) rating = 'attention';
-      else rating = 'below';
-    }
-
-    const messages = coachMessages[athleteConfig.coachStyle][rating];
+    // Get previous times for this workout (for historical comparison)
+    const previousTimes = workoutResults
+      .filter((r) => r.blockId === mainWod.id && r.timeInSeconds && r.completed)
+      .map((r) => r.timeInSeconds!)
+      .slice(0, 10);
 
     return {
-      rating,
-      time: latestResult.timeInSeconds,
-      completed: latestResult.completed,
+      mainWod,
+      result: latestResult,
+      previousTimes,
+      isBenchmark: mainWod.isBenchmark,
+      targetSeconds: mainWod.targetSeconds,
       referenceTime: mainWod.referenceTime?.[athleteConfig.level],
-      messages,
     };
   }, [selectedWorkout, workoutResults, athleteConfig]);
 
-  if (!feedback || !athleteConfig) {
+  // Fetch AI-generated feedback
+  useEffect(() => {
+    if (!resultData || !athleteConfig) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchFeedback = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-performance-feedback', {
+          body: {
+            coachStyle: athleteConfig.coachStyle,
+            gender: athleteConfig.sexo,
+            completed: resultData.result.completed,
+            timeInSeconds: resultData.result.timeInSeconds,
+            targetSeconds: resultData.targetSeconds || resultData.referenceTime,
+            isBenchmark: resultData.isBenchmark,
+            workoutTitle: resultData.mainWod.title,
+            workoutContent: resultData.mainWod.content,
+            athleteLevel: athleteConfig.level,
+            previousTimes: resultData.previousTimes,
+          },
+        });
+
+        if (error) {
+          console.error('Error fetching feedback:', error);
+          // Use fallback
+          setAiBucket(classifyPerformanceLocal(resultData));
+          setAiFeedback(null);
+        } else {
+          setAiFeedback(data.feedback);
+          setAiBucket(data.bucket as PerformanceBucket);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        setAiBucket(classifyPerformanceLocal(resultData));
+        setAiFeedback(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFeedback();
+  }, [resultData, athleteConfig]);
+
+  // Local classification fallback
+  function classifyPerformanceLocal(data: typeof resultData): PerformanceBucket {
+    if (!data) return 'OK';
+    if (!data.result.completed) return 'DNF';
+    if (!data.result.timeInSeconds) return 'OK';
+
+    const target = data.targetSeconds || data.referenceTime;
+    if (target) {
+      const ratio = data.result.timeInSeconds / target;
+      if (ratio <= 0.85) return 'ELITE';
+      if (ratio <= 0.95) return 'STRONG';
+      if (ratio <= 1.10) return 'OK';
+      return 'TOUGH';
+    }
+
+    return 'OK';
+  }
+
+  if (!resultData || !athleteConfig) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Nenhum resultado para exibir</p>
@@ -132,13 +165,17 @@ export function PerformanceFeedback() {
     );
   }
 
-  const config = ratingConfig[feedback.rating];
+  const bucket = aiBucket || classifyPerformanceLocal(resultData);
+  const config = bucketConfig[bucket];
+  const feedbackMessage = aiFeedback || fallbackMessages[athleteConfig.coachStyle][bucket];
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
+
+  const targetTime = resultData.targetSeconds || resultData.referenceTime;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -159,98 +196,140 @@ export function PerformanceFeedback() {
 
       {/* Content */}
       <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md text-center"
-        >
-          {/* Rating Icon */}
+        {isLoading ? (
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.2 }}
-            className={`inline-flex p-6 rounded-full bg-secondary mb-6 ${config.colorClass}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center gap-4"
           >
-            {config.icon}
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Analisando performance...</p>
           </motion.div>
-
-          {/* Rating Label */}
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className={`font-display text-4xl mb-2 ${config.colorClass}`}
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md text-center"
           >
-            {config.label}
-          </motion.h2>
+            {/* Bucket Icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: 0.2 }}
+              className={`inline-flex p-6 rounded-full bg-secondary mb-6 ${config.colorClass}`}
+            >
+              {config.icon}
+            </motion.div>
 
-          {/* Time Comparison */}
-          {feedback.time && feedback.referenceTime && (
+            {/* Bucket Label */}
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className={`font-display text-4xl mb-2 ${config.colorClass}`}
+            >
+              {config.label}
+            </motion.h2>
+
+            {/* Benchmark badge */}
+            {resultData.isBenchmark && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                className="mb-4"
+              >
+                <span className="px-3 py-1 text-xs font-bold bg-status-excellent/20 text-status-excellent rounded-full">
+                  BENCHMARK WOD
+                </span>
+              </motion.div>
+            )}
+
+            {/* Time Comparison */}
+            {resultData.result.timeInSeconds && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-6"
+              >
+                <p className="text-3xl font-display mb-1">{formatTime(resultData.result.timeInSeconds)}</p>
+                {targetTime && (
+                  <p className="text-muted-foreground text-sm">
+                    {resultData.targetSeconds ? 'Tempo alvo' : 'Referência'}: {formatTime(targetTime)}
+                    {resultData.result.timeInSeconds < targetTime && (
+                      <span className="ml-2 text-status-good">
+                        ({formatTime(targetTime - resultData.result.timeInSeconds)} mais rápido)
+                      </span>
+                    )}
+                    {resultData.result.timeInSeconds > targetTime && (
+                      <span className="ml-2 text-status-attention">
+                        ({formatTime(resultData.result.timeInSeconds - targetTime)} mais lento)
+                      </span>
+                    )}
+                  </p>
+                )}
+              </motion.div>
+            )}
+
+            {/* DNF indicator */}
+            {!resultData.result.completed && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-6"
+              >
+                <p className="text-lg text-status-below font-display">NÃO COMPLETOU</p>
+              </motion.div>
+            )}
+
+            {/* Coach Feedback */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="card-elevated p-6 mb-6 text-left"
+            >
+              <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                {feedbackMessage}
+              </p>
+            </motion.div>
+
+            {/* Coach Badge */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-sm text-muted-foreground mb-8 flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Coach {athleteConfig.coachStyle}
+            </motion.p>
+
+            {/* Actions */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mb-6"
+              transition={{ delay: 0.7 }}
+              className="flex gap-4"
             >
-              <p className="text-2xl font-display mb-1">{formatTime(feedback.time)}</p>
-              <p className="text-muted-foreground text-sm">
-                Referência: {formatTime(feedback.referenceTime)}
-              </p>
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-primary text-primary-foreground font-display text-lg hover:opacity-90 transition-opacity"
+              >
+                <Home className="w-5 h-5" />
+                DASHBOARD
+              </button>
+              <button
+                onClick={() => setCurrentView('config')}
+                className="px-6 py-4 rounded-lg border border-border hover:bg-secondary transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
             </motion.div>
-          )}
-
-          {/* Coach Message */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="card-elevated p-6 mb-6 text-left"
-          >
-            <p className="text-foreground mb-4 leading-relaxed">
-              {feedback.messages.main}
-            </p>
-            <ul className="space-y-2">
-              {feedback.messages.suggestions.map((suggestion, index) => (
-                <li key={index} className="flex items-start gap-2 text-muted-foreground text-sm">
-                  <span className="text-primary mt-0.5">•</span>
-                  {suggestion}
-                </li>
-              ))}
-            </ul>
           </motion.div>
-
-          {/* Coach Badge */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-sm text-muted-foreground mb-8"
-          >
-            Coach {athleteConfig.coachStyle}
-          </motion.p>
-
-          {/* Actions */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="flex gap-4"
-          >
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-primary text-primary-foreground font-display text-lg hover:opacity-90 transition-opacity"
-            >
-              <Home className="w-5 h-5" />
-              DASHBOARD
-            </button>
-            <button
-              onClick={() => setCurrentView('config')}
-              className="px-6 py-4 rounded-lg border border-border hover:bg-secondary transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </motion.div>
-        </motion.div>
+        )}
       </main>
     </div>
   );
