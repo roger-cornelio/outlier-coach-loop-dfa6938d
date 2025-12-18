@@ -124,6 +124,7 @@ export function Dashboard() {
               content: b.content,
             })),
             dayName: DAY_NAMES[currentWorkout.day],
+            sex: athleteConfig.sexo,
           },
         });
 
