@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      benchmark_results: {
+        Row: {
+          athlete_level: string | null
+          benchmark_id: string | null
+          block_id: string
+          bucket: string | null
+          completed: boolean
+          created_at: string
+          id: string
+          score: number | null
+          time_in_seconds: number | null
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          athlete_level?: string | null
+          benchmark_id?: string | null
+          block_id: string
+          bucket?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          score?: number | null
+          time_in_seconds?: number | null
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          athlete_level?: string | null
+          benchmark_id?: string | null
+          block_id?: string
+          bucket?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          score?: number | null
+          time_in_seconds?: number | null
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

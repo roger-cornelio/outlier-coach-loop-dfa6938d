@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, Check, X, AlertCircle, Info } from 'lucide-react';
-import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes } from '@/utils/benchmarkVariants';
+import { ArrowLeft, Check, X, AlertCircle, Info, Loader2 } from 'lucide-react';
+import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, classifyBenchmarkPerformance, calculateBenchmarkScore } from '@/utils/benchmarkVariants';
+import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 
 export function ResultRecording() {
-  const { selectedWorkout, setCurrentView, addWorkoutResult, athleteConfig } = useOutlierStore();
+  const { selectedWorkout, setCurrentView, athleteConfig } = useOutlierStore();
+  const { saveBenchmarkResult } = useBenchmarkResults();
   const [completed, setCompleted] = useState<boolean | null>(null);
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!selectedWorkout) {
     setCurrentView('dashboard');
@@ -31,26 +34,49 @@ export function ResultRecording() {
   const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig?.level);
   const hasTargetTime = effectiveTargetRange?.max && effectiveTargetRange.max > 0;
 
-  const handleSubmit = () => {
-    if (completed === null) return;
+  const handleSubmit = async () => {
+    if (completed === null || isSaving) return;
 
     // For benchmarks, time is required when completed
     if (isBenchmark && completed && !isValidTime()) {
       return;
     }
 
+    setIsSaving(true);
+
     const timeInSeconds = completed
       ? (parseInt(minutes || '0') * 60) + parseInt(seconds || '0')
       : undefined;
 
-    addWorkoutResult({
-      workoutId: selectedWorkout.day,
-      blockId: mainWod.id,
+    // Calculate score and bucket for benchmarks
+    let score: number | undefined;
+    let bucket: string | undefined;
+    
+    if (isBenchmark && timeInSeconds) {
+      bucket = classifyBenchmarkPerformance(
+        timeInSeconds,
+        effectiveTargetRange,
+        mainWod.benchmarkDirection || 'lower_is_better'
+      );
+      score = calculateBenchmarkScore(
+        timeInSeconds,
+        effectiveTargetRange,
+        mainWod.benchmarkDirection || 'lower_is_better',
+        mainWod.benchmarkWeight || 1
+      );
+    }
+
+    await saveBenchmarkResult({
+      workout_id: selectedWorkout.day,
+      block_id: mainWod.id,
+      benchmark_id: mainWod.benchmarkId,
       completed,
-      timeInSeconds,
-      date: new Date().toISOString(),
+      time_in_seconds: timeInSeconds,
+      score,
+      bucket,
     });
 
+    setIsSaving(false);
     setCurrentView('feedback');
   };
 
@@ -230,18 +256,25 @@ export function ResultRecording() {
           {/* Submit Button */}
           <motion.button
             onClick={handleSubmit}
-            disabled={completed === null || (timeRequired && !isValidTime())}
+            disabled={completed === null || (timeRequired && !isValidTime()) || isSaving}
             className={`
-              w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all
-              ${completed !== null && (!timeRequired || isValidTime())
+              w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all flex items-center justify-center gap-3
+              ${completed !== null && (!timeRequired || isValidTime()) && !isSaving
                 ? 'bg-primary text-primary-foreground hover:opacity-90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'
               }
             `}
-            whileHover={completed !== null && (!timeRequired || isValidTime()) ? { scale: 1.01 } : {}}
-            whileTap={completed !== null && (!timeRequired || isValidTime()) ? { scale: 0.99 } : {}}
+            whileHover={completed !== null && (!timeRequired || isValidTime()) && !isSaving ? { scale: 1.01 } : {}}
+            whileTap={completed !== null && (!timeRequired || isValidTime()) && !isSaving ? { scale: 0.99 } : {}}
           >
-            VER FEEDBACK
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                SALVANDO...
+              </>
+            ) : (
+              'VER FEEDBACK'
+            )}
           </motion.button>
         </motion.div>
       </main>
