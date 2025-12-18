@@ -8,6 +8,12 @@ const corsHeaders = {
 type PerformanceBucket = 'ELITE' | 'STRONG' | 'OK' | 'TOUGH' | 'DNF';
 type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 type Gender = 'masculino' | 'feminino';
+type WodType = 'engine' | 'strength' | 'skill' | 'mixed' | 'hyrox' | 'benchmark';
+
+interface TargetRange {
+  min: number;
+  max: number;
+}
 
 interface RequestBody {
   coachStyle: CoachStyle;
@@ -15,24 +21,38 @@ interface RequestBody {
   completed: boolean;
   timeInSeconds?: number;
   targetSeconds?: number;
+  targetRange?: TargetRange;
   isBenchmark?: boolean;
+  wodType?: WodType;
+  durationMinutes?: number;
   workoutTitle: string;
   workoutContent: string;
   athleteLevel: string;
-  previousTimes?: number[]; // Historical times for comparison
+  previousTimes?: number[];
 }
 
-// Classify performance into buckets
+// Classify performance into buckets using target range
 function classifyPerformance(
   completed: boolean,
   timeInSeconds?: number,
   targetSeconds?: number,
+  targetRange?: TargetRange,
   previousTimes?: number[]
 ): PerformanceBucket {
   if (!completed) return 'DNF';
   if (!timeInSeconds) return 'OK';
 
-  // If we have a target time
+  // If we have a target range (min/max), use it for classification
+  if (targetRange && targetRange.min > 0 && targetRange.max > 0) {
+    const mid = (targetRange.min + targetRange.max) / 2;
+    
+    if (timeInSeconds <= targetRange.min) return 'ELITE';
+    if (timeInSeconds <= mid) return 'STRONG';
+    if (timeInSeconds <= targetRange.max) return 'OK';
+    return 'TOUGH';
+  }
+
+  // If we have a single target time
   if (targetSeconds) {
     const ratio = timeInSeconds / targetSeconds;
     if (ratio <= 0.85) return 'ELITE';
@@ -45,7 +65,7 @@ function classifyPerformance(
   if (previousTimes && previousTimes.length > 0) {
     const personalBest = Math.min(...previousTimes);
     const ratio = timeInSeconds / personalBest;
-    if (ratio <= 0.95) return 'ELITE'; // New PR or very close
+    if (ratio <= 0.95) return 'ELITE';
     if (ratio <= 1.02) return 'STRONG';
     if (ratio <= 1.10) return 'OK';
     return 'TOUGH';
@@ -234,7 +254,10 @@ serve(async (req) => {
       completed,
       timeInSeconds,
       targetSeconds,
+      targetRange,
       isBenchmark,
+      wodType,
+      durationMinutes,
       workoutTitle,
       workoutContent,
       athleteLevel,
@@ -247,8 +270,8 @@ serve(async (req) => {
     }
 
     // Step 1: Classify performance
-    const bucket = classifyPerformance(completed, timeInSeconds, targetSeconds, previousTimes);
-    console.log(`Performance bucket: ${bucket}, Gender: ${gender}, Coach: ${coachStyle}`);
+    const bucket = classifyPerformance(completed, timeInSeconds, targetSeconds, targetRange, previousTimes);
+    console.log(`Performance bucket: ${bucket}, Gender: ${gender}, Coach: ${coachStyle}, WodType: ${wodType || 'not set'}`);
 
     // Step 2: Get predefined messages for this bucket
     const genderKey = gender === 'feminino' ? 'feminino' : 'masculino';

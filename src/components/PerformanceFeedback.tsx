@@ -89,6 +89,9 @@ export function PerformanceFeedback() {
       previousTimes,
       isBenchmark: mainWod.isBenchmark,
       targetSeconds: mainWod.targetSeconds,
+      targetRange: mainWod.targetRange,
+      wodType: mainWod.wodType,
+      durationMinutes: mainWod.durationMinutes,
       referenceTime: mainWod.referenceTime?.[athleteConfig.level],
     };
   }, [selectedWorkout, workoutResults, athleteConfig]);
@@ -110,7 +113,10 @@ export function PerformanceFeedback() {
             completed: resultData.result.completed,
             timeInSeconds: resultData.result.timeInSeconds,
             targetSeconds: resultData.targetSeconds || resultData.referenceTime,
+            targetRange: resultData.targetRange,
             isBenchmark: resultData.isBenchmark,
+            wodType: resultData.wodType,
+            durationMinutes: resultData.durationMinutes,
             workoutTitle: resultData.mainWod.title,
             workoutContent: resultData.mainWod.content,
             athleteLevel: athleteConfig.level,
@@ -145,6 +151,16 @@ export function PerformanceFeedback() {
     if (!data.result.completed) return 'DNF';
     if (!data.result.timeInSeconds) return 'OK';
 
+    // If we have a target range, use it
+    if (data.targetRange && data.targetRange.min > 0 && data.targetRange.max > 0) {
+      const mid = (data.targetRange.min + data.targetRange.max) / 2;
+      if (data.result.timeInSeconds <= data.targetRange.min) return 'ELITE';
+      if (data.result.timeInSeconds <= mid) return 'STRONG';
+      if (data.result.timeInSeconds <= data.targetRange.max) return 'OK';
+      return 'TOUGH';
+    }
+
+    // Fallback to single target
     const target = data.targetSeconds || data.referenceTime;
     if (target) {
       const ratio = data.result.timeInSeconds / target;

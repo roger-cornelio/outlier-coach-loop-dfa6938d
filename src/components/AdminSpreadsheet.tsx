@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save } from 'lucide-react';
-import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target } from 'lucide-react';
+import { DayOfWeek, DayWorkout, WorkoutBlock, WodType } from '@/types/outlier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -35,6 +35,15 @@ const DAY_NAMES: Record<DayOfWeek, string> = {
   sab: 'Sábado',
   dom: 'Domingo',
 };
+
+const WOD_TYPES: { value: WodType; label: string; icon: string }[] = [
+  { value: 'engine', label: 'Engine', icon: '🔥' },
+  { value: 'strength', label: 'Força', icon: '💪' },
+  { value: 'skill', label: 'Skill', icon: '🎯' },
+  { value: 'mixed', label: 'Misto', icon: '⚡' },
+  { value: 'hyrox', label: 'HYROX', icon: '🛷' },
+  { value: 'benchmark', label: 'Benchmark', icon: '🏆' },
+];
 
 function parseSpreadsheet(text: string): DayWorkout[] {
   const lines = text.split('\n');
@@ -238,9 +247,10 @@ export function AdminSpreadsheet() {
     const block = updated[dayIndex].blocks[blockIndex];
     block.isBenchmark = !block.isBenchmark;
     
-    // If unchecking benchmark, clear target time
+    // If unchecking benchmark, clear target time/range
     if (!block.isBenchmark) {
       block.targetSeconds = undefined;
+      block.targetRange = undefined;
     }
     
     setParsedWorkouts(updated);
@@ -252,6 +262,45 @@ export function AdminSpreadsheet() {
     const updated = [...parsedWorkouts];
     const block = updated[dayIndex].blocks[blockIndex];
     block.isMainWod = !block.isMainWod;
+    
+    setParsedWorkouts(updated);
+  };
+
+  const updateWodType = (dayIndex: number, blockIndex: number, wodType: WodType | undefined) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    updated[dayIndex].blocks[blockIndex].wodType = wodType;
+    
+    setParsedWorkouts(updated);
+  };
+
+  const updateDuration = (dayIndex: number, blockIndex: number, minutes: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    updated[dayIndex].blocks[blockIndex].durationMinutes = minutes > 0 ? minutes : undefined;
+    
+    setParsedWorkouts(updated);
+  };
+
+  const updateTargetRange = (dayIndex: number, blockIndex: number, field: 'min' | 'max', minutes: number, seconds: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const block = updated[dayIndex].blocks[blockIndex];
+    const totalSeconds = (minutes * 60) + seconds;
+    
+    if (!block.targetRange) {
+      block.targetRange = { min: 0, max: 0 };
+    }
+    
+    block.targetRange[field] = totalSeconds;
+    
+    // Also set targetSeconds to the max for backward compatibility
+    if (block.targetRange.max > 0) {
+      block.targetSeconds = block.targetRange.max;
+    }
     
     setParsedWorkouts(updated);
   };
@@ -391,17 +440,56 @@ export function AdminSpreadsheet() {
                             </pre>
 
                             {/* Block options */}
-                            <div className="space-y-3 pt-3 border-t border-border">
-                              {/* Main WOD toggle */}
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={block.isMainWod || false}
-                                  onChange={() => toggleBlockMainWod(dayIndex, blockIndex)}
-                                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                                />
-                                <span className="text-sm">WOD principal do dia</span>
-                              </label>
+                            <div className="space-y-4 pt-3 border-t border-border">
+                              {/* Row 1: Main WOD + WOD Type */}
+                              <div className="flex flex-wrap items-center gap-4">
+                                {/* Main WOD toggle */}
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={block.isMainWod || false}
+                                    onChange={() => toggleBlockMainWod(dayIndex, blockIndex)}
+                                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                  />
+                                  <span className="text-sm">WOD principal</span>
+                                </label>
+
+                                {/* WOD Type selector */}
+                                {block.isMainWod && (
+                                  <div className="flex items-center gap-2">
+                                    <Zap className="w-4 h-4 text-muted-foreground" />
+                                    <select
+                                      value={block.wodType || ''}
+                                      onChange={(e) => updateWodType(dayIndex, blockIndex, e.target.value as WodType || undefined)}
+                                      className="px-2 py-1 text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                      <option value="">Tipo do WOD</option>
+                                      {WOD_TYPES.map(wt => (
+                                        <option key={wt.value} value={wt.value}>
+                                          {wt.icon} {wt.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                                {/* Duration */}
+                                {block.isMainWod && (
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-muted-foreground" />
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="180"
+                                      value={block.durationMinutes || ''}
+                                      onChange={(e) => updateDuration(dayIndex, blockIndex, parseInt(e.target.value) || 0)}
+                                      placeholder="min"
+                                      className="w-16 px-2 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                    <span className="text-xs text-muted-foreground">min</span>
+                                  </div>
+                                )}
+                              </div>
 
                               {/* Benchmark toggle */}
                               <label className="flex items-center gap-3 cursor-pointer">
@@ -417,48 +505,89 @@ export function AdminSpreadsheet() {
                                 </div>
                               </label>
 
-                              {/* Target time (only if benchmark) */}
+                              {/* Target time range (only if benchmark) */}
                               {block.isBenchmark && (
                                 <motion.div
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
-                                  className="ml-7 mt-2"
+                                  className="ml-7 space-y-3"
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <Clock className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">Tempo alvo:</span>
-                                    <div className="flex items-center gap-2">
+                                  {/* Target range inputs */}
+                                  <div className="flex flex-wrap items-center gap-4">
+                                    <Target className="w-4 h-4 text-status-excellent" />
+                                    <span className="text-sm text-muted-foreground">Faixa de tempo alvo:</span>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap items-center gap-3 ml-6">
+                                    {/* Min time */}
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs text-muted-foreground">Min:</span>
                                       <input
                                         type="number"
                                         min="0"
                                         max="180"
-                                        value={formatTargetTime(block.targetSeconds).minutes}
+                                        value={block.targetRange?.min ? Math.floor(block.targetRange.min / 60) : ''}
                                         onChange={(e) => {
                                           const mins = parseInt(e.target.value) || 0;
-                                          const secs = block.targetSeconds ? block.targetSeconds % 60 : 0;
-                                          updateTargetTime(dayIndex, blockIndex, mins, secs);
+                                          const secs = block.targetRange?.min ? block.targetRange.min % 60 : 0;
+                                          updateTargetRange(dayIndex, blockIndex, 'min', mins, secs);
                                         }}
                                         placeholder="00"
-                                        className="w-16 px-2 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
                                       />
                                       <span className="text-muted-foreground">:</span>
                                       <input
                                         type="number"
                                         min="0"
                                         max="59"
-                                        value={formatTargetTime(block.targetSeconds).seconds}
+                                        value={block.targetRange?.min ? String(block.targetRange.min % 60).padStart(2, '0') : ''}
                                         onChange={(e) => {
                                           const secs = parseInt(e.target.value) || 0;
-                                          const mins = block.targetSeconds ? Math.floor(block.targetSeconds / 60) : 0;
-                                          updateTargetTime(dayIndex, blockIndex, mins, secs);
+                                          const mins = block.targetRange?.min ? Math.floor(block.targetRange.min / 60) : 0;
+                                          updateTargetRange(dayIndex, blockIndex, 'min', mins, secs);
                                         }}
                                         placeholder="00"
-                                        className="w-16 px-2 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                      />
+                                    </div>
+
+                                    <span className="text-muted-foreground">→</span>
+
+                                    {/* Max time */}
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs text-muted-foreground">Max:</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="180"
+                                        value={block.targetRange?.max ? Math.floor(block.targetRange.max / 60) : ''}
+                                        onChange={(e) => {
+                                          const mins = parseInt(e.target.value) || 0;
+                                          const secs = block.targetRange?.max ? block.targetRange.max % 60 : 0;
+                                          updateTargetRange(dayIndex, blockIndex, 'max', mins, secs);
+                                        }}
+                                        placeholder="00"
+                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                      />
+                                      <span className="text-muted-foreground">:</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="59"
+                                        value={block.targetRange?.max ? String(block.targetRange.max % 60).padStart(2, '0') : ''}
+                                        onChange={(e) => {
+                                          const secs = parseInt(e.target.value) || 0;
+                                          const mins = block.targetRange?.max ? Math.floor(block.targetRange.max / 60) : 0;
+                                          updateTargetRange(dayIndex, blockIndex, 'max', mins, secs);
+                                        }}
+                                        placeholder="00"
+                                        className="w-12 px-1 py-1 text-center text-sm rounded bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-primary"
                                       />
                                     </div>
                                   </div>
-                                  <p className="text-xs text-muted-foreground mt-2 ml-7">
-                                    ↳ Exigir tempo do atleta para gerar feedback
+
+                                  <p className="text-xs text-muted-foreground ml-6">
+                                    ↳ Exigir tempo do atleta • Classificação: ELITE ≤ min, STRONG ≤ média, OK ≤ max, TOUGH &gt; max
                                   </p>
                                 </motion.div>
                               )}
