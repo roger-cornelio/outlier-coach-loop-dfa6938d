@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { type TrainingLevel, type SessionDuration, OPTIONAL_EQUIPMENT_LIST } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Settings2, ChevronDown } from 'lucide-react';
+import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
+import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 
 // Níveis de treino - sem métricas visíveis
 const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
@@ -53,9 +54,9 @@ export function AthleteConfig() {
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
-  // Equipamentos opcionais que o atleta NÃO possui (por padrão assume que tem todos)
   const [unavailableEquipment, setUnavailableEquipment] = useState<string[]>(athleteConfig?.unavailableEquipment || []);
-  const [showEquipmentSettings, setShowEquipmentSettings] = useState(false);
+  const [otherNotes, setOtherNotes] = useState(athleteConfig?.equipmentNotes || '');
+  const [showAdaptModal, setShowAdaptModal] = useState(false);
 
   const handleSubmit = () => {
     if (!coachStyle) {
@@ -63,15 +64,11 @@ export function AthleteConfig() {
       return;
     }
 
-    // Salvar configuração - assume todos equipamentos disponíveis por padrão
-    const allEquipmentIds = OPTIONAL_EQUIPMENT_LIST.map(e => e.id);
-    const availableEquipment = allEquipmentIds.filter(id => !unavailableEquipment.includes(id));
-    
     const newConfig = {
       trainingLevel,
       sessionDuration: duration,
-      equipment: availableEquipment, // Equipamentos que o atleta TEM
-      unavailableEquipment, // Equipamentos que o atleta NÃO tem
+      unavailableEquipment,
+      equipmentNotes: otherNotes,
       coachStyle,
       altura: altura ? parseInt(altura) : undefined,
       peso: peso ? parseFloat(peso) : undefined,
@@ -93,13 +90,9 @@ export function AthleteConfig() {
     setCurrentView('dashboard');
   };
 
-  // Toggle de equipamento indisponível (marca/desmarca como NÃO disponível)
-  const toggleUnavailableEquipment = (equipId: string) => {
-    setUnavailableEquipment(prev => 
-      prev.includes(equipId) 
-        ? prev.filter(id => id !== equipId) // Agora tem o equipamento
-        : [...prev, equipId] // Não tem o equipamento
-    );
+  const handleSaveAdaptation = (config: AdaptationConfig) => {
+    setUnavailableEquipment(config.unavailableEquipment);
+    setOtherNotes(config.otherNotes);
   };
 
   return (
@@ -280,63 +273,6 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Optional Equipment Settings (collapsed by default) */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="mb-12"
-      >
-        <button
-          onClick={() => setShowEquipmentSettings(!showEquipmentSettings)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <Settings2 className="w-4 h-4" />
-          <span className="text-sm">Ajustes de equipamento (opcional)</span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showEquipmentSettings ? 'rotate-180' : ''}`} />
-        </button>
-        
-        <AnimatePresence>
-          {showEquipmentSettings && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <p className="text-xs text-muted-foreground mt-4 mb-3">
-                Por padrão, assumimos que você tem acesso a todos os equipamentos HYROX. 
-                Desmarque apenas os que você não possui.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {OPTIONAL_EQUIPMENT_LIST.map((equip) => {
-                  const isAvailable = !unavailableEquipment.includes(equip.id);
-                  return (
-                    <button
-                      key={equip.id}
-                      onClick={() => toggleUnavailableEquipment(equip.id)}
-                      className={`
-                        p-3 rounded-lg border transition-all duration-200 text-left
-                        ${isAvailable
-                          ? 'border-primary/50 bg-primary/5 text-foreground'
-                          : 'border-border bg-card text-muted-foreground opacity-50'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{equip.emoji}</span>
-                        <span className="text-sm">{equip.name}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.section>
-
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -351,12 +287,19 @@ export function AthleteConfig() {
           {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'IR PARA DASHBOARD'}
         </button>
         <button
-          onClick={() => setCurrentView('dashboard')}
+          onClick={() => setShowAdaptModal(true)}
           className="px-8 py-4 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
         >
-          Voltar
+          Adaptar Treino
         </button>
       </motion.div>
+
+      {/* Modal de Adaptação */}
+      <AdaptWorkoutModal
+        isOpen={showAdaptModal}
+        onClose={() => setShowAdaptModal(false)}
+        onSave={handleSaveAdaptation}
+      />
     </div>
   );
 }
