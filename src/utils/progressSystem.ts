@@ -3,9 +3,10 @@ import type { BenchmarkResult } from '@/hooks/useBenchmarkResults';
 
 // Level thresholds for progression (score required to advance)
 export const LEVEL_THRESHOLDS: Record<AthleteLevel, number> = {
-  iniciante: 70,
-  intermediario: 78,
-  avancado: 85,
+  iniciante: 35,
+  intermediario: 55,
+  avancado: 75,
+  hyrox_open: 90,
   hyrox_pro: 100,
 };
 
@@ -187,7 +188,7 @@ function calculateTrend(results: BenchmarkResult[]): 'improving' | 'stable' | 'd
 
 // Get next level
 function getNextLevel(current: AthleteLevel): AthleteLevel | null {
-  const order: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+  const order: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
   const currentIndex = order.indexOf(current);
   if (currentIndex >= order.length - 1) return null;
   return order[currentIndex + 1];
