@@ -8,14 +8,17 @@ import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { UserManagement } from '@/components/UserManagement';
 import { BenchmarksScreen } from '@/components/BenchmarksScreen';
+import { LevelBackground } from '@/components/LevelBackground';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
+import { useLevelTheme } from '@/hooks/useLevelTheme';
 
 const Index = () => {
   const { currentView } = useOutlierStore();
   
-  // Apply coach theme to the document
+  // Apply coach theme and level theme to the document
   useCoachTheme();
+  useLevelTheme();
 
   const renderView = () => {
     switch (currentView) {
@@ -44,18 +47,20 @@ const Index = () => {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={currentView}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="min-h-screen bg-background"
-      >
-        {renderView()}
-      </motion.div>
-    </AnimatePresence>
+    <LevelBackground>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentView}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="min-h-screen"
+        >
+          {renderView()}
+        </motion.div>
+      </AnimatePresence>
+    </LevelBackground>
   );
 };
 
