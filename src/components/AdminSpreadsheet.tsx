@@ -765,52 +765,57 @@ Use nomes dos dias, títulos e emojis livremente.`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-col sm:flex-row gap-4"
+          className="flex flex-col gap-4"
         >
-          <button
-            onClick={processSpreadsheet}
-            disabled={isProcessing}
-            className={`
-              flex-1 font-display text-xl tracking-wider px-8 py-5 rounded-lg
-              transition-all flex items-center justify-center gap-3
-              ${isProcessing
-                ? 'bg-muted text-muted-foreground cursor-wait'
-                : 'bg-primary text-primary-foreground hover:opacity-90'
-              }
-            `}
-          >
-            {isProcessing ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
-                  <Sparkles className="w-5 h-5" />
-                </motion.div>
-                PROCESSANDO...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                PROCESSAR PLANILHA
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => setCurrentView('welcome')}
-            className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
-          >
-            Voltar
-          </button>
-          {weeklyWorkouts.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={handleClearWorkouts}
-              className="px-8 py-5 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors font-body flex items-center justify-center gap-2"
+              onClick={processSpreadsheet}
+              disabled={isProcessing}
+              className={`
+                flex-1 font-display text-lg tracking-wider px-8 py-5 rounded-lg
+                transition-all flex items-center justify-center gap-3
+                ${isProcessing
+                  ? 'bg-muted text-muted-foreground cursor-wait'
+                  : 'bg-primary text-primary-foreground hover:opacity-90'
+                }
+              `}
             >
-              <Trash2 className="w-5 h-5" />
-              Limpar Planilha
+              {isProcessing ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                  </motion.div>
+                  ANALISANDO...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Analisar e Estruturar Programação
+                </>
+              )}
             </button>
-          )}
+            <button
+              onClick={() => setCurrentView('welcome')}
+              className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
+            >
+              Voltar
+            </button>
+            {weeklyWorkouts.length > 0 && (
+              <button
+                onClick={handleClearWorkouts}
+                className="px-8 py-5 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors font-body flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-5 h-5" />
+                Limpar Planilha
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            O sistema irá organizar dias, blocos de treino e identificar benchmarks automaticamente.
+          </p>
         </motion.div>
 
         {/* Info Card */}
