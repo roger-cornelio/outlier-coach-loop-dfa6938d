@@ -76,7 +76,7 @@ export function AthleteConfig() {
         className="flex items-center gap-4 mb-8"
       >
         <button
-          onClick={() => setCurrentView('welcome')}
+          onClick={() => setCurrentView('dashboard')}
           className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -241,7 +241,7 @@ export function AthleteConfig() {
           IR PARA DASHBOARD
         </button>
         <button
-          onClick={() => setCurrentView('welcome')}
+          onClick={() => setCurrentView('dashboard')}
           className="px-8 py-4 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
         >
           Voltar
