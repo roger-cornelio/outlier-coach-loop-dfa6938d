@@ -13,11 +13,12 @@ export interface AdaptationConfig {
   otherNotes: string;
 }
 
+// Apenas os 4 equipamentos HYROX que podem gerar adaptação
 const equipmentOptions = [
-  { id: 'ski', label: 'SKI', emoji: '⛷️' },
-  { id: 'remo', label: 'REMO', emoji: '🚣' },
+  { id: 'skierg', label: 'SKIERG', emoji: '⛷️' },
+  { id: 'rower', label: 'REMO', emoji: '🚣' },
+  { id: 'bike', label: 'ASSAULT BIKE', emoji: '🚴' },
   { id: 'sled', label: 'SLED', emoji: '🛷' },
-  { id: 'wallball', label: 'WALL BALL', emoji: '🏐' },
 ];
 
 export function AdaptWorkoutModal({ isOpen, onClose, onSave }: AdaptWorkoutModalProps) {
