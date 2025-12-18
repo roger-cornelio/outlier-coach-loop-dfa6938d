@@ -14,8 +14,15 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Bebas Neue', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
+        display: ['var(--font-display)', 'Bebas Neue', 'sans-serif'],
+        body: ['var(--font-body)', 'Inter', 'sans-serif'],
+        // Coach-specific fonts
+        'iron-display': ['Oswald', 'sans-serif'],
+        'iron-body': ['Inter', 'sans-serif'],
+        'spark-display': ['Fredoka', 'sans-serif'],
+        'spark-body': ['Fredoka', 'sans-serif'],
+        'pulse-display': ['Bebas Neue', 'sans-serif'],
+        'pulse-body': ['Nunito', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

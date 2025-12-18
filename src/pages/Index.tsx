@@ -8,9 +8,13 @@ import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { UserManagement } from '@/components/UserManagement';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useCoachTheme } from '@/hooks/useCoachTheme';
 
 const Index = () => {
   const { currentView } = useOutlierStore();
+  
+  // Apply coach theme to the document
+  useCoachTheme();
 
   const renderView = () => {
     switch (currentView) {
