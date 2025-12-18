@@ -180,7 +180,7 @@ export function WelcomeScreen() {
       >
         {/* Logo */}
         <motion.h1 
-          className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient mb-3"
+          className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo mb-3"
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
