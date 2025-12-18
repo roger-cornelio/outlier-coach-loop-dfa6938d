@@ -7,6 +7,7 @@ import { ResultRecording } from '@/components/ResultRecording';
 import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { UserManagement } from '@/components/UserManagement';
+import { BenchmarksScreen } from '@/components/BenchmarksScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
 
@@ -35,6 +36,8 @@ const Index = () => {
       case 'users':
       case 'userManagement':
         return <UserManagement />;
+      case 'benchmarks':
+        return <BenchmarksScreen />;
       default:
         return <WelcomeScreen />;
     }

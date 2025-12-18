@@ -5,8 +5,6 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
-import { BenchmarkHistory } from './BenchmarkHistory';
-import { EvolutionMilestones } from './EvolutionMilestones';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
 import { supabase } from '@/integrations/supabase/client';
@@ -293,6 +291,13 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentView('benchmarks')}
+                className="p-3 rounded-lg bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-colors"
+                title="Benchmarks & Evolução"
+              >
+                <Trophy className="w-5 h-5" />
+              </button>
               <button
                 onClick={() => setIsAdaptModalOpen(true)}
                 className={`
@@ -614,24 +619,6 @@ export function Dashboard() {
                 INICIAR TREINO
                 <ChevronRight className="w-6 h-6" />
               </motion.button>
-
-              {/* Evolution Milestones & Benchmark History Section */}
-              <div className="mt-8 grid gap-6 lg:grid-cols-2">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <EvolutionMilestones />
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <BenchmarkHistory />
-                </motion.div>
-              </div>
             </motion.div>
           ) : (
             <motion.div
