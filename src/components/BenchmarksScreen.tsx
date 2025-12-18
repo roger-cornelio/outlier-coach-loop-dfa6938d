@@ -5,7 +5,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
 import { AddResultModal } from './AddResultModal';
-import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useAthleteStatus, clearStatusHistory } from '@/hooks/useAthleteStatus';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { LEVEL_NAMES } from '@/types/outlier';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -54,8 +54,11 @@ export function BenchmarksScreen() {
         if (error) throw error;
       }
 
-      // Clear athlete status history
-      localStorage.removeItem('athlete-status-history');
+      // Clear athlete status history from localStorage
+      clearStatusHistory();
+      
+      // Trigger refresh to recalculate status with empty data
+      triggerExternalResultsRefresh();
       
       toast.success('Todos os resultados foram apagados');
       setRefreshKey(prev => prev + 1);
