@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, TrendingUp, Target, Calendar, Activity, Trophy, Clock, User } from 'lucide-react';
+import { CheckCircle2, AlertCircle, TrendingUp, Target, Calendar, Activity, Trophy, Clock, User, ChevronDown, Info } from 'lucide-react';
+import { useState } from 'react';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { 
@@ -10,6 +11,8 @@ import {
   getLevelScoreDescription,
   type StatusSource
 } from '@/utils/athleteStatusSystem';
+import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Gradient colors based on status
 const STATUS_GRADIENTS: Record<AthleteStatus, string> = {
@@ -45,6 +48,7 @@ function getPromotionBlockerMessage(
 
 export function StatusDisplay() {
   const statusData = useAthleteStatus();
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   if (statusData.loading) {
     return (
@@ -55,6 +59,7 @@ export function StatusDisplay() {
   const gradient = STATUS_GRADIENTS[statusData.status];
   const hasEnoughData = statusData.benchmarksUsed > 0 || statusData.validatingCompetition;
   const isValidatedByCompetition = statusData.statusSource === 'prova_oficial';
+  const { outlierScore } = statusData;
 
   return (
     <div className="card-elevated p-5 space-y-4">
@@ -74,20 +79,46 @@ export function StatusDisplay() {
           </h2>
         </div>
         
-        {/* Age Bracket & Confidence */}
-        <div className="text-right space-y-1">
-          {statusData.currentAgeBracket && (
-            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-              <User className="w-3 h-3" />
-              <span>Faixa: {statusData.currentAgeBracket}</span>
-            </div>
-          )}
-          <div>
-            <p className="text-xs text-muted-foreground">Confiança</p>
-            <span className={`text-sm font-medium ${CONFIDENCE_COLORS[statusData.confidence]}`}>
-              {CONFIDENCE_LABELS[statusData.confidence]}
+        {/* Outlier Score Display */}
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground mb-0.5">
+            {outlierScore.isProvisional ? 'Score Provisório' : 'Score OUTLIER'}
+          </p>
+          <div className="flex items-baseline gap-1 justify-end">
+            <span className={`text-3xl font-bold ${getScoreColorClass(outlierScore.score)}`}>
+              {outlierScore.score}
             </span>
+            <span className="text-muted-foreground text-sm">/100</span>
           </div>
+          <p className={`text-xs ${getScoreColorClass(outlierScore.score)}`}>
+            {getScoreDescription(outlierScore.score)}
+          </p>
+        </div>
+      </div>
+
+      {/* Score Ceiling Indicator (if official exists) */}
+      {outlierScore.ceiling !== null && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs text-amber-200">
+            Teto definido por prova oficial: <span className="font-semibold">{outlierScore.ceiling}</span>
+          </p>
+        </div>
+      )}
+
+      {/* Age Bracket & Confidence Row */}
+      <div className="flex items-center justify-between text-xs">
+        {statusData.currentAgeBracket && (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <User className="w-3 h-3" />
+            <span>Faixa: {statusData.currentAgeBracket}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground">Confiança:</span>
+          <span className={`font-medium ${CONFIDENCE_COLORS[statusData.confidence]}`}>
+            {CONFIDENCE_LABELS[statusData.confidence]}
+          </span>
         </div>
       </div>
 
@@ -149,9 +180,75 @@ export function StatusDisplay() {
         </div>
       )}
 
+      {/* Score Breakdown (Collapsible) */}
+      {hasEnoughData && (
+        <Collapsible open={showBreakdown} onOpenChange={setShowBreakdown}>
+          <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-center py-1">
+            <Info className="w-3 h-3" />
+            <span>Ver detalhes do score</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${showBreakdown ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="bg-secondary/30 rounded-lg p-3 mt-2 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Composição do Score</p>
+              
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-background/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground uppercase">Oficial</p>
+                  <p className={`text-sm font-semibold ${
+                    outlierScore.breakdown.officialAnchorScore !== null 
+                      ? getScoreColorClass(outlierScore.breakdown.officialAnchorScore) 
+                      : 'text-muted-foreground/50'
+                  }`}>
+                    {outlierScore.breakdown.officialAnchorScore ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">40%</p>
+                </div>
+                
+                <div className="bg-background/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground uppercase">Simulado</p>
+                  <p className={`text-sm font-semibold ${
+                    outlierScore.breakdown.simulatedScore !== null 
+                      ? getScoreColorClass(outlierScore.breakdown.simulatedScore) 
+                      : 'text-muted-foreground/50'
+                  }`}>
+                    {outlierScore.breakdown.simulatedScore ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {outlierScore.isProvisional ? '70%' : '50%'}
+                  </p>
+                </div>
+                
+                <div className="bg-background/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground uppercase">Benchmarks</p>
+                  <p className={`text-sm font-semibold ${
+                    outlierScore.breakdown.benchmarkScore !== null 
+                      ? getScoreColorClass(outlierScore.breakdown.benchmarkScore) 
+                      : 'text-muted-foreground/50'
+                  }`}>
+                    {outlierScore.breakdown.benchmarkScore ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {outlierScore.isProvisional ? '30%' : '10%'}
+                  </p>
+                </div>
+              </div>
+              
+              {outlierScore.isProvisional && (
+                <p className="text-[10px] text-amber-400 text-center mt-2">
+                  ⚠️ Score provisório — registre uma prova oficial para fixar seu teto
+                </p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Level Classification Explanation */}
       <div className="text-xs text-muted-foreground/80 bg-secondary/30 rounded-lg px-3 py-2">
-        <p>O nível indica a categoria em que você compete hoje, não sua colocação final.</p>
+        <p>
+          <strong>Status</strong> = onde você compete hoje. <strong>Score</strong> = quão perto do topo desse nível.
+        </p>
       </div>
 
       {/* Progress Ruler */}
@@ -159,9 +256,7 @@ export function StatusDisplay() {
         <>
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>
-                {isValidatedByCompetition ? 'Progresso no nível' : `Score: ${statusData.rulerScore}`}
-              </span>
+              <span>Progresso no nível</span>
               {statusData.nextStatus && !isValidatedByCompetition && (
                 <span>Próximo: {LEVEL_NAMES[statusData.nextStatus]}</span>
               )}
@@ -170,15 +265,15 @@ export function StatusDisplay() {
             <div className="relative h-3 bg-secondary/50 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${isValidatedByCompetition ? statusData.progressInStatus : statusData.progressToNextStatus}%` }}
+                animate={{ width: `${outlierScore.score}%` }}
                 transition={{ duration: 1, ease: 'easeOut' }}
                 className={`absolute inset-y-0 left-0 bg-gradient-to-r ${gradient} rounded-full`}
               />
-              {/* Threshold marker */}
-              {!isValidatedByCompetition && (
+              {/* Ceiling marker if exists */}
+              {outlierScore.ceiling !== null && (
                 <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-foreground/30"
-                  style={{ left: '100%' }}
+                  className="absolute top-0 bottom-0 w-0.5 bg-amber-500"
+                  style={{ left: `${outlierScore.ceiling}%` }}
                 />
               )}
             </div>
@@ -216,12 +311,6 @@ export function StatusDisplay() {
                 <Activity className="w-3 h-3" />
                 {statusData.benchmarksUsed} benchmarks
               </span>
-              {!isValidatedByCompetition && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {statusData.weeksWithGoodPerformance} sem. STRONG+
-                </span>
-              )}
             </div>
           </div>
 
