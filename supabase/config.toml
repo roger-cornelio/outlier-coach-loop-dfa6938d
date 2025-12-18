@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.adapt-workout]
 verify_jwt = false
+
+[functions.mandatory-adapt-workout]
+verify_jwt = false
+
+[functions.extract-time-from-screenshot]
+verify_jwt = false
