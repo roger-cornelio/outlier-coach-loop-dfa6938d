@@ -1,21 +1,69 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, History, Medal, Timer } from 'lucide-react';
+import { ArrowLeft, Trophy, History, Medal, Timer, Trash2 } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
 import { AddResultModal } from './AddResultModal';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { LEVEL_NAMES } from '@/types/outlier';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export function BenchmarksScreen() {
   const { setCurrentView, athleteConfig } = useOutlierStore();
   const { status } = useAthleteStatus();
+  const { clearHistory } = useBenchmarkResults();
+  const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isClearing, setIsClearing] = useState(false);
 
   const handleResultAdded = () => {
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleClearAllResults = async () => {
+    setIsClearing(true);
+    try {
+      // Clear local storage benchmarks
+      clearHistory();
+      
+      // Clear Supabase results if user is logged in
+      if (user?.id) {
+        const { error } = await supabase
+          .from('benchmark_results')
+          .delete()
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+      }
+
+      // Clear athlete status history
+      localStorage.removeItem('athlete-status-history');
+      
+      toast.success('Todos os resultados foram apagados');
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error clearing results:', error);
+      toast.error('Erro ao apagar resultados');
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   return (
@@ -45,8 +93,39 @@ export function BenchmarksScreen() {
               </div>
             </div>
             
-            {/* Add Result Button */}
-            <AddResultModal onResultAdded={handleResultAdded} />
+            <div className="flex items-center gap-2">
+              {/* Clear All Button */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10">
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Zerar</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Zerar todos os resultados?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá apagar permanentemente todos os seus benchmarks, simulados e provas oficiais. 
+                      Seu progresso e nível serão resetados. Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearAllResults}
+                      disabled={isClearing}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isClearing ? 'Apagando...' : 'Sim, apagar tudo'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Add Result Button */}
+              <AddResultModal onResultAdded={handleResultAdded} />
+            </div>
           </div>
         </div>
       </header>
