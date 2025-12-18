@@ -1,6 +1,13 @@
 export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 
-export type AthleteLevel = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_pro';
+// Status is now calculated from benchmarks, not user-defined
+export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_pro';
+
+// User preference for workout difficulty (offset applied to calculated status)
+export type TrainingDifficulty = 'leve' | 'padrao' | 'forte';
+
+// Legacy type alias for compatibility
+export type AthleteLevel = AthleteStatus;
 
 export type SessionDuration = 30 | 45 | 60 | 90 | 'ilimitado';
 
@@ -13,7 +20,8 @@ export interface Equipment {
 }
 
 export interface AthleteConfig {
-  level: AthleteLevel;
+  // User preference - NOT the actual status
+  trainingDifficulty: TrainingDifficulty;
   sessionDuration: SessionDuration;
   equipment: string[];
   coachStyle: CoachStyle;
@@ -140,9 +148,17 @@ export const DAY_NAMES: Record<DayOfWeek, string> = {
   dom: 'Domingo',
 };
 
-export const LEVEL_NAMES: Record<AthleteLevel, string> = {
+export const LEVEL_NAMES: Record<AthleteStatus, string> = {
   iniciante: 'Iniciante',
   intermediario: 'Intermediário',
   avancado: 'Avançado',
   hyrox_pro: 'HYROX PRO',
 };
+
+export const DIFFICULTY_NAMES: Record<TrainingDifficulty, string> = {
+  leve: 'Leve',
+  padrao: 'Padrão',
+  forte: 'Forte',
+};
+
+export const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];

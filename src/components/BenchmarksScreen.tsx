@@ -3,9 +3,12 @@ import { ArrowLeft, Trophy, History } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { LEVEL_NAMES } from '@/types/outlier';
 
 export function BenchmarksScreen() {
   const { setCurrentView, athleteConfig } = useOutlierStore();
+  const { status } = useAthleteStatus();
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +30,7 @@ export function BenchmarksScreen() {
               </h1>
               {athleteConfig && (
                 <p className="text-sm text-muted-foreground">
-                  {athleteConfig.level.replace('_', ' ').toUpperCase()} • Acompanhe seu progresso
+                  {LEVEL_NAMES[status]} • Acompanhe seu progresso
                 </p>
               )}
             </div>

@@ -122,12 +122,13 @@ function estimateFromContent(block: WorkoutBlock): number | null {
 export function calculateCalories(
   block: WorkoutBlock,
   athleteConfig: AthleteConfig | null,
-  _legacyDuration?: number | null // Ignored, kept for backward compatibility
+  level?: AthleteLevel // Explicit level parameter
 ): number | null {
   if (!athleteConfig) return null;
   
   // CRITICAL: Use ONLY block.durationMinutes for calories
-  const duration = getBlockDuration(block, athleteConfig.level);
+  const effectiveLevel = level;
+  const duration = getBlockDuration(block, effectiveLevel);
   if (!duration || duration <= 0) return null;
   
   // Need weight to calculate calories
@@ -138,7 +139,7 @@ export function calculateCalories(
   const baseKcal = BASE_KCAL_PER_MIN[block.type] || 8.0;
   
   // PSE factor (default to PSE 5 = factor 1.0)
-  const pse = getEffectivePSE(block, athleteConfig.level) || 5;
+  const pse = getEffectivePSE(block, effectiveLevel) || 5;
   const pseFactor = PSE_FACTORS[Math.min(10, Math.max(1, Math.round(pse)))] || 1.0;
   
   // Weight factor (normalized to 70kg baseline)

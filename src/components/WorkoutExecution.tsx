@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Clock, Play, Flame, Info, Timer, Target } from 'lucid
 import { getBlockDuration, getReferenceTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
 import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -216,27 +217,31 @@ export function WorkoutExecution() {
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
             
+            // Get effective level from status system
+            const effectiveLevel = athleteConfig?.trainingDifficulty === 'leve' ? 'iniciante' : 
+                                   athleteConfig?.trainingDifficulty === 'forte' ? 'avancado' : 'intermediario';
+            
             // Get effective content and notes based on athlete level
-            const effectiveContent = getEffectiveContent(block, athleteConfig?.level);
-            const effectiveNotes = getEffectiveNotes(block, athleteConfig?.level);
-            const effectiveTargetRange = getEffectiveTargetRange(block, athleteConfig?.level);
-            const effectivePSE = getEffectivePSE(block, athleteConfig?.level);
-            const effectivePace = getEffectiveReferencePace(block, athleteConfig?.level);
+            const effectiveContent = getEffectiveContent(block, effectiveLevel);
+            const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
+            const effectiveTargetRange = getEffectiveTargetRange(block, effectiveLevel);
+            const effectivePSE = getEffectivePSE(block, effectiveLevel);
+            const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
             // Block duration (used for calories) - from durationMinutes
             const blockDuration = athleteConfig 
-              ? getBlockDuration(block, athleteConfig.level)
+              ? getBlockDuration(block, effectiveLevel)
               : null;
             
             // Reference time (informational only) - estimated from content
             const referenceTime = athleteConfig 
-              ? getReferenceTimeForLevel(block, athleteConfig.level)
+              ? getReferenceTimeForLevel(block, effectiveLevel)
               : null;
             
             // Calories use ONLY blockDuration
             const calories = athleteConfig 
-              ? calculateCalories(block, athleteConfig)
+              ? calculateCalories(block, athleteConfig, effectiveLevel)
               : null;
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
