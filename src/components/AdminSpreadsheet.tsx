@@ -712,13 +712,23 @@ export function AdminSpreadsheet() {
             <h2 className="font-display text-2xl">PLANILHA SEMANAL</h2>
           </div>
           <p className="text-muted-foreground text-sm mb-4">
-            Cole a planilha completa da semana. O sistema aceita emojis, títulos e seções como:
-            Aquecimento, Conditioning, Força, Específico, Core, Corrida, Notas.
+            Cole aqui a programação semanal completa. O OUTLIER identifica automaticamente dias, blocos de treino, tempos e benchmarks.
           </p>
           <textarea
             value={spreadsheetText}
             onChange={(e) => setSpreadsheetText(e.target.value)}
-            placeholder="Cole aqui a planilha semanal completa..."
+            placeholder={`Exemplo:
+
+SEGUNDA
+🔥 Aquecimento
+⚡ Conditioning
+🏋️ Força
+
+TERÇA
+🏃 Corrida
+🎯 Específico
+
+Use nomes dos dias, títulos e emojis livremente.`}
             className="w-full h-96 px-4 py-4 rounded-lg bg-secondary border border-border font-body text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
           />
           <p className="text-muted-foreground text-xs mt-2">
