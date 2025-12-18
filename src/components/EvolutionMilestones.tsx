@@ -1,19 +1,11 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3 } from 'lucide-react';
-import { classifyBenchmarkPerformance, calculateBenchmarkScore } from '@/utils/benchmarkVariants';
+import { Trophy, Target, TrendingUp, Star, Award, Zap, ChevronRight, BarChart3, Loader2 } from 'lucide-react';
 import type { AthleteLevel, PerformanceBucket } from '@/types/outlier';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-
-interface BenchmarkResult {
-  blockId: string;
-  benchmarkId?: string;
-  timeInSeconds: number;
-  date: string;
-  bucket?: PerformanceBucket;
-  score?: number;
-}
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MilestoneData {
   id: string;
@@ -34,72 +26,24 @@ const LEVEL_DISPLAY: Record<AthleteLevel, { name: string; color: string; bgColor
   hyrox_pro: { name: 'HYROX PRO', color: 'text-amber-500', bgColor: 'bg-amber-500/20' },
 };
 
-const BUCKET_SCORES: Record<PerformanceBucket, number> = {
-  ELITE: 100,
-  STRONG: 80,
-  OK: 60,
-  TOUGH: 40,
-  DNF: 0,
-};
-
 export function EvolutionMilestones() {
-  const { workoutResults, weeklyWorkouts, athleteConfig } = useOutlierStore();
+  const { athleteConfig } = useOutlierStore();
+  const { user } = useAuth();
+  const { 
+    results: dbResults, 
+    loading, 
+    getWeeklyResults, 
+    getBucketCounts, 
+    getAverageScore,
+    totalBenchmarks 
+  } = useBenchmarkResults();
   const [activeTab, setActiveTab] = useState<'milestones' | 'chart'>('milestones');
 
   const evolutionData = useMemo(() => {
     if (!athleteConfig) return null;
 
-    // Get all benchmark blocks from weekly workouts
-    const benchmarkBlocks = weeklyWorkouts.flatMap(w => 
-      w.blocks.filter(b => b.isBenchmark)
-    );
-
-    // Get completed benchmark results
-    const benchmarkResults: BenchmarkResult[] = workoutResults
-      .filter(r => r.completed && r.timeInSeconds)
-      .map(r => {
-        const block = benchmarkBlocks.find(b => b.id === r.blockId);
-        if (!block) return null;
-
-        const bucket = classifyBenchmarkPerformance(
-          r.timeInSeconds!,
-          block.targetRange || block.levelTargetRanges?.[athleteConfig.level],
-          block.benchmarkDirection || 'lower_is_better'
-        );
-
-        const score = calculateBenchmarkScore(
-          r.timeInSeconds!,
-          block.targetRange || block.levelTargetRanges?.[athleteConfig.level],
-          block.benchmarkDirection || 'lower_is_better',
-          block.benchmarkWeight || 1
-        );
-
-        return {
-          blockId: r.blockId,
-          benchmarkId: block.benchmarkId,
-          timeInSeconds: r.timeInSeconds!,
-          date: r.date,
-          bucket,
-          score,
-        };
-      })
-      .filter(Boolean) as BenchmarkResult[];
-
-    // Calculate average score
-    const totalScore = benchmarkResults.reduce((sum, r) => sum + (r.score || 0), 0);
-    const avgScore = benchmarkResults.length > 0 ? totalScore / benchmarkResults.length : 0;
-
-    // Count performance buckets
-    const bucketCounts: Record<PerformanceBucket, number> = {
-      ELITE: 0,
-      STRONG: 0,
-      OK: 0,
-      TOUGH: 0,
-      DNF: 0,
-    };
-    benchmarkResults.forEach(r => {
-      if (r.bucket) bucketCounts[r.bucket]++;
-    });
+    const bucketCounts = getBucketCounts() as Record<PerformanceBucket, number>;
+    const avgScore = getAverageScore();
 
     // Calculate evolution level based on performance
     const currentLevelIndex = LEVEL_ORDER.indexOf(athleteConfig.level);
@@ -117,47 +61,19 @@ export function EvolutionMilestones() {
       : 100;
 
     return {
-      benchmarkResults,
       avgScore,
       bucketCounts,
-      totalBenchmarks: benchmarkResults.length,
+      totalBenchmarks,
       currentLevel: athleteConfig.level,
       suggestedLevel: LEVEL_ORDER[suggestedLevelIndex],
       progressToNextLevel,
       shouldEvolve: suggestedLevelIndex > currentLevelIndex,
     };
-  }, [workoutResults, weeklyWorkouts, athleteConfig]);
+  }, [athleteConfig, getBucketCounts, getAverageScore, totalBenchmarks]);
 
-  // Calculate weekly chart data
-  const chartData = useMemo(() => {
-    if (!evolutionData || evolutionData.benchmarkResults.length === 0) return [];
+  // Get chart data from hook
+  const chartData = useMemo(() => getWeeklyResults(), [getWeeklyResults]);
 
-    // Group by week
-    const weeklyData: Record<string, { scores: number[]; date: Date }> = {};
-    
-    evolutionData.benchmarkResults.forEach(r => {
-      const date = new Date(r.date);
-      // Get week start (Monday)
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay() + 1);
-      const weekKey = weekStart.toISOString().split('T')[0];
-      
-      if (!weeklyData[weekKey]) {
-        weeklyData[weekKey] = { scores: [], date: weekStart };
-      }
-      if (r.score) weeklyData[weekKey].scores.push(r.score);
-    });
-
-    // Convert to chart format and sort by date
-    return Object.entries(weeklyData)
-      .map(([key, data]) => ({
-        week: key,
-        weekLabel: `${data.date.getDate()}/${data.date.getMonth() + 1}`,
-        avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
-        benchmarks: data.scores.length,
-      }))
-      .sort((a, b) => a.week.localeCompare(b.week));
-  }, [evolutionData]);
 
   const milestones = useMemo((): MilestoneData[] => {
     if (!evolutionData) return [];
@@ -213,6 +129,23 @@ export function EvolutionMilestones() {
     ];
   }, [evolutionData]);
 
+  if (loading) {
+    return (
+      <div className="card-elevated p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/20">
+            <Trophy className="w-5 h-5 text-primary" />
+          </div>
+          <h3 className="font-display text-xl">Marcos de Evolução</h3>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Carregando histórico...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!evolutionData || evolutionData.totalBenchmarks === 0) {
     return (
       <div className="card-elevated p-6">
@@ -223,7 +156,9 @@ export function EvolutionMilestones() {
           <h3 className="font-display text-xl">Marcos de Evolução</h3>
         </div>
         <p className="text-muted-foreground text-sm">
-          Complete benchmarks para acompanhar sua evolução e desbloquear marcos.
+          {user 
+            ? 'Complete benchmarks para acompanhar sua evolução e desbloquear marcos.'
+            : 'Faça login para salvar e acompanhar seu histórico de benchmarks.'}
         </p>
       </div>
     );
