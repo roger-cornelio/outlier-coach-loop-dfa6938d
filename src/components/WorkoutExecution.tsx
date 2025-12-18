@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame, Info } from 'lucide-react';
 import { getEstimatedTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 
 const blockTypeColors: Record<string, string> = {
@@ -214,6 +215,12 @@ export function WorkoutExecution() {
             const isComplete = completedBlocks.includes(block.id);
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
+            
+            // Get effective content and notes based on athlete level
+            const effectiveContent = getEffectiveContent(block, athleteConfig?.level);
+            const effectiveNotes = getEffectiveNotes(block, athleteConfig?.level);
+            const effectiveTargetRange = getEffectiveTargetRange(block, athleteConfig?.level);
+            
             const estimatedTime = athleteConfig 
               ? getEstimatedTimeForLevel(block, athleteConfig.level)
               : null;
@@ -283,8 +290,16 @@ export function WorkoutExecution() {
                       )}
                     </div>
                     <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {block.content}
+                      {effectiveContent}
                     </pre>
+                    
+                    {/* Level-specific notes */}
+                    {effectiveNotes && (
+                      <div className="flex items-start gap-2 mt-3 p-2 bg-secondary/50 rounded text-xs text-muted-foreground">
+                        <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                        <span>{effectiveNotes}</span>
+                      </div>
+                    )}
 
                     {/* Block Stats */}
                     {(estimatedTime || calories) && block.type !== 'notas' && (

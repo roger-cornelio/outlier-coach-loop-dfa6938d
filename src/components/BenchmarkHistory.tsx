@@ -4,6 +4,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Trophy, TrendingUp, TrendingDown, Minus, Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import type { WorkoutBlock, WorkoutResult, PerformanceBucket } from '@/types/outlier';
+import { getEffectiveTargetRange } from '@/utils/benchmarkVariants';
 
 interface BenchmarkData {
   block: WorkoutBlock;
@@ -26,9 +27,8 @@ function formatDate(dateStr: string): string {
 }
 
 function getBucketForTime(time: number, block: WorkoutBlock, athleteLevel?: string): PerformanceBucket {
-  // Get effective target range based on athlete level
-  const levelRange = athleteLevel && block.levelTargetRanges?.[athleteLevel as keyof typeof block.levelTargetRanges];
-  const effectiveRange = levelRange || block.targetRange;
+  // Get effective target range based on athlete level using utility
+  const effectiveRange = getEffectiveTargetRange(block, athleteLevel as any);
   
   if (effectiveRange && effectiveRange.min > 0 && effectiveRange.max > 0) {
     const mid = (effectiveRange.min + effectiveRange.max) / 2;

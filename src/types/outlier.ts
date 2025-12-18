@@ -30,6 +30,22 @@ export interface TargetTimeRange {
   max: number; // seconds
 }
 
+// Variant data for each athlete level
+export interface LevelVariant {
+  content: string; // Workout description specific to this level
+  notes?: string; // e.g., "ritmo confortável, foco em constância"
+  targetRange?: TargetTimeRange;
+  durationMinutes?: number;
+}
+
+export interface LevelVariants {
+  iniciante?: LevelVariant;
+  intermediario?: LevelVariant;
+  avancado?: LevelVariant;
+  hyrox_pro?: LevelVariant;
+}
+
+// Legacy support for target ranges only
 export interface LevelTargetRanges {
   iniciante?: TargetTimeRange;
   intermediario?: TargetTimeRange;
@@ -41,14 +57,15 @@ export interface WorkoutBlock {
   id: string;
   type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
   title: string;
-  content: string;
+  content: string; // Base content (used when no level variants)
   isMainWod?: boolean;
   isBenchmark?: boolean;
   wodType?: WodType;
   durationMinutes?: number;
   targetSeconds?: number;
   targetRange?: TargetTimeRange;
-  levelTargetRanges?: LevelTargetRanges;
+  levelTargetRanges?: LevelTargetRanges; // Legacy: target times per level
+  levelVariants?: LevelVariants; // Full variants per level (content + targets)
   referenceTime?: {
     iniciante: number;
     intermediario: number;

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertCircle, Info } from 'lucide-react';
+import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes } from '@/utils/benchmarkVariants';
 
 export function ResultRecording() {
   const { selectedWorkout, setCurrentView, addWorkoutResult, athleteConfig } = useOutlierStore();
@@ -24,9 +25,10 @@ export function ResultRecording() {
   // Check if this is a benchmark WOD
   const isBenchmark = mainWod.isBenchmark || false;
   
-  // Get effective target range based on athlete level
-  const levelTargetRange = athleteConfig?.level && mainWod.levelTargetRanges?.[athleteConfig.level];
-  const effectiveTargetRange = levelTargetRange || mainWod.targetRange;
+  // Get effective variant based on athlete level
+  const effectiveContent = getEffectiveContent(mainWod, athleteConfig?.level);
+  const effectiveNotes = getEffectiveNotes(mainWod, athleteConfig?.level);
+  const effectiveTargetRange = getEffectiveTargetRange(mainWod, athleteConfig?.level);
   const hasTargetTime = effectiveTargetRange?.max && effectiveTargetRange.max > 0;
 
   const handleSubmit = () => {
@@ -104,8 +106,14 @@ export function ResultRecording() {
               )}
             </div>
             <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {mainWod.content}
+              {effectiveContent}
             </pre>
+            {effectiveNotes && (
+              <div className="flex items-start gap-2 mt-3 p-2 bg-secondary/50 rounded text-xs text-muted-foreground">
+                <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{effectiveNotes}</span>
+              </div>
+            )}
             {hasTargetTime && effectiveTargetRange && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-sm text-muted-foreground">
