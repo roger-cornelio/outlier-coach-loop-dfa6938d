@@ -5,6 +5,12 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -818,40 +824,50 @@ Use nomes dos dias, títulos e emojis livremente.`}
           </p>
         </motion.div>
 
-        {/* Info Card */}
+        {/* Info Accordions */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mt-8 p-6 rounded-lg bg-card border border-border"
+          className="mt-8"
         >
-          <h3 className="font-display text-lg mb-3">📋 FORMATO ESPERADO</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>• Use <strong>📅</strong> ou nome do dia para separar dias (Segunda, Terça...)</li>
-            <li>• Seções: 🔥 Aquecimento, 💪 Força, ⚡ Conditioning, 🛷 Específico, 🎯 Core, 🏃 Corrida, 📝 Notas</li>
-            <li>• Use <strong>---</strong> ou linha em branco para separar dias</li>
-            <li>• Inclua CAP e referências de tempo para WODs principais</li>
-            <li>• Emojis e formatação livre são aceitos</li>
-          </ul>
-        </motion.div>
+          <Accordion type="multiple" className="space-y-4">
+            {/* Formato Esperado */}
+            <AccordionItem value="formato" className="rounded-lg bg-card border border-border px-4">
+              <AccordionTrigger className="font-display text-lg hover:no-underline">
+                <span className="flex items-center gap-2">
+                  📄 FORMATO ESPERADO
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2 text-sm text-muted-foreground pb-2">
+                  <li>• Use <strong>📅</strong> ou nome do dia para separar dias (Segunda, Terça...)</li>
+                  <li>• Seções: 🔥 Aquecimento, 💪 Força, ⚡ Conditioning, 🛷 Específico, 🎯 Core, 🏃 Corrida, 📝 Notas</li>
+                  <li>• Use <strong>---</strong> ou linha em branco para separar dias</li>
+                  <li>• Inclua CAP e referências de tempo para WODs principais</li>
+                  <li>• Emojis e formatação livre são aceitos</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
 
-        {/* Benchmark info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-4 p-6 rounded-lg bg-status-excellent/10 border border-status-excellent/20"
-        >
-          <h3 className="font-display text-lg mb-3 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-status-excellent" />
-            BENCHMARKS
-          </h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>• Após processar, você poderá marcar WODs como <strong>benchmark</strong></li>
-            <li>• Benchmarks rastreiam evolução do atleta ao longo do tempo</li>
-            <li>• Atletas são obrigados a registrar tempo em benchmarks</li>
-            <li>• Configure um tempo alvo para classificação de performance</li>
-          </ul>
+            {/* Benchmarks */}
+            <AccordionItem value="benchmarks" className="rounded-lg bg-status-excellent/10 border border-status-excellent/20 px-4">
+              <AccordionTrigger className="font-display text-lg hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-status-excellent" />
+                  BENCHMARKS
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2 text-sm text-muted-foreground pb-2">
+                  <li>• Após processar, você poderá marcar WODs como <strong>benchmark</strong></li>
+                  <li>• Benchmarks rastreiam evolução do atleta ao longo do tempo</li>
+                  <li>• Atletas são obrigados a registrar tempo em benchmarks</li>
+                  <li>• Configure um tempo alvo para classificação de performance</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </motion.div>
       </main>
     </div>
