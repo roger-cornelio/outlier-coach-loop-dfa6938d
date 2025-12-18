@@ -138,6 +138,7 @@ export function AdminSpreadsheet() {
   // Review phase state
   const [parsedWorkouts, setParsedWorkouts] = useState<DayWorkout[] | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<DayOfWeek>>(new Set());
+  const [showPreview, setShowPreview] = useState(false);
 
   if (authLoading) {
     return (
@@ -204,6 +205,7 @@ export function AdminSpreadsheet() {
     setWeeklyWorkouts([]);
     setSpreadsheetText('');
     setParsedWorkouts(null);
+    setShowPreview(false);
     setSuccess(null);
     setError(null);
   };
@@ -228,9 +230,10 @@ export function AdminSpreadsheet() {
       return;
     }
 
-    // Move to review phase instead of saving directly
+    // Move to preview phase first
     setParsedWorkouts(parsed);
     setExpandedDays(new Set(parsed.map(w => w.day)));
+    setShowPreview(true);
     setIsProcessing(false);
   };
 
@@ -352,6 +355,18 @@ export function AdminSpreadsheet() {
 
   const cancelReview = () => {
     setParsedWorkouts(null);
+    setShowPreview(false);
+  };
+
+  const backToSpreadsheet = () => {
+    setShowPreview(false);
+    setParsedWorkouts(null);
+    // Text is preserved in spreadsheetText state
+  };
+
+  const confirmPreview = () => {
+    setShowPreview(false);
+    // Proceed to detailed review phase with parsedWorkouts
   };
 
   const formatTargetTime = (totalSeconds?: number) => {
@@ -360,6 +375,177 @@ export function AdminSpreadsheet() {
     const secs = totalSeconds % 60;
     return { minutes: mins.toString(), seconds: secs.toString().padStart(2, '0') };
   };
+
+  // Calculate preview stats
+  const getPreviewStats = () => {
+    if (!parsedWorkouts) return null;
+    
+    const totalDays = parsedWorkouts.length;
+    const allBlocks = parsedWorkouts.flatMap(w => w.blocks);
+    const blockTypes = new Set(allBlocks.map(b => b.type));
+    const benchmarks = allBlocks.filter(b => b.isBenchmark).length;
+    const withCap = allBlocks.filter(b => b.durationMinutes || b.targetSeconds || b.content.toLowerCase().includes('cap')).length;
+    
+    const blockTypeLabels: Record<string, string> = {
+      aquecimento: 'Aquecimento',
+      conditioning: 'Conditioning',
+      forca: 'Força',
+      especifico: 'Específico',
+      core: 'Core',
+      corrida: 'Corrida',
+      notas: 'Notas'
+    };
+    
+    return {
+      totalDays,
+      blockTypes: Array.from(blockTypes).map(t => blockTypeLabels[t] || t),
+      benchmarks,
+      withCap,
+      totalBlocks: allBlocks.length
+    };
+  };
+
+  // Preview phase UI
+  if (parsedWorkouts && showPreview) {
+    const stats = getPreviewStats();
+    
+    return (
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={backToSpreadsheet}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="font-display text-2xl font-bold tracking-wide">PREVIEW DA PROGRAMAÇÃO</h1>
+                <p className="text-sm text-muted-foreground">
+                  Resumo do que foi identificado
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Days */}
+              <div className="p-6 rounded-xl bg-card border border-border">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-display font-bold">{stats?.totalDays}</p>
+                    <p className="text-sm text-muted-foreground">dias de treino</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Blocks */}
+              <div className="p-6 rounded-xl bg-card border border-border">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-display font-bold">{stats?.totalBlocks}</p>
+                    <p className="text-sm text-muted-foreground">blocos de treino</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Benchmarks */}
+              <div className="p-6 rounded-xl bg-status-excellent/10 border border-status-excellent/20">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-status-excellent/20 flex items-center justify-center">
+                    <Trophy className="w-5 h-5 text-status-excellent" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-display font-bold">{stats?.benchmarks || 0}</p>
+                    <p className="text-sm text-muted-foreground">benchmarks identificados</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* With CAP */}
+              <div className="p-6 rounded-xl bg-card border border-border">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-display font-bold">{stats?.withCap || 0}</p>
+                    <p className="text-sm text-muted-foreground">treinos com CAP/tempo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Block Types */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <h3 className="font-display text-lg mb-4">Blocos Detectados</h3>
+              <div className="flex flex-wrap gap-2">
+                {stats?.blockTypes.map((type, i) => (
+                  <span 
+                    key={i}
+                    className="px-3 py-1.5 rounded-full bg-secondary text-sm font-medium"
+                  >
+                    {type}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Days Preview */}
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <h3 className="font-display text-lg mb-4">Dias Identificados</h3>
+              <div className="flex flex-wrap gap-2">
+                {parsedWorkouts.map((workout, i) => (
+                  <span 
+                    key={i}
+                    className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                  >
+                    {DAY_NAMES[workout.day]}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <button
+                onClick={confirmPreview}
+                className="flex-1 font-display text-lg tracking-wider px-8 py-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-3"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Confirmar Programação
+              </button>
+              <button
+                onClick={backToSpreadsheet}
+                className="px-8 py-5 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
+              >
+                Voltar e Ajustar
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Ao confirmar, você poderá revisar e configurar benchmarks em cada bloco.
+            </p>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
 
   // Review phase UI
   if (parsedWorkouts) {
