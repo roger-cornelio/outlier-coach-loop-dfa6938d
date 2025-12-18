@@ -19,6 +19,8 @@ export interface Equipment {
   emoji: string;
 }
 
+export type AthleteCountry = 'BR' | 'US' | 'DE' | 'UK' | 'ES' | 'FR' | 'IT' | 'PT' | 'OTHER';
+
 export interface AthleteConfig {
   // User preference - NOT the actual status
   trainingDifficulty: TrainingDifficulty;
@@ -29,6 +31,7 @@ export interface AthleteConfig {
   peso?: number;
   idade?: number;
   sexo?: 'masculino' | 'feminino';
+  pais?: AthleteCountry;
 }
 
 export type WodType = 'engine' | 'strength' | 'skill' | 'mixed' | 'hyrox' | 'benchmark';
