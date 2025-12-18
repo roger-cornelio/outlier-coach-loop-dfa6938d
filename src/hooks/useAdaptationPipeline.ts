@@ -1,12 +1,14 @@
 import { useCallback } from 'react';
 import { useOutlierStore } from '@/store/outlierStore';
-import { buildWorkoutByTime, validateAdaptation } from '@/utils/workoutAdaptationEngine';
+import { buildWorkoutByTime, validateAdaptation, calculateWodTime } from '@/utils/workoutAdaptationEngine';
 import type { DayWorkout, AthleteConfig, TrainingLevel } from '@/types/outlier';
 import { toast } from 'sonner';
 
 // ============================================
-// HOOK PARA PIPELINE DE ADAPTAÇÃO POR TEMPO REAL
+// HOOK PARA PIPELINE DE ADAPTAÇÃO POR TEMPO REAL v2
 // ============================================
+// Motor com tabela de referência (atleta intermediário HYROX)
+// Tempos de transição: 15s estação, 20s carga, 10s bloco
 // Usa o motor buildWorkoutByTime que:
 // 1. Adapta por nível + sexo (volume/carga)
 // 2. Adapta por tempo disponível (remove/condensa)

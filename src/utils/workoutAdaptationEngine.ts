@@ -1,14 +1,15 @@
 /**
- * MOTOR DE ADAPTAÇÃO POR TEMPO REAL
- * ==================================
- * Reconstrói o WOD para caber no tempo disponível mantendo
- * o mesmo estímulo fisiológico (cardiovascular + muscular).
+ * MOTOR DE ADAPTAÇÃO POR TEMPO REAL v2
+ * =====================================
+ * Tabela de referência: atleta INTERMEDIÁRIO HYROX
+ * Unidades padrão: 100m, 10 reps, 10 cal
  * 
  * Princípios:
- * 1. O tempo total é OUTPUT do WOD, nunca um valor exibido
- * 2. Conteúdo MUDA quando tempo disponível muda
- * 3. Preserva: estímulo cardiovascular, muscular dominante, densidade
- * 4. Usuário NÃO vê multiplicadores ou métricas internas
+ * 1. Tempo total é OUTPUT calculado, nunca valor fixo
+ * 2. Treinos curtos = mais densos, menos blocos
+ * 3. Treinos longos = mais volume, mais variação
+ * 4. Dificuldade percebida EQUIVALENTE independente do tempo
+ * 5. Usuário NÃO vê métricas internas
  */
 
 import type { WorkoutBlock, DayWorkout, TrainingLevel } from '@/types/outlier';
@@ -18,32 +19,787 @@ import type { WorkoutBlock, DayWorkout, TrainingLevel } from '@/types/outlier';
 // ============================================
 
 type SexKey = 'M' | 'F';
-type MovementType = 
-  | 'remo' | 'skierg' | 'bike' | 'corrida'
-  | 'sled_push' | 'sled_pull' | 'farmer' | 'lunge'
-  | 'wallball' | 'burpee' | 'sandbag'
-  | 'core' | 'strength' | 'generic';
+type MovementCategory = 'cardio_machine' | 'cardio_run' | 'sled' | 'carry' | 'gym' | 'core' | 'strength' | 'unknown';
 
-interface MovementConfig {
-  type: MovementType;
-  baseSecondsPerUnit: number; // segundos por metro/cal/rep
+interface MovementTimeRef {
+  name: string;
+  category: MovementCategory;
   unit: 'm' | 'cal' | 'reps';
-  fatigueFactor: number; // multiplicador quando aparece após esforço similar
+  baseUnit: number; // unidade padrão (100m, 10 reps, 10 cal)
+  baseSeconds: number; // tempo para unidade padrão (atleta intermediário)
+  patterns: string[]; // padrões de texto para identificar
+  requiresLoadAdjust?: boolean; // precisa ajustar carga?
 }
 
-interface ParsedMovement {
-  original: string;
-  type: MovementType;
+// ============================================
+// TABELA DE REFERÊNCIA - ATLETA INTERMEDIÁRIO HYROX
+// ============================================
+// Valores calibrados para atleta intermediário masculino
+// Unidades: 100m, 10 reps, 10 cal
+
+const MOVEMENT_TIME_TABLE: MovementTimeRef[] = [
+  // === CARDIO MACHINES ===
+  {
+    name: 'Remo',
+    category: 'cardio_machine',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 26, // 2:10/500m ≈ 26s/100m
+    patterns: ['remo', 'row', 'rower', 'ergometer'],
+  },
+  {
+    name: 'SkiErg',
+    category: 'cardio_machine',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 28, // 2:20/500m ≈ 28s/100m
+    patterns: ['skierg', 'ski erg', 'ski-erg', 'ski'],
+  },
+  {
+    name: 'Assault Bike',
+    category: 'cardio_machine',
+    unit: 'cal',
+    baseUnit: 10,
+    baseSeconds: 50, // ~12 cal/min = 50s/10cal
+    patterns: ['bike', 'assault', 'echo', 'air bike', 'airbike'],
+  },
+  
+  // === CORRIDA ===
+  {
+    name: 'Corrida',
+    category: 'cardio_run',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 36, // 6:00/km = 36s/100m
+    patterns: ['corrida', 'run', 'running', 'sprint'],
+  },
+  {
+    name: 'Trote',
+    category: 'cardio_run',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 42, // 7:00/km = 42s/100m (ritmo leve)
+    patterns: ['trote', 'jog', 'jogging'],
+  },
+  
+  // === SLED ===
+  {
+    name: 'Sled Push',
+    category: 'sled',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 360, // ~17m/min = 360s/100m
+    patterns: ['sled push', 'push sled'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Sled Pull',
+    category: 'sled',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 360,
+    patterns: ['sled pull', 'pull sled'],
+    requiresLoadAdjust: true,
+  },
+  
+  // === CARRY ===
+  {
+    name: 'Farmer Carry',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 180, // ~33m/min = 180s/100m
+    patterns: ['farmer', 'carry', 'farmers walk'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Sandbag Lunge',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 270, // ~22m/min = 270s/100m
+    patterns: ['lunge', 'afundo', 'walking lunge', 'sandbag lunge'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Sandbag Carry',
+    category: 'carry',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 200,
+    patterns: ['sandbag', 'saco'],
+    requiresLoadAdjust: true,
+  },
+  
+  // === GYM MOVEMENTS ===
+  {
+    name: 'Wall Ball',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 35, // ~17 reps/min = 35s/10 reps
+    patterns: ['wall ball', 'wallball', 'wb'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Burpee',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 50, // 12 reps/min = 50s/10 reps
+    patterns: ['burpee', 'burpees', 'bar facing', 'box jump over'],
+  },
+  {
+    name: 'Burpee Broad Jump',
+    category: 'gym',
+    unit: 'm',
+    baseUnit: 100,
+    baseSeconds: 450, // ~13m/min
+    patterns: ['burpee broad jump', 'broad jump'],
+  },
+  {
+    name: 'Box Jump',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 40, // ~15 reps/min
+    patterns: ['box jump', 'box step'],
+  },
+  {
+    name: 'Kettlebell Swing',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 25, // ~24 reps/min
+    patterns: ['swing', 'kb swing', 'kettlebell'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Thruster',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 45, // ~13 reps/min
+    patterns: ['thruster'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Push-up',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 20, // ~30 reps/min
+    patterns: ['push-up', 'pushup', 'push up', 'flexão', 'flexao'],
+  },
+  {
+    name: 'Pull-up',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 35, // ~17 reps/min
+    patterns: ['pull-up', 'pullup', 'pull up', 'barra'],
+  },
+  {
+    name: 'Squat',
+    category: 'gym',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 25, // ~24 reps/min
+    patterns: ['squat', 'agachamento', 'air squat'],
+  },
+  
+  // === STRENGTH ===
+  {
+    name: 'Deadlift',
+    category: 'strength',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 50, // ~12 reps/min (inclui setup)
+    patterns: ['deadlift', 'levantamento terra', 'dl'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Clean',
+    category: 'strength',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 55,
+    patterns: ['clean', 'power clean', 'hang clean'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Snatch',
+    category: 'strength',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 60,
+    patterns: ['snatch', 'power snatch'],
+    requiresLoadAdjust: true,
+  },
+  {
+    name: 'Press',
+    category: 'strength',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 40,
+    patterns: ['press', 'shoulder press', 'overhead'],
+    requiresLoadAdjust: true,
+  },
+  
+  // === CORE ===
+  {
+    name: 'Sit-up',
+    category: 'core',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 20, // ~30 reps/min
+    patterns: ['sit-up', 'situp', 'abdominal', 'crunch'],
+  },
+  {
+    name: 'Russian Twist',
+    category: 'core',
+    unit: 'reps',
+    baseUnit: 10,
+    baseSeconds: 18,
+    patterns: ['russian twist', 'twist'],
+  },
+  {
+    name: 'Plank',
+    category: 'core',
+    unit: 'reps', // tratamos segundos como "reps"
+    baseUnit: 10,
+    baseSeconds: 10, // 1:1 para segundos
+    patterns: ['plank', 'prancha'],
+  },
+];
+
+// ============================================
+// TEMPOS DE TRANSIÇÃO (segundos)
+// ============================================
+
+const TRANSITION_TIMES = {
+  stationChange: 15, // troca de estação
+  loadAdjust: 20, // ajuste de carga
+  blockPause: 10, // pausa natural entre blocos
+  roundRest: 8, // descanso entre rounds (se não especificado)
+};
+
+// ============================================
+// AJUSTES POR NÍVEL E SEXO
+// ============================================
+
+// Multiplicador de tempo por nível (intermediário = referência)
+const LEVEL_TIME_MULTIPLIER: Record<TrainingLevel, number> = {
+  base: 1.25, // 25% mais lento que intermediário
+  progressivo: 1.0, // referência
+  performance: 0.85, // 15% mais rápido que intermediário
+};
+
+// Multiplicador de tempo por sexo
+const SEX_TIME_MULTIPLIER: Record<SexKey, number> = {
+  M: 1.0,
+  F: 1.12, // 12% mais tempo para mesmo esforço relativo
+};
+
+// Fator conservador para exercícios desconhecidos
+const UNKNOWN_EXERCISE_FACTOR = 1.15; // +15%
+
+// ============================================
+// MOTOR DE DETECÇÃO DE MOVIMENTO
+// ============================================
+
+function findMovementRef(text: string): MovementTimeRef | null {
+  const lower = text.toLowerCase();
+  
+  for (const ref of MOVEMENT_TIME_TABLE) {
+    for (const pattern of ref.patterns) {
+      if (lower.includes(pattern)) {
+        return ref;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Classifica movimento desconhecido por padrão
+ */
+function classifyUnknownMovement(text: string): { category: MovementCategory; baseSecondsPerUnit: number; unit: 'm' | 'cal' | 'reps' } {
+  const lower = text.toLowerCase();
+  
+  // Detectar unidade para inferir categoria
+  if (lower.includes('m ') || lower.match(/\d+m\b/)) {
+    // Movimento com metros
+    if (lower.includes('sled') || lower.includes('push') || lower.includes('pull')) {
+      return { category: 'sled', baseSecondsPerUnit: 3.6, unit: 'm' };
+    }
+    if (lower.includes('carry') || lower.includes('walk')) {
+      return { category: 'carry', baseSecondsPerUnit: 2.0, unit: 'm' };
+    }
+    return { category: 'cardio_run', baseSecondsPerUnit: 0.40, unit: 'm' }; // conservador
+  }
+  
+  if (lower.includes('cal')) {
+    return { category: 'cardio_machine', baseSecondsPerUnit: 5.5, unit: 'cal' }; // conservador
+  }
+  
+  // Default: reps
+  if (lower.includes('core') || lower.includes('ab') || lower.includes('prancha')) {
+    return { category: 'core', baseSecondsPerUnit: 2.5, unit: 'reps' };
+  }
+  
+  // Detectar se é strength pelo contexto
+  if (lower.includes('kg') || lower.includes('lb') || lower.includes('carga')) {
+    return { category: 'strength', baseSecondsPerUnit: 5.0, unit: 'reps' };
+  }
+  
+  // Genérico com fator conservador
+  return { category: 'gym', baseSecondsPerUnit: 4.0, unit: 'reps' };
+}
+
+// ============================================
+// EXTRAÇÃO DE VOLUME DO TEXTO
+// ============================================
+
+interface ExtractedVolume {
   value: number;
   unit: 'm' | 'cal' | 'reps';
-  estimatedSeconds: number;
+  original: string;
 }
+
+function extractVolume(line: string): ExtractedVolume | null {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length < 2) return null;
+  
+  // Padrão metros: "1000m", "500 m"
+  const metersMatch = trimmed.match(/(\d+)\s*m\b/i);
+  if (metersMatch) {
+    return { value: parseInt(metersMatch[1], 10), unit: 'm', original: trimmed };
+  }
+  
+  // Padrão calorias: "50cal", "30 cal"
+  const calMatch = trimmed.match(/(\d+)\s*cal\b/i);
+  if (calMatch) {
+    return { value: parseInt(calMatch[1], 10), unit: 'cal', original: trimmed };
+  }
+  
+  // Padrão reps no início: "50 Wall Balls"
+  const repsMatch = trimmed.match(/^(\d+)\s+[A-Za-zÀ-ÿ]/);
+  if (repsMatch) {
+    return { value: parseInt(repsMatch[1], 10), unit: 'reps', original: trimmed };
+  }
+  
+  // Padrão reps após ":" : "3 rounds: 15 push-ups"
+  const repsAfterColon = trimmed.match(/:\s*(\d+)\s+[A-Za-zÀ-ÿ]/);
+  if (repsAfterColon) {
+    return { value: parseInt(repsAfterColon[1], 10), unit: 'reps', original: trimmed };
+  }
+  
+  return null;
+}
+
+// ============================================
+// CÁLCULO DE TEMPO POR LINHA
+// ============================================
+
+interface LineTimeResult {
+  line: string;
+  seconds: number;
+  transitionSeconds: number;
+  movementName: string;
+  isUnknown: boolean;
+}
+
+function calculateLineTime(
+  line: string,
+  nivel: TrainingLevel,
+  sexo: SexKey,
+  previousCategory: MovementCategory | null
+): LineTimeResult {
+  const volume = extractVolume(line);
+  
+  if (!volume) {
+    // Linha sem volume detectável (título, nota, etc)
+    return {
+      line,
+      seconds: 0,
+      transitionSeconds: 0,
+      movementName: 'nota',
+      isUnknown: false,
+    };
+  }
+  
+  const ref = findMovementRef(line);
+  let seconds: number;
+  let movementName: string;
+  let isUnknown: boolean;
+  let category: MovementCategory;
+  let requiresLoadAdjust = false;
+  
+  if (ref) {
+    // Movimento conhecido
+    const unitsCount = volume.value / ref.baseUnit;
+    seconds = unitsCount * ref.baseSeconds;
+    movementName = ref.name;
+    isUnknown = false;
+    category = ref.category;
+    requiresLoadAdjust = ref.requiresLoadAdjust || false;
+  } else {
+    // Movimento desconhecido - classificar por padrão
+    const classified = classifyUnknownMovement(line);
+    const baseSecondsPerUnit = classified.baseSecondsPerUnit;
+    
+    seconds = volume.value * baseSecondsPerUnit * UNKNOWN_EXERCISE_FACTOR;
+    movementName = 'desconhecido';
+    isUnknown = true;
+    category = classified.category;
+  }
+  
+  // Aplicar multiplicadores de nível e sexo
+  const levelMult = LEVEL_TIME_MULTIPLIER[nivel];
+  const sexMult = SEX_TIME_MULTIPLIER[sexo];
+  seconds = seconds * levelMult * sexMult;
+  
+  // Calcular transição
+  let transitionSeconds = TRANSITION_TIMES.stationChange;
+  
+  // Adicionar tempo de ajuste de carga se necessário
+  if (requiresLoadAdjust) {
+    transitionSeconds += TRANSITION_TIMES.loadAdjust;
+  }
+  
+  // Reduzir transição se mesmo tipo de movimento
+  if (previousCategory && previousCategory === category) {
+    transitionSeconds = Math.floor(transitionSeconds * 0.5);
+  }
+  
+  return {
+    line,
+    seconds: Math.ceil(seconds),
+    transitionSeconds,
+    movementName,
+    isUnknown,
+  };
+}
+
+// ============================================
+// CÁLCULO DE TEMPO DO BLOCO
+// ============================================
+
+interface BlockTimeResult {
+  block: WorkoutBlock;
+  totalSeconds: number;
+  movementSeconds: number;
+  transitionSeconds: number;
+  rounds: number;
+  linesAnalyzed: LineTimeResult[];
+}
+
+function calculateBlockTime(
+  block: WorkoutBlock,
+  nivel: TrainingLevel,
+  sexo: SexKey
+): BlockTimeResult {
+  const lines = block.content.split('\n').filter(l => l.trim());
+  const linesAnalyzed: LineTimeResult[] = [];
+  
+  let previousCategory: MovementCategory | null = null;
+  let movementSeconds = 0;
+  let transitionSeconds = 0;
+  
+  // Detectar rounds
+  const roundsMatch = block.content.toLowerCase().match(/(\d+)\s*(rounds?|rodadas?)/);
+  let rounds = roundsMatch ? parseInt(roundsMatch[1], 10) || 1 : 1;
+  
+  // AMRAP estima rounds baseado no tempo (se especificado)
+  const isAmrap = block.content.toLowerCase().includes('amrap');
+  if (isAmrap) {
+    const amrapMinutes = block.content.match(/amrap\s*(\d+)/i);
+    if (amrapMinutes) {
+      // Estimar rounds baseado no tempo do AMRAP
+      rounds = Math.ceil(parseInt(amrapMinutes[1], 10) / 4); // ~4min por round
+    } else {
+      rounds = 3; // default para AMRAP
+    }
+  }
+  
+  // EMOM trata cada minuto como um "round"
+  const isEmom = block.content.toLowerCase().includes('emom');
+  if (isEmom) {
+    const emomMinutes = block.content.match(/emom\s*(\d+)/i);
+    if (emomMinutes) {
+      // EMOM: tempo total = minutos especificados
+      return {
+        block,
+        totalSeconds: parseInt(emomMinutes[1], 10) * 60,
+        movementSeconds: parseInt(emomMinutes[1], 10) * 60,
+        transitionSeconds: 0,
+        rounds: 1,
+        linesAnalyzed: [],
+      };
+    }
+  }
+  
+  for (const line of lines) {
+    const ref = findMovementRef(line);
+    const currentCategory = ref?.category || classifyUnknownMovement(line).category;
+    
+    const result = calculateLineTime(line, nivel, sexo, previousCategory);
+    linesAnalyzed.push(result);
+    
+    movementSeconds += result.seconds;
+    transitionSeconds += result.transitionSeconds;
+    
+    if (result.seconds > 0) {
+      previousCategory = currentCategory;
+    }
+  }
+  
+  // Aplicar rounds
+  const baseTotal = movementSeconds + transitionSeconds;
+  const totalWithRounds = baseTotal * rounds;
+  
+  // Adicionar descanso entre rounds (se mais de 1 round)
+  const restBetweenRounds = rounds > 1 ? (rounds - 1) * TRANSITION_TIMES.roundRest : 0;
+  
+  return {
+    block,
+    totalSeconds: Math.ceil(totalWithRounds + restBetweenRounds),
+    movementSeconds: Math.ceil(movementSeconds * rounds),
+    transitionSeconds: Math.ceil(transitionSeconds * rounds + restBetweenRounds),
+    rounds,
+    linesAnalyzed,
+  };
+}
+
+// ============================================
+// CÁLCULO DE TEMPO DO WOD COMPLETO
+// ============================================
+
+export interface WodTimeResult {
+  totalSeconds: number;
+  totalMinutes: number;
+  movementSeconds: number;
+  transitionSeconds: number;
+  blockPauseSeconds: number;
+  blocksAnalyzed: BlockTimeResult[];
+}
+
+export function calculateWodTime(
+  blocks: WorkoutBlock[],
+  nivel: TrainingLevel,
+  sexo: SexKey
+): WodTimeResult {
+  const blocksAnalyzed: BlockTimeResult[] = [];
+  let movementSeconds = 0;
+  let transitionSeconds = 0;
+  
+  for (const block of blocks) {
+    const result = calculateBlockTime(block, nivel, sexo);
+    blocksAnalyzed.push(result);
+    movementSeconds += result.movementSeconds;
+    transitionSeconds += result.transitionSeconds;
+  }
+  
+  // Pausas entre blocos
+  const blockPauseSeconds = Math.max(0, blocks.length - 1) * TRANSITION_TIMES.blockPause;
+  
+  const totalSeconds = movementSeconds + transitionSeconds + blockPauseSeconds;
+  
+  return {
+    totalSeconds,
+    totalMinutes: Math.ceil(totalSeconds / 60),
+    movementSeconds,
+    transitionSeconds,
+    blockPauseSeconds,
+    blocksAnalyzed,
+  };
+}
+
+// ============================================
+// ADAPTAÇÃO POR TEMPO
+// ============================================
 
 interface BlockPriority {
   type: string;
   priority: number; // 1 = manter, 5 = remover primeiro
-  isAccessory: boolean;
+  canCondense: boolean;
 }
+
+const BLOCK_PRIORITIES: Record<string, BlockPriority> = {
+  conditioning: { type: 'conditioning', priority: 1, canCondense: true },
+  aquecimento: { type: 'aquecimento', priority: 2, canCondense: false },
+  forca: { type: 'forca', priority: 3, canCondense: true },
+  especifico: { type: 'especifico', priority: 4, canCondense: true },
+  core: { type: 'core', priority: 5, canCondense: true },
+  corrida: { type: 'corrida', priority: 5, canCondense: true },
+  notas: { type: 'notas', priority: 6, canCondense: false },
+};
+
+/**
+ * Remove blocos por prioridade até caber no tempo
+ */
+function removeBlocksByPriority(
+  blocks: WorkoutBlock[],
+  targetSeconds: number,
+  nivel: TrainingLevel,
+  sexo: SexKey
+): { blocks: WorkoutBlock[]; removed: number } {
+  const sorted = [...blocks].sort((a, b) => {
+    const pA = BLOCK_PRIORITIES[a.type]?.priority || 4;
+    const pB = BLOCK_PRIORITIES[b.type]?.priority || 4;
+    return pB - pA; // maior prioridade = remover primeiro
+  });
+  
+  const kept: WorkoutBlock[] = [];
+  let removed = 0;
+  
+  for (const block of sorted) {
+    // Sempre manter WOD principal e conditioning
+    if (block.isMainWod || block.type === 'conditioning') {
+      kept.push(block);
+      continue;
+    }
+    
+    // Verificar se cabe
+    const currentTime = calculateWodTime(kept, nivel, sexo).totalSeconds;
+    const blockTime = calculateWodTime([block], nivel, sexo).totalSeconds;
+    
+    if (currentTime + blockTime <= targetSeconds) {
+      kept.push(block);
+    } else {
+      removed++;
+    }
+  }
+  
+  // Reordenar para manter ordem original
+  const orderedKept = blocks.filter(b => kept.includes(b));
+  
+  return { blocks: orderedKept, removed };
+}
+
+/**
+ * Condensa volumes de um bloco
+ */
+function condenseBlockVolumes(
+  block: WorkoutBlock,
+  ratio: number
+): WorkoutBlock {
+  if (ratio >= 1.0) return block;
+  
+  // Clampar: nunca reduzir mais que 50%
+  const effectiveRatio = Math.max(0.5, ratio);
+  
+  const lines = block.content.split('\n');
+  const condensed = lines.map(line => {
+    let result = line;
+    
+    // Reduzir metros
+    result = result.replace(/(\d+)\s*m\b/gi, (match, p1) => {
+      const v = parseInt(p1, 10);
+      if (isNaN(v)) return match;
+      return `${Math.max(25, Math.floor(v * effectiveRatio))}m`;
+    });
+    
+    // Reduzir calorias
+    result = result.replace(/(\d+)\s*cal\b/gi, (match, p1) => {
+      const v = parseInt(p1, 10);
+      if (isNaN(v)) return match;
+      return `${Math.max(5, Math.floor(v * effectiveRatio))}cal`;
+    });
+    
+    // Reduzir reps no início
+    result = result.replace(/^(\s*)(\d+)(\s+)([A-Za-zÀ-ÿ])/g, (match, p1, p2, p3, p4) => {
+      const v = parseInt(p2, 10);
+      if (isNaN(v)) return match;
+      return `${p1}${Math.max(3, Math.floor(v * effectiveRatio))}${p3}${p4}`;
+    });
+    
+    // Reduzir rounds (mais conservador)
+    result = result.replace(/(\d+)\s*(rounds?|sets?|rodadas?)/gi, (match, p1, p2) => {
+      const v = parseInt(p1, 10);
+      if (isNaN(v)) return match;
+      const roundRatio = Math.max(0.6, effectiveRatio); // mínimo 60% dos rounds
+      return `${Math.max(1, Math.floor(v * roundRatio))} ${p2}`;
+    });
+    
+    // Reduzir AMRAP/EMOM minutos
+    result = result.replace(/\b(AMRAP|EMOM)\s*(\d+)/gi, (match, p1, p2) => {
+      const v = parseInt(p2, 10);
+      if (isNaN(v)) return match;
+      return `${p1} ${Math.max(4, Math.floor(v * effectiveRatio))}`;
+    });
+    
+    return result;
+  });
+  
+  return { ...block, content: condensed.join('\n') };
+}
+
+/**
+ * Aumenta densidade removendo descansos
+ */
+function increaseDensity(block: WorkoutBlock): WorkoutBlock {
+  const lines = block.content.split('\n');
+  const densified = lines.filter(line => {
+    const lower = line.toLowerCase();
+    // Remover linhas de descanso
+    return !lower.includes('descanso') && 
+           !lower.includes('rest') && 
+           !lower.includes('pausa');
+  }).map(line => {
+    // Reduzir descansos especificados
+    return line.replace(/(\d+)\s*(seg|s|segundos?)\s*(descanso|rest|pausa)/gi, (match, p1) => {
+      const v = parseInt(p1, 10);
+      if (isNaN(v)) return match;
+      const reduced = Math.max(5, Math.floor(v * 0.5));
+      return `${reduced}s descanso`;
+    });
+  });
+  
+  return { ...block, content: densified.join('\n') };
+}
+
+// ============================================
+// ADAPTAÇÃO POR NÍVEL E SEXO
+// ============================================
+
+function applyLevelSexVolumes(
+  block: WorkoutBlock,
+  nivel: TrainingLevel,
+  sexo: SexKey
+): WorkoutBlock {
+  // Performance M = referência, não altera
+  if (nivel === 'performance' && sexo === 'M') {
+    return block;
+  }
+  
+  // Multiplicadores de volume
+  const levelMult: Record<TrainingLevel, number> = {
+    base: 0.65,
+    progressivo: 0.85,
+    performance: 1.0,
+  };
+  
+  const sexMult: Record<SexKey, number> = {
+    M: 1.0,
+    F: 0.85,
+  };
+  
+  const volumeRatio = levelMult[nivel] * sexMult[sexo];
+  
+  if (volumeRatio >= 1.0) return block;
+  
+  // Não adaptar aquecimento
+  if (block.type === 'aquecimento') return block;
+  
+  return condenseBlockVolumes(block, volumeRatio);
+}
+
+// ============================================
+// FUNÇÃO PRINCIPAL: buildWorkoutByTime
+// ============================================
 
 export interface WorkoutAdaptationConfig {
   nivel: TrainingLevel;
@@ -58,549 +814,149 @@ export interface AdaptedWorkoutResult {
   adaptedDuration: number;
   wasCondensed: boolean;
   blocksRemoved: number;
+  densityIncreased: boolean;
 }
 
-// ============================================
-// CAMADA 1: TEMPO POR MOVIMENTO
-// ============================================
-
-/**
- * Configuração base de tempo por movimento (segundos/unidade)
- * Valores calibrados para atleta PERFORMANCE MASCULINO
- */
-const MOVEMENT_CONFIG: Record<MovementType, MovementConfig> = {
-  remo: { type: 'remo', baseSecondsPerUnit: 0.26, unit: 'm', fatigueFactor: 1.15 }, // 2:10/500m
-  skierg: { type: 'skierg', baseSecondsPerUnit: 0.28, unit: 'm', fatigueFactor: 1.15 }, // 2:20/500m
-  bike: { type: 'bike', baseSecondsPerUnit: 5, unit: 'cal', fatigueFactor: 1.20 }, // 12 cal/min
-  corrida: { type: 'corrida', baseSecondsPerUnit: 0.36, unit: 'm', fatigueFactor: 1.10 }, // 6:00/km
-  sled_push: { type: 'sled_push', baseSecondsPerUnit: 3.6, unit: 'm', fatigueFactor: 1.25 }, // ~17m/min
-  sled_pull: { type: 'sled_pull', baseSecondsPerUnit: 3.6, unit: 'm', fatigueFactor: 1.25 },
-  farmer: { type: 'farmer', baseSecondsPerUnit: 1.8, unit: 'm', fatigueFactor: 1.15 }, // ~33m/min
-  lunge: { type: 'lunge', baseSecondsPerUnit: 2.7, unit: 'm', fatigueFactor: 1.20 }, // ~22m/min
-  wallball: { type: 'wallball', baseSecondsPerUnit: 3.5, unit: 'reps', fatigueFactor: 1.15 }, // ~17 reps/min
-  burpee: { type: 'burpee', baseSecondsPerUnit: 5, unit: 'reps', fatigueFactor: 1.25 }, // 12 reps/min
-  sandbag: { type: 'sandbag', baseSecondsPerUnit: 3.0, unit: 'm', fatigueFactor: 1.20 },
-  core: { type: 'core', baseSecondsPerUnit: 3, unit: 'reps', fatigueFactor: 1.05 },
-  strength: { type: 'strength', baseSecondsPerUnit: 4, unit: 'reps', fatigueFactor: 1.10 },
-  generic: { type: 'generic', baseSecondsPerUnit: 3, unit: 'reps', fatigueFactor: 1.10 },
-};
-
-/**
- * Ajustes de tempo por nível (multiplicador de velocidade)
- * Valores INTERNOS - nunca exibidos
- */
-const LEVEL_TIME_MULT: Record<TrainingLevel, number> = {
-  base: 1.35, // 35% mais lento
-  progressivo: 1.15, // 15% mais lento
-  performance: 1.0, // referência
-};
-
-/**
- * Ajustes de tempo por sexo (proporcional, não "mais fácil")
- */
-const SEX_TIME_MULT: Record<SexKey, number> = {
-  M: 1.0,
-  F: 1.10, // 10% mais tempo para mesmo esforço relativo
-};
-
-/**
- * CAMADA 1: Estima tempo de um movimento específico
- * Ajustado por nível, sexo e fadiga acumulada
- */
-export function estimateMovementTime(
-  movement: string,
-  volume: number,
-  nivel: TrainingLevel,
-  sexo: SexKey,
-  accumulatedFatigue: boolean = false
-): number {
-  const type = detectMovementType(movement);
-  const config = MOVEMENT_CONFIG[type];
+export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWorkoutResult {
+  const { nivel, sexo, tempoDisponivel, wodBase } = config;
+  const sexKey: SexKey = sexo === 'feminino' ? 'F' : 'M';
   
-  const levelMult = LEVEL_TIME_MULT[nivel];
-  const sexMult = SEX_TIME_MULT[sexo];
-  const fatigueMult = accumulatedFatigue ? config.fatigueFactor : 1.0;
+  // 1. Calcular tempo original
+  const originalTime = calculateWodTime(wodBase.blocks, nivel, sexKey);
+  const originalMinutes = originalTime.totalMinutes;
   
-  const baseSeconds = volume * config.baseSecondsPerUnit;
-  const adjustedSeconds = baseSeconds * levelMult * sexMult * fatigueMult;
+  // 2. Aplicar adaptação por nível/sexo
+  let adaptedBlocks = wodBase.blocks.map(block => 
+    applyLevelSexVolumes(block, nivel, sexKey)
+  );
   
-  return Math.ceil(adjustedSeconds);
-}
-
-/**
- * Detecta tipo de movimento a partir do texto
- */
-function detectMovementType(text: string): MovementType {
-  const lower = text.toLowerCase();
+  // 3. Calcular tempo após adaptação de nível/sexo
+  let currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  let currentMinutes = currentTime.totalMinutes;
   
-  if (lower.includes('remo') || lower.includes('row')) return 'remo';
-  if (lower.includes('skierg') || lower.includes('ski erg') || lower.includes('ski-erg')) return 'skierg';
-  if (lower.includes('bike') || lower.includes('assault') || lower.includes('echo')) return 'bike';
-  if (lower.includes('corrida') || lower.includes('run') || lower.includes('trote')) return 'corrida';
-  if (lower.includes('sled push') || lower.includes('push')) return 'sled_push';
-  if (lower.includes('sled pull') || lower.includes('pull')) return 'sled_pull';
-  if (lower.includes('farmer') || lower.includes('carry')) return 'farmer';
-  if (lower.includes('lunge') || lower.includes('afundo')) return 'lunge';
-  if (lower.includes('wall ball') || lower.includes('wallball')) return 'wallball';
-  if (lower.includes('burpee')) return 'burpee';
-  if (lower.includes('sandbag') || lower.includes('saco')) return 'sandbag';
-  if (lower.includes('prancha') || lower.includes('abdominal') || lower.includes('twist') || lower.includes('core')) return 'core';
-  if (lower.includes('press') || lower.includes('squat') || lower.includes('agach') || lower.includes('deadlift')) return 'strength';
+  let wasCondensed = false;
+  let blocksRemoved = 0;
+  let densityIncreased = false;
   
-  return 'generic';
-}
-
-// ============================================
-// CAMADA 2: CÁLCULO DO TEMPO REAL DO WOD
-// ============================================
-
-const TRANSITION_TIME = 15; // segundos entre movimentos
-
-/**
- * Parse linha para extrair movimento e volume
- */
-function parseLine(line: string): ParsedMovement | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.length < 3) return null;
+  // 4. Se tempo ilimitado, retorna
+  if (tempoDisponivel >= 9999) {
+    return {
+      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: currentMinutes },
+      originalDuration: originalMinutes,
+      adaptedDuration: currentMinutes,
+      wasCondensed: false,
+      blocksRemoved: 0,
+      densityIncreased: false,
+    };
+  }
   
-  // Padrões de extração
-  const patterns = [
-    // Metros: "1000m Remo", "Remo 500m"
-    { regex: /(\d+)\s*m\s+(\w+)/i, unit: 'm' as const, valueGroup: 1 },
-    { regex: /(\w+)\s+(\d+)\s*m/i, unit: 'm' as const, valueGroup: 2 },
-    // Calorias: "50cal Bike", "Bike 30 cal"
-    { regex: /(\d+)\s*cal\s+(\w+)/i, unit: 'cal' as const, valueGroup: 1 },
-    { regex: /(\w+)\s+(\d+)\s*cal/i, unit: 'cal' as const, valueGroup: 2 },
-    // Reps: "50 Wall Balls", "15 Burpees"
-    { regex: /^(\d+)\s+(.+)/i, unit: 'reps' as const, valueGroup: 1 },
-  ];
+  const targetSeconds = tempoDisponivel * 60;
   
-  for (const pattern of patterns) {
-    const match = trimmed.match(pattern.regex);
-    if (match) {
-      const value = parseInt(match[pattern.valueGroup], 10);
-      if (!isNaN(value) && value > 0) {
-        const type = detectMovementType(trimmed);
-        return {
-          original: trimmed,
-          type,
-          value,
-          unit: pattern.unit,
-          estimatedSeconds: 0, // Será calculado depois
-        };
+  // 5. Se já cabe, retorna
+  if (currentTime.totalSeconds <= targetSeconds) {
+    return {
+      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: currentMinutes },
+      originalDuration: originalMinutes,
+      adaptedDuration: currentMinutes,
+      wasCondensed: false,
+      blocksRemoved: 0,
+      densityIncreased: false,
+    };
+  }
+  
+  // 6. ESTRATÉGIA DE ADAPTAÇÃO
+  
+  // Passo A: Remover blocos acessórios
+  const removeResult = removeBlocksByPriority(adaptedBlocks, targetSeconds, nivel, sexKey);
+  adaptedBlocks = removeResult.blocks;
+  blocksRemoved = removeResult.removed;
+  
+  currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  
+  // Passo B: Se ainda não cabe, aumentar densidade
+  if (currentTime.totalSeconds > targetSeconds) {
+    adaptedBlocks = adaptedBlocks.map(block => {
+      const priority = BLOCK_PRIORITIES[block.type];
+      if (priority?.canCondense) {
+        return increaseDensity(block);
       }
-    }
-  }
-  
-  return null;
-}
-
-/**
- * CAMADA 2: Calcula duração total do WOD
- * Soma tempo de todos os movimentos + transições
- */
-export function calculateWodDuration(
-  blocks: WorkoutBlock[],
-  nivel: TrainingLevel,
-  sexo: SexKey
-): number {
-  let totalSeconds = 0;
-  const previousTypes: MovementType[] = [];
-  
-  for (const block of blocks) {
-    const lines = block.content.split('\n');
-    let blockSeconds = 0;
-    
-    // Detectar rounds
-    const roundsMatch = block.content.toLowerCase().match(/(\d+)\s*(rounds?|rodadas?)/);
-    const rounds = roundsMatch ? parseInt(roundsMatch[1], 10) || 1 : 1;
-    
-    // AMRAP estima 3 rounds
-    const isAmrap = block.content.toLowerCase().includes('amrap');
-    const effectiveRounds = isAmrap ? 3 : rounds;
-    
-    for (const line of lines) {
-      const parsed = parseLine(line);
-      if (!parsed) continue;
-      
-      // Verifica fadiga: mesmo tipo de movimento apareceu antes
-      const hasFatigue = previousTypes.includes(parsed.type);
-      
-      const seconds = estimateMovementTime(
-        line,
-        parsed.value,
-        nivel,
-        sexo,
-        hasFatigue
-      );
-      
-      blockSeconds += seconds + TRANSITION_TIME;
-      previousTypes.push(parsed.type);
-    }
-    
-    totalSeconds += blockSeconds * effectiveRounds;
-  }
-  
-  return Math.ceil(totalSeconds);
-}
-
-// ============================================
-// CAMADA 3: ADAPTAÇÃO POR TEMPO
-// ============================================
-
-/**
- * Prioridade de blocos (maior = remover primeiro)
- */
-const BLOCK_PRIORITY: Record<string, BlockPriority> = {
-  aquecimento: { type: 'aquecimento', priority: 2, isAccessory: false },
-  conditioning: { type: 'conditioning', priority: 1, isAccessory: false }, // MANTER sempre
-  forca: { type: 'forca', priority: 3, isAccessory: false },
-  especifico: { type: 'especifico', priority: 4, isAccessory: true },
-  core: { type: 'core', priority: 5, isAccessory: true }, // remover primeiro
-  corrida: { type: 'corrida', priority: 5, isAccessory: true },
-  notas: { type: 'notas', priority: 6, isAccessory: true },
-};
-
-/**
- * Remove blocos acessórios quando tempo não é suficiente
- */
-function removeAccessoryBlocks(
-  blocks: WorkoutBlock[],
-  targetMinutes: number,
-  nivel: TrainingLevel,
-  sexo: SexKey
-): WorkoutBlock[] {
-  let currentDuration = calculateWodDuration(blocks, nivel, sexo) / 60;
-  
-  if (currentDuration <= targetMinutes) {
-    return blocks;
-  }
-  
-  // Ordenar por prioridade (maior prioridade = remover primeiro)
-  const sortedBlocks = [...blocks].sort((a, b) => {
-    const priorityA = BLOCK_PRIORITY[a.type]?.priority || 3;
-    const priorityB = BLOCK_PRIORITY[b.type]?.priority || 3;
-    return priorityB - priorityA;
-  });
-  
-  const keptBlocks: WorkoutBlock[] = [];
-  
-  for (const block of sortedBlocks) {
-    const priority = BLOCK_PRIORITY[block.type];
-    
-    // Sempre manter conditioning principal
-    if (block.isMainWod || block.type === 'conditioning') {
-      keptBlocks.push(block);
-      continue;
-    }
-    
-    // Recalcular duração atual
-    currentDuration = calculateWodDuration(keptBlocks, nivel, sexo) / 60;
-    
-    // Se ainda tem espaço, adicionar bloco
-    const blockDuration = calculateWodDuration([block], nivel, sexo) / 60;
-    if (currentDuration + blockDuration <= targetMinutes) {
-      keptBlocks.push(block);
-    }
-  }
-  
-  // Reordenar para ordem original
-  return blocks.filter(b => keptBlocks.includes(b));
-}
-
-/**
- * Condensa volumes de um bloco para caber no tempo
- */
-function condenseBlock(
-  block: WorkoutBlock,
-  targetRatio: number
-): WorkoutBlock {
-  if (targetRatio >= 1.0) return block;
-  
-  // Clampar ratio entre 0.5 e 1.0 (nunca reduzir mais que 50%)
-  const ratio = Math.max(0.5, Math.min(1.0, targetRatio));
-  
-  const lines = block.content.split('\n');
-  const condensedLines: string[] = [];
-  
-  for (const line of lines) {
-    let condensed = line;
-    
-    // Reduzir metros
-    condensed = condensed.replace(/(\d+)\s*m\b/gi, (match, p1) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(50, Math.floor(value * ratio));
-      return `${newValue}m`;
+      return block;
     });
+    densityIncreased = true;
     
-    // Reduzir calorias
-    condensed = condensed.replace(/(\d+)\s*cal\b/gi, (match, p1) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(10, Math.floor(value * ratio));
-      return `${newValue}cal`;
-    });
-    
-    // Reduzir reps no início da linha
-    condensed = condensed.replace(/^(\s*)(\d+)(\s+)([A-Za-zÀ-ÿ])/g, (match, p1, p2, p3, p4) => {
-      const value = parseInt(p2, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(5, Math.floor(value * ratio));
-      return `${p1}${newValue}${p3}${p4}`;
-    });
-    
-    // Reduzir rounds/sets
-    condensed = condensed.replace(/(\d+)\s*(rounds?|sets?|rodadas?)/gi, (match, p1, p2) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(1, Math.floor(value * ratio));
-      return `${newValue} ${p2}`;
-    });
-    
-    // Reduzir EMOM/AMRAP minutos
-    condensed = condensed.replace(/\b(EMOM|AMRAP)\s*(\d+)/gi, (match, p1, p2) => {
-      const value = parseInt(p2, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(4, Math.floor(value * ratio));
-      return `${p1} ${newValue}`;
-    });
-    
-    condensedLines.push(condensed);
+    currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   }
   
-  return {
-    ...block,
-    content: condensedLines.join('\n'),
-  };
-}
-
-/**
- * CAMADA 3: Adapta WOD por tempo disponível
- * Estratégia combinada: remover acessórios + condensar principal
- */
-function adaptByTime(
-  blocks: WorkoutBlock[],
-  targetMinutes: number,
-  nivel: TrainingLevel,
-  sexo: SexKey
-): { blocks: WorkoutBlock[]; wasCondensed: boolean; blocksRemoved: number } {
-  const originalCount = blocks.length;
-  
-  // Se tempo ilimitado, retorna original
-  if (targetMinutes >= 9999) {
-    return { blocks, wasCondensed: false, blocksRemoved: 0 };
+  // Passo C: Se ainda não cabe, condensar volumes
+  if (currentTime.totalSeconds > targetSeconds) {
+    const ratio = targetSeconds / currentTime.totalSeconds;
+    
+    adaptedBlocks = adaptedBlocks.map(block => {
+      const priority = BLOCK_PRIORITIES[block.type];
+      if (priority?.canCondense) {
+        return condenseBlockVolumes(block, ratio);
+      }
+      return block;
+    });
+    wasCondensed = true;
+    
+    currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   }
   
-  // Passo 1: Remover blocos acessórios
-  let adaptedBlocks = removeAccessoryBlocks(blocks, targetMinutes, nivel, sexo);
-  const blocksRemoved = originalCount - adaptedBlocks.length;
-  
-  // Passo 2: Verificar se cabe
-  let currentDuration = calculateWodDuration(adaptedBlocks, nivel, sexo) / 60;
-  
-  if (currentDuration <= targetMinutes) {
-    return { blocks: adaptedBlocks, wasCondensed: false, blocksRemoved };
-  }
-  
-  // Passo 3: Condensar blocos de conditioning
-  const targetRatio = targetMinutes / currentDuration;
-  
-  adaptedBlocks = adaptedBlocks.map(block => {
-    if (block.type === 'conditioning' || block.isMainWod) {
-      return condenseBlock(block, targetRatio);
-    }
-    return block;
-  });
-  
-  // Passo 4: Se ainda não cabe, condensar mais agressivamente
-  currentDuration = calculateWodDuration(adaptedBlocks, nivel, sexo) / 60;
-  
-  if (currentDuration > targetMinutes) {
-    const aggressiveRatio = targetMinutes / currentDuration * 0.95;
+  // Passo D: Se ainda não cabe, condensar mais agressivamente
+  if (currentTime.totalSeconds > targetSeconds * 1.1) { // tolerância de 10%
+    const aggressiveRatio = (targetSeconds / currentTime.totalSeconds) * 0.9;
     
     adaptedBlocks = adaptedBlocks.map(block => {
       if (block.type === 'conditioning' || block.isMainWod) {
-        return condenseBlock(block, aggressiveRatio);
+        return condenseBlockVolumes(block, aggressiveRatio);
       }
-      // Condensar aquecimento também
       if (block.type === 'aquecimento') {
-        return condenseBlock(block, Math.max(0.7, aggressiveRatio));
+        // Condensar aquecimento levemente
+        return condenseBlockVolumes(block, Math.max(0.75, aggressiveRatio));
       }
       return block;
     });
   }
   
-  return { blocks: adaptedBlocks, wasCondensed: true, blocksRemoved };
-}
-
-// ============================================
-// CAMADA 4: ADAPTAÇÃO POR NÍVEL E SEXO
-// ============================================
-
-/**
- * Multiplicador de volume por nível
- */
-const LEVEL_VOLUME_MULT: Record<TrainingLevel, number> = {
-  base: 0.65,
-  progressivo: 0.8,
-  performance: 1.0,
-};
-
-/**
- * Multiplicador de volume por sexo
- */
-const SEX_VOLUME_MULT: Record<SexKey, number> = {
-  M: 1.0,
-  F: 0.85,
-};
-
-/**
- * Aplica adaptação de nível/sexo no conteúdo
- */
-function applyLevelSexAdaptation(
-  block: WorkoutBlock,
-  nivel: TrainingLevel,
-  sexo: SexKey
-): WorkoutBlock {
-  // Performance M = referência
-  if (nivel === 'performance' && sexo === 'M') {
-    return block;
-  }
+  // 7. Calcular tempo final
+  const finalTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   
-  const volumeMult = LEVEL_VOLUME_MULT[nivel] * SEX_VOLUME_MULT[sexo];
-  
-  if (volumeMult >= 1.0) return block;
-  
-  const lines = block.content.split('\n');
-  const adaptedLines: string[] = [];
-  
-  for (const line of lines) {
-    let adapted = line;
-    
-    // Não adaptar aquecimento
-    const isWarmupLine = line.toLowerCase().includes('aquecimento') || 
-                          line.toLowerCase().includes('warm');
-    if (isWarmupLine) {
-      adaptedLines.push(line);
-      continue;
-    }
-    
-    // Adaptar metros
-    adapted = adapted.replace(/(\d+)\s*m\b/gi, (match, p1) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(10, Math.floor(value * volumeMult));
-      return `${newValue}m`;
-    });
-    
-    // Adaptar calorias
-    adapted = adapted.replace(/(\d+)\s*cal\b/gi, (match, p1) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(5, Math.floor(value * volumeMult));
-      return `${newValue}cal`;
-    });
-    
-    // Adaptar reps
-    adapted = adapted.replace(/^(\s*)(\d+)(\s+)([A-Za-zÀ-ÿ])/g, (match, p1, p2, p3, p4) => {
-      const value = parseInt(p2, 10);
-      if (isNaN(value)) return match;
-      const newValue = Math.max(3, Math.floor(value * volumeMult));
-      return `${p1}${newValue}${p3}${p4}`;
-    });
-    
-    // Adaptar rounds/sets (menos agressivo)
-    adapted = adapted.replace(/(\d+)\s*(rounds?|sets?|rodadas?)/gi, (match, p1, p2) => {
-      const value = parseInt(p1, 10);
-      if (isNaN(value)) return match;
-      // Rounds são adaptados de forma mais conservadora
-      const roundsMult = Math.max(0.7, volumeMult);
-      const newValue = Math.max(1, Math.floor(value * roundsMult));
-      return `${newValue} ${p2}`;
-    });
-    
-    adaptedLines.push(adapted);
-  }
-  
-  return {
-    ...block,
-    content: adaptedLines.join('\n'),
-  };
-}
-
-// ============================================
-// FUNÇÃO PRINCIPAL: buildWorkoutByTime
-// ============================================
-
-/**
- * MOTOR PRINCIPAL: Constrói treino adaptado ao tempo disponível
- * 
- * @param config - Configuração do atleta e treino base
- * @returns Treino adaptado com duração calculada
- */
-export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWorkoutResult {
-  const { nivel, sexo, tempoDisponivel, wodBase } = config;
-  const sexKey: SexKey = sexo === 'feminino' ? 'F' : 'M';
-  
-  // 1. Calcular duração original
-  const originalDuration = calculateWodDuration(wodBase.blocks, nivel, sexKey);
-  const originalMinutes = Math.ceil(originalDuration / 60);
-  
-  // 2. Aplicar adaptação por nível/sexo primeiro (CAMADA 4)
-  let adaptedBlocks = wodBase.blocks.map(block => 
-    applyLevelSexAdaptation(block, nivel, sexKey)
-  );
-  
-  // 3. Calcular duração após adaptação de nível/sexo
-  const afterLevelDuration = calculateWodDuration(adaptedBlocks, nivel, sexKey);
-  const afterLevelMinutes = Math.ceil(afterLevelDuration / 60);
-  
-  // 4. Aplicar adaptação por tempo (CAMADA 3)
-  const timeAdaptation = adaptByTime(
-    adaptedBlocks,
-    tempoDisponivel,
-    nivel,
-    sexKey
-  );
-  
-  adaptedBlocks = timeAdaptation.blocks;
-  
-  // 5. Calcular duração final
-  const finalDuration = calculateWodDuration(adaptedBlocks, nivel, sexKey);
-  const finalMinutes = Math.ceil(finalDuration / 60);
-  
-  // 6. Debug log (dev only)
+  // 8. Debug log
   if (process.env.NODE_ENV === 'development') {
-    console.log('🏋️ buildWorkoutByTime:', {
+    console.log('🏋️ buildWorkoutByTime v2:', {
       nivel,
       sexo,
       tempoDisponivel,
       originalMinutes,
-      afterLevelMinutes,
-      finalMinutes,
-      wasCondensed: timeAdaptation.wasCondensed,
-      blocksRemoved: timeAdaptation.blocksRemoved,
+      adaptedMinutes: finalTime.totalMinutes,
+      wasCondensed,
+      blocksRemoved,
+      densityIncreased,
+      breakdown: {
+        movementMin: Math.ceil(finalTime.movementSeconds / 60),
+        transitionMin: Math.ceil(finalTime.transitionSeconds / 60),
+        pauseMin: Math.ceil(finalTime.blockPauseSeconds / 60),
+      },
     });
   }
   
-  // 7. Retornar resultado
   return {
     workout: {
       ...wodBase,
       blocks: adaptedBlocks,
-      estimatedTime: finalMinutes,
+      estimatedTime: finalTime.totalMinutes,
     },
     originalDuration: originalMinutes,
-    adaptedDuration: finalMinutes,
-    wasCondensed: timeAdaptation.wasCondensed,
-    blocksRemoved: timeAdaptation.blocksRemoved,
+    adaptedDuration: finalTime.totalMinutes,
+    wasCondensed,
+    blocksRemoved,
+    densityIncreased,
   };
 }
 
 /**
- * Valida se adaptação está correta
- * Regra: tempo diferente DEVE resultar em WOD diferente
+ * Valida adaptação: tempo diferente DEVE resultar em WOD diferente
  */
 export function validateAdaptation(
   original: DayWorkout,
@@ -608,28 +964,17 @@ export function validateAdaptation(
   tempoOriginal: number,
   tempoAdaptado: number
 ): { isValid: boolean; reason?: string } {
-  // Se tempo é igual, WOD pode ser igual
   if (tempoOriginal === tempoAdaptado) {
     return { isValid: true };
   }
   
-  // Se tempo é diferente, WOD DEVE ser diferente
-  const originalContent = original.blocks.map(b => b.content).join('\n');
-  const adaptedContent = adapted.blocks.map(b => b.content).join('\n');
+  const originalContent = original.blocks.map(b => b.content).join('');
+  const adaptedContent = adapted.blocks.map(b => b.content).join('');
   
-  if (originalContent === adaptedContent) {
+  if (originalContent === adaptedContent && original.blocks.length === adapted.blocks.length) {
     return {
       isValid: false,
-      reason: 'Tempo mudou mas WOD permanece igual - adaptação não aplicada',
-    };
-  }
-  
-  // Validar que tempo estimado corresponde à realidade
-  const diff = Math.abs(adapted.estimatedTime - tempoAdaptado);
-  if (diff > tempoAdaptado * 0.3) { // Tolerância de 30%
-    return {
-      isValid: false,
-      reason: `Tempo estimado (${adapted.estimatedTime}min) difere muito do alvo (${tempoAdaptado}min)`,
+      reason: 'Tempo mudou mas WOD permanece igual',
     };
   }
   
