@@ -6,6 +6,7 @@ import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { BenchmarkHistory } from './BenchmarkHistory';
+import { EvolutionMilestones } from './EvolutionMilestones';
 import { formatBlockTime } from '@/utils/workoutCalculations';
 import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
 import { supabase } from '@/integrations/supabase/client';
@@ -614,15 +615,23 @@ export function Dashboard() {
                 <ChevronRight className="w-6 h-6" />
               </motion.button>
 
-              {/* Benchmark History Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mt-8"
-              >
-                <BenchmarkHistory />
-              </motion.div>
+              {/* Evolution Milestones & Benchmark History Section */}
+              <div className="mt-8 grid gap-6 lg:grid-cols-2">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <EvolutionMilestones />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <BenchmarkHistory />
+                </motion.div>
+              </div>
             </motion.div>
           ) : (
             <motion.div
