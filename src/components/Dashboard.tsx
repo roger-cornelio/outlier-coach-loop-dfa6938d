@@ -5,8 +5,8 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
-import { formatBlockTime } from '@/utils/workoutCalculations';
-import { calculateBlockMetricsWithEngine } from '@/utils/workoutEngine';
+import { formatBlockTimeSec, getBlockDurationSec, calculateCalories } from '@/utils/workoutCalculations';
+import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -205,29 +205,41 @@ export function Dashboard() {
   const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
 
   // ============================================
-  // REGRA: Tempo vem EXCLUSIVAMENTE do estimatedTime do adaptedWorkout
-  // Nunca de workoutEngine, nunca de valores fixos
+  // REGRA INVIOLÁVEL:
+  // Tempo total exibido = soma real dos durationSec de TODOS os blocos
+  // Tempo no card = durationSec daquele bloco
+  // Fonte única: sumBlocksDurationSec
   // ============================================
-  const totalTime = currentWorkout?.estimatedTime || 0;
-  
-  // Calculate calories using the workout engine (only for kcal, not time)
-  const workoutMetrics = useMemo(() => {
-    if (!currentWorkout || !athleteConfig) {
-      return { totalMinutes: 0, totalKcal: 0, blockMetrics: [] };
-    }
-    return calculateBlockMetricsWithEngine(
-      currentWorkout.blocks.map(b => ({ type: b.type, content: b.content })),
-      {
-        level: effectiveLevel,
-        sessionDuration: athleteConfig.sessionDuration,
-        peso: athleteConfig.peso,
-        idade: athleteConfig.idade,
-        sexo: athleteConfig.sexo,
-      }
-    );
+  const blockMetrics = useMemo(() => {
+    if (!currentWorkout) return { totalSec: 0, byBlockSec: {}, blockData: [] };
+    
+    // Converter blocos para TimeBlock com durationSec calculado
+    const timeBlocks: TimeBlock[] = currentWorkout.blocks.map((block) => {
+      const durationSec = getBlockDurationSec(block, effectiveLevel);
+      return {
+        id: block.id,
+        title: block.title,
+        durationSec,
+      };
+    });
+    
+    const { totalSec, byBlockSec } = sumBlocksDurationSec(timeBlocks);
+    
+    // Calcular calorias para cada bloco
+    const blockData = currentWorkout.blocks.map((block) => {
+      const sec = byBlockSec[block.id] || 0;
+      const kcal = calculateCalories(block, athleteConfig, effectiveLevel) || 0;
+      return { sec, kcal };
+    });
+    
+    return { totalSec, byBlockSec, blockData };
   }, [currentWorkout, athleteConfig, effectiveLevel]);
 
-  const totalCalories = workoutMetrics.totalKcal;
+  // Tempo total em minutos (convertido de segundos)
+  const totalTime = Math.round(blockMetrics.totalSec / 60);
+  
+  // Calorias totais = soma das calorias de cada bloco
+  const totalCalories = blockMetrics.blockData.reduce((sum, b) => sum + b.kcal, 0);
 
   // Fallback objective if AI fails
   const getFallbackObjective = (): string => {
@@ -521,10 +533,10 @@ export function Dashboard() {
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
-                  const level = effectiveLevel;
-                  const blockMetric = workoutMetrics.blockMetrics[index];
-                  const estimatedTime = blockMetric?.minutes || 0;
-                  const calories = blockMetric?.kcal || 0;
+                  // Tempo e calorias vêm de blockMetrics (fonte única de verdade)
+                  const blockData = blockMetrics.blockData[index];
+                  const durationSec = blockData?.sec || 0;
+                  const calories = blockData?.kcal || 0;
 
                   return (
                     <motion.div
@@ -555,13 +567,21 @@ export function Dashboard() {
                       {/* Block Stats */}
                       {block.type !== 'notas' && (
                         <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-                          {estimatedTime > 0 && (
+                          {durationSec > 0 ? (
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span className="text-muted-foreground">
                                 Tempo:
                               </span>
-                              <span className="font-medium text-foreground">{formatBlockTime(estimatedTime)}</span>
+                              <span className="font-medium text-foreground">{formatBlockTimeSec(durationSec)}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Tempo:
+                              </span>
+                              <span className="font-medium text-foreground">—</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-sm">
