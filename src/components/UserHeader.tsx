@@ -40,6 +40,7 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
           <UserIdentity 
             user={{ name: profile?.name, email: profile?.email || user.email || '' }}
             size="sm"
+            primaryOnly={true}
             className="max-w-[150px]"
           />
           <Badge variant="outline" className="text-xs w-fit px-1.5 py-0 mt-0.5">
