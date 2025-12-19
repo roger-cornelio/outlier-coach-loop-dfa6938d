@@ -51,14 +51,10 @@ const Index = () => {
       return;
     }
 
-    // ADMIN: redirect to /admin
-    if (state === 'admin') {
-      navigate('/admin');
-      return;
-    }
+    // ADMIN and SUPERADMIN can access ALL views - no redirect
+    // They can navigate the app normally like any athlete
 
     // Non-admin trying to access admin views: reset to dashboard
-    // Note: Admin users are already redirected above, but this guards against edge cases
     const isAdminView = currentView === 'admin' || currentView === 'userManagement' || 
                         currentView === 'params' || currentView === 'coachApplicationsAdmin';
     if (isAdminView && !canManageWorkouts) {
@@ -67,11 +63,11 @@ const Index = () => {
     }
 
     // Non-coach trying to access coach performance: reset to dashboard
-    if (currentView === 'coachPerformance' && !isCoach) {
+    if (currentView === 'coachPerformance' && !isCoach && state !== 'admin' && state !== 'superadmin') {
       setCurrentView('dashboard');
       return;
     }
-  }, [state, currentView, isCoach, navigate, setCurrentView]);
+  }, [state, currentView, isCoach, canManageWorkouts, navigate, setCurrentView]);
 
   // Show loading while checking auth (except welcome screen)
   if (state === 'loading' && currentView !== 'welcome') {
