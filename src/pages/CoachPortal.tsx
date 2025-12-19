@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Eye, EyeOff, Mail, Lock, Loader2, ArrowLeft, 
   Clock, CheckCircle, XCircle, RefreshCw, UserCog, 
-  Instagram, MapPin, Building2, User
+  Instagram, MapPin, Building2, User, ShieldCheck, ArrowRight
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -42,19 +42,28 @@ export default function CoachPortal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { user, profile, isCoach, loading: authLoading } = useAuth();
+  const { user, profile, isCoach, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const { application, loading: appLoading, submitApplication, refetch } = useCoachApplication();
   const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // If authenticated and is coach with approved application, redirect to coach panel
+  // PRIORITY: ADMIN > COACH > ATHLETE
+  // If admin/superadmin, redirect to admin panel
   useEffect(() => {
-    if (!authLoading && !appLoading && user && isCoach && application?.status === 'approved') {
+    if (!authLoading && user && (isAdmin || isSuperAdmin)) {
       setCurrentView('admin');
       navigate('/');
     }
-  }, [user, isCoach, application, authLoading, appLoading, navigate, setCurrentView]);
+  }, [user, isAdmin, isSuperAdmin, authLoading, navigate, setCurrentView]);
+
+  // If authenticated and is coach with approved application, redirect to coach panel
+  useEffect(() => {
+    if (!authLoading && !appLoading && user && isCoach && !isAdmin && !isSuperAdmin && application?.status === 'approved') {
+      setCurrentView('admin');
+      navigate('/');
+    }
+  }, [user, isCoach, isAdmin, isSuperAdmin, application, authLoading, appLoading, navigate, setCurrentView]);
 
   const validateForm = () => {
     try {
@@ -265,10 +274,46 @@ export default function CoachPortal() {
     );
   }
 
-  // Authenticated user - show status based on application
+  // Authenticated user - show status based on role and application
   if (user) {
-    // Check application status first (pending, rejected, approved)
-    // IMPORTANT: Only show "athlete access" if there's NO application at all
+    // PRIORITY CHECK: Admin/Superadmin - show admin card (should redirect, but fallback UI)
+    if (isAdmin || isSuperAdmin) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-yellow-500/10 rounded-full flex items-center justify-center mb-6">
+                <ShieldCheck className="w-8 h-8 text-yellow-500" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Você é {isSuperAdmin ? 'SUPERADMIN' : 'ADMIN'}
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Você já possui acesso administrativo ao sistema. 
+                Não é necessário se cadastrar como coach.
+              </p>
+              <button
+                onClick={() => {
+                  setCurrentView('admin');
+                  navigate('/');
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                Ir para Painel do Admin
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // Check application status for non-admin users
+    // IMPORTANT: Only show coach flow for users that are NOT admin/superadmin
     
     // Pending application - show waiting screen
     if (application?.status === 'pending') {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { DEFAULT_SUPERADMIN_EMAILS } from '@/config/superadminEmails';
 
 export type UserRole = 'superadmin' | 'admin' | 'coach' | 'user';
 
@@ -22,7 +23,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  // Computed properties
+  // Computed properties - PRIORITY: superadmin > admin > coach > user
   const isSuperAdmin = role === 'superadmin';
   const isAdmin = role === 'admin' || role === 'superadmin';
   const isCoach = role === 'coach';
@@ -50,6 +51,9 @@ export function useAuth() {
 
   const syncRolesOnBootstrap = useCallback(async (userId: string, email: string) => {
     try {
+      // Check if email is in default superadmin list (frontend check for faster UX)
+      const isSuperadminEmail = DEFAULT_SUPERADMIN_EMAILS.includes(email.toLowerCase());
+      
       // 1. Ensure superadmin role for fixed emails
       await supabase.rpc('ensure_superadmin_role', { 
         _user_id: userId, 
@@ -61,8 +65,11 @@ export function useAuth() {
         _user_id: userId, 
         _email: email 
       });
+      
+      return isSuperadminEmail;
     } catch (err) {
       console.error('Error syncing roles on bootstrap:', err);
+      return false;
     }
   }, []);
 
