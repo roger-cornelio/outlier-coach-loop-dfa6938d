@@ -164,50 +164,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkUserRole, fetchProfile, syncRolesOnBootstrap]);
 
   useEffect(() => {
+    // Track if initial session check is done
+    let initialCheckDone = false;
+
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      // CRITICAL: Keep loading=true during auth state changes until fully resolved
+      // Only the initial getSession or this handler will set loading=false
+      
       setSession(session);
       setUser(session?.user ?? null);
       setSessionExpired(false);
 
-      // Defer role and profile check with setTimeout to avoid deadlock
-      if (session?.user) {
-        // CRITICAL: Set loading to TRUE before async role sync
-        // This prevents route guards from redirecting before role/profile are determined
-        setLoading(true);
-        const email = session.user.email || "";
-        setTimeout(async () => {
+      // If initial check already ran, handle subsequent auth changes
+      if (initialCheckDone) {
+        if (session?.user) {
+          // Keep loading true while we fetch roles/profile
+          setLoading(true);
+          const email = session.user.email || "";
+          // Use setTimeout to avoid Supabase deadlock
+          setTimeout(async () => {
+            try {
+              await syncRolesOnBootstrap(session.user.id, email);
+              await Promise.all([
+                checkUserRole(session.user.id),
+                fetchProfile(session.user.id),
+              ]);
+            } finally {
+              setLoading(false);
+            }
+          }, 0);
+        } else {
+          // User signed out
+          setRole("user");
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+      // If initial check hasn't run yet, let getSession handle loading state
+    });
+
+    // THEN check for existing session (runs once on mount)
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          // loading is already true from initial state
+          const email = session.user.email || "";
           await syncRolesOnBootstrap(session.user.id, email);
           await Promise.all([
             checkUserRole(session.user.id),
             fetchProfile(session.user.id),
           ]);
-          setLoading(false);
-        }, 0);
-      } else {
-        setRole("user");
-        setProfile(null);
+        }
+      } catch (err) {
+        console.error("Error initializing session:", err);
+      } finally {
+        // Mark initial check as done BEFORE setting loading=false
+        initialCheckDone = true;
         setLoading(false);
       }
-    });
+    };
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        setLoading(true);
-        const email = session.user.email || "";
-        await syncRolesOnBootstrap(session.user.id, email);
-        await Promise.all([checkUserRole(session.user.id), fetchProfile(session.user.id)]);
-        setLoading(false);
-      } else {
-        setLoading(false);
-      }
-    });
+    initSession();
 
     return () => subscription.unsubscribe();
   }, [checkUserRole, fetchProfile, syncRolesOnBootstrap]);
