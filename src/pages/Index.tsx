@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
+import { useEvents } from '@/hooks/useEvents';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { AthleteConfig } from '@/components/AthleteConfig';
 import { Dashboard } from '@/components/Dashboard';
@@ -19,45 +20,51 @@ import { useLevelTheme } from '@/hooks/useLevelTheme';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-const { currentView, setCurrentView } = useOutlierStore();
-  const { user, loading: authLoading, canManageWorkouts, isAdmin, isCoach } = useAuth();
+  const { currentView, setCurrentView } = useOutlierStore();
+  const { user, profile, loading: authLoading, canManageWorkouts, isAdmin, isCoach } = useAuth();
   const navigate = useNavigate();
+  
+  // Initialize event tracking (tracks app_opened automatically)
+  useEvents();
   
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
 
-  // Protect admin views
+  // MANDATORY LOGIN: Redirect to auth if not logged in (except welcome)
   useEffect(() => {
     if (authLoading) return;
     
-    // Redirect to auth if trying to access protected views without login
-    if (!user && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params' || currentView === 'coachPerformance')) {
+    // Allow welcome screen without login
+    if (currentView === 'welcome') return;
+    
+    // Redirect to auth if not logged in
+    if (!user) {
       navigate('/auth');
       return;
     }
     
     // Redirect non-coaches away from admin
-    if (user && currentView === 'admin' && !canManageWorkouts) {
+    if (currentView === 'admin' && !canManageWorkouts) {
       setCurrentView('dashboard');
       return;
     }
     
     // Redirect non-admins away from user management and params
-    if (user && (currentView === 'userManagement' || currentView === 'params') && !isAdmin) {
+    if ((currentView === 'userManagement' || currentView === 'params') && !isAdmin) {
       setCurrentView('dashboard');
       return;
     }
     
     // Redirect non-coaches away from coach performance
-    if (user && currentView === 'coachPerformance' && !isCoach && !isAdmin) {
+    if (currentView === 'coachPerformance' && !isCoach && !isAdmin) {
       setCurrentView('dashboard');
       return;
     }
   }, [user, authLoading, currentView, canManageWorkouts, isAdmin, isCoach, navigate, setCurrentView]);
 
-  // Show loading while checking auth for protected views
-  if (authLoading && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params' || currentView === 'coachPerformance')) {
+  // Show loading while checking auth
+  if (authLoading && currentView !== 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

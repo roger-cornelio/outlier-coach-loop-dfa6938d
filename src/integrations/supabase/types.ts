@@ -92,26 +92,75 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      events: {
         Row: {
-          created_at: string
-          email: string | null
+          created_at: string | null
+          event_name: string
           id: string
+          properties: Json | null
           user_id: string
         }
         Insert: {
-          created_at?: string
-          email?: string | null
+          created_at?: string | null
+          event_name: string
           id?: string
+          properties?: Json | null
           user_id: string
         }
         Update: {
-          created_at?: string
-          email?: string | null
+          created_at?: string | null
+          event_name?: string
           id?: string
+          properties?: Json | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          coach_id: string | null
+          created_at: string
+          email: string
+          id: string
+          last_active_at: string | null
+          name: string | null
+          user_id: string
+        }
+        Insert: {
+          coach_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          last_active_at?: string | null
+          name?: string | null
+          user_id: string
+        }
+        Update: {
+          coach_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          last_active_at?: string | null
+          name?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -140,6 +189,7 @@ export type Database = {
         Args: { _athlete_id: string; _viewer_id: string }
         Returns: boolean
       }
+      get_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
