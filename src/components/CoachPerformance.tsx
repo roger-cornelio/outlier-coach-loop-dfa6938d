@@ -55,7 +55,7 @@ interface BenchmarkSummary {
 }
 
 export function CoachPerformance() {
-  const { user, isCoach, isAdmin, loading: authLoading } = useAuth();
+  const { user, profile, isCoach, isAdmin, loading: authLoading } = useAuth();
   const { setCurrentView } = useOutlierStore();
   
   const [athletes, setAthletes] = useState<AthleteWithResults[]>([]);
@@ -63,20 +63,20 @@ export function CoachPerformance() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteWithResults | null>(null);
 
-  // Fetch coach's athletes and their results
+  // Fetch coach's athletes and their results using profiles.coach_id
   useEffect(() => {
     async function fetchData() {
-      if (!user || authLoading) return;
+      if (!user || !profile?.id || authLoading) return;
       
       try {
         setLoading(true);
         setError(null);
 
-        // 1. Get athletes linked to this coach
-        const { data: coachAthletes, error: athletesError } = await supabase
-          .from('coach_athletes')
-          .select('athlete_id')
-          .eq('coach_id', user.id);
+        // 1. Get athletes linked to this coach via profiles.coach_id
+        const { data: athleteProfiles, error: athletesError } = await supabase
+          .from('profiles')
+          .select('id, user_id, email, name')
+          .eq('coach_id', profile.id);
 
         if (athletesError) {
           console.error('Error fetching coach athletes:', athletesError);
@@ -85,29 +85,19 @@ export function CoachPerformance() {
           return;
         }
 
-        if (!coachAthletes || coachAthletes.length === 0) {
+        if (!athleteProfiles || athleteProfiles.length === 0) {
           setAthletes([]);
           setLoading(false);
           return;
         }
 
-        const athleteIds = coachAthletes.map(a => a.athlete_id);
+        const athleteUserIds = athleteProfiles.map(a => a.user_id);
 
-        // 2. Get profiles for these athletes
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, email')
-          .in('user_id', athleteIds);
-
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-        }
-
-        // 3. Get benchmark results for these athletes
+        // 2. Get benchmark results for these athletes
         const { data: results, error: resultsError } = await supabase
           .from('benchmark_results')
           .select('*')
-          .in('user_id', athleteIds)
+          .in('user_id', athleteUserIds)
           .order('created_at', { ascending: false });
 
         if (resultsError) {
@@ -117,14 +107,13 @@ export function CoachPerformance() {
           return;
         }
 
-        // 4. Map results to athletes
-        const athletesWithResults: AthleteWithResults[] = athleteIds.map(athleteId => {
-          const profile = profiles?.find(p => p.user_id === athleteId);
-          const athleteResults = (results || []).filter(r => r.user_id === athleteId);
+        // 3. Map results to athletes
+        const athletesWithResults: AthleteWithResults[] = athleteProfiles.map(athleteProfile => {
+          const athleteResults = (results || []).filter(r => r.user_id === athleteProfile.user_id);
           
           return {
-            userId: athleteId,
-            email: profile?.email || 'Atleta',
+            userId: athleteProfile.user_id,
+            email: athleteProfile.name || athleteProfile.email || 'Atleta',
             results: athleteResults
           };
         });
@@ -139,7 +128,7 @@ export function CoachPerformance() {
     }
 
     fetchData();
-  }, [user, authLoading]);
+  }, [user, profile?.id, authLoading]);
 
   // Aggregate statistics
   const stats = useMemo(() => {

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { StatusDisplay } from './StatusDisplay';
+import { UserHeader } from './UserHeader';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
@@ -281,6 +282,9 @@ export function Dashboard() {
                   </p>
                 )}
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <UserHeader showLogout={true} />
             </div>
             <div className="flex items-center gap-2">
               <button

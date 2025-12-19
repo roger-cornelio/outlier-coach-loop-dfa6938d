@@ -4,9 +4,20 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'admin' | 'coach' | 'user';
 
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  name: string | null;
+  email: string;
+  coach_id: string | null;
+  last_active_at: string | null;
+  created_at: string;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -15,6 +26,26 @@ export function useAuth() {
   const isAdmin = role === 'admin';
   const isCoach = role === 'coach';
   const canManageWorkouts = role === 'admin' || role === 'coach';
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      } else {
+        setProfile(data as UserProfile);
+      }
+    } catch (err) {
+      console.error('Error in fetchProfile:', err);
+      setProfile(null);
+    }
+  }, []);
 
   const checkUserRole = useCallback(async (userId: string) => {
     try {
@@ -62,7 +93,10 @@ export function useAuth() {
         setSessionExpired(false);
         
         if (data.session.user) {
-          await checkUserRole(data.session.user.id);
+          await Promise.all([
+            checkUserRole(data.session.user.id),
+            fetchProfile(data.session.user.id),
+          ]);
         }
       }
       
@@ -72,7 +106,7 @@ export function useAuth() {
       setSessionExpired(true);
       return { error: err };
     }
-  }, [checkUserRole]);
+  }, [checkUserRole, fetchProfile]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -82,13 +116,17 @@ export function useAuth() {
         setUser(session?.user ?? null);
         setSessionExpired(false);
         
-        // Defer role check with setTimeout to avoid deadlock
+        // Defer role and profile check with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkUserRole(session.user.id);
+            Promise.all([
+              checkUserRole(session.user.id),
+              fetchProfile(session.user.id),
+            ]);
           }, 0);
         } else {
           setRole('user');
+          setProfile(null);
           setLoading(false);
         }
       }
@@ -100,14 +138,17 @@ export function useAuth() {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkUserRole(session.user.id);
+        Promise.all([
+          checkUserRole(session.user.id),
+          fetchProfile(session.user.id),
+        ]);
       } else {
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [checkUserRole]);
+  }, [checkUserRole, fetchProfile]);
 
   // Check session expiration periodically
   useEffect(() => {
@@ -142,7 +183,7 @@ export function useAuth() {
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -150,6 +191,7 @@ export function useAuth() {
       password,
       options: {
         emailRedirectTo: redirectUrl,
+        data: name ? { name } : undefined,
       },
     });
     return { error };
@@ -166,6 +208,7 @@ export function useAuth() {
     // Clear state regardless of server response
     setSession(null);
     setUser(null);
+    setProfile(null);
     setRole('user');
     setSessionExpired(false);
     
@@ -175,6 +218,7 @@ export function useAuth() {
   return {
     user,
     session,
+    profile,
     role,
     isAdmin,
     isCoach,
