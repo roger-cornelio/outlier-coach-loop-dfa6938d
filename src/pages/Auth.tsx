@@ -41,7 +41,16 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const next = new URLSearchParams(location.search).get('next');
+  const searchParams = new URLSearchParams(location.search);
+  const next = searchParams.get('next');
+  const initialMode = searchParams.get('mode');
+
+  // Set initial mode from query param
+  useEffect(() => {
+    if (initialMode === 'signup') {
+      setMode('signup');
+    }
+  }, [initialMode]);
 
   useEffect(() => {
     if (!user || authLoading) return;
