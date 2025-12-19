@@ -164,16 +164,36 @@ export default function CoachPortal() {
       }
 
       // Wait a moment for the profile trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // 2. Submit coach application
-      const success = await submitApplication({
-        full_name: name.trim(),
-        email: email.trim(),
-        instagram: instagram.trim() || undefined,
-        box_name: boxName.trim() || undefined,
-        city: city.trim() || undefined,
-      });
+      // 2. Fetch the newly created profile to get profile.id
+      const { data: newProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', signUpData.user.id)
+        .single();
+
+      if (profileError || !newProfile?.id) {
+        console.error('Error fetching profile after signup:', profileError);
+        toast({
+          title: 'Conta criada!',
+          description: 'Sua conta foi criada, mas houve um problema ao buscar seu perfil. Faça login para continuar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // 3. Submit coach application with the profile ID
+      const success = await submitApplication(
+        {
+          full_name: name.trim(),
+          email: email.trim(),
+          instagram: instagram.trim() || undefined,
+          box_name: boxName.trim() || undefined,
+          city: city.trim() || undefined,
+        },
+        newProfile.id // Pass profile ID directly
+      );
 
       if (!success) {
         console.error('Error submitting application');
