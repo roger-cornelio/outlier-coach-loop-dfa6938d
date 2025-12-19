@@ -8,9 +8,9 @@ import { useCoachApplication } from '@/hooks/useCoachApplication';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, 
+  Eye, EyeOff, Mail, Lock, Loader2, ArrowLeft, 
   Clock, CheckCircle, XCircle, RefreshCw, UserCog, 
-  Instagram, MapPin, Building2, LogOut
+  Instagram, MapPin, Building2, User
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -224,9 +224,36 @@ export default function CoachPortal() {
     }
   };
 
-  const handleSignOutAndReturn = async () => {
-    await supabase.auth.signOut();
-    setMode('login');
+  const handleSubmitApplicationForLoggedUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    setIsSubmitting(true);
+    try {
+      const success = await submitApplication({
+        full_name: name.trim() || profile.name || '',
+        email: profile.email,
+        instagram: instagram.trim() || undefined,
+        box_name: boxName.trim() || undefined,
+        city: city.trim() || undefined,
+      });
+
+      if (!success) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível enviar a solicitação.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Solicitação enviada!',
+          description: 'Aguarde a aprovação do administrador.',
+        });
+        await refetch();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Loading state
@@ -378,9 +405,8 @@ export default function CoachPortal() {
       );
     }
 
-    // NO application exists AND user is not coach = show athlete warning
-    // This is the ONLY case where we show the "athlete access" message
-    if (!application && !isCoach) {
+    // User authenticated but NO application exists - show coach signup form
+    if (!application) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
           <motion.div
@@ -388,25 +414,108 @@ export default function CoachPortal() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-md"
           >
-            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
-              <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
-                <User className="w-8 h-8 text-amber-500" />
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <UserCog className="w-8 h-8 text-primary" />
+                </div>
+                <h1 className="font-display text-2xl text-foreground mb-2">
+                  Cadastrar como Coach
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Complete seu cadastro para solicitar acesso como coach
+                </p>
               </div>
-              <h1 className="font-display text-2xl text-foreground mb-4">
-                Acesso de Atleta
-              </h1>
-              <p className="text-muted-foreground mb-6">
-                Você está logado como atleta/usuário. Para acessar como coach, 
-                saia e entre com sua conta de coach.
-              </p>
-              
-              <button
-                onClick={handleSignOutAndReturn}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              >
-                <LogOut className="w-5 h-5" />
-                Sair e entrar como Coach
-              </button>
+
+              <form onSubmit={handleSubmitApplicationForLoggedUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={name || profile?.name || ''}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Seu nome completo"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="email"
+                      value={profile?.email || ''}
+                      disabled
+                      className="w-full pl-10 pr-4 py-3 bg-secondary/50 border border-border rounded-lg text-muted-foreground cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Instagram <span className="text-muted-foreground">(opcional)</span>
+                  </label>
+                  <div className="relative">
+                    <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="@seuinstagram"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Box / Academia <span className="text-muted-foreground">(opcional)</span>
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={boxName}
+                      onChange={(e) => setBoxName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Nome do seu box"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Cidade <span className="text-muted-foreground">(opcional)</span>
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Sua cidade"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <UserCog className="w-5 h-5" />
+                  )}
+                  Solicitar Acesso como Coach
+                </button>
+              </form>
 
               <button
                 onClick={() => navigate('/')}
