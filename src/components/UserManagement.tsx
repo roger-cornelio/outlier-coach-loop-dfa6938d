@@ -279,7 +279,8 @@ export function UserManagement() {
   };
 
   const coaches = users.filter(u => u.role === 'coach');
-  const regularUsers = users.filter(u => u.role === 'user');
+  const athletes = users.filter(u => u.role === 'user');
+  const admins = users.filter(u => u.role === 'admin' || u.role === 'superadmin');
 
   return (
     <div className="min-h-screen">
@@ -306,14 +307,14 @@ export function UserManagement() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-3 gap-4 mb-8"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8"
         >
           <div className="card-elevated p-4 rounded-xl">
             <div className="flex items-center gap-3">
               <Users className="w-6 h-6 text-muted-foreground" />
               <div>
-                <p className="text-2xl font-display">{users.length}</p>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-display">{athletes.length}</p>
+                <p className="text-sm text-muted-foreground">Atletas</p>
               </div>
             </div>
           </div>
@@ -323,6 +324,15 @@ export function UserManagement() {
               <div>
                 <p className="text-2xl font-display">{coaches.length}</p>
                 <p className="text-sm text-muted-foreground">Coaches</p>
+              </div>
+            </div>
+          </div>
+          <div className="card-elevated p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+              <div>
+                <p className="text-2xl font-display">{admins.length}</p>
+                <p className="text-sm text-muted-foreground">Admins</p>
               </div>
             </div>
           </div>
@@ -500,41 +510,99 @@ export function UserManagement() {
           </motion.div>
         )}
 
-        {/* All Users List */}
+        {/* Athletes Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
+          className="mb-8"
         >
           <h2 className="font-display text-xl mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            TODOS OS USUÁRIOS
+            <Users className="w-5 h-5 text-muted-foreground" />
+            ATLETAS ({athletes.length})
           </h2>
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : users.length === 0 ? (
+          ) : athletes.length === 0 ? (
             <div className="card-elevated p-8 rounded-xl text-center">
-              <p className="text-muted-foreground">Nenhum usuário cadastrado ainda.</p>
+              <p className="text-muted-foreground">Nenhum atleta cadastrado ainda.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {users.map((u) => (
+              {athletes.map((u) => (
                 <motion.div
                   key={u.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className={`card-elevated p-4 rounded-xl flex items-center justify-between ${
-                    u.role !== 'user' ? `border-l-4 ${getRoleBorderColor(u.role)}` : ''
-                  }`}
+                  className="card-elevated p-4 rounded-xl flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-secondary">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <UserIdentity 
+                        user={{ name: u.name, email: u.email }} 
+                        size="md"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Atleta • Desde {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {u.id === user?.id ? (
+                    <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
+                      Você
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => toggleCoachRole(u.id, u.role)}
+                      disabled={updating === u.id}
+                      className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                    >
+                      {updating === u.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          Autorizar coach
+                        </>
+                      )}
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Admins Section */}
+        {admins.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h2 className="font-display text-xl mb-4 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              ADMINISTRADORES ({admins.length})
+            </h2>
+
+            <div className="space-y-3">
+              {admins.map((u) => (
+                <motion.div
+                  key={u.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`card-elevated p-4 rounded-xl flex items-center justify-between border-l-4 ${getRoleBorderColor(u.role)}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${
-                      u.role === 'superadmin' ? 'bg-yellow-500/20' :
-                      u.role === 'admin' ? 'bg-primary/20' : 
-                      u.role === 'coach' ? 'bg-green-500/20' : 'bg-secondary'
+                      u.role === 'superadmin' ? 'bg-yellow-500/20' : 'bg-primary/20'
                     }`}>
                       {getRoleIcon(u.role)}
                     </div>
@@ -557,40 +625,16 @@ export function UserManagement() {
                     <span className="text-xs text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg">
                       SuperAdmin
                     </span>
-                  ) : u.role === 'admin' ? (
+                  ) : (
                     <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-lg">
                       Admin
                     </span>
-                  ) : (
-                    <button
-                      onClick={() => toggleCoachRole(u.id, u.role)}
-                      disabled={updating === u.id}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
-                        u.role === 'coach'
-                          ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                          : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                      }`}
-                    >
-                      {updating === u.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : u.role === 'coach' ? (
-                        <>
-                          <UserMinus className="w-4 h-4" />
-                          Remover coach
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4" />
-                          Autorizar coach
-                        </>
-                      )}
-                    </button>
                   )}
                 </motion.div>
               ))}
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
       </main>
     </div>
   );
