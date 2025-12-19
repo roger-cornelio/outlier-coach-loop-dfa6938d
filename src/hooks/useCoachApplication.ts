@@ -31,10 +31,10 @@ export interface CoachApplicationFormData {
 }
 
 export function useCoachApplication() {
-  const { user, profile, isCoach } = useAuth();
+  const { user, profile, isCoach, loading: authLoading } = useAuth();
   const { trackEvent } = useEvents();
   const [application, setApplication] = useState<CoachApplication | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'done'>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,17 +42,23 @@ export function useCoachApplication() {
     ? 'approved' 
     : (application?.status as ApplicationStatus) || 'none';
 
+  // Compute loading state:
+  // - If auth is still loading, we're loading (don't know if user exists)
+  // - If user exists but we haven't fetched yet or are fetching, we're loading
+  // - If no user and auth is done, we're not loading (nothing to fetch)
+  const loading = authLoading || (user !== null && fetchState !== 'done');
+
   // Fetch user's application using auth.uid() directly (via auth_user_id column)
   const fetchApplication = useCallback(async () => {
     // Use auth.uid() directly - no dependency on profile
     if (!user?.id) {
       console.log('[fetchApplication] No user.id yet, skipping');
-      setLoading(false);
+      setFetchState('idle');
       return;
     }
 
     try {
-      setLoading(true);
+      setFetchState('loading');
       console.log('[fetchApplication] Fetching for auth_user_id:', user.id);
       
       // Get most recent application for this user using auth_user_id
@@ -74,13 +80,25 @@ export function useCoachApplication() {
     } catch (err) {
       console.error('[fetchApplication] Exception:', err);
     } finally {
-      setLoading(false);
+      setFetchState('done');
     }
   }, [user?.id]);
 
+  // Reset state when user changes (logout/login)
   useEffect(() => {
-    fetchApplication();
-  }, [fetchApplication]);
+    if (!user?.id) {
+      // User logged out or not yet loaded - reset state
+      setApplication(null);
+      setFetchState('idle');
+    }
+  }, [user?.id]);
+
+  // Trigger fetch when user becomes available
+  useEffect(() => {
+    if (user?.id && fetchState === 'idle') {
+      fetchApplication();
+    }
+  }, [user?.id, fetchState, fetchApplication]);
 
   // Submit application - now uses auth_user_id directly
   const submitApplication = async (

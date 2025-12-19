@@ -51,9 +51,11 @@ export default function CoachPortal() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Calculate if we're still resolving the coach state
-  // CRITICAL: Don't redirect or render final state until ALL data is resolved
-  const isResolvingCoachState = authLoading || (user && appLoading);
+  // LOADING GATE: The appLoading from useCoachApplication already includes:
+  // - authLoading (from useAuth)
+  // - fetchState check (idle/loading/done)
+  // So we just need to check appLoading
+  const isResolvingCoachState = appLoading;
 
   // PRIORITY 1: Admin/Superadmin → redirect to /admin (only after resolved)
   useEffect(() => {
