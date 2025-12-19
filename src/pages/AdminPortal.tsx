@@ -13,7 +13,7 @@ import {
   Users, 
   UserPlus, 
   Settings2, 
-  FileSpreadsheet, 
+   
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -22,10 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Admin-specific spreadsheet content (without coach header)
-import { AdminSpreadsheetContent } from "@/components/AdminSpreadsheetContent";
-
-export type AdminView = "spreadsheet" | "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist";
 
 interface NavItem {
   id: AdminView;
@@ -35,12 +32,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { 
-    id: "spreadsheet", 
-    label: "Planilhas", 
-    icon: <FileSpreadsheet className="w-5 h-5" />,
-    description: "Gerenciar treinos semanais"
-  },
   { 
     id: "users", 
     label: "Usuários", 
@@ -74,7 +65,7 @@ const navItems: NavItem[] = [
 ];
 
 const AdminPortal = () => {
-  const [adminView, setAdminView] = useState<AdminView>("spreadsheet");
+  const [adminView, setAdminView] = useState<AdminView>("users");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, isAdmin, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -125,10 +116,8 @@ const AdminPortal = () => {
       case "coachApplications":
         return <CoachApplicationsAdmin />;
       case "allowlist":
-        return <AdminAllowlistManager />;
-      case "spreadsheet":
       default:
-        return <AdminSpreadsheetContent />;
+        return <AdminAllowlistManager />;
     }
   };
 
