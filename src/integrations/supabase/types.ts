@@ -71,6 +71,69 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_applications: {
+        Row: {
+          box_name: string | null
+          city: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          instagram: string | null
+          message: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          box_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          instagram?: string | null
+          message?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          box_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          instagram?: string | null
+          message?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_athletes: {
         Row: {
           athlete_id: string
@@ -185,6 +248,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_coach_application: {
+        Args: { _admin_id: string; _application_id: string }
+        Returns: boolean
+      }
       can_view_athlete_data: {
         Args: { _athlete_id: string; _viewer_id: string }
         Returns: boolean
@@ -198,6 +265,10 @@ export type Database = {
         Returns: boolean
       }
       is_coach_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      reject_coach_application: {
+        Args: { _admin_id: string; _application_id: string; _reason?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "coach"

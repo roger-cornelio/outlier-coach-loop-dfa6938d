@@ -14,6 +14,8 @@ import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { UserManagement } from '@/components/UserManagement';
 import { BenchmarksScreen } from '@/components/BenchmarksScreen';
 import { CoachPerformance } from '@/components/CoachPerformance';
+import { CoachApplicationPage } from '@/components/CoachApplicationPage';
+import { CoachApplicationsAdmin } from '@/components/CoachApplicationsAdmin';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
 import { useLevelTheme } from '@/hooks/useLevelTheme';
@@ -97,6 +99,10 @@ const Index = () => {
         return <BenchmarksScreen />;
       case 'coachPerformance':
         return (isCoach || isAdmin) ? <CoachPerformance /> : <Dashboard />;
+      case 'coachApplication':
+        return <CoachApplicationPage />;
+      case 'coachApplicationsAdmin':
+        return isAdmin ? <CoachApplicationsAdmin /> : <Dashboard />;
       default:
         return <WelcomeScreen />;
     }
