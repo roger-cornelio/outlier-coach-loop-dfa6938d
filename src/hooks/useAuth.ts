@@ -30,9 +30,9 @@ export function useAuth() {
   const isCoach = role === 'coach';
   const canManageWorkouts = role === 'admin' || role === 'coach' || role === 'superadmin';
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, email?: string, name?: string) => {
     try {
-      const { data, error } = await fetchProfileWithRetry(userId);
+      const { data, error } = await fetchProfileWithRetry(userId, email, name);
 
       if (error) {
         console.error('Error fetching profile after retries:', error);
@@ -122,10 +122,11 @@ export function useAuth() {
         
         if (data.session.user) {
           const email = data.session.user.email || '';
+          const name = data.session.user.user_metadata?.name || '';
           await syncRolesOnBootstrap(data.session.user.id, email);
           await Promise.all([
             checkUserRole(data.session.user.id),
-            fetchProfile(data.session.user.id),
+            fetchProfile(data.session.user.id, email, name),
           ]);
         }
       }
@@ -152,11 +153,12 @@ export function useAuth() {
           // This prevents Auth.tsx from redirecting before role is determined
           setLoading(true);
           const email = session.user.email || '';
+          const name = session.user.user_metadata?.name || '';
           setTimeout(async () => {
             await syncRolesOnBootstrap(session.user.id, email);
             await Promise.all([
               checkUserRole(session.user.id),
-              fetchProfile(session.user.id),
+              fetchProfile(session.user.id, email, name),
             ]);
           }, 0);
         } else {
@@ -174,10 +176,11 @@ export function useAuth() {
       
       if (session?.user) {
         const email = session.user.email || '';
+        const name = session.user.user_metadata?.name || '';
         await syncRolesOnBootstrap(session.user.id, email);
         await Promise.all([
           checkUserRole(session.user.id),
-          fetchProfile(session.user.id),
+          fetchProfile(session.user.id, email, name),
         ]);
       } else {
         setLoading(false);
