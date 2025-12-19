@@ -629,7 +629,7 @@ export function getLevelSpeedKmh(level: AthleteLevel): number {
 }
 
 // ============================================
-// VALIDAÇÃO
+// VALIDAÇÃO COMPLETA
 // ============================================
 
 export interface ValidationResult {
@@ -639,7 +639,7 @@ export interface ValidationResult {
 }
 
 /**
- * Valida uma configuração de parâmetros
+ * Valida uma configuração de parâmetros (validação completa)
  */
 export function validateParams(params: Partial<OutlierParamsConfig>): ValidationResult {
   const errors: string[] = [];
@@ -650,9 +650,44 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
     errors.push('Versão é obrigatória');
   }
 
+  // Validar seções obrigatórias
+  if (!params.benchmark) {
+    errors.push('Seção "benchmark" é obrigatória');
+  }
+  if (!params.estimation) {
+    errors.push('Seção "estimation" é obrigatória');
+  }
+  if (!params.exerciseMets) {
+    errors.push('Seção "exerciseMets" é obrigatória');
+  }
+  if (!params.labels) {
+    errors.push('Seção "labels" é obrigatória');
+  }
+
   // Validar benchmark
   if (params.benchmark) {
     const b = params.benchmark;
+    
+    // Validar time ranges
+    if (b.defaultTimeRangesByLevel) {
+      const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const;
+      for (const level of levels) {
+        const range = b.defaultTimeRangesByLevel[level];
+        if (range) {
+          if (typeof range.min !== 'number' || isNaN(range.min) || range.min < 0) {
+            errors.push(`benchmark.timeRangesByLevel.${level}.min inválido (deve ser número positivo)`);
+          }
+          if (typeof range.max !== 'number' || isNaN(range.max) || range.max < 0) {
+            errors.push(`benchmark.timeRangesByLevel.${level}.max inválido (deve ser número positivo)`);
+          }
+          if (range.min > range.max) {
+            errors.push(`benchmark.timeRangesByLevel.${level}: min (${range.min}) deve ser <= max (${range.max})`);
+          }
+        }
+      }
+    }
+    
+    // Validar scoring buckets
     if (b.scoringBuckets) {
       if (b.scoringBuckets.elite <= b.scoringBuckets.strong) {
         errors.push('Score ELITE deve ser maior que STRONG');
@@ -660,18 +695,79 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
       if (b.scoringBuckets.strong <= b.scoringBuckets.ok) {
         errors.push('Score STRONG deve ser maior que OK');
       }
+      if (b.scoringBuckets.ok <= b.scoringBuckets.tough) {
+        errors.push('Score OK deve ser maior que TOUGH');
+      }
+      // Check for negative values
+      for (const [key, val] of Object.entries(b.scoringBuckets)) {
+        if (typeof val !== 'number' || val < 0) {
+          errors.push(`scoringBuckets.${key} deve ser número >= 0`);
+        }
+      }
     }
   }
 
   // Validar estimation
   if (params.estimation) {
     const e = params.estimation;
+    
+    // Level multipliers
     if (e.levelMultipliers) {
       for (const [level, mult] of Object.entries(e.levelMultipliers)) {
-        if (mult <= 0) {
-          errors.push(`Multiplicador de ${level} deve ser positivo`);
+        if (typeof mult !== 'number' || isNaN(mult)) {
+          errors.push(`levelMultipliers.${level} deve ser número`);
+        } else if (mult <= 0) {
+          errors.push(`levelMultipliers.${level} deve ser positivo (atual: ${mult})`);
+        } else if (mult > 3) {
+          warnings.push(`levelMultipliers.${level} = ${mult} parece muito alto (máximo recomendado: 3)`);
         }
       }
+    }
+    
+    // WOD type factors
+    if (e.wodTypeFactors) {
+      for (const [type, factor] of Object.entries(e.wodTypeFactors)) {
+        if (factor) {
+          if (typeof factor.baseMinutes !== 'number' || factor.baseMinutes <= 0) {
+            errors.push(`wodTypeFactors.${type}.baseMinutes deve ser positivo`);
+          }
+          if (typeof factor.variancePercent !== 'number' || factor.variancePercent < 0 || factor.variancePercent > 1) {
+            warnings.push(`wodTypeFactors.${type}.variancePercent deve estar entre 0 e 1`);
+          }
+        }
+      }
+    }
+    
+    // Min/max estimate bounds
+    if (e.minEstimateSeconds !== undefined && e.maxEstimateSeconds !== undefined) {
+      if (e.minEstimateSeconds >= e.maxEstimateSeconds) {
+        errors.push('minEstimateSeconds deve ser menor que maxEstimateSeconds');
+      }
+    }
+  }
+
+  // Validar exerciseMets
+  if (params.exerciseMets) {
+    const m = params.exerciseMets;
+    
+    if (m.metBaseByModality) {
+      for (const [mod, met] of Object.entries(m.metBaseByModality)) {
+        if (met && (typeof met.baseKcalPerMin !== 'number' || met.baseKcalPerMin < 0)) {
+          errors.push(`mets.${mod}.baseKcalPerMin deve ser número >= 0`);
+        }
+      }
+    }
+    
+    if (m.intensityMultipliers) {
+      for (const [pse, mult] of Object.entries(m.intensityMultipliers)) {
+        if (typeof mult !== 'number' || mult <= 0) {
+          errors.push(`intensityMultipliers[${pse}] deve ser positivo`);
+        }
+      }
+    }
+    
+    if (m.fallbackKcalPerMin !== undefined && m.fallbackKcalPerMin < 0) {
+      errors.push('fallbackKcalPerMin deve ser >= 0');
     }
   }
 
@@ -679,11 +775,15 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
   if (params.progression) {
     const p = params.progression;
     if (p.levelThresholds) {
-      const thresholds = Object.values(p.levelThresholds);
-      for (let i = 1; i < thresholds.length; i++) {
-        if (thresholds[i] <= thresholds[i - 1]) {
-          warnings.push('Thresholds de nível devem ser crescentes');
-          break;
+      const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'] as const;
+      let prevThreshold = -Infinity;
+      for (const level of levels) {
+        const threshold = p.levelThresholds[level];
+        if (threshold !== undefined) {
+          if (threshold <= prevThreshold) {
+            warnings.push(`Thresholds de nível devem ser crescentes (${level}: ${threshold})`);
+          }
+          prevThreshold = threshold;
         }
       }
     }

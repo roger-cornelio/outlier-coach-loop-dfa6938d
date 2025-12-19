@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info, Settings2 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -129,7 +129,7 @@ function parseSpreadsheet(text: string): DayWorkout[] {
 
 export function AdminSpreadsheet() {
   const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
-  const { user, canManageWorkouts, loading: authLoading, signOut } = useAuth();
+  const { user, canManageWorkouts, isAdmin, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1166,17 +1166,29 @@ export function AdminSpreadsheet() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate('/');
-                setCurrentView('welcome');
-              }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={() => setCurrentView('params')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
+                  title="Parâmetros do Sistema"
+                >
+                  <Settings2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Parâmetros</span>
+                </button>
+              )}
+              <button
+                onClick={async () => {
+                  await signOut();
+                  navigate('/');
+                  setCurrentView('welcome');
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
           </div>
         </div>
       </header>
