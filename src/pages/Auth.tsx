@@ -207,20 +207,62 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background glow effect */}
+      <div 
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{ background: 'var(--gradient-glow)' }}
+      />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md z-10"
       >
-        <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="font-display text-3xl text-foreground mb-2 tracking-wide">
-              OUTLIER
-            </h1>
-            <p className="text-muted-foreground">
-              {mode === 'login' && 'Entre na sua conta'}
+        {/* Branding Section - Above the card */}
+        <div className="text-center mb-8">
+          {/* 1) OUTLIER - Maior destaque */}
+          <motion.h1 
+            className="font-display text-6xl md:text-7xl tracking-widest font-bold text-gradient-logo mb-4"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            OUTLIER
+          </motion.h1>
+          
+          {/* 2) Subheadline - Destaque */}
+          <motion.p 
+            className="text-xl md:text-2xl font-display text-foreground tracking-wide mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Consistência vira resultado.
+          </motion.p>
+          
+          {/* 3) Linha de apoio - Menor */}
+          <motion.p 
+            className="text-sm md:text-base text-muted-foreground max-w-xs mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            Entre para treinar com direção — e acompanhar sua evolução.
+          </motion.p>
+        </div>
+
+        {/* Login Card */}
+        <motion.div 
+          className="bg-card border border-border/50 p-6 md:p-8 rounded-2xl shadow-2xl"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          {/* Card Header - Mode indicator */}
+          <div className="text-center mb-6">
+            <p className="text-muted-foreground text-sm">
+              {mode === 'login' && 'Acesse sua conta'}
               {mode === 'signup' && 'Crie sua conta'}
               {mode === 'forgot-password' && 'Recuperar senha'}
             </p>
@@ -329,47 +371,48 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => switchMode('forgot-password')}
-                      className="text-primary hover:underline text-sm"
+                      className="text-muted-foreground hover:text-primary text-sm transition-colors"
                     >
                       Esqueceu a senha?
                     </button>
                   </div>
                 )}
 
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-primary text-primary-foreground rounded-lg font-display text-lg tracking-wider hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
                 >
                   {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                  {mode === 'login' && 'Entrar'}
-                  {mode === 'signup' && 'Criar conta'}
-                  {mode === 'forgot-password' && 'Enviar email'}
+                  {mode === 'login' && 'ENTRAR'}
+                  {mode === 'signup' && 'CRIAR CONTA'}
+                  {mode === 'forgot-password' && 'ENVIAR EMAIL'}
                 </button>
               </form>
 
-              {/* Toggle */}
+              {/* Toggle between modes */}
               <div className="mt-6 text-center space-y-2">
                 {mode === 'login' && (
                   <button
                     onClick={() => switchMode('signup')}
-                    className="text-primary hover:underline text-sm"
+                    className="text-muted-foreground hover:text-primary text-sm transition-colors"
                   >
-                    Não tem conta? Cadastre-se
+                    Não tem conta? <span className="text-primary font-medium">Criar conta</span>
                   </button>
                 )}
                 {mode === 'signup' && (
                   <button
                     onClick={() => switchMode('login')}
-                    className="text-primary hover:underline text-sm"
+                    className="text-muted-foreground hover:text-primary text-sm transition-colors"
                   >
-                    Já tem conta? Faça login
+                    Já tem conta? <span className="text-primary font-medium">Fazer login</span>
                   </button>
                 )}
                 {mode === 'forgot-password' && (
                   <button
                     onClick={() => switchMode('login')}
-                    className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
+                    className="text-muted-foreground hover:text-primary text-sm flex items-center gap-1 mx-auto transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Voltar ao login
@@ -378,7 +421,7 @@ export default function Auth() {
               </div>
             </>
           )}
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
