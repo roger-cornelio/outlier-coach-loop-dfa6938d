@@ -1,4 +1,10 @@
 import type { WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LevelTargetRanges } from '@/types/outlier';
+import { 
+  getActiveParams, 
+  getWodTypeFactor, 
+  getLevelMultiplier,
+  getNumericParam 
+} from '@/config/outlierParams';
 
 /**
  * SISTEMA DE GERAÇÃO AUTOMÁTICA DE FAIXAS DE TEMPO DE REFERÊNCIA
@@ -8,27 +14,9 @@ import type { WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LevelTargetR
  * - Volume total estimado
  * - Modalidades envolvidas
  * - Padrões do Cross Training / HYROX
+ * 
+ * TODOS os parâmetros vêm do config central (outlierParams)
  */
-
-// Fatores de ajuste por tipo de WOD
-const WOD_TYPE_FACTORS: Record<WodType | 'default', { baseMinutes: number; variancePercent: number }> = {
-  engine: { baseMinutes: 20, variancePercent: 0.15 },      // Engine tende a ser mais longo
-  strength: { baseMinutes: 12, variancePercent: 0.20 },    // Força tem mais variação
-  skill: { baseMinutes: 15, variancePercent: 0.15 },       // Skill é moderado
-  mixed: { baseMinutes: 18, variancePercent: 0.18 },       // Misto varia bastante
-  hyrox: { baseMinutes: 25, variancePercent: 0.12 },       // HYROX específico
-  benchmark: { baseMinutes: 15, variancePercent: 0.15 },   // Benchmark padrão
-  default: { baseMinutes: 15, variancePercent: 0.18 },
-};
-
-// Fatores de ajuste por nível de atleta (quanto maior, mais tempo leva)
-const LEVEL_FACTORS: Record<AthleteLevel, number> = {
-  iniciante: 1.35,       // 35% mais lento que referência
-  intermediario: 1.15,   // 15% mais lento
-  avancado: 1.0,         // Referência base
-  hyrox_open: 0.95,      // 5% mais rápido (não usado aqui, mas mantido para compatibilidade)
-  hyrox_pro: 0.85,       // 15% mais rápido
-};
 
 // Detecta modalidades no conteúdo do treino
 interface ModalityAnalysis {
@@ -91,13 +79,15 @@ function detectWodFormat(content: string): 'for_time' | 'amrap' | 'emom' | 'chip
   
   // Heurísticas adicionais
   const movements = (lowerContent.match(/\d+\s+[a-z]/gi) || []).length;
-  if (movements >= 5) return 'chipper'; // Muitos movimentos = provavelmente chipper
+  if (movements >= 5) return 'chipper';
   
-  return 'for_time'; // Default
+  return 'for_time';
 }
 
-// Estima tempo base em segundos
+// Estima tempo base em segundos usando config
 function estimateBaseTimeSeconds(content: string, durationMinutes?: number): number {
+  const params = getActiveParams();
+  
   // Se já temos duração definida, usar como base
   if (durationMinutes && durationMinutes > 0) {
     return durationMinutes * 60;
@@ -106,10 +96,15 @@ function estimateBaseTimeSeconds(content: string, durationMinutes?: number): num
   const analysis = analyzeWorkoutContent(content);
   const format = detectWodFormat(content);
   
+  // Tempos base por modalidade (do config)
+  const mets = params.exerciseMets.metBaseByModality;
   let baseSeconds = 0;
   
-  // Tempo por modalidade (segundos)
-  if (analysis.hasRunning) baseSeconds += analysis.distanceMeters > 0 ? analysis.distanceMeters * 0.3 : 180;
+  // Tempo estimado por modalidade (segundos)
+  // Usando uma heurística: baseKcalPerMin maior = mais intenso = menos tempo por unidade
+  if (analysis.hasRunning) {
+    baseSeconds += analysis.distanceMeters > 0 ? analysis.distanceMeters * 0.3 : 180;
+  }
   if (analysis.hasRowing) baseSeconds += 120;
   if (analysis.hasBike) baseSeconds += 90;
   if (analysis.hasSkiErg) baseSeconds += 100;
@@ -120,39 +115,48 @@ function estimateBaseTimeSeconds(content: string, durationMinutes?: number): num
   // Multiplicar por rounds
   baseSeconds *= Math.max(1, analysis.roundCount);
   
+  // Ajuste por formato (do config)
+  const formatMultiplier = getNumericParam(
+    params.estimation.formatMultipliers[format as keyof typeof params.estimation.formatMultipliers],
+    1.0,
+    `formatMultiplier.${format}`
+  );
+  
   // Ajuste por formato
   switch (format) {
     case 'amrap':
-      // AMRAP tem tempo fixo, estimar baseado no conteúdo
       baseSeconds = Math.max(baseSeconds, 600); // Mínimo 10 min
       break;
     case 'emom':
-      // EMOM: cada minuto conta
       const emomMinMatch = content.match(/(\d+)\s*min/i);
       if (emomMinMatch) baseSeconds = parseInt(emomMinMatch[1]) * 60;
       break;
     case 'chipper':
-      // Chipper tende a ser mais longo
-      baseSeconds = Math.max(baseSeconds * 1.2, 720); // Mínimo 12 min
+      baseSeconds = Math.max(baseSeconds * formatMultiplier, 720);
       break;
     case 'interval':
-      // Intervalado: somar tempos de trabalho
-      baseSeconds = Math.max(baseSeconds, 900); // Mínimo 15 min
+      baseSeconds = Math.max(baseSeconds, 900);
       break;
   }
   
-  // Garantir tempo mínimo de 5 minutos
-  return Math.max(baseSeconds, 300);
+  // Limites do config
+  const minSeconds = getNumericParam(params.estimation.minEstimateSeconds, 300, 'minEstimate');
+  const maxSeconds = getNumericParam(params.estimation.maxEstimateSeconds, 7200, 'maxEstimate');
+  
+  return Math.max(minSeconds, Math.min(maxSeconds, baseSeconds));
 }
 
 /**
  * Gera faixas de tempo de referência para cada nível de atleta
+ * APENAS para WODs marcados como BENCHMARK
+ * 
  * @param block O bloco de treino
  * @returns Objeto com faixas de tempo para cada nível
  */
 export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRanges {
+  const params = getActiveParams();
   const wodType = block.wodType || 'default';
-  const typeConfig = WOD_TYPE_FACTORS[wodType] || WOD_TYPE_FACTORS.default;
+  const typeConfig = getWodTypeFactor(wodType as WodType | 'default');
   
   // Estimar tempo base
   const baseSeconds = block.durationMinutes 
@@ -161,11 +165,11 @@ export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRan
   
   const result: LevelTargetRanges = {};
   
-  // Gerar para cada nível
-  const levels: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'];
+  // Gerar para cada nível (do config)
+  const levels = params.labels.athleteLevels.filter(l => l !== 'hyrox_open') as AthleteLevel[];
   
   for (const level of levels) {
-    const levelFactor = LEVEL_FACTORS[level];
+    const levelFactor = getLevelMultiplier(level);
     const adjustedBase = baseSeconds * levelFactor;
     
     // Variação para criar a faixa (min/max)
@@ -184,6 +188,7 @@ export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRan
  * Formata tempo em segundos para "MM:SS"
  */
 export function formatTimeRange(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return '--:--';
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${String(secs).padStart(2, '0')}`;
@@ -198,9 +203,14 @@ export function describeTimeRange(range: TargetTimeRange): string {
 
 /**
  * Verifica se um WOD deve ser usado para métricas de evolução
+ * Baseado na regra do config: benchmark.enabledOnlyForBenchmark
  */
 export function shouldTrackEvolution(block: WorkoutBlock): boolean {
-  return block.isBenchmark === true;
+  const params = getActiveParams();
+  if (params.benchmark.enabledOnlyForBenchmark) {
+    return block.isBenchmark === true;
+  }
+  return true; // Se não for only benchmark, todos são rastreados
 }
 
 /**
@@ -247,4 +257,46 @@ export function estimateIntensity(block: WorkoutBlock): 'baixa' | 'moderada' | '
   if (score >= 5) return 'alta';
   if (score >= 3) return 'moderada';
   return 'baixa';
+}
+
+/**
+ * Verifica se deve usar override do coach
+ * Retorna true se coach override está habilitado E existe override no bloco
+ */
+export function shouldUseCoachOverride(block: WorkoutBlock): boolean {
+  const params = getActiveParams();
+  
+  if (!params.benchmark.allowCoachOverride) return false;
+  if (params.benchmark.coachOverridePriority !== 'coach_wins') return false;
+  
+  // Verifica se o bloco tem override do coach
+  return !!(block.levelTargetRanges && Object.keys(block.levelTargetRanges).length > 0);
+}
+
+/**
+ * Obtém a faixa de tempo efetiva para um nível
+ * Considera: override do coach > default do config
+ */
+export function getEffectiveTimeRange(
+  block: WorkoutBlock, 
+  level: AthleteLevel
+): TargetTimeRange | null {
+  const params = getActiveParams();
+  
+  // Se benchmark não está habilitado para este bloco
+  if (params.benchmark.enabledOnlyForBenchmark && !block.isBenchmark) {
+    return null;
+  }
+  
+  // Prioridade 1: Override do coach (se coach_wins)
+  if (shouldUseCoachOverride(block)) {
+    const coachRange = block.levelTargetRanges?.[level];
+    if (coachRange && coachRange.min > 0 && coachRange.max > 0) {
+      return coachRange;
+    }
+  }
+  
+  // Prioridade 2: Range gerado automaticamente
+  const generated = generateBenchmarkTimeRanges(block);
+  return generated[level] || null;
 }

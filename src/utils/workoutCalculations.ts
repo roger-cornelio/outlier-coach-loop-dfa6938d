@@ -1,59 +1,19 @@
 import type { AthleteConfig, WorkoutBlock, AthleteLevel } from '@/types/outlier';
 import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
 import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
+import { 
+  getActiveParams, 
+  getModalityKcal, 
+  getIntensityFactor, 
+  getLevelSpeedKmh,
+  getNumericParam 
+} from '@/config/outlierParams';
 
 // ============================================
 // REGRA INVIOLÁVEL:
 // Tempo total exibido = soma real dos blocos
 // Tempo do card de cada bloco = durationSec daquele bloco
 // ============================================
-
-// Base kcal per minute for different workout types
-const BASE_KCAL_PER_MIN: Record<string, number> = {
-  aquecimento: 6.0,   // ~360 kcal/h
-  conditioning: 12.0,  // ~720 kcal/h
-  forca: 8.0,         // ~480 kcal/h
-  especifico: 14.0,   // ~840 kcal/h (HYROX specific)
-  core: 5.0,          // ~300 kcal/h
-  corrida: 10.0,      // ~600 kcal/h (fallback when no distance)
-  notas: 0,
-};
-
-// PSE factor multipliers (base = PSE 5)
-const PSE_FACTORS: Record<number, number> = {
-  1: 0.5,   // Very light
-  2: 0.6,
-  3: 0.7,   // Light
-  4: 0.85,
-  5: 1.0,   // Moderate (base)
-  6: 1.1,
-  7: 1.2,   // Vigorous
-  8: 1.35,
-  9: 1.5,   // Very hard
-  10: 1.7,  // Maximum
-};
-
-// Time multipliers by level (for reference time estimation only)
-const LEVEL_TIME_MULTIPLIERS: Record<AthleteLevel, number> = {
-  iniciante: 1.3,
-  intermediario: 1.0,
-  avancado: 0.85,
-  hyrox_open: 0.78,
-  hyrox_pro: 0.72,
-};
-
-// Velocidade padrão (km/h) por nível para estimar distância quando não há explícita
-const LEVEL_SPEED_KMH: Record<AthleteLevel, number> = {
-  iniciante: 8.0,       // 7:30/km
-  intermediario: 10.0,  // 6:00/km
-  avancado: 12.0,       // 5:00/km
-  hyrox_open: 13.0,     // 4:37/km
-  hyrox_pro: 14.0,      // 4:17/km
-};
-
-// Fator de calorias por km de corrida (kcal = peso_kg * km * fator)
-// Baseado em estudos: ~1 kcal/kg/km para corrida em terreno plano
-const RUNNING_KCAL_FACTOR = 1.0;
 
 /**
  * Extrai distância em km do conteúdo do bloco
@@ -137,6 +97,8 @@ export function getReferenceTimeForLevel(
   block: WorkoutBlock,
   level: AthleteLevel
 ): number | null {
+  const params = getActiveParams();
+  
   // If block has explicit reference times, use them
   if (block.referenceTime) {
     return Math.round(block.referenceTime[level] / 60);
@@ -146,7 +108,12 @@ export function getReferenceTimeForLevel(
   const baseMinutes = estimateFromContent(block);
   if (baseMinutes === null) return null;
 
-  const multiplier = LEVEL_TIME_MULTIPLIERS[level];
+  // Usar multiplicador do config
+  const multiplier = getNumericParam(
+    params.estimation.levelMultipliers[level],
+    1.0,
+    `levelMultiplier.${level}`
+  );
   return Math.round(baseMinutes * multiplier);
 }
 
@@ -184,7 +151,14 @@ function estimateFromContent(block: WorkoutBlock): number | null {
   const emomMatch = content.match(/emom\s*(\d+)/i);
   if (emomMatch) return parseInt(emomMatch[1]);
 
-  // Default estimates by block type
+  // Default estimates by block type (usando config)
+  const params = getActiveParams();
+  const wodTypeFactor = params.estimation.wodTypeFactors[block.type as keyof typeof params.estimation.wodTypeFactors];
+  if (wodTypeFactor?.baseMinutes) {
+    return wodTypeFactor.baseMinutes;
+  }
+
+  // Fallback por tipo de bloco
   switch (block.type) {
     case 'aquecimento': return 10;
     case 'forca': return 20;
@@ -199,13 +173,15 @@ function estimateFromContent(block: WorkoutBlock): number | null {
 
 /**
  * Calcula calorias para corrida baseado em distância
- * Fórmula: peso_kg * km * RUNNING_KCAL_FACTOR
+ * Fórmula: peso_kg * km * RUNNING_KCAL_FACTOR (do config)
  */
 export function calculateRunningCalories(
   weightKg: number,
   distanceKm: number
 ): number {
-  return Math.round(weightKg * distanceKm * RUNNING_KCAL_FACTOR);
+  const params = getActiveParams();
+  const factor = getNumericParam(params.exerciseMets.runningKcalFactor, 1.0, 'runningKcalFactor');
+  return Math.round(weightKg * distanceKm * factor);
 }
 
 /**
@@ -216,9 +192,35 @@ export function calculateRunningCaloriesByTime(
   durationMinutes: number,
   level: AthleteLevel
 ): number {
-  const speedKmh = LEVEL_SPEED_KMH[level];
+  const speedKmh = getLevelSpeedKmh(level);
   const estimatedKm = (durationMinutes / 60) * speedKmh;
   return calculateRunningCalories(weightKg, estimatedKm);
+}
+
+/**
+ * Obtém fator de idade do config
+ */
+function getAgeFactor(idade?: number): number {
+  if (!idade) return 1.0;
+  
+  const params = getActiveParams();
+  const ageRules = params.exerciseMets.ageFactorRules;
+  
+  if (idade < 30) return getNumericParam(ageRules.under30, 1.05, 'ageFactor.under30');
+  if (idade < 40) return getNumericParam(ageRules.under40, 1.0, 'ageFactor.under40');
+  if (idade < 50) return getNumericParam(ageRules.under50, 0.95, 'ageFactor.under50');
+  return getNumericParam(ageRules.over50, 0.90, 'ageFactor.over50');
+}
+
+/**
+ * Obtém fator de sexo do config
+ */
+function getSexFactor(sexo?: 'masculino' | 'feminino'): number {
+  const params = getActiveParams();
+  const sexRules = params.exerciseMets.sexFactorRules;
+  
+  if (sexo === 'masculino') return getNumericParam(sexRules.masculino, 1.1, 'sexFactor.masculino');
+  return getNumericParam(sexRules.feminino, 1.0, 'sexFactor.feminino');
 }
 
 /**
@@ -236,6 +238,7 @@ export function calculateCalories(
 ): number | null {
   if (!athleteConfig) return null;
   
+  const params = getActiveParams();
   const effectiveLevel = level || 'intermediario';
   const weight = athleteConfig.peso;
   if (!weight) return null;
@@ -262,29 +265,37 @@ export function calculateCalories(
   const duration = getBlockDuration(block, effectiveLevel);
   if (!duration || duration <= 0) return null;
 
-  // Base kcal per minute for this block type
-  const baseKcal = BASE_KCAL_PER_MIN[block.type] || 8.0;
+  // Base kcal per minute for this block type (do config)
+  const baseKcal = getModalityKcal(block.type);
   
   // PSE factor (default to PSE 5 = factor 1.0)
   const pse = getEffectivePSE(block, effectiveLevel) || 5;
-  const pseFactor = PSE_FACTORS[Math.min(10, Math.max(1, Math.round(pse)))] || 1.0;
+  const pseFactor = getIntensityFactor(pse);
   
-  // Weight factor (normalized to 70kg baseline)
-  const weightFactor = weight / 70;
+  // Weight factor (normalized to baseline from config)
+  const baselineKg = getNumericParam(
+    params.exerciseMets.weightFactorRules.baselineKg, 
+    70, 
+    'weightBaseline'
+  );
+  const weightFactor = weight / baselineKg;
   
-  // Age factor (metabolism decreases with age)
-  let ageFactor = 1.0;
-  if (athleteConfig.idade) {
-    ageFactor = athleteConfig.idade < 30 ? 1.05 : 
-                athleteConfig.idade < 40 ? 1.0 :
-                athleteConfig.idade < 50 ? 0.95 : 0.90;
-  }
+  // Age factor (from config)
+  const ageFactor = getAgeFactor(athleteConfig.idade);
 
-  // Sex factor (men ~10% higher metabolic rate)
-  const sexFactor = athleteConfig.sexo === 'masculino' ? 1.1 : 1.0;
+  // Sex factor (from config)
+  const sexFactor = getSexFactor(athleteConfig.sexo);
 
   // Final calculation
   const calories = duration * baseKcal * pseFactor * weightFactor * ageFactor * sexFactor;
+  
+  // Garantir que nunca retorne NaN
+  if (isNaN(calories)) {
+    console.warn('[workoutCalculations] Cálculo de calorias resultou em NaN', {
+      duration, baseKcal, pseFactor, weightFactor, ageFactor, sexFactor
+    });
+    return null;
+  }
   
   return Math.round(calories);
 }
