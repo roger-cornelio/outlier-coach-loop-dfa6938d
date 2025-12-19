@@ -33,37 +33,36 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // MANDATORY LOGIN: Redirect to auth if not logged in (except welcome)
-  // PRIORITY: admin/superadmin > coach > athlete (ADMIN has ABSOLUTE priority)
+  // MANDATORY LOGIN: Redirect to auth if not logged in
+  // PRIORITY: ADMIN > COACH > ATHLETE (ADMIN has ABSOLUTE priority)
   useEffect(() => {
     if (authLoading) return;
 
-    // Allow welcome screen without login
-    if (currentView === "welcome") return;
+    // ===== ADMIN PRIORITY: ABSOLUTE, checked FIRST =====
+    // If user is logged in AND is admin, ALWAYS force admin view
+    if (user && isAdmin) {
+      if (currentView !== "admin" && currentView !== "userManagement" && currentView !== "params" && currentView !== "coachApplicationsAdmin") {
+        setCurrentView("admin");
+      }
+      return; // Admin handled, stop here
+    }
 
-    // Redirect to auth if not logged in
+    // ===== Welcome screen: allowed without login =====
+    if (currentView === "welcome" && !user) return;
+
+    // ===== No user: redirect to auth =====
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    // ADMIN PRIORITY: Admin users ALWAYS go to admin panel
-    // This takes absolute precedence over any other role
-    if (isAdmin) {
-      // Only redirect if not already in an admin view
-      if (currentView !== "admin" && currentView !== "userManagement" && currentView !== "params" && currentView !== "coachApplicationsAdmin") {
-        setCurrentView("admin");
-      }
-      return;
-    }
-
-    // Non-admin users cannot access admin views
+    // ===== Non-admin trying to access admin views: redirect to dashboard =====
     if (currentView === "admin" || currentView === "userManagement" || currentView === "params" || currentView === "coachApplicationsAdmin") {
       setCurrentView("dashboard");
       return;
     }
 
-    // Redirect non-coaches away from coach performance
+    // ===== Non-coach trying to access coach performance: redirect to dashboard =====
     if (currentView === "coachPerformance" && !isCoach) {
       setCurrentView("dashboard");
       return;
