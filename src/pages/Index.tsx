@@ -11,6 +11,7 @@ import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { AthleteWelcomeScreen } from "@/components/AthleteWelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
 import { Dashboard } from "@/components/Dashboard";
 import { WorkoutExecution } from "@/components/WorkoutExecution";
@@ -82,6 +83,8 @@ const Index = () => {
     switch (currentView) {
       case "welcome":
         return <WelcomeScreen />;
+      case "athleteWelcome":
+        return <AthleteWelcomeScreen />;
       case "config":
         return <AthleteConfig />;
       case "dashboard":
