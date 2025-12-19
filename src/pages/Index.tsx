@@ -1,12 +1,11 @@
 /**
  * Index - "DUMB" page that renders based on AppState
  * 
- * NO automatic redirects scattered. Uses useAppState for decisions.
- * AppGate handles routing protection.
+ * IMPORTANT: Only authenticated users reach this page.
+ * AppGate redirects anon users to /auth before they can see Index.
  */
 
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
@@ -29,7 +28,6 @@ import { Loader2 } from "lucide-react";
 const Index = () => {
   const { currentView, setCurrentView } = useOutlierStore();
   const { state, isCoach, canManageWorkouts } = useAppState();
-  const navigate = useNavigate();
 
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();
@@ -38,19 +36,10 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // Minimal navigation logic - AppGate handles most protection
+  // View access control for authenticated users
   useEffect(() => {
-    // LOADING: Do nothing, let AppGate show loader
+    // LOADING: Do nothing, AppGate handles loading state
     if (state === 'loading') return;
-
-    // ANON on welcome: allowed
-    if (state === 'anon' && currentView === 'welcome') return;
-
-    // ANON trying to access other views: redirect to auth
-    if (state === 'anon' && currentView !== 'welcome') {
-      navigate('/auth');
-      return;
-    }
 
     // ADMIN and SUPERADMIN can access ALL views - no redirect
     // They can navigate the app normally like any athlete
@@ -68,10 +57,10 @@ const Index = () => {
       setCurrentView('dashboard');
       return;
     }
-  }, [state, currentView, isCoach, canManageWorkouts, navigate, setCurrentView]);
+  }, [state, currentView, isCoach, canManageWorkouts, setCurrentView]);
 
-  // Show loading while checking auth (except welcome screen)
-  if (state === 'loading' && currentView !== 'welcome') {
+  // Show loading while checking auth
+  if (state === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

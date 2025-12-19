@@ -3,9 +3,10 @@
  * 
  * CRITICAL RULES:
  * 1. While loading: render ONLY a loader (no redirects, no fallbacks)
- * 2. SUPERADMIN: NEVER blocked, NEVER redirected, access to ALL routes
- * 3. Decisions based ONLY on user.role, not coach_application
- * 4. No implicit redirects for authenticated users
+ * 2. ANON users: ALWAYS redirect to /auth (except /auth and /coach routes)
+ * 3. SUPERADMIN: NEVER blocked, NEVER redirected, access to ALL routes
+ * 4. Decisions based ONLY on user.role, not coach_application
+ * 5. No implicit redirects for authenticated users
  */
 
 import { ReactNode } from 'react';
@@ -35,20 +36,34 @@ export function AppGate({ children }: AppGateProps) {
     );
   }
 
-  // ===== RULE 2: SUPERADMIN is NEVER blocked, NEVER redirected =====
+  // ===== RULE 2: ANON users MUST see /auth first =====
+  // Redirect anon users to /auth for ALL routes except /auth and /coach
+  if (state === 'anon') {
+    // /auth route - allow anon users
+    if (pathname === '/auth') {
+      return <>{children}</>;
+    }
+    
+    // /coach route - allow anon users (shows login form within)
+    if (pathname.startsWith('/coach')) {
+      return <>{children}</>;
+    }
+    
+    // ALL OTHER ROUTES: redirect to /auth
+    console.log('[AppGate] REDIRECT → /auth | Reason: anon user on protected route:', pathname);
+    return <Navigate to="/auth" replace />;
+  }
+
+  // ===== RULE 3: SUPERADMIN is NEVER blocked, NEVER redirected =====
   if (state === 'superadmin') {
     // Superadmin has access to ALL routes without any restrictions
     return <>{children}</>;
   }
 
-  // ===== RULE 3: Route-based access control (based on role ONLY) =====
+  // ===== RULE 4: Route-based access control for authenticated users =====
   
   // /admin route - requires admin or superadmin role
   if (pathname.startsWith('/admin')) {
-    if (state === 'anon') {
-      console.log('[AppGate] REDIRECT /admin → /auth | Reason: anon user');
-      return <Navigate to="/auth" replace />;
-    }
     if (state !== 'admin') {
       // Authenticated but not admin - go to home
       console.log('[AppGate] REDIRECT /admin → / | Reason: not admin');
@@ -57,32 +72,19 @@ export function AppGate({ children }: AppGateProps) {
     // Admin user - allow access
   }
 
-  // /coach route - NEVER redirect authenticated users
-  // Let the CoachPortal page handle rendering based on role
-  if (pathname.startsWith('/coach')) {
-    // Anon users can access /coach (it shows login form)
-    // Authenticated users stay on /coach and see appropriate screen based on ROLE
-    // NO REDIRECT TO "/" FOR AUTHENTICATED USERS
-  }
-
-  // / (index) route - requires auth (except welcome screen handled internally)
-  if (pathname === '/') {
-    // Let Index page handle welcome screen for anon users
-  }
-
-  // /auth route
+  // /auth route - redirect authenticated users away
   if (pathname === '/auth') {
-    // If already authenticated, redirect to appropriate place
-    if (state !== 'anon') {
-      if (state === 'admin') {
-        console.log('[AppGate] REDIRECT /auth → /admin | Reason: admin user');
-        return <Navigate to="/admin" replace />;
-      }
-      console.log('[AppGate] REDIRECT /auth → / | Reason: authenticated user');
-      return <Navigate to="/" replace />;
+    if (state === 'admin') {
+      console.log('[AppGate] REDIRECT /auth → /admin | Reason: admin user');
+      return <Navigate to="/admin" replace />;
     }
+    console.log('[AppGate] REDIRECT /auth → / | Reason: authenticated user');
+    return <Navigate to="/" replace />;
   }
 
-  // ===== RULE 4: Render children (pages handle their own state-based rendering) =====
+  // /coach route - let CoachPortal handle rendering based on role
+  // NO REDIRECT TO "/" FOR AUTHENTICATED USERS
+
+  // ===== RULE 5: Render children (pages handle their own state-based rendering) =====
   return <>{children}</>;
 }
