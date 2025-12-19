@@ -43,7 +43,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
-  const { user, profile, isAdmin, isCoach, loading: authLoading, signOut } = useAuth();
+  const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectCoach = (style: CoachStyle) => {
@@ -63,10 +63,7 @@ export function WelcomeScreen() {
   };
 
   const handleCoachAccess = () => {
-    if (authLoading) return;
-    if (user && isCoach) {
-      setCurrentView('admin');
-    }
+    navigate('/coach');
   };
 
   const handleAdminAccess = () => {
@@ -93,6 +90,18 @@ export function WelcomeScreen() {
 
       {/* Top buttons container */}
       <div className="absolute top-6 right-6 z-50 flex items-center gap-2">
+        {/* Coach Portal Button - always visible */}
+        <motion.button
+          onClick={handleCoachAccess}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-500 border border-green-500/30 transition-all text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0 }}
+        >
+          <UserCog className="w-4 h-4" />
+          <span className="hidden sm:inline">Painel do Coach</span>
+        </motion.button>
+
         {!user ? (
           /* Not logged in: show login/signup buttons */
           <>
@@ -125,7 +134,7 @@ export function WelcomeScreen() {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 text-sm text-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.0 }}
+              transition={{ delay: 1.1 }}
             >
               <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                 <User className="w-3 h-3 text-primary" />
@@ -140,24 +149,10 @@ export function WelcomeScreen() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 transition-all text-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.1 }}
+                transition={{ delay: 1.2 }}
               >
                 <Shield className="w-4 h-4" />
                 <span className="hidden sm:inline">Admin</span>
-              </motion.button>
-            )}
-
-            {/* Coach Button - only if coach */}
-            {isCoach && (
-              <motion.button
-                onClick={handleCoachAccess}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-500 border border-green-500/30 transition-all text-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2 }}
-              >
-                <UserCog className="w-4 h-4" />
-                <span className="hidden sm:inline">Painel Coach</span>
               </motion.button>
             )}
 

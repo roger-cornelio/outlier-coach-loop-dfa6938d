@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw, UserPlus } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw } from 'lucide-react';
 import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 import { formatBlockTimeSec, getBlockDurationSec, calculateCalories } from '@/utils/workoutCalculations';
 import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
@@ -287,16 +287,6 @@ export function Dashboard() {
               <UserHeader showLogout={true} />
             </div>
             <div className="flex items-center gap-2">
-              {/* Coach Application - only for non-coaches */}
-              {user && !isCoach && !isAdmin && (
-                <button
-                  onClick={() => setCurrentView('coachApplication')}
-                  className="p-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  title="Quero ser Coach"
-                >
-                  <UserPlus className="w-5 h-5" />
-                </button>
-              )}
               <button
                 onClick={() => setCurrentView('benchmarks')}
                 className="p-3 rounded-lg bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-colors"
