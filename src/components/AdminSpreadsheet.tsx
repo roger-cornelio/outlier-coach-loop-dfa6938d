@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -11,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -269,13 +270,31 @@ export function AdminSpreadsheet() {
     const block = updated[dayIndex].blocks[blockIndex];
     block.isBenchmark = !block.isBenchmark;
     
-    // If unchecking benchmark, clear target time/range
-    if (!block.isBenchmark) {
+    // Se marcou como benchmark, gerar faixas de tempo automaticamente
+    if (block.isBenchmark) {
+      const suggestedRanges = generateBenchmarkTimeRanges(block);
+      block.levelTargetRanges = suggestedRanges;
+    } else {
+      // Se desmarcou benchmark, limpar faixas de tempo
       block.targetSeconds = undefined;
       block.targetRange = undefined;
+      block.levelTargetRanges = undefined;
     }
     
     setParsedWorkouts(updated);
+  };
+
+  const regenerateTimeRanges = (dayIndex: number, blockIndex: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const block = updated[dayIndex].blocks[blockIndex];
+    
+    if (block.isBenchmark) {
+      const suggestedRanges = generateBenchmarkTimeRanges(block);
+      block.levelTargetRanges = suggestedRanges;
+      setParsedWorkouts(updated);
+    }
   };
 
   const toggleBlockMainWod = (dayIndex: number, blockIndex: number) => {
@@ -818,9 +837,12 @@ export function AdminSpreadsheet() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20"
           >
-            <p className="text-sm text-primary">
+            <p className="text-sm text-primary mb-2">
               <Trophy className="w-4 h-4 inline mr-2" />
-              Marque WODs como <strong>benchmark</strong> para rastrear evolução. Benchmarks exigem tempo do atleta.
+              <strong>WOD BENCHMARK</strong> = ferramenta de mensuração e evolução
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Marque WODs como benchmark para gerar faixas de tempo de referência automáticas e classificar performance (ELITE/STRONG/OK/TOUGH). WODs comuns são apenas para prescrição e organização do treino.
             </p>
           </motion.div>
 
@@ -957,13 +979,33 @@ export function AdminSpreadsheet() {
                                 </div>
                               </label>
 
-                              {/* Target time ranges by level (only if benchmark) */}
+                              {/* Target time ranges by level (ONLY if benchmark) */}
                               {block.isBenchmark && (
                                 <motion.div
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
                                   className="ml-7 space-y-4"
                                 >
+                                  {/* Suggestion header */}
+                                  <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-status-excellent/10 border border-status-excellent/20">
+                                    <Info className="w-4 h-4 text-status-excellent flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-status-excellent">
+                                        Referência de tempo sugerida pelo app
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Parâmetro técnico de ajuste opcional. Você pode manter ou ajustar manualmente.
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => regenerateTimeRanges(dayIndex, blockIndex)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-status-excellent/20 text-status-excellent text-xs font-medium hover:bg-status-excellent/30 transition-colors"
+                                    >
+                                      <Wand2 className="w-3 h-3" />
+                                      Recalcular
+                                    </button>
+                                  </div>
+
                                   <div className="flex flex-wrap items-center gap-4">
                                     <Target className="w-4 h-4 text-status-excellent" />
                                     <span className="text-sm text-muted-foreground">Faixa de tempo alvo por nível:</span>
@@ -1044,13 +1086,20 @@ export function AdminSpreadsheet() {
                                               className="w-10 px-1 py-0.5 text-center text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary"
                                             />
                                           </div>
+
+                                          {/* Preview formatted */}
+                                          {levelRange?.min && levelRange?.max && (
+                                            <span className="text-xs text-muted-foreground ml-auto">
+                                              ({formatTimeRange(levelRange.min)} – {formatTimeRange(levelRange.max)})
+                                            </span>
+                                          )}
                                         </div>
                                       );
                                     })}
                                   </div>
 
                                   <p className="text-xs text-muted-foreground ml-6">
-                                    ↳ Cada nível tem sua faixa • ELITE ≤ min, STRONG ≤ média, OK ≤ max, TOUGH &gt; max
+                                    ↳ Classificação: ELITE ≤ min • STRONG ≤ média • OK ≤ max • TOUGH &gt; max
                                   </p>
                                 </motion.div>
                               )}
