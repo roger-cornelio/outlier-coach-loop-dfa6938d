@@ -35,7 +35,7 @@ export default function Auth() {
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [resetSent, setResetSent] = useState(false);
 
-  const { user, canManageWorkouts, isAdmin, loading: authLoading } = useAuth();
+  const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading } = useAuth();
   const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -52,38 +52,11 @@ export default function Auth() {
     }
   }, [initialMode]);
 
+  // REDIRECT PRIORITY AFTER LOGIN: ADMIN > COACH > ATHLETE
   useEffect(() => {
     if (!user || authLoading) return;
 
-    if (next === 'admin') {
-      if (canManageWorkouts) {
-        setCurrentView('admin');
-        navigate('/');
-      } else {
-        toast({
-          title: 'Acesso negado',
-          description: 'Sua conta não tem permissão de coach ou administrador.',
-          variant: 'destructive',
-        });
-        navigate('/');
-      }
-      return;
-    }
-
-    if (next === 'coach') {
-      if (canManageWorkouts) {
-        setCurrentView('admin');
-        navigate('/');
-      } else {
-        toast({
-          title: 'Cadastro realizado!',
-          description: 'Aguarde a aprovação do administrador para acessar como coach.',
-        });
-        navigate('/');
-      }
-      return;
-    }
-
+    // Handle specific next redirects
     if (next === 'userManagement') {
       if (isAdmin) {
         setCurrentView('userManagement');
@@ -94,15 +67,28 @@ export default function Auth() {
           description: 'Sua conta não tem permissão de administrador.',
           variant: 'destructive',
         });
-        navigate('/');
+        // Fall through to priority redirect
       }
+    }
+
+    // PRIORITY 1: ADMIN - always goes to admin panel
+    if (isAdmin) {
+      setCurrentView('admin');
+      navigate('/');
       return;
     }
 
-    // Default: go to dashboard
+    // PRIORITY 2: COACH - goes to coach panel (admin view)
+    if (isCoach) {
+      setCurrentView('admin');
+      navigate('/');
+      return;
+    }
+
+    // PRIORITY 3: ATHLETE (default) - goes to dashboard
     setCurrentView('dashboard');
     navigate('/');
-  }, [user, authLoading, canManageWorkouts, isAdmin, next, navigate, setCurrentView, toast]);
+  }, [user, authLoading, isAdmin, isCoach, next, navigate, setCurrentView, toast]);
 
   const validateForm = () => {
     try {
