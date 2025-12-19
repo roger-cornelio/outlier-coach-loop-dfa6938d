@@ -41,6 +41,8 @@ export default function CoachPortal() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('login');
 
   const { user, profile, isCoach, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const { application, loading: appLoading, submitApplication, refetch } = useCoachApplication();
@@ -113,7 +115,8 @@ export default function CoachPortal() {
           title: 'Login realizado!',
           description: 'Verificando status da sua conta...',
         });
-        // The useEffect will handle redirection
+        // Refetch application data after login
+        await refetch();
       }
     } finally {
       setIsSubmitting(false);
@@ -139,10 +142,12 @@ export default function CoachPortal() {
 
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
+          // Auto-switch to login tab and show friendly message
+          setEmailAlreadyRegistered(true);
+          setActiveTab('login');
           toast({
-            title: 'Email já cadastrado',
-            description: 'Este email já está registrado. Tente fazer login.',
-            variant: 'destructive',
+            title: 'Esse email já tem conta',
+            description: 'Faça login para solicitar acesso como coach.',
           });
         } else {
           toast({
@@ -618,13 +623,24 @@ export default function CoachPortal() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full" onValueChange={(v) => setMode(v as AuthMode)}>
+          <Tabs value={activeTab} className="w-full" onValueChange={(v) => {
+            setActiveTab(v);
+            setMode(v as AuthMode);
+            setEmailAlreadyRegistered(false);
+          }}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Entrar</TabsTrigger>
               <TabsTrigger value="signup">Cadastrar como Coach</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
+              {emailAlreadyRegistered && (
+                <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <p className="text-sm text-primary">
+                    Esse email já tem conta cadastrada. Faça login abaixo para solicitar acesso como coach.
+                  </p>
+                </div>
+              )}
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Email</label>
