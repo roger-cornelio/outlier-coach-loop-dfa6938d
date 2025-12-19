@@ -46,25 +46,31 @@ export default function CoachPortal() {
   const [activeTab, setActiveTab] = useState<string>('login');
 
   const { user, profile, isCoach, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
-  const { application, loading: appLoading, submitApplication, refetch } = useCoachApplication();
+  const { application, loading: appLoading, submitting: appSubmitting, submitApplication, refetch } = useCoachApplication();
   const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // PRIORITY 1: Admin/Superadmin → redirect to /admin
+  // Calculate if we're still resolving the coach state
+  // CRITICAL: Don't redirect or render final state until ALL data is resolved
+  const isResolvingCoachState = authLoading || (user && appLoading);
+
+  // PRIORITY 1: Admin/Superadmin → redirect to /admin (only after resolved)
   useEffect(() => {
-    if (!authLoading && user && (isAdmin || isSuperAdmin)) {
+    if (isResolvingCoachState) return; // Wait for resolution
+    if (user && (isAdmin || isSuperAdmin)) {
       navigate('/admin');
     }
-  }, [user, isAdmin, isSuperAdmin, authLoading, navigate]);
+  }, [user, isAdmin, isSuperAdmin, isResolvingCoachState, navigate]);
 
-  // PRIORITY 2: Coach role → redirect to main app (coach dashboard)
+  // PRIORITY 2: Coach role → redirect to main app (only after resolved)
   useEffect(() => {
-    if (!authLoading && user && isCoach && !isAdmin && !isSuperAdmin) {
+    if (isResolvingCoachState) return; // Wait for resolution
+    if (user && isCoach && !isAdmin && !isSuperAdmin) {
       setCurrentView('admin');
       navigate('/');
     }
-  }, [user, isCoach, isAdmin, isSuperAdmin, authLoading, navigate, setCurrentView]);
+  }, [user, isCoach, isAdmin, isSuperAdmin, isResolvingCoachState, navigate, setCurrentView]);
 
   const validateForm = () => {
     try {
@@ -308,11 +314,13 @@ export default function CoachPortal() {
     }
   };
 
-  // Loading state
-  if (authLoading || appLoading) {
+  // LOADING GATE: Show loader while resolving state
+  // CRITICAL: Never render final UI or redirect while data is undefined/loading
+  if (isResolvingCoachState) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground text-sm">Carregando status...</p>
       </div>
     );
   }
