@@ -1,43 +1,17 @@
 import type { AthleteLevel } from '@/types/outlier';
 import type { BenchmarkResult } from '@/hooks/useBenchmarkResults';
+import { 
+  getActiveParams, 
+  getLevelThreshold, 
+  getBucketScore,
+  getNumericParam 
+} from '@/config/outlierParams';
 
-// Level thresholds for progression (score required to advance)
-export const LEVEL_THRESHOLDS: Record<AthleteLevel, number> = {
-  iniciante: 35,
-  intermediario: 55,
-  avancado: 75,
-  hyrox_open: 90,
-  hyrox_pro: 100,
-};
-
-// Consistency validation constants
-export const MIN_STRONG_WEEKS = 2; // Minimum weeks with STRONG+ performance
-export const MIN_STRONG_RATIO = 0.7; // 70% of benchmarks must be STRONG+
-export const CONSISTENCY_THRESHOLD = 15; // Max standard deviation
-
-// Temporal decay constants
-const DECAY_HALF_LIFE_DAYS = 30;
-const MIN_WEIGHT = 0.1;
-
-// Benchmark type weights
-const BENCHMARK_TYPE_WEIGHTS: Record<string, number> = {
-  engine: 1.2,
-  chipper: 1.0,
-  intervalado: 1.1,
-  amrap: 1.0,
-  emom: 0.9,
-  fortime: 1.1,
-  default: 1.0,
-};
-
-// Score impacts for buckets
-const BUCKET_SCORES: Record<string, number> = {
-  ELITE: 100,
-  STRONG: 85,
-  OK: 65,
-  TOUGH: 40,
-  DNF: 10,
-};
+/**
+ * SISTEMA DE PROGRESSÃO DE ATLETAS
+ * 
+ * Todos os parâmetros vêm do config central (outlierParams)
+ */
 
 export interface WeeklyPerformance {
   week: string;
@@ -73,22 +47,41 @@ export interface ProgressData {
   weeklyPerformance: WeeklyPerformance[];
 }
 
-// Calculate temporal decay weight
+// Calculate temporal decay weight using config
 function calculateTemporalWeight(createdAt: string): number {
+  const params = getActiveParams();
+  const decay = params.progression.temporalDecay;
+  
+  const halfLifeDays = getNumericParam(decay.halfLifeDays, 30, 'temporalDecay.halfLife');
+  const minWeight = getNumericParam(decay.minWeight, 0.1, 'temporalDecay.minWeight');
+  
   const now = new Date();
   const created = new Date(createdAt);
   const daysDiff = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
-  const weight = Math.pow(0.5, daysDiff / DECAY_HALF_LIFE_DAYS);
-  return Math.max(MIN_WEIGHT, weight);
+  const weight = Math.pow(0.5, daysDiff / halfLifeDays);
+  return Math.max(minWeight, weight);
 }
 
-// Get benchmark type from IDs
+// Get benchmark type from IDs using config
 function getBenchmarkType(result: BenchmarkResult): string {
+  const params = getActiveParams();
+  const weights = params.progression.benchmarkTypeWeights;
+  
   const id = (result.workout_id + result.block_id).toLowerCase();
-  for (const type of Object.keys(BENCHMARK_TYPE_WEIGHTS)) {
+  for (const type of Object.keys(weights)) {
     if (id.includes(type)) return type;
   }
   return 'default';
+}
+
+// Get benchmark type weight from config
+function getBenchmarkTypeWeight(type: string): number {
+  const params = getActiveParams();
+  return getNumericParam(
+    params.progression.benchmarkTypeWeights[type],
+    1.0,
+    `benchmarkTypeWeight.${type}`
+  );
 }
 
 // Check if bucket is STRONG or better
@@ -104,16 +97,24 @@ function calculateRulerScore(results: BenchmarkResult[]): number {
   let weightedSum = 0;
 
   for (const result of results) {
-    const score = result.score ?? BUCKET_SCORES[result.bucket || 'OK'] ?? 65;
+    const score = result.score ?? getBucketScore(result.bucket || 'OK');
     const temporalWeight = calculateTemporalWeight(result.created_at);
-    const typeWeight = BENCHMARK_TYPE_WEIGHTS[getBenchmarkType(result)] || 1.0;
+    const typeWeight = getBenchmarkTypeWeight(getBenchmarkType(result));
     const combinedWeight = temporalWeight * typeWeight;
 
     weightedSum += score * combinedWeight;
     totalWeight += combinedWeight;
   }
 
-  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+  const finalScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  
+  // Garantir que nunca retorne NaN
+  if (isNaN(finalScore)) {
+    console.warn('[progressSystem] Cálculo de rulerScore resultou em NaN');
+    return 0;
+  }
+  
+  return finalScore;
 }
 
 // Calculate weekly performance for validation
@@ -186,12 +187,13 @@ function calculateTrend(results: BenchmarkResult[]): 'improving' | 'stable' | 'd
   return 'stable';
 }
 
-// Get next level
+// Get next level from config
 function getNextLevel(current: AthleteLevel): AthleteLevel | null {
-  const order: AthleteLevel[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
+  const params = getActiveParams();
+  const order = params.labels.athleteLevels;
   const currentIndex = order.indexOf(current);
   if (currentIndex >= order.length - 1) return null;
-  return order[currentIndex + 1];
+  return order[currentIndex + 1] as AthleteLevel;
 }
 
 // Main calculation function
@@ -199,6 +201,9 @@ export function calculateProgress(
   results: BenchmarkResult[],
   currentLevel: AthleteLevel
 ): ProgressData {
+  const params = getActiveParams();
+  const consistency = params.progression.consistencyValidation;
+  
   const validResults = results.filter(r => r.completed);
   
   // Calculate immediate ruler score
@@ -206,7 +211,13 @@ export function calculateProgress(
   
   // Calculate weekly performance for validation
   const weeklyPerformance = calculateWeeklyPerformance(validResults);
-  const weeksWithStrongPlus = weeklyPerformance.filter(w => w.ratio >= MIN_STRONG_RATIO).length;
+  
+  // Get validation constants from config
+  const minStrongWeeks = getNumericParam(consistency.minStrongWeeks, 2, 'minStrongWeeks');
+  const minStrongRatio = getNumericParam(consistency.minStrongRatio, 0.7, 'minStrongRatio');
+  const consistencyThreshold = getNumericParam(consistency.consistencyThreshold, 15, 'consistencyThreshold');
+  
+  const weeksWithStrongPlus = weeklyPerformance.filter(w => w.ratio >= minStrongRatio).length;
   
   // Calculate overall STRONG+ ratio
   const totalStrong = validResults.filter(r => isStrongPlus(r.bucket)).length;
@@ -215,16 +226,16 @@ export function calculateProgress(
   // Consistency metrics
   const standardDeviation = calculateStandardDeviation(validResults);
   const consistencyScore = calculateConsistencyScore(standardDeviation);
-  const isConsistent = standardDeviation <= CONSISTENCY_THRESHOLD;
+  const isConsistent = standardDeviation <= consistencyThreshold;
   
-  // Level info
+  // Level info from config
   const nextLevel = getNextLevel(currentLevel);
-  const currentThreshold = LEVEL_THRESHOLDS[currentLevel];
+  const currentThreshold = getLevelThreshold(currentLevel);
   
   // Validation checks
   const meetsThreshold = rulerScore >= currentThreshold;
   const meetsConsistency = isConsistent;
-  const meetsWeeklyStrong = weeksWithStrongPlus >= MIN_STRONG_WEEKS && strongPlusRatio >= MIN_STRONG_RATIO;
+  const meetsWeeklyStrong = weeksWithStrongPlus >= minStrongWeeks && strongPlusRatio >= minStrongRatio;
   
   // Determine blocking reason
   let blockingReason: 'threshold' | 'consistency' | 'weekly_validation' | null = null;
@@ -236,7 +247,9 @@ export function calculateProgress(
   const isReadyToAdvance = meetsThreshold && meetsConsistency && meetsWeeklyStrong && nextLevel !== null;
   
   // Progress percentage (ruler position)
-  const progressToNextLevel = Math.min(100, (rulerScore / currentThreshold) * 100);
+  const progressToNextLevel = currentThreshold > 0 
+    ? Math.min(100, (rulerScore / currentThreshold) * 100)
+    : 0;
   
   return {
     rulerScore: Math.round(rulerScore * 10) / 10,
@@ -263,23 +276,42 @@ export function calculateProgress(
 
 // Format score for display
 export function formatScore(score: number): string {
+  if (isNaN(score)) return '0.0';
   return score.toFixed(1);
 }
 
-// Get color class based on score
+// Get color class based on score using config bucket thresholds
 export function getScoreColor(score: number): string {
-  if (score >= 85) return 'text-amber-500';
-  if (score >= 70) return 'text-green-500';
-  if (score >= 50) return 'text-blue-500';
-  if (score >= 30) return 'text-orange-500';
+  const params = getActiveParams();
+  const buckets = params.benchmark.scoringBuckets;
+  
+  if (score >= buckets.strong) return 'text-amber-500';
+  if (score >= buckets.ok) return 'text-green-500';
+  if (score >= buckets.tough) return 'text-blue-500';
+  if (score >= buckets.dnf) return 'text-orange-500';
   return 'text-red-500';
 }
 
 // Get progress bar gradient based on score
 export function getProgressGradient(score: number): string {
-  if (score >= 85) return 'from-amber-500 to-yellow-400';
-  if (score >= 70) return 'from-green-500 to-emerald-400';
-  if (score >= 50) return 'from-blue-500 to-cyan-400';
-  if (score >= 30) return 'from-orange-500 to-amber-400';
+  const params = getActiveParams();
+  const buckets = params.benchmark.scoringBuckets;
+  
+  if (score >= buckets.strong) return 'from-amber-500 to-yellow-400';
+  if (score >= buckets.ok) return 'from-green-500 to-emerald-400';
+  if (score >= buckets.tough) return 'from-blue-500 to-cyan-400';
+  if (score >= buckets.dnf) return 'from-orange-500 to-amber-400';
   return 'from-red-500 to-orange-400';
 }
+
+// Export level thresholds getter for backward compatibility
+export function getLevelThresholds(): Record<AthleteLevel, number> {
+  const params = getActiveParams();
+  return params.progression.levelThresholds as Record<AthleteLevel, number>;
+}
+
+// Export constants for backward compatibility
+export const LEVEL_THRESHOLDS = getLevelThresholds();
+export const MIN_STRONG_WEEKS = getActiveParams().progression.consistencyValidation.minStrongWeeks;
+export const MIN_STRONG_RATIO = getActiveParams().progression.consistencyValidation.minStrongRatio;
+export const CONSISTENCY_THRESHOLD = getActiveParams().progression.consistencyValidation.consistencyThreshold;
