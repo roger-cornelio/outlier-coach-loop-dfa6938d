@@ -29,7 +29,7 @@ interface OutlierState {
   // Legacy: mantido para compatibilidade (aponta para adaptedWorkouts ou baseWorkouts)
   weeklyWorkouts: DayWorkout[];
   
-  currentView: 'welcome' | 'config' | 'dashboard' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks';
+  currentView: 'welcome' | 'config' | 'dashboard' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks' | 'params';
   selectedDay: string | null;
   selectedWorkout: DayWorkout | null;
   externalResultsRefreshKey: number;

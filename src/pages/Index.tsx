@@ -9,6 +9,7 @@ import { WorkoutExecution } from '@/components/WorkoutExecution';
 import { ResultRecording } from '@/components/ResultRecording';
 import { PerformanceFeedback } from '@/components/PerformanceFeedback';
 import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
+import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { UserManagement } from '@/components/UserManagement';
 import { BenchmarksScreen } from '@/components/BenchmarksScreen';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -30,7 +31,7 @@ const Index = () => {
     if (authLoading) return;
     
     // Redirect to auth if trying to access protected views without login
-    if (!user && (currentView === 'admin' || currentView === 'userManagement')) {
+    if (!user && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params')) {
       navigate('/auth');
       return;
     }
@@ -41,15 +42,15 @@ const Index = () => {
       return;
     }
     
-    // Redirect non-admins away from user management
-    if (user && currentView === 'userManagement' && !isAdmin) {
+    // Redirect non-admins away from user management and params
+    if (user && (currentView === 'userManagement' || currentView === 'params') && !isAdmin) {
       setCurrentView('dashboard');
       return;
     }
   }, [user, authLoading, currentView, canManageWorkouts, isAdmin, navigate, setCurrentView]);
 
   // Show loading while checking auth for protected views
-  if (authLoading && (currentView === 'admin' || currentView === 'userManagement')) {
+  if (authLoading && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params')) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -73,6 +74,8 @@ const Index = () => {
         return <PerformanceFeedback />;
       case 'admin':
         return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
+      case 'params':
+        return isAdmin ? <AdminParamsEditor /> : <Dashboard />;
       case 'users':
       case 'userManagement':
         return isAdmin ? <UserManagement /> : <Dashboard />;
