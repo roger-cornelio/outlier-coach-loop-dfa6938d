@@ -34,6 +34,7 @@ const Index = () => {
   useLevelTheme();
 
   // MANDATORY LOGIN: Redirect to auth if not logged in (except welcome)
+  // PRIORITY: admin/superadmin > coach > athlete
   useEffect(() => {
     if (authLoading) return;
     
@@ -43,6 +44,13 @@ const Index = () => {
     // Redirect to auth if not logged in
     if (!user) {
       navigate('/auth');
+      return;
+    }
+    
+    // Admin/superadmin: Always have access to admin views
+    // Auto-redirect to admin if they land on dashboard
+    if (isAdmin && currentView === 'dashboard') {
+      setCurrentView('admin');
       return;
     }
     
