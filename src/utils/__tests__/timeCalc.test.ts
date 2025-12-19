@@ -164,4 +164,39 @@ describe('Regra de Consistência', () => {
     expect(totalSec).toBe(manualSum);
     expect(totalSec).toBe(2700);
   });
+
+  // TESTE PRINCIPAL SOLICITADO: 38min + 46min = 84min
+  it('DASHBOARD: 2 blocos (38min + 46min) = 84min total', () => {
+    const blocks: TimeBlock[] = [
+      { id: 'bloco1', durationSec: 38 * 60 },  // 38min = 2280s
+      { id: 'bloco2', durationSec: 46 * 60 },  // 46min = 2760s
+    ];
+
+    const { totalSec, byBlockSec } = sumBlocksDurationSec(blocks);
+
+    // Tempo total = 84min = 5040s
+    expect(totalSec).toBe(84 * 60);
+    expect(totalSec).toBe(5040);
+    
+    // Cada card mostra seu tempo correto
+    expect(Math.round(byBlockSec['bloco1'] / 60)).toBe(38);
+    expect(Math.round(byBlockSec['bloco2'] / 60)).toBe(46);
+    
+    // Soma dos cards = total
+    const somaCards = byBlockSec['bloco1'] + byBlockSec['bloco2'];
+    expect(totalSec).toBe(somaCards);
+  });
+
+  it('blocos sem durationSec devem mostrar "—" e ser excluídos do total', () => {
+    const blocks: TimeBlock[] = [
+      { id: 'warmup', durationSec: 600 },
+      { id: 'notes' }, // sem durationSec
+      { id: 'conditioning', durationSec: 1200 },
+    ];
+
+    const { totalSec, byBlockSec } = sumBlocksDurationSec(blocks);
+
+    expect(totalSec).toBe(1800); // apenas warmup + conditioning
+    expect(byBlockSec['notes']).toBe(0);
+  });
 });
