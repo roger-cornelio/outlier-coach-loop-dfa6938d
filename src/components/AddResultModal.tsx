@@ -52,7 +52,7 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
   const needsGenderForProva = resultType === 'prova_oficial' && !hasGenderConfigured;
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -62,39 +62,28 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setScreenshotFile(file);
       setExtractionConfidence(null);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setScreenshotPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const preview = reader.result as string;
+        setScreenshotPreview(preview);
+        // Auto-extract time from screenshot
+        await extractTimeFromImage(preview);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const removeScreenshot = () => {
-    setScreenshotFile(null);
-    setScreenshotPreview(null);
-    setExtractionConfidence(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const extractTimeFromScreenshot = async () => {
-    if (!screenshotPreview) {
-      toast.error('Faça upload de uma imagem primeiro');
-      return;
-    }
-
+  const extractTimeFromImage = async (imagePreview: string) => {
     setIsExtracting(true);
     
     try {
       const { data, error } = await supabase.functions.invoke('extract-time-from-screenshot', {
-        body: { imageUrl: screenshotPreview }
+        body: { imageUrl: imagePreview }
       });
 
       if (error) throw error;
 
       if (data.error) {
-        toast.error(data.error);
+        toast.info('Não foi possível extrair o tempo automaticamente. Preencha manualmente.');
         return;
       }
 
@@ -127,7 +116,6 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           low: 'baixa'
         }[data.confidence] || 'média';
 
-        // Build success message with detected fields
         let successMsg = `Tempo extraído: ${data.formatted_time}`;
         if (data.race_category) {
           successMsg += ` | Categoria: ${data.race_category}`;
@@ -136,15 +124,26 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
 
         toast.success(successMsg);
       } else {
-        toast.error('Não foi possível identificar o tempo na imagem');
+        toast.info('Não foi possível identificar o tempo. Preencha manualmente.');
       }
     } catch (error) {
       console.error('Extraction error:', error);
-      toast.error('Erro ao extrair tempo da imagem');
+      toast.info('Erro ao extrair tempo. Preencha manualmente.');
     } finally {
       setIsExtracting(false);
     }
   };
+
+  const removeScreenshot = () => {
+    setScreenshotFile(null);
+    setScreenshotPreview(null);
+    setExtractionConfidence(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Função extractTimeFromScreenshot removida - agora usa extractTimeFromImage automaticamente
 
   const calculateTotalSeconds = (): number | null => {
     const h = parseInt(hours) || 0;
@@ -167,8 +166,10 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
     }
 
     const totalSeconds = calculateTotalSeconds();
-    if (!totalSeconds && !screenshotFile) {
-      toast.error('Insira o tempo ou faça upload do print do resultado');
+    
+    // TEMPO É OBRIGATÓRIO para provas e simulados
+    if (!totalSeconds) {
+      toast.error('O tempo é obrigatório. Preencha horas, minutos e segundos.');
       return;
     }
 
@@ -434,26 +435,13 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
                     )}
                   </div>
                   
-                  {/* AI Extract Button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={extractTimeFromScreenshot}
-                    disabled={isExtracting}
-                    className="w-full gap-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                  >
-                    {isExtracting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Analisando imagem...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4" />
-                        Extrair Tempo com IA
-                      </>
-                    )}
-                  </Button>
+                  {/* Extraction status indicator */}
+                  {isExtracting && (
+                    <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                      <span className="text-sm text-amber-500">Extraindo tempo da imagem...</span>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.button
