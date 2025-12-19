@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, 
   Clock, CheckCircle, XCircle, RefreshCw, UserCog, 
-  Instagram, MapPin, Building2, MessageSquare
+  Instagram, MapPin, Building2, LogOut
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -28,7 +28,6 @@ const signupSchema = z.object({
   instagram: z.string().trim().max(100, 'Instagram muito longo').optional(),
   boxName: z.string().trim().max(100, 'Nome do box muito longo').optional(),
   city: z.string().trim().max(100, 'Cidade muito longa').optional(),
-  message: z.string().trim().max(500, 'Mensagem muito longa').optional(),
 });
 
 export default function CoachPortal() {
@@ -39,7 +38,6 @@ export default function CoachPortal() {
   const [instagram, setInstagram] = useState('');
   const [boxName, setBoxName] = useState('');
   const [city, setCity] = useState('');
-  const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -63,7 +61,7 @@ export default function CoachPortal() {
       if (mode === 'login') {
         loginSchema.parse({ email, password });
       } else {
-        signupSchema.parse({ name, email, password, instagram, boxName, city, message });
+        signupSchema.parse({ name, email, password, instagram, boxName, city });
       }
       setErrors({});
       return true;
@@ -166,7 +164,6 @@ export default function CoachPortal() {
         instagram: instagram.trim() || undefined,
         box_name: boxName.trim() || undefined,
         city: city.trim() || undefined,
-        message: message.trim() || undefined,
       });
 
       if (!success) {
@@ -190,7 +187,6 @@ export default function CoachPortal() {
       setInstagram('');
       setBoxName('');
       setCity('');
-      setMessage('');
 
     } finally {
       setIsSubmitting(false);
@@ -201,12 +197,11 @@ export default function CoachPortal() {
     setIsSubmitting(true);
     try {
       const success = await submitApplication({
-        full_name: profile?.name || name.trim(),
-        email: profile?.email || email.trim(),
-        instagram: instagram.trim() || undefined,
-        box_name: boxName.trim() || undefined,
-        city: city.trim() || undefined,
-        message: message.trim() || undefined,
+        full_name: profile?.name || application?.full_name || '',
+        email: profile?.email || application?.email || '',
+        instagram: application?.instagram || instagram.trim() || undefined,
+        box_name: application?.box_name || boxName.trim() || undefined,
+        city: application?.city || city.trim() || undefined,
       });
 
       if (!success) {
@@ -225,6 +220,11 @@ export default function CoachPortal() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSignOutAndReturn = async () => {
+    await supabase.auth.signOut();
+    setMode('login');
   };
 
   // Loading state
@@ -301,20 +301,8 @@ export default function CoachPortal() {
                 </div>
               )}
               <p className="text-muted-foreground mb-6">
-                Você pode atualizar suas informações e reenviar a solicitação.
+                Você pode reenviar a solicitação para nova análise.
               </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="relative">
-                  <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px]"
-                    placeholder="Adicione informações adicionais..."
-                  />
-                </div>
-              </div>
 
               <button
                 onClick={handleResubmit}
@@ -342,7 +330,7 @@ export default function CoachPortal() {
       );
     }
 
-    // No application yet - show form to apply
+    // No application yet - show warning that user is logged as athlete
     if (!application) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -351,75 +339,25 @@ export default function CoachPortal() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-md"
           >
-            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                  <UserCog className="w-8 h-8 text-primary" />
-                </div>
-                <h1 className="font-display text-2xl text-foreground mb-2">
-                  Solicitar Acesso de Coach
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Preencha o formulário abaixo para solicitar acesso ao painel de coach.
-                </p>
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+                <User className="w-8 h-8 text-amber-500" />
               </div>
-
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                await handleResubmit();
-              }} className="space-y-4">
-                <div className="relative">
-                  <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="@seu_instagram"
-                  />
-                </div>
-
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={boxName}
-                    onChange={(e) => setBoxName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="Nome do seu Box/Academia"
-                  />
-                </div>
-
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="Cidade"
-                  />
-                </div>
-
-                <div className="relative">
-                  <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px]"
-                    placeholder="Por que você quer ser coach?"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                  Enviar Solicitação
-                </button>
-              </form>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Acesso de Atleta
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Você está logado como atleta/usuário. Para acessar como coach, 
+                saia e entre com sua conta de coach.
+              </p>
+              
+              <button
+                onClick={handleSignOutAndReturn}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-5 h-5" />
+                Sair e entrar como Coach
+              </button>
 
               <button
                 onClick={() => navigate('/')}
@@ -645,16 +583,6 @@ export default function CoachPortal() {
                         onChange={(e) => setCity(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="Cidade"
-                      />
-                    </div>
-
-                    <div className="relative">
-                      <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                      <textarea
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px]"
-                        placeholder="Por que você quer ser coach?"
                       />
                     </div>
                   </div>

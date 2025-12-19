@@ -12,7 +12,6 @@ import {
   Instagram, 
   MapPin, 
   Building2, 
-  MessageSquare,
   Loader2,
   CheckCircle,
   Clock,
@@ -28,7 +27,6 @@ const applicationSchema = z.object({
   instagram: z.string().trim().max(50).optional(),
   box_name: z.string().trim().max(100).optional(),
   city: z.string().trim().max(100).optional(),
-  message: z.string().trim().max(500).optional(),
 });
 
 export function CoachApplicationForm() {
@@ -41,7 +39,6 @@ export function CoachApplicationForm() {
     instagram: '',
     box_name: '',
     city: '',
-    message: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -54,7 +51,6 @@ export function CoachApplicationForm() {
         instagram: application.instagram || '',
         box_name: application.box_name || '',
         city: application.city || '',
-        message: application.message || '',
       });
     }
   });
@@ -72,7 +68,6 @@ export function CoachApplicationForm() {
         instagram: validated.instagram,
         box_name: validated.box_name,
         city: validated.city,
-        message: validated.message,
       });
 
       if (success) {
@@ -209,7 +204,6 @@ function ApplicationFormFields({
     instagram: string;
     box_name: string;
     city: string;
-    message: string;
   };
   setFormData: React.Dispatch<React.SetStateAction<typeof formData>>;
   errors: Record<string, string>;
@@ -321,23 +315,6 @@ function ApplicationFormFields({
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Sua cidade"
-              />
-            </div>
-          </div>
-
-          {/* Message */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Mensagem (opcional)
-            </label>
-            <div className="relative">
-              <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-              <textarea
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                rows={3}
-                className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder="Conte um pouco sobre você e sua experiência..."
               />
             </div>
           </div>
