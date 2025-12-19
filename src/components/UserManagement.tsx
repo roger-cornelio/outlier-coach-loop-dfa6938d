@@ -14,6 +14,7 @@ interface UserWithRole {
   email: string;
   created_at: string;
   role: 'superadmin' | 'admin' | 'coach' | 'user';
+  hasPendingCoachApplication: boolean;
 }
 
 interface CoachAthlete {
@@ -58,6 +59,19 @@ export function UserManagement() {
 
       if (rolesError) throw rolesError;
 
+      // Fetch pending coach applications
+      const { data: pendingApplications, error: appError } = await supabase
+        .from('coach_applications')
+        .select('auth_user_id')
+        .eq('status', 'pending');
+
+      if (appError) throw appError;
+
+      // Build a set of user IDs with pending coach applications
+      const pendingCoachUserIds = new Set(
+        (pendingApplications || []).map(app => app.auth_user_id).filter(Boolean)
+      );
+
       // Build a map of user roles (prioritize superadmin > admin > coach > user)
       const userRoleMap = new Map<string, 'superadmin' | 'admin' | 'coach' | 'user'>();
       (allRoles || []).forEach(r => {
@@ -78,6 +92,7 @@ export function UserManagement() {
         email: p.email || 'Email não disponível',
         created_at: p.created_at,
         role: userRoleMap.get(p.user_id) || 'user',
+        hasPendingCoachApplication: pendingCoachUserIds.has(p.user_id),
       }));
 
       setUsers(usersWithRoles);
@@ -558,7 +573,7 @@ export function UserManagement() {
                     <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
                       Você
                     </span>
-                  ) : (
+                  ) : u.hasPendingCoachApplication ? (
                     <button
                       onClick={() => toggleCoachRole(u.id, u.role)}
                       disabled={updating === u.id}
@@ -573,7 +588,7 @@ export function UserManagement() {
                         </>
                       )}
                     </button>
-                  )}
+                  ) : null}
                 </motion.div>
               ))}
             </div>
