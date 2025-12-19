@@ -167,10 +167,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Track if initial session check is done
     let initialCheckDone = false;
 
+    console.log('[DEBUG useAuth] useEffect mount - setting up auth listener');
+
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[DEBUG useAuth] onAuthStateChange:', event, '| session:', !!session, '| initialCheckDone:', initialCheckDone);
       // CRITICAL: Keep loading=true during auth state changes until fully resolved
       // Only the initial getSession or this handler will set loading=false
       
@@ -193,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 fetchProfile(session.user.id),
               ]);
             } finally {
+              console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false after roles/profile');
               setLoading(false);
             }
           }, 0);
@@ -200,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // User signed out
           setRole("user");
           setProfile(null);
+          console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false (signed out)');
           setLoading(false);
         }
       }
@@ -208,8 +213,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session (runs once on mount)
     const initSession = async () => {
+      console.log('[DEBUG useAuth] initSession START - loading is true');
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        console.log('[DEBUG useAuth] getSession result:', !!session, '| user:', session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -217,17 +225,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           // loading is already true from initial state
           const email = session.user.email || "";
+          console.log('[DEBUG useAuth] initSession - syncing roles for:', email);
           await syncRolesOnBootstrap(session.user.id, email);
           await Promise.all([
             checkUserRole(session.user.id),
             fetchProfile(session.user.id),
           ]);
+          console.log('[DEBUG useAuth] initSession - roles/profile DONE');
         }
       } catch (err) {
         console.error("Error initializing session:", err);
       } finally {
         // Mark initial check as done BEFORE setting loading=false
         initialCheckDone = true;
+        console.log('[DEBUG useAuth] initSession FINALLY - setting loading=false');
         setLoading(false);
       }
     };

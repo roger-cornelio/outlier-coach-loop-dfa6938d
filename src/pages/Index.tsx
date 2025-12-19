@@ -33,10 +33,12 @@ const Index = () => {
   // MANDATORY LOGIN: Redirect to auth if not logged in
   // ADMIN users are redirected to /admin route (isolated)
   useEffect(() => {
+    console.log('[DEBUG Index] Effect check:', { authLoading, user: !!user, isAdmin, isCoach, currentView, pathname: window.location.pathname });
     if (authLoading) return;
 
     // ===== ADMIN: Redirect to /admin route =====
     if (user && isAdmin) {
+      console.log('[DEBUG Index] REDIRECT / → /admin | Reason: user is admin');
       navigate("/admin");
       return;
     }
@@ -46,18 +48,21 @@ const Index = () => {
 
     // ===== No user: redirect to auth =====
     if (!user) {
+      console.log('[DEBUG Index] REDIRECT / → /auth | Reason: no user');
       navigate("/auth");
       return;
     }
 
     // ===== Non-admin trying to access admin views: redirect to dashboard =====
     if (currentView === "admin" || currentView === "userManagement" || currentView === "params" || currentView === "coachApplicationsAdmin") {
+      console.log('[DEBUG Index] setCurrentView → dashboard | Reason: non-admin on admin view');
       setCurrentView("dashboard");
       return;
     }
 
     // ===== Non-coach trying to access coach performance: redirect to dashboard =====
     if (currentView === "coachPerformance" && !isCoach) {
+      console.log('[DEBUG Index] setCurrentView → dashboard | Reason: non-coach on coachPerformance');
       setCurrentView("dashboard");
       return;
     }
