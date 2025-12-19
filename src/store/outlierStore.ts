@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AthleteConfig, CoachStyle, WorkoutResult, DayWorkout } from '@/types/outlier';
+import { migrateWorkouts } from '@/utils/benchmarkMigration';
 
 // ============================================
 // SEPARAÇÃO DE FONTES DE VERDADE
@@ -141,6 +142,18 @@ export const useOutlierStore = create<OutlierState>()(
         baseWorkouts: state.baseWorkouts,
         // Não persistir adaptedWorkouts - recalcular sempre
       }),
+      // Run migration when store is rehydrated from storage
+      onRehydrateStorage: () => (state) => {
+        if (state && state.baseWorkouts && state.baseWorkouts.length > 0) {
+          const migrated = migrateWorkouts(state.baseWorkouts);
+          if (migrated) {
+            // Update store with migrated workouts
+            state.baseWorkouts = migrated;
+            state.weeklyWorkouts = migrated;
+            console.log('[outlierStore] Benchmarks migrated with paramsVersionUsed');
+          }
+        }
+      },
     }
   )
 );

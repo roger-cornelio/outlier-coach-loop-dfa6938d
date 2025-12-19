@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
+import { getActiveParams } from '@/config/outlierParams';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -270,12 +271,21 @@ export function AdminSpreadsheet() {
     const block = updated[dayIndex].blocks[blockIndex];
     block.isBenchmark = !block.isBenchmark;
     
-    // Se marcou como benchmark, gerar faixas de tempo automaticamente
+    // Se marcou como benchmark, gerar faixas de tempo e salvar versão dos params
     if (block.isBenchmark) {
       const suggestedRanges = generateBenchmarkTimeRanges(block);
       block.levelTargetRanges = suggestedRanges;
+      
+      // IMPORTANTE: Salvar versão dos parâmetros usados (imutável)
+      // Só seta se ainda não existir (preserva histórico)
+      if (!block.paramsVersionUsed) {
+        block.paramsVersionUsed = getActiveParams().version;
+        block.createdAt = new Date().toISOString();
+      }
+      block.updatedAt = new Date().toISOString();
     } else {
-      // Se desmarcou benchmark, limpar faixas de tempo
+      // Se desmarcou benchmark, limpar faixas de tempo mas MANTER paramsVersionUsed
+      // (para caso remarque, preservar histórico)
       block.targetSeconds = undefined;
       block.targetRange = undefined;
       block.levelTargetRanges = undefined;
@@ -996,6 +1006,12 @@ export function AdminSpreadsheet() {
                                       <p className="text-xs text-muted-foreground">
                                         Parâmetro técnico de ajuste opcional. Você pode manter ou ajustar manualmente.
                                       </p>
+                                      {/* Versão dos parâmetros usados */}
+                                      {block.paramsVersionUsed && (
+                                        <p className="text-xs text-muted-foreground/70 mt-1">
+                                          Versão de parâmetros: <span className="font-mono">{block.paramsVersionUsed}</span>
+                                        </p>
+                                      )}
                                     </div>
                                     <button
                                       onClick={() => regenerateTimeRanges(dayIndex, blockIndex)}

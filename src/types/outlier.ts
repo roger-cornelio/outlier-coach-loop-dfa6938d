@@ -99,6 +99,12 @@ export interface WorkoutBlock {
     avancado: number;
     hyrox_pro: number;
   };
+  // Versioning for params preservation
+  paramsVersionUsed?: string; // Version of outlierParams when benchmark was created
+  createdAt?: string; // ISO timestamp of when benchmark was created
+  updatedAt?: string; // ISO timestamp of last update
+  // Coach override for benchmark times (takes priority over generated ranges)
+  benchmarkTimeOverride?: LevelTargetRanges;
 }
 
 // Performance classification buckets

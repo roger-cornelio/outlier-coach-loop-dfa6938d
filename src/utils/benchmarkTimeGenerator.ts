@@ -1,9 +1,11 @@
 import type { WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LevelTargetRanges } from '@/types/outlier';
 import { 
   getActiveParams, 
+  getParamsForWod,
   getWodTypeFactor, 
   getLevelMultiplier,
-  getNumericParam 
+  getNumericParam,
+  OutlierParamsConfig
 } from '@/config/outlierParams';
 
 /**
@@ -150,13 +152,22 @@ function estimateBaseTimeSeconds(content: string, durationMinutes?: number): num
  * Gera faixas de tempo de referência para cada nível de atleta
  * APENAS para WODs marcados como BENCHMARK
  * 
+ * Usa parâmetros da versão salva no WOD (paramsVersionUsed) se existir,
+ * garantindo que benchmarks antigos não mudem quando params são atualizados.
+ * 
  * @param block O bloco de treino
+ * @param overrideParams Parâmetros opcionais para sobrescrever (usado em migração)
  * @returns Objeto com faixas de tempo para cada nível
  */
-export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRanges {
-  const params = getActiveParams();
+export function generateBenchmarkTimeRanges(block: WorkoutBlock, overrideParams?: OutlierParamsConfig): LevelTargetRanges {
+  // Usa parâmetros da versão do WOD ou params ativos
+  const params = overrideParams || getParamsForWod(block);
   const wodType = block.wodType || 'default';
-  const typeConfig = getWodTypeFactor(wodType as WodType | 'default');
+  
+  // Buscar fatores do wodType dos params
+  const typeConfig = params.estimation.wodTypeFactors[wodType as WodType | 'default'] 
+    || params.estimation.wodTypeFactors.default 
+    || { baseMinutes: 15, variancePercent: 0.18 };
   
   // Estimar tempo base
   const baseSeconds = block.durationMinutes 
@@ -169,11 +180,12 @@ export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRan
   const levels = params.labels.athleteLevels.filter(l => l !== 'hyrox_open') as AthleteLevel[];
   
   for (const level of levels) {
-    const levelFactor = getLevelMultiplier(level);
+    // Buscar multiplicador de nível dos params
+    const levelFactor = params.estimation.levelMultipliers[level] || 1.0;
     const adjustedBase = baseSeconds * levelFactor;
     
     // Variação para criar a faixa (min/max)
-    const variance = adjustedBase * typeConfig.variancePercent;
+    const variance = adjustedBase * (typeConfig.variancePercent || 0.15);
     
     result[level] = {
       min: Math.round(adjustedBase - variance),
@@ -182,6 +194,14 @@ export function generateBenchmarkTimeRanges(block: WorkoutBlock): LevelTargetRan
   }
   
   return result;
+}
+
+/**
+ * Obtém os parâmetros de benchmark para um WOD
+ * Retorna os params da versão salva no WOD ou os ativos
+ */
+export function getBenchmarkParams(block: WorkoutBlock): OutlierParamsConfig {
+  return getParamsForWod(block);
 }
 
 /**
@@ -203,10 +223,10 @@ export function describeTimeRange(range: TargetTimeRange): string {
 
 /**
  * Verifica se um WOD deve ser usado para métricas de evolução
- * Baseado na regra do config: benchmark.enabledOnlyForBenchmark
+ * Baseado na regra do config da versão do WOD
  */
 export function shouldTrackEvolution(block: WorkoutBlock): boolean {
-  const params = getActiveParams();
+  const params = getParamsForWod(block);
   if (params.benchmark.enabledOnlyForBenchmark) {
     return block.isBenchmark === true;
   }
