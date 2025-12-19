@@ -1,13 +1,11 @@
 /**
  * AppGate - SINGLE POINT of routing/rendering decisions
  * 
- * RULES:
+ * CRITICAL RULES:
  * 1. While loading: render ONLY a loader (no redirects, no fallbacks)
- * 2. Redirect ONLY when anon user tries to access protected route
- * 3. Authenticated user on /coach: NEVER redirect to "/", render appropriate screen
- * 4. Admin/Superadmin: render or allow access to /admin
- * 
- * Pages become "dumb" - they just render based on state, no navigation logic.
+ * 2. SUPERADMIN: NEVER blocked, NEVER redirected, access to ALL routes
+ * 3. Decisions based ONLY on user.role, not coach_application
+ * 4. No implicit redirects for authenticated users
  */
 
 import { ReactNode } from 'react';
@@ -37,9 +35,15 @@ export function AppGate({ children }: AppGateProps) {
     );
   }
 
-  // ===== RULE 2: Redirect logic (ONLY for anon users) =====
+  // ===== RULE 2: SUPERADMIN is NEVER blocked, NEVER redirected =====
+  if (state === 'superadmin') {
+    // Superadmin has access to ALL routes without any restrictions
+    return <>{children}</>;
+  }
+
+  // ===== RULE 3: Route-based access control (based on role ONLY) =====
   
-  // /admin route - requires admin role
+  // /admin route - requires admin or superadmin role
   if (pathname.startsWith('/admin')) {
     if (state === 'anon') {
       console.log('[AppGate] REDIRECT /admin → /auth | Reason: anon user');
@@ -53,18 +57,17 @@ export function AppGate({ children }: AppGateProps) {
     // Admin user - allow access
   }
 
-  // /coach route - NEVER redirect authenticated users to "/"
-  // Let the CoachPortal page handle rendering based on state
+  // /coach route - NEVER redirect authenticated users
+  // Let the CoachPortal page handle rendering based on role
   if (pathname.startsWith('/coach')) {
     // Anon users can access /coach (it shows login form)
-    // Authenticated users stay on /coach and see appropriate screen
+    // Authenticated users stay on /coach and see appropriate screen based on ROLE
     // NO REDIRECT TO "/" FOR AUTHENTICATED USERS
   }
 
   // / (index) route - requires auth (except welcome screen handled internally)
   if (pathname === '/') {
     // Let Index page handle welcome screen for anon users
-    // It will redirect to /auth if needed
   }
 
   // /auth route
@@ -80,6 +83,6 @@ export function AppGate({ children }: AppGateProps) {
     }
   }
 
-  // ===== RULE 3: Render children (pages handle their own state-based rendering) =====
+  // ===== RULE 4: Render children (pages handle their own state-based rendering) =====
   return <>{children}</>;
 }

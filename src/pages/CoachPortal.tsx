@@ -1,8 +1,11 @@
 /**
- * CoachPortal - "DUMB" page that renders based on AppState
+ * CoachPortal - "DUMB" page that renders based on ROLE (not application status)
  * 
- * NO automatic redirects to "/" for authenticated users.
- * Rendering is purely based on state from useAppState.
+ * CRITICAL RULES:
+ * 1. Access decisions based ONLY on user.role from useAppState
+ * 2. applicationStatus is ONLY for UI display within the athlete state
+ * 3. NO automatic redirects to "/" for authenticated users
+ * 4. superadmin has access to ALL routes
  */
 
 import { useState } from 'react';
@@ -55,7 +58,7 @@ export default function CoachPortal() {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const { profile } = useAuth();
-  const { state, user, isAdmin, isSuperAdmin, isCoach } = useAppState();
+  const { state, user, isAdmin, isSuperAdmin, isCoach, applicationStatus } = useAppState();
   const { application, submitting: appSubmitting, submitApplication, refetch } = useCoachApplication();
   const { setCurrentView } = useOutlierStore();
   const { toast } = useToast();
@@ -286,6 +289,7 @@ export default function CoachPortal() {
           title: 'Solicitação enviada!',
           description: 'Aguarde a aprovação do administrador.',
         });
+        setShowApplicationForm(false);
         await refetch();
       }
     } finally {
@@ -293,7 +297,7 @@ export default function CoachPortal() {
     }
   };
 
-  // ===== RENDER BASED ON STATE (no redirects) =====
+  // ===== RENDER BASED ON ROLE (not application status) =====
   
   // STATE: loading - already handled by AppGate, but safety check
   if (state === 'loading') {
@@ -301,6 +305,64 @@ export default function CoachPortal() {
       <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <p className="text-muted-foreground text-sm">Carregando status...</p>
+      </div>
+    );
+  }
+
+  // STATE: superadmin - NEVER blocked, show coach hub with extra powers
+  if (state === 'superadmin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+            <div className="w-16 h-16 mx-auto bg-yellow-500/10 rounded-full flex items-center justify-center mb-6">
+              <ShieldCheck className="w-8 h-8 text-yellow-500" />
+            </div>
+            <h1 className="font-display text-2xl text-foreground mb-3">SUPERADMIN</h1>
+            <p className="text-muted-foreground mb-6">
+              Você tem acesso total a todas as rotas do sistema.
+            </p>
+            <div className="grid gap-3">
+              <button
+                onClick={() => {
+                  setCurrentView('coachPerformance');
+                  navigate('/');
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Ver Performance
+              </button>
+              <button
+                onClick={() => navigate('/admin')}
+                className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                Painel Admin
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentView('dashboard');
+                  navigate('/');
+                }}
+                className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Ir para o App
+              </button>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                }}
+                className="text-muted-foreground hover:text-foreground text-sm mt-2"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -319,10 +381,15 @@ export default function CoachPortal() {
               <ShieldCheck className="w-8 h-8 text-yellow-500" />
             </div>
             <h1 className="font-display text-2xl text-foreground mb-4">
-              Você é {isSuperAdmin ? 'SUPERADMIN' : 'ADMIN'}
+              Você é ADMIN
             </h1>
             <p className="text-muted-foreground mb-6">
-              Você já possui acesso administrativo ao sistema.
+              Você possui acesso administrativo ao sistema.
+              {!isCoach && (
+                <span className="block mt-2 text-sm">
+                  Para acessar este painel como coach, solicite a role de coach.
+                </span>
+              )}
             </p>
             <button
               onClick={() => navigate('/admin')}
@@ -337,117 +404,8 @@ export default function CoachPortal() {
     );
   }
 
-  // STATE: coach_pending - show pending screen
-  if (state === 'coach_pending') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
-            <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
-              <Clock className="w-8 h-8 text-amber-500" />
-            </div>
-            <h1 className="font-display text-2xl text-foreground mb-4">
-              Aguardando Aprovação
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              Sua solicitação para se tornar coach está em análise.
-            </p>
-            <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-4">
-              <p><strong>Nome:</strong> {application?.full_name}</p>
-              <p><strong>Email:</strong> {application?.email}</p>
-              {application?.box_name && <p><strong>Box:</strong> {application.box_name}</p>}
-              {application?.city && <p><strong>Cidade:</strong> {application.city}</p>}
-            </div>
-            <div className="flex flex-col gap-3 mt-6">
-              <button
-                onClick={() => navigate('/')}
-                className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar ao início
-              </button>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                }}
-                className="text-muted-foreground hover:text-foreground text-sm"
-              >
-                Sair e usar outra conta
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // STATE: coach_rejected - show rejection + resubmit option
-  if (state === 'coach_rejected') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
-            <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center mb-6">
-              <XCircle className="w-8 h-8 text-destructive" />
-            </div>
-            <h1 className="font-display text-2xl text-foreground mb-4">
-              Solicitação Recusada
-            </h1>
-            {application?.rejection_reason && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
-                <p className="text-sm text-destructive">
-                  <strong>Motivo:</strong> {application.rejection_reason}
-                </p>
-              </div>
-            )}
-            <p className="text-muted-foreground mb-6">
-              Você pode reenviar a solicitação para nova análise.
-            </p>
-            <button
-              onClick={handleResubmit}
-              disabled={isSubmitting}
-              className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <RefreshCw className="w-5 h-5" />
-              )}
-              Reenviar Solicitação
-            </button>
-            <div className="flex flex-col gap-3 mt-4">
-              <button
-                onClick={() => navigate('/')}
-                className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar ao início
-              </button>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                }}
-                className="text-muted-foreground hover:text-foreground text-sm"
-              >
-                Sair e usar outra conta
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // STATE: coach_approved - show coach hub (NO redirect to "/")
-  if (state === 'coach_approved') {
+  // STATE: coach - show coach hub (NO redirect to "/")
+  if (state === 'coach') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
         <motion.div
@@ -497,8 +455,120 @@ export default function CoachPortal() {
     );
   }
 
-  // STATE: athlete (authenticated but no application) - show access restricted screen
+  // STATE: athlete (authenticated but no coach role)
+  // Use applicationStatus ONLY for UI display within this state
   if (state === 'athlete' && user) {
+    // Application pending - show waiting screen
+    if (applicationStatus === 'pending') {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+                <Clock className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Aguardando Aprovação
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Sua solicitação para se tornar coach está em análise.
+              </p>
+              <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-4">
+                <p><strong>Nome:</strong> {application?.full_name}</p>
+                <p><strong>Email:</strong> {application?.email}</p>
+                {application?.box_name && <p><strong>Box:</strong> {application.box_name}</p>}
+                {application?.city && <p><strong>Cidade:</strong> {application.city}</p>}
+              </div>
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao início
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Sair e usar outra conta
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // Application rejected - show rejection + resubmit option
+    if (applicationStatus === 'rejected') {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+                <XCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Solicitação Recusada
+              </h1>
+              {application?.rejection_reason && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-destructive">
+                    <strong>Motivo:</strong> {application.rejection_reason}
+                  </p>
+                </div>
+              )}
+              <p className="text-muted-foreground mb-6">
+                Você pode reenviar a solicitação para nova análise.
+              </p>
+              <button
+                onClick={handleResubmit}
+                disabled={isSubmitting}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-5 h-5" />
+                )}
+                Reenviar Solicitação
+              </button>
+              <div className="flex flex-col gap-3 mt-4">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao início
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Sair e usar outra conta
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // No application or approved status but still athlete role
+    // Show access restricted screen
     if (!showApplicationForm) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -517,7 +587,7 @@ export default function CoachPortal() {
               <p className="text-muted-foreground mb-6">
                 Este painel é exclusivo para coaches.
                 <br />
-                Para liberar esse acesso, solicite autorização como coach.
+                Deseja solicitar acesso como coach?
               </p>
               <div className="grid gap-3">
                 <button
@@ -704,7 +774,7 @@ export default function CoachPortal() {
                       required
                     />
                   </div>
-                  {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
+                  {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -727,7 +797,7 @@ export default function CoachPortal() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
+                  {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
                 </div>
 
                 <button
@@ -742,7 +812,7 @@ export default function CoachPortal() {
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignupAsCoach} className="space-y-4">
+              <form onSubmit={(e) => { setMode('signup'); handleSignupAsCoach(e); }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Nome completo *</label>
                   <div className="relative">
@@ -756,7 +826,7 @@ export default function CoachPortal() {
                       required
                     />
                   </div>
-                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                  {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -772,7 +842,7 @@ export default function CoachPortal() {
                       required
                     />
                   </div>
-                  {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
+                  {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -795,7 +865,7 @@ export default function CoachPortal() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
+                  {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
                 </div>
 
                 <div>
@@ -852,13 +922,6 @@ export default function CoachPortal() {
             </TabsContent>
           </Tabs>
         </div>
-
-        <p className="text-center text-muted-foreground text-sm mt-6">
-          Quer usar como atleta?{' '}
-          <button onClick={() => navigate('/')} className="text-primary hover:underline">
-            Ir para o app
-          </button>
-        </p>
       </motion.div>
     </div>
   );
