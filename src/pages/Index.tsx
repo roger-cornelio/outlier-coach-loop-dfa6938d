@@ -10,12 +10,9 @@ import { WorkoutExecution } from "@/components/WorkoutExecution";
 import { ResultRecording } from "@/components/ResultRecording";
 import { PerformanceFeedback } from "@/components/PerformanceFeedback";
 import { AdminSpreadsheet } from "@/components/AdminSpreadsheet";
-import { AdminParamsEditor } from "@/components/AdminParamsEditor";
-import { UserManagement } from "@/components/UserManagement";
 import { BenchmarksScreen } from "@/components/BenchmarksScreen";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
-import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
 import { useLevelTheme } from "@/hooks/useLevelTheme";
@@ -34,17 +31,14 @@ const Index = () => {
   useLevelTheme();
 
   // MANDATORY LOGIN: Redirect to auth if not logged in
-  // PRIORITY: ADMIN > COACH > ATHLETE (ADMIN has ABSOLUTE priority)
+  // ADMIN users are redirected to /admin route (isolated)
   useEffect(() => {
     if (authLoading) return;
 
-    // ===== ADMIN PRIORITY: ABSOLUTE, checked FIRST =====
-    // If user is logged in AND is admin, ALWAYS force admin view
+    // ===== ADMIN: Redirect to /admin route =====
     if (user && isAdmin) {
-      if (currentView !== "admin" && currentView !== "userManagement" && currentView !== "params" && currentView !== "coachApplicationsAdmin") {
-        setCurrentView("admin");
-      }
-      return; // Admin handled, stop here
+      navigate("/admin");
+      return;
     }
 
     // ===== Welcome screen: allowed without login =====
@@ -79,15 +73,8 @@ const Index = () => {
   }
 
   const renderView = () => {
-    // ADMIN ABSOLUTE RENDER RULE:
-    // Never show athlete/coach/welcome screens for admins, even if currentView is stale.
-    if (user && isAdmin) {
-      if (currentView === "params") return <AdminParamsEditor />;
-      if (currentView === "users" || currentView === "userManagement") return <UserManagement />;
-      if (currentView === "coachPerformance") return <CoachPerformance />;
-      if (currentView === "coachApplicationsAdmin") return <CoachApplicationsAdmin />;
-      return <AdminSpreadsheet />;
-    }
+    // ADMIN users are handled by /admin route, not here
+    // This Index page is for athletes and coaches only
 
     switch (currentView) {
       case "welcome":
@@ -103,20 +90,14 @@ const Index = () => {
       case "feedback":
         return <PerformanceFeedback />;
       case "admin":
+        // Coach can access admin spreadsheet for workout management
         return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
-      case "params":
-        return isAdmin ? <AdminParamsEditor /> : <Dashboard />;
-      case "users":
-      case "userManagement":
-        return isAdmin ? <UserManagement /> : <Dashboard />;
       case "benchmarks":
         return <BenchmarksScreen />;
       case "coachPerformance":
-        return isCoach || isAdmin ? <CoachPerformance /> : <Dashboard />;
+        return isCoach ? <CoachPerformance /> : <Dashboard />;
       case "coachApplication":
         return <CoachApplicationPage />;
-      case "coachApplicationsAdmin":
-        return isAdmin ? <CoachApplicationsAdmin /> : <Dashboard />;
       default:
         return <WelcomeScreen />;
     }
