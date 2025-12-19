@@ -17,7 +17,8 @@ import {
   Clock,
   XCircle,
   Send,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -262,11 +263,13 @@ function ApplicationFormFields({
                 value={userEmail}
                 readOnly
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-muted-foreground cursor-not-allowed"
+                className="w-full pl-10 pr-10 py-2.5 bg-muted border border-border rounded-lg text-muted-foreground cursor-not-allowed"
               />
+              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Email da sua conta (não editável)
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Este é o email da sua conta e não pode ser alterado
             </p>
           </div>
 
