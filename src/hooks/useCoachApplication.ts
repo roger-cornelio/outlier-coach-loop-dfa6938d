@@ -8,6 +8,7 @@ export type ApplicationStatus = 'none' | 'pending' | 'approved' | 'rejected';
 export interface CoachApplication {
   id: string;
   user_id: string;
+  auth_user_id: string; // New: references auth.uid() directly
   full_name: string | null;
   email: string | null;
   instagram: string | null;
@@ -41,24 +42,24 @@ export function useCoachApplication() {
     ? 'approved' 
     : (application?.status as ApplicationStatus) || 'none';
 
-  // Fetch user's application using profile.id (from RPC, no profiles table query)
+  // Fetch user's application using auth.uid() directly (via auth_user_id column)
   const fetchApplication = useCallback(async () => {
-    // Need profile.id to query coach_applications (FK to profiles.id)
-    if (!profile?.id) {
-      console.log('[fetchApplication] No profile.id yet, skipping');
+    // Use auth.uid() directly - no dependency on profile
+    if (!user?.id) {
+      console.log('[fetchApplication] No user.id yet, skipping');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      console.log('[fetchApplication] Fetching for profile.id:', profile.id);
+      console.log('[fetchApplication] Fetching for auth_user_id:', user.id);
       
-      // Get most recent application for this user
+      // Get most recent application for this user using auth_user_id
       const { data, error: fetchError } = await supabase
         .from('coach_applications')
         .select('*')
-        .eq('user_id', profile.id)
+        .eq('auth_user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -75,28 +76,25 @@ export function useCoachApplication() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchApplication();
   }, [fetchApplication]);
 
-  // Submit application - accepts optional profileId for cases where hook's profile isn't updated yet
+  // Submit application - now uses auth_user_id directly
   const submitApplication = async (
-    formData: CoachApplicationFormData, 
-    overrideProfileId?: string
+    formData: CoachApplicationFormData
   ): Promise<boolean> => {
-    const targetProfileId = overrideProfileId || profile?.id;
-    
     console.log('[submitApplication] Starting with:', {
-      targetProfileId,
       authUserId: user?.id,
+      profileId: profile?.id,
       email: formData.email,
     });
 
-    if (!targetProfileId) {
+    if (!user?.id) {
       setError('Usuário não autenticado');
-      console.error('[submitApplication] No profile ID available');
+      console.error('[submitApplication] No user.id available');
       return false;
     }
 
@@ -105,7 +103,8 @@ export function useCoachApplication() {
       setError(null);
 
       const applicationData = {
-        user_id: targetProfileId,
+        auth_user_id: user.id, // Primary key for RLS
+        user_id: profile?.id || null, // Keep for compatibility (nullable now)
         full_name: formData.full_name,
         email: formData.email,
         instagram: formData.instagram || null,
@@ -121,10 +120,10 @@ export function useCoachApplication() {
 
       console.log('[submitApplication] Upserting:', applicationData);
 
-      // Upsert (insert or update if exists)
+      // Upsert using auth_user_id as the conflict key
       const { data, error: upsertError } = await supabase
         .from('coach_applications')
-        .upsert(applicationData as any, { onConflict: 'user_id' })
+        .upsert(applicationData as any, { onConflict: 'auth_user_id' })
         .select()
         .single();
 
