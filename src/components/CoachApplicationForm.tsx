@@ -30,12 +30,14 @@ const applicationSchema = z.object({
 });
 
 export function CoachApplicationForm() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { application, status, loading, submitting, submitApplication } = useCoachApplication();
+  
+  // Email comes from authenticated user - cannot be changed
+  const userEmail = user?.email || profile?.email || '';
   
   const [formData, setFormData] = useState({
     full_name: profile?.name || '',
-    email: profile?.email || '',
     instagram: '',
     box_name: '',
     city: '',
@@ -47,7 +49,6 @@ export function CoachApplicationForm() {
     if (application && status === 'rejected') {
       setFormData({
         full_name: application.full_name || profile?.name || '',
-        email: application.email || profile?.email || '',
         instagram: application.instagram || '',
         box_name: application.box_name || '',
         city: application.city || '',
@@ -59,12 +60,12 @@ export function CoachApplicationForm() {
     e.preventDefault();
 
     try {
-      const validated = applicationSchema.parse(formData);
+      const validated = applicationSchema.parse({ ...formData, email: userEmail });
       setErrors({});
 
       const success = await submitApplication({
         full_name: validated.full_name,
-        email: validated.email,
+        email: userEmail, // Always use authenticated user's email
         instagram: validated.instagram,
         box_name: validated.box_name,
         city: validated.city,
@@ -171,6 +172,7 @@ export function CoachApplicationForm() {
           submitting={submitting}
           onSubmit={handleSubmit}
           buttonText="Reenviar Solicitação"
+          userEmail={userEmail}
         />
       </div>
     );
@@ -185,6 +187,7 @@ export function CoachApplicationForm() {
       submitting={submitting}
       onSubmit={handleSubmit}
       buttonText="Enviar Solicitação"
+      userEmail={userEmail}
     />
   );
 }
@@ -197,10 +200,10 @@ function ApplicationFormFields({
   submitting,
   onSubmit,
   buttonText,
+  userEmail,
 }: {
   formData: {
     full_name: string;
-    email: string;
     instagram: string;
     box_name: string;
     city: string;
@@ -210,6 +213,7 @@ function ApplicationFormFields({
   submitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
   buttonText: string;
+  userEmail: string;
 }) {
   return (
     <Card>
@@ -246,7 +250,7 @@ function ApplicationFormFields({
             )}
           </div>
 
-          {/* Email */}
+          {/* Email - Read Only from authenticated user */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Email *
@@ -255,17 +259,15 @@ function ApplicationFormFields({
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                  errors.email ? 'border-destructive' : 'border-border'
-                }`}
-                placeholder="seu@email.com"
+                value={userEmail}
+                readOnly
+                disabled
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-muted-foreground cursor-not-allowed"
               />
             </div>
-            {errors.email && (
-              <p className="text-destructive text-sm mt-1">{errors.email}</p>
-            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Email da sua conta (não editável)
+            </p>
           </div>
 
           {/* Instagram */}
