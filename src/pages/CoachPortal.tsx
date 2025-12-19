@@ -59,16 +59,20 @@ export default function CoachPortal() {
 
   // PRIORITY 1: Admin/Superadmin → redirect to /admin (only after resolved)
   useEffect(() => {
+    console.log('[DEBUG CoachPortal] Effect1 check:', { isResolvingCoachState, user: !!user, isAdmin, isSuperAdmin });
     if (isResolvingCoachState) return; // Wait for resolution
     if (user && (isAdmin || isSuperAdmin)) {
+      console.log('[DEBUG CoachPortal] REDIRECT /coach → /admin | Reason: user is admin/superadmin');
       navigate('/admin');
     }
   }, [user, isAdmin, isSuperAdmin, isResolvingCoachState, navigate]);
 
   // PRIORITY 2: Coach role → redirect to main app (only after resolved)
   useEffect(() => {
+    console.log('[DEBUG CoachPortal] Effect2 check:', { isResolvingCoachState, user: !!user, isCoach, isAdmin, isSuperAdmin });
     if (isResolvingCoachState) return; // Wait for resolution
     if (user && isCoach && !isAdmin && !isSuperAdmin) {
+      console.log('[DEBUG CoachPortal] REDIRECT /coach → / | Reason: user is coach (not admin)');
       setCurrentView('admin');
       navigate('/');
     }

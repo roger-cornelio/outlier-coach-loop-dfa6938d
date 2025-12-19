@@ -9,9 +9,12 @@ export function GlobalAuthGate({ children }: { children: ReactNode }) {
 
   const isCoachPath = location.pathname.startsWith("/coach");
 
+  console.log('[DEBUG GlobalAuthGate] pathname:', location.pathname, '| authLoading:', authLoading);
+
   // CRITICAL: While auth is resolving, DO NOT render routes that may redirect.
   // This prevents global guards from navigating away before session/user is known.
   if (authLoading) {
+    console.log('[DEBUG GlobalAuthGate] BLOCKING render - auth still loading');
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -22,5 +25,6 @@ export function GlobalAuthGate({ children }: { children: ReactNode }) {
     );
   }
 
+  console.log('[DEBUG GlobalAuthGate] ALLOWING render - auth resolved');
   return <>{children}</>;
 }
