@@ -79,6 +79,16 @@ const Index = () => {
   }
 
   const renderView = () => {
+    // ADMIN ABSOLUTE RENDER RULE:
+    // Never show athlete/coach/welcome screens for admins, even if currentView is stale.
+    if (user && isAdmin) {
+      if (currentView === "params") return <AdminParamsEditor />;
+      if (currentView === "users" || currentView === "userManagement") return <UserManagement />;
+      if (currentView === "coachPerformance") return <CoachPerformance />;
+      if (currentView === "coachApplicationsAdmin") return <CoachApplicationsAdmin />;
+      return <AdminSpreadsheet />;
+    }
+
     switch (currentView) {
       case "welcome":
         return <WelcomeScreen />;
