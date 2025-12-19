@@ -52,6 +52,7 @@ export default function CoachPortal() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('login');
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const { profile } = useAuth();
   const { state, user, isAdmin, isSuperAdmin, isCoach } = useAppState();
@@ -496,8 +497,51 @@ export default function CoachPortal() {
     );
   }
 
-  // STATE: athlete (authenticated but no application) - show application form
+  // STATE: athlete (authenticated but no application) - show access restricted screen
   if (state === 'athlete' && user) {
+    if (!showApplicationForm) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+                <UserCog className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Acesso restrito ao Coach
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Este painel é exclusivo para coaches.
+                <br />
+                Para liberar esse acesso, solicite autorização como coach.
+              </p>
+              <div className="grid gap-3">
+                <button
+                  onClick={() => setShowApplicationForm(true)}
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <UserCog className="w-5 h-5" />
+                  Solicitar acesso como Coach
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  Voltar para treinos
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // Show application form when user clicked "Solicitar acesso"
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
         <motion.div
@@ -506,15 +550,22 @@ export default function CoachPortal() {
           className="w-full max-w-md"
         >
           <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
+            <button
+              onClick={() => setShowApplicationForm(false)}
+              className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </button>
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <UserCog className="w-8 h-8 text-primary" />
               </div>
               <h1 className="font-display text-2xl text-foreground mb-2">
-                Cadastrar como Coach
+                Solicitar Acesso de Coach
               </h1>
               <p className="text-muted-foreground text-sm">
-                Complete seu cadastro para solicitar acesso como coach
+                Complete os dados abaixo para solicitar acesso
               </p>
             </div>
 
