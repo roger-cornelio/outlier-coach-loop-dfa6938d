@@ -1,7 +1,14 @@
+/**
+ * Index - "DUMB" page that renders based on AppState
+ * 
+ * NO automatic redirects scattered. Uses useAppState for decisions.
+ * AppGate handles routing protection.
+ */
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOutlierStore } from "@/store/outlierStore";
-import { useAuth } from "@/hooks/useAuth";
+import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
@@ -20,7 +27,7 @@ import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const { currentView, setCurrentView } = useOutlierStore();
-  const { user, profile, loading: authLoading, canManageWorkouts, isAdmin, isCoach } = useAuth();
+  const { state, isCoach, canManageWorkouts } = useAppState();
   const navigate = useNavigate();
 
   // Initialize event tracking (tracks app_opened automatically)
@@ -30,46 +37,44 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // MANDATORY LOGIN: Redirect to auth if not logged in
-  // ADMIN users are redirected to /admin route (isolated)
+  // Minimal navigation logic - AppGate handles most protection
   useEffect(() => {
-    console.log('[DEBUG Index] Effect check:', { authLoading, user: !!user, isAdmin, isCoach, currentView, pathname: window.location.pathname });
-    if (authLoading) return;
+    // LOADING: Do nothing, let AppGate show loader
+    if (state === 'loading') return;
 
-    // ===== ADMIN: Redirect to /admin route =====
-    if (user && isAdmin) {
-      console.log('[DEBUG Index] REDIRECT / → /admin | Reason: user is admin');
-      navigate("/admin");
+    // ANON on welcome: allowed
+    if (state === 'anon' && currentView === 'welcome') return;
+
+    // ANON trying to access other views: redirect to auth
+    if (state === 'anon' && currentView !== 'welcome') {
+      navigate('/auth');
       return;
     }
 
-    // ===== Welcome screen: allowed without login =====
-    if (currentView === "welcome" && !user) return;
-
-    // ===== No user: redirect to auth =====
-    if (!user) {
-      console.log('[DEBUG Index] REDIRECT / → /auth | Reason: no user');
-      navigate("/auth");
+    // ADMIN: redirect to /admin
+    if (state === 'admin') {
+      navigate('/admin');
       return;
     }
 
-    // ===== Non-admin trying to access admin views: redirect to dashboard =====
-    if (currentView === "admin" || currentView === "userManagement" || currentView === "params" || currentView === "coachApplicationsAdmin") {
-      console.log('[DEBUG Index] setCurrentView → dashboard | Reason: non-admin on admin view');
-      setCurrentView("dashboard");
+    // Non-admin trying to access admin views: reset to dashboard
+    // Note: Admin users are already redirected above, but this guards against edge cases
+    const isAdminView = currentView === 'admin' || currentView === 'userManagement' || 
+                        currentView === 'params' || currentView === 'coachApplicationsAdmin';
+    if (isAdminView && !canManageWorkouts) {
+      setCurrentView('dashboard');
       return;
     }
 
-    // ===== Non-coach trying to access coach performance: redirect to dashboard =====
-    if (currentView === "coachPerformance" && !isCoach) {
-      console.log('[DEBUG Index] setCurrentView → dashboard | Reason: non-coach on coachPerformance');
-      setCurrentView("dashboard");
+    // Non-coach trying to access coach performance: reset to dashboard
+    if (currentView === 'coachPerformance' && !isCoach) {
+      setCurrentView('dashboard');
       return;
     }
-  }, [user, authLoading, currentView, canManageWorkouts, isAdmin, isCoach, navigate, setCurrentView]);
+  }, [state, currentView, isCoach, navigate, setCurrentView]);
 
-  // Show loading while checking auth
-  if (authLoading && currentView !== "welcome") {
+  // Show loading while checking auth (except welcome screen)
+  if (state === 'loading' && currentView !== 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -78,9 +83,6 @@ const Index = () => {
   }
 
   const renderView = () => {
-    // ADMIN users are handled by /admin route, not here
-    // This Index page is for athletes and coaches only
-
     switch (currentView) {
       case "welcome":
         return <WelcomeScreen />;
@@ -95,7 +97,6 @@ const Index = () => {
       case "feedback":
         return <PerformanceFeedback />;
       case "admin":
-        // Coach can access admin spreadsheet for workout management
         return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
       case "benchmarks":
         return <BenchmarksScreen />;
