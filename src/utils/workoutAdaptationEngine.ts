@@ -663,7 +663,11 @@ export function calculateWodTime(
 // 50-79%: remover acessórios/skills, manter WOD principal
 // <50%: apenas WOD principal, máxima densidade
 
-type TimeRelationTier = 'full' | 'reduced' | 'minimal';
+// TIER NAMING conforme especificação:
+// 'full' = estrutura completa (≥80%)
+// 'reduced' = reduzido (50-79%)
+// 'condensed' = condensado/máxima densidade (<50%)
+type TimeRelationTier = 'full' | 'reduced' | 'condensed';
 
 function calculateTimeRelation(tempoDisponivel: number, tempoBase: number): { ratio: number; tier: TimeRelationTier } {
   if (tempoDisponivel >= 9999 || tempoBase <= 0) {
@@ -677,7 +681,7 @@ function calculateTimeRelation(tempoDisponivel: number, tempoBase: number): { ra
   } else if (ratio >= 0.50) {
     return { ratio, tier: 'reduced' };
   } else {
-    return { ratio, tier: 'minimal' };
+    return { ratio, tier: 'condensed' };
   }
 }
 
@@ -1080,7 +1084,10 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
     wasCondensed = true;
     
   } else {
-    // <50%: APENAS WOD principal, máxima densidade
+    // <50% (CONDENSED): APENAS WOD principal, máxima densidade
+    // Remove: aquecimento, acessórios, exercícios secundários
+    // Mantém: WOD principal com menos pausas, transições mínimas
+    // O treino deve parecer mais pesado e mais direto
     const result = applyMinimalTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
     adaptedBlocks = result.blocks;
     blocksRemoved = result.removed;
