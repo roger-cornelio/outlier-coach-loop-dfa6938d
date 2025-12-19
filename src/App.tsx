@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { GlobalAuthGate } from "@/components/GlobalAuthGate";
-import { RouteRestoreOnReload } from "@/components/RouteRestoreOnReload";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -23,7 +22,6 @@ const App = () => (
         <Sonner />
         <SessionRefreshBanner />
         <BrowserRouter>
-          <RouteRestoreOnReload />
           <GlobalAuthGate>
             <Routes>
               <Route path="/" element={<Index />} />
