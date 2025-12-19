@@ -14,6 +14,8 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { StatusDisplay } from './StatusDisplay';
 import { UserHeader } from './UserHeader';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
+import { AthleteViewSelector } from './AthleteViewSelector';
+import { useAppState } from '@/hooks/useAppState';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -68,10 +70,12 @@ export function Dashboard() {
     baseWorkouts,
     adaptedWorkouts,
     adaptationPending,
-    athleteConfig 
+    athleteConfig,
+    viewingAsAthlete
   } = useOutlierStore();
   
   const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
+  const { state } = useAppState();
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const navigate = useNavigate();
@@ -284,6 +288,10 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Admin: Seletor de atleta para visualização */}
+              {(state === 'admin' || state === 'superadmin') && (
+                <AthleteViewSelector />
+              )}
               <UserHeader showLogout={true} />
             </div>
             <div className="flex items-center gap-2">

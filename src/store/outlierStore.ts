@@ -10,6 +10,12 @@ import { migrateWorkouts } from '@/utils/benchmarkMigration';
 // adaptedWorkouts: treino gerado para o atleta (MUTÁVEL)
 // ============================================
 
+interface ViewingAsAthlete {
+  id: string;
+  email: string;
+  name: string | null;
+}
+
 interface OutlierState {
   coachStyle: CoachStyle | null;
   athleteConfig: AthleteConfig | null;
@@ -35,6 +41,9 @@ interface OutlierState {
   selectedWorkout: DayWorkout | null;
   externalResultsRefreshKey: number;
   
+  // Admin: Visualizar como atleta específico
+  viewingAsAthlete: ViewingAsAthlete | null;
+  
   // Actions
   setCoachStyle: (style: CoachStyle) => void;
   setAthleteConfig: (config: AthleteConfig) => void;
@@ -56,6 +65,10 @@ interface OutlierState {
   setSelectedWorkout: (workout: DayWorkout | null) => void;
   triggerExternalResultsRefresh: () => void;
   resetConfig: () => void;
+  
+  // Admin: Visualizar como atleta
+  setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
+  clearViewingAsAthlete: () => void;
 }
 
 export const useOutlierStore = create<OutlierState>()(
@@ -73,6 +86,7 @@ export const useOutlierStore = create<OutlierState>()(
       selectedDay: null,
       selectedWorkout: null,
       externalResultsRefreshKey: 0,
+      viewingAsAthlete: null,
 
       setCoachStyle: (style) => set({ coachStyle: style }),
       
@@ -131,6 +145,10 @@ export const useOutlierStore = create<OutlierState>()(
       setSelectedWorkout: (workout) => set({ selectedWorkout: workout }),
       triggerExternalResultsRefresh: () => set((state) => ({ externalResultsRefreshKey: state.externalResultsRefreshKey + 1 })),
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
+      
+      // Admin: Visualizar como atleta
+      setViewingAsAthlete: (athlete) => set({ viewingAsAthlete: athlete }),
+      clearViewingAsAthlete: () => set({ viewingAsAthlete: null }),
     }),
     {
       name: 'outlier-storage',
