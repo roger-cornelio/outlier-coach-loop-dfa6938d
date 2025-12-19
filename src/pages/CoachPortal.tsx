@@ -188,8 +188,7 @@ export default function CoachPortal() {
           instagram: instagram.trim() || undefined,
           box_name: boxName.trim() || undefined,
           city: city.trim() || undefined,
-        },
-        newProfile.id // Pass profile ID directly
+        }
       );
 
       if (!success) {

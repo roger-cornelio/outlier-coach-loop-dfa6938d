@@ -97,6 +97,7 @@ export type Database = {
       }
       coach_applications: {
         Row: {
+          auth_user_id: string | null
           box_name: string | null
           city: string | null
           created_at: string | null
@@ -112,6 +113,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auth_user_id?: string | null
           box_name?: string | null
           city?: string | null
           created_at?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auth_user_id?: string | null
           box_name?: string | null
           city?: string | null
           created_at?: string | null
