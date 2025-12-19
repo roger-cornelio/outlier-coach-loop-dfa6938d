@@ -526,6 +526,45 @@ export function reloadParams(): OutlierParamsConfig {
   return activeParams;
 }
 
+/**
+ * Obtém parâmetros de uma versão específica do histórico
+ * Se não encontrar, retorna null
+ */
+export function getParamsForVersion(version: string): OutlierParamsConfig | null {
+  // Check if it's the active version
+  const active = getActiveParams();
+  if (active.version === version) {
+    return active;
+  }
+  
+  // Search in history
+  const history = loadHistory();
+  const found = history.find(p => p.version === version);
+  return found || null;
+}
+
+/**
+ * Obtém parâmetros para um WOD específico
+ * - Se for benchmark com paramsVersionUsed: usa essa versão
+ * - Senão: usa parâmetros ativos
+ * 
+ * Usado para garantir que benchmarks antigos não mudem quando params são atualizados
+ */
+export function getParamsForWod(wod: { isBenchmark?: boolean; paramsVersionUsed?: string }): OutlierParamsConfig {
+  // Se for benchmark com versão salva, tentar carregar essa versão
+  if (wod.isBenchmark && wod.paramsVersionUsed) {
+    const versionParams = getParamsForVersion(wod.paramsVersionUsed);
+    if (versionParams) {
+      return versionParams;
+    }
+    // Fallback: versão não encontrada no histórico
+    console.warn(`[outlierParams] Versão ${wod.paramsVersionUsed} não encontrada no histórico, usando params ativos`);
+  }
+  
+  // Default: parâmetros ativos
+  return getActiveParams();
+}
+
 // ============================================
 // HELPERS COM FALLBACK
 // ============================================
