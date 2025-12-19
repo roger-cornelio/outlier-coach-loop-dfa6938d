@@ -1,34 +1,34 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useOutlierStore } from '@/store/outlierStore';
-import { useAuth } from '@/hooks/useAuth';
-import { useEvents } from '@/hooks/useEvents';
-import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { AthleteConfig } from '@/components/AthleteConfig';
-import { Dashboard } from '@/components/Dashboard';
-import { WorkoutExecution } from '@/components/WorkoutExecution';
-import { ResultRecording } from '@/components/ResultRecording';
-import { PerformanceFeedback } from '@/components/PerformanceFeedback';
-import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
-import { AdminParamsEditor } from '@/components/AdminParamsEditor';
-import { UserManagement } from '@/components/UserManagement';
-import { BenchmarksScreen } from '@/components/BenchmarksScreen';
-import { CoachPerformance } from '@/components/CoachPerformance';
-import { CoachApplicationPage } from '@/components/CoachApplicationPage';
-import { CoachApplicationsAdmin } from '@/components/CoachApplicationsAdmin';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useCoachTheme } from '@/hooks/useCoachTheme';
-import { useLevelTheme } from '@/hooks/useLevelTheme';
-import { Loader2 } from 'lucide-react';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useOutlierStore } from "@/store/outlierStore";
+import { useAuth } from "@/hooks/useAuth";
+import { useEvents } from "@/hooks/useEvents";
+import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { AthleteConfig } from "@/components/AthleteConfig";
+import { Dashboard } from "@/components/Dashboard";
+import { WorkoutExecution } from "@/components/WorkoutExecution";
+import { ResultRecording } from "@/components/ResultRecording";
+import { PerformanceFeedback } from "@/components/PerformanceFeedback";
+import { AdminSpreadsheet } from "@/components/AdminSpreadsheet";
+import { AdminParamsEditor } from "@/components/AdminParamsEditor";
+import { UserManagement } from "@/components/UserManagement";
+import { BenchmarksScreen } from "@/components/BenchmarksScreen";
+import { CoachPerformance } from "@/components/CoachPerformance";
+import { CoachApplicationPage } from "@/components/CoachApplicationPage";
+import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCoachTheme } from "@/hooks/useCoachTheme";
+import { useLevelTheme } from "@/hooks/useLevelTheme";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const { currentView, setCurrentView } = useOutlierStore();
   const { user, profile, loading: authLoading, canManageWorkouts, isAdmin, isCoach } = useAuth();
   const navigate = useNavigate();
-  
+
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();
-  
+
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
@@ -37,44 +37,32 @@ const Index = () => {
   // PRIORITY: admin/superadmin > coach > athlete
   useEffect(() => {
     if (authLoading) return;
-    
+
     // Allow welcome screen without login
-    if (currentView === 'welcome') return;
-    
+    if (currentView === "welcome") return;
+
     // Redirect to auth if not logged in
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
-    
-    // Admin/superadmin: Always have access to admin views
-    // Auto-redirect to admin if they land on dashboard
-    if (isAdmin && currentView === 'dashboard') {
-      setCurrentView('admin');
+
+    // Admin NÃO é controlado por currentView aqui.
+    // Admin deve ser rota (/admin). Aqui só garantimos que não-admin não fique em telas admin-like.
+    if (currentView === "admin" || currentView === "userManagement" || currentView === "params") {
+      setCurrentView("dashboard");
       return;
     }
-    
-    // Redirect non-coaches away from admin
-    if (currentView === 'admin' && !canManageWorkouts) {
-      setCurrentView('dashboard');
-      return;
-    }
-    
-    // Redirect non-admins away from user management and params
-    if ((currentView === 'userManagement' || currentView === 'params') && !isAdmin) {
-      setCurrentView('dashboard');
-      return;
-    }
-    
+
     // Redirect non-coaches away from coach performance
-    if (currentView === 'coachPerformance' && !isCoach && !isAdmin) {
-      setCurrentView('dashboard');
+    if (currentView === "coachPerformance" && !isCoach && !isAdmin) {
+      setCurrentView("dashboard");
       return;
     }
   }, [user, authLoading, currentView, canManageWorkouts, isAdmin, isCoach, navigate, setCurrentView]);
 
   // Show loading while checking auth
-  if (authLoading && currentView !== 'welcome') {
+  if (authLoading && currentView !== "welcome") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -84,32 +72,32 @@ const Index = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'welcome':
+      case "welcome":
         return <WelcomeScreen />;
-      case 'config':
+      case "config":
         return <AthleteConfig />;
-      case 'dashboard':
+      case "dashboard":
         return <Dashboard />;
-      case 'workout':
+      case "workout":
         return <WorkoutExecution />;
-      case 'result':
+      case "result":
         return <ResultRecording />;
-      case 'feedback':
+      case "feedback":
         return <PerformanceFeedback />;
-      case 'admin':
+      case "admin":
         return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
-      case 'params':
+      case "params":
         return isAdmin ? <AdminParamsEditor /> : <Dashboard />;
-      case 'users':
-      case 'userManagement':
+      case "users":
+      case "userManagement":
         return isAdmin ? <UserManagement /> : <Dashboard />;
-      case 'benchmarks':
+      case "benchmarks":
         return <BenchmarksScreen />;
-      case 'coachPerformance':
-        return (isCoach || isAdmin) ? <CoachPerformance /> : <Dashboard />;
-      case 'coachApplication':
+      case "coachPerformance":
+        return isCoach || isAdmin ? <CoachPerformance /> : <Dashboard />;
+      case "coachApplication":
         return <CoachApplicationPage />;
-      case 'coachApplicationsAdmin':
+      case "coachApplicationsAdmin":
         return isAdmin ? <CoachApplicationsAdmin /> : <Dashboard />;
       default:
         return <WelcomeScreen />;
