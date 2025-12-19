@@ -13,31 +13,41 @@ interface ProfileResult {
 const RETRY_DELAYS = [300, 800, 1500]; // ms
 
 /**
- * Fetches user profile with retry/backoff to handle race conditions
- * after signup when the trigger might not have created the profile yet.
+ * Gets profile.id using RPC function (SECURITY DEFINER - bypasses RLS)
+ * Then constructs profile data from auth user metadata to avoid profiles table RLS recursion
  */
 export async function fetchProfileWithRetry(
-  userId: string
+  userId: string,
+  userEmail?: string,
+  userName?: string
 ): Promise<{ data: ProfileResult | null; error: string | null }> {
   let lastError: string | null = null;
 
   for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Use RPC function to get profile.id (bypasses RLS via SECURITY DEFINER)
+      const { data: profileId, error: rpcError } = await supabase
+        .rpc('get_profile_id', { _user_id: userId });
 
-      if (error) {
-        lastError = error.message;
-        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1} failed:`, error.message);
-      } else if (data) {
-        // Success - profile found
-        return { data, error: null };
+      if (rpcError) {
+        lastError = rpcError.message;
+        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1} RPC failed:`, rpcError.message);
+      } else if (profileId) {
+        // Success - construct profile from available data
+        // We use auth data to avoid querying profiles table directly
+        const profile: ProfileResult = {
+          id: profileId,
+          user_id: userId,
+          email: userEmail || '',
+          name: userName || null,
+          coach_id: null,
+          last_active_at: null,
+          created_at: new Date().toISOString(),
+        };
+        return { data: profile, error: null };
       } else {
-        lastError = 'Profile not found';
-        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1}: profile not found yet`);
+        lastError = 'Profile ID not found';
+        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1}: profile ID not found yet`);
       }
     } catch (err) {
       lastError = err instanceof Error ? err.message : 'Unknown error';

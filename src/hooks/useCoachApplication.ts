@@ -41,29 +41,37 @@ export function useCoachApplication() {
     ? 'approved' 
     : (application?.status as ApplicationStatus) || 'none';
 
-  // Fetch user's application
+  // Fetch user's application using profile.id (from RPC, no profiles table query)
   const fetchApplication = useCallback(async () => {
+    // Need profile.id to query coach_applications (FK to profiles.id)
     if (!profile?.id) {
+      console.log('[fetchApplication] No profile.id yet, skipping');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      console.log('[fetchApplication] Fetching for profile.id:', profile.id);
+      
+      // Get most recent application for this user
       const { data, error: fetchError } = await supabase
         .from('coach_applications')
         .select('*')
         .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (fetchError) {
-        console.error('Error fetching application:', fetchError);
+        console.error('[fetchApplication] Error:', fetchError);
         setError('Erro ao carregar solicitação');
       } else {
+        console.log('[fetchApplication] Result:', data?.status || 'none');
         setApplication(data as CoachApplication | null);
       }
     } catch (err) {
-      console.error('Error in fetchApplication:', err);
+      console.error('[fetchApplication] Exception:', err);
     } finally {
       setLoading(false);
     }
@@ -80,9 +88,15 @@ export function useCoachApplication() {
   ): Promise<boolean> => {
     const targetProfileId = overrideProfileId || profile?.id;
     
+    console.log('[submitApplication] Starting with:', {
+      targetProfileId,
+      authUserId: user?.id,
+      email: formData.email,
+    });
+
     if (!targetProfileId) {
       setError('Usuário não autenticado');
-      console.error('submitApplication: No profile ID available');
+      console.error('[submitApplication] No profile ID available');
       return false;
     }
 
@@ -105,6 +119,8 @@ export function useCoachApplication() {
         rejection_reason: null,
       };
 
+      console.log('[submitApplication] Upserting:', applicationData);
+
       // Upsert (insert or update if exists)
       const { data, error: upsertError } = await supabase
         .from('coach_applications')
@@ -113,11 +129,27 @@ export function useCoachApplication() {
         .single();
 
       if (upsertError) {
-        console.error('Error submitting application:', upsertError);
-        setError('Erro ao enviar solicitação');
+        console.error('[submitApplication] Upsert error:', upsertError);
+        
+        // If duplicate error, fetch existing application instead of showing error
+        if (upsertError.code === '23505' || upsertError.message.includes('duplicate')) {
+          console.log('[submitApplication] Duplicate detected, fetching existing...');
+          await fetchApplication();
+          // Check if we got a pending application
+          if (application?.status === 'pending') {
+            console.log('[submitApplication] Already pending, treating as success');
+            return true;
+          }
+        }
+        
+        // Show real error message for debugging
+        setError(`Erro: ${upsertError.message}`);
         return false;
       }
 
+      console.log('[submitApplication] Success:', data);
+      
+      // Immediately set application as pending (optimistic update)
       setApplication(data as CoachApplication);
       
       // Track event
@@ -125,9 +157,12 @@ export function useCoachApplication() {
         application_id: data?.id,
       });
 
+      // Refetch to ensure sync
+      await fetchApplication();
+
       return true;
     } catch (err) {
-      console.error('Error in submitApplication:', err);
+      console.error('[submitApplication] Exception:', err);
       setError('Erro inesperado');
       return false;
     } finally {
