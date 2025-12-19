@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProfileWithRetry } from '@/utils/fetchProfileWithRetry';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachApplication } from '@/hooks/useCoachApplication';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -166,15 +167,8 @@ export default function CoachPortal() {
         return;
       }
 
-      // Wait a moment for the profile trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // 2. Fetch the newly created profile to get profile.id
-      const { data: newProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', signUpData.user.id)
-        .single();
+      // 2. Fetch the newly created profile with retry/backoff
+      const { data: newProfile, error: profileError } = await fetchProfileWithRetry(signUpData.user.id);
 
       if (profileError || !newProfile?.id) {
         console.error('Error fetching profile after signup:', profileError);

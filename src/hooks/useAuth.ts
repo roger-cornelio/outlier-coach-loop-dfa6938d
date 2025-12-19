@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { DEFAULT_SUPERADMIN_EMAILS } from '@/config/superadminEmails';
+import { fetchProfileWithRetry } from '@/utils/fetchProfileWithRetry';
 
 export type UserRole = 'superadmin' | 'admin' | 'coach' | 'user';
 
@@ -31,17 +32,15 @@ export function useAuth() {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      const { data, error } = await fetchProfileWithRetry(userId);
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching profile after retries:', error);
         setProfile(null);
-      } else {
+      } else if (data) {
         setProfile(data as UserProfile);
+      } else {
+        setProfile(null);
       }
     } catch (err) {
       console.error('Error in fetchProfile:', err);
