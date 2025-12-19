@@ -34,8 +34,8 @@ export function CoachApplicationForm() {
   const { profile, user } = useAuth();
   const { application, status, loading, submitting, submitApplication } = useCoachApplication();
   
-  // Email comes from authenticated user - cannot be changed
-  const userEmail = user?.email || profile?.email || '';
+  // Email comes directly from authenticated user - use user.email only
+  const userEmail = user?.email || '';
   
   const [formData, setFormData] = useState({
     full_name: profile?.name || '',
@@ -60,13 +60,19 @@ export function CoachApplicationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Block submit if no authenticated email
+    if (!user?.email) {
+      toast.error('Sessão inválida. Faça login novamente.');
+      return;
+    }
+
     try {
-      const validated = applicationSchema.parse({ ...formData, email: userEmail });
+      const validated = applicationSchema.parse({ ...formData, email: user.email });
       setErrors({});
 
       const success = await submitApplication({
         full_name: validated.full_name,
-        email: userEmail, // Always use authenticated user's email
+        email: user.email, // Always use user.email directly from auth
         instagram: validated.instagram,
         box_name: validated.box_name,
         city: validated.city,
