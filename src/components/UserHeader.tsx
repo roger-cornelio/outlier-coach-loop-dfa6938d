@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { LogOut, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { UserIdentity } from '@/components/UserIdentity';
 
 interface UserHeaderProps {
   showLogout?: boolean;
@@ -16,9 +17,8 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
 
   if (!user) return null;
 
-  const displayName = profile?.name || profile?.email || user.email || 'Usuário';
-  
   const roleLabels: Record<string, string> = {
+    superadmin: 'SuperAdmin',
     admin: 'Admin',
     coach: 'Coach',
     user: 'Atleta',
@@ -37,10 +37,12 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
           <User className="w-4 h-4 text-primary" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground truncate max-w-[150px]">
-            {displayName}
-          </span>
-          <Badge variant="outline" className="text-xs w-fit px-1.5 py-0">
+          <UserIdentity 
+            user={{ name: profile?.name, email: profile?.email || user.email || '' }}
+            size="sm"
+            className="max-w-[150px]"
+          />
+          <Badge variant="outline" className="text-xs w-fit px-1.5 py-0 mt-0.5">
             {roleLabels[role] || role}
           </Badge>
         </div>
