@@ -102,11 +102,12 @@ export function useAdaptationPipeline() {
           dayWorkout,
           result.workout,
           9999, // tempo original (ilimitado)
-          tempoDisponivel
+          tempoDisponivel,
+          result.timeRelationTier
         );
         
         if (!validation.isValid) {
-          console.warn('⚠️ Validação falhou:', validation.reason);
+          console.warn('⚠️ Validação falhou:', validation.errors);
         }
       }
 

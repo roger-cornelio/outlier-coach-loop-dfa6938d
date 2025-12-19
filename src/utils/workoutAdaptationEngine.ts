@@ -1153,40 +1153,103 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
 }
 
 /**
- * Valida adaptação: tempo diferente DEVE resultar em WOD diferente
+ * VALIDAÇÃO AUTOMÁTICA DO MOTOR DE ADAPTAÇÃO
+ * ============================================
+ * Regras invioláveis:
+ * 1. Tempo diferente = WOD diferente
+ * 2. Treino mais curto = não pode conter acessórios
+ * 3. Treino condensado (<50%) = apenas 1 bloco principal
+ * 4. Percepção de esforço equivalente em qualquer duração
  */
 export function validateAdaptation(
   original: DayWorkout,
   adapted: DayWorkout,
   tempoOriginal: number,
-  tempoAdaptado: number
-): { isValid: boolean; reason?: string } {
-  if (tempoOriginal === tempoAdaptado) {
-    return { isValid: true };
-  }
+  tempoAdaptado: number,
+  tier?: TimeRelationTier
+): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
   
-  const originalContent = original.blocks.map(b => b.content).join('');
-  const adaptedContent = adapted.blocks.map(b => b.content).join('');
-  
-  // REGRA OBRIGATÓRIA: tempos diferentes = WODs diferentes
-  if (originalContent === adaptedContent && original.blocks.length === adapted.blocks.length) {
-    return {
-      isValid: false,
-      reason: 'ERRO: Tempo mudou mas WOD permanece idêntico. Treino deveria ser mais denso.',
-    };
-  }
-  
-  // Validar que treino mais curto não é mais fácil
-  if (tempoAdaptado < tempoOriginal) {
-    // Verificar se houve condensação ou aumento de densidade
-    const shorterContent = adaptedContent.length;
-    const originalContentLength = originalContent.length;
+  // REGRA 1: Tempo diferente = WOD diferente
+  if (tempoOriginal !== tempoAdaptado) {
+    const originalContent = original.blocks.map(b => b.content).join('');
+    const adaptedContent = adapted.blocks.map(b => b.content).join('');
     
-    if (shorterContent > originalContentLength) {
-      // Conteúdo maior em tempo menor = suspeito
-      console.warn('⚠️ Treino mais curto com mais conteúdo textual - verificar densidade');
+    if (originalContent === adaptedContent && original.blocks.length === adapted.blocks.length) {
+      errors.push('ERRO: Tempo mudou mas WOD permanece idêntico. Treino deveria ser diferente.');
     }
   }
   
-  return { isValid: true };
+  // REGRA 2: Treino mais curto não pode conter acessórios (se tier != full)
+  if (tier && tier !== 'full' && tempoAdaptado < tempoOriginal) {
+    const hasAccessories = adapted.blocks.some(block => {
+      const priority = BLOCK_PRIORITIES[block.type];
+      return priority?.isAccessory && !block.isMainWod;
+    });
+    
+    if (hasAccessories) {
+      errors.push('ERRO: Treino reduzido/condensado ainda contém blocos acessórios.');
+    }
+  }
+  
+  // REGRA 3: Treino condensado deve ter apenas 1 bloco principal
+  if (tier === 'condensed') {
+    const mainBlocks = adapted.blocks.filter(block => 
+      block.isMainWod || block.type === 'conditioning' || block.type === 'forca'
+    );
+    
+    if (mainBlocks.length > 1) {
+      errors.push('AVISO: Treino condensado tem mais de 1 bloco principal. Verificar densidade.');
+    }
+    
+    // Condensado não pode ter aquecimento
+    const hasWarmup = adapted.blocks.some(block => block.type === 'aquecimento');
+    if (hasWarmup) {
+      errors.push('ERRO: Treino condensado não deve conter aquecimento.');
+    }
+  }
+  
+  // REGRA 4: Treino mais curto deve ser mais denso (menos blocos ou volumes condensados)
+  if (tempoAdaptado < tempoOriginal * 0.8) {
+    if (adapted.blocks.length >= original.blocks.length) {
+      // Mesmo número de blocos em tempo menor = suspeito (a menos que volumes condensados)
+      const adaptedTotalChars = adapted.blocks.reduce((sum, b) => sum + b.content.length, 0);
+      const originalTotalChars = original.blocks.reduce((sum, b) => sum + b.content.length, 0);
+      
+      if (adaptedTotalChars >= originalTotalChars) {
+        errors.push('AVISO: Treino mais curto com mesma ou maior quantidade de conteúdo.');
+      }
+    }
+  }
+  
+  return {
+    isValid: errors.filter(e => e.startsWith('ERRO')).length === 0,
+    errors,
+  };
 }
+
+/**
+ * Exporta informações do motor para debug/documentação
+ */
+export const ENGINE_VERSION = {
+  version: '3.0.0',
+  name: 'Motor de Adaptação por Tempo Real',
+  frozen: true, // Motor congelado - não alterar sem revisão
+  lastUpdate: '2025-01-19',
+  rules: {
+    tiers: ['full (≥80%)', 'reduced (50-79%)', 'condensed (<50%)'],
+    transitions: {
+      stationChange: '15s',
+      loadAdjust: '20s',
+      blockPause: '10s',
+    },
+    tolerance: '±5%',
+    unknownMovementFactor: '+15%',
+  },
+  principles: [
+    'Tempo diferente = WOD diferente',
+    'Tempo menor = treino mais denso, não mais fácil',
+    'Percepção de esforço equivalente em qualquer duração',
+    'Nunca subestimar tempo de execução',
+  ],
+};
