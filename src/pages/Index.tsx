@@ -12,14 +12,15 @@ import { AdminSpreadsheet } from '@/components/AdminSpreadsheet';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { UserManagement } from '@/components/UserManagement';
 import { BenchmarksScreen } from '@/components/BenchmarksScreen';
+import { CoachPerformance } from '@/components/CoachPerformance';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCoachTheme } from '@/hooks/useCoachTheme';
 import { useLevelTheme } from '@/hooks/useLevelTheme';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  const { currentView, setCurrentView } = useOutlierStore();
-  const { user, loading: authLoading, canManageWorkouts, isAdmin } = useAuth();
+const { currentView, setCurrentView } = useOutlierStore();
+  const { user, loading: authLoading, canManageWorkouts, isAdmin, isCoach } = useAuth();
   const navigate = useNavigate();
   
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
@@ -31,7 +32,7 @@ const Index = () => {
     if (authLoading) return;
     
     // Redirect to auth if trying to access protected views without login
-    if (!user && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params')) {
+    if (!user && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params' || currentView === 'coachPerformance')) {
       navigate('/auth');
       return;
     }
@@ -47,10 +48,16 @@ const Index = () => {
       setCurrentView('dashboard');
       return;
     }
-  }, [user, authLoading, currentView, canManageWorkouts, isAdmin, navigate, setCurrentView]);
+    
+    // Redirect non-coaches away from coach performance
+    if (user && currentView === 'coachPerformance' && !isCoach && !isAdmin) {
+      setCurrentView('dashboard');
+      return;
+    }
+  }, [user, authLoading, currentView, canManageWorkouts, isAdmin, isCoach, navigate, setCurrentView]);
 
   // Show loading while checking auth for protected views
-  if (authLoading && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params')) {
+  if (authLoading && (currentView === 'admin' || currentView === 'userManagement' || currentView === 'params' || currentView === 'coachPerformance')) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -81,6 +88,8 @@ const Index = () => {
         return isAdmin ? <UserManagement /> : <Dashboard />;
       case 'benchmarks':
         return <BenchmarksScreen />;
+      case 'coachPerformance':
+        return (isCoach || isAdmin) ? <CoachPerformance /> : <Dashboard />;
       default:
         return <WelcomeScreen />;
     }
