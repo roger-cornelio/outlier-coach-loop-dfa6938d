@@ -6,9 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell, Link2, Unlink, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAllowlistManager } from './AdminAllowlistManager';
+import { UserIdentity, UserIdentityCompact, getDisplayName, type UserIdentityData } from './UserIdentity';
 
 interface UserWithRole {
   id: string;
+  name: string | null;
   email: string;
   created_at: string;
   role: 'superadmin' | 'admin' | 'coach' | 'user';
@@ -41,10 +43,10 @@ export function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch all profiles
+      // Fetch all profiles including name
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email, created_at')
+        .select('user_id, email, name, created_at')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -72,6 +74,7 @@ export function UserManagement() {
 
       const usersWithRoles: UserWithRole[] = (profiles || []).map(p => ({
         id: p.user_id,
+        name: p.name || null,
         email: p.email || 'Email não disponível',
         created_at: p.created_at,
         role: userRoleMap.get(p.user_id) || 'user',
@@ -88,7 +91,6 @@ export function UserManagement() {
 
   const fetchCoachAthletes = async () => {
     try {
-      // Note: coach_athletes table may not be in generated types yet
       const { data, error } = await (supabase as any)
         .from('coach_athletes')
         .select('*');
@@ -390,8 +392,11 @@ export function UserManagement() {
                           <Dumbbell className="w-5 h-5 text-green-500" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{coach.email}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <UserIdentity 
+                            user={{ name: coach.name, email: coach.email }} 
+                            size="md"
+                          />
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {coachAthletesList.length} atleta{coachAthletesList.length !== 1 ? 's' : ''} vinculado{coachAthletesList.length !== 1 ? 's' : ''}
                           </p>
                         </div>
@@ -437,7 +442,7 @@ export function UserManagement() {
                                       key={athlete.id}
                                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-sm"
                                     >
-                                      <span className="text-foreground">{athlete.email.split('@')[0]}</span>
+                                      <UserIdentityCompact user={{ name: athlete.name, email: athlete.email }} />
                                       <button
                                         onClick={() => removeAthleteFromCoach(coach.id, athlete.id)}
                                         disabled={linkingAthlete?.athleteId === athlete.id}
@@ -472,7 +477,7 @@ export function UserManagement() {
                                       ) : (
                                         <Link2 className="w-3 h-3 text-green-500" />
                                       )}
-                                      <span>{athlete.email.split('@')[0]}</span>
+                                      <UserIdentityCompact user={{ name: athlete.name, email: athlete.email }} />
                                     </button>
                                   ))}
                                 </div>
@@ -534,8 +539,11 @@ export function UserManagement() {
                       {getRoleIcon(u.role)}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{u.email}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <UserIdentity 
+                        user={{ name: u.name, email: u.email }} 
+                        size="md"
+                      />
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {getRoleLabel(u.role)} • Desde {new Date(u.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
