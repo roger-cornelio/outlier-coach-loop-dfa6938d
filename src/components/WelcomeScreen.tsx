@@ -1,24 +1,15 @@
 /**
- * WELCOME SCREEN - LAYOUT OFICIAL ATIVO
- * Versão: 1.1.0 (GLOBAL - FINAL)
- * Status: APROVADO E VIGENTE
- * Data: 2025-12-18
+ * WELCOME SCREEN - Seleção de Coach
  * 
- * Elementos fixos:
- * - Logo OUTLIER (LARANJA FIXO - text-gradient-logo)
- * - Slogan "Be the Outlier"
- * - 3 cards de coach (IRON, PULSE, SPARK)
- * - CTA "PRONTO PARA PERFORMAR" (laranja com glow)
- * 
- * VERSÃO FINAL APROVADA - NÃO MODIFICAR
+ * IMPORTANTE: Esta tela só é exibida para usuários AUTENTICADOS.
+ * Usuários anônimos são redirecionados para /auth pelo AppGate.
  */
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import type { CoachStyle } from '@/types/outlier';
-import { Flame, Heart, Zap, UserCog, Shield, LogOut, User, UserPlus } from 'lucide-react';
+import { Flame, Heart, Zap, LogOut, User } from 'lucide-react';
 
 const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; description: string }[] = [
   {
@@ -43,33 +34,15 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; d
 
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
-  const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
 
   const handleSelectCoach = (style: CoachStyle) => {
     setCoachStyle(style);
   };
 
   const handleContinue = () => {
-    // If not logged in, redirect to auth
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    
     if (coachStyle) {
       setCurrentView('athleteWelcome');
-    }
-  };
-
-  const handleCoachAccess = () => {
-    navigate('/coach');
-  };
-
-  const handleAdminAccess = () => {
-    if (authLoading) return;
-    if (user && isAdmin) {
-      setCurrentView('userManagement');
     }
   };
 
@@ -78,7 +51,7 @@ export function WelcomeScreen() {
     toast.success('Logout realizado com sucesso');
   };
 
-  const displayName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
+  const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
@@ -88,87 +61,32 @@ export function WelcomeScreen() {
         style={{ background: 'var(--gradient-glow)' }}
       />
 
-      {/* Top buttons container */}
+      {/* Top bar - User info and logout */}
       <div className="absolute top-6 right-6 z-50 flex items-center gap-2">
-        {/* Coach Portal Button - always visible */}
-        <motion.button
-          onClick={handleCoachAccess}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-500 border border-green-500/30 transition-all text-sm"
+        {/* User name display */}
+        <motion.div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 text-sm text-foreground"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.0 }}
+          transition={{ delay: 0.5 }}
         >
-          <UserCog className="w-4 h-4" />
-          <span className="hidden sm:inline">Painel do Coach</span>
+          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+            <User className="w-3 h-3 text-primary" />
+          </div>
+          <span className="hidden sm:inline max-w-[150px] truncate">{displayName}</span>
+        </motion.div>
+
+        {/* Logout Button */}
+        <motion.button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          title="Sair"
+        >
+          <LogOut className="w-4 h-4" />
         </motion.button>
-
-        {!user ? (
-          /* Not logged in: show login/signup buttons */
-          <>
-            <motion.button
-              onClick={() => navigate('/auth')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all text-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.1 }}
-            >
-              <User className="w-4 h-4" />
-              <span>Entrar</span>
-            </motion.button>
-            <motion.button
-              onClick={() => navigate('/auth?mode=signup')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all text-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.2 }}
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Criar conta</span>
-            </motion.button>
-          </>
-        ) : (
-          /* Logged in: show user info, role buttons, logout */
-          <>
-            {/* User name display */}
-            <motion.div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 text-sm text-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.1 }}
-            >
-              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="w-3 h-3 text-primary" />
-              </div>
-              <span className="hidden sm:inline max-w-[120px] truncate">{displayName}</span>
-            </motion.div>
-
-            {/* Admin Button - only if admin */}
-            {isAdmin && (
-              <motion.button
-                onClick={handleAdminAccess}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 transition-all text-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2 }}
-              >
-                <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
-              </motion.button>
-            )}
-
-            {/* Logout Button */}
-            <motion.button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all text-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.3 }}
-              title="Sair"
-            >
-              <LogOut className="w-4 h-4" />
-            </motion.button>
-          </>
-        )}
       </div>
       
       <motion.div
