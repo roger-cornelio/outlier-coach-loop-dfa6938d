@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type UserRole = 'admin' | 'coach' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'coach' | 'user';
 
 export interface UserProfile {
   id: string;
@@ -23,9 +23,10 @@ export function useAuth() {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Computed properties
-  const isAdmin = role === 'admin';
+  const isSuperAdmin = role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin';
   const isCoach = role === 'coach';
-  const canManageWorkouts = role === 'admin' || role === 'coach';
+  const canManageWorkouts = role === 'admin' || role === 'coach' || role === 'superadmin';
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -47,6 +48,24 @@ export function useAuth() {
     }
   }, []);
 
+  const syncRolesOnBootstrap = useCallback(async (userId: string, email: string) => {
+    try {
+      // 1. Ensure superadmin role for fixed emails
+      await supabase.rpc('ensure_superadmin_role', { 
+        _user_id: userId, 
+        _email: email 
+      });
+
+      // 2. Sync admin role from allowlist
+      await supabase.rpc('sync_admin_role_from_allowlist', { 
+        _user_id: userId, 
+        _email: email 
+      });
+    } catch (err) {
+      console.error('Error syncing roles on bootstrap:', err);
+    }
+  }, []);
+
   const checkUserRole = useCallback(async (userId: string) => {
     try {
       const { data: roles, error } = await supabase
@@ -59,7 +78,10 @@ export function useAuth() {
         setRole('user');
       } else if (roles && roles.length > 0) {
         const roleNames = roles.map(r => String(r.role));
-        if (roleNames.includes('admin')) {
+        // Priority: superadmin > admin > coach > user
+        if (roleNames.includes('superadmin')) {
+          setRole('superadmin');
+        } else if (roleNames.includes('admin')) {
           setRole('admin');
         } else if (roleNames.includes('coach')) {
           setRole('coach');
@@ -93,6 +115,8 @@ export function useAuth() {
         setSessionExpired(false);
         
         if (data.session.user) {
+          const email = data.session.user.email || '';
+          await syncRolesOnBootstrap(data.session.user.id, email);
           await Promise.all([
             checkUserRole(data.session.user.id),
             fetchProfile(data.session.user.id),
@@ -106,7 +130,7 @@ export function useAuth() {
       setSessionExpired(true);
       return { error: err };
     }
-  }, [checkUserRole, fetchProfile]);
+  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -118,8 +142,10 @@ export function useAuth() {
         
         // Defer role and profile check with setTimeout to avoid deadlock
         if (session?.user) {
-          setTimeout(() => {
-            Promise.all([
+          const email = session.user.email || '';
+          setTimeout(async () => {
+            await syncRolesOnBootstrap(session.user.id, email);
+            await Promise.all([
               checkUserRole(session.user.id),
               fetchProfile(session.user.id),
             ]);
@@ -133,12 +159,14 @@ export function useAuth() {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        Promise.all([
+        const email = session.user.email || '';
+        await syncRolesOnBootstrap(session.user.id, email);
+        await Promise.all([
           checkUserRole(session.user.id),
           fetchProfile(session.user.id),
         ]);
@@ -148,7 +176,7 @@ export function useAuth() {
     });
 
     return () => subscription.unsubscribe();
-  }, [checkUserRole, fetchProfile]);
+  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap]);
 
   // Check session expiration periodically
   useEffect(() => {
@@ -220,6 +248,7 @@ export function useAuth() {
     session,
     profile,
     role,
+    isSuperAdmin,
     isAdmin,
     isCoach,
     canManageWorkouts,

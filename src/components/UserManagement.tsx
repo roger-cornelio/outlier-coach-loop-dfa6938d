@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell, Link2, Unlink, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, UserMinus, Dumbbell, Link2, Unlink, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import { AdminAllowlistManager } from './AdminAllowlistManager';
 
 interface UserWithRole {
   id: string;
   email: string;
   created_at: string;
-  role: 'admin' | 'coach' | 'user';
+  role: 'superadmin' | 'admin' | 'coach' | 'user';
 }
 
 interface CoachAthlete {
@@ -22,7 +23,7 @@ interface CoachAthlete {
 
 export function UserManagement() {
   const { setCurrentView } = useOutlierStore();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [coachAthletes, setCoachAthletes] = useState<CoachAthlete[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,14 +56,16 @@ export function UserManagement() {
 
       if (rolesError) throw rolesError;
 
-      // Build a map of user roles (prioritize admin > coach > user)
-      const userRoleMap = new Map<string, 'admin' | 'coach' | 'user'>();
+      // Build a map of user roles (prioritize superadmin > admin > coach > user)
+      const userRoleMap = new Map<string, 'superadmin' | 'admin' | 'coach' | 'user'>();
       (allRoles || []).forEach(r => {
         const roleStr = String(r.role);
         const currentRole = userRoleMap.get(r.user_id);
-        if (roleStr === 'admin') {
+        if (roleStr === 'superadmin') {
+          userRoleMap.set(r.user_id, 'superadmin');
+        } else if (roleStr === 'admin' && currentRole !== 'superadmin') {
           userRoleMap.set(r.user_id, 'admin');
-        } else if (roleStr === 'coach' && currentRole !== 'admin') {
+        } else if (roleStr === 'coach' && !['superadmin', 'admin'].includes(currentRole || '')) {
           userRoleMap.set(r.user_id, 'coach');
         }
       });
@@ -97,14 +100,14 @@ export function UserManagement() {
     }
   };
 
-  const toggleCoachRole = async (userId: string, currentRole: 'admin' | 'coach' | 'user') => {
+  const toggleCoachRole = async (userId: string, currentRole: 'superadmin' | 'admin' | 'coach' | 'user') => {
     if (userId === user?.id) {
       toast.error('Você não pode alterar seu próprio acesso');
       return;
     }
 
-    if (currentRole === 'admin') {
-      toast.error('Não é possível remover outro administrador');
+    if (currentRole === 'admin' || currentRole === 'superadmin') {
+      toast.error('Não é possível alterar administradores por aqui');
       return;
     }
 
@@ -234,8 +237,10 @@ export function UserManagement() {
     );
   }
 
-  const getRoleIcon = (role: 'admin' | 'coach' | 'user') => {
+  const getRoleIcon = (role: 'superadmin' | 'admin' | 'coach' | 'user') => {
     switch (role) {
+      case 'superadmin':
+        return <Crown className="w-5 h-5 text-yellow-500" />;
       case 'admin':
         return <ShieldCheck className="w-5 h-5 text-primary" />;
       case 'coach':
@@ -245,8 +250,10 @@ export function UserManagement() {
     }
   };
 
-  const getRoleLabel = (role: 'admin' | 'coach' | 'user') => {
+  const getRoleLabel = (role: 'superadmin' | 'admin' | 'coach' | 'user') => {
     switch (role) {
+      case 'superadmin':
+        return 'SuperAdmin';
       case 'admin':
         return 'Administrador';
       case 'coach':
@@ -256,8 +263,10 @@ export function UserManagement() {
     }
   };
 
-  const getRoleBorderColor = (role: 'admin' | 'coach' | 'user') => {
+  const getRoleBorderColor = (role: 'superadmin' | 'admin' | 'coach' | 'user') => {
     switch (role) {
+      case 'superadmin':
+        return 'border-l-yellow-500';
       case 'admin':
         return 'border-l-primary';
       case 'coach':
@@ -339,6 +348,13 @@ export function UserManagement() {
             <strong className="text-foreground"> Usuários</strong> veem apenas seus próprios dados.
           </p>
         </motion.div>
+
+        {/* SuperAdmin Only: Admin Allowlist Manager */}
+        {isSuperAdmin && (
+          <div className="mb-8">
+            <AdminAllowlistManager />
+          </div>
+        )}
 
         {/* Coaches Section */}
         {coaches.length > 0 && (
@@ -511,6 +527,7 @@ export function UserManagement() {
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${
+                      u.role === 'superadmin' ? 'bg-yellow-500/20' :
                       u.role === 'admin' ? 'bg-primary/20' : 
                       u.role === 'coach' ? 'bg-green-500/20' : 'bg-secondary'
                     }`}>
@@ -527,6 +544,10 @@ export function UserManagement() {
                   {u.id === user?.id ? (
                     <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
                       Você
+                    </span>
+                  ) : u.role === 'superadmin' ? (
+                    <span className="text-xs text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg">
+                      SuperAdmin
                     </span>
                   ) : u.role === 'admin' ? (
                     <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-lg">
