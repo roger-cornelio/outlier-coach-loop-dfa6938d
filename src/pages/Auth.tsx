@@ -56,26 +56,20 @@ export default function Auth() {
   useEffect(() => {
     if (!user || authLoading) return;
 
-    // Handle specific next redirects
-    if (next === 'userManagement') {
-      if (isAdmin) {
-        setCurrentView('userManagement');
-        navigate('/');
-      } else {
-        toast({
-          title: 'Acesso negado',
-          description: 'Sua conta não tem permissão de administrador.',
-          variant: 'destructive',
-        });
-        // Fall through to priority redirect
-      }
+    // PRIORITY 1: ADMIN - always goes to /admin route (isolated, no currentView dependency)
+    if (isAdmin) {
+      navigate('/admin');
+      return;
     }
 
-    // PRIORITY 1: ADMIN - always goes to admin panel
-    if (isAdmin) {
-      setCurrentView('admin');
-      navigate('/');
-      return;
+    // Handle specific next redirects for non-admins
+    if (next === 'userManagement') {
+      toast({
+        title: 'Acesso negado',
+        description: 'Sua conta não tem permissão de administrador.',
+        variant: 'destructive',
+      });
+      // Fall through to priority redirect
     }
 
     // PRIORITY 2: COACH - goes to coach panel (admin view)
