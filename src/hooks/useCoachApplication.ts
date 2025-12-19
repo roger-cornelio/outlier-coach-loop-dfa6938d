@@ -73,10 +73,16 @@ export function useCoachApplication() {
     fetchApplication();
   }, [fetchApplication]);
 
-  // Submit application
-  const submitApplication = async (formData: CoachApplicationFormData): Promise<boolean> => {
-    if (!profile?.id) {
+  // Submit application - accepts optional profileId for cases where hook's profile isn't updated yet
+  const submitApplication = async (
+    formData: CoachApplicationFormData, 
+    overrideProfileId?: string
+  ): Promise<boolean> => {
+    const targetProfileId = overrideProfileId || profile?.id;
+    
+    if (!targetProfileId) {
       setError('Usuário não autenticado');
+      console.error('submitApplication: No profile ID available');
       return false;
     }
 
@@ -85,7 +91,7 @@ export function useCoachApplication() {
       setError(null);
 
       const applicationData = {
-        user_id: profile.id,
+        user_id: targetProfileId,
         full_name: formData.full_name,
         email: formData.email,
         instagram: formData.instagram || null,

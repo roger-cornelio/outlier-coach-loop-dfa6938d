@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCoachApplicationsAdmin, type CoachApplication } from '@/hooks/useCoachApplication';
 import { useAuth } from '@/hooks/useAuth';
-import { useOutlierStore } from '@/store/outlierStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { 
-  ArrowLeft,
   Users,
   Clock,
   CheckCircle,
@@ -36,8 +33,7 @@ type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
 
 export function CoachApplicationsAdmin() {
   const { isAdmin, loading: authLoading } = useAuth();
-  const { setCurrentView } = useOutlierStore();
-  const { applications, loading, error, approveApplication, rejectApplication, refetch } = useCoachApplicationsAdmin();
+  const { applications, loading, error, approveApplication, rejectApplication } = useCoachApplicationsAdmin();
   
   const [filter, setFilter] = useState<FilterStatus>('pending');
   const [selectedApp, setSelectedApp] = useState<CoachApplication | null>(null);
@@ -92,7 +88,7 @@ export function CoachApplicationsAdmin() {
 
   if (!isAdmin && !authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
@@ -119,78 +115,58 @@ export function CoachApplicationsAdmin() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => (
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentView('admin')}
+            key={status}
+            variant={filter === status ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter(status)}
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-5 h-5" />
+            {status === 'pending' && <Clock className="w-4 h-4" />}
+            {status === 'approved' && <CheckCircle className="w-4 h-4" />}
+            {status === 'rejected' && <XCircle className="w-4 h-4" />}
+            {status === 'all' && <Filter className="w-4 h-4" />}
+            <span className="capitalize">
+              {status === 'all' ? 'Todas' : 
+               status === 'pending' ? 'Pendentes' :
+               status === 'approved' ? 'Aprovados' : 'Rejeitados'}
+            </span>
+            <span className="text-xs bg-secondary px-1.5 rounded">
+              {counts[status]}
+            </span>
           </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              Solicitações de Coach
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie as solicitações de acesso ao painel de coach
+        ))}
+      </div>
+
+      {/* Applications List */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
+            <p className="text-muted-foreground">{error}</p>
+          </CardContent>
+        </Card>
+      ) : filteredApps.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center py-12">
+            <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              {filter === 'pending' 
+                ? 'Nenhuma solicitação pendente'
+                : 'Nenhuma solicitação encontrada'}
             </p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => (
-            <Button
-              key={status}
-              variant={filter === status ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter(status)}
-              className="flex items-center gap-2"
-            >
-              {status === 'pending' && <Clock className="w-4 h-4" />}
-              {status === 'approved' && <CheckCircle className="w-4 h-4" />}
-              {status === 'rejected' && <XCircle className="w-4 h-4" />}
-              {status === 'all' && <Filter className="w-4 h-4" />}
-              <span className="capitalize">
-                {status === 'all' ? 'Todas' : 
-                 status === 'pending' ? 'Pendentes' :
-                 status === 'approved' ? 'Aprovados' : 'Rejeitados'}
-              </span>
-              <span className="text-xs bg-secondary px-1.5 rounded">
-                {counts[status]}
-              </span>
-            </Button>
-          ))}
-        </div>
-
-        {/* Applications List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : error ? (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
-              <p className="text-muted-foreground">{error}</p>
-            </CardContent>
-          </Card>
-        ) : filteredApps.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center py-12">
-              <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                {filter === 'pending' 
-                  ? 'Nenhuma solicitação pendente'
-                  : 'Nenhuma solicitação encontrada'}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
             <AnimatePresence>
               {filteredApps.map((app, idx) => (
                 <motion.div
@@ -271,8 +247,8 @@ export function CoachApplicationsAdmin() {
           </div>
         )}
 
-        {/* Application Detail Dialog */}
-        <Dialog open={!!selectedApp && !rejectDialogOpen} onOpenChange={(open) => !open && setSelectedApp(null)}>
+      {/* Application Detail Dialog */}
+      <Dialog open={!!selectedApp && !rejectDialogOpen} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Detalhes da Solicitação</DialogTitle>
@@ -361,8 +337,8 @@ export function CoachApplicationsAdmin() {
           </DialogContent>
         </Dialog>
 
-        {/* Reject Dialog */}
-        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Rejeitar Solicitação</DialogTitle>
@@ -395,8 +371,7 @@ export function CoachApplicationsAdmin() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
     </div>
   );
 }
