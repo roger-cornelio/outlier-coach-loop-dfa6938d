@@ -259,7 +259,7 @@ export function UserManagement() {
       case 'coach':
         return 'Coach';
       default:
-        return 'Usuário';
+        return 'Atleta';
     }
   };
 
