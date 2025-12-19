@@ -58,7 +58,7 @@ export function WelcomeScreen() {
     }
     
     if (coachStyle) {
-      setCurrentView('config');
+      setCurrentView('athleteWelcome');
     }
   };
 
