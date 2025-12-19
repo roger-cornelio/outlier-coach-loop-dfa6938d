@@ -149,6 +149,9 @@ export function useAuth() {
         
         // Defer role and profile check with setTimeout to avoid deadlock
         if (session?.user) {
+          // CRITICAL: Set loading to TRUE before async role sync
+          // This prevents Auth.tsx from redirecting before role is determined
+          setLoading(true);
           const email = session.user.email || '';
           setTimeout(async () => {
             await syncRolesOnBootstrap(session.user.id, email);
