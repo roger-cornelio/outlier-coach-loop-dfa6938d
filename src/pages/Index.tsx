@@ -34,7 +34,7 @@ const Index = () => {
   useLevelTheme();
 
   // MANDATORY LOGIN: Redirect to auth if not logged in (except welcome)
-  // PRIORITY: admin/superadmin > coach > athlete
+  // PRIORITY: admin/superadmin > coach > athlete (ADMIN has ABSOLUTE priority)
   useEffect(() => {
     if (authLoading) return;
 
@@ -47,15 +47,24 @@ const Index = () => {
       return;
     }
 
-    // Admin NÃO é controlado por currentView aqui.
-    // Admin deve ser rota (/admin). Aqui só garantimos que não-admin não fique em telas admin-like.
-    if (currentView === "admin" || currentView === "userManagement" || currentView === "params") {
+    // ADMIN PRIORITY: Admin users ALWAYS go to admin panel
+    // This takes absolute precedence over any other role
+    if (isAdmin) {
+      // Only redirect if not already in an admin view
+      if (currentView !== "admin" && currentView !== "userManagement" && currentView !== "params" && currentView !== "coachApplicationsAdmin") {
+        setCurrentView("admin");
+      }
+      return;
+    }
+
+    // Non-admin users cannot access admin views
+    if (currentView === "admin" || currentView === "userManagement" || currentView === "params" || currentView === "coachApplicationsAdmin") {
       setCurrentView("dashboard");
       return;
     }
 
     // Redirect non-coaches away from coach performance
-    if (currentView === "coachPerformance" && !isCoach && !isAdmin) {
+    if (currentView === "coachPerformance" && !isCoach) {
       setCurrentView("dashboard");
       return;
     }
