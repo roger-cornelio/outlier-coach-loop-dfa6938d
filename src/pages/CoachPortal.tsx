@@ -178,6 +178,8 @@ export default function CoachPortal() {
           title: 'Solicitação enviada!',
           description: 'Sua conta foi criada e a solicitação de coach foi enviada. Aguarde a aprovação do administrador.',
         });
+        // Force refetch to update UI
+        await refetch();
       }
 
       // Clear form
@@ -236,9 +238,12 @@ export default function CoachPortal() {
     );
   }
 
-  // Authenticated user - show status
+  // Authenticated user - show status based on application
   if (user) {
-    // Pending application
+    // Check application status first (pending, rejected, approved)
+    // IMPORTANT: Only show "athlete access" if there's NO application at all
+    
+    // Pending application - show waiting screen
     if (application?.status === 'pending') {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -277,7 +282,7 @@ export default function CoachPortal() {
       );
     }
 
-    // Rejected application
+    // Rejected application - show rejection + resubmit option
     if (application?.status === 'rejected') {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -330,8 +335,52 @@ export default function CoachPortal() {
       );
     }
 
-    // No application yet - show warning that user is logged as athlete
-    if (!application) {
+    // Approved application + coach role - redirect to panel (handled in useEffect)
+    if (application?.status === 'approved' && isCoach) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    // Approved but not coach role yet (edge case - needs re-login)
+    if (application?.status === 'approved' && !isCoach) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md text-center"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
+              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-4">
+                Aprovado!
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Sua solicitação foi aprovada. Faça logout e login novamente para ativar o acesso de coach.
+              </p>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate('/coach');
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Fazer Login Novamente
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // NO application exists AND user is not coach = show athlete warning
+    // This is the ONLY case where we show the "athlete access" message
+    if (!application && !isCoach) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
           <motion.div
@@ -365,40 +414,6 @@ export default function CoachPortal() {
               >
                 <ArrowLeft className="w-4 h-4" />
                 Voltar ao início
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      );
-    }
-
-    // Approved but not coach yet (edge case)
-    if (application?.status === 'approved' && !isCoach) {
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md text-center"
-          >
-            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl">
-              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              </div>
-              <h1 className="font-display text-2xl text-foreground mb-4">
-                Aprovado!
-              </h1>
-              <p className="text-muted-foreground mb-6">
-                Sua solicitação foi aprovada. Faça logout e login novamente para ativar o acesso de coach.
-              </p>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate('/coach');
-                }}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
-              >
-                Fazer Login Novamente
               </button>
             </div>
           </motion.div>
