@@ -50,21 +50,20 @@ export default function CoachPortal() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // PRIORITY: ADMIN > COACH > ATHLETE
-  // If admin/superadmin, redirect to admin panel
+  // PRIORITY 1: Admin/Superadmin → redirect to /admin
   useEffect(() => {
     if (!authLoading && user && (isAdmin || isSuperAdmin)) {
       navigate('/admin');
     }
   }, [user, isAdmin, isSuperAdmin, authLoading, navigate]);
 
-  // If authenticated and is coach with approved application, redirect to coach portal
+  // PRIORITY 2: Coach role → redirect to main app (coach dashboard)
   useEffect(() => {
-    if (!authLoading && !appLoading && user && isCoach && !isAdmin && !isSuperAdmin && application?.status === 'approved') {
+    if (!authLoading && user && isCoach && !isAdmin && !isSuperAdmin) {
       setCurrentView('admin');
       navigate('/');
     }
-  }, [user, isCoach, isAdmin, isSuperAdmin, application, authLoading, appLoading, navigate, setCurrentView]);
+  }, [user, isCoach, isAdmin, isSuperAdmin, authLoading, navigate, setCurrentView]);
 
   const validateForm = () => {
     try {
@@ -229,11 +228,20 @@ export default function CoachPortal() {
   };
 
   const handleResubmit = async () => {
+    if (!user?.email) {
+      toast({
+        title: 'Sessão inválida',
+        description: 'Faça login novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const success = await submitApplication({
         full_name: profile?.name || application?.full_name || '',
-        email: profile?.email || application?.email || '',
+        email: user.email, // Always use auth user email
         instagram: application?.instagram || instagram.trim() || undefined,
         box_name: application?.box_name || boxName.trim() || undefined,
         city: application?.city || city.trim() || undefined,
@@ -250,7 +258,7 @@ export default function CoachPortal() {
           title: 'Solicitação reenviada!',
           description: 'Aguarde a aprovação do administrador.',
         });
-        refetch();
+        await refetch();
       }
     } finally {
       setIsSubmitting(false);
@@ -259,13 +267,30 @@ export default function CoachPortal() {
 
   const handleSubmitApplicationForLoggedUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    
+    if (!user?.email) {
+      toast({
+        title: 'Sessão inválida',
+        description: 'Faça login novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!profile) {
+      toast({
+        title: 'Erro',
+        description: 'Perfil não encontrado. Tente recarregar a página.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const success = await submitApplication({
         full_name: name.trim() || profile.name || '',
-        email: profile.email,
+        email: user.email, // Always use auth user email
         instagram: instagram.trim() || undefined,
         box_name: boxName.trim() || undefined,
         city: city.trim() || undefined,
@@ -282,6 +307,7 @@ export default function CoachPortal() {
           title: 'Solicitação enviada!',
           description: 'Aguarde a aprovação do administrador.',
         });
+        // Immediately refetch to update UI to pending state
         await refetch();
       }
     } finally {
@@ -536,11 +562,17 @@ export default function CoachPortal() {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <input
                       type="email"
-                      value={profile?.email || ''}
+                      value={user?.email || ''}
+                      readOnly
                       disabled
-                      className="w-full pl-10 pr-4 py-3 bg-secondary/50 border border-border rounded-lg text-muted-foreground cursor-not-allowed"
+                      className="w-full pl-10 pr-10 py-3 bg-muted border border-border rounded-lg text-muted-foreground cursor-not-allowed"
                     />
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    Este é o email da sua conta e não pode ser alterado
+                  </p>
                 </div>
 
                 <div>
