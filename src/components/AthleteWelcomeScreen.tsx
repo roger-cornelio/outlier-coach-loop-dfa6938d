@@ -71,7 +71,7 @@ export function AthleteWelcomeScreen() {
 
     const timer = setTimeout(() => {
       setCurrentView('config');
-    }, 10000);
+    }, 18000);
 
     return () => clearTimeout(timer);
   }, [isReady, setCurrentView]);
