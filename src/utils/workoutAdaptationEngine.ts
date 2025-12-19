@@ -656,65 +656,219 @@ export function calculateWodTime(
 }
 
 // ============================================
-// ADAPTAÇÃO POR TEMPO
+// REGRA-MÃE DE ADAPTAÇÃO
+// ============================================
+// Relação de tempo = tempo disponível / tempo base
+// ≥80%: estrutura completa, ajuste proporcional
+// 50-79%: remover acessórios/skills, manter WOD principal
+// <50%: apenas WOD principal, máxima densidade
+
+type TimeRelationTier = 'full' | 'reduced' | 'minimal';
+
+function calculateTimeRelation(tempoDisponivel: number, tempoBase: number): { ratio: number; tier: TimeRelationTier } {
+  if (tempoDisponivel >= 9999 || tempoBase <= 0) {
+    return { ratio: 1.0, tier: 'full' };
+  }
+  
+  const ratio = tempoDisponivel / tempoBase;
+  
+  if (ratio >= 0.80) {
+    return { ratio, tier: 'full' };
+  } else if (ratio >= 0.50) {
+    return { ratio, tier: 'reduced' };
+  } else {
+    return { ratio, tier: 'minimal' };
+  }
+}
+
+// ============================================
+// PRIORIDADES DE BLOCOS
 // ============================================
 
 interface BlockPriority {
   type: string;
   priority: number; // 1 = manter, 5 = remover primeiro
   canCondense: boolean;
+  isAccessory: boolean; // blocos acessórios removidos em reduced/minimal
+  isWarmup: boolean;
 }
 
 const BLOCK_PRIORITIES: Record<string, BlockPriority> = {
-  conditioning: { type: 'conditioning', priority: 1, canCondense: true },
-  aquecimento: { type: 'aquecimento', priority: 2, canCondense: false },
-  forca: { type: 'forca', priority: 3, canCondense: true },
-  especifico: { type: 'especifico', priority: 4, canCondense: true },
-  core: { type: 'core', priority: 5, canCondense: true },
-  corrida: { type: 'corrida', priority: 5, canCondense: true },
-  notas: { type: 'notas', priority: 6, canCondense: false },
+  conditioning: { type: 'conditioning', priority: 1, canCondense: true, isAccessory: false, isWarmup: false },
+  forca: { type: 'forca', priority: 2, canCondense: true, isAccessory: false, isWarmup: false },
+  aquecimento: { type: 'aquecimento', priority: 3, canCondense: true, isAccessory: false, isWarmup: true },
+  especifico: { type: 'especifico', priority: 4, canCondense: true, isAccessory: true, isWarmup: false },
+  core: { type: 'core', priority: 5, canCondense: true, isAccessory: true, isWarmup: false },
+  corrida: { type: 'corrida', priority: 5, canCondense: true, isAccessory: true, isWarmup: false },
+  notas: { type: 'notas', priority: 6, canCondense: false, isAccessory: true, isWarmup: false },
 };
 
+// ============================================
+// ESTRATÉGIAS POR TIER
+// ============================================
+
 /**
- * Remove blocos por prioridade até caber no tempo
+ * TIER FULL (≥80%): Manter estrutura completa, ajustar volumes proporcionalmente
  */
-function removeBlocksByPriority(
+function applyFullTierStrategy(
   blocks: WorkoutBlock[],
-  targetSeconds: number,
-  nivel: TrainingLevel,
-  sexo: SexKey
-): { blocks: WorkoutBlock[]; removed: number } {
-  const sorted = [...blocks].sort((a, b) => {
-    const pA = BLOCK_PRIORITIES[a.type]?.priority || 4;
-    const pB = BLOCK_PRIORITIES[b.type]?.priority || 4;
-    return pB - pA; // maior prioridade = remover primeiro
-  });
+  ratio: number,
+  _nivel: TrainingLevel,
+  _sexo: SexKey
+): WorkoutBlock[] {
+  if (ratio >= 1.0) return blocks;
   
-  const kept: WorkoutBlock[] = [];
+  // Ajuste proporcional suave
+  return blocks.map(block => {
+    const priority = BLOCK_PRIORITIES[block.type];
+    if (priority?.canCondense) {
+      return condenseBlockVolumes(block, ratio);
+    }
+    return block;
+  });
+}
+
+/**
+ * TIER REDUCED (50-79%): Remover acessórios/skills, manter aquecimento reduzido
+ */
+function applyReducedTierStrategy(
+  blocks: WorkoutBlock[],
+  ratio: number,
+  nivel: TrainingLevel,
+  sexo: SexKey,
+  targetSeconds: number
+): { blocks: WorkoutBlock[]; removed: number } {
   let removed = 0;
   
-  for (const block of sorted) {
-    // Sempre manter WOD principal e conditioning
-    if (block.isMainWod || block.type === 'conditioning') {
-      kept.push(block);
-      continue;
-    }
-    
-    // Verificar se cabe
-    const currentTime = calculateWodTime(kept, nivel, sexo).totalSeconds;
-    const blockTime = calculateWodTime([block], nivel, sexo).totalSeconds;
-    
-    if (currentTime + blockTime <= targetSeconds) {
-      kept.push(block);
-    } else {
+  // 1. Remover blocos acessórios
+  let filtered = blocks.filter(block => {
+    const priority = BLOCK_PRIORITIES[block.type];
+    if (priority?.isAccessory && !block.isMainWod) {
       removed++;
+      return false;
     }
+    return true;
+  });
+  
+  // 2. Reduzir aquecimento (50% do volume)
+  filtered = filtered.map(block => {
+    const priority = BLOCK_PRIORITIES[block.type];
+    if (priority?.isWarmup) {
+      return condenseBlockVolumes(block, 0.5);
+    }
+    return block;
+  });
+  
+  // 3. Verificar se cabe
+  let currentTime = calculateWodTime(filtered, nivel, sexo);
+  
+  // 4. Se ainda não cabe, condensar WOD principal proporcionalmente
+  if (currentTime.totalSeconds > targetSeconds) {
+    const adjustRatio = Math.max(0.6, targetSeconds / currentTime.totalSeconds);
+    filtered = filtered.map(block => {
+      if (block.type === 'conditioning' || block.isMainWod || block.type === 'forca') {
+        return condenseBlockVolumes(block, adjustRatio);
+      }
+      return block;
+    });
   }
   
-  // Reordenar para manter ordem original
-  const orderedKept = blocks.filter(b => kept.includes(b));
+  return { blocks: filtered, removed };
+}
+
+/**
+ * TIER MINIMAL (<50%): APENAS WOD principal, máxima densidade
+ * Remove: aquecimento, acessórios, exercícios secundários
+ * Mantém: WOD principal condensado com alta densidade
+ */
+function applyMinimalTierStrategy(
+  blocks: WorkoutBlock[],
+  ratio: number,
+  nivel: TrainingLevel,
+  sexo: SexKey,
+  targetSeconds: number
+): { blocks: WorkoutBlock[]; removed: number } {
+  let removed = 0;
   
-  return { blocks: orderedKept, removed };
+  // 1. Manter APENAS conditioning e isMainWod
+  let kept = blocks.filter(block => {
+    if (block.isMainWod || block.type === 'conditioning') {
+      return true;
+    }
+    // Manter força se não houver conditioning
+    if (block.type === 'forca' && !blocks.some(b => b.type === 'conditioning')) {
+      return true;
+    }
+    removed++;
+    return false;
+  });
+  
+  // 2. Se não sobrou nada, manter o primeiro bloco
+  if (kept.length === 0 && blocks.length > 0) {
+    kept = [blocks[0]];
+    removed = blocks.length - 1;
+  }
+  
+  // 3. Aumentar densidade: remover descansos
+  kept = kept.map(block => increaseDensity(block));
+  
+  // 4. Condensar agressivamente para For Time / AMRAP curto
+  let currentTime = calculateWodTime(kept, nivel, sexo);
+  
+  if (currentTime.totalSeconds > targetSeconds) {
+    // Ratio para condensação: garantir que cabe
+    const condenseRatio = Math.max(0.4, targetSeconds / currentTime.totalSeconds);
+    
+    kept = kept.map(block => {
+      const condensed = condenseBlockVolumes(block, condenseRatio);
+      // Converter para formato mais intenso se necessário
+      return convertToIntenseFormat(condensed, ratio);
+    });
+  }
+  
+  // 5. Validação final: garantir ±5% do tempo alvo
+  currentTime = calculateWodTime(kept, nivel, sexo);
+  const tolerance = targetSeconds * 0.05; // 5%
+  
+  if (Math.abs(currentTime.totalSeconds - targetSeconds) > tolerance) {
+    // Ajuste fino final
+    const finalRatio = targetSeconds / currentTime.totalSeconds;
+    kept = kept.map(block => condenseBlockVolumes(block, finalRatio));
+  }
+  
+  return { blocks: kept, removed };
+}
+
+/**
+ * Converte bloco para formato mais intenso (For Time, AMRAP curto)
+ */
+function convertToIntenseFormat(block: WorkoutBlock, ratio: number): WorkoutBlock {
+  const content = block.content;
+  const lower = content.toLowerCase();
+  
+  // Se já é For Time ou AMRAP curto, manter
+  if (lower.includes('for time') || lower.includes('amrap')) {
+    // Reduzir tempo do AMRAP se muito longo
+    const modified = content.replace(/\b(AMRAP)\s*(\d+)/gi, (match, p1, p2) => {
+      const mins = parseInt(p2, 10);
+      if (mins > 8 && ratio < 0.5) {
+        return `${p1} ${Math.max(6, Math.floor(mins * ratio * 1.5))}`; // AMRAP mais curto mas intenso
+      }
+      return match;
+    });
+    return { ...block, content: modified };
+  }
+  
+  // Converter rounds longos para AMRAP
+  const roundsMatch = content.match(/(\d+)\s*(rounds?|rodadas?)/i);
+  if (roundsMatch && parseInt(roundsMatch[1], 10) > 4) {
+    // Muitos rounds → converter para AMRAP intenso
+    const amrapMinutes = Math.max(6, Math.floor(8 * ratio));
+    const modified = content.replace(/(\d+)\s*(rounds?|rodadas?)/i, `AMRAP ${amrapMinutes}min - máxima intensidade`);
+    return { ...block, content: modified };
+  }
+  
+  return block;
 }
 
 /**
@@ -726,8 +880,8 @@ function condenseBlockVolumes(
 ): WorkoutBlock {
   if (ratio >= 1.0) return block;
   
-  // Clampar: nunca reduzir mais que 50%
-  const effectiveRatio = Math.max(0.5, ratio);
+  // Clampar: nunca reduzir mais que 40% (manter mínimo 40%)
+  const effectiveRatio = Math.max(0.4, ratio);
   
   const lines = block.content.split('\n');
   const condensed = lines.map(line => {
@@ -758,7 +912,7 @@ function condenseBlockVolumes(
     result = result.replace(/(\d+)\s*(rounds?|sets?|rodadas?)/gi, (match, p1, p2) => {
       const v = parseInt(p1, 10);
       if (isNaN(v)) return match;
-      const roundRatio = Math.max(0.6, effectiveRatio); // mínimo 60% dos rounds
+      const roundRatio = Math.max(0.5, effectiveRatio); // mínimo 50% dos rounds
       return `${Math.max(1, Math.floor(v * roundRatio))} ${p2}`;
     });
     
@@ -787,14 +941,14 @@ function increaseDensity(block: WorkoutBlock): WorkoutBlock {
            !lower.includes('rest') && 
            !lower.includes('pausa');
   }).map(line => {
-    // Reduzir descansos especificados
+    // Reduzir descansos especificados (50% ou eliminar)
     return line.replace(/(\d+)\s*(seg|s|segundos?)\s*(descanso|rest|pausa)/gi, (match, p1) => {
       const v = parseInt(p1, 10);
-      if (isNaN(v)) return match;
-      const reduced = Math.max(5, Math.floor(v * 0.5));
+      if (isNaN(v) || v <= 10) return ''; // eliminar descansos curtos
+      const reduced = Math.max(5, Math.floor(v * 0.3)); // 30% do original
       return `${reduced}s descanso`;
     });
-  });
+  }).filter(line => line.trim()); // remover linhas vazias
   
   return { ...block, content: densified.join('\n') };
 }
@@ -853,128 +1007,124 @@ export interface AdaptedWorkoutResult {
   wasCondensed: boolean;
   blocksRemoved: number;
   densityIncreased: boolean;
+  timeRelationTier: TimeRelationTier;
+  timeRelationRatio: number;
 }
 
 export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWorkoutResult {
   const { nivel, sexo, tempoDisponivel, wodBase } = config;
   const sexKey: SexKey = sexo === 'feminino' ? 'F' : 'M';
   
-  // 1. Calcular tempo original
+  // 1. Calcular tempo original do WOD base
   const originalTime = calculateWodTime(wodBase.blocks, nivel, sexKey);
   const originalMinutes = originalTime.totalMinutes;
   
-  // 2. Aplicar adaptação por nível/sexo
+  // 2. Aplicar adaptação por nível/sexo (primeiro passo sempre)
   let adaptedBlocks = wodBase.blocks.map(block => 
     applyLevelSexVolumes(block, nivel, sexKey)
   );
   
-  // 3. Calcular tempo após adaptação de nível/sexo
-  let currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
-  let currentMinutes = currentTime.totalMinutes;
+  // 3. Recalcular tempo após adaptação de nível/sexo
+  const afterLevelTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  const tempoBase = afterLevelTime.totalMinutes;
+  
+  // 4. Calcular relação de tempo (REGRA-MÃE)
+  const { ratio, tier } = calculateTimeRelation(tempoDisponivel, tempoBase);
   
   let wasCondensed = false;
   let blocksRemoved = 0;
   let densityIncreased = false;
   
-  // 4. Se tempo ilimitado, retorna
+  // 5. Se tempo ilimitado, retorna após adaptação de nível/sexo
   if (tempoDisponivel >= 9999) {
     return {
-      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: currentMinutes },
+      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: tempoBase },
       originalDuration: originalMinutes,
-      adaptedDuration: currentMinutes,
+      adaptedDuration: tempoBase,
       wasCondensed: false,
       blocksRemoved: 0,
       densityIncreased: false,
+      timeRelationTier: 'full',
+      timeRelationRatio: 1.0,
     };
   }
   
   const targetSeconds = tempoDisponivel * 60;
   
-  // 5. Se já cabe, retorna
-  if (currentTime.totalSeconds <= targetSeconds) {
+  // 6. Verificar se já cabe (tempo suficiente)
+  if (afterLevelTime.totalSeconds <= targetSeconds) {
     return {
-      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: currentMinutes },
+      workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: tempoBase },
       originalDuration: originalMinutes,
-      adaptedDuration: currentMinutes,
+      adaptedDuration: tempoBase,
       wasCondensed: false,
       blocksRemoved: 0,
       densityIncreased: false,
+      timeRelationTier: tier,
+      timeRelationRatio: ratio,
     };
   }
   
-  // 6. ESTRATÉGIA DE ADAPTAÇÃO
+  // 7. APLICAR ESTRATÉGIA CONFORME TIER
   
-  // Passo A: Remover blocos acessórios
-  const removeResult = removeBlocksByPriority(adaptedBlocks, targetSeconds, nivel, sexKey);
-  adaptedBlocks = removeResult.blocks;
-  blocksRemoved = removeResult.removed;
-  
-  currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
-  
-  // Passo B: Se ainda não cabe, aumentar densidade
-  if (currentTime.totalSeconds > targetSeconds) {
-    adaptedBlocks = adaptedBlocks.map(block => {
-      const priority = BLOCK_PRIORITIES[block.type];
-      if (priority?.canCondense) {
-        return increaseDensity(block);
-      }
-      return block;
-    });
-    densityIncreased = true;
+  if (tier === 'full') {
+    // ≥80%: Manter estrutura, ajustar proporcionalmente
+    adaptedBlocks = applyFullTierStrategy(adaptedBlocks, ratio, nivel, sexKey);
+    wasCondensed = ratio < 1.0;
     
-    currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
-  }
-  
-  // Passo C: Se ainda não cabe, condensar volumes
-  if (currentTime.totalSeconds > targetSeconds) {
-    const ratio = targetSeconds / currentTime.totalSeconds;
-    
-    adaptedBlocks = adaptedBlocks.map(block => {
-      const priority = BLOCK_PRIORITIES[block.type];
-      if (priority?.canCondense) {
-        return condenseBlockVolumes(block, ratio);
-      }
-      return block;
-    });
+  } else if (tier === 'reduced') {
+    // 50-79%: Remover acessórios, manter WOD principal
+    const result = applyReducedTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
+    adaptedBlocks = result.blocks;
+    blocksRemoved = result.removed;
     wasCondensed = true;
     
-    currentTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  } else {
+    // <50%: APENAS WOD principal, máxima densidade
+    const result = applyMinimalTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
+    adaptedBlocks = result.blocks;
+    blocksRemoved = result.removed;
+    wasCondensed = true;
+    densityIncreased = true;
   }
   
-  // Passo D: Se ainda não cabe, condensar mais agressivamente
-  if (currentTime.totalSeconds > targetSeconds * 1.1) { // tolerância de 10%
-    const aggressiveRatio = (targetSeconds / currentTime.totalSeconds) * 0.9;
-    
+  // 8. Calcular tempo final
+  const finalTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  
+  // 9. VALIDAÇÃO FINAL: tempo deve estar ±5% do alvo
+  const tolerance = targetSeconds * 0.05;
+  if (finalTime.totalSeconds > targetSeconds + tolerance) {
+    // Ajuste fino: condensar mais
+    const finalRatio = targetSeconds / finalTime.totalSeconds;
     adaptedBlocks = adaptedBlocks.map(block => {
-      if (block.type === 'conditioning' || block.isMainWod) {
-        return condenseBlockVolumes(block, aggressiveRatio);
-      }
-      if (block.type === 'aquecimento') {
-        // Condensar aquecimento levemente
-        return condenseBlockVolumes(block, Math.max(0.75, aggressiveRatio));
+      const priority = BLOCK_PRIORITIES[block.type];
+      if (priority?.canCondense) {
+        return condenseBlockVolumes(block, finalRatio);
       }
       return block;
     });
   }
   
-  // 7. Calcular tempo final
-  const finalTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
+  const validatedTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   
-  // 8. Debug log
+  // 10. Debug log
   if (process.env.NODE_ENV === 'development') {
-    console.log('🏋️ buildWorkoutByTime v2:', {
+    console.log('🏋️ buildWorkoutByTime v3 (Regra-Mãe):', {
       nivel,
       sexo,
       tempoDisponivel,
+      tempoBase,
+      tier,
+      ratio: Math.round(ratio * 100) + '%',
       originalMinutes,
-      adaptedMinutes: finalTime.totalMinutes,
+      adaptedMinutes: validatedTime.totalMinutes,
       wasCondensed,
       blocksRemoved,
       densityIncreased,
       breakdown: {
-        movementMin: Math.ceil(finalTime.movementSeconds / 60),
-        transitionMin: Math.ceil(finalTime.transitionSeconds / 60),
-        pauseMin: Math.ceil(finalTime.blockPauseSeconds / 60),
+        movementMin: Math.ceil(validatedTime.movementSeconds / 60),
+        transitionMin: Math.ceil(validatedTime.transitionSeconds / 60),
+        pauseMin: Math.ceil(validatedTime.blockPauseSeconds / 60),
       },
     });
   }
@@ -983,13 +1133,15 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
     workout: {
       ...wodBase,
       blocks: adaptedBlocks,
-      estimatedTime: finalTime.totalMinutes,
+      estimatedTime: validatedTime.totalMinutes,
     },
     originalDuration: originalMinutes,
-    adaptedDuration: finalTime.totalMinutes,
+    adaptedDuration: validatedTime.totalMinutes,
     wasCondensed,
     blocksRemoved,
     densityIncreased,
+    timeRelationTier: tier,
+    timeRelationRatio: ratio,
   };
 }
 
@@ -1009,11 +1161,24 @@ export function validateAdaptation(
   const originalContent = original.blocks.map(b => b.content).join('');
   const adaptedContent = adapted.blocks.map(b => b.content).join('');
   
+  // REGRA OBRIGATÓRIA: tempos diferentes = WODs diferentes
   if (originalContent === adaptedContent && original.blocks.length === adapted.blocks.length) {
     return {
       isValid: false,
-      reason: 'Tempo mudou mas WOD permanece igual',
+      reason: 'ERRO: Tempo mudou mas WOD permanece idêntico. Treino deveria ser mais denso.',
     };
+  }
+  
+  // Validar que treino mais curto não é mais fácil
+  if (tempoAdaptado < tempoOriginal) {
+    // Verificar se houve condensação ou aumento de densidade
+    const shorterContent = adaptedContent.length;
+    const originalContentLength = originalContent.length;
+    
+    if (shorterContent > originalContentLength) {
+      // Conteúdo maior em tempo menor = suspeito
+      console.warn('⚠️ Treino mais curto com mais conteúdo textual - verificar densidade');
+    }
   }
   
   return { isValid: true };
