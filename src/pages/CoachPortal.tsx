@@ -51,32 +51,25 @@ export default function CoachPortal() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // LOADING GATE: The appLoading from useCoachApplication already includes:
-  // - authLoading (from useAuth)
-  // - fetchState check (idle/loading/done)
-  // So we just need to check appLoading
-  const isResolvingCoachState = appLoading;
+  // LOADING GATE: We only decide anything AFTER auth + roles + application are resolved.
+  const isResolvingCoachState = authLoading || appLoading;
 
   // PRIORITY 1: Admin/Superadmin → redirect to /admin (only after resolved)
   useEffect(() => {
-    console.log('[DEBUG CoachPortal] Effect1 check:', { isResolvingCoachState, user: !!user, isAdmin, isSuperAdmin });
-    if (isResolvingCoachState) return; // Wait for resolution
+    console.log('[DEBUG CoachPortal] Effect admin redirect check:', {
+      isResolvingCoachState,
+      user: !!user,
+      isAdmin,
+      isSuperAdmin,
+    });
+
+    if (isResolvingCoachState) return;
+
     if (user && (isAdmin || isSuperAdmin)) {
       console.log('[DEBUG CoachPortal] REDIRECT /coach → /admin | Reason: user is admin/superadmin');
       navigate('/admin');
     }
   }, [user, isAdmin, isSuperAdmin, isResolvingCoachState, navigate]);
-
-  // PRIORITY 2: Coach role → redirect to main app (only after resolved)
-  useEffect(() => {
-    console.log('[DEBUG CoachPortal] Effect2 check:', { isResolvingCoachState, user: !!user, isCoach, isAdmin, isSuperAdmin });
-    if (isResolvingCoachState) return; // Wait for resolution
-    if (user && isCoach && !isAdmin && !isSuperAdmin) {
-      console.log('[DEBUG CoachPortal] REDIRECT /coach → / | Reason: user is coach (not admin)');
-      setCurrentView('admin');
-      navigate('/');
-    }
-  }, [user, isCoach, isAdmin, isSuperAdmin, isResolvingCoachState, navigate, setCurrentView]);
 
   const validateForm = () => {
     try {
@@ -483,11 +476,58 @@ export default function CoachPortal() {
       );
     }
 
-    // Approved application + coach role - redirect to panel (handled in useEffect)
-    if (application?.status === 'approved' && isCoach) {
+    // Coach (role active) → render coach hub (NO automatic redirect)
+    // IMPORTANT: /coach must never auto-redirect authenticated users to "/".
+    if (isCoach) {
       return (
-        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <h1 className="font-display text-2xl text-foreground mb-3">Central do Coach</h1>
+              <p className="text-muted-foreground mb-6">
+                Seu acesso de coach está ativo. Escolha para onde ir.
+              </p>
+
+              <div className="grid gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentView('coachPerformance');
+                    navigate('/');
+                  }}
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+                >
+                  Ver Performance
+                </button>
+
+                <button
+                  onClick={() => {
+                    setCurrentView('dashboard');
+                    navigate('/');
+                  }}
+                  className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+                >
+                  Ir para o App
+                </button>
+
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/coach');
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Sair
+                </button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       );
     }
