@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_allowlist: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          email: string
+          id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          email: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          email?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       benchmark_results: {
         Row: {
           athlete_level: string | null
@@ -248,12 +272,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_admin_allowlist: { Args: { _email: string }; Returns: boolean }
       approve_coach_application: {
         Args: { _admin_id: string; _application_id: string }
         Returns: boolean
       }
       can_view_athlete_data: {
         Args: { _athlete_id: string; _viewer_id: string }
+        Returns: boolean
+      }
+      ensure_superadmin_role: {
+        Args: { _email: string; _user_id: string }
         Returns: boolean
       }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
@@ -268,6 +297,11 @@ export type Database = {
       reject_coach_application: {
         Args: { _admin_id: string; _application_id: string; _reason?: string }
         Returns: boolean
+      }
+      revoke_admin_allowlist: { Args: { _email: string }; Returns: boolean }
+      sync_admin_role_from_allowlist: {
+        Args: { _email: string; _user_id: string }
+        Returns: string
       }
     }
     Enums: {
