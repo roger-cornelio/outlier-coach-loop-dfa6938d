@@ -54,12 +54,11 @@ export default function CoachPortal() {
   // If admin/superadmin, redirect to admin panel
   useEffect(() => {
     if (!authLoading && user && (isAdmin || isSuperAdmin)) {
-      setCurrentView('admin');
-      navigate('/');
+      navigate('/admin');
     }
-  }, [user, isAdmin, isSuperAdmin, authLoading, navigate, setCurrentView]);
+  }, [user, isAdmin, isSuperAdmin, authLoading, navigate]);
 
-  // If authenticated and is coach with approved application, redirect to coach panel
+  // If authenticated and is coach with approved application, redirect to coach portal
   useEffect(() => {
     if (!authLoading && !appLoading && user && isCoach && !isAdmin && !isSuperAdmin && application?.status === 'approved') {
       setCurrentView('admin');
@@ -322,10 +321,7 @@ export default function CoachPortal() {
                 Não é necessário se cadastrar como coach.
               </p>
               <button
-                onClick={() => {
-                  setCurrentView('admin');
-                  navigate('/');
-                }}
+                onClick={() => navigate('/admin')}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 Ir para Painel do Admin
@@ -366,13 +362,24 @@ export default function CoachPortal() {
                 {application.box_name && <p><strong>Box:</strong> {application.box_name}</p>}
                 {application.city && <p><strong>Cidade:</strong> {application.city}</p>}
               </div>
-              <button
-                onClick={() => navigate('/')}
-                className="mt-6 text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar ao início
-              </button>
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao início
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/coach');
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Sair e usar outra conta
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -419,13 +426,24 @@ export default function CoachPortal() {
                 Reenviar Solicitação
               </button>
 
-              <button
-                onClick={() => navigate('/')}
-                className="mt-4 text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar ao início
-              </button>
+              <div className="flex flex-col gap-3 mt-4">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao início
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/coach');
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Sair e usar outra conta
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
