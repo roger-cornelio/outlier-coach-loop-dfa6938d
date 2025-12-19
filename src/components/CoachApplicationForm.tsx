@@ -1,0 +1,361 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { z } from 'zod';
+import { useCoachApplication } from '@/hooks/useCoachApplication';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  User, 
+  Mail, 
+  Instagram, 
+  MapPin, 
+  Building2, 
+  MessageSquare,
+  Loader2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Send,
+  AlertCircle
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+const applicationSchema = z.object({
+  full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100),
+  email: z.string().trim().email('Email inválido').max(255),
+  instagram: z.string().trim().max(50).optional(),
+  box_name: z.string().trim().max(100).optional(),
+  city: z.string().trim().max(100).optional(),
+  message: z.string().trim().max(500).optional(),
+});
+
+export function CoachApplicationForm() {
+  const { profile } = useAuth();
+  const { application, status, loading, submitting, submitApplication } = useCoachApplication();
+  
+  const [formData, setFormData] = useState({
+    full_name: profile?.name || '',
+    email: profile?.email || '',
+    instagram: '',
+    box_name: '',
+    city: '',
+    message: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Pre-fill form when application exists (for resubmission)
+  useState(() => {
+    if (application && status === 'rejected') {
+      setFormData({
+        full_name: application.full_name || profile?.name || '',
+        email: application.email || profile?.email || '',
+        instagram: application.instagram || '',
+        box_name: application.box_name || '',
+        city: application.city || '',
+        message: application.message || '',
+      });
+    }
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const validated = applicationSchema.parse(formData);
+      setErrors({});
+
+      const success = await submitApplication({
+        full_name: validated.full_name,
+        email: validated.email,
+        instagram: validated.instagram,
+        box_name: validated.box_name,
+        city: validated.city,
+        message: validated.message,
+      });
+
+      if (success) {
+        toast.success('Solicitação enviada!', {
+          description: 'Aguarde a aprovação do administrador.',
+        });
+      } else {
+        toast.error('Erro ao enviar solicitação');
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.errors.forEach((error) => {
+          if (error.path[0]) {
+            fieldErrors[error.path[0] as string] = error.message;
+          }
+        });
+        setErrors(fieldErrors);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Already approved - show success state
+  if (status === 'approved') {
+    return (
+      <Card className="border-green-500/30 bg-green-500/5">
+        <CardContent className="pt-6 text-center">
+          <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+          <h3 className="text-xl font-bold text-foreground mb-2">
+            Você é um Coach!
+          </h3>
+          <p className="text-muted-foreground">
+            Sua conta tem acesso ao painel de coach.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pending - show waiting state
+  if (status === 'pending') {
+    return (
+      <Card className="border-yellow-500/30 bg-yellow-500/5">
+        <CardContent className="pt-6 text-center">
+          <Clock className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+          <h3 className="text-xl font-bold text-foreground mb-2">
+            Aguardando Aprovação
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            Sua solicitação foi enviada em{' '}
+            {application?.created_at
+              ? new Date(application.created_at).toLocaleDateString('pt-BR')
+              : ''}
+          </p>
+          <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
+            Pendente
+          </Badge>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Rejected - show reason and allow resubmission
+  if (status === 'rejected') {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <XCircle className="w-8 h-8 text-red-500 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  Solicitação Não Aprovada
+                </h3>
+                {application?.rejection_reason && (
+                  <p className="text-muted-foreground mb-2">
+                    <strong>Motivo:</strong> {application.rejection_reason}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Você pode enviar uma nova solicitação abaixo.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Resubmission form */}
+        <ApplicationFormFields
+          formData={formData}
+          setFormData={setFormData}
+          errors={errors}
+          submitting={submitting}
+          onSubmit={handleSubmit}
+          buttonText="Reenviar Solicitação"
+        />
+      </div>
+    );
+  }
+
+  // No application yet - show form
+  return (
+    <ApplicationFormFields
+      formData={formData}
+      setFormData={setFormData}
+      errors={errors}
+      submitting={submitting}
+      onSubmit={handleSubmit}
+      buttonText="Enviar Solicitação"
+    />
+  );
+}
+
+// Separate form fields component for reuse
+function ApplicationFormFields({
+  formData,
+  setFormData,
+  errors,
+  submitting,
+  onSubmit,
+  buttonText,
+}: {
+  formData: {
+    full_name: string;
+    email: string;
+    instagram: string;
+    box_name: string;
+    city: string;
+    message: string;
+  };
+  setFormData: React.Dispatch<React.SetStateAction<typeof formData>>;
+  errors: Record<string, string>;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  buttonText: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="w-5 h-5" />
+          Solicitar Acesso como Coach
+        </CardTitle>
+        <CardDescription>
+          Preencha o formulário para solicitar acesso ao painel de coach.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4">
+          {/* Full Name */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Nome Completo *
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                  errors.full_name ? 'border-destructive' : 'border-border'
+                }`}
+                placeholder="Seu nome completo"
+              />
+            </div>
+            {errors.full_name && (
+              <p className="text-destructive text-sm mt-1">{errors.full_name}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Email *
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                  errors.email ? 'border-destructive' : 'border-border'
+                }`}
+                placeholder="seu@email.com"
+              />
+            </div>
+            {errors.email && (
+              <p className="text-destructive text-sm mt-1">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Instagram */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Instagram
+            </label>
+            <div className="relative">
+              <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={formData.instagram}
+                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="@seuinsta"
+              />
+            </div>
+          </div>
+
+          {/* Box/Gym Name */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Box / Academia
+            </label>
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={formData.box_name}
+                onChange={(e) => setFormData({ ...formData, box_name: e.target.value })}
+                className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Nome do box ou academia"
+              />
+            </div>
+          </div>
+
+          {/* City */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Cidade
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Sua cidade"
+              />
+            </div>
+          </div>
+
+          {/* Message */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Mensagem (opcional)
+            </label>
+            <div className="relative">
+              <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+              <textarea
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                rows={3}
+                className="w-full pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                placeholder="Conte um pouco sobre você e sua experiência..."
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="w-full"
+          >
+            {submitting ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
+            {buttonText}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

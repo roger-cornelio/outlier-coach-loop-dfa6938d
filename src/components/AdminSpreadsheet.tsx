@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info, Settings2, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info, Settings2, Users, UserPlus } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -1195,14 +1195,24 @@ export function AdminSpreadsheet() {
                 </button>
               )}
               {isAdmin && (
-                <button
-                  onClick={() => setCurrentView('params')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
-                  title="Parâmetros do Sistema"
-                >
-                  <Settings2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Parâmetros</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setCurrentView('coachApplicationsAdmin')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-sm"
+                    title="Solicitações de Coach"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Solicitações</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('params')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
+                    title="Parâmetros do Sistema"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Parâmetros</span>
+                  </button>
+                </>
               )}
               <button
                 onClick={async () => {

@@ -10,7 +10,10 @@ export type EventName =
   | 'benchmark_completed'
   | 'coach_analytics_viewed'
   | 'admin_params_saved'
-  | 'params_version_activated';
+  | 'params_version_activated'
+  | 'coach_application_submitted'
+  | 'coach_application_approved'
+  | 'coach_application_rejected';
 
 interface UseEventsReturn {
   trackEvent: (eventName: EventName, properties?: Record<string, unknown>) => Promise<void>;
