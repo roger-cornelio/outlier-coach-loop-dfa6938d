@@ -27,7 +27,6 @@ export interface CoachApplicationFormData {
   instagram?: string;
   box_name?: string;
   city?: string;
-  message?: string;
 }
 
 export function useCoachApplication() {
@@ -92,7 +91,7 @@ export function useCoachApplication() {
         instagram: formData.instagram || null,
         box_name: formData.box_name || null,
         city: formData.city || null,
-        message: formData.message || null,
+        message: null,
         status: 'pending',
         created_at: new Date().toISOString(),
         reviewed_at: null,
