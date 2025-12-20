@@ -66,6 +66,7 @@ interface OutlierState {
   triggerExternalResultsRefresh: () => void;
   resetConfig: () => void;
   resetToDefaults: () => void; // Reset completo para novo usuário
+  resetUserPreferencesOnly: () => void; // Reset apenas configs, mantém treinos do banco
   
   // Admin: Visualizar como atleta
   setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
@@ -148,6 +149,8 @@ export const useOutlierStore = create<OutlierState>()(
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
       
       // Reset completo para novo usuário - zera TUDO para defaults
+      // ATENÇÃO: Este reset é para LOGOUT ou troca de usuário
+      // NÃO afeta treinos do banco (esses são carregados via useCoachWorkouts)
       resetToDefaults: () => set({
         coachStyle: null,
         athleteConfig: null,
@@ -162,6 +165,22 @@ export const useOutlierStore = create<OutlierState>()(
         selectedWorkout: null,
         externalResultsRefreshKey: 0,
         viewingAsAthlete: null,
+      }),
+      
+      // Reset APENAS preferências do usuário - preserva treinos carregados do banco
+      // Usado quando há treinos do banco disponíveis e não queremos sobrescrevê-los
+      resetUserPreferencesOnly: () => set({
+        // Limpa apenas configurações pessoais
+        coachStyle: null,
+        athleteConfig: null,
+        // NÃO limpa treinos - baseWorkouts, adaptedWorkouts, weeklyWorkouts permanecem
+        adaptationPending: true, // Marca para readaptar com nova config
+        // Limpa estado de navegação
+        currentView: 'welcome',
+        selectedDay: null,
+        selectedWorkout: null,
+        viewingAsAthlete: null,
+        // Mantém workoutResults e externalResultsRefreshKey
       }),
       
       // Admin: Visualizar como atleta
