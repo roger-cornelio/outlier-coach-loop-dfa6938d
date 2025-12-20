@@ -57,7 +57,7 @@ export interface CoachCopySet {
 export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
   IRON: {
     selectCoachScreen: {
-      title: 'Escolha seu estilo de treino.',
+      title: 'Escolha o estilo do seu treinador.',
       subtitle: 'Não é tema. É personalidade. É o jeito que você vai evoluir.',
       cards: {
         IRON: {
@@ -139,7 +139,7 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
 
   PULSE: {
     selectCoachScreen: {
-      title: 'Escolha seu estilo de treino.',
+      title: 'Escolha o estilo do seu treinador.',
       subtitle: 'Não é tema. É personalidade. É o jeito que você vai evoluir.',
       cards: {
         IRON: {
@@ -221,7 +221,7 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
 
   SPARK: {
     selectCoachScreen: {
-      title: 'Escolha seu estilo de treino.',
+      title: 'Escolha o estilo do seu treinador.',
       subtitle: 'Não é tema. É personalidade. É o jeito que você vai evoluir.',
       cards: {
         IRON: {
