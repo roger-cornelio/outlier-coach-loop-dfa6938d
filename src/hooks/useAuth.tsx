@@ -435,11 +435,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
 }
-
-/**
- * Safe version of useAuth that returns null if AuthProvider is not available.
- * Useful for components that may render before AuthProvider is ready.
- */
-export function useAuthSafe(): AuthContextValue | null {
-  return useContext(AuthContext);
-}
