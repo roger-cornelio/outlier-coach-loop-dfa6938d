@@ -77,13 +77,13 @@ export function AppGate({ children }: AppGateProps) {
 
   // /login/coach - Coach login page
   // If already coach → go to /coach/dashboard
-  // If not coach → show access denied (Auth component handles this)
+  // Otherwise let CoachAuth handle the flow (it manages its own states)
   if (pathname === '/login/coach') {
     if (state === 'coach') {
       console.log('[AppGate] REDIRECT /login/coach → /coach/dashboard | Reason: already coach');
       return <Navigate to="/coach/dashboard" replace />;
     }
-    // Let Auth component handle non-coach case (shows access denied)
+    // CoachAuth handles everything: login, contact modal, set password
     return <>{children}</>;
   }
 
