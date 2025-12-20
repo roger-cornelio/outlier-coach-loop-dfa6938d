@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus } from 'lucide-react';
+import { CoachApplicationModal } from '@/components/CoachApplicationModal';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password';
 type AuthContext = 'user' | 'coach' | 'admin';
@@ -40,6 +41,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [resetSent, setResetSent] = useState(false);
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
 
   const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading } = useAuth();
   const { setCurrentView } = useOutlierStore();
@@ -351,15 +353,10 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 Entrar como Atleta
               </Link>
               <button
-                onClick={async () => {
-                  // TODO: Abrir fluxo de solicitação de coach
-                  toast({
-                    title: 'Solicitar acesso de Coach',
-                    description: 'Entre em contato com o administrador para solicitar acesso de Coach.',
-                  });
-                }}
-                className="w-full py-3 bg-secondary text-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
+                onClick={() => setShowApplicationModal(true)}
+                className="w-full py-3 bg-secondary text-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2"
               >
+                <UserPlus className="w-4 h-4" />
                 Solicitar acesso de Coach
               </button>
               <button
@@ -374,6 +371,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
             </div>
           </div>
         </motion.div>
+        
+        {/* Coach Application Modal */}
+        <CoachApplicationModal 
+          isOpen={showApplicationModal} 
+          onClose={() => setShowApplicationModal(false)} 
+        />
       </div>
     );
   }
@@ -585,6 +588,20 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 </button>
               </form>
 
+              {/* Request Coach Access - Only on coach login screen */}
+              {context === 'coach' && (
+                <div className="mt-4 pt-4 border-t border-border/20">
+                  <button
+                    type="button"
+                    onClick={() => setShowApplicationModal(true)}
+                    className="w-full py-2.5 bg-secondary/50 text-foreground rounded font-display text-sm font-medium tracking-wide hover:bg-secondary/70 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Solicitar acesso de Coach
+                  </button>
+                </div>
+              )}
+
               {/* Secondary actions - Low hierarchy */}
               {mode === 'login' && (
                 <div className="mt-3 pt-3 border-t border-border/10 space-y-2.5">
@@ -685,6 +702,14 @@ export default function Auth({ context = 'user' }: AuthProps) {
           )}
         </motion.div>
       </motion.div>
+      
+      {/* Coach Application Modal */}
+      {context === 'coach' && (
+        <CoachApplicationModal 
+          isOpen={showApplicationModal} 
+          onClose={() => setShowApplicationModal(false)} 
+        />
+      )}
     </div>
   );
 }
