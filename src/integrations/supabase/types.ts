@@ -353,6 +353,10 @@ export type Database = {
         Args: { _email: string; _user_id: string }
         Returns: string
       }
+      sync_coach_role_on_login: {
+        Args: { _email: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "coach" | "superadmin"
