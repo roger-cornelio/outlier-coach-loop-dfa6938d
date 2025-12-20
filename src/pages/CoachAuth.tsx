@@ -9,7 +9,7 @@
  *    c) Email APROVADO com conta → login normal → redireciona para /coach/dashboard
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { z } from 'zod';
@@ -61,13 +61,24 @@ export default function CoachAuth() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
 
-  const { user, isCoach, loading: authLoading } = useAuth();
+  const { user, isCoach, role, loading: authLoading, refreshSession } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ===== REDIRECT IF ALREADY COACH =====
+  // Debug log for troubleshooting
+  console.log('[CoachAuth] DEBUG:', {
+    userId: user?.id || 'null',
+    email: user?.email || 'null',
+    role,
+    isCoach,
+    authLoading,
+    flowState,
+  });
+
+  // ===== REDIRECT IF ALREADY COACH (user_roles is source of truth) =====
   useEffect(() => {
     if (!authLoading && user && isCoach) {
+      console.log('[CoachAuth] REDIRECT → /coach/dashboard | Reason: isCoach=true (user_roles)');
       navigate('/coach/dashboard', { replace: true });
     }
   }, [user, isCoach, authLoading, navigate]);
@@ -166,8 +177,12 @@ export default function CoachAuth() {
             variant: 'destructive',
           });
         }
+      } else {
+        // Login successful - force refresh to load updated roles from user_roles
+        console.log('[CoachAuth] Login successful, refreshing session to load roles...');
+        await refreshSession();
+        // useEffect will redirect to /coach/dashboard when isCoach becomes true
       }
-      // If successful, useEffect will redirect to /coach/dashboard
     } catch (err) {
       console.error('[CoachAuth] Login error:', err);
       toast({
@@ -230,6 +245,9 @@ export default function CoachAuth() {
         }
       } else if (data.user) {
         // Account created! The sync_coach_role_on_login function will grant coach role
+        // Force refresh to pick up the newly assigned coach role
+        console.log('[CoachAuth] Account created, refreshing session to load coach role...');
+        await refreshSession();
         toast({
           title: 'Conta criada!',
           description: 'Bem-vindo ao painel de Coach.',
