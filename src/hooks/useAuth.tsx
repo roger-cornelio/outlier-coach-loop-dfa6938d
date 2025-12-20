@@ -37,7 +37,12 @@ type AuthContextValue = {
   isCoach: boolean;
   canManageWorkouts: boolean;
   loading: boolean;
+  /** Carregamento do perfil (separado do auth/roles) */
+  profileLoading: boolean;
+  /** True quando já tentamos carregar o perfil (mesmo se vier null) */
+  profileLoaded: boolean;
   sessionExpired: boolean;
+  updateProfileOptimistic: (patch: Partial<UserProfile>) => void;
   signIn: (email: string, password: string) => Promise<{ error: unknown | null }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: unknown | null }>;
   signOut: () => Promise<{ error: null }>;
@@ -53,7 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>("user");
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
-  
+
+  // Profile status (separado): usado para decidir onboarding SEM flicker
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'loaded'>('idle');
+  const profileLoading = profileStatus === 'loading';
+  const profileLoaded = profileStatus === 'loaded';
+
   // Track previous user ID to detect user changes
   const previousUserIdRef = useRef<string | null>(null);
   const resetToDefaults = useOutlierStore((state) => state.resetToDefaults);
@@ -67,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canManageWorkouts = role === "admin" || role === "coach" || role === "superadmin";
 
   const fetchProfile = useCallback(async (userId: string) => {
+    setProfileStatus('loading');
     try {
       const { data, error } = await fetchProfileWithRetry(userId);
 
@@ -81,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Error in fetchProfile:", err);
       setProfile(null);
+    } finally {
+      setProfileStatus('loaded');
     }
   }, []);
 
@@ -234,9 +247,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('[DEBUG useAuth] User signed out, full reset');
           resetToDefaults();
           previousUserIdRef.current = null;
-          
+
           setRole("user");
           setProfile(null);
+          setProfileStatus('idle');
           console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false (signed out)');
           setLoading(false);
         }
@@ -283,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('[DEBUG useAuth] initSession - roles/profile DONE');
         } else {
           previousUserIdRef.current = null;
+          setProfileStatus('idle');
         }
       } catch (err) {
         console.error("Error initializing session:", err);
@@ -359,11 +374,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setUser(null);
     setProfile(null);
+    setProfileStatus('idle');
     setRole("user");
     setSessionExpired(false);
     setLoading(false);
 
     return { error: null };
+  }, []);
+
+  const updateProfileOptimistic = useCallback((patch: Partial<UserProfile>) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -377,7 +397,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isCoach,
       canManageWorkouts,
       loading,
+      profileLoading,
+      profileLoaded,
       sessionExpired,
+      updateProfileOptimistic,
       signIn,
       signUp,
       signOut,
@@ -393,7 +416,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isCoach,
       canManageWorkouts,
       loading,
+      profileLoading,
+      profileLoaded,
       sessionExpired,
+      updateProfileOptimistic,
       signIn,
       signUp,
       signOut,

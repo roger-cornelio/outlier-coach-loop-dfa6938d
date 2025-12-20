@@ -30,6 +30,9 @@ export interface AppState {
   isSuperAdmin: boolean;
   isCoach: boolean;
   canManageWorkouts: boolean;
+  /** Flags de carregamento do perfil (para decidir onboarding sem flicker) */
+  profileLoading: boolean;
+  profileLoaded: boolean;
   // Application status is ONLY for UI display, NOT for access control
   applicationStatus: 'none' | 'pending' | 'approved' | 'rejected';
   user: ReturnType<typeof useAuth>['user'];
@@ -86,6 +89,8 @@ export function useAppState(): AppState {
     isSuperAdmin: auth.isSuperAdmin,
     isCoach: auth.isCoach,
     canManageWorkouts: auth.canManageWorkouts,
+    profileLoading: auth.profileLoading,
+    profileLoaded: auth.profileLoaded,
     // Application status is ONLY for UI display
     applicationStatus: appStatus,
     user: auth.user,

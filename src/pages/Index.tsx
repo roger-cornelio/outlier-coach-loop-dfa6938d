@@ -13,7 +13,7 @@ import { useEffect, useRef } from "react";
 import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
-import { useCoachStylePersistence } from "@/hooks/useCoachStylePersistence";
+import type { CoachStyle } from "@/types/outlier";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AthleteWelcomeScreen } from "@/components/AthleteWelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
@@ -31,10 +31,9 @@ import { useLevelTheme } from "@/hooks/useLevelTheme";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { currentView, setCurrentView, coachStyle, athleteConfig } = useOutlierStore();
-  const { state, isCoach, canManageWorkouts } = useAppState();
-  const { loadCoachStyleFromProfile, hasPersistedCoachStyle } = useCoachStylePersistence();
-  
+  const { currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig } = useOutlierStore();
+  const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
+
   // Track if we've already done the initial navigation check
   const initialCheckDone = useRef(false);
 
@@ -44,32 +43,54 @@ const Index = () => {
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
-  
-  // COACH STYLE PERSISTENCE: Load from profile and skip welcome if already set
+
+  // COACH STYLE FLOW (fonte de verdade = profile.coach_style)
   useEffect(() => {
-    if (state === 'loading' || initialCheckDone.current) return;
-    
-    // Try to load coach style from profile
-    const hasPersistedStyle = hasPersistedCoachStyle();
-    
-    if (hasPersistedStyle) {
-      // Load the style into the store
-      loadCoachStyleFromProfile();
-      
-      // Skip welcome screen - go directly to config or dashboard
+    if (state === 'loading' || profileLoading || !profileLoaded || initialCheckDone.current) return;
+
+    const coachStyleFromProfile = profile?.coach_style;
+    const hasCoachStyle = !!coachStyleFromProfile;
+
+    // ===== CONDIÇÃO EXATA DE ONBOARDING =====
+    // if (profileLoaded && !coach_style) -> ir para onboarding
+    if (profileLoaded && !hasCoachStyle) {
+      if (currentView !== 'welcome') {
+        setCurrentView('welcome');
+      }
+      initialCheckDone.current = true;
+      return;
+    }
+
+    // Se existe coach_style no perfil, sincroniza store e pula welcome
+    if (coachStyleFromProfile) {
+      const normalized = coachStyleFromProfile as CoachStyle;
+
+      if (coachStyle !== normalized) {
+        setCoachStyle(normalized);
+      }
+
       if (currentView === 'welcome') {
-        // If no athleteConfig yet, go to config; otherwise dashboard
         if (!athleteConfig) {
           setCurrentView('config');
         } else {
           setCurrentView('dashboard');
         }
-        console.log('[Index] Skipped welcome - coach style loaded from profile');
+        console.log('[Index] Skipped welcome - coach_style found in profile');
       }
     }
-    
+
     initialCheckDone.current = true;
-  }, [state, hasPersistedCoachStyle, loadCoachStyleFromProfile, currentView, athleteConfig, setCurrentView]);
+  }, [
+    state,
+    profileLoading,
+    profileLoaded,
+    profile?.coach_style,
+    coachStyle,
+    currentView,
+    athleteConfig,
+    setCoachStyle,
+    setCurrentView,
+  ]);
 
   // View access control for authenticated users
   useEffect(() => {

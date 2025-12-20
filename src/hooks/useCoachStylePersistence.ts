@@ -11,7 +11,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import type { CoachStyle } from '@/types/outlier';
 
 export function useCoachStylePersistence() {
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfileOptimistic } = useAuth();
   const { coachStyle, setCoachStyle } = useOutlierStore();
 
   /**
@@ -22,6 +22,11 @@ export function useCoachStylePersistence() {
       return { success: false, error: 'Usuário não autenticado' };
     }
 
+    // Otimista: atualiza store + profile local ANTES do persist
+    const previousStyle = coachStyle;
+    setCoachStyle(style);
+    updateProfileOptimistic({ coach_style: style });
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -30,19 +35,29 @@ export function useCoachStylePersistence() {
 
       if (error) {
         console.error('[useCoachStylePersistence] Error saving coach_style:', error);
+
+        // Rollback (somente se já existia um estilo anterior)
+        if (previousStyle && previousStyle !== style) {
+          setCoachStyle(previousStyle);
+          updateProfileOptimistic({ coach_style: previousStyle });
+        }
+
         return { success: false, error: error.message };
       }
 
-      // Atualiza o store local também
-      setCoachStyle(style);
-      
       console.log('[useCoachStylePersistence] Coach style saved:', style);
       return { success: true };
     } catch (err) {
       console.error('[useCoachStylePersistence] Unexpected error:', err);
+
+      if (previousStyle && previousStyle !== style) {
+        setCoachStyle(previousStyle);
+        updateProfileOptimistic({ coach_style: previousStyle });
+      }
+
       return { success: false, error: 'Erro ao salvar preferência' };
     }
-  }, [user, setCoachStyle]);
+  }, [user, coachStyle, setCoachStyle, updateProfileOptimistic]);
 
   /**
    * Carrega o estilo do coach do banco de dados para o store

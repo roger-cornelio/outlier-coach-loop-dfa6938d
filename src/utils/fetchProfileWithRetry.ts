@@ -6,6 +6,7 @@ interface ProfileResult {
   email: string;
   name: string | null;
   coach_id: string | null;
+  coach_style: string | null;
   last_active_at: string | null;
   created_at: string;
 }
@@ -25,7 +26,7 @@ export async function fetchProfileWithRetry(
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_id, email, name, coach_id, last_active_at, created_at')
+        .select('id, user_id, email, name, coach_id, coach_style, last_active_at, created_at')
         .eq('user_id', userId)
         .maybeSingle();
 
