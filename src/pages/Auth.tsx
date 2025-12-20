@@ -377,12 +377,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
       >
         {/* HERO BRANDING - Maximum emphasis */}
         <div className="text-center mb-12">
-          {/* Logo - Dominant */}
+          {/* Logo - Identical to WelcomeScreen */}
           <motion.h1 
-            className="text-5xl md:text-6xl font-display font-black tracking-tighter bg-gradient-to-r from-primary via-[hsl(24,100%,55%)] to-primary bg-clip-text text-transparent mb-4"
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo mb-3"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
           </motion.h1>
