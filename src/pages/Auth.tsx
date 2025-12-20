@@ -221,9 +221,9 @@ export default function Auth() {
       >
         {/* Branding Section - Above the card */}
         <div className="text-center mb-10">
-          {/* 1) OUTLIER - Maior destaque (~20% maior) */}
+          {/* 1) OUTLIER - Logo principal com branding oficial */}
           <motion.h1 
-            className="font-display text-7xl md:text-8xl tracking-widest font-bold text-gradient-logo mb-5"
+            className="brand-logo-lg mb-6"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
