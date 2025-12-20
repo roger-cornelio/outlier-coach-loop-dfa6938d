@@ -99,53 +99,53 @@ export function AthleteWelcomeScreen() {
           {coachCopy?.subheadline || 'A partir de agora, você é OUTLIER.'}
         </motion.p>
 
-        {/* D) Card do Coach - Maior */}
+        {/* D) Card do Coach - Destaque forte, mostra valor da personalização */}
         {coachCopy && (
           <motion.div
-            className="card-elevated p-8 md:p-10 text-left max-w-lg mx-auto"
+            className="card-elevated p-8 md:p-12 text-left max-w-xl mx-auto border-2 border-primary/30 shadow-2xl shadow-primary/20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            {/* Coach header */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/40">
+            {/* Coach header - Maior destaque */}
+            <div className="flex items-center gap-4 mb-6 pb-5 border-b border-border/50">
+              <div className="p-4 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/50">
                 {coachIcon}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Seu Coach</p>
-                <p className="font-display text-xl tracking-wide text-foreground">{coachStyle}</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Seu Coach</p>
+                <p className="font-display text-3xl md:text-4xl tracking-wide text-foreground">{coachStyle}</p>
               </div>
             </div>
 
-            {/* What you'll feel */}
-            <p className="text-sm text-muted-foreground mb-3">
+            {/* What you'll feel - Texto maior */}
+            <p className="text-base text-muted-foreground mb-4 font-medium">
               {coachCopy?.coachCardIntro || 'O que você vai sentir nessa experiência:'}
             </p>
             
-            <ul className="space-y-2 mb-5">
+            <ul className="space-y-3 mb-6">
               {coachCopy?.bullets.map((bullet, index) => (
                 <motion.li 
                   key={index}
-                  className="flex items-start gap-2 text-foreground"
+                  className="flex items-start gap-3 text-foreground"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.9 + index * 0.1 }}
                 >
-                  <span className="text-primary mt-1">•</span>
-                  <span className="text-sm">{bullet}</span>
+                  <span className="text-primary text-lg mt-0.5">•</span>
+                  <span className="text-base md:text-lg">{bullet}</span>
                 </motion.li>
               ))}
             </ul>
 
-            {/* Footer line */}
+            {/* Footer line - Mais impacto */}
             <motion.p 
-              className="text-sm text-primary font-medium italic border-t border-border/50 pt-4"
+              className="text-base md:text-lg text-primary font-semibold italic border-t border-primary/30 pt-5"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
             >
-              {coachCopy?.footer}
+              "{coachCopy?.footer}"
             </motion.p>
           </motion.div>
         )}
