@@ -75,7 +75,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
     // CONTEXT: ADMIN - only allow if user is admin
     if (context === 'admin') {
       if (isAdmin) {
-        navigate('/admin');
+        navigate('/painel-admin');
       } else {
         // Block access - show restricted message, do NOT redirect to user flow
         setAccessDenied('Acesso restrito. Sua conta não possui permissão de administrador.');
@@ -90,9 +90,9 @@ export default function Auth({ context = 'user' }: AuthProps) {
     }
 
     // CONTEXT: USER (default) - normal athlete flow
-    // If admin accessing /login, redirect to /admin
+    // If admin accessing /login, redirect to /painel-admin
     if (isAdmin) {
-      navigate('/admin');
+      navigate('/painel-admin');
       return;
     }
     

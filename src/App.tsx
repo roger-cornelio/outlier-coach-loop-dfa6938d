@@ -31,7 +31,7 @@ const App = () => (
               <Route path="/login/admin" element={<Auth context="admin" />} />
               <Route path="/auth" element={<Auth context="user" />} />
               <Route path="/coach" element={<CoachPortal />} />
-              <Route path="/admin" element={<AdminPortal />} />
+              <Route path="/painel-admin" element={<AdminPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
