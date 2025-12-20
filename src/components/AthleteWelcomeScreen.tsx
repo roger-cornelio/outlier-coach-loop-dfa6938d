@@ -77,37 +77,25 @@ export function AthleteWelcomeScreen() {
         transition={{ duration: 0.6 }}
         className="text-center z-10 max-w-xl w-full"
       >
-        {/* A) Headline - Maior destaque */}
-        <motion.h1 
-          className="font-display text-4xl md:text-6xl tracking-wider font-bold text-gradient-logo mb-6"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          {coachCopy?.headline || 'SEJA BEM-VINDO, OUTLIER'}
-        </motion.h1>
-
-        {/* B) Nome do atleta - Destaque forte */}
-        <motion.div
-          className="mb-4"
+        {/* A) Linha 1 - Menor destaque */}
+        <motion.p 
+          className="font-display text-xl md:text-2xl tracking-wide text-muted-foreground mb-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/20 border border-primary/40 text-primary font-display text-2xl md:text-3xl tracking-wide shadow-lg shadow-primary/20">
-            {athleteName} {coachEmoji(coachStyle)}
-          </span>
-        </motion.div>
-
-        {/* C) Subtítulo curto - personalizado por coach */}
-        <motion.p 
-          className="text-lg md:text-xl text-muted-foreground mb-10"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          {coachCopy?.subheadline || 'A partir de agora, você é OUTLIER.'}
+          PARABÉNS, {athleteName.toUpperCase()}.
         </motion.p>
+
+        {/* B) Headline principal - Maior destaque */}
+        <motion.h1 
+          className="font-display text-3xl md:text-5xl lg:text-6xl tracking-wider font-bold text-gradient-logo mb-10"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          VOCÊ ESTÁ PRESTES A SE TORNAR OUTLIER.
+        </motion.h1>
 
         {/* D) Card do Coach - Destaque forte, mostra valor da personalização */}
         {coachCopy && (
