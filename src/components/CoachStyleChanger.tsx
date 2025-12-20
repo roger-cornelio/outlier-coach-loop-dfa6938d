@@ -17,8 +17,8 @@ import { Flame, Heart, Zap, Check, Loader2 } from 'lucide-react';
 
 // Integrated coach messages (exact text per style - universal language)
 const coachMessages: Record<CoachStyle, string> = {
-  IRON: 'Daqui pra frente é direto e sem desculpa.',
-  PULSE: 'Você escolheu bem. Constância com direção — vamos construir isso.',
+  IRON: 'Irmão, daqui pra frente é direto e sem desculpa.',
+  PULSE: 'Você escolheu bem. Constância com direção — vamos construir isso juntos.',
   SPARK: 'Agora é energia alta e ritmo forte. Bora acelerar.',
 };
 
