@@ -73,7 +73,7 @@ export function EquipmentAdaptModal({
               {/* Header */}
               <div className="flex items-start justify-between p-5 pb-3">
                 <div className="flex-1 pr-4">
-                  <h2 className="font-display text-xl mb-1">AJUSTAR PRO MEU BOX</h2>
+                  <h2 className="font-display text-xl mb-1">SUBSTITUIR EQUIPAMENTO</h2>
                   <p className="text-muted-foreground text-sm">
                     Marque o que você <strong>NÃO</strong> tem. Eu adapto sem mudar o estímulo.
                   </p>
