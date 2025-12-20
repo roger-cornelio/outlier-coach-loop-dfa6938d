@@ -629,7 +629,7 @@ export function Dashboard() {
                   <span className="font-display text-sm tracking-wide">
                     {hasAdaptations 
                       ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
-                      : 'SUBSTITUIR EQUIPAMENTO'
+                      : 'AJUSTAR TREINO PARA O MEU BOX'
                     }
                   </span>
                 </button>
