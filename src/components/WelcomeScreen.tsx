@@ -177,27 +177,29 @@ export function WelcomeScreen() {
           })}
         </motion.div>
 
-        {/* CTA Button */}
-        <motion.button
-          onClick={handleContinue}
-          disabled={!coachStyle || isSaving}
-          className={`
-            font-display text-xl tracking-widest px-16 py-6 rounded-xl
-            transition-all duration-300 flex items-center justify-center gap-3
-            ${coachStyle && !isSaving
-              ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
-              : 'bg-muted text-muted-foreground cursor-not-allowed'
-            }
-          `}
-          whileHover={coachStyle && !isSaving ? { scale: 1.05 } : {}}
-          whileTap={coachStyle && !isSaving ? { scale: 0.95 } : {}}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
-          {isSaving ? 'SALVANDO...' : screenCopy.cta}
-        </motion.button>
+        {/* CTA Button - Centered independently */}
+        <div className="flex justify-center w-full">
+          <motion.button
+            onClick={handleContinue}
+            disabled={!coachStyle || isSaving}
+            className={`
+              font-display text-xl tracking-widest px-16 py-6 rounded-xl
+              transition-all duration-300 flex items-center justify-center gap-3
+              ${coachStyle && !isSaving
+                ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }
+            `}
+            whileHover={coachStyle && !isSaving ? { scale: 1.05 } : {}}
+            whileTap={coachStyle && !isSaving ? { scale: 0.95 } : {}}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
+            {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+            {isSaving ? 'SALVANDO...' : screenCopy.cta}
+          </motion.button>
+        </div>
       </motion.div>
     </div>
   );
