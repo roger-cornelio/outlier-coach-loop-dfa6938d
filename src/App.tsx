@@ -8,6 +8,7 @@ import { AppGate } from "@/components/AppGate";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
+import CoachSetPassword from "./pages/CoachSetPassword";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,9 @@ const App = () => (
 
             {/* COACH login - fluxo único e linear */}
             <Route path="/login/coach" element={<CoachAuth />} />
+
+            {/* COACH definir senha - coach aprovado sem senha */}
+            <Route path="/coach/definir-senha" element={<CoachSetPassword />} />
 
             {/* COACH dashboard - rota oficial do painel do coach */}
             <Route path="/coach/dashboard" element={<CoachDashboard />} />

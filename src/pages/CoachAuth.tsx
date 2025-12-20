@@ -24,13 +24,7 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
 });
 
-const setPasswordSchema = z.object({
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
-  confirmPassword: z.string().min(6, 'Confirme sua senha').max(100, 'Senha muito longa'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'As senhas não coincidem',
-  path: ['confirmPassword'],
-});
+// Removed setPasswordSchema - now handled by /coach/definir-senha
 
 const contactSchema = z.object({
   full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome muito longo'),
@@ -42,7 +36,6 @@ const contactSchema = z.object({
 type CoachFlowState = 
   | 'login'           // Tela inicial de login
   | 'contact_modal'   // Modal "Deixe seu contato" (email não aprovado)
-  | 'set_password'    // Tela "Defina sua senha" (email aprovado, sem conta)
   | 'contact_sent';   // Confirmação de envio
 
 export default function CoachAuth() {
@@ -138,34 +131,27 @@ export default function CoachAuth() {
     [fetchUserRoles, navigate, refreshSession]
   );
 
-  // ===== CHECK EMAIL STATUS (CRM only; NOT source of truth for access) =====
-  const checkEmailStatus = async (
-    emailToCheck: string
-  ): Promise<'not_approved' | 'approved_no_account' | 'approved_with_account'> => {
+  // ===== CHECK IF EMAIL HAS COACH ROLE (source of truth: user_roles via profile email) =====
+  const checkCoachRoleByEmail = async (emailToCheck: string): Promise<boolean> => {
     const normalizedEmail = emailToCheck.toLowerCase().trim();
 
-    const { data: application, error } = await supabase
-      .from('coach_applications')
-      .select('id, status, auth_user_id, created_at')
+    // Find profile with this email, then check user_roles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id')
       .eq('email', normalizedEmail)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle();
 
-    if (error) {
-      console.error('[CoachAuth] checkEmailStatus error:', error);
+    if (!profile?.user_id) {
+      return false;
     }
 
-    if (!application) {
-      return 'not_approved';
-    }
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', profile.user_id);
 
-    if (application.auth_user_id) {
-      return 'approved_with_account';
-    }
-
-    return 'approved_no_account';
+    return (roles || []).some((r) => String(r.role) === 'coach');
   };
 
   // ===== HANDLE LOGIN =====
@@ -185,48 +171,48 @@ export default function CoachAuth() {
     }
 
     setIsSubmitting(true);
+    const normalizedEmail = email.toLowerCase().trim();
 
     try {
-      // First, check email status BEFORE attempting login (used only to decide
-      // between: block+contact modal vs set password vs attempt login)
-      const status = await checkEmailStatus(email);
+      // STEP 1: Check if email has coach role (source of truth)
+      const hasCoachRole = await checkCoachRoleByEmail(normalizedEmail);
+      console.log('[CoachAuth] hasCoachRole for', normalizedEmail, ':', hasCoachRole);
 
-      if (status === 'not_approved') {
-        // Email not approved → open contact modal with email pre-filled
-        setContactEmail(email);
+      if (!hasCoachRole) {
+        // No coach role → show contact modal
+        console.log('[CoachAuth] No coach role → contact modal');
+        setContactEmail(normalizedEmail);
         setFlowState('contact_modal');
         setIsSubmitting(false);
         return;
       }
 
-      if (status === 'approved_no_account') {
-        // Email approved but no account → open set password screen
-        setFlowState('set_password');
+      // STEP 2: Coach role exists → try login
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (loginError) {
+        console.log('[CoachAuth] Login error:', loginError.message);
+
+        // If credentials invalid but role exists → needs to set password
+        if (loginError.message.includes('Invalid login credentials')) {
+          console.log('[CoachAuth] Coach role exists but login failed → redirect to set password');
+          navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+        } else {
+          toast({
+            title: 'Erro no login',
+            description: loginError.message,
+            variant: 'destructive',
+          });
+        }
         setIsSubmitting(false);
         return;
       }
 
-      // status === 'approved_with_account' → try normal login
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          toast({
-            title: 'Erro no login',
-            description: 'Email ou senha incorretos.',
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'Erro no login',
-            description: error.message,
-            variant: 'destructive',
-          });
-        }
-      } else {
-        // After signIn, we MUST refresh + refetch roles BEFORE deciding route.
-        await runPostAuthDecision(email);
-      }
+      // STEP 3: Login successful → verify roles and redirect
+      await runPostAuthDecision(normalizedEmail);
     } catch (err) {
       console.error('[CoachAuth] Login error:', err);
       toast({
@@ -239,74 +225,7 @@ export default function CoachAuth() {
     }
   };
 
-  // ===== HANDLE SET PASSWORD (Create account for approved coach) =====
-  const handleSetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-
-    // Validate
-    const result = setPasswordSchema.safeParse({ password, confirmPassword });
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
-        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Create account with the approved email
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login/coach`,
-        },
-      });
-
-      if (error) {
-        if (error.message.includes('already registered')) {
-          // Account already exists - try to login instead
-          const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) {
-            toast({
-              title: 'Email já cadastrado',
-              description: 'Use a senha que você já definiu anteriormente.',
-              variant: 'destructive',
-            });
-            setFlowState('login');
-          } else {
-            await runPostAuthDecision(email);
-          }
-        } else {
-          toast({
-            title: 'Erro ao criar conta',
-            description: error.message,
-            variant: 'destructive',
-          });
-        }
-      } else if (data.user) {
-        // Account created! Now decide based on user_roles after refresh.
-        await runPostAuthDecision(email);
-        toast({
-          title: 'Conta criada!',
-          description: 'Bem-vindo ao painel de Coach.',
-        });
-      }
-    } catch (err) {
-      console.error('[CoachAuth] Set password error:', err);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível criar a conta. Tente novamente.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // handleSetPassword removed - now handled by /coach/definir-senha
 
   // ===== HANDLE CONTACT SUBMIT (smart upsert - no duplicates) =====
   const handleContactSubmit = async (e: React.FormEvent) => {
@@ -454,121 +373,7 @@ export default function CoachAuth() {
     );
   }
 
-  // ===== RENDER: SET PASSWORD SCREEN =====
-  if (flowState === 'set_password') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,4%)] to-[hsl(0,0%,2%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.15), transparent 60%)' }}
-        />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-xs z-10"
-        >
-          {/* Success Icon */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-            <h1 className="font-display text-2xl text-foreground mb-2">
-              Acesso Aprovado!
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Seu acesso como coach foi aprovado. Defina sua senha para entrar.
-            </p>
-            <p className="text-primary text-sm mt-2 font-medium">
-              {email}
-            </p>
-          </div>
-
-          {/* Set Password Form */}
-          <div className="bg-card/40 backdrop-blur-sm border border-border/20 px-4 py-4 rounded-lg">
-            <form onSubmit={handleSetPassword} className="space-y-3">
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Senha
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full pl-8 pr-10 py-2.5 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
-                      errors.password ? 'border-destructive/50' : 'border-border/30'
-                    }`}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-destructive text-xs mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Confirmar Senha
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full pl-8 pr-10 py-2.5 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
-                      errors.confirmPassword ? 'border-destructive/50' : 'border-border/30'
-                    }`}
-                    placeholder="Repita a senha"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-2 py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                CRIAR CONTA
-              </button>
-            </form>
-
-            {/* Back to login */}
-            <button
-              onClick={resetToLogin}
-              className="w-full mt-3 text-center text-muted-foreground/60 hover:text-muted-foreground text-xs transition-colors flex items-center justify-center gap-1"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Voltar
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // set_password screen removed - now using /coach/definir-senha route
 
   // ===== RENDER: LOGIN SCREEN =====
   return (
