@@ -102,9 +102,9 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return;
     }
 
-    // Default: go to dashboard
+    // Default: go to main app
     setCurrentView('dashboard');
-    navigate('/');
+    navigate('/app');
   }, [user, authLoading, isAdmin, isCoach, context, navigate, setCurrentView]);
 
   const validateForm = () => {
@@ -201,7 +201,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
         }
       } else if (mode === 'forgot-password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?mode=reset`,
+          redirectTo: `${window.location.origin}/login?mode=reset`,
         });
 
         if (error) {
