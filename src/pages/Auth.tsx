@@ -558,7 +558,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   <button
                     type="button"
                     onClick={() => switchMode('forgot-password')}
-                    className="w-full text-center text-muted-foreground/50 hover:text-muted-foreground/70 text-xs transition-colors"
+                    className="w-full text-center text-muted-foreground/60 hover:text-muted-foreground text-xs transition-colors"
                   >
                     Esqueceu a senha?
                   </button>
@@ -583,12 +583,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
               >
                 Criar conta
               </button>
-              <div className="flex items-center justify-center gap-4 text-muted-foreground/50">
-                <Link to="/login/admin" className="text-xs hover:text-muted-foreground transition-colors">
+              <div className="flex items-center justify-center gap-4">
+                <Link to="/login/admin" className="text-sm text-primary hover:text-primary/80 transition-colors">
                   Admin
                 </Link>
                 <span className="text-muted-foreground/30">·</span>
-                <Link to="/coach" className="text-xs hover:text-muted-foreground transition-colors">
+                <Link to="/coach" className="text-sm text-primary hover:text-primary/80 transition-colors">
                   Coach
                 </Link>
               </div>
