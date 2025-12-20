@@ -56,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track previous user ID to detect user changes
   const previousUserIdRef = useRef<string | null>(null);
   const resetToDefaults = useOutlierStore((state) => state.resetToDefaults);
+  const resetUserPreferencesOnly = useOutlierStore((state) => state.resetUserPreferencesOnly);
+  const baseWorkouts = useOutlierStore((state) => state.baseWorkouts);
 
   // Computed properties - PRIORITY: superadmin > admin > coach > user
   const isSuperAdmin = role === "superadmin";
@@ -195,8 +197,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                            previousUserIdRef.current !== session.user.id;
           
           if (isNewUser) {
-            console.log('[DEBUG useAuth] New user detected, resetting store to defaults');
-            resetToDefaults();
+            console.log('[DEBUG useAuth] New user detected, resetting store');
+            // BLINDAGEM: Se há treinos do banco carregados, preservar
+            // Reset seletivo apenas de preferências do usuário
+            if (baseWorkouts.length > 0) {
+              console.log('[DEBUG useAuth] baseWorkouts exist, using selective reset');
+              resetUserPreferencesOnly();
+            } else {
+              console.log('[DEBUG useAuth] No baseWorkouts, full reset');
+              resetToDefaults();
+            }
           }
           
           previousUserIdRef.current = session.user.id;
@@ -218,8 +228,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }, 0);
         } else {
-          // User signed out - reset store
-          console.log('[DEBUG useAuth] User signed out, resetting store to defaults');
+          // User signed out - reset store completamente
+          // Logout SEMPRE faz reset completo (não há mais sessão)
+          console.log('[DEBUG useAuth] User signed out, full reset');
           resetToDefaults();
           previousUserIdRef.current = null;
           
@@ -247,8 +258,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Check if this is a different user than what was previously stored
           const storedUserId = previousUserIdRef.current;
           if (storedUserId !== null && storedUserId !== session.user.id) {
-            console.log('[DEBUG useAuth] initSession - Different user detected, resetting store');
-            resetToDefaults();
+            console.log('[DEBUG useAuth] initSession - Different user detected');
+            // BLINDAGEM: Mesmo na inicialização, preservar treinos se existirem
+            if (baseWorkouts.length > 0) {
+              console.log('[DEBUG useAuth] initSession - baseWorkouts exist, selective reset');
+              resetUserPreferencesOnly();
+            } else {
+              console.log('[DEBUG useAuth] initSession - No baseWorkouts, full reset');
+              resetToDefaults();
+            }
           }
           
           previousUserIdRef.current = session.user.id;
@@ -278,7 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap, resetToDefaults]);
+  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap, resetToDefaults, resetUserPreferencesOnly, baseWorkouts]);
 
   // Check session expiration periodically
   useEffect(() => {

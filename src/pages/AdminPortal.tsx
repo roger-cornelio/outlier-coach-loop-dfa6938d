@@ -6,6 +6,7 @@ import { UserManagement } from "@/components/UserManagement";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
+import { CoachWorkoutManager } from "@/components/CoachWorkoutManager";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -20,11 +21,12 @@ import {
   ChevronRight,
   UserCog,
   Activity,
-  ArrowLeft
+  ArrowLeft,
+  Dumbbell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts";
 
 interface NavItem {
   id: AdminView;
@@ -45,6 +47,12 @@ const navItems: NavItem[] = [
     label: "Solicitações", 
     icon: <UserPlus className="w-5 h-5" />,
     description: "Aprovar coaches"
+  },
+  { 
+    id: "workouts", 
+    label: "Treinos", 
+    icon: <Dumbbell className="w-5 h-5" />,
+    description: "Gerenciar treinos salvos"
   },
   { 
     id: "coachPerformance", 
@@ -150,6 +158,8 @@ const AdminPortal = () => {
         return <CoachPerformance />;
       case "coachApplications":
         return <CoachApplicationsAdmin />;
+      case "workouts":
+        return <CoachWorkoutManager />;
       case "allowlist":
       default:
         return <AdminAllowlistManager />;
