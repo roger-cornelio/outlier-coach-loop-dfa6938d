@@ -44,10 +44,14 @@ export function AppGate({ children }: AppGateProps) {
 
   // ===== RULE 2: ANON user handling =====
   if (state === 'anon') {
-    // PUBLIC ROUTES: Allow anon users on all login entry points
-    const isLoginRoute = pathname === '/login' || pathname === '/login/admin' || pathname === '/login/coach';
+    // PUBLIC ROUTES: Allow anon users on all login entry points + coach set password
+    const isPublicRoute = 
+      pathname === '/login' || 
+      pathname === '/login/admin' || 
+      pathname === '/login/coach' ||
+      pathname === '/coach/definir-senha';
     
-    if (isLoginRoute) {
+    if (isPublicRoute) {
       return <>{children}</>;
     }
     

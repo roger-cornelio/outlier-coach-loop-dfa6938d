@@ -237,26 +237,43 @@ export function useCoachApplicationsAdmin() {
     fetchApplications();
   }, [fetchApplications]);
 
-  // Approve application
+  // Approve application - creates user without password + grants coach role
   const approveApplication = async (applicationId: string): Promise<boolean> => {
     if (!user?.id) return false;
 
     try {
-      const { data, error: rpcError } = await supabase
-        .rpc('approve_coach_application', {
-          _application_id: applicationId,
-          _admin_id: user.id,
-        });
-
-      if (rpcError) {
-        console.error('Error approving application:', rpcError);
-        setError('Erro ao aprovar solicitação');
+      // Get application details
+      const app = applications.find((a) => a.id === applicationId);
+      if (!app) {
+        setError('Solicitação não encontrada');
         return false;
       }
+
+      // Call edge function to create user + grant role
+      console.log('[approveApplication] Calling create-coach-user for:', app.email);
+      const { data: createData, error: createError } = await supabase.functions.invoke(
+        'create-coach-user',
+        {
+          body: {
+            email: app.email,
+            full_name: app.full_name,
+            application_id: applicationId,
+          },
+        }
+      );
+
+      if (createError || !createData?.success) {
+        console.error('Error creating coach user:', createError || createData?.error);
+        setError('Erro ao criar usuário coach');
+        return false;
+      }
+
+      console.log('[approveApplication] Coach user created successfully:', createData.user_id);
 
       // Track event
       trackEvent('coach_application_approved', {
         application_id: applicationId,
+        user_id: createData.user_id,
       });
 
       // Refresh list
