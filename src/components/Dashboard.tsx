@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw } from 'lucide-react';
-import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
+import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { formatBlockTimeSec, getBlockDurationSec, calculateCalories } from '@/utils/workoutCalculations';
 import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +82,7 @@ export function Dashboard() {
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
-  const [adaptations, setAdaptations] = useState<AdaptationConfig | null>(null);
+  const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
   const [workoutFeedback, setWorkoutFeedback] = useState<string | null>(null);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
@@ -190,11 +190,20 @@ export function Dashboard() {
     }
   };
 
-  const handleSaveAdaptations = async (config: AdaptationConfig) => {
-    setAdaptations(config);
-    // A adaptação agora é feita pelo motor determinístico, não por IA
-    if (config.unavailableEquipment.length > 0) {
-      toast.info('Equipamentos marcados como indisponíveis. Reconfigure seu treino para aplicar substituições.');
+  const handleSaveEquipmentAdaptations = (unavailableEquipment: string[]) => {
+    // Salvar no athleteConfig via store
+    if (athleteConfig) {
+      const { setAthleteConfig } = useOutlierStore.getState();
+      setAthleteConfig({
+        ...athleteConfig,
+        unavailableEquipment,
+      });
+    }
+    
+    if (unavailableEquipment.length > 0) {
+      toast.success('Treino adaptado pro seu box.', { duration: 3000 });
+    } else {
+      toast.success('Adaptações removidas.', { duration: 3000 });
     }
   };
 
@@ -207,7 +216,7 @@ export function Dashboard() {
     return `${minutes}min`;
   };
 
-  const hasAdaptations = adaptations && (adaptations.unavailableEquipment.length > 0 || adaptations.otherNotes);
+  const hasAdaptations = savedUnavailableEquipment.length > 0;
 
   // ============================================
   // REGRA INVIOLÁVEL:
@@ -303,22 +312,6 @@ export function Dashboard() {
                 <Trophy className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setIsAdaptModalOpen(true)}
-                className={`
-                  p-3 rounded-lg transition-colors relative
-                  ${hasAdaptations 
-                    ? 'bg-primary/20 text-primary hover:bg-primary/30' 
-                    : 'bg-secondary hover:bg-secondary/80'
-                  }
-                `}
-                title="Adaptar Treino"
-              >
-                <Wrench className="w-5 h-5" />
-                {hasAdaptations && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                )}
-              </button>
-              <button
                 onClick={() => setCurrentView('config')}
                 className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
               >
@@ -410,7 +403,7 @@ export function Dashboard() {
       )}
 
       {/* Equipment Adaptation Banner */}
-      {hasAdaptations && adaptations?.unavailableEquipment && adaptations.unavailableEquipment.length > 0 && (
+      {hasAdaptations && (
         <div className="border-b bg-blue-500/5 border-blue-500/10">
           <div className="max-w-6xl mx-auto px-6 py-3">
             <div className="flex items-center gap-3">
@@ -619,6 +612,31 @@ export function Dashboard() {
                 INICIAR TREINO
                 <ChevronRight className="w-6 h-6" />
               </motion.button>
+
+              {/* Equipment Substitution Button */}
+              <div className="mt-6">
+                <button
+                  onClick={() => setIsAdaptModalOpen(true)}
+                  className={`
+                    w-full py-3 px-4 rounded-lg border transition-all flex items-center justify-center gap-2
+                    ${hasAdaptations
+                      ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
+                      : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    }
+                  `}
+                >
+                  <Wrench className="w-4 h-4" />
+                  <span className="font-display text-sm tracking-wide">
+                    {hasAdaptations 
+                      ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
+                      : 'SUBSTITUIR EQUIPAMENTO'
+                    }
+                  </span>
+                </button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
+                </p>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -671,11 +689,12 @@ export function Dashboard() {
         </AnimatePresence>
       </main>
 
-      {/* Adapt Workout Modal */}
-      <AdaptWorkoutModal
+      {/* Equipment Adapt Modal */}
+      <EquipmentAdaptModal
         isOpen={isAdaptModalOpen}
         onClose={() => setIsAdaptModalOpen(false)}
-        onSave={handleSaveAdaptations}
+        onApply={handleSaveEquipmentAdaptations}
+        initialSelection={savedUnavailableEquipment}
       />
     </div>
   );
