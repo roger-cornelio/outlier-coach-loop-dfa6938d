@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import type { DayWorkout } from '@/types/outlier';
 
 export type WorkoutStatus = 'draft' | 'published' | 'archived';

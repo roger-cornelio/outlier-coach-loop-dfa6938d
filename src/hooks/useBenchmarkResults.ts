@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface BenchmarkResult {
   id: string;
