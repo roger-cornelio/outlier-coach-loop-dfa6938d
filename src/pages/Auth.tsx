@@ -374,28 +374,21 @@ export default function Auth({ context = 'user' }: AuthProps) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm z-10"
       >
-          {/* Branding Section - Above the card - MORE PROMINENT */}
-          <div className="text-center mb-12">
-            {/* Logo */}
-            <motion.div
-              className="mb-8"
-              initial={{ scale: 0.8, opacity: 0 }}
+          {/* Branding Section - Above the card */}
+          <div className="text-center mb-10">
+            {/* Title - Orange gradient logo */}
+            <motion.h1 
+              className="brand-logo-lg mb-6"
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-foreground">
-                {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
-              </h1>
-              {context !== 'user' && (
-                <span className="text-xs uppercase tracking-[0.3em] text-primary mt-1 block">
-                  {context === 'coach' ? 'Portal' : 'Painel'}
-                </span>
-              )}
-            </motion.div>
+              {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
+            </motion.h1>
             
-            {/* Tagline - More prominent */}
+            {/* Subheadline */}
             <motion.p 
-              className="text-xl md:text-2xl font-display text-foreground tracking-wide mb-3"
+              className="text-lg md:text-xl font-display text-foreground/80 tracking-wide mb-1.5"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -403,37 +396,37 @@ export default function Auth({ context = 'user' }: AuthProps) {
               {context === 'user'
                 ? 'Consistência vira resultado.'
                 : context === 'coach'
-                  ? 'Gerencie seus atletas.'
-                  : 'Performance escalada.'
+                  ? 'Acesso exclusivo para coaches OUTLIER'
+                  : 'Onde a performance é criada, validada e escalada.'
               }
             </motion.p>
             
             {/* Support line */}
             <motion.p 
-              className="text-sm text-muted-foreground max-w-xs mx-auto"
+              className="text-xs md:text-sm text-muted-foreground/70 max-w-xs mx-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
               {context === 'user'
-                ? 'Entre para treinar com direção e acompanhar sua evolução.'
+                ? 'Entre para treinar com direção — e acompanhar sua evolução.'
                 : context === 'coach'
-                  ? 'Faça login para acessar o portal.'
-                  : 'Acesso restrito para administradores.'
+                  ? 'Faça login para ver seu status de aprovação.'
+                  : 'Acesso restrito para administradores da OUTLIER.'
               }
             </motion.p>
           </div>
 
-        {/* Login Card - Smaller and more compact */}
+        {/* Login Card - Smaller */}
         <motion.div 
           className="bg-card border border-border/50 px-5 py-5 rounded-xl shadow-2xl"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          {/* Card Header - Mode indicator (minimal for user context) */}
+          {/* Card Header - Mode + Context indicator */}
           <div className="text-center mb-4">
-            {/* Context Badge - only for non-user */}
+            {/* Context Badge */}
             {context !== 'user' && (
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-2">
                 {context === 'admin' && <Shield className="w-3 h-3" />}
@@ -442,7 +435,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
               </div>
             )}
             <p className="text-muted-foreground text-xs">
-              {mode === 'login' && 'Acesse sua conta'}
+              {mode === 'login' && (
+                context === 'user'
+                  ? 'Acesse sua conta'
+                  : context === 'coach'
+                    ? 'Acesse sua conta de Coach'
+                    : 'Acesse sua conta de Admin'
+              )}
               {mode === 'signup' && 'Crie sua conta'}
               {mode === 'forgot-password' && 'Recuperar senha'}
             </p>
