@@ -3,8 +3,8 @@
  * 
  * ROTAS OFICIAIS (entry points):
  * - /login: Login usuário/atleta
+ * - /login/coach: Login coach (tela dedicada)
  * - /login/admin: Login admin
- * - /coach/dashboard: Painel do coach (rota oficial)
  * 
  * DESTINOS (pós-login, protegidos):
  * - /app: App principal (requer auth, BLOQUEADO para coach)
@@ -13,7 +13,6 @@
  * 
  * REDIRECTS (aliases):
  * - /, /auth, /longin → /login
- * - /login/coach → /coach/dashboard
  * - /coach → /coach/dashboard
  */
 
@@ -46,10 +45,9 @@ export function AppGate({ children }: AppGateProps) {
   // ===== RULE 2: ANON user handling =====
   if (state === 'anon') {
     // PUBLIC ROUTES: Allow anon users on all login entry points
-    const isLoginRoute = pathname === '/login' || pathname === '/login/admin';
-    const isCoachRoute = pathname === '/coach';
+    const isLoginRoute = pathname === '/login' || pathname === '/login/admin' || pathname === '/login/coach';
     
-    if (isLoginRoute || isCoachRoute) {
+    if (isLoginRoute) {
       return <>{children}</>;
     }
     
@@ -57,6 +55,12 @@ export function AppGate({ children }: AppGateProps) {
     if (pathname.startsWith('/painel-admin')) {
       console.log('[AppGate] REDIRECT → /login/admin | Reason: anon user on admin route');
       return <Navigate to="/login/admin" replace />;
+    }
+    
+    // PROTECTED ROUTE: /coach/* → redirect to /login/coach
+    if (pathname.startsWith('/coach')) {
+      console.log('[AppGate] REDIRECT → /login/coach | Reason: anon user on coach route');
+      return <Navigate to="/login/coach" replace />;
     }
     
     // OTHER PROTECTED ROUTES: Redirect to /login
@@ -70,6 +74,18 @@ export function AppGate({ children }: AppGateProps) {
   }
 
   // ===== RULE 4: Authenticated user routing based on context =====
+
+  // /login/coach - Coach login page
+  // If already coach → go to /coach/dashboard
+  // If not coach → show access denied (Auth component handles this)
+  if (pathname === '/login/coach') {
+    if (state === 'coach') {
+      console.log('[AppGate] REDIRECT /login/coach → /coach/dashboard | Reason: already coach');
+      return <Navigate to="/coach/dashboard" replace />;
+    }
+    // Let Auth component handle non-coach case (shows access denied)
+    return <>{children}</>;
+  }
 
   // /login/admin - Admin login page
   // If already admin → go to /painel-admin
@@ -130,7 +146,44 @@ export function AppGate({ children }: AppGateProps) {
     return <>{children}</>;
   }
 
-  // /coach routes - let CoachDashboard handle its own state-based rendering
+  // /coach routes - requires coach role
+  if (pathname.startsWith('/coach')) {
+    if (state !== 'coach') {
+      console.log('[AppGate] BLOCKED /coach/* | Reason: not coach, state:', state);
+      // Redirect to /login/coach with message
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-4">
+          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center max-w-md">
+            <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+              <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h1 className="font-display text-2xl text-foreground mb-4">Área de Coach</h1>
+            <p className="text-muted-foreground mb-6">
+              Esta área é restrita para coaches. Faça login com uma conta de coach ou volte para a área de atleta.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/login/coach"
+                className="inline-block w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-center"
+              >
+                Entrar como Coach
+              </Link>
+              <Link
+                to="/app"
+                className="text-muted-foreground hover:text-primary text-sm transition-colors"
+              >
+                Voltar para área de atleta
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // Coach user - allow access
+    return <>{children}</>;
+  }
 
   // ===== RULE 5: COACH cannot access athlete routes (/app) =====
   // If coach tries to access /app, redirect to /coach/dashboard

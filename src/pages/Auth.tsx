@@ -83,9 +83,14 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return;
     }
 
-    // CONTEXT: COACH - redirect to coach portal, let it handle states
+    // CONTEXT: COACH - validate coach role before allowing access
     if (context === 'coach') {
-      navigate('/coach');
+      if (isCoach) {
+        navigate('/coach/dashboard');
+      } else {
+        // Block access - user is logged in but NOT a coach
+        setAccessDenied('coach_not_approved');
+      }
       return;
     }
 
@@ -98,7 +103,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
     
     // If coach accessing /login, redirect to coach portal
     if (isCoach) {
-      navigate('/coach');
+      navigate('/coach/dashboard');
       return;
     }
 
@@ -314,6 +319,64 @@ export default function Auth({ context = 'user' }: AuthProps) {
       default: return null;
     }
   };
+
+  // ACCESS DENIED SCREEN - Coach context (user is not coach)
+  if (accessDenied === 'coach_not_approved') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: 'var(--gradient-glow)' }}
+        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md z-10"
+        >
+          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+            <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+              <UserCog className="w-8 h-8 text-amber-500" />
+            </div>
+            <h1 className="font-display text-2xl text-foreground mb-4">
+              Acesso de Coach não encontrado
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Sua conta não possui permissão de Coach. Entre como Atleta ou solicite acesso de Coach.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/login"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-center"
+              >
+                Entrar como Atleta
+              </Link>
+              <button
+                onClick={async () => {
+                  // TODO: Abrir fluxo de solicitação de coach
+                  toast({
+                    title: 'Solicitar acesso de Coach',
+                    description: 'Entre em contato com o administrador para solicitar acesso de Coach.',
+                  });
+                }}
+                className="w-full py-3 bg-secondary text-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
+              >
+                Solicitar acesso de Coach
+              </button>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setAccessDenied(null);
+                }}
+                className="text-muted-foreground hover:text-foreground text-sm transition-colors mt-2"
+              >
+                Sair e usar outra conta
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // ACCESS DENIED SCREEN (for admin context when user is not admin)
   if (accessDenied) {
@@ -588,7 +651,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   Admin
                 </Link>
                 <span className="text-muted-foreground/30">·</span>
-                <Link to="/coach" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                <Link to="/login/coach" className="text-sm text-primary hover:text-primary/80 transition-colors">
                   Coach
                 </Link>
               </div>
