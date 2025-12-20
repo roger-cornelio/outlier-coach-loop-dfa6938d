@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthSafe } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 export function SessionRefreshBanner() {
-  const { sessionExpired, refreshSession, user } = useAuth();
+  // Use safe version that returns null if AuthProvider not ready
+  const auth = useAuthSafe();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  // If auth context not available, render nothing
+  if (!auth) {
+    return null;
+  }
+  
+  const { sessionExpired, refreshSession, user } = auth;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
