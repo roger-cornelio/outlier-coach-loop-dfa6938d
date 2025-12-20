@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -11,6 +12,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_SUPERADMIN_EMAILS } from "@/config/superadminEmails";
 import { fetchProfileWithRetry } from "@/utils/fetchProfileWithRetry";
+import { useOutlierStore } from "@/store/outlierStore";
 
 export type UserRole = "superadmin" | "admin" | "coach" | "user";
 
@@ -50,6 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>("user");
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
+  
+  // Track previous user ID to detect user changes
+  const previousUserIdRef = useRef<string | null>(null);
+  const resetToDefaults = useOutlierStore((state) => state.resetToDefaults);
 
   // Computed properties - PRIORITY: superadmin > admin > coach > user
   const isSuperAdmin = role === "superadmin";
@@ -184,6 +190,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If initial check already ran, handle subsequent auth changes
       if (initialCheckDone) {
         if (session?.user) {
+          // Check if this is a different user than before
+          const isNewUser = previousUserIdRef.current !== null && 
+                           previousUserIdRef.current !== session.user.id;
+          
+          if (isNewUser) {
+            console.log('[DEBUG useAuth] New user detected, resetting store to defaults');
+            resetToDefaults();
+          }
+          
+          previousUserIdRef.current = session.user.id;
+          
           // Keep loading true while we fetch roles/profile
           setLoading(true);
           const email = session.user.email || "";
@@ -201,7 +218,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }, 0);
         } else {
-          // User signed out
+          // User signed out - reset store
+          console.log('[DEBUG useAuth] User signed out, resetting store to defaults');
+          resetToDefaults();
+          previousUserIdRef.current = null;
+          
           setRole("user");
           setProfile(null);
           console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false (signed out)');
@@ -223,6 +244,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
+          // Check if this is a different user than what was previously stored
+          const storedUserId = previousUserIdRef.current;
+          if (storedUserId !== null && storedUserId !== session.user.id) {
+            console.log('[DEBUG useAuth] initSession - Different user detected, resetting store');
+            resetToDefaults();
+          }
+          
+          previousUserIdRef.current = session.user.id;
+          
           // loading is already true from initial state
           const email = session.user.email || "";
           console.log('[DEBUG useAuth] initSession - syncing roles for:', email);
@@ -232,6 +262,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchProfile(session.user.id),
           ]);
           console.log('[DEBUG useAuth] initSession - roles/profile DONE');
+        } else {
+          previousUserIdRef.current = null;
         }
       } catch (err) {
         console.error("Error initializing session:", err);
@@ -246,7 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap]);
+  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap, resetToDefaults]);
 
   // Check session expiration periodically
   useEffect(() => {
