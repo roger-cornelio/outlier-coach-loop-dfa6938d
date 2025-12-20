@@ -4,15 +4,17 @@
  * ROTAS OFICIAIS (entry points):
  * - /login: Login usuário/atleta
  * - /login/admin: Login admin
- * - /coach: Portal coach
+ * - /coach/dashboard: Painel do coach (rota oficial)
  * 
  * DESTINOS (pós-login, protegidos):
- * - /app: App principal (requer auth)
+ * - /app: App principal (requer auth, BLOQUEADO para coach)
  * - /painel-admin: Dashboard admin (requer role admin)
+ * - /coach/dashboard: Dashboard coach (requer role coach)
  * 
  * REDIRECTS (aliases):
  * - /, /auth, /longin → /login
- * - /login/coach → /coach
+ * - /login/coach → /coach/dashboard
+ * - /coach → /coach/dashboard
  */
 
 import { ReactNode } from 'react';
@@ -89,8 +91,8 @@ export function AppGate({ children }: AppGateProps) {
       return <Navigate to="/painel-admin" replace />;
     }
     if (state === 'coach') {
-      console.log('[AppGate] REDIRECT /login → /coach | Reason: coach user');
-      return <Navigate to="/coach" replace />;
+      console.log('[AppGate] REDIRECT /login → /coach/dashboard | Reason: coach user');
+      return <Navigate to="/coach/dashboard" replace />;
     }
     // Athlete - go to main app
     console.log('[AppGate] REDIRECT /login → /app | Reason: authenticated athlete');
@@ -128,14 +130,13 @@ export function AppGate({ children }: AppGateProps) {
     return <>{children}</>;
   }
 
-  // /coach - let CoachPortal handle its own state-based rendering
-  // NO automatic redirect for authenticated users - coach portal manages this
+  // /coach routes - let CoachDashboard handle its own state-based rendering
 
   // ===== RULE 5: COACH cannot access athlete routes (/app) =====
-  // If coach tries to access /app, redirect to /coach
+  // If coach tries to access /app, redirect to /coach/dashboard
   if (pathname === '/app' && state === 'coach') {
-    console.log('[AppGate] REDIRECT /app → /coach | Reason: coach cannot access athlete app');
-    return <Navigate to="/coach" replace />;
+    console.log('[AppGate] REDIRECT /app → /coach/dashboard | Reason: coach cannot access athlete app');
+    return <Navigate to="/coach/dashboard" replace />;
   }
 
   // /app - main application (requires authentication, already verified above)

@@ -44,11 +44,11 @@ const App = () => (
             {/* ADMIN login - shows admin login screen, then goes to /painel-admin */}
             <Route path="/login/admin" element={<Auth context="admin" />} />
 
-            {/* COACH portal - has its own login + status screens */}
-            <Route path="/coach" element={<CoachPortal />} />
-            
-            {/* COACH dashboard - painel exclusivo do coach */}
+            {/* COACH dashboard - rota oficial do painel do coach */}
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
+            
+            {/* /coach redireciona para /coach/dashboard automaticamente */}
+            <Route path="/coach" element={<Navigate to="/coach/dashboard" replace />} />
 
             {/* === PROTECTED DASHBOARDS === */}
             {/* Admin dashboard (requires admin role) */}
