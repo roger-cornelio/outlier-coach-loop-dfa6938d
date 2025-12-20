@@ -5,7 +5,6 @@ import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
 import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
-import { AdaptWorkoutModal, type AdaptationConfig } from './AdaptWorkoutModal';
 
 // Níveis de treino - sem métricas visíveis
 const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
@@ -54,9 +53,6 @@ export function AthleteConfig() {
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
-  const [unavailableEquipment, setUnavailableEquipment] = useState<string[]>(athleteConfig?.unavailableEquipment || []);
-  const [otherNotes, setOtherNotes] = useState(athleteConfig?.equipmentNotes || '');
-  const [showAdaptModal, setShowAdaptModal] = useState(false);
 
   const handleSubmit = () => {
     if (!coachStyle) {
@@ -67,8 +63,8 @@ export function AthleteConfig() {
     const newConfig = {
       trainingLevel,
       sessionDuration: duration,
-      unavailableEquipment,
-      equipmentNotes: otherNotes,
+      unavailableEquipment: athleteConfig?.unavailableEquipment || [],
+      equipmentNotes: athleteConfig?.equipmentNotes || '',
       coachStyle,
       altura: altura ? parseInt(altura) : undefined,
       peso: peso ? parseFloat(peso) : undefined,
@@ -88,11 +84,6 @@ export function AthleteConfig() {
     }
 
     setCurrentView('dashboard');
-  };
-
-  const handleSaveAdaptation = (config: AdaptationConfig) => {
-    setUnavailableEquipment(config.unavailableEquipment);
-    setOtherNotes(config.otherNotes);
   };
 
   return (
@@ -278,28 +269,14 @@ export function AthleteConfig() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="flex flex-col sm:flex-row gap-4"
       >
         <button
           onClick={handleSubmit}
-          className="flex-1 font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+          className="w-full font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
           {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'IR PARA DASHBOARD'}
         </button>
-        <button
-          onClick={() => setShowAdaptModal(true)}
-          className="px-8 py-4 rounded-lg border border-border hover:bg-secondary transition-colors font-body"
-        >
-          Adaptar Treino
-        </button>
       </motion.div>
-
-      {/* Modal de Adaptação */}
-      <AdaptWorkoutModal
-        isOpen={showAdaptModal}
-        onClose={() => setShowAdaptModal(false)}
-        onSave={handleSaveAdaptation}
-      />
     </div>
   );
 }
