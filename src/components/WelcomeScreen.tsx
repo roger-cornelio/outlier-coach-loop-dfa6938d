@@ -84,15 +84,22 @@ export function WelcomeScreen() {
         transition={{ duration: 0.8 }}
         className="text-center z-10 max-w-2xl"
       >
-        {/* Logo */}
-        <motion.h1 
-          className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo mb-3"
+        {/* Logo - LOCKED: Do not modify typography, hierarchy, or proportions */}
+        <motion.div
+          className="mb-3"
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          BE THE OUTLIER
-        </motion.h1>
+          {/* Prefix - smaller, regular weight, white */}
+          <p className="font-display text-2xl md:text-4xl tracking-widest font-normal text-white mb-1">
+            BE THE
+          </p>
+          {/* Main logo - LOCKED: orange, bold, large - DO NOT MODIFY */}
+          <h1 className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo">
+            OUTLIER
+          </h1>
+        </motion.div>
         
         <motion.p 
           className="text-xl md:text-2xl font-display text-muted-foreground tracking-wide mb-6"
