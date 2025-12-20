@@ -17,6 +17,16 @@ const coachIcons: Record<CoachStyle, React.ReactNode> = {
   SPARK: <Zap className="w-6 h-6" />,
 };
 
+// Emoji que aparece ao lado do nome do atleta, varia por coach
+const coachEmoji = (style: CoachStyle | null): string => {
+  if (!style) return '🔥';
+  const key = style.toUpperCase();
+  if (key === 'IRON') return '👊';
+  if (key === 'PULSE') return '🤝';
+  if (key === 'SPARK') return '⚡';
+  return '🔥';
+};
+
 export function AthleteWelcomeScreen() {
   const { coachStyle, setCurrentView } = useOutlierStore();
   const { user, profile, loading: authLoading } = useAuth();
@@ -85,7 +95,7 @@ export function AthleteWelcomeScreen() {
           transition={{ delay: 0.3 }}
         >
           <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/20 border border-primary/40 text-primary font-display text-2xl md:text-3xl tracking-wide shadow-lg shadow-primary/20">
-            {athleteName} 👊
+            {athleteName} {coachEmoji(coachStyle)}
           </span>
         </motion.div>
 
