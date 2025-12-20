@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
-import { LogOut, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { UserIdentity } from '@/components/UserIdentity';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { LogOut, User, Settings, UserCircle, ChevronDown } from 'lucide-react';
+import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface UserHeaderProps {
   showLogout?: boolean;
@@ -13,6 +22,7 @@ interface UserHeaderProps {
 export function UserHeader({ showLogout = true, className = '' }: UserHeaderProps) {
   const { user, profile, role, signOut } = useAuth();
   const { setCurrentView } = useOutlierStore();
+  const { status: athleteStatus } = useAthleteStatus();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -24,41 +34,115 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
     user: 'Atleta',
   };
 
+  // Get human-readable level name
+  const getLevelName = (status: AthleteStatus): string => {
+    return LEVEL_NAMES[status] || 'Iniciante';
+  };
+
   const handleLogout = async () => {
     await signOut();
     setCurrentView('welcome');
     navigate('/');
   };
 
+  const handleProfile = () => {
+    // Navigate to profile/config view
+    setCurrentView('config');
+  };
+
+  const handleSettings = () => {
+    // Navigate to config view
+    setCurrentView('config');
+  };
+
+  const displayName = profile?.name || profile?.email?.split('@')[0] || 'Usuário';
+  const roleLabel = roleLabels[role] || 'Atleta';
+  const levelLabel = getLevelName(athleteStatus);
+
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <User className="w-4 h-4 text-primary" />
-        </div>
-        <div className="flex flex-col">
-          <UserIdentity 
-            user={{ name: profile?.name, email: profile?.email || user.email || '' }}
-            size="sm"
-            primaryOnly={true}
-            className="max-w-[150px]"
-          />
-          <Badge variant="outline" className="text-xs w-fit px-1.5 py-0 mt-0.5">
-            {roleLabels[role] || role}
-          </Badge>
-        </div>
-      </div>
-      
-      {showLogout && (
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm"
-          title="Sair"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card/50 border border-border/30 hover:bg-card/80 hover:border-border/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20">
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-primary" />
+            </div>
+            
+            {/* Identity Block */}
+            <div className="flex flex-col items-start text-left min-w-0">
+              <span className="font-semibold text-foreground text-sm truncate max-w-[140px]">
+                {displayName}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {roleLabel} • Nível {levelLabel}
+              </span>
+            </div>
+
+            {/* Dropdown indicator */}
+            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent 
+          align="end" 
+          className="w-56 bg-card border border-border shadow-xl z-50"
+          sideOffset={8}
         >
-          <LogOut className="w-4 h-4" />
-          <span className="hidden sm:inline">Sair</span>
-        </button>
-      )}
+          {/* Header with user info */}
+          <DropdownMenuLabel className="py-3">
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold text-foreground truncate">
+                {displayName}
+              </span>
+              <span className="text-xs text-muted-foreground font-normal">
+                {profile?.email || user.email}
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  {roleLabel}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                  {levelLabel}
+                </span>
+              </div>
+            </div>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          {/* Menu Options */}
+          <DropdownMenuItem 
+            onClick={handleProfile}
+            className="cursor-pointer py-2.5"
+          >
+            <UserCircle className="w-4 h-4 mr-2" />
+            <span>Perfil</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem 
+            onClick={handleSettings}
+            className="cursor-pointer py-2.5"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            <span>Configurações</span>
+          </DropdownMenuItem>
+
+          {showLogout && (
+            <>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                className="cursor-pointer py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
