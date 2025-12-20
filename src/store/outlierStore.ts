@@ -65,6 +65,7 @@ interface OutlierState {
   setSelectedWorkout: (workout: DayWorkout | null) => void;
   triggerExternalResultsRefresh: () => void;
   resetConfig: () => void;
+  resetToDefaults: () => void; // Reset completo para novo usuário
   
   // Admin: Visualizar como atleta
   setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
@@ -145,6 +146,23 @@ export const useOutlierStore = create<OutlierState>()(
       setSelectedWorkout: (workout) => set({ selectedWorkout: workout }),
       triggerExternalResultsRefresh: () => set((state) => ({ externalResultsRefreshKey: state.externalResultsRefreshKey + 1 })),
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
+      
+      // Reset completo para novo usuário - zera TUDO para defaults
+      resetToDefaults: () => set({
+        coachStyle: null,
+        athleteConfig: null,
+        workoutResults: [],
+        baseWorkouts: [],
+        adaptedWorkouts: [],
+        adaptationPending: false,
+        lastAdaptationTimestamp: null,
+        weeklyWorkouts: [],
+        currentView: 'welcome',
+        selectedDay: null,
+        selectedWorkout: null,
+        externalResultsRefreshKey: 0,
+        viewingAsAthlete: null,
+      }),
       
       // Admin: Visualizar como atleta
       setViewingAsAthlete: (athlete) => set({ viewingAsAthlete: athlete }),
