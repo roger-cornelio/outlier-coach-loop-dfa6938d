@@ -200,11 +200,15 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
             >
               <div className="w-full max-w-lg px-10 py-8 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-lg shadow-primary/10">
                 <div className="flex flex-col items-center gap-4">
-                  {/* Coach icon with pulse animation */}
+                  {/* Coach icon with pulse animation (3 cycles) */}
                   <motion.div
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.2, 1, 1.15, 1] }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
+                    animate={{ scale: [1, 1.15, 1] }}
+                    transition={{ 
+                      duration: 0.8, 
+                      ease: 'easeInOut',
+                      repeat: 2,
+                      repeatDelay: 0.2
+                    }}
                     className="p-4 rounded-full bg-primary/20 ring-2 ring-primary/30"
                   >
                     <MessageIcon className="w-8 h-8 text-primary" />
