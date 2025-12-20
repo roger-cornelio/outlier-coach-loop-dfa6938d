@@ -131,8 +131,15 @@ export function AppGate({ children }: AppGateProps) {
   // /coach - let CoachPortal handle its own state-based rendering
   // NO automatic redirect for authenticated users - coach portal manages this
 
+  // ===== RULE 5: COACH cannot access athlete routes (/app) =====
+  // If coach tries to access /app, redirect to /coach
+  if (pathname === '/app' && state === 'coach') {
+    console.log('[AppGate] REDIRECT /app → /coach | Reason: coach cannot access athlete app');
+    return <Navigate to="/coach" replace />;
+  }
+
   // /app - main application (requires authentication, already verified above)
   
-  // ===== RULE 5: Render children for all other cases =====
+  // ===== RULE 6: Render children for all other cases =====
   return <>{children}</>;
 }

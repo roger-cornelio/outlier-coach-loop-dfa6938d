@@ -404,7 +404,8 @@ export default function CoachPortal() {
     );
   }
 
-  // STATE: coach - show coach hub (NO redirect to "/")
+  // STATE: coach - show coach hub with ONLY coach panel access and logout
+  // CRITICAL: Coach should NEVER access athlete routes
   if (state === 'coach') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -419,7 +420,7 @@ export default function CoachPortal() {
             </div>
             <h1 className="font-display text-2xl text-foreground mb-3">Central do Coach</h1>
             <p className="text-muted-foreground mb-6">
-              Seu acesso de coach está ativo. Escolha para onde ir.
+              Seu acesso de coach está ativo.
             </p>
             <div className="grid gap-3">
               <button
@@ -429,22 +430,13 @@ export default function CoachPortal() {
                 }}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
-                Ver Performance
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentView('dashboard');
-                  navigate('/app');
-                }}
-                className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
-              >
-                Ir para o App
+                Acessar Central do Coach
               </button>
               <button
                 onClick={async () => {
                   await supabase.auth.signOut();
                 }}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
                 Sair
               </button>
