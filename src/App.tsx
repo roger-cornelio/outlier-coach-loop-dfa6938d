@@ -7,7 +7,7 @@ import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import CoachPortal from "./pages/CoachPortal";
+import CoachAuth from "./pages/CoachAuth";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
@@ -37,15 +37,15 @@ const App = () => (
             {/* Main app route (protected) */}
             <Route path="/app" element={<Index />} />
 
-            {/* === LOGIN ROUTES (3 entry points) === */}
+            {/* === LOGIN ROUTES === */}
             {/* USER login */}
             <Route path="/login" element={<Auth context="user" />} />
 
             {/* ADMIN login - shows admin login screen, then goes to /painel-admin */}
             <Route path="/login/admin" element={<Auth context="admin" />} />
 
-            {/* COACH login - tela de login dedicada para coach */}
-            <Route path="/login/coach" element={<Auth context="coach" />} />
+            {/* COACH login - fluxo único e linear */}
+            <Route path="/login/coach" element={<CoachAuth />} />
 
             {/* COACH dashboard - rota oficial do painel do coach */}
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
