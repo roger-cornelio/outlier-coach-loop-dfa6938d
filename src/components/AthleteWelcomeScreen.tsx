@@ -39,7 +39,7 @@ export function AthleteWelcomeScreen() {
 
     const timer = setTimeout(() => {
       setCurrentView('config');
-    }, 18000);
+    }, 16000);
 
     return () => clearTimeout(timer);
   }, [isReady, setCurrentView]);
@@ -149,6 +149,16 @@ export function AthleteWelcomeScreen() {
             </motion.p>
           </motion.div>
         )}
+
+        {/* Loading indicator */}
+        <motion.p
+          className="text-sm text-muted-foreground mt-8 tracking-wide"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+        >
+          ajustando sua experiência...
+        </motion.p>
       </motion.div>
     </div>
   );
