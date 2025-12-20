@@ -44,6 +44,9 @@ const App = () => (
             {/* ADMIN login - shows admin login screen, then goes to /painel-admin */}
             <Route path="/login/admin" element={<Auth context="admin" />} />
 
+            {/* COACH login - tela de login dedicada para coach */}
+            <Route path="/login/coach" element={<Auth context="coach" />} />
+
             {/* COACH dashboard - rota oficial do painel do coach */}
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
             
@@ -58,7 +61,6 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/auth" element={<Navigate to="/login" replace />} />
             <Route path="/longin" element={<Navigate to="/login" replace />} />
-            <Route path="/login/coach" element={<Navigate to="/coach" replace />} />
 
             {/* CATCH-ALL: 404 */}
             <Route path="*" element={<NotFound />} />

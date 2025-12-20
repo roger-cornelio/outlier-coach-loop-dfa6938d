@@ -8,13 +8,12 @@
  * - Botão: Sair (Logout)
  * 
  * Regras:
- * - Apenas coach, admin ou superadmin podem acessar
+ * - Apenas coach, admin ou superadmin podem acessar (protegido por AppGate)
  * - Coach NUNCA acessa /app (fluxo de atleta)
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppState } from '@/hooks/useAppState';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,25 +38,13 @@ interface CoachWorkout {
 }
 
 export default function CoachDashboard() {
-  const { state, isCoach } = useAppState();
-  const { profile, user } = useAuth();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const [athletes, setAthletes] = useState<LinkedAthlete[]>([]);
   const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
   const [loadingAthletes, setLoadingAthletes] = useState(true);
   const [loadingWorkouts, setLoadingWorkouts] = useState(true);
-
-  // Proteção: apenas coach, admin ou superadmin podem acessar
-  useEffect(() => {
-    if (state === 'loading') return;
-    
-    // Se não é coach/admin/superadmin, redireciona para login
-    if (!isCoach && state !== 'admin' && state !== 'superadmin') {
-      console.log('[CoachDashboard] Acesso negado - redirecionando para /login');
-      navigate('/login', { replace: true });
-    }
-  }, [state, isCoach, navigate]);
 
   // Buscar atletas vinculados ao coach (via profiles.coach_id)
   useEffect(() => {
@@ -118,27 +105,9 @@ export default function CoachDashboard() {
 
   // Logout
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate('/login', { replace: true });
   };
-
-  // Loading inicial
-  if (state === 'loading') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-[hsl(0,0%,3%)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Acesso negado (será redirecionado pelo useEffect)
-  if (!isCoach && state !== 'admin' && state !== 'superadmin') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-[hsl(0,0%,3%)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-[hsl(0,0%,3%)] p-4 md:p-6">
