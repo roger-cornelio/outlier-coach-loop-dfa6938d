@@ -23,6 +23,7 @@ export interface UserProfile {
   email: string;
   coach_id: string | null;
   coach_style: string | null;
+  first_setup_completed: boolean;
   last_active_at: string | null;
   created_at: string;
 }

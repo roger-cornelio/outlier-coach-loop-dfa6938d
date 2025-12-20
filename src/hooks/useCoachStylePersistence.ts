@@ -16,8 +16,12 @@ export function useCoachStylePersistence() {
 
   /**
    * Salva o estilo do coach no banco de dados
+   * @param isFirstSetup - Se true, também marca first_setup_completed = true
    */
-  const saveCoachStyle = useCallback(async (style: CoachStyle): Promise<{ success: boolean; error?: string }> => {
+  const saveCoachStyle = useCallback(async (
+    style: CoachStyle, 
+    isFirstSetup: boolean = false
+  ): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: 'Usuário não autenticado' };
     }
@@ -25,12 +29,26 @@ export function useCoachStylePersistence() {
     // Otimista: atualiza store + profile local ANTES do persist
     const previousStyle = coachStyle;
     setCoachStyle(style);
-    updateProfileOptimistic({ coach_style: style });
+    
+    const optimisticUpdate: Partial<{ coach_style: string; first_setup_completed: boolean }> = { 
+      coach_style: style 
+    };
+    if (isFirstSetup) {
+      optimisticUpdate.first_setup_completed = true;
+    }
+    updateProfileOptimistic(optimisticUpdate);
 
     try {
+      const updateData: { coach_style: string; first_setup_completed?: boolean } = { 
+        coach_style: style 
+      };
+      if (isFirstSetup) {
+        updateData.first_setup_completed = true;
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({ coach_style: style })
+        .update(updateData)
         .eq('user_id', user.id);
 
       if (error) {
@@ -45,7 +63,7 @@ export function useCoachStylePersistence() {
         return { success: false, error: error.message };
       }
 
-      console.log('[useCoachStylePersistence] Coach style saved:', style);
+      console.log('[useCoachStylePersistence] Coach style saved:', style, 'isFirstSetup:', isFirstSetup);
       return { success: true };
     } catch (err) {
       console.error('[useCoachStylePersistence] Unexpected error:', err);
@@ -58,6 +76,35 @@ export function useCoachStylePersistence() {
       return { success: false, error: 'Erro ao salvar preferência' };
     }
   }, [user, coachStyle, setCoachStyle, updateProfileOptimistic]);
+
+  /**
+   * Marca o setup como completo (usado quando termina o onboarding completo)
+   */
+  const markSetupCompleted = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'Usuário não autenticado' };
+    }
+
+    updateProfileOptimistic({ first_setup_completed: true });
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ first_setup_completed: true })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[useCoachStylePersistence] Error marking setup completed:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('[useCoachStylePersistence] Setup marked as completed');
+      return { success: true };
+    } catch (err) {
+      console.error('[useCoachStylePersistence] Unexpected error:', err);
+      return { success: false, error: 'Erro ao salvar' };
+    }
+  }, [user, updateProfileOptimistic]);
 
   /**
    * Carrega o estilo do coach do banco de dados para o store
@@ -93,8 +140,10 @@ export function useCoachStylePersistence() {
 
   return {
     saveCoachStyle,
+    markSetupCompleted,
     loadCoachStyleFromProfile,
     hasPersistedCoachStyle,
     persistedCoachStyle: profile?.coach_style as CoachStyle | null,
+    isSetupCompleted: profile?.first_setup_completed === true,
   };
 }

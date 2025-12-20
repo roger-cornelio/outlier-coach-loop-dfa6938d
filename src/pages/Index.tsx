@@ -45,45 +45,41 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // COACH STYLE FLOW (fonte de verdade = profile.coach_style)
-  // REGRA: Welcome screen APENAS no primeiro acesso (coach_style == null)
-  // Em logins futuros, vai direto para dashboard (ou preWorkout se implementado)
+  // COACH STYLE FLOW (fonte de verdade = profile.first_setup_completed)
+  // REGRA: Welcome screen APENAS no primeiro acesso (first_setup_completed == false)
+  // Em logins futuros, vai direto para preWorkout/dashboard
   useEffect(() => {
     if (state === 'loading' || profileLoading || !profileLoaded || initialCheckDone.current) return;
 
     const coachStyleFromProfile = profile?.coach_style;
-    const hasCoachStyle = !!coachStyleFromProfile;
+    const hasCompletedSetup = profile?.first_setup_completed === true;
 
     // ===== CONDIÇÃO EXATA DE ONBOARDING =====
-    // if (profileLoaded && !coach_style) -> ir para onboarding
-    if (profileLoaded && !hasCoachStyle) {
-      if (currentView !== 'welcome') {
+    // if (!first_setup_completed) → mostrar boas-vindas / onboarding
+    if (!hasCompletedSetup) {
+      if (currentView !== 'welcome' && currentView !== 'athleteWelcome' && currentView !== 'config') {
         setCurrentView('welcome');
       }
       initialCheckDone.current = true;
       return;
     }
 
-    // Se existe coach_style no perfil, sincroniza store e vai para fluxo principal
+    // Se setup já foi completado, sincroniza coach_style e vai para fluxo principal
     if (coachStyleFromProfile) {
       const normalized = coachStyleFromProfile as CoachStyle;
-
       if (coachStyle !== normalized) {
         setCoachStyle(normalized);
       }
+    }
 
-      // REGRA: NUNCA redirecionar para config automaticamente
-      // Vai direto para preWorkout (se tem athleteConfig) ou config (primeiro setup)
-      if (currentView === 'welcome') {
-        if (!athleteConfig) {
-          // Primeiro setup: precisa configurar perfil de atleta
-          setCurrentView('athleteWelcome');
-        } else {
-          // Logins subsequentes: vai para pré-treino
-          setCurrentView('preWorkout');
-        }
-        console.log('[Index] Skipped welcome - coach_style found in profile');
+    // Login subsequente: vai direto para preWorkout ou dashboard
+    if (currentView === 'welcome') {
+      if (athleteConfig) {
+        setCurrentView('preWorkout');
+      } else {
+        setCurrentView('dashboard');
       }
+      console.log('[Index] Skipped welcome - first_setup_completed = true');
     }
 
     initialCheckDone.current = true;

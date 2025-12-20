@@ -220,6 +220,7 @@ export type Database = {
           coach_style: string | null
           created_at: string
           email: string
+          first_setup_completed: boolean
           id: string
           last_active_at: string | null
           name: string | null
@@ -230,6 +231,7 @@ export type Database = {
           coach_style?: string | null
           created_at?: string
           email: string
+          first_setup_completed?: boolean
           id?: string
           last_active_at?: string | null
           name?: string | null
@@ -240,6 +242,7 @@ export type Database = {
           coach_style?: string | null
           created_at?: string
           email?: string
+          first_setup_completed?: boolean
           id?: string
           last_active_at?: string | null
           name?: string | null
