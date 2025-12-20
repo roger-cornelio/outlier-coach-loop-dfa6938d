@@ -77,7 +77,7 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
     },
     welcomeScreen: {
       headline: 'SEJA BEM-VINDO, OUTLIER',
-      subheadline: 'A partir de agora, você é OUTLIER. Sem espaço pra mediocridade.',
+      subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
         'Exigência máxima em cada treino',
@@ -159,7 +159,7 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
     },
     welcomeScreen: {
       headline: 'SEJA BEM-VINDO, OUTLIER',
-      subheadline: 'A partir de agora, você é OUTLIER. Um passo de cada vez.',
+      subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
         'Consistência como chave do sucesso',
@@ -241,7 +241,7 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
     },
     welcomeScreen: {
       headline: 'SEJA BEM-VINDO, OUTLIER',
-      subheadline: 'A partir de agora, você é OUTLIER. Bora fazer acontecer!',
+      subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
         'Energia positiva em cada sessão',
