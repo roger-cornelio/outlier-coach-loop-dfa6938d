@@ -362,90 +362,64 @@ export default function Auth({ context = 'user' }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background glow effect */}
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,4%)] to-[hsl(0,0%,2%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle background glow */}
       <div 
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{ background: 'var(--gradient-glow)' }}
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.15), transparent 60%)' }}
       />
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-xs z-10 flex flex-col items-center"
       >
-          {/* Branding Section - Above the card */}
-          <div className="text-center mb-10">
-            {/* Title - Orange gradient logo */}
-            <motion.h1 
-              className="brand-logo-lg mb-6"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
-            </motion.h1>
-            
-            {/* Subheadline */}
-            <motion.p 
-              className="text-lg md:text-xl font-display text-foreground/80 tracking-wide mb-1.5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              {context === 'user'
-                ? 'Consistência vira resultado.'
-                : context === 'coach'
-                  ? 'Acesso exclusivo para coaches OUTLIER'
-                  : 'Onde a performance é criada, validada e escalada.'
-              }
-            </motion.p>
-            
-            {/* Support line */}
-            <motion.p 
-              className="text-xs md:text-sm text-muted-foreground/70 max-w-xs mx-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              {context === 'user'
-                ? 'Entre para treinar com direção — e acompanhar sua evolução.'
-                : context === 'coach'
-                  ? 'Faça login para ver seu status de aprovação.'
-                  : 'Acesso restrito para administradores da OUTLIER.'
-              }
-            </motion.p>
-          </div>
+        {/* HERO BRANDING - Maximum emphasis */}
+        <div className="text-center mb-12">
+          {/* Logo - Dominant */}
+          <motion.h1 
+            className="text-5xl md:text-6xl font-display font-black tracking-tighter bg-gradient-to-r from-primary via-[hsl(24,100%,55%)] to-primary bg-clip-text text-transparent mb-4"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
+          </motion.h1>
+          
+          {/* Tagline - Strong emphasis */}
+          <motion.p 
+            className="text-xl md:text-2xl font-display font-semibold text-foreground tracking-wide uppercase"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            {context === 'user'
+              ? 'CONSISTÊNCIA VIRA RESULTADO.'
+              : context === 'coach'
+                ? 'PORTAL DO COACH'
+                : 'PAINEL ADMINISTRATIVO'
+            }
+          </motion.p>
+        </div>
 
-        {/* Login Card - Smaller */}
+        {/* LOGIN CARD - Minimal, translucent */}
         <motion.div 
-          className="bg-card border border-border/50 px-5 py-5 rounded-xl shadow-2xl"
-          initial={{ opacity: 0, y: 10 }}
+          className="w-full bg-card/40 backdrop-blur-sm border border-border/20 px-4 py-4 rounded-lg"
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
         >
-          {/* Card Header - Mode + Context indicator */}
-          <div className="text-center mb-4">
-            {/* Context Badge */}
-            {context !== 'user' && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-2">
-                {context === 'admin' && <Shield className="w-3 h-3" />}
-                {context === 'coach' && <UserCog className="w-3 h-3" />}
-                {context === 'admin' ? 'Painel Admin' : 'Portal do Coach'}
+          {/* Context Badge - Only for non-user */}
+          {context !== 'user' && (
+            <div className="flex justify-center mb-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
+                {context === 'admin' && <Shield className="w-2.5 h-2.5" />}
+                {context === 'coach' && <UserCog className="w-2.5 h-2.5" />}
+                {context === 'admin' ? 'Admin' : 'Coach'}
               </div>
-            )}
-            <p className="text-muted-foreground text-xs">
-              {mode === 'login' && (
-                context === 'user'
-                  ? 'Acesse sua conta'
-                  : context === 'coach'
-                    ? 'Acesse sua conta de Coach'
-                    : 'Acesse sua conta de Admin'
-              )}
-              {mode === 'signup' && 'Crie sua conta'}
-              {mode === 'forgot-password' && 'Recuperar senha'}
-            </p>
-          </div>
+            </div>
+          )}
 
           {/* Forgot Password Success */}
           {mode === 'forgot-password' && resetSent ? (
@@ -465,257 +439,186 @@ export default function Auth({ context = 'user' }: AuthProps) {
             </div>
           ) : (
             <>
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-3.5">
+              {/* Form - Compact */}
+              <form onSubmit={handleSubmit} className="space-y-2.5">
                 {/* Name field (signup only) */}
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-xs font-medium text-foreground mb-1.5">
-                      Nome
-                    </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
-                          errors.name ? 'border-destructive' : 'border-border'
+                        className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.name ? 'border-destructive/50' : 'border-border/30'
                         }`}
-                        placeholder="Seu nome"
+                        placeholder="Nome"
                       />
                     </div>
                     {errors.name && (
-                      <p className="text-destructive text-sm mt-1">{errors.name}</p>
+                      <p className="text-destructive text-xs mt-1">{errors.name}</p>
                     )}
                   </div>
                 )}
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1.5">
-                    Email
-                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
-                        errors.email ? 'border-destructive' : 'border-border'
+                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.email ? 'border-destructive/50' : 'border-border/30'
                       }`}
-                      placeholder="seu@email.com"
+                      placeholder="Email"
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-destructive text-sm mt-1">{errors.email}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.email}</p>
                   )}
                 </div>
 
                 {/* Password (not for forgot-password) */}
                 {mode !== 'forgot-password' && (
                   <div>
-                    <label className="block text-xs font-medium text-foreground mb-1.5">
-                      Senha
-                    </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className={`w-full pl-10 pr-12 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
-                          errors.password ? 'border-destructive' : 'border-border'
+                        className={`w-full pl-8 pr-10 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.password ? 'border-destructive/50' : 'border-border/30'
                         }`}
-                        placeholder="••••••••"
+                        placeholder="Senha"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
                       >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="text-destructive text-sm mt-1">{errors.password}</p>
+                      <p className="text-destructive text-xs mt-1">{errors.password}</p>
                     )}
                   </div>
                 )}
 
-                {/* Forgot password link (login only) */}
-                {mode === 'login' && (
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => switchMode('forgot-password')}
-                      className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                    >
-                      Esqueceu a senha?
-                    </button>
-                  </div>
-                )}
-
-                {/* Submit Button */}
+                {/* Submit Button - Only element with strong color */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-display text-base tracking-wider hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
+                  className="w-full mt-1 py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                  {mode === 'login' && (
-                    context === 'user'
-                      ? 'ENTRAR'
-                      : context === 'coach'
-                        ? 'ENTRAR COMO COACH'
-                        : 'ENTRAR COMO ADMIN'
-                  )}
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {mode === 'login' && 'ENTRAR'}
                   {mode === 'signup' && 'CRIAR CONTA'}
-                  {mode === 'forgot-password' && 'ENVIAR EMAIL'}
+                  {mode === 'forgot-password' && 'ENVIAR'}
                 </button>
+              </form>
 
-                {/* Coach note */}
-                {mode === 'login' && context === 'coach' && (
-                  <p className="text-xs text-muted-foreground/70 text-center">
-                    Se você ainda não foi aprovado, você verá o status após entrar.
-                  </p>
-                )}
+              {/* Secondary actions - Low hierarchy */}
+              {mode === 'login' && (
+                <div className="mt-3 pt-3 border-t border-border/10">
+                  {/* Forgot password */}
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot-password')}
+                    className="w-full text-center text-muted-foreground/40 hover:text-muted-foreground/60 text-xs transition-colors mb-2"
+                  >
+                    Esqueceu a senha?
+                  </button>
 
-                {/* Admin note */}
-                {mode === 'login' && context === 'admin' && (
-                  <p className="text-xs text-muted-foreground/50 text-center italic">
-                    Área restrita. Tentativas de acesso são monitoradas.
-                  </p>
-                )}
-
-                {/* Divider */}
-                {mode === 'login' && (
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border/50" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-3 text-muted-foreground/60">ou</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Social Sign-in Buttons */}
-                {mode === 'login' && (
-                  <div className="space-y-3">
-                    {/* Google */}
+                  {/* Social login - Minimal */}
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleGoogleSignIn}
                       disabled={isSubmitting}
-                      className="w-full py-3 bg-white text-gray-800 rounded-lg font-medium hover:bg-gray-100 transition-all disabled:opacity-50 flex items-center justify-center gap-3 border border-gray-200"
+                      className="flex-1 py-1.5 bg-background/30 text-muted-foreground/50 rounded text-xs hover:bg-background/50 hover:text-muted-foreground/70 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 border border-border/10"
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path
-                          fill="#4285F4"
-                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                        />
+                      <svg className="w-3 h-3" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                       </svg>
-                      Entrar com Google
+                      Google
                     </button>
-
-                    {/* Apple */}
                     <button
                       type="button"
                       onClick={handleAppleSignIn}
                       disabled={isSubmitting}
-                      className="w-full py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                      className="flex-1 py-1.5 bg-background/30 text-muted-foreground/50 rounded text-xs hover:bg-background/50 hover:text-muted-foreground/70 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 border border-border/10"
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                       </svg>
-                      Entrar com Apple
+                      Apple
                     </button>
                   </div>
-                )}
-              </form>
+                </div>
+              )}
+            </>
+          )}
+        </motion.div>
 
-              {/* Toggle between modes */}
-              <div className="mt-5 text-center space-y-3">
-                {mode === 'login' && (
-                  <>
-                    {context === 'user' && (
-                      <button
-                        onClick={() => switchMode('signup')}
-                        className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                      >
-                        Não tem conta? <span className="text-primary font-medium">Criar conta</span>
-                      </button>
-                    )}
-                    
-                    {/* Admin/Coach access links - only show on user context */}
-                    {context === 'user' && (
-                      <div className="pt-3 border-t border-border/30">
-                        <p className="text-xs text-muted-foreground/60 mb-2">Entrar como:</p>
-                        <div className="flex items-center justify-center gap-3">
-                          <Link
-                            to="/login/admin"
-                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            Admin
-                          </Link>
-                          <span className="text-muted-foreground/40">·</span>
-                          <Link
-                            to="/coach"
-                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            Coach
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Back to user login - show on admin/coach context */}
-                    {context !== 'user' && (
-                      <div className="pt-3 border-t border-border/30">
-                        <Link
-                          to="/login"
-                          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 justify-center"
-                        >
-                          <ArrowLeft className="w-3 h-3" />
-                          Voltar para login de usuário
-                        </Link>
-                      </div>
-                    )}
-                  </>
-                )}
-                {mode === 'signup' && (
-                  <button
-                    onClick={() => switchMode('login')}
-                    className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                  >
-                    Já tem conta? <span className="text-primary font-medium">Fazer login</span>
-                  </button>
-                )}
-                {mode === 'forgot-password' && (
-                  <button
-                    onClick={() => switchMode('login')}
-                    className="text-muted-foreground hover:text-primary text-sm flex items-center gap-1 mx-auto transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar ao login
-                  </button>
-                )}
+        {/* Footer links - Very low hierarchy */}
+        <motion.div 
+          className="mt-6 text-center space-y-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          {mode === 'login' && context === 'user' && (
+            <>
+              <button
+                onClick={() => switchMode('signup')}
+                className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
+              >
+                Criar conta
+              </button>
+              <div className="flex items-center justify-center gap-3 text-muted-foreground/20">
+                <Link to="/login/admin" className="text-[10px] hover:text-muted-foreground/40 transition-colors">
+                  Admin
+                </Link>
+                <span>·</span>
+                <Link to="/coach" className="text-[10px] hover:text-muted-foreground/40 transition-colors">
+                  Coach
+                </Link>
               </div>
             </>
+          )}
+          {mode === 'login' && context !== 'user' && (
+            <Link
+              to="/login"
+              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors flex items-center gap-1 justify-center"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Voltar
+            </Link>
+          )}
+          {mode === 'signup' && (
+            <button
+              onClick={() => switchMode('login')}
+              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
+            >
+              Já tem conta? Entrar
+            </button>
+          )}
+          {mode === 'forgot-password' && !resetSent && (
+            <button
+              onClick={() => switchMode('login')}
+              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs flex items-center gap-1 mx-auto transition-colors"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Voltar
+            </button>
           )}
         </motion.div>
       </motion.div>
