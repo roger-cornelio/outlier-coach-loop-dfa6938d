@@ -83,40 +83,85 @@ export default function CoachAuth() {
     }
   }, [user, isCoach, authLoading, navigate]);
 
-  // ===== CHECK EMAIL STATUS =====
-  const checkEmailStatus = async (emailToCheck: string): Promise<'not_approved' | 'approved_no_account' | 'approved_with_account'> => {
-    // 1. Check if email has approved coach application
-    const { data: application } = await supabase
+  const fetchUserRoles = useCallback(async (userId: string): Promise<string[]> => {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('[CoachAuth] fetchUserRoles error:', error);
+      return [];
+    }
+
+    return (data || []).map((r) => String(r.role));
+  }, []);
+
+  const runPostAuthDecision = useCallback(
+    async (emailForUi: string) => {
+      console.log('[CoachAuth] post-auth decision START');
+
+      // (a) getSession
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('[CoachAuth] getSession error:', sessionError);
+      }
+
+      const authedUserId = sessionData.session?.user?.id;
+      console.log('[CoachAuth] post-auth session:', {
+        hasSession: !!sessionData.session,
+        userId: authedUserId || 'null',
+      });
+
+      if (!authedUserId) {
+        return;
+      }
+
+      // (b) refresh + refetch roles/profile (ensures role sync runs)
+      await refreshSession();
+
+      const roleNames = await fetchUserRoles(authedUserId);
+      console.log('[CoachAuth] post-auth roles loaded:', roleNames);
+
+      // (c) decide route ONLY by user_roles
+      if (roleNames.includes('coach')) {
+        console.log('[CoachAuth] DECISION: allow → /coach/dashboard');
+        navigate('/coach/dashboard', { replace: true });
+        return;
+      }
+
+      console.log('[CoachAuth] DECISION: deny (no coach role) → signOut + open contact modal');
+      await supabase.auth.signOut();
+      setContactEmail(emailForUi);
+      setFlowState('contact_modal');
+    },
+    [fetchUserRoles, navigate, refreshSession]
+  );
+
+  // ===== CHECK EMAIL STATUS (CRM only; NOT source of truth for access) =====
+  const checkEmailStatus = async (
+    emailToCheck: string
+  ): Promise<'not_approved' | 'approved_no_account' | 'approved_with_account'> => {
+    const normalizedEmail = emailToCheck.toLowerCase().trim();
+
+    const { data: application, error } = await supabase
       .from('coach_applications')
-      .select('id, status, auth_user_id')
-      .eq('email', emailToCheck.toLowerCase().trim())
+      .select('id, status, auth_user_id, created_at')
+      .eq('email', normalizedEmail)
       .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
+
+    if (error) {
+      console.error('[CoachAuth] checkEmailStatus error:', error);
+    }
 
     if (!application) {
       return 'not_approved';
     }
 
-    // 2. If approved, check if there's an account linked
     if (application.auth_user_id) {
-      return 'approved_with_account';
-    }
-
-    // 3. Check if there's an existing user with this email
-    // We can't directly query auth.users, but we can try to sign in and see the error
-    // Or check profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, user_id')
-      .eq('email', emailToCheck.toLowerCase().trim())
-      .maybeSingle();
-
-    if (profile) {
-      // User exists, update the application to link them
-      await supabase
-        .from('coach_applications')
-        .update({ auth_user_id: profile.user_id })
-        .eq('id', application.id);
       return 'approved_with_account';
     }
 
@@ -142,7 +187,8 @@ export default function CoachAuth() {
     setIsSubmitting(true);
 
     try {
-      // First, check email status BEFORE attempting login
+      // First, check email status BEFORE attempting login (used only to decide
+      // between: block+contact modal vs set password vs attempt login)
       const status = await checkEmailStatus(email);
 
       if (status === 'not_approved') {
@@ -178,10 +224,8 @@ export default function CoachAuth() {
           });
         }
       } else {
-        // Login successful - force refresh to load updated roles from user_roles
-        console.log('[CoachAuth] Login successful, refreshing session to load roles...');
-        await refreshSession();
-        // useEffect will redirect to /coach/dashboard when isCoach becomes true
+        // After signIn, we MUST refresh + refetch roles BEFORE deciding route.
+        await runPostAuthDecision(email);
       }
     } catch (err) {
       console.error('[CoachAuth] Login error:', err);
@@ -234,8 +278,9 @@ export default function CoachAuth() {
               variant: 'destructive',
             });
             setFlowState('login');
+          } else {
+            await runPostAuthDecision(email);
           }
-          // If login successful, useEffect will redirect
         } else {
           toast({
             title: 'Erro ao criar conta',
@@ -244,15 +289,12 @@ export default function CoachAuth() {
           });
         }
       } else if (data.user) {
-        // Account created! The sync_coach_role_on_login function will grant coach role
-        // Force refresh to pick up the newly assigned coach role
-        console.log('[CoachAuth] Account created, refreshing session to load coach role...');
-        await refreshSession();
+        // Account created! Now decide based on user_roles after refresh.
+        await runPostAuthDecision(email);
         toast({
           title: 'Conta criada!',
           description: 'Bem-vindo ao painel de Coach.',
         });
-        // Redirect will happen via useEffect when isCoach becomes true
       }
     } catch (err) {
       console.error('[CoachAuth] Set password error:', err);
