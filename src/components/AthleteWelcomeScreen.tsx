@@ -99,10 +99,10 @@ export function AthleteWelcomeScreen() {
           {coachCopy?.subheadline || 'A partir de agora, você é OUTLIER.'}
         </motion.p>
 
-        {/* D) Card do Coach */}
+        {/* D) Card do Coach - Maior */}
         {coachCopy && (
           <motion.div
-            className="card-elevated p-6 md:p-8 text-left max-w-md mx-auto"
+            className="card-elevated p-8 md:p-10 text-left max-w-lg mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
