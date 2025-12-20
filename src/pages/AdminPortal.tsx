@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminParamsEditor } from "@/components/AdminParamsEditor";
@@ -80,18 +80,16 @@ const AdminPortal = () => {
     navigate("/login");
   };
 
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Redirect unauthenticated users to admin login
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate("/login/admin", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
-  // Block render if not authenticated - redirect to admin login
-  if (!user) {
-    navigate("/login/admin");
+  // Show loading while checking auth
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

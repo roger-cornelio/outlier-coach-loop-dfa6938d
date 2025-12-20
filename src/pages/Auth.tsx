@@ -50,12 +50,20 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const searchParams = new URLSearchParams(location.search);
   const initialMode = searchParams.get('mode');
 
-  // Set initial mode from query param
+  // Set initial mode from query param (only for user context)
   useEffect(() => {
+    if (context !== 'user') return;
     if (initialMode === 'signup') {
       setMode('signup');
     }
-  }, [initialMode]);
+  }, [initialMode, context]);
+
+  // Lock coach/admin login to "login" mode (no signup)
+  useEffect(() => {
+    if (context !== 'user') {
+      setMode('login');
+    }
+  }, [context]);
 
   // REDIRECT BASED ON CONTEXT (entry route), NOT role guessing
   useEffect(() => {
@@ -267,7 +275,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 to="/login"
                 className="text-muted-foreground hover:text-primary text-sm transition-colors"
               >
-                Voltar ao login de atleta
+                Voltar para login de usuário
               </Link>
             </div>
           </div>
@@ -289,38 +297,48 @@ export default function Auth({ context = 'user' }: AuthProps) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md z-10"
       >
-        {/* Branding Section - Above the card */}
-        <div className="text-center mb-10">
-          {/* 1) OUTLIER - Logo principal com branding oficial */}
-          <motion.h1 
-            className="brand-logo-lg mb-6"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            OUTLIER
-          </motion.h1>
-          
-          {/* 2) Subheadline - Menos peso */}
-          <motion.p 
-            className="text-lg md:text-xl font-display text-foreground/80 tracking-wide mb-1.5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            Consistência vira resultado.
-          </motion.p>
-          
-          {/* 3) Linha de apoio - Ainda menor */}
-          <motion.p 
-            className="text-xs md:text-sm text-muted-foreground/70 max-w-xs mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            Entre para treinar com direção — e acompanhar sua evolução.
-          </motion.p>
-        </div>
+          {/* Branding Section - Above the card */}
+          <div className="text-center mb-10">
+            {/* Title */}
+            <motion.h1 
+              className="brand-logo-lg mb-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'LOGIN COACH' : 'LOGIN ADMIN'}
+            </motion.h1>
+            
+            {/* Subheadline */}
+            <motion.p 
+              className="text-lg md:text-xl font-display text-foreground/80 tracking-wide mb-1.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              {context === 'user'
+                ? 'Consistência vira resultado.'
+                : context === 'coach'
+                  ? 'Acesso exclusivo para coaches OUTLIER'
+                  : 'Área restrita'
+              }
+            </motion.p>
+            
+            {/* Support line */}
+            <motion.p 
+              className="text-xs md:text-sm text-muted-foreground/70 max-w-xs mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              {context === 'user'
+                ? 'Entre para treinar com direção — e acompanhar sua evolução.'
+                : context === 'coach'
+                  ? 'Faça login para ver seu status de aprovação.'
+                  : 'Somente administradores autorizados.'
+              }
+            </motion.p>
+          </div>
 
         {/* Login Card - Mais compacto */}
         <motion.div 
@@ -340,7 +358,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
               </div>
             )}
             <p className="text-muted-foreground text-xs">
-              {mode === 'login' && 'Acesse sua conta'}
+              {mode === 'login' && (
+                context === 'user'
+                  ? 'Acesse sua conta'
+                  : context === 'coach'
+                    ? 'Acesse sua conta de Coach'
+                    : 'Acesse sua conta de Admin'
+              )}
               {mode === 'signup' && 'Crie sua conta'}
               {mode === 'forgot-password' && 'Recuperar senha'}
             </p>
@@ -463,22 +487,37 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-display text-base tracking-wider hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
                 >
                   {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                  {mode === 'login' && 'ENTRAR'}
+                  {mode === 'login' && (
+                    context === 'user'
+                      ? 'ENTRAR'
+                      : context === 'coach'
+                        ? 'ENTRAR COMO COACH'
+                        : 'ENTRAR COMO ADMIN'
+                  )}
                   {mode === 'signup' && 'CRIAR CONTA'}
                   {mode === 'forgot-password' && 'ENVIAR EMAIL'}
                 </button>
+
+                {/* Coach note */}
+                {mode === 'login' && context === 'coach' && (
+                  <p className="text-xs text-muted-foreground/70 text-center">
+                    Se você ainda não foi aprovado, você verá o status após entrar.
+                  </p>
+                )}
               </form>
 
               {/* Toggle between modes */}
               <div className="mt-5 text-center space-y-3">
                 {mode === 'login' && (
                   <>
-                    <button
-                      onClick={() => switchMode('signup')}
-                      className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                    >
-                      Não tem conta? <span className="text-primary font-medium">Criar conta</span>
-                    </button>
+                    {context === 'user' && (
+                      <button
+                        onClick={() => switchMode('signup')}
+                        className="text-muted-foreground hover:text-primary text-sm transition-colors"
+                      >
+                        Não tem conta? <span className="text-primary font-medium">Criar conta</span>
+                      </button>
+                    )}
                     
                     {/* Admin/Coach access links - only show on user context */}
                     {context === 'user' && (
@@ -501,6 +540,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                         </div>
                       </div>
                     )}
+
                     {/* Back to user login - show on admin/coach context */}
                     {context !== 'user' && (
                       <div className="pt-3 border-t border-border/30">
@@ -509,7 +549,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                           className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 justify-center"
                         >
                           <ArrowLeft className="w-3 h-3" />
-                          Voltar ao login de atleta
+                          Voltar para login de usuário
                         </Link>
                       </div>
                     )}
