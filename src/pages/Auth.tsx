@@ -392,14 +392,36 @@ export default function Auth() {
               </form>
 
               {/* Toggle between modes */}
-              <div className="mt-5 text-center space-y-2">
+              <div className="mt-5 text-center space-y-3">
                 {mode === 'login' && (
-                  <button
-                    onClick={() => switchMode('signup')}
-                    className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                  >
-                    Não tem conta? <span className="text-primary font-medium">Criar conta</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => switchMode('signup')}
+                      className="text-muted-foreground hover:text-primary text-sm transition-colors"
+                    >
+                      Não tem conta? <span className="text-primary font-medium">Criar conta</span>
+                    </button>
+                    
+                    {/* Admin/Coach access links */}
+                    <div className="pt-3 border-t border-border/30">
+                      <p className="text-xs text-muted-foreground/60 mb-2">Entrar como:</p>
+                      <div className="flex items-center justify-center gap-3">
+                        <Link
+                          to="/admin"
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Admin
+                        </Link>
+                        <span className="text-muted-foreground/40">·</span>
+                        <Link
+                          to="/coach"
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Coach
+                        </Link>
+                      </div>
+                    </div>
+                  </>
                 )}
                 {mode === 'signup' && (
                   <button
