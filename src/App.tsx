@@ -25,7 +25,11 @@ const App = () => (
           <AppGate>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
+              {/* Login routes with explicit context */}
+              <Route path="/login" element={<Auth context="user" />} />
+              <Route path="/login/coach" element={<Auth context="coach" />} />
+              <Route path="/login/admin" element={<Auth context="admin" />} />
+              <Route path="/auth" element={<Auth context="user" />} />
               <Route path="/coach" element={<CoachPortal />} />
               <Route path="/admin" element={<AdminPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

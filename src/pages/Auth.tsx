@@ -6,9 +6,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog } from 'lucide-react';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password';
+type AuthContext = 'user' | 'coach' | 'admin';
+
+interface AuthProps {
+  context?: AuthContext;
+}
 
 const loginSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
@@ -25,7 +30,7 @@ const forgotSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
 });
 
-export default function Auth() {
+export default function Auth({ context = 'user' }: AuthProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,6 +39,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [resetSent, setResetSent] = useState(false);
+  const [accessDenied, setAccessDenied] = useState<string | null>(null);
 
   const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading } = useAuth();
   const { setCurrentView } = useOutlierStore();
@@ -42,7 +48,6 @@ export default function Auth() {
   const location = useLocation();
 
   const searchParams = new URLSearchParams(location.search);
-  const next = searchParams.get('next');
   const initialMode = searchParams.get('mode');
 
   // Set initial mode from query param
@@ -52,37 +57,47 @@ export default function Auth() {
     }
   }, [initialMode]);
 
-  // REDIRECT PRIORITY AFTER LOGIN: ADMIN > COACH > ATHLETE
+  // REDIRECT BASED ON CONTEXT (entry route), NOT role guessing
   useEffect(() => {
     if (!user || authLoading) return;
 
-    // PRIORITY 1: ADMIN - always goes to /admin route (isolated, no currentView dependency)
+    // Reset access denied state on user change
+    setAccessDenied(null);
+
+    // CONTEXT: ADMIN - only allow if user is admin
+    if (context === 'admin') {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        // Block access - show restricted message, do NOT redirect to user flow
+        setAccessDenied('Acesso restrito. Sua conta não possui permissão de administrador.');
+      }
+      return;
+    }
+
+    // CONTEXT: COACH - redirect to coach portal, let it handle states
+    if (context === 'coach') {
+      navigate('/coach');
+      return;
+    }
+
+    // CONTEXT: USER (default) - normal athlete flow
+    // If admin accessing /login, redirect to /admin
     if (isAdmin) {
       navigate('/admin');
       return;
     }
-
-    // Handle specific next redirects for non-admins
-    if (next === 'userManagement') {
-      toast({
-        title: 'Acesso negado',
-        description: 'Sua conta não tem permissão de administrador.',
-        variant: 'destructive',
-      });
-      // Fall through to priority redirect
-    }
-
-    // PRIORITY 2: COACH - goes to coach panel (admin view)
+    
+    // If coach accessing /login, redirect to coach portal
     if (isCoach) {
-      setCurrentView('admin');
-      navigate('/');
+      navigate('/coach');
       return;
     }
 
-    // PRIORITY 3: ATHLETE (default) - goes to dashboard
+    // Default: go to dashboard
     setCurrentView('dashboard');
     navigate('/');
-  }, [user, authLoading, isAdmin, isCoach, next, navigate, setCurrentView, toast]);
+  }, [user, authLoading, isAdmin, isCoach, context, navigate, setCurrentView]);
 
   const validateForm = () => {
     try {
@@ -206,6 +221,61 @@ export default function Auth() {
     setResetSent(false);
   };
 
+  // Get context-specific UI text
+  const getContextLabel = () => {
+    switch (context) {
+      case 'admin': return 'Painel Admin';
+      case 'coach': return 'Portal do Coach';
+      default: return null;
+    }
+  };
+
+  // ACCESS DENIED SCREEN (for admin context when user is not admin)
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: 'var(--gradient-glow)' }}
+        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md z-10"
+        >
+          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+            <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+              <Shield className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="font-display text-2xl text-foreground mb-4">
+              Acesso Restrito
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              {accessDenied}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setAccessDenied(null);
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Sair e usar outra conta
+              </button>
+              <Link
+                to="/login"
+                className="text-muted-foreground hover:text-primary text-sm transition-colors"
+              >
+                Voltar ao login de atleta
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background glow effect */}
@@ -259,8 +329,16 @@ export default function Auth() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          {/* Card Header - Mode indicator */}
+          {/* Card Header - Mode + Context indicator */}
           <div className="text-center mb-5">
+            {/* Context Badge */}
+            {context !== 'user' && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
+                {context === 'admin' && <Shield className="w-3 h-3" />}
+                {context === 'coach' && <UserCog className="w-3 h-3" />}
+                {getContextLabel()}
+              </div>
+            )}
             <p className="text-muted-foreground text-xs">
               {mode === 'login' && 'Acesse sua conta'}
               {mode === 'signup' && 'Crie sua conta'}
@@ -402,25 +480,39 @@ export default function Auth() {
                       Não tem conta? <span className="text-primary font-medium">Criar conta</span>
                     </button>
                     
-                    {/* Admin/Coach access links */}
-                    <div className="pt-3 border-t border-border/30">
-                      <p className="text-xs text-muted-foreground/60 mb-2">Entrar como:</p>
-                      <div className="flex items-center justify-center gap-3">
+                    {/* Admin/Coach access links - only show on user context */}
+                    {context === 'user' && (
+                      <div className="pt-3 border-t border-border/30">
+                        <p className="text-xs text-muted-foreground/60 mb-2">Entrar como:</p>
+                        <div className="flex items-center justify-center gap-3">
+                          <Link
+                            to="/login/admin"
+                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            Admin
+                          </Link>
+                          <span className="text-muted-foreground/40">·</span>
+                          <Link
+                            to="/login/coach"
+                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            Coach
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                    {/* Back to user login - show on admin/coach context */}
+                    {context !== 'user' && (
+                      <div className="pt-3 border-t border-border/30">
                         <Link
-                          to="/admin"
-                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          to="/login"
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 justify-center"
                         >
-                          Admin
-                        </Link>
-                        <span className="text-muted-foreground/40">·</span>
-                        <Link
-                          to="/coach"
-                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          Coach
+                          <ArrowLeft className="w-3 h-3" />
+                          Voltar ao login de atleta
                         </Link>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
                 {mode === 'signup' && (

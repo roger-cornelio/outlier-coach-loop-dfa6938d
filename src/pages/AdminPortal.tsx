@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminParamsEditor } from "@/components/AdminParamsEditor";
 import { UserManagement } from "@/components/UserManagement";
@@ -7,6 +7,7 @@ import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
 import { AnimatePresence, motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Loader2, 
   Shield, 
@@ -18,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCog,
-  Activity
+  Activity,
+  ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -70,18 +72,12 @@ const AdminPortal = () => {
   const { user, isAdmin, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // SECURITY: Redirect non-admins to home
-  useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user || !isAdmin) {
-      navigate("/");
-    }
-  }, [user, isAdmin, authLoading, navigate]);
+  // SECURITY: Do NOT redirect non-admins - show access denied instead
+  // This prevents fallback to user flow confusion
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    navigate("/login");
   };
 
   // Show loading while checking auth
@@ -93,14 +89,55 @@ const AdminPortal = () => {
     );
   }
 
-  // Block render if not admin (while redirect happens)
-  if (!user || !isAdmin) {
+  // Block render if not authenticated - redirect to admin login
+  if (!user) {
+    navigate("/login/admin");
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Acesso restrito</p>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Block render if not admin - show access restricted, do NOT redirect to user flow
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center">
+            <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+              <Shield className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="font-display text-2xl text-foreground mb-4">
+              Acesso Restrito
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Sua conta não possui permissão de administrador.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/login/admin");
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Sair e usar outra conta
+              </button>
+              <Link
+                to="/login"
+                className="text-muted-foreground hover:text-primary text-sm transition-colors flex items-center gap-1 justify-center"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Voltar ao login de atleta
+              </Link>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
