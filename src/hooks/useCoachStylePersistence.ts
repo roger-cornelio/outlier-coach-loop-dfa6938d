@@ -16,11 +16,10 @@ export function useCoachStylePersistence() {
 
   /**
    * Salva o estilo do coach no banco de dados
-   * @param isFirstSetup - Se true, também marca first_setup_completed = true
+   * SEMPRE marca first_setup_completed = true junto com coach_style
    */
   const saveCoachStyle = useCallback(async (
-    style: CoachStyle, 
-    isFirstSetup: boolean = false
+    style: CoachStyle
   ): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: 'Usuário não autenticado' };
@@ -30,25 +29,19 @@ export function useCoachStylePersistence() {
     const previousStyle = coachStyle;
     setCoachStyle(style);
     
-    const optimisticUpdate: Partial<{ coach_style: string; first_setup_completed: boolean }> = { 
-      coach_style: style 
-    };
-    if (isFirstSetup) {
-      optimisticUpdate.first_setup_completed = true;
-    }
-    updateProfileOptimistic(optimisticUpdate);
+    // SEMPRE seta first_setup_completed = true junto com coach_style
+    updateProfileOptimistic({ 
+      coach_style: style,
+      first_setup_completed: true 
+    });
 
     try {
-      const updateData: { coach_style: string; first_setup_completed?: boolean } = { 
-        coach_style: style 
-      };
-      if (isFirstSetup) {
-        updateData.first_setup_completed = true;
-      }
-
       const { error } = await supabase
         .from('profiles')
-        .update(updateData)
+        .update({ 
+          coach_style: style,
+          first_setup_completed: true 
+        })
         .eq('user_id', user.id);
 
       if (error) {
@@ -63,7 +56,7 @@ export function useCoachStylePersistence() {
         return { success: false, error: error.message };
       }
 
-      console.log('[useCoachStylePersistence] Coach style saved:', style, 'isFirstSetup:', isFirstSetup);
+      console.log('[useCoachStylePersistence] Coach style saved:', style, '+ first_setup_completed = true');
       return { success: true };
     } catch (err) {
       console.error('[useCoachStylePersistence] Unexpected error:', err);

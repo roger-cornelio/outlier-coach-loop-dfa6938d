@@ -46,11 +46,12 @@ const sexOptions = [
 export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView, baseWorkouts } = useOutlierStore();
   const { profile } = useAuth();
-  const { markSetupCompleted, isSetupCompleted } = useCoachStylePersistence();
+  const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
   
-  // Detectar se é primeiro setup (onboarding)
-  const isFirstSetup = !isSetupCompleted;
+  // Detectar se é primeiro setup (onboarding) - agora baseado em coach_style
+  // Se coach_style existe, setup já foi feito
+  const isFirstSetup = !profile?.coach_style;
   const [isSaving, setIsSaving] = useState(false);
   
   // Use existing values as defaults
@@ -85,15 +86,8 @@ export function AthleteConfig() {
     
     setAthleteConfig(newConfig);
 
-    // Se é primeiro setup, marcar como completo no banco
-    if (isFirstSetup) {
-      const result = await markSetupCompleted();
-      if (!result.success) {
-        console.error('[AthleteConfig] Failed to mark setup completed:', result.error);
-      } else {
-        console.log('[AthleteConfig] First setup completed, flag saved');
-      }
-    }
+    // Nota: first_setup_completed já é marcado automaticamente quando coach_style é salvo
+    // Não precisamos chamar markSetupCompleted aqui
 
     // Gerar treino adaptado se houver planilha base
     // Passa config diretamente para evitar race condition com o store
