@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useAuth } from '@/hooks/useAuth';
+import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2 } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
@@ -43,7 +45,13 @@ const sexOptions = [
 
 export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView, baseWorkouts } = useOutlierStore();
+  const { profile } = useAuth();
+  const { markSetupCompleted, isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
+  
+  // Detectar se é primeiro setup (onboarding)
+  const isFirstSetup = !isSetupCompleted;
+  const [isSaving, setIsSaving] = useState(false);
   
   // Use existing values as defaults
   const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>(
@@ -55,11 +63,13 @@ export function AthleteConfig() {
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!coachStyle) {
       toast.error('Selecione um estilo de coach primeiro');
       return;
     }
+
+    setIsSaving(true);
 
     const newConfig = {
       trainingLevel,
@@ -75,6 +85,16 @@ export function AthleteConfig() {
     
     setAthleteConfig(newConfig);
 
+    // Se é primeiro setup, marcar como completo no banco
+    if (isFirstSetup) {
+      const result = await markSetupCompleted();
+      if (!result.success) {
+        console.error('[AthleteConfig] Failed to mark setup completed:', result.error);
+      } else {
+        console.log('[AthleteConfig] First setup completed, flag saved');
+      }
+    }
+
     // Gerar treino adaptado se houver planilha base
     // Passa config diretamente para evitar race condition com o store
     if (hasBaseWorkouts) {
@@ -84,7 +104,14 @@ export function AthleteConfig() {
       }
     }
 
-    setCurrentView('dashboard');
+    setIsSaving(false);
+    
+    // Se é primeiro setup, vai para preWorkout; senão, vai para dashboard
+    if (isFirstSetup) {
+      setCurrentView('preWorkout');
+    } else {
+      setCurrentView('dashboard');
+    }
   };
 
   return (
@@ -95,15 +122,18 @@ export function AthleteConfig() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-8"
       >
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        {/* Só mostra botão voltar se NÃO for primeiro setup */}
+        {!isFirstSetup && (
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <div>
-          <h1 className="font-display text-4xl">CONFIGURAÇÃO</h1>
-          <p className="text-muted-foreground">Ajuste seu treino</p>
+          <h1 className="font-display text-4xl">{isFirstSetup ? 'CONFIGURE SEU TREINO' : 'CONFIGURAÇÃO'}</h1>
+          <p className="text-muted-foreground">{isFirstSetup ? 'Personalize sua experiência' : 'Ajuste seu treino'}</p>
         </div>
       </motion.div>
 
@@ -276,9 +306,18 @@ export function AthleteConfig() {
       >
         <button
           onClick={handleSubmit}
-          className="w-full font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+          disabled={isSaving}
+          className="w-full font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-3 disabled:opacity-70"
         >
-          {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'COMEÇAR MEU TREINO'}
+          {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+          {isSaving 
+            ? 'SALVANDO...' 
+            : isFirstSetup 
+              ? 'COMEÇAR MEU TREINO' 
+              : hasBaseWorkouts 
+                ? 'GERAR TREINO ADAPTADO' 
+                : 'SALVAR CONFIGURAÇÃO'
+          }
         </button>
       </motion.div>
     </div>
