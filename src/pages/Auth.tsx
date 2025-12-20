@@ -220,10 +220,10 @@ export default function Auth() {
         className="w-full max-w-md z-10"
       >
         {/* Branding Section - Above the card */}
-        <div className="text-center mb-8">
-          {/* 1) OUTLIER - Maior destaque */}
+        <div className="text-center mb-10">
+          {/* 1) OUTLIER - Maior destaque (~20% maior) */}
           <motion.h1 
-            className="font-display text-6xl md:text-7xl tracking-widest font-bold text-gradient-logo mb-4"
+            className="font-display text-7xl md:text-8xl tracking-widest font-bold text-gradient-logo mb-5"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -231,9 +231,9 @@ export default function Auth() {
             OUTLIER
           </motion.h1>
           
-          {/* 2) Subheadline - Destaque */}
+          {/* 2) Subheadline - Menos peso */}
           <motion.p 
-            className="text-xl md:text-2xl font-display text-foreground tracking-wide mb-2"
+            className="text-lg md:text-xl font-display text-foreground/80 tracking-wide mb-1.5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -241,9 +241,9 @@ export default function Auth() {
             Consistência vira resultado.
           </motion.p>
           
-          {/* 3) Linha de apoio - Menor */}
+          {/* 3) Linha de apoio - Ainda menor */}
           <motion.p 
-            className="text-sm md:text-base text-muted-foreground max-w-xs mx-auto"
+            className="text-xs md:text-sm text-muted-foreground/70 max-w-xs mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -252,16 +252,16 @@ export default function Auth() {
           </motion.p>
         </div>
 
-        {/* Login Card */}
+        {/* Login Card - Mais compacto */}
         <motion.div 
-          className="bg-card border border-border/50 p-6 md:p-8 rounded-2xl shadow-2xl"
+          className="bg-card border border-border/50 px-5 py-5 md:px-7 md:py-6 rounded-2xl shadow-2xl"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           {/* Card Header - Mode indicator */}
-          <div className="text-center mb-6">
-            <p className="text-muted-foreground text-sm">
+          <div className="text-center mb-5">
+            <p className="text-muted-foreground text-xs">
               {mode === 'login' && 'Acesse sua conta'}
               {mode === 'signup' && 'Crie sua conta'}
               {mode === 'forgot-password' && 'Recuperar senha'}
@@ -287,11 +287,11 @@ export default function Auth() {
           ) : (
             <>
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3.5">
                 {/* Name field (signup only) */}
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
                       Nome
                     </label>
                     <div className="relative">
@@ -300,7 +300,7 @@ export default function Auth() {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                        className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
                           errors.name ? 'border-destructive' : 'border-border'
                         }`}
                         placeholder="Seu nome"
@@ -314,7 +314,7 @@ export default function Auth() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
                     Email
                   </label>
                   <div className="relative">
@@ -323,7 +323,7 @@ export default function Auth() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                      className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
                         errors.email ? 'border-destructive' : 'border-border'
                       }`}
                       placeholder="seu@email.com"
@@ -337,7 +337,7 @@ export default function Auth() {
                 {/* Password (not for forgot-password) */}
                 {mode !== 'forgot-password' && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
                       Senha
                     </label>
                     <div className="relative">
@@ -346,7 +346,7 @@ export default function Auth() {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className={`w-full pl-10 pr-12 py-3 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                        className={`w-full pl-10 pr-12 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm ${
                           errors.password ? 'border-destructive' : 'border-border'
                         }`}
                         placeholder="••••••••"
@@ -382,7 +382,7 @@ export default function Auth() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3.5 bg-primary text-primary-foreground rounded-lg font-display text-lg tracking-wider hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-display text-base tracking-wider hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
                 >
                   {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
                   {mode === 'login' && 'ENTRAR'}
@@ -392,7 +392,7 @@ export default function Auth() {
               </form>
 
               {/* Toggle between modes */}
-              <div className="mt-6 text-center space-y-2">
+              <div className="mt-5 text-center space-y-2">
                 {mode === 'login' && (
                   <button
                     onClick={() => switchMode('signup')}
