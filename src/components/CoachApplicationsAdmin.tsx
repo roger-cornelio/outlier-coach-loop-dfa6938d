@@ -274,22 +274,10 @@ export function CoachApplicationsAdmin() {
                       <span>{selectedApp.instagram}</span>
                     </div>
                   )}
-                  {selectedApp.box_name && (
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span>{selectedApp.box_name}</span>
-                    </div>
-                  )}
                   {selectedApp.city && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span>{selectedApp.city}</span>
-                    </div>
-                  )}
-                  {selectedApp.message && (
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <span className="text-muted-foreground">{selectedApp.message}</span>
                     </div>
                   )}
                 </div>

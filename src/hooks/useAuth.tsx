@@ -115,6 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         _email: email,
       });
 
+      // 3. Sync coach role from approved applications
+      // This handles the case where a lead got approved before creating an account
+      await supabase.rpc("sync_coach_role_on_login", {
+        _user_id: userId,
+        _email: email,
+      });
+
       return isSuperadminEmail;
     } catch (err) {
       console.error("Error syncing roles on bootstrap:", err);
