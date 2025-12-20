@@ -270,6 +270,39 @@ export type Database = {
         }
         Relationships: []
       }
+      workouts: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          price: number
+          status: Database["public"]["Enums"]["workout_status"]
+          title: string
+          updated_at: string
+          workout_json: Json
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          price?: number
+          status?: Database["public"]["Enums"]["workout_status"]
+          title: string
+          updated_at?: string
+          workout_json?: Json
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          price?: number
+          status?: Database["public"]["Enums"]["workout_status"]
+          title?: string
+          updated_at?: string
+          workout_json?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -309,6 +342,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "coach" | "superadmin"
+      workout_status: "draft" | "published" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -437,6 +471,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "coach", "superadmin"],
+      workout_status: ["draft", "published", "archived"],
     },
   },
 } as const
