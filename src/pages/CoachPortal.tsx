@@ -328,10 +328,7 @@ export default function CoachPortal() {
             </p>
             <div className="grid gap-3">
               <button
-                onClick={() => {
-                  setCurrentView('coachPerformance');
-                  navigate('/app');
-                }}
+                onClick={() => navigate('/coach/dashboard')}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
                 Ver Performance
@@ -405,7 +402,8 @@ export default function CoachPortal() {
   }
 
   // STATE: coach - show coach hub with ONLY coach panel access and logout
-  // CRITICAL: Coach should NEVER access athlete routes
+  // CRITICAL: Coach should NEVER access athlete routes (/app)
+  // Navega para /coach/dashboard (rota exclusiva do coach)
   if (state === 'coach') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--background))] to-[hsl(0,0%,3%)] flex items-center justify-center p-4">
@@ -424,10 +422,7 @@ export default function CoachPortal() {
             </p>
             <div className="grid gap-3">
               <button
-                onClick={() => {
-                  setCurrentView('coachPerformance');
-                  navigate('/app');
-                }}
+                onClick={() => navigate('/coach/dashboard')}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
                 Acessar Central do Coach
