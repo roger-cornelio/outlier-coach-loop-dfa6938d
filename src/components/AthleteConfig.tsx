@@ -274,7 +274,7 @@ export function AthleteConfig() {
           onClick={handleSubmit}
           className="w-full font-display text-xl tracking-wider px-8 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
-          {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'IR PARA DASHBOARD'}
+          {hasBaseWorkouts ? 'GERAR TREINO ADAPTADO' : 'COMEÇAR MEU TREINO'}
         </button>
       </motion.div>
     </div>
