@@ -62,11 +62,11 @@ export function AppGate({ children }: AppGateProps) {
 
   // ===== RULE 4: Route-based access control for authenticated users =====
   
-  // /admin route - requires admin or superadmin role
-  if (pathname.startsWith('/admin')) {
+  // /painel-admin route - requires admin or superadmin role
+  if (pathname.startsWith('/painel-admin')) {
     if (state !== 'admin') {
       // Authenticated but not admin - go to home
-      console.log('[AppGate] REDIRECT /admin → / | Reason: not admin');
+      console.log('[AppGate] REDIRECT /painel-admin → / | Reason: not admin');
       return <Navigate to="/" replace />;
     }
     // Admin user - allow access
@@ -75,18 +75,18 @@ export function AppGate({ children }: AppGateProps) {
   // /auth and /login routes - redirect authenticated users away
   if (pathname === '/auth' || pathname === '/login') {
     if (state === 'admin') {
-      console.log('[AppGate] REDIRECT /auth → /admin | Reason: admin user');
-      return <Navigate to="/admin" replace />;
+      console.log('[AppGate] REDIRECT /auth → /painel-admin | Reason: admin user');
+      return <Navigate to="/painel-admin" replace />;
     }
     console.log('[AppGate] REDIRECT /auth → / | Reason: authenticated user');
     return <Navigate to="/" replace />;
   }
   
-  // /login/admin - redirect authenticated admins to /admin, block non-admins
+  // /login/admin - redirect authenticated admins to /painel-admin, block non-admins
   if (pathname === '/login/admin') {
     if (state === 'admin') {
-      console.log('[AppGate] REDIRECT /login/admin → /admin | Reason: already admin');
-      return <Navigate to="/admin" replace />;
+      console.log('[AppGate] REDIRECT /login/admin → /painel-admin | Reason: already admin');
+      return <Navigate to="/painel-admin" replace />;
     }
     // Non-admin authenticated users - let Auth page handle access denied
     return <>{children}</>;
