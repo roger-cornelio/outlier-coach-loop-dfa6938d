@@ -8,6 +8,7 @@ import { AppGate } from "@/components/AppGate";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachPortal from "./pages/CoachPortal";
+import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,9 @@ const App = () => (
 
             {/* COACH portal - has its own login + status screens */}
             <Route path="/coach" element={<CoachPortal />} />
+            
+            {/* COACH dashboard - painel exclusivo do coach */}
+            <Route path="/coach/dashboard" element={<CoachDashboard />} />
 
             {/* === PROTECTED DASHBOARDS === */}
             {/* Admin dashboard (requires admin role) */}
