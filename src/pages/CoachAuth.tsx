@@ -308,7 +308,7 @@ export default function CoachAuth() {
     }
   };
 
-  // ===== HANDLE CONTACT SUBMIT =====
+  // ===== HANDLE CONTACT SUBMIT (smart upsert - no duplicates) =====
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -331,25 +331,89 @@ export default function CoachAuth() {
 
     setIsSubmitting(true);
 
+    const normalizedEmail = contactEmail.toLowerCase().trim();
+
     try {
-      const { error } = await supabase
+      // (a) Check for existing application for this email
+      const { data: existing, error: fetchErr } = await supabase
+        .from('coach_applications')
+        .select('id, status')
+        .eq('email', normalizedEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchErr) {
+        console.error('[CoachAuth] fetch existing error:', fetchErr);
+      }
+
+      // (b) If pending or approved → don't insert, show toast
+      if (existing?.status === 'pending') {
+        toast({
+          title: 'Solicitação já existe',
+          description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (existing?.status === 'approved') {
+        toast({
+          title: 'Acesso já aprovado',
+          description: 'Seu acesso já foi aprovado. Faça login.',
+        });
+        setFlowState('login');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // (c) If rejected → update existing to pending (reopen)
+      if (existing?.status === 'rejected') {
+        const { error: updateErr } = await supabase
+          .from('coach_applications')
+          .update({
+            full_name: contactName.trim(),
+            instagram: contactPhone.trim(),
+            status: 'pending',
+            rejection_reason: null,
+            reviewed_at: null,
+            reviewed_by: null,
+          })
+          .eq('id', existing.id);
+
+        if (updateErr) {
+          console.error('[CoachAuth] update rejected error:', updateErr);
+          toast({
+            title: 'Erro ao reenviar',
+            description: 'Tente novamente.',
+            variant: 'destructive',
+          });
+        } else {
+          setFlowState('contact_sent');
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      // (d) No existing → create new
+      const { error: insertErr } = await supabase
         .from('coach_applications')
         .insert({
           full_name: contactName.trim(),
-          email: contactEmail.toLowerCase().trim(),
+          email: normalizedEmail,
           instagram: contactPhone.trim(),
           status: 'pending',
         });
 
-      if (error) {
-        if (error.code === '23505') {
-          // Unique constraint violation - application already exists
+      if (insertErr) {
+        // Handle race condition: unique constraint violation
+        if (insertErr.code === '23505') {
           toast({
             title: 'Solicitação já existe',
-            description: 'Você já enviou uma solicitação. Aguarde a aprovação.',
+            description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
           });
         } else {
-          console.error('[CoachAuth] Contact submit error:', error);
+          console.error('[CoachAuth] Contact submit error:', insertErr);
           toast({
             title: 'Erro ao enviar',
             description: 'Tente novamente.',
