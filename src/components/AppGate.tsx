@@ -1,23 +1,22 @@
 /**
  * AppGate - SINGLE POINT of routing/rendering decisions
  * 
- * CRITICAL RULES:
- * 1. While loading: render ONLY a loader (no redirects, no fallbacks)
- * 2. ANON users: allowed on login routes, redirect to /login for protected routes
- * 3. SUPERADMIN: NEVER blocked, NEVER redirected, access to ALL routes
- * 4. Decisions based ONLY on user.role, not coach_application
- * 5. Context preservation: /login/admin → /painel-admin, /coach → coach flow
+ * ROTAS OFICIAIS (entry points):
+ * - /login: Login usuário/atleta
+ * - /login/admin: Login admin
+ * - /coach: Portal coach
  * 
- * ROUTE STRUCTURE:
- * - /login: User login (anon allowed)
- * - /login/admin: Admin login (anon allowed, redirects admin to /painel-admin)
- * - /coach: Coach portal (anon allowed - has its own login)
- * - /painel-admin: Admin dashboard (requires admin role)
- * - /app: Main app (requires authentication)
+ * DESTINOS (pós-login, protegidos):
+ * - /app: App principal (requer auth)
+ * - /painel-admin: Dashboard admin (requer role admin)
+ * 
+ * REDIRECTS (aliases):
+ * - /, /auth, /longin → /login
+ * - /login/coach → /coach
  */
 
 import { ReactNode } from 'react';
-import { useLocation, Navigate } from 'react-router-dom';
+import { useLocation, Navigate, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAppState } from '@/hooks/useAppState';
 
@@ -52,7 +51,13 @@ export function AppGate({ children }: AppGateProps) {
       return <>{children}</>;
     }
     
-    // PROTECTED ROUTES: Redirect to /login
+    // PROTECTED ROUTE: /painel-admin → redirect to /login/admin (not generic /login)
+    if (pathname.startsWith('/painel-admin')) {
+      console.log('[AppGate] REDIRECT → /login/admin | Reason: anon user on admin route');
+      return <Navigate to="/login/admin" replace />;
+    }
+    
+    // OTHER PROTECTED ROUTES: Redirect to /login
     console.log('[AppGate] REDIRECT → /login | Reason: anon user on protected route:', pathname);
     return <Navigate to="/login" replace />;
   }
@@ -109,12 +114,12 @@ export function AppGate({ children }: AppGateProps) {
             <p className="text-muted-foreground mb-6">
               Você não possui permissão de administrador para acessar este painel.
             </p>
-            <a
-              href="/login/admin"
+            <Link
+              to="/login/admin"
               className="inline-block w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-center"
             >
               Voltar ao login admin
-            </a>
+            </Link>
           </div>
         </div>
       );
@@ -126,7 +131,7 @@ export function AppGate({ children }: AppGateProps) {
   // /coach - let CoachPortal handle its own state-based rendering
   // NO automatic redirect for authenticated users - coach portal manages this
 
-  // /app - main application (requires authentication, already verified)
+  // /app - main application (requires authentication, already verified above)
   
   // ===== RULE 5: Render children for all other cases =====
   return <>{children}</>;
