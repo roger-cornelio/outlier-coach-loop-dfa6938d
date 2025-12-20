@@ -43,28 +43,31 @@ export function CoachApplicationModal({ isOpen, onClose }: CoachApplicationModal
       setErrors({});
       setSubmitting(true);
 
+      // Insert without user_id (nullable now) - works for both logged in and anonymous users
+      const insertData: Record<string, unknown> = {
+        full_name: validated.full_name,
+        email: isLoggedIn ? user?.email : validated.email,
+        instagram: validated.contact,
+        status: 'pending',
+      };
+
+      // Only add auth_user_id if user is logged in
+      if (isLoggedIn && user?.id) {
+        insertData.auth_user_id = user.id;
+      }
+
       const { error } = await supabase
         .from('coach_applications')
-        .insert({
-          full_name: validated.full_name,
-          email: isLoggedIn ? user?.email : validated.email,
-          instagram: validated.contact,
-          status: 'pending',
-          auth_user_id: isLoggedIn ? user?.id : null,
-        } as any);
+        .insert(insertData as any);
 
       if (error) {
-        console.error('Error submitting application:', error);
-        toast.error('Erro ao enviar', {
-          description: 'Tente novamente ou entre em contato.',
-        });
+        console.error('[CoachApplicationModal] Error submitting:', error);
+        toast.error('Erro ao enviar. Tente novamente.');
         setSubmitting(false);
         return;
       }
 
-      toast.success('Contato enviado!', {
-        description: 'Em breve entraremos em contato.',
-      });
+      toast.success('Contato enviado. Aguarde aprovação do admin.');
       setSubmitted(true);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -75,6 +78,9 @@ export function CoachApplicationModal({ isOpen, onClose }: CoachApplicationModal
           }
         });
         setErrors(fieldErrors);
+      } else {
+        console.error('[CoachApplicationModal] Unexpected error:', err);
+        toast.error('Erro ao enviar. Tente novamente.');
       }
     } finally {
       setSubmitting(false);

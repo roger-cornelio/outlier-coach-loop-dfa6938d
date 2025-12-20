@@ -110,7 +110,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -126,7 +126,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -142,7 +142,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
