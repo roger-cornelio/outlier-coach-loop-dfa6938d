@@ -36,11 +36,11 @@ export function AppGate({ children }: AppGateProps) {
     );
   }
 
-  // ===== RULE 2: ANON users MUST see /auth first =====
-  // Redirect anon users to /auth for ALL routes except /auth and /coach
+  // ===== RULE 2: ANON users MUST see login first =====
+  // Redirect anon users to /login for ALL routes except login routes and /coach
   if (state === 'anon') {
-    // /auth route - allow anon users
-    if (pathname === '/auth') {
+    // /auth or /login routes - allow anon users
+    if (pathname === '/auth' || pathname.startsWith('/login')) {
       return <>{children}</>;
     }
     
@@ -49,9 +49,9 @@ export function AppGate({ children }: AppGateProps) {
       return <>{children}</>;
     }
     
-    // ALL OTHER ROUTES: redirect to /auth
-    console.log('[AppGate] REDIRECT → /auth | Reason: anon user on protected route:', pathname);
-    return <Navigate to="/auth" replace />;
+    // ALL OTHER ROUTES: redirect to /login
+    console.log('[AppGate] REDIRECT → /login | Reason: anon user on protected route:', pathname);
+    return <Navigate to="/login" replace />;
   }
 
   // ===== RULE 3: SUPERADMIN is NEVER blocked, NEVER redirected =====
@@ -72,14 +72,30 @@ export function AppGate({ children }: AppGateProps) {
     // Admin user - allow access
   }
 
-  // /auth route - redirect authenticated users away
-  if (pathname === '/auth') {
+  // /auth and /login routes - redirect authenticated users away
+  if (pathname === '/auth' || pathname === '/login') {
     if (state === 'admin') {
       console.log('[AppGate] REDIRECT /auth → /admin | Reason: admin user');
       return <Navigate to="/admin" replace />;
     }
     console.log('[AppGate] REDIRECT /auth → / | Reason: authenticated user');
     return <Navigate to="/" replace />;
+  }
+  
+  // /login/admin - redirect authenticated admins to /admin, block non-admins
+  if (pathname === '/login/admin') {
+    if (state === 'admin') {
+      console.log('[AppGate] REDIRECT /login/admin → /admin | Reason: already admin');
+      return <Navigate to="/admin" replace />;
+    }
+    // Non-admin authenticated users - let Auth page handle access denied
+    return <>{children}</>;
+  }
+  
+  // /login/coach - redirect authenticated coaches to /coach
+  if (pathname === '/login/coach') {
+    // Let Auth page handle the redirect after checking coach status
+    return <>{children}</>;
   }
 
   // /coach route - let CoachPortal handle rendering based on role
