@@ -406,6 +406,15 @@ export function WorkoutExecution() {
             Complete todos os blocos para registrar seu resultado
           </p>
         )}
+
+        {/* Equipment Substitution Button - Bottom */}
+        <button
+          onClick={() => setIsEquipmentModalOpen(true)}
+          className="w-full mt-6 py-3 px-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <Wrench className="w-4 h-4" />
+          <span className="font-display text-sm tracking-wide">SUBSTITUIÇÕES DE EQUIPAMENTOS</span>
+        </button>
       </main>
 
       {/* Equipment Adaptation Modal */}
