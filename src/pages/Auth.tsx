@@ -674,7 +674,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                           </Link>
                           <span className="text-muted-foreground/40">·</span>
                           <Link
-                            to="/login/coach"
+                            to="/coach"
                             className="text-sm text-muted-foreground hover:text-primary transition-colors"
                           >
                             Coach
