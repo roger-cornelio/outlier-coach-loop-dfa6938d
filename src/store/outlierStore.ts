@@ -151,8 +151,9 @@ export const useOutlierStore = create<OutlierState>()(
       // Reset completo para novo usuário - zera TUDO para defaults
       // ATENÇÃO: Este reset é para LOGOUT ou troca de usuário
       // NÃO afeta treinos do banco (esses são carregados via useCoachWorkouts)
+      // NÃO reseta coachStyle - ele é persistido no banco e carregado do perfil
       resetToDefaults: () => set({
-        coachStyle: null,
+        // coachStyle NÃO é resetado - será carregado do perfil no próximo login
         athleteConfig: null,
         workoutResults: [],
         baseWorkouts: [],
@@ -169,9 +170,9 @@ export const useOutlierStore = create<OutlierState>()(
       
       // Reset APENAS preferências do usuário - preserva treinos carregados do banco
       // Usado quando há treinos do banco disponíveis e não queremos sobrescrevê-los
+      // NÃO reseta coachStyle - ele é persistido no banco
       resetUserPreferencesOnly: () => set({
-        // Limpa apenas configurações pessoais
-        coachStyle: null,
+        // Limpa apenas configurações pessoais (NÃO coachStyle)
         athleteConfig: null,
         // NÃO limpa treinos - baseWorkouts, adaptedWorkouts, weeklyWorkouts permanecem
         adaptationPending: true, // Marca para readaptar com nova config

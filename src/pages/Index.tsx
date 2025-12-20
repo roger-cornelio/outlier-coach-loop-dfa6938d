@@ -3,12 +3,17 @@
  * 
  * IMPORTANT: Only authenticated users reach this page.
  * AppGate redirects anon users to /auth before they can see Index.
+ * 
+ * COACH STYLE FLOW:
+ * - First login: Shows WelcomeScreen for coach selection, saves to profile
+ * - Subsequent logins: Loads saved coach_style, skips to dashboard/config
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
+import { useCoachStylePersistence } from "@/hooks/useCoachStylePersistence";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AthleteWelcomeScreen } from "@/components/AthleteWelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
@@ -26,8 +31,12 @@ import { useLevelTheme } from "@/hooks/useLevelTheme";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { currentView, setCurrentView } = useOutlierStore();
+  const { currentView, setCurrentView, coachStyle, athleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts } = useAppState();
+  const { loadCoachStyleFromProfile, hasPersistedCoachStyle } = useCoachStylePersistence();
+  
+  // Track if we've already done the initial navigation check
+  const initialCheckDone = useRef(false);
 
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();
@@ -35,6 +44,32 @@ const Index = () => {
   // Apply coach theme and level theme (colors for text/badges only, NOT background)
   useCoachTheme();
   useLevelTheme();
+  
+  // COACH STYLE PERSISTENCE: Load from profile and skip welcome if already set
+  useEffect(() => {
+    if (state === 'loading' || initialCheckDone.current) return;
+    
+    // Try to load coach style from profile
+    const hasPersistedStyle = hasPersistedCoachStyle();
+    
+    if (hasPersistedStyle) {
+      // Load the style into the store
+      loadCoachStyleFromProfile();
+      
+      // Skip welcome screen - go directly to config or dashboard
+      if (currentView === 'welcome') {
+        // If no athleteConfig yet, go to config; otherwise dashboard
+        if (!athleteConfig) {
+          setCurrentView('config');
+        } else {
+          setCurrentView('dashboard');
+        }
+        console.log('[Index] Skipped welcome - coach style loaded from profile');
+      }
+    }
+    
+    initialCheckDone.current = true;
+  }, [state, hasPersistedCoachStyle, loadCoachStyleFromProfile, currentView, athleteConfig, setCurrentView]);
 
   // View access control for authenticated users
   useEffect(() => {

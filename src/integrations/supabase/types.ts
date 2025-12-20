@@ -217,6 +217,7 @@ export type Database = {
       profiles: {
         Row: {
           coach_id: string | null
+          coach_style: string | null
           created_at: string
           email: string
           id: string
@@ -226,6 +227,7 @@ export type Database = {
         }
         Insert: {
           coach_id?: string | null
+          coach_style?: string | null
           created_at?: string
           email: string
           id?: string
@@ -235,6 +237,7 @@ export type Database = {
         }
         Update: {
           coach_id?: string | null
+          coach_style?: string | null
           created_at?: string
           email?: string
           id?: string
