@@ -14,14 +14,24 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+/**
+ * App component with provider tree
+ * 
+ * CRITICAL: Provider order matters!
+ * 1. QueryClientProvider (external, no deps)
+ * 2. BrowserRouter (routing, no auth deps)
+ * 3. AuthProvider (auth context - MUST wrap everything that uses useAuth)
+ * 4. TooltipProvider (UI utils)
+ * 5. AppGate + Routes (uses useAuth via useAppState)
+ */
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SessionRefreshBanner />
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <SessionRefreshBanner />
           <AppGate>
             <Routes>
               {/* Main app route (protected) */}
@@ -51,9 +61,9 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppGate>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
