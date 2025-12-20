@@ -15,12 +15,11 @@ import type { CoachStyle } from '@/types/outlier';
 import { getCoachCopy } from '@/config/coachCopy';
 import { Flame, Heart, Zap, Check, Loader2 } from 'lucide-react';
 
-
-// Integrated coach messages (exact text per style)
+// Integrated coach messages (exact text per style - universal language)
 const coachMessages: Record<CoachStyle, string> = {
   IRON: 'Daqui pra frente é direto e sem desculpa.',
-  PULSE: 'Constância com direção. Vamos construir isso.',
-  SPARK: 'Energia alta. Bora manter o ritmo.',
+  PULSE: 'Você escolheu bem. Constância com direção — vamos construir isso.',
+  SPARK: 'Agora é energia alta e ritmo forte. Bora acelerar.',
 };
 
 const coachOptions: { style: CoachStyle; label: string; icon: typeof Flame; description: string }[] = [
@@ -187,27 +186,42 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
 
       {/* Integrated Coach Message - appears after style change */}
       <AnimatePresence>
-        {showCoachMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="mt-8 text-center"
-          >
-            <div className="inline-flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-primary/5 border border-primary/20">
-              {/* Coach name */}
-              <span className="font-display text-xl tracking-wider text-primary">
-                {showCoachMessage}
-              </span>
-              
-              {/* Coach message in quotes */}
-              <p className="text-base text-foreground/90 italic">
-                "{coachMessages[showCoachMessage]}"
-              </p>
-            </div>
-          </motion.div>
-        )}
+        {showCoachMessage && (() => {
+          const messageOption = coachOptions.find(o => o.style === showCoachMessage);
+          const MessageIcon = messageOption?.icon || Flame;
+          
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="mt-8 text-center"
+            >
+              <div className="inline-flex flex-col items-center gap-3 px-8 py-5 rounded-xl bg-primary/5 border border-primary/20">
+                {/* Coach icon with brief pulse animation */}
+                <motion.div
+                  initial={{ scale: 1 }}
+                  animate={{ scale: [1, 1.15, 1, 1.1, 1] }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  className="p-3 rounded-full bg-primary/10"
+                >
+                  <MessageIcon className="w-6 h-6 text-primary" />
+                </motion.div>
+                
+                {/* Coach name */}
+                <span className="font-display text-xl tracking-wider text-primary">
+                  {showCoachMessage}
+                </span>
+                
+                {/* Coach message in quotes */}
+                <p className="text-base text-foreground/90 italic max-w-sm">
+                  "{coachMessages[showCoachMessage]}"
+                </p>
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </motion.section>
   );
