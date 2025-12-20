@@ -16,6 +16,7 @@ import { UserHeader } from './UserHeader';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { AthleteViewSelector } from './AthleteViewSelector';
 import { useAppState } from '@/hooks/useAppState';
+import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -71,13 +72,15 @@ export function Dashboard() {
     adaptedWorkouts,
     adaptationPending,
     athleteConfig,
-    viewingAsAthlete
+    viewingAsAthlete,
+    setBaseWorkouts
   } = useOutlierStore();
   
   const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const { state } = useAppState();
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
+  const { fetchAvailableWorkouts } = useCoachWorkouts();
   const navigate = useNavigate();
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
@@ -86,6 +89,34 @@ export function Dashboard() {
   const [workoutFeedback, setWorkoutFeedback] = useState<string | null>(null);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
+  const [isLoadingFromDb, setIsLoadingFromDb] = useState(false);
+
+  // ============================================
+  // REGRA: Carregar treinos do banco se não houver localmente
+  // ============================================
+  useEffect(() => {
+    async function loadFromDatabase() {
+      // Se já tem treinos locais, não buscar do banco
+      if (baseWorkouts.length > 0) return;
+      // Se é coach/admin, não precisa buscar (eles criam)
+      if (canManageWorkouts) return;
+      
+      setIsLoadingFromDb(true);
+      try {
+        const workoutsFromDb = await fetchAvailableWorkouts();
+        if (workoutsFromDb.length > 0) {
+          console.log('[Dashboard] Loaded workouts from database:', workoutsFromDb.length, 'days');
+          setBaseWorkouts(workoutsFromDb);
+        }
+      } catch (err) {
+        console.error('[Dashboard] Error loading workouts from DB:', err);
+      } finally {
+        setIsLoadingFromDb(false);
+      }
+    }
+    
+    loadFromDatabase();
+  }, [baseWorkouts.length, canManageWorkouts, fetchAvailableWorkouts, setBaseWorkouts]);
 
   // ============================================
   // REGRA: Usar SEMPRE adaptedWorkouts quando existir
