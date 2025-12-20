@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getEffectiveContent, getEffectiveTargetRange } from '@/utils/benchmarkVariants';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { getCoachLine, getBucketFeedbackCategory } from '@/config/coachCopy';
 
 const bucketConfig: Record<PerformanceBucket, { icon: React.ReactNode; label: string; colorClass: string }> = {
   ELITE: {
@@ -33,31 +34,6 @@ const bucketConfig: Record<PerformanceBucket, { icon: React.ReactNode; label: st
     icon: <XCircle className="w-12 h-12" />,
     label: 'DNF',
     colorClass: 'text-status-below',
-  },
-};
-
-// Fallback messages when AI is unavailable
-const fallbackMessages: Record<CoachStyle, Record<PerformanceBucket, string>> = {
-  IRON: {
-    ELITE: 'Performance sólida. Você provou que está no caminho certo. Não relaxe.',
-    STRONG: 'Você fez o que precisava ser feito. Agora é hora de superar.',
-    OK: 'Aceitável. Mas aceitável não é o objetivo.',
-    TOUGH: 'Treino pesado. Se você sobreviveu, está mais forte.',
-    DNF: 'Você não terminou. Identifique onde perdeu e corrija.',
-  },
-  PULSE: {
-    ELITE: 'Incrível! Você se superou hoje. Esse é o resultado de consistência e dedicação.',
-    STRONG: 'Bom trabalho! Você está evoluindo no ritmo certo. Continue firme.',
-    OK: 'Você completou, e isso já conta. O próximo vai ser melhor.',
-    TOUGH: 'Dia difícil, mas você terminou. Isso já é uma vitória.',
-    DNF: 'Nem todo dia é perfeito, e tudo bem. O importante é não desistir.',
-  },
-  SPARK: {
-    ELITE: '🔥 BOOOOM! Você destruiu esse WOD! Isso sim é performance de outlier!',
-    STRONG: 'Muito bom! 💪 Treino sólido, atleta! Você está no jogo!',
-    OK: 'Check feito! 💪 Treino completado, é isso que importa.',
-    TOUGH: 'Ufa 😅 treino puxado! Mas você passou por ele!',
-    DNF: 'Dia complicado! Mas calma, campeão não é feito em um dia. 💫',
   },
 };
 
@@ -194,7 +170,9 @@ export function PerformanceFeedback() {
 
   const bucket = aiBucket || classifyPerformanceLocal(resultData);
   const config = bucketConfig[bucket];
-  const feedbackMessage = aiFeedback || fallbackMessages[athleteConfig.coachStyle][bucket];
+  // Use centralized coach copy for fallback
+  const feedbackCategory = getBucketFeedbackCategory(bucket);
+  const feedbackMessage = aiFeedback || getCoachLine(athleteConfig.coachStyle, feedbackCategory);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

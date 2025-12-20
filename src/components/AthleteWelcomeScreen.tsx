@@ -1,7 +1,7 @@
 /**
  * ATHLETE WELCOME SCREEN
  * Exibido após login/seleção de coach
- * Auto-avança após 2.4s
+ * Auto-avança após 15s
  */
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -9,45 +9,12 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Flame, Heart, Zap } from 'lucide-react';
 import type { CoachStyle } from '@/types/outlier';
+import { getCoachCopy } from '@/config/coachCopy';
 
-interface CoachCopy {
-  displayName: string;
-  icon: React.ReactNode;
-  bullets: string[];
-  footerLine: string;
-}
-
-const coachCopyMap: Record<CoachStyle, CoachCopy> = {
-  IRON: {
-    displayName: 'IRON',
-    icon: <Flame className="w-6 h-6" />,
-    bullets: [
-      'Exigência máxima em cada treino',
-      'Zero desculpas, foco total no resultado',
-      'Progressão implacável rumo ao pódio',
-    ],
-    footerLine: 'Prepare-se. Vai doer, mas vai valer.',
-  },
-  PULSE: {
-    displayName: 'PULSE',
-    icon: <Heart className="w-6 h-6" />,
-    bullets: [
-      'Consistência como chave do sucesso',
-      'Apoio constante na sua jornada',
-      'Evolução sustentável e inteligente',
-    ],
-    footerLine: 'Um passo de cada vez. Juntos até o fim.',
-  },
-  SPARK: {
-    displayName: 'SPARK',
-    icon: <Zap className="w-6 h-6" />,
-    bullets: [
-      'Energia positiva em cada sessão',
-      'Criatividade para superar desafios',
-      'Diversão sem perder a intensidade',
-    ],
-    footerLine: 'Bora fazer acontecer! 🔥',
-  },
+const coachIcons: Record<CoachStyle, React.ReactNode> = {
+  IRON: <Flame className="w-6 h-6" />,
+  PULSE: <Heart className="w-6 h-6" />,
+  SPARK: <Zap className="w-6 h-6" />,
 };
 
 export function AthleteWelcomeScreen() {
@@ -56,7 +23,8 @@ export function AthleteWelcomeScreen() {
   const [isReady, setIsReady] = useState(false);
 
   const athleteName = profile?.name || user?.email?.split('@')[0] || '';
-  const coachCopy = coachStyle ? coachCopyMap[coachStyle] : null;
+  const coachCopy = coachStyle ? getCoachCopy(coachStyle).welcomeScreen : null;
+  const coachIcon = coachStyle ? coachIcons[coachStyle] : null;
 
   // Check if data is ready
   useEffect(() => {
@@ -106,7 +74,7 @@ export function AthleteWelcomeScreen() {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          SEJA BEM-VINDO, OUTLIER
+          {coachCopy?.headline || 'SEJA BEM-VINDO, OUTLIER'}
         </motion.h1>
 
         {/* B) Nome do atleta - Destaque forte */}
@@ -121,14 +89,14 @@ export function AthleteWelcomeScreen() {
           </span>
         </motion.div>
 
-        {/* C) Subtítulo curto */}
+        {/* C) Subtítulo curto - personalizado por coach */}
         <motion.p 
           className="text-lg md:text-xl text-muted-foreground mb-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          A partir de agora, você é OUTLIER.
+          {coachCopy?.subheadline || 'A partir de agora, você é OUTLIER.'}
         </motion.p>
 
         {/* D) Card do Coach */}
@@ -142,21 +110,21 @@ export function AthleteWelcomeScreen() {
             {/* Coach header */}
             <div className="flex items-center gap-3 mb-5">
               <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/40">
-                {coachCopy.icon}
+                {coachIcon}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Seu Coach</p>
-                <p className="font-display text-xl tracking-wide text-foreground">{coachCopy.displayName}</p>
+                <p className="font-display text-xl tracking-wide text-foreground">{coachStyle}</p>
               </div>
             </div>
 
             {/* What you'll feel */}
             <p className="text-sm text-muted-foreground mb-3">
-              O que você vai sentir nessa experiência:
+              {coachCopy?.coachCardIntro || 'O que você vai sentir nessa experiência:'}
             </p>
             
             <ul className="space-y-2 mb-5">
-              {coachCopy.bullets.map((bullet, index) => (
+              {coachCopy?.bullets.map((bullet, index) => (
                 <motion.li 
                   key={index}
                   className="flex items-start gap-2 text-foreground"
@@ -177,7 +145,7 @@ export function AthleteWelcomeScreen() {
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
             >
-              {coachCopy.footerLine}
+              {coachCopy?.footer}
             </motion.p>
           </motion.div>
         )}

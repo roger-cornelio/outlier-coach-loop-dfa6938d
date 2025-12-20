@@ -10,26 +10,15 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import type { CoachStyle } from '@/types/outlier';
 import { Flame, Heart, Zap, LogOut, User } from 'lucide-react';
+import { getCoachCopy } from '@/config/coachCopy';
 
-const coachOptions: { style: CoachStyle; icon: React.ReactNode; title: string; description: string }[] = [
-  {
-    style: 'IRON',
-    icon: <Flame className="w-8 h-8" />,
-    title: 'IRON',
-    description: 'Direto. Exigente. Sem desculpas.',
-  },
-  {
-    style: 'PULSE',
-    icon: <Heart className="w-8 h-8" />,
-    title: 'PULSE',
-    description: 'Humano. Consistente. Confiável.',
-  },
-  {
-    style: 'SPARK',
-    icon: <Zap className="w-8 h-8" />,
-    title: 'SPARK',
-    description: 'Leve. Energético. Inspirador.',
-  },
+// Use centralized copy - pick any coach since selectCoachScreen is the same for all
+const screenCopy = getCoachCopy('PULSE').selectCoachScreen;
+
+const coachOptions: { style: CoachStyle; icon: React.ReactNode }[] = [
+  { style: 'IRON', icon: <Flame className="w-8 h-8" /> },
+  { style: 'PULSE', icon: <Heart className="w-8 h-8" /> },
+  { style: 'SPARK', icon: <Zap className="w-8 h-8" /> },
 ];
 
 export function WelcomeScreen() {
@@ -111,7 +100,7 @@ export function WelcomeScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          Be the Outlier. Treine para ser fora da curva.
+          {screenCopy.title}
         </motion.p>
         
         <motion.p 
@@ -120,8 +109,7 @@ export function WelcomeScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          Seu programa de treinamento HYROX personalizado. 
-          Escolha seu estilo de coach e comece a jornada.
+          {screenCopy.subtitle}
         </motion.p>
 
         {/* Coach Selection */}
@@ -131,33 +119,36 @@ export function WelcomeScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
         >
-          {coachOptions.map((option) => (
-            <motion.button
-              key={option.style}
-              onClick={() => handleSelectCoach(option.style)}
-              className={`
-                card-elevated p-7 text-left transition-all duration-300
-                ${coachStyle === option.style 
-                  ? 'border-primary ring-2 ring-primary/50 shadow-xl shadow-primary/25 scale-[1.03]' 
-                  : 'hover:border-muted-foreground/50 opacity-70 hover:opacity-100 shadow-md'
-                }
-              `}
-              whileHover={{ scale: coachStyle === option.style ? 1.03 : 1.04 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className={`
-                mb-4 inline-flex p-3.5 rounded-xl transition-all duration-300
-                ${coachStyle === option.style 
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/40' 
-                  : 'bg-secondary text-foreground'
-                }
-              `}>
-                {option.icon}
-              </div>
-              <h3 className="font-display text-2xl mb-2 tracking-wide">{option.title}</h3>
-              <p className="text-sm text-muted-foreground leading-snug">{option.description}</p>
-            </motion.button>
-          ))}
+          {coachOptions.map((option) => {
+            const cardCopy = screenCopy.cards[option.style];
+            return (
+              <motion.button
+                key={option.style}
+                onClick={() => handleSelectCoach(option.style)}
+                className={`
+                  card-elevated p-7 text-left transition-all duration-300
+                  ${coachStyle === option.style 
+                    ? 'border-primary ring-2 ring-primary/50 shadow-xl shadow-primary/25 scale-[1.03]' 
+                    : 'hover:border-muted-foreground/50 opacity-70 hover:opacity-100 shadow-md'
+                  }
+                `}
+                whileHover={{ scale: coachStyle === option.style ? 1.03 : 1.04 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className={`
+                  mb-4 inline-flex p-3.5 rounded-xl transition-all duration-300
+                  ${coachStyle === option.style 
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/40' 
+                    : 'bg-secondary text-foreground'
+                  }
+                `}>
+                  {option.icon}
+                </div>
+                <h3 className="font-display text-2xl mb-2 tracking-wide">{cardCopy.title}</h3>
+                <p className="text-sm text-muted-foreground leading-snug">{cardCopy.description}</p>
+              </motion.button>
+            );
+          })}
         </motion.div>
 
         {/* CTA Button */}
@@ -178,7 +169,7 @@ export function WelcomeScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
         >
-          PRONTO PARA PERFORMAR
+          {screenCopy.cta}
         </motion.button>
       </motion.div>
     </div>
