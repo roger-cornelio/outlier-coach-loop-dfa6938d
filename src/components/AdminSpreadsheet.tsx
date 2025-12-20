@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info, Settings2, Users, UserPlus } from 'lucide-react';
+import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
+import { ArrowLeft, FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ShieldAlert, LogIn, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, LogOut, Eye, Wand2, Info, Settings2, Users, UserPlus, Upload, Database, Globe } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -129,8 +130,9 @@ function parseSpreadsheet(text: string): DayWorkout[] {
 }
 
 export function AdminSpreadsheet() {
-  const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
-  const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading, signOut } = useAuth();
+  const { setCurrentView, setWeeklyWorkouts, weeklyWorkouts, setBaseWorkouts } = useOutlierStore();
+  const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading, signOut, profile } = useAuth();
+  const { saveWorkout: saveToDb, publishWorkout, loading: dbLoading, workouts: savedWorkouts } = useCoachWorkouts();
   const navigate = useNavigate();
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -149,6 +151,7 @@ export function AdminSpreadsheet() {
   const [targetAudience, setTargetAudience] = useState<'all' | 'specific'>('all');
   const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [isSavingToDb, setIsSavingToDb] = useState(false);
 
   if (authLoading) {
     return (
@@ -386,13 +389,39 @@ export function AdminSpreadsheet() {
     setParsedWorkouts(updated);
   };
 
-  const saveWorkouts = () => {
+  const saveWorkouts = async () => {
     if (!parsedWorkouts) return;
     
-    setWeeklyWorkouts(parsedWorkouts);
-    setSuccess(`${parsedWorkouts.length} dia(s) de treino salvo(s) com sucesso!`);
-    setParsedWorkouts(null);
-    setSpreadsheetText('');
+    setIsSavingToDb(true);
+    setError(null);
+    
+    try {
+      // 1. Salvar no localStorage (legado) para uso local do coach
+      setWeeklyWorkouts(parsedWorkouts);
+      
+      // 2. Salvar no banco de dados para persistência e visibilidade
+      const title = programName.trim() || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
+      const status = programStatus === 'published' ? 'published' : 'draft';
+      
+      const workoutId = await saveToDb(title, parsedWorkouts, status, 0);
+      
+      if (workoutId) {
+        setSuccess(`${parsedWorkouts.length} dia(s) de treino salvo(s) no banco! ${status === 'published' ? '(Publicado - visível para atletas)' : '(Rascunho - não visível para atletas)'}`);
+      } else {
+        setSuccess(`${parsedWorkouts.length} dia(s) salvo(s) localmente. Erro ao salvar no banco.`);
+      }
+      
+      setParsedWorkouts(null);
+      setSpreadsheetText('');
+      setProgramName('');
+      setShowConfig(false);
+      setShowSaveConfirmation(false);
+    } catch (err) {
+      console.error('[AdminSpreadsheet] Error saving:', err);
+      setError('Erro ao salvar treino no banco');
+    } finally {
+      setIsSavingToDb(false);
+    }
   };
 
   const cancelReview = () => {

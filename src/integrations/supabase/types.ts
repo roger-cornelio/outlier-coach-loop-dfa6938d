@@ -301,7 +301,15 @@ export type Database = {
           updated_at?: string
           workout_json?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workouts_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
