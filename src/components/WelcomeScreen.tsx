@@ -3,13 +3,18 @@
  * 
  * IMPORTANTE: Esta tela só é exibida para usuários AUTENTICADOS.
  * Usuários anônimos são redirecionados para /auth pelo AppGate.
+ * 
+ * FIRST-TIME ONLY: O estilo escolhido é salvo no perfil do usuário.
+ * Em logins subsequentes, o usuário vai direto para config/dashboard.
  */
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
+import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import type { CoachStyle } from '@/types/outlier';
-import { Flame, Heart, Zap, LogOut, User } from 'lucide-react';
+import { Flame, Heart, Zap, LogOut, User, Loader2 } from 'lucide-react';
 import { getCoachCopy } from '@/config/coachCopy';
 
 // Use centralized copy - pick any coach since selectCoachScreen is the same for all
@@ -24,15 +29,29 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode }[] = [
 export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
   const { profile, signOut } = useAuth();
+  const { saveCoachStyle } = useCoachStylePersistence();
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSelectCoach = (style: CoachStyle) => {
     setCoachStyle(style);
   };
 
-  const handleContinue = () => {
-    if (coachStyle) {
+  const handleContinue = async () => {
+    if (!coachStyle) return;
+    
+    setIsSaving(true);
+    
+    // Salvar estilo no banco de dados
+    const result = await saveCoachStyle(coachStyle);
+    
+    if (result.success) {
       setCurrentView('athleteWelcome');
+    } else {
+      toast.error('Erro ao salvar preferência. Tente novamente.');
+      console.error('[WelcomeScreen] Failed to save coach style:', result.error);
     }
+    
+    setIsSaving(false);
   };
 
   const handleLogout = async () => {
@@ -161,22 +180,23 @@ export function WelcomeScreen() {
         {/* CTA Button */}
         <motion.button
           onClick={handleContinue}
-          disabled={!coachStyle}
+          disabled={!coachStyle || isSaving}
           className={`
             font-display text-xl tracking-widest px-16 py-6 rounded-xl
-            transition-all duration-300
-            ${coachStyle 
+            transition-all duration-300 flex items-center justify-center gap-3
+            ${coachStyle && !isSaving
               ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
               : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
-          whileHover={coachStyle ? { scale: 1.05 } : {}}
-          whileTap={coachStyle ? { scale: 0.95 } : {}}
+          whileHover={coachStyle && !isSaving ? { scale: 1.05 } : {}}
+          whileTap={coachStyle && !isSaving ? { scale: 0.95 } : {}}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
         >
-          {screenCopy.cta}
+          {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+          {isSaving ? 'SALVANDO...' : screenCopy.cta}
         </motion.button>
       </motion.div>
     </div>

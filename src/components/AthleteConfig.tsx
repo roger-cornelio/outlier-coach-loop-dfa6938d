@@ -5,6 +5,7 @@ import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
 import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
+import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 
 // Níveis de treino - sem métricas visíveis
 const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
@@ -123,6 +124,9 @@ export function AthleteConfig() {
           </div>
         </motion.div>
       )}
+
+      {/* Coach Style Changer */}
+      <CoachStyleChanger />
 
       {/* Athlete Data */}
       <motion.section
