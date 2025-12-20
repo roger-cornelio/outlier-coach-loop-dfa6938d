@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw, Info } from 'lucide-react';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { formatBlockTimeSec, getBlockDurationSec, calculateCalories } from '@/utils/workoutCalculations';
 import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
@@ -17,6 +17,7 @@ import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { AthleteViewSelector } from './AthleteViewSelector';
 import { useAppState } from '@/hooks/useAppState';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
+import { getCoachCopy } from '@/config/coachCopy';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -516,6 +517,17 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
+
+              {/* Workout Adjusted Note - Institutional copy */}
+              {(() => {
+                const dashboardCopy = getCoachCopy(athleteConfig?.coachStyle).dashboard;
+                return (
+                  <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground/80">
+                    <Info className="w-3.5 h-3.5" />
+                    <span>{dashboardCopy.workoutAdjustedNote}</span>
+                  </div>
+                );
+              })()}
 
               {/* Workout Summary Block */}
               {(() => {

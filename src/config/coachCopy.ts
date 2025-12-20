@@ -26,6 +26,17 @@ export interface CoachCopySet {
     coachCardIntro: string;
     bullets: string[];
     footer: string;
+    /** Texto institucional explicando que treino ≠ estilo de feedback */
+    institutionalNote: string;
+  };
+  /** Copys institucionais para configurações */
+  settings: {
+    coachStyleChangeNote: string;
+    coachStyleChangeSubnote: string;
+  };
+  /** Copy antes do treino no dashboard */
+  dashboard: {
+    workoutAdjustedNote: string;
   };
   workoutComments: {
     preWorkout: string[];
@@ -85,6 +96,14 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Progressão implacável rumo ao pódio',
       ],
       footer: 'Prepare-se. Vai doer, mas vai valer.',
+      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+    },
+    settings: {
+      coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+    },
+    dashboard: {
+      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
     },
     workoutComments: {
       preWorkout: [
@@ -167,6 +186,14 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Evolução sustentável e inteligente',
       ],
       footer: 'Um passo de cada vez. Juntos até o fim.',
+      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+    },
+    settings: {
+      coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+    },
+    dashboard: {
+      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
     },
     workoutComments: {
       preWorkout: [
@@ -249,6 +276,14 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Diversão sem perder a intensidade',
       ],
       footer: 'Bora fazer acontecer! 🔥',
+      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+    },
+    settings: {
+      coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+    },
+    dashboard: {
+      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
     },
     workoutComments: {
       preWorkout: [
