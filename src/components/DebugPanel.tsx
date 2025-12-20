@@ -39,12 +39,12 @@ export function DebugPanel({ state }: DebugPanelProps) {
     { label: 'user.id', value: state.userId?.slice(0, 8) || 'null', color: state.userId ? 'text-blue-400' : 'text-gray-500' },
     { label: 'profileLoaded', value: String(state.profileLoaded), color: state.profileLoaded ? 'text-green-400' : 'text-yellow-400' },
     { label: 'first_setup_completed', value: String(state.firstSetupCompleted), color: state.firstSetupCompleted ? 'text-green-400' : 'text-orange-400' },
-    { label: 'profile.coach_style', value: state.profileCoachStyle || 'null', color: state.profileCoachStyle ? 'text-purple-400' : 'text-gray-500' },
+    { label: 'profile.coach_style', value: state.profileCoachStyle || 'null', color: state.profileCoachStyle ? 'text-green-400' : 'text-red-400' },
     { label: 'localCoachStyle', value: state.localCoachStyle || 'null', color: state.localCoachStyle ? 'text-purple-400' : 'text-gray-500' },
-    { label: 'shouldShowOnboarding', value: String(state.shouldShowOnboarding), color: state.shouldShowOnboarding ? 'text-orange-400' : 'text-green-400' },
+    { label: 'shouldShowOnboarding', value: String(state.shouldShowOnboarding), color: state.shouldShowOnboarding ? 'text-red-400' : 'text-green-400' },
     { label: 'currentRoute', value: location.pathname, color: 'text-cyan-400' },
     { label: 'currentView', value: state.currentView, color: 'text-cyan-400' },
-    { label: 'lastRedirectReason', value: state.lastRedirectReason, color: 'text-yellow-300' },
+    { label: 'lastRedirectReason', value: state.lastRedirectReason, color: state.lastRedirectReason === 'COACH_STYLE_PRESENT' ? 'text-green-400' : state.lastRedirectReason === 'COACH_STYLE_MISSING' ? 'text-red-400' : 'text-yellow-300' },
   ];
 
   return (

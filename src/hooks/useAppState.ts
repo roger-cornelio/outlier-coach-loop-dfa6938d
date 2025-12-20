@@ -38,6 +38,7 @@ export interface AppState {
   user: ReturnType<typeof useAuth>['user'];
   profile: ReturnType<typeof useAuth>['profile'];
   role: ReturnType<typeof useAuth>['role'];
+  updateProfileOptimistic: ReturnType<typeof useAuth>['updateProfileOptimistic'];
 }
 
 export function useAppState(): AppState {
@@ -96,5 +97,6 @@ export function useAppState(): AppState {
     user: auth.user,
     profile: auth.profile,
     role: auth.role,
+    updateProfileOptimistic: auth.updateProfileOptimistic,
   };
 }
