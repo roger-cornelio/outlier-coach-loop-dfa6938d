@@ -2,7 +2,10 @@
  * COACH STYLE CHANGER
  * 
  * Componente para alterar o estilo do treinador em Configurações.
- * Exibe o estilo atual e permite mudança com confirmação.
+ * Aplica mudança imediatamente e exibe toast personalizado por estilo.
+ * 
+ * IMPORTANTE: Não reutiliza a tela de seleção inicial (WelcomeScreen).
+ * A tela de escolha é exclusiva do primeiro acesso.
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,8 +13,24 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import type { CoachStyle } from '@/types/outlier';
 import { getCoachCopy } from '@/config/coachCopy';
-import { Flame, Heart, Zap, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Flame, Heart, Zap, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Toast messages customized per coach style
+const styleChangeToasts: Record<CoachStyle, { title: string; description: string }> = {
+  IRON: {
+    title: 'Estilo atualizado.',
+    description: 'A cobrança agora é direta e sem desculpas.'
+  },
+  PULSE: {
+    title: 'Estilo atualizado.',
+    description: 'Constância com direção, a partir de agora.'
+  },
+  SPARK: {
+    title: 'Estilo atualizado.',
+    description: 'Energia alta. Bora manter o ritmo.'
+  }
+};
 
 const coachOptions: { style: CoachStyle; label: string; icon: typeof Flame; description: string }[] = [
   { 
@@ -43,46 +62,35 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
   const { saveCoachStyle } = useCoachStylePersistence();
   
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState<CoachStyle | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [savingStyle, setSavingStyle] = useState<CoachStyle | null>(null);
 
   const currentOption = coachOptions.find(o => o.style === coachStyle);
   const CurrentIcon = currentOption?.icon || Flame;
 
-  const handleSelectStyle = (style: CoachStyle) => {
+  const handleSelectStyle = async (style: CoachStyle) => {
     if (style === coachStyle) {
       // Same style - just close
       setIsExpanded(false);
       return;
     }
     
-    setSelectedStyle(style);
-    setShowConfirmation(true);
-  };
-
-  const handleConfirmChange = async () => {
-    if (!selectedStyle) return;
+    setSavingStyle(style);
     
-    setIsSaving(true);
-    
-    const result = await saveCoachStyle(selectedStyle);
+    const result = await saveCoachStyle(style);
     
     if (result.success) {
-      toast.success(`Estilo alterado para ${selectedStyle}`);
-      setShowConfirmation(false);
+      // Show personalized toast for the new style (5 seconds duration)
+      const toastContent = styleChangeToasts[style];
+      toast.success(toastContent.title, {
+        description: toastContent.description,
+        duration: 5000,
+      });
       setIsExpanded(false);
-      setSelectedStyle(null);
     } else {
       toast.error('Erro ao salvar. Tente novamente.');
     }
     
-    setIsSaving(false);
-  };
-
-  const handleCancelChange = () => {
-    setShowConfirmation(false);
-    setSelectedStyle(null);
+    setSavingStyle(null);
   };
 
   if (compact) {
@@ -142,9 +150,9 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
         {coachCopy.settings.coachStyleChangeSubnote}
       </p>
 
-      {/* Expanded Options */}
+      {/* Expanded Options - Direct selection, no confirmation modal */}
       <AnimatePresence>
-        {isExpanded && !showConfirmation && (
+        {isExpanded && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -154,69 +162,35 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
             {coachOptions.map((option) => {
               const Icon = option.icon;
               const isSelected = option.style === coachStyle;
+              const isSaving = savingStyle === option.style;
               
               return (
                 <button
                   key={option.style}
                   onClick={() => handleSelectStyle(option.style)}
+                  disabled={savingStyle !== null}
                   className={`
                     p-4 rounded-lg border transition-all duration-200 text-left
                     ${isSelected
                       ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
                       : 'border-border bg-card hover:border-muted-foreground/50'
                     }
+                    ${savingStyle !== null && !isSaving ? 'opacity-50' : ''}
                   `}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    {isSaving ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    ) : (
+                      <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    )}
                     <span className="font-display text-lg">{option.label}</span>
-                    {isSelected && <Check className="w-4 h-4 text-primary ml-auto" />}
+                    {isSelected && !isSaving && <Check className="w-4 h-4 text-primary ml-auto" />}
                   </div>
                   <p className="text-xs text-muted-foreground">{option.description}</p>
                 </button>
               );
             })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Confirmation Dialog */}
-      <AnimatePresence>
-        {showConfirmation && selectedStyle && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="mt-4 p-5 rounded-lg border border-amber-500/30 bg-amber-500/10"
-          >
-            <div className="flex items-start gap-3 mb-4">
-              <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-foreground mb-1">Confirmar alteração?</p>
-                <p className="text-sm text-muted-foreground">
-                  Você está alterando de <strong>{coachStyle}</strong> para <strong>{selectedStyle}</strong>.
-                  O estilo do treinador afeta todo o tom das mensagens e feedbacks do app.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleCancelChange}
-                disabled={isSaving}
-                className="px-4 py-2 rounded-lg border border-border hover:bg-secondary transition-colors text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmChange}
-                disabled={isSaving}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm flex items-center gap-2"
-              >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? 'Salvando...' : 'Confirmar'}
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
