@@ -383,7 +383,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'LOGIN COACH' : 'LOGIN ADMIN'}
+              {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'LOGIN COACH' : 'PORTAL ADMIN'}
             </motion.h1>
             
             {/* Subheadline */}
@@ -397,7 +397,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 ? 'Consistência vira resultado.'
                 : context === 'coach'
                   ? 'Acesso exclusivo para coaches OUTLIER'
-                  : 'Área restrita'
+                  : 'Onde a performance é criada, validada e escalada.'
               }
             </motion.p>
             
@@ -412,7 +412,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 ? 'Entre para treinar com direção — e acompanhar sua evolução.'
                 : context === 'coach'
                   ? 'Faça login para ver seu status de aprovação.'
-                  : 'Somente administradores autorizados.'
+                  : 'Acesso restrito para administradores da OUTLIER.'
               }
             </motion.p>
           </div>
@@ -431,7 +431,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
                 {context === 'admin' && <Shield className="w-3 h-3" />}
                 {context === 'coach' && <UserCog className="w-3 h-3" />}
-                {getContextLabel()}
+                {context === 'admin' ? 'Painel Admin' : 'Portal do Coach'}
               </div>
             )}
             <p className="text-muted-foreground text-xs">
@@ -579,6 +579,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 {mode === 'login' && context === 'coach' && (
                   <p className="text-xs text-muted-foreground/70 text-center">
                     Se você ainda não foi aprovado, você verá o status após entrar.
+                  </p>
+                )}
+
+                {/* Admin note */}
+                {mode === 'login' && context === 'admin' && (
+                  <p className="text-xs text-muted-foreground/50 text-center italic">
+                    Área restrita. Tentativas de acesso são monitoradas.
                   </p>
                 )}
 
