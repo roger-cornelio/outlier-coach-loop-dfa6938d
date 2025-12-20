@@ -27,22 +27,25 @@ const App = () => (
               {/* Main app route (protected) */}
               <Route path="/app" element={<Index />} />
               
-              {/* LOGIN ROUTES */}
-              {/* /login is the ONLY user login screen */}
+              {/* === LOGIN ROUTES (3 entry points) === */}
+              {/* USER login */}
               <Route path="/login" element={<Auth context="user" />} />
               
-              {/* /coach is the coach portal (login + status screens) */}
+              {/* ADMIN login - shows admin login screen, then goes to /painel-admin */}
+              <Route path="/login/admin" element={<Auth context="admin" />} />
+              
+              {/* COACH portal - has its own login + status screens */}
               <Route path="/coach" element={<CoachPortal />} />
               
-              {/* /painel-admin is the admin dashboard (protected) */}
+              {/* === PROTECTED DASHBOARDS === */}
+              {/* Admin dashboard (requires admin role) */}
               <Route path="/painel-admin" element={<AdminPortal />} />
               
-              {/* REDIRECTS - Normalize all entry points to /login */}
+              {/* === REDIRECTS - Normalize legacy routes to /login === */}
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/auth" element={<Navigate to="/login" replace />} />
               <Route path="/longin" element={<Navigate to="/login" replace />} />
               <Route path="/login/coach" element={<Navigate to="/coach" replace />} />
-              <Route path="/login/admin" element={<Navigate to="/painel-admin" replace />} />
               
               {/* CATCH-ALL: 404 */}
               <Route path="*" element={<NotFound />} />
