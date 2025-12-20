@@ -16,20 +16,11 @@ import { getCoachCopy } from '@/config/coachCopy';
 import { Flame, Heart, Zap, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Toast messages customized per coach style
-const styleChangeToasts: Record<CoachStyle, { title: string; description: string }> = {
-  IRON: {
-    title: 'Estilo atualizado.',
-    description: 'A cobrança agora é direta e sem desculpas.'
-  },
-  PULSE: {
-    title: 'Estilo atualizado.',
-    description: 'Constância com direção, a partir de agora.'
-  },
-  SPARK: {
-    title: 'Estilo atualizado.',
-    description: 'Energia alta. Bora manter o ritmo.'
-  }
+// Toast messages customized per coach style (EXACT text)
+const styleChangeToasts: Record<CoachStyle, string> = {
+  IRON: 'Estilo atualizado. A cobrança agora é direta e sem desculpas.',
+  PULSE: 'Estilo atualizado. Constância com direção, a partir de agora.',
+  SPARK: 'Estilo atualizado. Energia alta. Bora manter o ritmo.',
 };
 
 const coachOptions: { style: CoachStyle; label: string; icon: typeof Flame; description: string }[] = [
@@ -80,9 +71,7 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
     
     if (result.success) {
       // Show personalized toast for the new style (5 seconds duration)
-      const toastContent = styleChangeToasts[style];
-      toast.success(toastContent.title, {
-        description: toastContent.description,
+      toast.success(styleChangeToasts[style], {
         duration: 5000,
       });
       setIsExpanded(false);

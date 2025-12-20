@@ -26,13 +26,13 @@ interface AppGateProps {
 
 export function AppGate({ children }: AppGateProps) {
   const location = useLocation();
-  const { state, loading } = useAppState();
+  const { state, loading, profileLoading } = useAppState();
   const pathname = location.pathname;
 
-  console.log('[AppGate] state:', state, '| pathname:', pathname, '| loading:', loading);
+  console.log('[AppGate] state:', state, '| pathname:', pathname, '| loading:', loading, '| profileLoading:', profileLoading);
 
-  // ===== RULE 1: While loading, ONLY show loader =====
-  if (loading || state === 'loading') {
+  // ===== RULE 1: While loading (auth OR profile), ONLY show loader =====
+  if (loading || profileLoading || state === 'loading') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
