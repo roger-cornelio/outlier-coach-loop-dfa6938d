@@ -741,6 +741,13 @@ export default function CoachPortal() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
+          <button
+            onClick={() => navigate('/login')}
+            className="text-muted-foreground hover:text-primary text-sm flex items-center gap-1 mb-6 mx-auto transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para login
+          </button>
           <h1 className="font-display text-3xl text-foreground mb-2">Portal do Coach</h1>
           <p className="text-muted-foreground">Acesse ou cadastre-se para gerenciar atletas</p>
         </div>
