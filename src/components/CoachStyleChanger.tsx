@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import type { CoachStyle } from '@/types/outlier';
+import { getCoachCopy } from '@/config/coachCopy';
 import { Flame, Heart, Zap, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -94,13 +95,21 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
     );
   }
 
+  // Get institutional copy
+  const coachCopy = getCoachCopy(coachStyle || 'PULSE');
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="mb-8"
     >
-      <h2 className="font-display text-2xl mb-4">ESTILO DO TREINADOR</h2>
+      <h2 className="font-display text-2xl mb-2">ESTILO DO TREINADOR</h2>
+      
+      {/* Institutional note */}
+      <p className="text-sm text-muted-foreground mb-4">
+        {coachCopy.settings.coachStyleChangeNote}
+      </p>
       
       {/* Current Style Display */}
       <button
@@ -127,6 +136,11 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
           {isExpanded ? 'Fechar' : 'Alterar'}
         </span>
       </button>
+
+      {/* Subnote */}
+      <p className="text-xs text-muted-foreground/70 mt-2">
+        {coachCopy.settings.coachStyleChangeSubnote}
+      </p>
 
       {/* Expanded Options */}
       <AnimatePresence>

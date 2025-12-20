@@ -160,12 +160,24 @@ export function AthleteWelcomeScreen() {
           </motion.div>
         )}
 
+        {/* Institutional note - treino vs feedback */}
+        {coachCopy && (
+          <motion.p
+            className="text-sm text-muted-foreground mt-8 max-w-md mx-auto text-center leading-relaxed"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.4 }}
+          >
+            {coachCopy.institutionalNote}
+          </motion.p>
+        )}
+
         {/* Loading indicator */}
         <motion.p
-          className="text-sm text-muted-foreground mt-8 tracking-wide"
+          className="text-xs text-muted-foreground/60 mt-6 tracking-wide"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
+          transition={{ delay: 1.6 }}
         >
           ajustando sua experiência...
         </motion.p>
