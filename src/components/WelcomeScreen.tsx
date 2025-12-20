@@ -91,7 +91,7 @@ export function WelcomeScreen() {
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          OUTLIER
+          BE THE OUTLIER
         </motion.h1>
         
         <motion.p 
