@@ -14,13 +14,13 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import type { CoachStyle } from '@/types/outlier';
 import { getCoachCopy } from '@/config/coachCopy';
 import { Flame, Heart, Zap, Check, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 
-// Toast messages customized per coach style (EXACT text)
-const styleChangeToasts: Record<CoachStyle, string> = {
-  IRON: 'Estilo atualizado. A cobrança agora é direta e sem desculpas.',
-  PULSE: 'Estilo atualizado. Constância com direção, a partir de agora.',
-  SPARK: 'Estilo atualizado. Energia alta. Bora manter o ritmo.',
+
+// Integrated coach messages (exact text per style)
+const coachMessages: Record<CoachStyle, string> = {
+  IRON: 'Daqui pra frente é direto e sem desculpa.',
+  PULSE: 'Constância com direção. Vamos construir isso.',
+  SPARK: 'Energia alta. Bora manter o ritmo.',
 };
 
 const coachOptions: { style: CoachStyle; label: string; icon: typeof Flame; description: string }[] = [
@@ -54,6 +54,7 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [savingStyle, setSavingStyle] = useState<CoachStyle | null>(null);
+  const [showCoachMessage, setShowCoachMessage] = useState<CoachStyle | null>(null);
 
   const currentOption = coachOptions.find(o => o.style === coachStyle);
   const CurrentIcon = currentOption?.icon || Flame;
@@ -70,13 +71,13 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
     const result = await saveCoachStyle(style);
     
     if (result.success) {
-      // Show personalized toast for the new style (5 seconds duration)
-      toast.success(styleChangeToasts[style], {
-        duration: 5000,
-      });
+      // Show integrated coach message (10 seconds with fade-out)
+      setShowCoachMessage(style);
       setIsExpanded(false);
-    } else {
-      toast.error('Erro ao salvar. Tente novamente.');
+      
+      setTimeout(() => {
+        setShowCoachMessage(null);
+      }, 10000);
     }
     
     setSavingStyle(null);
@@ -180,6 +181,31 @@ export function CoachStyleChanger({ compact = false }: CoachStyleChangerProps) {
                 </button>
               );
             })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Integrated Coach Message - appears after style change */}
+      <AnimatePresence>
+        {showCoachMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="mt-8 text-center"
+          >
+            <div className="inline-flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-primary/5 border border-primary/20">
+              {/* Coach name */}
+              <span className="font-display text-xl tracking-wider text-primary">
+                {showCoachMessage}
+              </span>
+              
+              {/* Coach message in quotes */}
+              <p className="text-base text-foreground/90 italic">
+                "{coachMessages[showCoachMessage]}"
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
