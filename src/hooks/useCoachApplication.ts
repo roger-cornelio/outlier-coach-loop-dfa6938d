@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useEvents } from './useEvents';
 
 export type ApplicationStatus = 'none' | 'pending' | 'approved' | 'rejected';

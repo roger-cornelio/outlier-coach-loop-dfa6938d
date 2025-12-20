@@ -10,7 +10,7 @@
  */
 
 import { useMemo } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useCoachApplication } from './useCoachApplication';
 
 // AppUserState based ONLY on role (not application status)
