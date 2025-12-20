@@ -15,6 +15,7 @@ import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
 import type { CoachStyle } from "@/types/outlier";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { PreWorkoutScreen } from "@/components/PreWorkoutScreen";
 import { AthleteWelcomeScreen } from "@/components/AthleteWelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
 import { Dashboard } from "@/components/Dashboard";
@@ -45,6 +46,8 @@ const Index = () => {
   useLevelTheme();
 
   // COACH STYLE FLOW (fonte de verdade = profile.coach_style)
+  // REGRA: Welcome screen APENAS no primeiro acesso (coach_style == null)
+  // Em logins futuros, vai direto para dashboard (ou preWorkout se implementado)
   useEffect(() => {
     if (state === 'loading' || profileLoading || !profileLoaded || initialCheckDone.current) return;
 
@@ -61,7 +64,7 @@ const Index = () => {
       return;
     }
 
-    // Se existe coach_style no perfil, sincroniza store e pula welcome
+    // Se existe coach_style no perfil, sincroniza store e vai para fluxo principal
     if (coachStyleFromProfile) {
       const normalized = coachStyleFromProfile as CoachStyle;
 
@@ -69,11 +72,15 @@ const Index = () => {
         setCoachStyle(normalized);
       }
 
+      // REGRA: NUNCA redirecionar para config automaticamente
+      // Vai direto para preWorkout (se tem athleteConfig) ou config (primeiro setup)
       if (currentView === 'welcome') {
         if (!athleteConfig) {
-          setCurrentView('config');
+          // Primeiro setup: precisa configurar perfil de atleta
+          setCurrentView('athleteWelcome');
         } else {
-          setCurrentView('dashboard');
+          // Logins subsequentes: vai para pré-treino
+          setCurrentView('preWorkout');
         }
         console.log('[Index] Skipped welcome - coach_style found in profile');
       }
@@ -132,6 +139,8 @@ const Index = () => {
         return <AthleteWelcomeScreen />;
       case "config":
         return <AthleteConfig />;
+      case "preWorkout":
+        return <PreWorkoutScreen />;
       case "dashboard":
         return <Dashboard />;
       case "workout":
