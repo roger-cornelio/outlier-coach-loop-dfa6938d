@@ -387,15 +387,15 @@ export default function Auth({ context = 'user' }: AuthProps) {
             {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
           </motion.h1>
           
-          {/* Tagline - Strong emphasis */}
+          {/* Tagline - Secondary hierarchy */}
           <motion.p 
-            className="text-xl md:text-2xl font-display font-semibold text-foreground tracking-wide uppercase"
+            className="text-xs md:text-sm font-medium text-muted-foreground/60 tracking-[0.2em] uppercase mt-6"
             initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            animate={{ opacity: 0.6, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
           >
             {context === 'user'
-              ? 'CONSISTÊNCIA VIRA RESULTADO.'
+              ? 'CONSISTÊNCIA GERA RESULTADO.'
               : context === 'coach'
                 ? 'PORTAL DO COACH'
                 : 'PAINEL ADMINISTRATIVO'
