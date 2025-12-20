@@ -330,14 +330,14 @@ export default function CoachPortal() {
               <button
                 onClick={() => {
                   setCurrentView('coachPerformance');
-                  navigate('/');
+                  navigate('/app');
                 }}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
                 Ver Performance
               </button>
               <button
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate('/painel-admin')}
                 className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 Painel Admin
@@ -346,7 +346,7 @@ export default function CoachPortal() {
               <button
                 onClick={() => {
                   setCurrentView('dashboard');
-                  navigate('/');
+                  navigate('/app');
                 }}
                 className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
@@ -392,7 +392,7 @@ export default function CoachPortal() {
               )}
             </p>
             <button
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/painel-admin')}
               className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
               Ir para Painel do Admin
@@ -425,7 +425,7 @@ export default function CoachPortal() {
               <button
                 onClick={() => {
                   setCurrentView('coachPerformance');
-                  navigate('/');
+                  navigate('/app');
                 }}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
@@ -434,7 +434,7 @@ export default function CoachPortal() {
               <button
                 onClick={() => {
                   setCurrentView('dashboard');
-                  navigate('/');
+                  navigate('/app');
                 }}
                 className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
@@ -485,7 +485,7 @@ export default function CoachPortal() {
               </div>
               <div className="flex flex-col gap-3 mt-6">
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/app')}
                   className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -546,7 +546,7 @@ export default function CoachPortal() {
               </button>
               <div className="flex flex-col gap-3 mt-4">
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/app')}
                   className="text-primary hover:underline text-sm flex items-center gap-1 mx-auto"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -598,7 +598,7 @@ export default function CoachPortal() {
                   Solicitar acesso como Coach
                 </button>
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/app')}
                   className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
                   <ArrowLeft className="w-5 h-5" />
