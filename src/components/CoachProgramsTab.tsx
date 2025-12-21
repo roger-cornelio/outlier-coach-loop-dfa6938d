@@ -243,19 +243,44 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
   };
 
   /**
-   * Formata período da semana (7 dias) a partir da data inicial
-   * Calcula segunda a domingo da semana correspondente
-   * Ex: "Semana: 22/12 → 28/12"
+   * Extrai o período da semana do título do workout
+   * Formato esperado: "Nome [Semana: dd/MM → dd/MM]" ou "Semana: dd/MM - dd/MM"
+   * Retorna o período formatado ou null se não encontrar
    */
-  const formatWeekPeriod = (startDateString: string, workoutDays: number = 7) => {
-    const date = new Date(startDateString);
-    // Ajustar para início da semana (segunda-feira)
+  const extractWeekFromTitle = (title: string): string | null => {
+    // Padrão 1: [Semana: dd/MM → dd/MM]
+    const match1 = title.match(/\[Semana:\s*(\d{2}\/\d{2})\s*[→-]\s*(\d{2}\/\d{2})\]/i);
+    if (match1) {
+      return `Semana: ${match1[1]} → ${match1[2]}`;
+    }
+    
+    // Padrão 2: Semana: dd/MM - dd/MM ou Semana dd/MM - dd/MM
+    const match2 = title.match(/Semana:?\s*(\d{2}\/\d{2})\s*[-–→]\s*(\d{2}\/\d{2})/i);
+    if (match2) {
+      return `Semana: ${match2[1]} → ${match2[2]}`;
+    }
+    
+    return null;
+  };
+
+  /**
+   * Formata período da semana para exibição
+   * Prioridade: 1) Extrai do título, 2) Fallback para data de criação
+   */
+  const formatWeekPeriod = (workout: { title: string; created_at: string }) => {
+    // Tentar extrair do título primeiro (fonte correta)
+    const fromTitle = extractWeekFromTitle(workout.title);
+    if (fromTitle) {
+      return fromTitle;
+    }
+    
+    // Fallback: calcular da data de criação (menos preciso)
+    const date = new Date(workout.created_at);
     const dayOfWeek = date.getDay();
     const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const monday = new Date(date);
     monday.setDate(date.getDate() + diffToMonday);
     
-    // Fim da semana é domingo (6 dias depois de segunda)
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     
@@ -424,7 +449,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
                             </span>
                             <span className="text-muted-foreground">•</span>
                             <span className="text-xs font-medium text-primary">
-                              {formatWeekPeriod(workout.created_at)}
+                              {formatWeekPeriod(workout)}
                             </span>
                           </div>
                         </div>
