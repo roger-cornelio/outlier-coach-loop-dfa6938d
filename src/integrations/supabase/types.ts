@@ -344,9 +344,11 @@ export type Database = {
       get_coach_approval_by_email: {
         Args: { _email: string }
         Returns: {
+          app_exists: boolean
           application_id: string
           approved: boolean
           created_at: string
+          has_password: boolean
           status: string
         }[]
       }
