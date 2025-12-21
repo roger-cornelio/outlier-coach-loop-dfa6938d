@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/accordion";
 import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
+import { identifyMainBlock, setAsMainBlock, clearMainBlock } from '@/utils/mainBlockIdentifier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -239,12 +240,21 @@ export function AdminSpreadsheetContent() {
     }
   };
 
+  // Toggle de bloco principal - GARANTE apenas 1 por dia
   const toggleBlockMainWod = (dayIndex: number, blockIndex: number) => {
     if (!parsedWorkouts) return;
     
     const updated = [...parsedWorkouts];
-    const block = updated[dayIndex].blocks[blockIndex];
-    block.isMainWod = !block.isMainWod;
+    const day = updated[dayIndex];
+    const block = day.blocks[blockIndex];
+    
+    if (block.isMainWod) {
+      // Se já é o principal, remove a marcação (volta para automático)
+      day.blocks = clearMainBlock(day.blocks);
+    } else {
+      // Marca como principal e remove de outros
+      day.blocks = setAsMainBlock(day.blocks, blockIndex);
+    }
     
     setParsedWorkouts(updated);
   };
@@ -468,32 +478,49 @@ Pull-ups
                       className="border-t border-border"
                     >
                       <div className="p-4 space-y-3">
-                        {day.blocks.map((block, blockIndex) => (
+                        {day.blocks.map((block, blockIndex) => {
+                          // Identificar bloco principal (manual ou automático)
+                          const mainBlockResult = identifyMainBlock(day.blocks);
+                          const isMainBlock = mainBlockResult.blockIndex === blockIndex;
+                          const isManualMain = block.isMainWod === true;
+                          const isAutoMain = isMainBlock && !isManualMain;
+                          
+                          return (
                           <div 
                             key={block.id} 
                             className={`p-3 rounded-lg border ${
                               block.isBenchmark 
                                 ? 'border-amber-500/30 bg-amber-500/5' 
-                                : 'border-border bg-secondary/30'
+                                : isMainBlock
+                                  ? 'border-primary/30 bg-primary/5'
+                                  : 'border-border bg-secondary/30'
                             }`}
                           >
                             <div className="flex items-start justify-between mb-2">
-                              <div>
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-medium">{block.title}</span>
-                                {block.isMainWod && (
-                                  <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                    WOD Principal
+                                {isManualMain && (
+                                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
+                                    ⚡ Principal (definido)
+                                  </span>
+                                )}
+                                {isAutoMain && (
+                                  <span className="text-xs bg-primary/10 text-primary/70 px-2 py-0.5 rounded-full">
+                                    ⚡ Principal (auto)
                                   </span>
                                 )}
                               </div>
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => toggleBlockMainWod(dayIndex, blockIndex)}
-                                  className={`text-xs px-2 py-1 rounded ${
-                                    block.isMainWod 
+                                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                                    isManualMain 
                                       ? 'bg-primary/20 text-primary' 
-                                      : 'bg-secondary text-muted-foreground hover:text-foreground'
+                                      : isAutoMain
+                                        ? 'bg-primary/10 text-primary/70'
+                                        : 'bg-secondary text-muted-foreground hover:text-foreground'
                                   }`}
+                                  title={isManualMain ? 'Remover marcação manual (voltar para automático)' : 'Marcar como bloco principal'}
                                 >
                                   <Dumbbell className="w-3 h-3" />
                                 </button>
@@ -567,7 +594,8 @@ Pull-ups
                               </div>
                             )}
                           </div>
-                        ))}
+                        );
+                        })}
                       </div>
                     </motion.div>
                   )}

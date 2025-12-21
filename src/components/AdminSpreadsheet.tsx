@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/accordion";
 import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
+import { identifyMainBlock, setAsMainBlock, clearMainBlock } from '@/utils/mainBlockIdentifier';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -310,12 +311,21 @@ export function AdminSpreadsheet() {
     }
   };
 
+  // Toggle de bloco principal - GARANTE apenas 1 por dia
   const toggleBlockMainWod = (dayIndex: number, blockIndex: number) => {
     if (!parsedWorkouts) return;
     
     const updated = [...parsedWorkouts];
-    const block = updated[dayIndex].blocks[blockIndex];
-    block.isMainWod = !block.isMainWod;
+    const day = updated[dayIndex];
+    const block = day.blocks[blockIndex];
+    
+    if (block.isMainWod) {
+      // Se já é o principal, remove a marcação (volta para automático)
+      day.blocks = clearMainBlock(day.blocks);
+    } else {
+      // Marca como principal e remove de outros
+      day.blocks = setAsMainBlock(day.blocks, blockIndex);
+    }
     
     setParsedWorkouts(updated);
   };

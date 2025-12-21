@@ -13,6 +13,7 @@
  */
 
 import type { WorkoutBlock, DayWorkout, TrainingLevel } from '@/types/outlier';
+import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 
 // ============================================
 // TIPOS INTERNOS (INVISÍVEIS ao usuário)
@@ -994,6 +995,34 @@ function applyLevelSexVolumes(
 }
 
 // ============================================
+// PRÉ-PROCESSAMENTO: GARANTIR BLOCO PRINCIPAL MARCADO
+// ============================================
+
+/**
+ * Garante que exatamente um bloco esteja marcado como principal.
+ * Se nenhum estiver marcado, usa identificação automática.
+ */
+function ensureMainBlockMarked(blocks: WorkoutBlock[]): WorkoutBlock[] {
+  // Verificar se já existe bloco marcado manualmente
+  const hasManualMain = blocks.some(b => b.isMainWod === true);
+  if (hasManualMain) {
+    return blocks;
+  }
+  
+  // Usar identificação automática
+  const mainResult = identifyMainBlock(blocks);
+  if (mainResult.blockIndex < 0) {
+    return blocks;
+  }
+  
+  // Marcar o bloco identificado
+  return blocks.map((block, index) => ({
+    ...block,
+    isMainWod: index === mainResult.blockIndex ? true : undefined,
+  }));
+}
+
+// ============================================
 // FUNÇÃO PRINCIPAL: buildWorkoutByTime
 // ============================================
 
@@ -1019,12 +1048,17 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
   const { nivel, sexo, tempoDisponivel, wodBase } = config;
   const sexKey: SexKey = sexo === 'feminino' ? 'F' : 'M';
   
+  // PRÉ-PROCESSAMENTO: Garantir que o bloco principal esteja marcado
+  // Usa identificação automática se nenhum bloco estiver marcado manualmente
+  const preprocessedBlocks = ensureMainBlockMarked(wodBase.blocks);
+  const preprocessedWod = { ...wodBase, blocks: preprocessedBlocks };
+  
   // 1. Calcular tempo original do WOD base
-  const originalTime = calculateWodTime(wodBase.blocks, nivel, sexKey);
+  const originalTime = calculateWodTime(preprocessedWod.blocks, nivel, sexKey);
   const originalMinutes = originalTime.totalMinutes;
   
   // 2. Aplicar adaptação por nível/sexo (primeiro passo sempre)
-  let adaptedBlocks = wodBase.blocks.map(block => 
+  let adaptedBlocks = preprocessedWod.blocks.map(block => 
     applyLevelSexVolumes(block, nivel, sexKey)
   );
   
