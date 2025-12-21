@@ -1,9 +1,10 @@
 /**
  * CoachSetPassword - Tela para coach aprovado definir senha
  * 
- * Regras:
- * - Só chega aqui se o email tem role=coach mas ainda não tem senha definida
- * - Ao definir senha, loga automaticamente e vai para /coach/dashboard
+ * FLUXO:
+ * 1. Coach aprovado (coach_applications.status='approved') mas sem conta
+ * 2. Esta tela permite criar conta com signUp
+ * 3. Após signUp → upsert user_roles=coach → login automático → /coach/dashboard
  */
 
 import { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Lock, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Loader2, ArrowLeft, CheckCircle, Mail } from 'lucide-react';
 
 const passwordSchema = z.object({
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
@@ -27,7 +28,7 @@ export default function CoachSetPassword() {
   const [searchParams] = useSearchParams();
   const emailParam = searchParams.get('email') || '';
   
-  const [email] = useState(emailParam);
+  const [email] = useState(emailParam.toLowerCase().trim());
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +54,27 @@ export default function CoachSetPassword() {
     }
   }, [emailParam, navigate]);
 
+  // Check if email is approved before showing the form
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!email) return;
+      
+      const { data } = await supabase
+        .from('coach_applications')
+        .select('status')
+        .eq('email', email)
+        .eq('status', 'approved')
+        .limit(1)
+        .maybeSingle();
+      
+      setIsApproved(!!data);
+    };
+    
+    checkApproval();
+  }, [email]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -71,41 +93,140 @@ export default function CoachSetPassword() {
     setIsSubmitting(true);
 
     try {
-      // Try to login with the new password (user was created with temp password)
-      // First, update the password via admin API through edge function
-      const { data: updateData, error: updateError } = await supabase.functions.invoke(
-        'update-coach-password',
-        {
-          body: { email: email.toLowerCase().trim(), password },
-        }
-      );
+      // STEP 1: Try signUp first (creates new account)
+      console.log('[CoachSetPassword] Attempting signUp for:', email);
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/coach/dashboard`,
+          data: {
+            name: email.split('@')[0],
+          },
+        },
+      });
 
-      if (updateError || !updateData?.success) {
-        console.error('[CoachSetPassword] Update password error:', updateError || updateData?.error);
+      if (signUpError) {
+        console.log('[CoachSetPassword] SignUp error:', signUpError.message);
+
+        // If user already exists, try to update password via edge function
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+          console.log('[CoachSetPassword] User exists, updating password via edge function');
+          
+          const { data: updateData, error: updateError } = await supabase.functions.invoke(
+            'update-coach-password',
+            {
+              body: { email, password },
+            }
+          );
+
+          if (updateError || !updateData?.success) {
+            console.error('[CoachSetPassword] Update password error:', updateError || updateData?.error);
+            toast({
+              title: 'Erro ao definir senha',
+              description: updateData?.error || 'Tente novamente.',
+              variant: 'destructive',
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Now login with the new password
+          const { error: loginError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (loginError) {
+            console.error('[CoachSetPassword] Login error after password update:', loginError);
+            toast({
+              title: 'Senha definida!',
+              description: 'Faça login com sua nova senha.',
+            });
+            navigate('/login/coach', { replace: true });
+            return;
+          }
+
+          // Success
+          await refreshSession();
+          toast({
+            title: 'Conta ativada!',
+            description: 'Bem-vindo ao painel de Coach.',
+          });
+          navigate('/coach/dashboard', { replace: true });
+          return;
+        }
+
+        // Other signUp errors
         toast({
-          title: 'Erro ao definir senha',
-          description: updateData?.error || 'Tente novamente.',
+          title: 'Erro ao criar conta',
+          description: signUpError.message,
           variant: 'destructive',
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Now login with the new password
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase().trim(),
-        password,
-      });
+      // STEP 2: signUp successful - user created
+      const userId = signUpData.user?.id;
+      console.log('[CoachSetPassword] SignUp successful, user_id:', userId);
 
-      if (loginError) {
-        console.error('[CoachSetPassword] Login error:', loginError);
+      if (!userId) {
         toast({
-          title: 'Erro ao entrar',
-          description: 'Senha definida, mas falha no login. Tente novamente.',
+          title: 'Erro',
+          description: 'Falha ao criar conta. Tente novamente.',
           variant: 'destructive',
         });
         setIsSubmitting(false);
         return;
+      }
+
+      // STEP 3: Grant coach role via edge function (uses service role)
+      console.log('[CoachSetPassword] Granting coach role via edge function');
+      
+      // Get application info
+      const { data: appData } = await supabase
+        .from('coach_applications')
+        .select('id, full_name')
+        .eq('email', email)
+        .eq('status', 'approved')
+        .limit(1)
+        .maybeSingle();
+
+      if (appData) {
+        // Call edge function to ensure coach role
+        await supabase.functions.invoke('create-coach-user', {
+          body: {
+            email,
+            full_name: appData.full_name,
+            application_id: appData.id,
+          },
+        });
+      }
+
+      // STEP 4: Login (session may already exist from signUp)
+      await refreshSession();
+      
+      // Check if session exists
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // Need to login
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (loginError) {
+          console.error('[CoachSetPassword] Login error:', loginError);
+          toast({
+            title: 'Conta criada!',
+            description: 'Faça login com sua nova senha.',
+          });
+          navigate('/login/coach', { replace: true });
+          return;
+        }
       }
 
       // Success - refresh and redirect
@@ -127,10 +248,33 @@ export default function CoachSetPassword() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || isApproved === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If not approved, redirect to login
+  if (isApproved === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,4%)] to-[hsl(0,0%,2%)] flex flex-col items-center justify-center p-4">
+        <div className="text-center max-w-sm">
+          <h1 className="text-xl font-display font-semibold text-foreground mb-2">
+            Email não aprovado
+          </h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            O email <span className="text-primary">{email}</span> não possui aprovação como coach.
+          </p>
+          <Link
+            to="/login/coach"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded font-display text-sm font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Link>
+        </div>
       </div>
     );
   }
@@ -158,9 +302,10 @@ export default function CoachSetPassword() {
           <p className="text-muted-foreground text-sm">
             Seu acesso como coach foi aprovado. Defina sua senha para entrar.
           </p>
-          <p className="text-primary text-sm mt-2 font-medium">
-            {email}
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Mail className="w-4 h-4 text-primary" />
+            <span className="text-primary text-sm font-medium">{email}</span>
+          </div>
         </div>
 
         {/* Set Password Form */}
