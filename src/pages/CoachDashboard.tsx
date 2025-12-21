@@ -35,39 +35,14 @@ import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { useToast } from '@/hooks/use-toast';
 import { AthleteStatus, LEVEL_NAMES } from '@/types/outlier';
-
-/**
- * Calcula o status do atleta baseado nos buckets de benchmark
- * Esta é uma versão simplificada do cálculo usado no painel do atleta
- */
-function calculateStatusFromBuckets(buckets: string[]): AthleteStatus | null {
-  if (!buckets || buckets.length === 0) return null;
-  
-  // Contar buckets
-  const counts: Record<string, number> = {};
-  buckets.forEach(b => {
-    if (b) counts[b] = (counts[b] || 0) + 1;
-  });
-  
-  const total = buckets.length;
-  const eliteCount = counts['ELITE'] || 0;
-  const strongCount = counts['STRONG'] || 0;
-  const okCount = counts['OK'] || 0;
-  
-  // Regras de classificação simplificadas
-  if (eliteCount >= total * 0.5) return 'hyrox_pro';
-  if (eliteCount + strongCount >= total * 0.6) return 'hyrox_open';
-  if (strongCount >= total * 0.4) return 'avancado';
-  if (okCount + strongCount >= total * 0.5) return 'intermediario';
-  return 'iniciante';
-}
+import { calculateAthleteStatus, type AthleteGender } from '@/utils/athleteStatusSystem';
 
 interface LinkedAthlete {
   id: string;
   user_id: string;
   name: string | null;
   email: string;
-  // Status REAL do atleta (calculado de benchmarks)
+  // Status REAL do atleta (calculado de benchmarks via calculateAthleteStatus)
   athleteStatus?: AthleteStatus | null;
   sexo?: string | null;
 }
@@ -161,30 +136,70 @@ export default function CoachDashboard() {
       // Step 3: Get benchmark_results for all athletes to calculate status
       const { data: benchmarks, error: benchmarksError } = await supabase
         .from('benchmark_results')
-        .select('user_id, bucket')
+        .select('user_id, bucket, completed, time_in_seconds, score, result_type, event_name, event_date, race_category')
         .in('user_id', athleteIds);
 
       if (benchmarksError) {
         console.warn('[CoachDashboard] Benchmarks error (non-fatal):', benchmarksError);
       }
 
-      // Group buckets by user_id
-      const bucketsByUser: Record<string, string[]> = {};
+      // Group benchmarks by user_id and calculate status using the official function
+      const benchmarksByUser: Record<string, typeof benchmarks> = {};
       (benchmarks || []).forEach(b => {
-        if (b.bucket) {
-          if (!bucketsByUser[b.user_id]) bucketsByUser[b.user_id] = [];
-          bucketsByUser[b.user_id].push(b.bucket);
-        }
+        if (!benchmarksByUser[b.user_id]) benchmarksByUser[b.user_id] = [];
+        benchmarksByUser[b.user_id].push(b);
       });
 
-      const transformedAthletes: LinkedAthlete[] = (profiles || []).map(p => ({
-        id: p.id,
-        user_id: p.user_id,
-        name: p.name,
-        email: p.email,
-        athleteStatus: calculateStatusFromBuckets(bucketsByUser[p.user_id] || []),
-        sexo: p.sexo,
-      }));
+      const transformedAthletes: LinkedAthlete[] = (profiles || []).map(p => {
+        const athleteBenchmarks = benchmarksByUser[p.user_id] || [];
+        
+        // Use calculateAthleteStatus from athleteStatusSystem
+        // Filter benchmarks (only those not result_type 'external' or 'simulado')
+        const regularBenchmarks = athleteBenchmarks
+          .filter(b => !['external', 'simulado'].includes(b.result_type || ''))
+          .map(b => ({
+            id: '',
+            user_id: b.user_id,
+            workout_id: '',
+            block_id: '',
+            benchmark_id: null,
+            completed: b.completed,
+            score: b.score ?? null,
+            bucket: b.bucket ?? null,
+            time_in_seconds: b.time_in_seconds ?? null,
+            created_at: '',
+          }));
+        
+        // Get official results (result_type = 'prova_oficial' or 'simulado')
+        const officialResults = athleteBenchmarks
+          .filter(b => b.result_type === 'prova_oficial' || b.result_type === 'simulado')
+          .map(b => ({
+            id: '',
+            event_name: b.event_name ?? '',
+            event_date: b.event_date ?? '',
+            time_in_seconds: b.time_in_seconds ?? 0,
+            race_category: (b.race_category as 'PRO' | 'OPEN') ?? 'OPEN',
+            result_type: (b.result_type as 'prova_oficial' | 'simulado') ?? 'prova_oficial',
+            created_at: '',
+          }));
+        
+        const gender: AthleteGender = (p.sexo as AthleteGender) || 'masculino';
+        
+        let athleteStatus: AthleteStatus | null = null;
+        if (regularBenchmarks.length > 0 || officialResults.length > 0) {
+          const calculated = calculateAthleteStatus(regularBenchmarks, officialResults, gender);
+          athleteStatus = calculated.status;
+        }
+        
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          name: p.name,
+          email: p.email,
+          athleteStatus,
+          sexo: p.sexo,
+        };
+      });
 
       setLinkedAthletes(transformedAthletes);
       setLastFetchOk(true);
