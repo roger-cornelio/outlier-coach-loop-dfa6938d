@@ -36,6 +36,8 @@ interface PublishToAthletesModalProps {
   onOpenChange: (open: boolean) => void;
   workouts: DayWorkout[];
   title: string;
+  linkedAthletes: LinkedAthlete[]; // FONTE ÚNICA - passada pelo parent
+  loadingAthletes?: boolean;
   onSuccess?: () => void;
 }
 
@@ -53,51 +55,30 @@ export function PublishToAthletesModal({
   onOpenChange, 
   workouts, 
   title,
+  linkedAthletes,
+  loadingAthletes = false,
   onSuccess 
 }: PublishToAthletesModalProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
   
-  const [athletes, setAthletes] = useState<LinkedAthlete[]>([]);
+  // Usa a lista passada pelo parent - FONTE ÚNICA
+  const athletes = linkedAthletes;
+  const isLoading = loadingAthletes;
+  
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
 
-  // Buscar atletas vinculados
+  // Log ao abrir para QA
   useEffect(() => {
-    async function fetchAthletes() {
-      if (!profile?.id || !open) return;
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('id, user_id, name, email')
-          .eq('coach_id', profile.id);
-
-        if (fetchError) {
-          console.error('[PublishToAthletesModal] Fetch error:', fetchError);
-          setError('Erro ao carregar atletas');
-          return;
-        }
-
-        setAthletes(data || []);
-        // Selecionar todos por padrão
-        setSelectedAthletes(new Set((data || []).map(a => a.user_id)));
-      } catch (err) {
-        console.error('[PublishToAthletesModal] Error:', err);
-        setError('Erro inesperado');
-      } finally {
-        setIsLoading(false);
-      }
+    if (open) {
+      console.log('[PublishToAthletesModal] Modal opened with athletes:', linkedAthletes);
+      // Selecionar todos por padrão quando abrir
+      setSelectedAthletes(new Set(linkedAthletes.map(a => a.user_id)));
     }
-
-    fetchAthletes();
-  }, [profile?.id, open]);
+  }, [open, linkedAthletes]);
 
   const handleClose = () => {
     setSelectedAthletes(new Set());
@@ -206,6 +187,11 @@ export function PublishToAthletesModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* QA Debug info */}
+          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded font-mono">
+            linkedAthletes.length: {athletes.length} | loading: {isLoading ? 'true' : 'false'}
+          </div>
+          
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
