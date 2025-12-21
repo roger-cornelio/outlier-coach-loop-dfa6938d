@@ -591,7 +591,7 @@ export function PublishToAthletesModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-5 h-5 text-primary" />
@@ -639,9 +639,11 @@ export function PublishToAthletesModal({
           ))}
         </div>
 
-        <div className="py-4 min-h-[280px]">
-          {renderStepContent()}
-        </div>
+        <ScrollArea className="flex-1 min-h-[280px]">
+          <div className="py-4 pr-4">
+            {renderStepContent()}
+          </div>
+        </ScrollArea>
 
         <DialogFooter className="flex-row justify-between gap-2">
           <div>

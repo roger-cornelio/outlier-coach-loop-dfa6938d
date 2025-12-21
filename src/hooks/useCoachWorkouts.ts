@@ -37,6 +37,13 @@ interface UseCoachWorkoutsReturn {
   archiveWorkout: (id: string) => Promise<boolean>;
   deleteWorkout: (id: string) => Promise<boolean>;
   
+  /**
+   * REPUBLICAR: Duplica um treino publicado como RASCUNHO
+   * O treino original continua ativo para o atleta
+   * Coach edita o rascunho e publica quando quiser
+   */
+  duplicateAsDraft: (id: string) => Promise<string | null>;
+  
   // Actions para atleta
   fetchAvailableWorkouts: () => Promise<DayWorkout[]>;
   
@@ -236,6 +243,19 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     }
   }, []);
 
+  // Duplicate workout as draft (for safe editing of published workouts)
+  const duplicateAsDraft = useCallback(async (id: string): Promise<string | null> => {
+    const workout = workouts.find(w => w.id === id);
+    if (!workout) {
+      setError('Treino não encontrado');
+      return null;
+    }
+
+    // Create a copy as draft with "(Edição)" suffix
+    const newTitle = `${workout.title} (Edição)`;
+    return saveWorkout(newTitle, workout.workout_json, 'draft', 0);
+  }, [workouts, saveWorkout]);
+
   return {
     workouts,
     loading,
@@ -245,6 +265,7 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     publishWorkout,
     archiveWorkout,
     deleteWorkout,
+    duplicateAsDraft,
     fetchAvailableWorkouts,
     refetch: fetchCoachWorkouts,
   };
