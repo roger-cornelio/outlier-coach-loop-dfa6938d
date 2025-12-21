@@ -22,6 +22,7 @@ export interface CoachWorkout {
   status: WorkoutStatus;
   created_at: string;
   updated_at: string;
+  week_start: string | null; // Segunda-feira da semana de referência (campo canônico)
 }
 
 interface UseCoachWorkoutsReturn {
@@ -31,7 +32,7 @@ interface UseCoachWorkoutsReturn {
   error: string | null;
   
   // Actions para coach
-  saveWorkout: (title: string, workoutData: DayWorkout[], status?: WorkoutStatus, price?: number) => Promise<string | null>;
+  saveWorkout: (title: string, workoutData: DayWorkout[], status?: WorkoutStatus, price?: number, weekStart?: string | null) => Promise<string | null>;
   updateWorkout: (id: string, updates: Partial<Pick<CoachWorkout, 'title' | 'workout_json' | 'status' | 'price'>>) => Promise<boolean>;
   publishWorkout: (id: string) => Promise<boolean>;
   archiveWorkout: (id: string) => Promise<boolean>;
@@ -83,6 +84,7 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
         ...w,
         status: w.status as WorkoutStatus,
         workout_json: (w.workout_json as unknown as DayWorkout[]) || [],
+        week_start: w.week_start || null,
       }));
 
       setWorkouts(parsed);
@@ -106,7 +108,8 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     title: string,
     workoutData: DayWorkout[],
     status: WorkoutStatus = 'draft',
-    price: number = 0
+    price: number = 0,
+    weekStart: string | null = null
   ): Promise<string | null> => {
     if (!profile?.id) {
       setError('Perfil não encontrado');
@@ -118,13 +121,18 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
 
     try {
       // Cast workout_json to any to bypass strict JSON type checking
-      const insertPayload = {
+      const insertPayload: Record<string, unknown> = {
         coach_id: profile.id,
         title,
         workout_json: JSON.parse(JSON.stringify(workoutData)),
         status,
         price,
       };
+      
+      // Adicionar week_start se fornecido
+      if (weekStart) {
+        insertPayload.week_start = weekStart;
+      }
 
       const { data, error: insertError } = await supabase
         .from('workouts')

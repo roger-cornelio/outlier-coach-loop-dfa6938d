@@ -297,23 +297,14 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     setError(null);
     
     try {
-      // CRÍTICO: Usar semana selecionada no título para persistência da informação
-      // Formato: "Nome [Semana: dd/MM → dd/MM]" ou fallback para data atual
-      let title = programName.trim();
-      if (selectedWeek) {
-        // Adiciona a semana ao título se não estiver já incluída
-        if (!title.includes('Semana:') && !title.includes(selectedWeek.label)) {
-          title = title 
-            ? `${title} [Semana: ${selectedWeek.label}]`
-            : `Semana: ${selectedWeek.label}`;
-        }
-      } else {
-        title = title || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
-      }
-      
+      // Título limpo (sem informação de semana - isso agora vai no campo week_start)
+      const title = programName.trim() || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
       const status = programStatus === 'published' ? 'published' : 'draft';
       
-      const workoutId = await saveToDb(title, parsedWorkouts, status, 0);
+      // CAMPO CANÔNICO: week_start é a segunda-feira da semana selecionada
+      const weekStart = selectedWeek?.startDate || null;
+      
+      const workoutId = await saveToDb(title, parsedWorkouts, status, 0, weekStart);
       
       if (workoutId) {
         setSuccess(`${parsedWorkouts.length} dia(s) salvos! ${status === 'published' ? '(Publicado)' : '(Rascunho)'}`);
