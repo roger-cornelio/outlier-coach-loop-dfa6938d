@@ -67,9 +67,7 @@ const getCoachSummaryStyle = (coachStyle: string | undefined) => {
 };
 
 export function Dashboard() {
-  console.count('Dashboard render');
-
-  const { 
+  const {
     setCurrentView,
     setSelectedWorkout, 
     baseWorkouts,
@@ -86,8 +84,10 @@ export function Dashboard() {
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
   const { plan: athletePlan, workouts: planWorkouts, loading: loadingPlan, hasCoach } = useAthletePlan();
-  const coachPlanKey = athletePlan ? `${athletePlan.id}:${athletePlan.week_start}` : null;
-  const lastAppliedCoachPlanKeyRef = useRef<string | null>(null);
+  // Chave estável para detectar mudança real de plano
+  const planId = athletePlan?.id ?? null;
+  const planWeekStart = athletePlan?.week_start ?? null;
+  const lastAppliedPlanIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
@@ -104,49 +104,44 @@ export function Dashboard() {
   // 2. Treinos locais (baseWorkouts/adaptedWorkouts)
   // 3. Fallback: buscar do banco (workouts publicados)
   // ============================================
+  
+  // Efeito 1: Aplicar plano do coach quando planId muda
   useEffect(() => {
-    async function loadWorkouts() {
-      // Se tem plano do coach, usar esse
-      if (planWorkouts.length > 0 && coachPlanKey) {
-        if (lastAppliedCoachPlanKeyRef.current !== coachPlanKey) {
-          console.log('[Dashboard] Using coach plan:', coachPlanKey, planWorkouts.length, 'days');
-          lastAppliedCoachPlanKeyRef.current = coachPlanKey;
-          setBaseWorkouts(planWorkouts);
-        }
-        return;
-      }
+    if (!planId || planWorkouts.length === 0) return;
+    if (lastAppliedPlanIdRef.current === planId) return;
+    
+    console.log('[Dashboard] Applying coach plan:', planId);
+    lastAppliedPlanIdRef.current = planId;
+    setBaseWorkouts(planWorkouts);
+  }, [planId, planWorkouts, setBaseWorkouts]);
 
-      // Se já tem treinos locais, não buscar do banco
-      if (baseWorkouts.length > 0) return;
-      // Se é coach/admin, não precisa buscar (eles criam)
-      if (canManageWorkouts) return;
-      // Se ainda está carregando o plano do coach, esperar
-      if (loadingPlan) return;
-      
-      setIsLoadingFromDb(true);
-      try {
-        const workoutsFromDb = await fetchAvailableWorkouts();
+  // Efeito 2: Fallback - buscar do banco se não tem plano do coach nem treinos locais
+  const hasLocalWorkouts = baseWorkouts.length > 0;
+  const hasPlanWorkouts = planWorkouts.length > 0;
+  
+  useEffect(() => {
+    if (hasPlanWorkouts || hasLocalWorkouts || canManageWorkouts || loadingPlan) return;
+    
+    let cancelled = false;
+    setIsLoadingFromDb(true);
+    
+    fetchAvailableWorkouts()
+      .then((workoutsFromDb) => {
+        if (cancelled) return;
         if (workoutsFromDb.length > 0) {
           console.log('[Dashboard] Loaded workouts from database:', workoutsFromDb.length, 'days');
           setBaseWorkouts(workoutsFromDb);
         }
-      } catch (err) {
-        console.error('[Dashboard] Error loading workouts from DB:', err);
-      } finally {
-        setIsLoadingFromDb(false);
-      }
-    }
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('[Dashboard] Error loading workouts from DB:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingFromDb(false);
+      });
     
-    loadWorkouts();
-  }, [
-    baseWorkouts.length,
-    canManageWorkouts,
-    fetchAvailableWorkouts,
-    setBaseWorkouts,
-    planWorkouts,
-    coachPlanKey,
-    loadingPlan,
-  ]);
+    return () => { cancelled = true; };
+  }, [hasPlanWorkouts, hasLocalWorkouts, canManageWorkouts, loadingPlan, fetchAvailableWorkouts, setBaseWorkouts]);
 
   // ============================================
   // REGRA: Usar SEMPRE adaptedWorkouts quando existir

@@ -13,6 +13,13 @@ import type { DayWorkout } from '@/types/outlier';
 
 const EMPTY_WORKOUTS: DayWorkout[] = [];
 
+// Comparação simples por id+week_start (evita deep compare caro)
+function planEquals(a: AthletePlan | null, b: AthletePlan | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.id === b.id && a.week_start === b.week_start && a.published_at === b.published_at;
+}
+
 export interface AthletePlan {
   id: string;
   week_start: string;
@@ -52,6 +59,9 @@ export function useAthletePlan(): UseAthletePlanReturn {
 
   const hasCoach = !!profile?.coach_id;
 
+  // userId estável (primitivo)
+  const userId = user?.id ?? null;
+
   const fetchPlan = useCallback(async () => {
     // Se é coach/admin, não precisa buscar plano de atleta
     if (canManageWorkouts) {
@@ -59,7 +69,7 @@ export function useAthletePlan(): UseAthletePlanReturn {
       return;
     }
 
-    if (!user?.id) {
+    if (!userId) {
       setLoading(false);
       return;
     }
@@ -68,32 +78,18 @@ export function useAthletePlan(): UseAthletePlanReturn {
     setError(null);
 
     try {
-      // Buscar plano da semana atual (usando any para evitar erro de tipos não gerados)
       const { data, error: fetchError } = await (supabase as any)
         .from('athlete_plans')
         .select('id, week_start, title, plan_json, published_at, coach_id')
-        .eq('athlete_user_id', user.id)
+        .eq('athlete_user_id', userId)
         .eq('week_start', weekStart)
         .eq('status', 'published')
         .maybeSingle();
 
       if (fetchError) {
-        const details = {
-          code: fetchError.code,
-          message: fetchError.message,
-          details: fetchError.details,
-          hint: fetchError.hint,
-          athlete_user_id: user.id,
-          week_start: weekStart,
-        };
-        console.error('[useAthletePlan] Fetch error:', details);
-
+        console.error('[useAthletePlan] Fetch error:', fetchError);
         setError(fetchError.message || 'Erro ao carregar treino');
-        // Evitar setState redundante
-        if (lastPlanKeyRef.current !== null) {
-          lastPlanKeyRef.current = null;
-          setPlan(null);
-        }
+        setPlan((prev) => (prev === null ? prev : null));
         return;
       }
 
@@ -108,48 +104,39 @@ export function useAthletePlan(): UseAthletePlanReturn {
           coach_id: data.coach_id,
         };
 
-        const nextKey = `${nextPlan.id}:${nextPlan.week_start}`;
-        if (lastPlanKeyRef.current === nextKey) {
-          // Mesmo plano, não atualizar estado
-          return;
-        }
-
-        lastPlanKeyRef.current = nextKey;
-        setPlan(nextPlan);
+        // Só atualiza se realmente mudou
+        setPlan((prev) => (planEquals(prev, nextPlan) ? prev : nextPlan));
       } else {
-        // Sem plano publicado
-        if (lastPlanKeyRef.current !== null) {
-          lastPlanKeyRef.current = null;
-          setPlan(null);
-        }
+        setPlan((prev) => (prev === null ? prev : null));
       }
     } catch (err: any) {
-      console.error('[useAthletePlan] Exception:', {
-        message: err?.message || String(err),
-        athlete_user_id: user?.id,
-        week_start: weekStart,
-      });
+      console.error('[useAthletePlan] Exception:', err);
       setError(err?.message || 'Erro inesperado');
     } finally {
       setLoading(false);
     }
-  }, [user?.id, canManageWorkouts, weekStart]);
+  }, [userId, canManageWorkouts, weekStart]);
 
-  // Fetch on mount e quando user.id ou weekStart mudar
+  // Flag para evitar re-fetch em loop
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
-    console.count('useAthletePlan effect');
-    console.log('[useAthletePlan] deps:', {
-      userId: user?.id || null,
-      weekStart,
-      canManageWorkouts,
-    });
+    // Reset flag quando deps reais mudam
+    hasFetchedRef.current = false;
+  }, [userId, weekStart]);
 
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     fetchPlan();
   }, [fetchPlan]);
 
+  // Workouts estável - só muda quando plan.id muda
+  const workouts = plan?.workouts ?? EMPTY_WORKOUTS;
+
   return {
     plan,
-    workouts: plan?.workouts ?? EMPTY_WORKOUTS,
+    workouts,
     loading,
     error,
     hasCoach,
