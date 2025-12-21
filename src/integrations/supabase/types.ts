@@ -102,6 +102,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           email: string | null
+          email_normalized: string | null
           full_name: string | null
           id: string
           instagram: string | null
@@ -110,6 +111,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
@@ -118,6 +120,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          email_normalized?: string | null
           full_name?: string | null
           id?: string
           instagram?: string | null
@@ -126,6 +129,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
@@ -134,6 +138,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          email_normalized?: string | null
           full_name?: string | null
           id?: string
           instagram?: string | null
@@ -142,6 +147,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: [
@@ -335,6 +341,15 @@ export type Database = {
         Args: { _email: string; _user_id: string }
         Returns: boolean
       }
+      get_coach_approval_by_email: {
+        Args: { _email: string }
+        Returns: {
+          application_id: string
+          approved: boolean
+          created_at: string
+          status: string
+        }[]
+      }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -349,6 +364,16 @@ export type Database = {
         Returns: boolean
       }
       revoke_admin_allowlist: { Args: { _email: string }; Returns: boolean }
+      submit_coach_application: {
+        Args: { _contact: string; _email: string; _full_name: string }
+        Returns: {
+          application_id: string
+          approved: boolean
+          created: boolean
+          created_at: string
+          status: string
+        }[]
+      }
       sync_admin_role_from_allowlist: {
         Args: { _email: string; _user_id: string }
         Returns: string

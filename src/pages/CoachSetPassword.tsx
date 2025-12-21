@@ -54,22 +54,26 @@ export default function CoachSetPassword() {
     }
   }, [emailParam, navigate]);
 
-  // Check if email is approved before showing the form
+  // Check if email is approved before showing the form (via RPC - bypasses RLS)
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   
   useEffect(() => {
     const checkApproval = async () => {
       if (!email) return;
       
-      const { data } = await supabase
-        .from('coach_applications')
-        .select('status')
-        .eq('email', email)
-        .eq('status', 'approved')
-        .limit(1)
-        .maybeSingle();
+      console.log('[CoachSetPassword] Checking approval via RPC for:', email);
+      const { data, error } = await supabase
+        .rpc('get_coach_approval_by_email', { _email: email });
       
-      setIsApproved(!!data);
+      if (error) {
+        console.error('[CoachSetPassword] get_coach_approval_by_email error:', error);
+        setIsApproved(false);
+        return;
+      }
+      
+      const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      console.log('[CoachSetPassword] Approval result:', row);
+      setIsApproved(row ? !!row.approved : false);
     };
     
     checkApproval();
@@ -185,24 +189,21 @@ export default function CoachSetPassword() {
       // STEP 3: Grant coach role via edge function (uses service role)
       console.log('[CoachSetPassword] Granting coach role via edge function');
       
-      // Get application info
-      const { data: appData } = await supabase
-        .from('coach_applications')
-        .select('id, full_name')
-        .eq('email', email)
-        .eq('status', 'approved')
-        .limit(1)
-        .maybeSingle();
+      // Get application info via RPC (bypasses RLS)
+      const { data: approvalData, error: approvalErr } = await supabase
+        .rpc('get_coach_approval_by_email', { _email: email });
 
-      if (appData) {
-        // Call edge function to ensure coach role
-        await supabase.functions.invoke('create-coach-user', {
-          body: {
-            email,
-            full_name: appData.full_name,
-            application_id: appData.id,
-          },
-        });
+      if (!approvalErr) {
+        const appRow = Array.isArray(approvalData) && approvalData.length > 0 ? approvalData[0] : null;
+        if (appRow && appRow.application_id) {
+          // Call edge function to ensure coach role
+          await supabase.functions.invoke('create-coach-user', {
+            body: {
+              email,
+              application_id: appRow.application_id,
+            },
+          });
+        }
       }
 
       // STEP 4: Login (session may already exist from signUp)
