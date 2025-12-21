@@ -64,39 +64,43 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Calcular semanas permitidas usando função canônica
-  // CRÍTICO: Não usar useMemo com deps vazias - recalcular baseado no currentWeekStart
-  const currentWeekStart = getAthleteCurrentWeekStart(new Date());
+  // CRÍTICO: Calcular semanas permitidas de forma estável
+  // Usar useMemo para evitar recálculo em cada render
+  const allowedWeeks = useMemo(() => {
+    const curr = getAthleteCurrentWeekStart(new Date());
+    const prevDate = new Date(curr + 'T12:00:00');
+    prevDate.setDate(prevDate.getDate() - 7);
+    const prev = prevDate.toISOString().split('T')[0];
+    
+    const nextDate = new Date(curr + 'T12:00:00');
+    nextDate.setDate(nextDate.getDate() + 7);
+    const next = nextDate.toISOString().split('T')[0];
+    
+    return { prev, curr, next };
+  }, []); // Recalcula apenas no mount - suficiente para sessão normal
   
-  const allowedWeeks = useMemo(() => ({
-    prev: (() => {
-      const d = new Date(currentWeekStart + 'T12:00:00');
-      d.setDate(d.getDate() - 7);
-      return d.toISOString().split('T')[0];
-    })(),
-    curr: currentWeekStart,
-    next: (() => {
-      const d = new Date(currentWeekStart + 'T12:00:00');
-      d.setDate(d.getDate() + 7);
-      return d.toISOString().split('T')[0];
-    })(),
-  }), [currentWeekStart]);
-  
-  // Estado: qual das 3 semanas está selecionada (prev, curr, next)
-  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(currentWeekStart);
+  // Estado: qual das 3 semanas está selecionada
+  // CRÍTICO: Usar função inicializadora lazy para evitar erro "Should have a queue"
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => 
+    getAthleteCurrentWeekStart(new Date())
+  );
 
-  // Sincronizar selectedWeekStart se estiver fora da janela permitida (ex: reload no domingo)
+  // Sincronizar selectedWeekStart se estiver fora da janela permitida
   useEffect(() => {
     const { prev, curr, next } = allowedWeeks;
-    if (selectedWeekStart !== prev && selectedWeekStart !== curr && selectedWeekStart !== next) {
-      console.log('ATHLETE_WEEK_SYNC', { 
-        reason: 'selectedWeekStart fora da janela',
-        old: selectedWeekStart,
-        new: curr 
-      });
-      setSelectedWeekStart(curr);
-    }
-  }, [allowedWeeks, selectedWeekStart]);
+    setSelectedWeekStart(prevSelected => {
+      const allowed = new Set([prev, curr, next]);
+      if (!allowed.has(prevSelected)) {
+        console.log('ATHLETE_WEEK_SYNC', { 
+          reason: 'selectedWeekStart fora da janela',
+          old: prevSelected,
+          new: curr 
+        });
+        return curr;
+      }
+      return prevSelected;
+    });
+  }, [allowedWeeks]);
 
   // LOG: ATHLETE_WEEK_RESOLVE ao inicializar/navegar
   useEffect(() => {
