@@ -1,6 +1,10 @@
 /**
- * CoachSpreadsheetTab - Versão simplificada do AdminSpreadsheet para uso em tabs
- * Remove headers duplicados e verificação de auth (já feita pelo CoachDashboard)
+ * CoachSpreadsheetTab - Aba IMPORTAR do Coach
+ * 
+ * REGRA ANTI-BUG:
+ * - Preview = estado local (parsedWorkouts)
+ * - Nunca depende do banco para renderizar preview
+ * - "Publicar para Atletas" usa preview local como fonte
  */
 
 import { useState } from 'react';
@@ -8,7 +12,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
-import { FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, Info, Trophy, Clock, Send } from 'lucide-react';
+import { 
+  FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
+  Save, Zap, Dumbbell, Target, Info, Trophy, Clock, Send, Upload 
+} from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, LEVEL_NAMES } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
 import {
@@ -25,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -371,19 +379,39 @@ Terça-feira 📅
         </Card>
       )}
 
-      {/* Preview dos treinos parseados */}
+      {/* Preview dos treinos parseados - FONTE LOCAL */}
       {parsedWorkouts && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Dumbbell className="w-5 h-5 text-primary" />
-                Revisar Treinos ({parsedWorkouts.length} dias)
+                Preview da Semana ({parsedWorkouts.length} dias)
               </CardTitle>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setParsedWorkouts(null)}>
                   Voltar
                 </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowPublishModal(true)}
+                        className="flex items-center gap-1.5"
+                        disabled={linkedAthletes.length === 0}
+                      >
+                        <Send className="w-4 h-4" />
+                        Publicar para Atletas
+                      </Button>
+                    </TooltipTrigger>
+                    {linkedAthletes.length === 0 && (
+                      <TooltipContent>
+                        <p>Vincule atletas primeiro na aba Atletas</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </CardHeader>
@@ -460,7 +488,7 @@ Terça-feira 📅
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label>Status ao Salvar</Label>
                   <div className="flex gap-2">
                     <Button
                       variant={programStatus === 'draft' ? "default" : "outline"}
@@ -504,42 +532,24 @@ Terça-feira 📅
         </Card>
       )}
 
-      {/* Treinos já salvos */}
-      {weeklyWorkouts.length > 0 && !parsedWorkouts && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                Treinos Carregados ({weeklyWorkouts.length} dias)
-              </CardTitle>
-              <Button
-                size="sm"
-                onClick={() => setShowPublishModal(true)}
-                className="flex items-center gap-1.5"
-              >
-                <Send className="w-4 h-4" />
-                Publicar para Atletas
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {weeklyWorkouts.map((workout) => (
-                <Badge key={workout.day} variant="secondary">
-                  {DAY_NAMES[workout.day]} • {workout.blocks.length} blocos
-                </Badge>
-              ))}
-            </div>
+      {/* Estado vazio - sem preview processado */}
+      {!parsedWorkouts && !spreadsheetText.trim() && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Upload className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <p className="text-foreground font-medium">Nenhuma planilha importada</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Cole sua planilha semanal acima e clique em "Processar Planilha".
+            </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Modal de publicar para atletas */}
+      {/* Modal de publicar para atletas - usa preview local */}
       <PublishToAthletesModal
         open={showPublishModal}
         onOpenChange={setShowPublishModal}
-        workouts={weeklyWorkouts}
+        workouts={parsedWorkouts || []}
         title={programName || `Semana ${new Date().toLocaleDateString('pt-BR')}`}
         linkedAthletes={linkedAthletes}
         loadingAthletes={loadingAthletes}
