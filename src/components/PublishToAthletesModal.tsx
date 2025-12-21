@@ -91,6 +91,7 @@ export function PublishToAthletesModal({
     payload?: { athlete_user_id?: string; coach_id?: string; scheduled_date?: string };
   } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
+  const [athletesWithExistingPlan, setAthletesWithExistingPlan] = useState<Set<string>>(new Set());
 
   // Calcula o período da semana a partir de weekStart
   const weekPeriodLabel = weekStart 
@@ -153,8 +154,35 @@ export function PublishToAthletesModal({
       setPublishedCount(0);
       setError(null);
       setErrorData(null);
+      setAthletesWithExistingPlan(new Set());
     }
   }, [open, linkedAthletes, weekStart]);
+
+  // Verificar quais atletas já têm plano na mesma semana
+  useEffect(() => {
+    const checkExistingPlans = async () => {
+      if (!open || !weekStart || selectedAthletes.size === 0) {
+        setAthletesWithExistingPlan(new Set());
+        return;
+      }
+
+      const { data: existingPlans } = await supabase
+        .from('athlete_plans')
+        .select('athlete_user_id')
+        .eq('week_start', weekStart)
+        .in('athlete_user_id', Array.from(selectedAthletes));
+
+      if (existingPlans && existingPlans.length > 0) {
+        const existingSet = new Set(existingPlans.map(p => p.athlete_user_id));
+        setAthletesWithExistingPlan(existingSet);
+        console.log('[PublishToAthletesModal] Athletes with existing plans:', existingSet);
+      } else {
+        setAthletesWithExistingPlan(new Set());
+      }
+    };
+
+    checkExistingPlans();
+  }, [open, weekStart, selectedAthletes]);
 
   const handleClose = () => {
     setSelectedAthletes(new Set());
@@ -518,6 +546,17 @@ export function PublishToAthletesModal({
               </div>
             )}
 
+            {/* Aviso informativo quando substituirá treino existente */}
+            {weekStart && athletesWithExistingPlan.size > 0 && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-600">
+                    ℹ️ Este treino substituirá o treino atual desta semana para {athletesWithExistingPlan.size} atleta(s) selecionado(s).
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Confirmação quando pode publicar */}
             {canPublish && !error && publishedCount === 0 && (
               <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
