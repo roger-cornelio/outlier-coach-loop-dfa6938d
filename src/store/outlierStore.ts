@@ -190,29 +190,26 @@ export const useOutlierStore = create<OutlierState>()(
       clearViewingAsAthlete: () => set({ viewingAsAthlete: null }),
     }),
     {
-      name: 'outlier-storage',
-      // Persistir configurações e treinos base
+      name: 'outlier-store-v2', // NOVO NAME para limpar storage antigo
       partialize: (state) => ({
         coachStyle: state.coachStyle,
         athleteConfig: state.athleteConfig,
         workoutResults: state.workoutResults,
         baseWorkouts: state.baseWorkouts,
-        // Não persistir adaptedWorkouts - recalcular sempre
       }),
-      // Run migration when store is rehydrated from storage
-      onRehydrateStorage: () => (state) => {
-        if (state) {
+      onRehydrateStorage: () => (state, error) => {
+        if (!error && state) {
           // Migrar workouts se necessário
           if (state.baseWorkouts && state.baseWorkouts.length > 0) {
             const migrated = migrateWorkouts(state.baseWorkouts);
             if (migrated) {
               state.baseWorkouts = migrated;
               state.weeklyWorkouts = migrated;
-              console.log('[outlierStore] Benchmarks migrated with paramsVersionUsed');
+              console.log('[outlierStore] Benchmarks migrated');
             }
           }
-          // Marcar como hidratado APÓS migração
-          state.hasHydrated = true;
+          // Marcar como hidratado via action
+          state.setHasHydrated?.(true);
           console.log('[outlierStore] Hydration complete');
         }
       },
