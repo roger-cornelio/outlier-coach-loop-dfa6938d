@@ -2,42 +2,40 @@
  * useQADebugMode - Hook para gerenciar QA Debug Mode
  * 
  * Regras:
- * 1. Só ativa em desenvolvimento (import.meta.env.DEV)
- * 2. Requer QA Code correto
- * 3. Expira após 30 minutos
- * 4. Armazena em sessionStorage para persistir apenas na sessão
+ * 1. Persiste em localStorage (sem expiração)
+ * 2. Requer QA Code correto para ativar
+ * 3. Só pode ser ativado por owner (whitelist) OU em ambiente dev/preview
+ * 4. Toggle manual: liga/desliga quando o usuário quiser
  */
 
 import { useState, useEffect, useCallback } from 'react';
 
 const QA_STORAGE_KEY = 'QA_DEBUG';
-const QA_EXPIRY_KEY = 'QA_DEBUG_EXPIRY';
 const QA_TOGGLE_EVENT = 'qa-debug-toggle';
-const QA_CODE = 'outlier2024qa'; // Hardcoded QA code
-const EXPIRY_MINUTES = 30;
+const QA_CODE = 'outlier2024qa';
+const OWNER_WHITELIST = ['roger.bm2016@gmail.com'];
 
-export function useQADebugMode() {
+export function useQADebugMode(userEmail?: string | null) {
   const [isQAActive, setIsQAActive] = useState(() => checkQAActive());
   
-  // Check if QA mode is active and not expired
+  // Check if QA mode is active
   function checkQAActive(): boolean {
     if (typeof window === 'undefined') return false;
+    return localStorage.getItem(QA_STORAGE_KEY) === '1';
+  }
+
+  // Check if user can activate QA mode
+  const canActivate = useCallback((): boolean => {
+    // Always allow in dev/preview
+    if (!import.meta.env.PROD) return true;
     
-    const qaValue = sessionStorage.getItem(QA_STORAGE_KEY);
-    const expiryValue = sessionStorage.getItem(QA_EXPIRY_KEY);
-    
-    if (qaValue !== '1' || !expiryValue) return false;
-    
-    const expiry = parseInt(expiryValue, 10);
-    if (Date.now() > expiry) {
-      // Expired - clean up
-      sessionStorage.removeItem(QA_STORAGE_KEY);
-      sessionStorage.removeItem(QA_EXPIRY_KEY);
-      return false;
+    // In production, only allow whitelisted emails
+    if (userEmail && OWNER_WHITELIST.includes(userEmail.toLowerCase())) {
+      return true;
     }
     
-    return true;
-  }
+    return false;
+  }, [userEmail]);
 
   // Listen for toggle events
   useEffect(() => {
@@ -46,66 +44,50 @@ export function useQADebugMode() {
     };
 
     window.addEventListener(QA_TOGGLE_EVENT, handleToggle);
-    
-    // Also check periodically for expiration
-    const interval = setInterval(() => {
-      if (isQAActive && !checkQAActive()) {
-        setIsQAActive(false);
-      }
-    }, 60000); // Check every minute
+    // Also listen to storage events for cross-tab sync
+    window.addEventListener('storage', handleToggle);
 
     return () => {
       window.removeEventListener(QA_TOGGLE_EVENT, handleToggle);
-      clearInterval(interval);
+      window.removeEventListener('storage', handleToggle);
     };
-  }, [isQAActive]);
+  }, []);
 
   // Activate QA mode with code validation
-  const activateQA = useCallback((code: string): boolean => {
-    // Block in production
-    if (import.meta.env.PROD) {
-      console.warn('[QA Debug] Cannot activate in production');
-      return false;
+  const activateQA = useCallback((code: string, email?: string | null): boolean => {
+    const effectiveEmail = email || userEmail;
+    
+    // Check if can activate
+    if (!import.meta.env.PROD) {
+      // Dev/preview: just validate code
+    } else {
+      // Production: must be whitelisted email
+      if (!effectiveEmail || !OWNER_WHITELIST.includes(effectiveEmail.toLowerCase())) {
+        console.warn('[QA Debug] Cannot activate: not authorized');
+        return false;
+      }
     }
 
     if (code !== QA_CODE) {
       return false;
     }
 
-    const expiry = Date.now() + (EXPIRY_MINUTES * 60 * 1000);
-    sessionStorage.setItem(QA_STORAGE_KEY, '1');
-    sessionStorage.setItem(QA_EXPIRY_KEY, String(expiry));
-    
+    localStorage.setItem(QA_STORAGE_KEY, '1');
     window.dispatchEvent(new CustomEvent(QA_TOGGLE_EVENT));
     return true;
-  }, []);
+  }, [userEmail]);
 
   // Deactivate QA mode
   const deactivateQA = useCallback(() => {
-    sessionStorage.removeItem(QA_STORAGE_KEY);
-    sessionStorage.removeItem(QA_EXPIRY_KEY);
+    localStorage.removeItem(QA_STORAGE_KEY);
     window.dispatchEvent(new CustomEvent(QA_TOGGLE_EVENT));
   }, []);
-
-  // Get remaining time in minutes
-  const getRemainingMinutes = useCallback((): number => {
-    const expiryValue = sessionStorage.getItem(QA_EXPIRY_KEY);
-    if (!expiryValue) return 0;
-    
-    const expiry = parseInt(expiryValue, 10);
-    const remaining = Math.max(0, Math.ceil((expiry - Date.now()) / 60000));
-    return remaining;
-  }, []);
-
-  // Check if QA mode can be activated (dev/preview only)
-  const canActivate = !import.meta.env.PROD;
 
   return {
     isQAActive,
     activateQA,
     deactivateQA,
-    getRemainingMinutes,
-    canActivate,
+    canActivate: canActivate(),
   };
 }
 

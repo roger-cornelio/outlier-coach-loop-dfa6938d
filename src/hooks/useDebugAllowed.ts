@@ -3,7 +3,7 @@
  * 
  * Regras:
  * 1. Owner Mode: profile.email === owner whitelist + debug flag
- * 2. QA Mode: sessionStorage.QA_DEBUG === '1' (dev/preview only, any user)
+ * 2. QA Mode: localStorage.QA_DEBUG === '1' (dev/preview OU owner em prod)
  * 3. QA Mode mostra dados limitados/mascarados
  */
 
@@ -19,7 +19,7 @@ const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 export function useDebugAllowed() {
   const { profile, user } = useAuth();
   const [searchParams] = useSearchParams();
-  const { isQAActive, deactivateQA, getRemainingMinutes } = useQADebugMode();
+  const { isQAActive, deactivateQA } = useQADebugMode(profile?.email);
   
   const [debugStorageValue, setDebugStorageValue] = useState(() => 
     typeof window !== 'undefined' ? localStorage.getItem(DEBUG_STORAGE_KEY) === '1' : false
@@ -75,7 +75,6 @@ export function useDebugAllowed() {
     isOwner,
     isQAActive,
     deactivateQA,
-    getRemainingMinutes,
     maskValue,
     maskEmail,
     userId: user?.id,

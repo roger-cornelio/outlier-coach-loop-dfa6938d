@@ -6,7 +6,7 @@
  * - QA Mode: dados limitados/mascarados para qualquer usuário (dev/preview only)
  */
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, Bug, X, Clock } from 'lucide-react';
+import { ChevronUp, ChevronDown, Bug, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useDebugAllowed } from '@/hooks/useDebugAllowed';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +36,6 @@ export function DebugPanel({ state }: DebugPanelProps) {
     debugMode, 
     isQAActive, 
     deactivateQA, 
-    getRemainingMinutes,
     maskValue, 
     maskEmail, 
     userEmail 
@@ -81,7 +80,6 @@ export function DebugPanel({ state }: DebugPanelProps) {
   ];
 
   const items = debugMode === 'qa' ? qaItems : ownerItems;
-  const remainingMinutes = isQAActive ? getRemainingMinutes() : 0;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-black/95 border-t border-yellow-500/50 text-xs font-mono">
@@ -92,13 +90,6 @@ export function DebugPanel({ state }: DebugPanelProps) {
         <div className="flex items-center gap-2">
           <Bug className="w-4 h-4" />
           <span>DEBUG {debugMode === 'qa' ? '(QA)' : '(OWNER)'}</span>
-          {debugMode === 'qa' && (
-            <>
-              <span className="text-gray-500">|</span>
-              <Clock className="w-3 h-3 text-amber-400" />
-              <span className="text-amber-400">{remainingMinutes}min</span>
-            </>
-          )}
           <span className="text-gray-500">|</span>
           <span className={state.shouldShowOnboarding ? 'text-orange-400' : 'text-green-400'}>
             onboarding: {state.shouldShowOnboarding ? 'YES' : 'NO'}

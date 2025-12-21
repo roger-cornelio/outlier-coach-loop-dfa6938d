@@ -9,7 +9,7 @@
  * - QA Mode: dados limitados/mascarados para qualquer usuário (dev/preview only)
  */
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, Bug, X, Clock, AlertTriangle } from 'lucide-react';
+import { ChevronUp, ChevronDown, Bug, X, AlertTriangle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useDebugAllowed } from '@/hooks/useDebugAllowed';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,7 +23,6 @@ export function GlobalDebugBar() {
     debugMode, 
     isQAActive, 
     deactivateQA, 
-    getRemainingMinutes,
     maskValue, 
     maskEmail, 
     userEmail,
@@ -52,7 +51,6 @@ export function GlobalDebugBar() {
   };
 
   const authStatus = getAuthStatus();
-  const remainingMinutes = isQAActive ? getRemainingMinutes() : 0;
 
   // QA Mode: limited data - always expanded, highly visible
   const qaItems = [
@@ -145,13 +143,7 @@ export function GlobalDebugBar() {
           <span style={{ fontWeight: 'bold' }}>
             DEBUG {isQA ? '(QA MODE)' : '(OWNER)'}
           </span>
-          {isQA && (
-            <>
-              <span style={{ color: 'rgba(255,255,255,0.5)' }}>|</span>
-              <Clock style={{ width: 14, height: 14, color: '#fcd34d' }} />
-              <span style={{ color: '#fcd34d' }}>{remainingMinutes}min restantes</span>
-            </>
-          )}
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>|</span>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>|</span>
           <span style={{ color: '#22d3ee' }}>{location.pathname}</span>
         </div>

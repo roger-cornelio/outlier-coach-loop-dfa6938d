@@ -2,13 +2,14 @@
  * DebugKeyboardToggle - Global keyboard shortcuts for debug
  * 
  * Ctrl+Shift+D: Toggle localStorage.DEBUG_BAR for owner only
- * Ctrl+Shift+Q: Open QA activation modal (dev/preview only)
+ * Ctrl+Shift+Q: Toggle QA mode - if inactive opens modal, if active toggles visibility
  */
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { QAActivationModal } from '@/components/QAActivationModal';
+import { useQADebugMode } from '@/hooks/useQADebugMode';
 
 const OWNER_EMAIL = 'roger.bm2016@gmail.com';
 const DEBUG_STORAGE_KEY = 'DEBUG_BAR';
@@ -18,6 +19,7 @@ export function DebugKeyboardToggle() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [showQAModal, setShowQAModal] = useState(false);
+  const { isQAActive, deactivateQA, canActivate } = useQADebugMode(profile?.email);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,22 +54,38 @@ export function DebugKeyboardToggle() {
         window.dispatchEvent(new CustomEvent(DEBUG_TOGGLE_EVENT));
       }
 
-      // Ctrl+Shift+Q - QA modal (dev/preview only)
+      // Ctrl+Shift+Q - QA toggle
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
         e.preventDefault();
         
-        // Only in dev/preview
-        if (import.meta.env.PROD) {
+        // Check if user can activate
+        if (!canActivate) {
+          toast({
+            title: "QA Mode indisponível",
+            description: "Não autorizado para este ambiente/usuário",
+            duration: 2000,
+          });
           return;
         }
 
-        setShowQAModal(true);
+        if (isQAActive) {
+          // If QA is active, deactivate it
+          deactivateQA();
+          toast({
+            title: "QA Mode Desativado",
+            description: "Debug bar QA removida",
+            duration: 2000,
+          });
+        } else {
+          // If QA is inactive, open activation modal
+          setShowQAModal(true);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [profile?.email, toast]);
+  }, [profile?.email, toast, isQAActive, deactivateQA, canActivate]);
 
   return (
     <QAActivationModal 
