@@ -34,15 +34,41 @@ import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { useToast } from '@/hooks/use-toast';
-import { TRAINING_LEVEL_NAMES, TrainingLevel } from '@/types/outlier';
+import { AthleteStatus, LEVEL_NAMES } from '@/types/outlier';
+
+/**
+ * Calcula o status do atleta baseado nos buckets de benchmark
+ * Esta é uma versão simplificada do cálculo usado no painel do atleta
+ */
+function calculateStatusFromBuckets(buckets: string[]): AthleteStatus | null {
+  if (!buckets || buckets.length === 0) return null;
+  
+  // Contar buckets
+  const counts: Record<string, number> = {};
+  buckets.forEach(b => {
+    if (b) counts[b] = (counts[b] || 0) + 1;
+  });
+  
+  const total = buckets.length;
+  const eliteCount = counts['ELITE'] || 0;
+  const strongCount = counts['STRONG'] || 0;
+  const okCount = counts['OK'] || 0;
+  
+  // Regras de classificação simplificadas
+  if (eliteCount >= total * 0.5) return 'hyrox_pro';
+  if (eliteCount + strongCount >= total * 0.6) return 'hyrox_open';
+  if (strongCount >= total * 0.4) return 'avancado';
+  if (okCount + strongCount >= total * 0.5) return 'intermediario';
+  return 'iniciante';
+}
 
 interface LinkedAthlete {
   id: string;
   user_id: string;
   name: string | null;
   email: string;
-  // Status do atleta (para visualização)
-  training_level?: string | null;
+  // Status REAL do atleta (calculado de benchmarks)
+  athleteStatus?: AthleteStatus | null;
   sexo?: string | null;
 }
 
@@ -115,11 +141,11 @@ export default function CoachDashboard() {
         return true;
       }
 
-      // Step 2: Get profiles for each athlete_id (including training_level and sexo for display)
+      // Step 2: Get profiles for each athlete_id
       const athleteIds = links.map(l => l.athlete_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, name, email, training_level, sexo')
+        .select('id, user_id, name, email, sexo')
         .in('user_id', athleteIds);
 
       if (profilesError) {
@@ -132,12 +158,31 @@ export default function CoachDashboard() {
 
       console.log('[CoachDashboard] Profiles found:', profiles?.length ?? 0);
 
+      // Step 3: Get benchmark_results for all athletes to calculate status
+      const { data: benchmarks, error: benchmarksError } = await supabase
+        .from('benchmark_results')
+        .select('user_id, bucket')
+        .in('user_id', athleteIds);
+
+      if (benchmarksError) {
+        console.warn('[CoachDashboard] Benchmarks error (non-fatal):', benchmarksError);
+      }
+
+      // Group buckets by user_id
+      const bucketsByUser: Record<string, string[]> = {};
+      (benchmarks || []).forEach(b => {
+        if (b.bucket) {
+          if (!bucketsByUser[b.user_id]) bucketsByUser[b.user_id] = [];
+          bucketsByUser[b.user_id].push(b.bucket);
+        }
+      });
+
       const transformedAthletes: LinkedAthlete[] = (profiles || []).map(p => ({
         id: p.id,
         user_id: p.user_id,
         name: p.name,
         email: p.email,
-        training_level: p.training_level,
+        athleteStatus: calculateStatusFromBuckets(bucketsByUser[p.user_id] || []),
         sexo: p.sexo,
       }));
 
@@ -394,11 +439,28 @@ export default function CoachDashboard() {
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-2">
                     {linkedAthletes.map((athlete) => {
-                      // training_level = intenção de treino escolhida pelo atleta (Base/Progressivo/Performance)
-                      // NÃO confundir com AthleteStatus (HYROX PRO, etc.) que é calculado de benchmarks
-                      const trainingLevelLabel = athlete.training_level 
-                        ? TRAINING_LEVEL_NAMES[athlete.training_level as TrainingLevel] || athlete.training_level
+                      // athleteStatus = STATUS REAL calculado de benchmarks (HYROX PRO, Iniciante, etc.)
+                      const statusLabel = athlete.athleteStatus 
+                        ? LEVEL_NAMES[athlete.athleteStatus]
                         : null;
+                      
+                      // Cores baseadas no status real
+                      const getStatusColors = (status: AthleteStatus | null | undefined) => {
+                        switch (status) {
+                          case 'hyrox_pro':
+                            return 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/30';
+                          case 'hyrox_open':
+                            return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+                          case 'avancado':
+                            return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+                          case 'intermediario':
+                            return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                          case 'iniciante':
+                            return 'bg-slate-500/10 text-slate-400 border-slate-500/30';
+                          default:
+                            return 'bg-muted text-muted-foreground border-border';
+                        }
+                      };
                       
                       return (
                         <div
@@ -408,7 +470,7 @@ export default function CoachDashboard() {
                           <UserAvatar
                             name={athlete.name || athlete.email}
                             gender={athlete.sexo as 'masculino' | 'feminino' | null}
-                            trainingLevel={athlete.training_level as TrainingLevel | null}
+                            athleteStatus={athlete.athleteStatus}
                             size="md"
                             showGlow
                           />
@@ -422,27 +484,29 @@ export default function CoachDashboard() {
                                   {athlete.email}
                                 </p>
                               )}
-                              {trainingLevelLabel && (
-                                <span className="text-xs text-muted-foreground">
-                                  • Nível: {trainingLevelLabel}
+                              {statusLabel && (
+                                <span className="text-xs text-primary">
+                                  • Status atual: {statusLabel}
+                                </span>
+                              )}
+                              {!statusLabel && (
+                                <span className="text-xs text-muted-foreground italic">
+                                  • Sem benchmarks registrados
                                 </span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {trainingLevelLabel && (
+                            {statusLabel ? (
                               <Badge 
                                 variant="outline" 
-                                className={`
-                                  ${athlete.training_level === 'performance' 
-                                    ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-                                    : athlete.training_level === 'progressivo'
-                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                      : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                                  }
-                                `}
+                                className={getStatusColors(athlete.athleteStatus)}
                               >
-                                {trainingLevelLabel}
+                                {statusLabel}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border">
+                                Novo
                               </Badge>
                             )}
                             <Button
