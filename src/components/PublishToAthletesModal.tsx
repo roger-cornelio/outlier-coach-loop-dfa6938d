@@ -105,6 +105,42 @@ export function PublishToAthletesModal({
   } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
 
+  /**
+   * Verifica se a data selecionada está dentro da janela de publicação
+   * REGRA: Só pode publicar para semana atual ou próxima
+   */
+  const isDateWithinPublishWindow = (date: Date | undefined): boolean => {
+    if (!date) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDay = new Date(date);
+    selectedDay.setHours(0, 0, 0, 0);
+    
+    // Calcular início da semana da data selecionada
+    const selectedDayOfWeek = selectedDay.getDay();
+    const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
+    const weekStart = new Date(selectedDay);
+    weekStart.setDate(selectedDay.getDate() + daysToMonday);
+    
+    // Calcular início da semana atual
+    const todayDayOfWeek = today.getDay();
+    const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
+    
+    // Calcular início da próxima semana
+    const nextWeekStart = new Date(currentWeekStart);
+    nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+    
+    const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
+    const isNextWeek = weekStart.getTime() === nextWeekStart.getTime();
+    
+    return isSameWeek || isNextWeek;
+  };
+
+  const canPublish = scheduledDate && isDateWithinPublishWindow(scheduledDate);
+
   const copyErrorToClipboard = () => {
     if (!errorData) return;
     const errorReport = {
@@ -430,15 +466,15 @@ export function PublishToAthletesModal({
                 </div>
               </div>
             ) : (
-              // Fallback: seletor de data manual
+              // Fallback: seletor de data manual - SEM RESTRIÇÕES
               <>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm font-medium text-foreground">Data Obrigatória</span>
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Selecione a Data</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Selecione a data em que o treino deve aparecer no calendário dos atletas.
+                    Escolha a data em que o treino deve aparecer no calendário dos atletas.
                   </p>
                 </div>
                 
@@ -449,7 +485,7 @@ export function PublishToAthletesModal({
                     onSelect={setScheduledDate}
                     locale={ptBR}
                     className={cn("rounded-md border pointer-events-auto")}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    // ⚠️ REGRA: Calendário NUNCA bloqueia datas - validação acontece na publicação
                   />
                 </div>
               </>
@@ -461,7 +497,7 @@ export function PublishToAthletesModal({
                   Data selecionada: {format(scheduledDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
                 
-                {/* Mensagem informativa para o coach sobre quando o atleta verá */}
+                {/* Mensagem informativa com validação de janela de publicação */}
                 {(() => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
@@ -480,22 +516,45 @@ export function PublishToAthletesModal({
                   const currentWeekStart = new Date(today);
                   currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
                   
-                  const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
-                  const isFutureWeek = weekStart > currentWeekStart;
+                  // Calcular início da próxima semana
+                  const nextWeekStart = new Date(currentWeekStart);
+                  nextWeekStart.setDate(currentWeekStart.getDate() + 7);
                   
-                  if (isFutureWeek) {
-                    return (
-                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <p className="text-xs text-blue-500">
-                          ℹ️ O atleta verá este treino apenas quando a semana de {format(weekStart, "dd/MM", { locale: ptBR })} iniciar.
-                        </p>
-                      </div>
-                    );
-                  } else if (isSameWeek) {
+                  const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
+                  const isNextWeek = weekStart.getTime() === nextWeekStart.getTime();
+                  const isWithinPublishWindow = isSameWeek || isNextWeek;
+                  const isPastWeek = weekStart < currentWeekStart;
+                  const isFarFutureWeek = weekStart > nextWeekStart;
+                  
+                  if (isSameWeek) {
                     return (
                       <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
                         <p className="text-xs text-green-500">
                           ✓ Treino aparecerá imediatamente no painel do atleta.
+                        </p>
+                      </div>
+                    );
+                  } else if (isNextWeek) {
+                    return (
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-xs text-blue-500">
+                          ℹ️ O atleta verá este treino quando a semana de {format(weekStart, "dd/MM", { locale: ptBR })} iniciar.
+                        </p>
+                      </div>
+                    );
+                  } else if (isPastWeek) {
+                    return (
+                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-xs text-amber-600">
+                          📅 Esta data está no passado. Você pode salvar como rascunho, mas a publicação para atletas só é permitida na semana atual ou próxima.
+                        </p>
+                      </div>
+                    );
+                  } else if (isFarFutureWeek) {
+                    return (
+                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-xs text-amber-600">
+                          📅 Esta data pode ser salva, mas só pode ser publicada para atletas na semana atual ou na próxima.
                         </p>
                       </div>
                     );
@@ -506,8 +565,8 @@ export function PublishToAthletesModal({
             )}
             
             {!scheduledDate && (
-              <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="text-xs text-destructive">
+              <div className="text-center p-2 rounded-lg bg-muted border border-border">
+                <p className="text-xs text-muted-foreground">
                   Selecione uma data para continuar
                 </p>
               </div>
@@ -540,6 +599,36 @@ export function PublishToAthletesModal({
                 </span>
               </div>
             </div>
+
+            {/* Aviso quando data está fora da janela de publicação */}
+            {!canPublish && scheduledDate && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-amber-600">
+                      Publicação não permitida para esta data
+                    </p>
+                    <p className="text-xs text-amber-600">
+                      A publicação para atletas só é permitida na semana atual ou na próxima. 
+                      Você pode salvar este treino como rascunho e publicá-lo quando a data estiver dentro da janela permitida.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Confirmação quando pode publicar */}
+            {canPublish && !error && publishedCount === 0 && (
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-600">
+                    Tudo certo! Clique em "Publicar" para enviar o treino para os atletas selecionados.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Error display */}
             {error && (
@@ -581,9 +670,11 @@ export function PublishToAthletesModal({
       case 'athletes':
         return selectedAthletes.size > 0 && athletes.length > 0;
       case 'date':
+        // Pode avançar para confirmação se tem data selecionada
         return !!scheduledDate;
       case 'confirm':
-        return true;
+        // Só pode publicar se estiver dentro da janela de publicação
+        return canPublish;
       default:
         return false;
     }
