@@ -46,6 +46,8 @@ export type Database = {
           id: string
           plan_json: Json
           published_at: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
           status: string
           title: string | null
           updated_at: string
@@ -58,6 +60,8 @@ export type Database = {
           id?: string
           plan_json?: Json
           published_at?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string
           title?: string | null
           updated_at?: string
@@ -70,6 +74,8 @@ export type Database = {
           id?: string
           plan_json?: Json
           published_at?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string
           title?: string | null
           updated_at?: string
