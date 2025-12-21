@@ -141,23 +141,33 @@ export function useAthletePlan(): UseAthletePlanReturn {
 
   // Navegação
   const goToPreviousWeek = useCallback(() => {
-    setWeekOffset(prev => prev - 1);
-  }, []);
+    // Atleta pode voltar para semana atual se estiver na próxima
+    if (weekOffset > 0) {
+      setWeekOffset(0);
+    }
+  }, [weekOffset]);
 
   const goToNextWeek = useCallback(() => {
-    // NÃO permitir navegar para semanas futuras (atleta não pode ver treinos futuros)
-    if (weekOffset >= 0) return;
-    setWeekOffset(prev => prev + 1);
+    // Permitir navegar para próxima semana APENAS no domingo
+    const today = new Date();
+    const isSunday = today.getDay() === 0;
+    
+    if (isSunday && weekOffset === 0) {
+      setWeekOffset(1);
+    }
   }, [weekOffset]);
 
   const goToCurrentWeek = useCallback(() => {
     setWeekOffset(0);
   }, []);
 
-  // Atleta NÃO pode ver semanas futuras
-  const canNavigateToFuture = weekOffset < 0;
-  // Pode ver histórico (limite de 12 semanas para não sobrecarregar)
-  const canNavigateToPast = weekOffset > -12;
+  // Verificar se hoje é domingo
+  const isSunday = useMemo(() => new Date().getDay() === 0, []);
+
+  // Atleta pode ver próxima semana APENAS no domingo e se estiver na semana atual
+  const canNavigateToFuture = isSunday && weekOffset === 0;
+  // Atleta pode voltar para semana atual se estiver na próxima
+  const canNavigateToPast = weekOffset > 0;
 
   const fetchPlans = useCallback(async () => {
     // Se é coach/admin, não precisa buscar plano de atleta
