@@ -86,50 +86,90 @@ export default function CoachDashboard() {
     }
   };
 
-  // Função para recarregar atletas
+  // Função para recarregar atletas - usando coach_athletes como fonte única
   const fetchAthletes = async () => {
-    if (!profile?.id) return;
-
     try {
       setLoadingAthletes(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        console.error('[CoachDashboard] No authenticated user');
+        setAthletes([]);
+        return;
+      }
+
+      console.log('[CoachDashboard] Fetching athletes for coach:', user.id);
+
+      // Query coach_athletes joined with profiles
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, name, email')
-        .eq('coach_id', profile.id);
+        .from('coach_athletes')
+        .select(`
+          athlete_id,
+          created_at,
+          profiles!coach_athletes_athlete_id_fkey (
+            id,
+            user_id,
+            name,
+            email
+          )
+        `)
+        .eq('coach_id', user.id);
 
       if (error) {
         console.error('[CoachDashboard] Erro ao buscar atletas:', error);
         setAthletes([]);
       } else {
-        setAthletes(data || []);
+        console.log('[CoachDashboard] Athletes data:', data);
+        // Transform the data to match LinkedAthlete interface
+        const transformedAthletes: LinkedAthlete[] = (data || [])
+          .filter(row => row.profiles) // Filter out any rows without profile
+          .map(row => ({
+            id: (row.profiles as any).id,
+            user_id: (row.profiles as any).user_id,
+            name: (row.profiles as any).name,
+            email: (row.profiles as any).email,
+          }));
+        setAthletes(transformedAthletes);
       }
     } finally {
       setLoadingAthletes(false);
     }
   };
 
-  // Buscar atletas vinculados ao coach (via profiles.coach_id)
+  // Buscar atletas vinculados ao coach (via coach_athletes)
   useEffect(() => {
-    if (profile?.id) {
-      fetchAthletes();
-    }
-  }, [profile?.id]);
+    fetchAthletes();
+  }, []);
 
-  // Desvincular atleta
-  const handleUnlinkAthlete = async (athleteId: string, athleteName: string) => {
+  // Desvincular atleta - remove from coach_athletes
+  const handleUnlinkAthlete = async (athleteUserId: string, athleteName: string) => {
     const confirmed = window.confirm(`Desvincular ${athleteName}?`);
     if (!confirmed) return;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ coach_id: null })
-      .eq('id', athleteId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        toast({ title: 'Usuário não autenticado', variant: 'destructive' });
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from('coach_athletes')
+        .delete()
+        .eq('coach_id', user.id)
+        .eq('athlete_id', athleteUserId);
+
+      if (error) {
+        console.error('[CoachDashboard] Unlink error:', error);
+        toast({ title: 'Erro ao desvincular', variant: 'destructive' });
+      } else {
+        toast({ title: 'Atleta desvinculado' });
+        fetchAthletes();
+      }
+    } catch (err) {
+      console.error('[CoachDashboard] Unlink error:', err);
       toast({ title: 'Erro ao desvincular', variant: 'destructive' });
-    } else {
-      toast({ title: 'Atleta desvinculado' });
-      fetchAthletes();
     }
   };
 
@@ -258,7 +298,7 @@ export default function CoachDashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleUnlinkAthlete(athlete.id, athlete.name || athlete.email)}
+                            onClick={() => handleUnlinkAthlete(athlete.user_id, athlete.name || athlete.email)}
                             className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             title="Desvincular atleta"
                           >
