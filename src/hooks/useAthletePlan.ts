@@ -1,17 +1,18 @@
 /**
  * useAthletePlan - Hook para carregar planos do atleta da tabela athlete_plans
  * 
- * REGRAS DE EXIBIÇÃO (MVP):
- * 1. Buscar apenas treinos com status='published' e scheduled_date dentro da semana atual
- * 2. Agrupar por scheduled_date para exibir no quadro semanal
- * 3. Múltiplos treinos no mesmo dia: listar todos
- * 4. Treinos sem scheduled_date: ignorar (legado)
+ * REGRAS DE EXIBIÇÃO (ANTI-BUG):
+ * 1. scheduled_date é OBRIGATÓRIA - treinos sem data são IGNORADOS
+ * 2. Buscar apenas treinos com status='published' e scheduled_date dentro da semana
+ * 3. Treinos com data passada não aparecem no painel ativo
+ * 4. Treinos legados sem data são logados como warning
  */
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { DayWorkout } from '@/types/outlier';
+import { filterValidWorkouts, isWorkoutInPast } from '@/utils/workoutValidation';
 
 const EMPTY_WORKOUTS: DayWorkout[] = [];
 
@@ -106,7 +107,17 @@ export function useAthletePlan(): UseAthletePlanReturn {
       }
 
       if (data && data.length > 0) {
-        const parsedPlans: AthletePlan[] = data.map((row: any) => {
+        // Filtrar treinos válidos (com scheduled_date) - loga legados automaticamente
+        const validData = filterValidWorkouts(data, 'useAthletePlan');
+        
+        // Filtrar treinos no passado (não mostrar no painel ativo)
+        const activeData = validData.filter(row => !isWorkoutInPast(row.scheduled_date));
+        
+        if (validData.length !== activeData.length) {
+          console.log('[useAthletePlan] Filtered out', validData.length - activeData.length, 'past workouts');
+        }
+
+        const parsedPlans: AthletePlan[] = activeData.map((row: any) => {
           const planJson = row.plan_json as { workouts?: DayWorkout[] } | null;
           return {
             id: row.id,
@@ -119,7 +130,7 @@ export function useAthletePlan(): UseAthletePlanReturn {
           };
         });
 
-        console.log('[useAthletePlan] Found plans:', parsedPlans.length);
+        console.log('[useAthletePlan] Active plans:', parsedPlans.length);
         setPlans(parsedPlans);
       } else {
         console.log('[useAthletePlan] No plans found for week:', weekStart, '-', weekEnd);

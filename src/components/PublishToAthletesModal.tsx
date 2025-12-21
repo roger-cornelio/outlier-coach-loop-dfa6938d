@@ -1,10 +1,11 @@
 /**
  * PublishToAthletesModal - Modal para publicar treino para atletas vinculados
  * 
- * REGRAS OBRIGATÓRIAS:
+ * REGRAS OBRIGATÓRIAS (ANTI-BUG):
  * 1. Selecionar atletas (obrigatório)
  * 2. Selecionar data de agendamento (obrigatório - scheduled_date)
- * 3. Confirmar e publicar
+ * 3. É PROIBIDO publicar sem scheduled_date
+ * 4. Confirmar e publicar
  * 
  * O treino só aparece no quadro semanal do atleta na scheduled_date.
  */
@@ -16,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
+import { validateWorkoutForPublish } from '@/utils/workoutValidation';
 import {
   Dialog,
   DialogContent,
@@ -175,13 +177,34 @@ export function PublishToAthletesModal({
   };
 
   const handlePublish = async () => {
-    if (!profile?.id || selectedAthletes.size === 0 || !scheduledDate) return;
+    // VALIDAÇÃO OBRIGATÓRIA: Data é indispensável
+    const scheduledDateStr = scheduledDate ? format(scheduledDate, 'yyyy-MM-dd') : null;
+    const validation = validateWorkoutForPublish(
+      workouts,
+      scheduledDateStr,
+      Array.from(selectedAthletes)
+    );
+
+    if (!validation.isValid) {
+      console.error('[PublishToAthletesModal] Validation failed:', validation.errors);
+      setError(validation.errors.join('\n'));
+      toast({
+        title: 'Erro de validação',
+        description: validation.errors[0],
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!profile?.id || !scheduledDate || !scheduledDateStr) {
+      setError('Dados incompletos. Verifique se a data foi selecionada.');
+      return;
+    }
 
     setIsPublishing(true);
     setError(null);
     setPublishedCount(0);
 
-    const scheduledDateStr = format(scheduledDate, 'yyyy-MM-dd');
     // Week start is still used for the unique constraint, but scheduled_date is what matters for display
     const weekStart = getWeekStartFromDate(scheduledDate);
     
@@ -376,8 +399,14 @@ export function PublishToAthletesModal({
         return (
           <div className="space-y-4">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-foreground">Data Obrigatória</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
                 Selecione a data em que o treino deve aparecer no calendário dos atletas.
+                <br />
+                <span className="text-xs text-amber-500/80">O treino não será salvo sem uma data definida.</span>
               </p>
             </div>
             
@@ -396,6 +425,14 @@ export function PublishToAthletesModal({
               <div className="text-center">
                 <p className="text-sm font-medium text-primary">
                   Data selecionada: {format(scheduledDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
+              </div>
+            )}
+            
+            {!scheduledDate && (
+              <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-xs text-destructive">
+                  Selecione uma data para continuar
                 </p>
               </div>
             )}
@@ -484,11 +521,16 @@ export function PublishToAthletesModal({
             <Send className="w-5 h-5 text-primary" />
             Publicar Treino
           </DialogTitle>
-          <DialogDescription>
-            {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
-            {currentStep === 'date' && 'Escolha a data de agendamento (obrigatório).'}
-            {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
-          </DialogDescription>
+        <DialogDescription>
+          {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
+          {currentStep === 'date' && (
+            <span className="flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+              Escolha a data de agendamento (obrigatório).
+            </span>
+          )}
+          {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
+        </DialogDescription>
         </DialogHeader>
 
         {/* Step indicators */}
