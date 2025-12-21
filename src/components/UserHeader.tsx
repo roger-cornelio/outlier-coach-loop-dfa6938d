@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useLogout } from '@/hooks/useLogout';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { LogOut, User, Settings, UserCircle, ChevronDown } from 'lucide-react';
+import { LogOut, User, Settings, UserCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import {
   DropdownMenu,
@@ -20,10 +19,10 @@ interface UserHeaderProps {
 }
 
 export function UserHeader({ showLogout = true, className = '' }: UserHeaderProps) {
-  const { user, profile, role, signOut } = useAuth();
+  const { user, profile, role } = useAuth();
+  const { logout, isLoggingOut } = useLogout();
   const { setCurrentView } = useOutlierStore();
   const { status: athleteStatus } = useAthleteStatus();
-  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -39,19 +38,15 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
     return LEVEL_NAMES[status] || 'Iniciante';
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    setCurrentView('welcome');
-    navigate('/');
+  const handleLogout = () => {
+    logout();
   };
 
   const handleProfile = () => {
-    // Navigate to profile/config view
     setCurrentView('config');
   };
 
   const handleSettings = () => {
-    // Navigate to config view
     setCurrentView('config');
   };
 
@@ -134,10 +129,15 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
               
               <DropdownMenuItem 
                 onClick={handleLogout}
+                disabled={isLoggingOut}
                 className="cursor-pointer py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                <span>Sair</span>
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4 mr-2" />
+                )}
+                <span>{isLoggingOut ? 'Saindo...' : 'Sair'}</span>
               </DropdownMenuItem>
             </>
           )}

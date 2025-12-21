@@ -13,8 +13,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useLogout } from '@/hooks/useLogout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,8 +38,8 @@ interface CoachWorkout {
 }
 
 export default function CoachDashboard() {
-  const { profile, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { logout, isLoggingOut } = useLogout();
 
   const [athletes, setAthletes] = useState<LinkedAthlete[]>([]);
   const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
@@ -103,10 +103,9 @@ export default function CoachDashboard() {
     }
   }, [profile?.id]);
 
-  // Logout
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login', { replace: true });
+  // Logout com reload forçado
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -128,10 +127,15 @@ export default function CoachDashboard() {
             variant="outline"
             size="sm"
             onClick={handleLogout}
+            disabled={isLoggingOut}
             className="flex items-center gap-2"
           >
-            <LogOut className="w-4 h-4" />
-            Sair
+            {isLoggingOut ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            {isLoggingOut ? 'Saindo...' : 'Sair'}
           </Button>
         </motion.div>
 
