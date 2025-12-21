@@ -525,7 +525,7 @@ export function Dashboard() {
                   {totalCalories > 0 && (
                     <div className="flex items-center gap-2">
                       <Flame className="w-4 h-4 text-orange-500" />
-                      <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
+                      <span className="text-orange-500 font-medium">~{Math.abs(totalCalories)} kcal</span>
                     </div>
                   )}
                 </div>
@@ -565,7 +565,7 @@ export function Dashboard() {
                         <Flame className="w-5 h-5 text-orange-500" />
                         <span className="text-muted-foreground">{summaryStyle.caloriesLabel}</span>
                         <span className="font-display text-lg text-orange-500">
-                          {totalCalories > 0 ? `~${totalCalories} kcal` : '-'}
+                          {totalCalories > 0 ? `~${Math.abs(totalCalories)} kcal` : '-'}
                         </span>
                       </div>
                     </div>
