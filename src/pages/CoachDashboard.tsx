@@ -649,7 +649,7 @@ export default function CoachDashboard() {
         );
 
       case 'planilha':
-        return <CoachSpreadsheetTab />;
+        return <CoachSpreadsheetTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
 
       case 'benchmarks':
         return <CoachBenchmarksTab />;

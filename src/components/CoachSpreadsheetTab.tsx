@@ -134,7 +134,19 @@ function parseSpreadsheet(text: string): DayWorkout[] {
   return workouts;
 }
 
-export function CoachSpreadsheetTab() {
+interface LinkedAthlete {
+  id: string;
+  user_id: string;
+  name: string | null;
+  email: string;
+}
+
+interface CoachSpreadsheetTabProps {
+  linkedAthletes: LinkedAthlete[];
+  loadingAthletes?: boolean;
+}
+
+export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }: CoachSpreadsheetTabProps) {
   const { setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
   const { profile } = useAuth();
   const { saveWorkout: saveToDb } = useCoachWorkouts();
@@ -529,6 +541,8 @@ Terça-feira 📅
         onOpenChange={setShowPublishModal}
         workouts={weeklyWorkouts}
         title={programName || `Semana ${new Date().toLocaleDateString('pt-BR')}`}
+        linkedAthletes={linkedAthletes}
+        loadingAthletes={loadingAthletes}
       />
     </div>
   );
