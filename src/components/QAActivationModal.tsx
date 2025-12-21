@@ -2,13 +2,14 @@
  * QAActivationModal - Modal para ativar QA Debug Mode
  * 
  * Solicita código QA e ativa o modo de debug para testes
- * Só funciona em desenvolvimento/preview
+ * Sem expiração - toggle manual
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bug, Lock } from 'lucide-react';
 import { useQADebugMode } from '@/hooks/useQADebugMode';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 interface QAActivationModalProps {
@@ -19,7 +20,8 @@ interface QAActivationModalProps {
 export function QAActivationModal({ isOpen, onClose }: QAActivationModalProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const { activateQA, canActivate } = useQADebugMode();
+  const { profile } = useAuth();
+  const { activateQA, canActivate } = useQADebugMode(profile?.email);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,16 +29,16 @@ export function QAActivationModal({ isOpen, onClose }: QAActivationModalProps) {
     setError('');
 
     if (!canActivate) {
-      setError('QA Mode não disponível em produção');
+      setError('QA Mode não disponível para este usuário');
       return;
     }
 
-    const success = activateQA(code.trim());
+    const success = activateQA(code.trim(), profile?.email);
     
     if (success) {
       toast({
         title: 'QA Mode Ativado',
-        description: 'Debug bar visível por 30 minutos',
+        description: 'Debug bar visível. Use Ctrl+Shift+Q ou botão para desativar.',
         duration: 3000,
       });
       setCode('');
@@ -89,14 +91,14 @@ export function QAActivationModal({ isOpen, onClose }: QAActivationModalProps) {
                 <div className="text-center py-4">
                   <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    QA Debug Mode não está disponível em produção.
+                    QA Debug Mode não está disponível para este usuário.
                   </p>
                 </div>
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    Digite o código QA para ativar a Debug Bar para qualquer usuário. 
-                    A sessão expira em 30 minutos.
+                    Digite o código QA para ativar a Debug Bar. 
+                    Sem expiração - desative manualmente quando quiser.
                   </p>
                   
                   <div>
