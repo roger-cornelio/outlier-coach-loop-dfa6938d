@@ -413,6 +413,18 @@ export type Database = {
         Returns: boolean
       }
       revoke_admin_allowlist: { Args: { _email: string }; Returns: boolean }
+      search_athlete_by_email: {
+        Args: { _email: string }
+        Returns: {
+          coach_id: string
+          email: string
+          is_athlete: boolean
+          is_coach_or_admin: boolean
+          name: string
+          profile_id: string
+          user_id: string
+        }[]
+      }
       submit_coach_application: {
         Args: { _contact: string; _email: string; _full_name: string }
         Returns: {
