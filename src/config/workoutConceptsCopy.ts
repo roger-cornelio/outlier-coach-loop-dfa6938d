@@ -17,18 +17,21 @@ export const WORKOUT_CONCEPTS = {
     
     // Copy para o coach
     description: 'Bloco central do treino do dia.',
-    tooltip: 'WOD principal é o bloco central do treino do dia. É ele que usamos para medir performance no contexto do atleta.',
+    tooltip: 'WOD principal é o bloco central do treino do dia. É ele que usamos para medir performance no contexto do atleta e ajustar o treino com justiça.',
     
     // Estados
-    manualLabel: 'Principal (definido)',
-    autoLabel: 'Principal (auto)',
+    manualLabel: 'Principal',
+    autoLabel: 'Auto',
     
     // Instruções
-    setManualHint: 'Clique para definir este bloco como principal',
-    removeManualHint: 'Remover marcação manual (voltar para automático)',
+    setManualHint: 'Clique para definir este bloco como WOD principal do dia',
+    removeManualHint: 'Remover marcação manual (voltar para detecção automática)',
     
     // Feedback
     autoDetectedMessage: 'Bloco principal identificado automaticamente com base no tipo e duração.',
+    
+    // Copy detalhada para exibição no editor
+    editorDescription: 'WOD principal é o bloco central do treino do dia. É ele que usamos para medir performance no contexto do atleta e ajustar o treino com justiça.',
   },
 
   // ============================================

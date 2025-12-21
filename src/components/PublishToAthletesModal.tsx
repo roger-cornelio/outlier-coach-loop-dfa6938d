@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { DayWorkout } from '@/types/outlier';
+import { DayWorkout, DayOfWeek, DAY_NAMES } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { validateWorkoutForPublish } from '@/utils/workoutValidation';
 import {
@@ -49,7 +49,13 @@ interface LinkedAthlete {
   email: string;
 }
 
-interface PublishToAthletesModalProps {
+interface WeekPeriod {
+  startDate: string; // YYYY-MM-DD (Monday)
+  endDate: string;   // YYYY-MM-DD (Sunday)
+  label: string;
+}
+
+export interface PublishToAthletesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workouts: DayWorkout[];
@@ -57,6 +63,7 @@ interface PublishToAthletesModalProps {
   linkedAthletes: LinkedAthlete[];
   loadingAthletes?: boolean;
   onSuccess?: () => void;
+  weekPeriod?: WeekPeriod | null;
 }
 
 // Step enum for the wizard
@@ -69,7 +76,8 @@ export function PublishToAthletesModal({
   title,
   linkedAthletes,
   loadingAthletes = false,
-  onSuccess 
+  onSuccess,
+  weekPeriod,
 }: PublishToAthletesModalProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -163,7 +171,7 @@ export function PublishToAthletesModal({
   const handleNext = () => {
     if (currentStep === 'athletes' && selectedAthletes.size > 0) {
       setCurrentStep('date');
-    } else if (currentStep === 'date' && scheduledDate) {
+    } else if (currentStep === 'date' && (scheduledDate || weekPeriod)) {
       setCurrentStep('confirm');
     }
   };
@@ -177,11 +185,13 @@ export function PublishToAthletesModal({
   };
 
   const handlePublish = async () => {
+    // Use weekPeriod.startDate se disponível, senão usa scheduledDate
+    const effectiveDate = weekPeriod?.startDate || (scheduledDate ? format(scheduledDate, 'yyyy-MM-dd') : null);
+    
     // VALIDAÇÃO OBRIGATÓRIA: Data é indispensável
-    const scheduledDateStr = scheduledDate ? format(scheduledDate, 'yyyy-MM-dd') : null;
     const validation = validateWorkoutForPublish(
       workouts,
-      scheduledDateStr,
+      effectiveDate,
       Array.from(selectedAthletes)
     );
 
@@ -196,8 +206,8 @@ export function PublishToAthletesModal({
       return;
     }
 
-    if (!profile?.id || !scheduledDate || !scheduledDateStr) {
-      setError('Dados incompletos. Verifique se a data foi selecionada.');
+    if (!profile?.id || !effectiveDate) {
+      setError('Dados incompletos. Verifique se a semana/data foi selecionada.');
       return;
     }
 
@@ -206,7 +216,8 @@ export function PublishToAthletesModal({
     setPublishedCount(0);
 
     // Week start is still used for the unique constraint, but scheduled_date is what matters for display
-    const weekStart = getWeekStartFromDate(scheduledDate);
+    const dateForWeekCalc = weekPeriod ? new Date(weekPeriod.startDate + 'T00:00:00') : scheduledDate!;
+    const weekStart = getWeekStartFromDate(dateForWeekCalc);
     
     let successCount = 0;
     const errors: Array<{ athleteId: string; error: any }> = [];
@@ -217,9 +228,9 @@ export function PublishToAthletesModal({
           athlete_user_id: athleteUserId,
           coach_id: profile.id,
           week_start: weekStart,
-          scheduled_date: scheduledDateStr,
+          scheduled_date: effectiveDate,
           plan_json: { workouts },
-          title: title || `Treino ${scheduledDateStr}`,
+          title: title || `Treino ${effectiveDate}`,
           status: 'published',
           published_at: new Date().toISOString(),
         };
@@ -256,7 +267,7 @@ export function PublishToAthletesModal({
       if (successCount > 0) {
         toast({
           title: 'Treino agendado!',
-          description: `Publicado para ${successCount} atleta(s) em ${format(scheduledDate, 'dd/MM/yyyy')}.`,
+          description: `Publicado para ${successCount} atleta(s) em ${effectiveDate}.`,
         });
         onSuccess?.();
         
@@ -287,7 +298,7 @@ export function PublishToAthletesModal({
           payload: {
             athlete_user_id: errors[0]?.athleteId,
             coach_id: profile?.id,
-            scheduled_date: scheduledDateStr,
+            scheduled_date: effectiveDate,
           },
         });
         
@@ -398,28 +409,51 @@ export function PublishToAthletesModal({
       case 'date':
         return (
           <div className="space-y-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-foreground">Data Obrigatória</span>
+            {weekPeriod ? (
+              // Semana já selecionada pelo coach - mostrar resumo
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">Semana de Referência</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{weekPeriod.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Os treinos serão publicados com as datas desta semana ({weekPeriod.startDate} → {weekPeriod.endDate})
+                  </p>
+                </div>
+                
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-xs text-green-600">
+                    ✓ Cada dia (Seg-Dom) será mapeado para a data correspondente da semana selecionada.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Selecione a data em que o treino deve aparecer no calendário dos atletas.
-                <br />
-                <span className="text-xs text-amber-500/80">O treino não será salvo sem uma data definida.</span>
-              </p>
-            </div>
-            
-            <div className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={scheduledDate}
-                onSelect={setScheduledDate}
-                locale={ptBR}
-                className={cn("rounded-md border pointer-events-auto")}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-              />
-            </div>
+            ) : (
+              // Fallback: seletor de data manual
+              <>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-medium text-foreground">Data Obrigatória</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Selecione a data em que o treino deve aparecer no calendário dos atletas.
+                  </p>
+                </div>
+                
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={scheduledDate}
+                    onSelect={setScheduledDate}
+                    locale={ptBR}
+                    className={cn("rounded-md border pointer-events-auto")}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  />
+                </div>
+              </>
+            )}
 
             {scheduledDate && (
               <div className="space-y-2 text-center">
