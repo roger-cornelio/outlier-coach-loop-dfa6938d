@@ -76,26 +76,35 @@ export default function CoachAuth() {
     }
   }, [user, isCoach, authLoading, navigate]);
 
-  // ===== CHECK IF EMAIL IS APPROVED (coach_applications.status='approved') =====
+  // ===== CHECK IF EMAIL IS APPROVED (via RPC - bypasses RLS) =====
   // This is used BEFORE account exists - pre-account source of truth
-  const checkEmailApproved = async (emailToCheck: string): Promise<boolean> => {
+  type ApprovalResult = { approved: boolean; application_id: string | null; status: string | null; created_at: string | null };
+  
+  const getCoachApprovalByEmail = async (emailToCheck: string): Promise<ApprovalResult> => {
     const normalizedEmail = emailToCheck.toLowerCase().trim();
+    console.log('[CoachAuth] getCoachApprovalByEmail (RPC):', normalizedEmail);
     
     const { data, error } = await supabase
-      .from('coach_applications')
-      .select('status')
-      .eq('email', normalizedEmail)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .rpc('get_coach_approval_by_email', { _email: normalizedEmail });
 
     if (error) {
-      console.error('[CoachAuth] checkEmailApproved error:', error);
-      return false;
+      console.error('[CoachAuth] getCoachApprovalByEmail error:', error);
+      return { approved: false, application_id: null, status: null, created_at: null };
     }
 
-    return !!data;
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    console.log('[CoachAuth] getCoachApprovalByEmail result:', row);
+    
+    if (!row) {
+      return { approved: false, application_id: null, status: null, created_at: null };
+    }
+    
+    return {
+      approved: !!row.approved,
+      application_id: row.application_id,
+      status: row.status,
+      created_at: row.created_at,
+    };
   };
 
   // ===== CHECK USER ROLES (for logged-in user) =====
@@ -142,18 +151,35 @@ export default function CoachAuth() {
       if (loginError) {
         console.log('[CoachAuth] Login error:', loginError.message);
 
-        // Login failed - check if email is approved (pre-account source of truth)
+        // Login failed - check if email is approved (pre-account source of truth via RPC)
         if (loginError.message.includes('Invalid login credentials')) {
-          const isApproved = await checkEmailApproved(normalizedEmail);
-          console.log('[CoachAuth] Email approved?', isApproved);
+          const approval = await getCoachApprovalByEmail(normalizedEmail);
+          console.log('[CoachAuth] Approval result:', approval);
 
-          if (isApproved) {
+          if (approval.approved) {
             // Email is approved but no account or wrong password
             // → redirect to set password page
             console.log('[CoachAuth] Approved email, redirecting to /coach/definir-senha');
             navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+          } else if (approval.status === 'pending') {
+            // Pending application → show message
+            toast({
+              title: 'Aguarde aprovação',
+              description: 'Sua solicitação está em análise. Aguarde a aprovação do admin.',
+            });
+            setIsSubmitting(false);
+            return;
+          } else if (approval.status === 'rejected') {
+            // Rejected → allow resubmission
+            toast({
+              title: 'Solicitação não aprovada',
+              description: 'Você pode reenviar sua solicitação.',
+              variant: 'destructive',
+            });
+            setContactEmail(normalizedEmail);
+            setFlowState('contact_modal');
           } else {
-            // Not approved → show contact modal
+            // No application → show contact modal
             console.log('[CoachAuth] Not approved, showing contact modal');
             setContactEmail(normalizedEmail);
             setFlowState('contact_modal');
@@ -208,7 +234,7 @@ export default function CoachAuth() {
     }
   };
 
-  // ===== HANDLE CONTACT SUBMIT (smart upsert - no duplicates) =====
+  // ===== HANDLE CONTACT SUBMIT (via RPC - no duplicates) =====
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -230,104 +256,76 @@ export default function CoachAuth() {
     }
 
     setIsSubmitting(true);
-    const normalizedEmail = contactEmail.toLowerCase().trim();
 
     try {
-      // Check if email is already approved
-      const isApproved = await checkEmailApproved(normalizedEmail);
-      
-      if (isApproved) {
-        // Already approved → redirect to set password
+      // Use RPC to submit (handles duplicates server-side)
+      const { data, error } = await supabase.rpc('submit_coach_application', {
+        _full_name: contactName.trim(),
+        _email: contactEmail.toLowerCase().trim(),
+        _contact: contactPhone.trim(),
+      });
+
+      if (error) {
+        console.error('[CoachAuth] submit_coach_application error:', error);
         toast({
-          title: 'Acesso já aprovado!',
-          description: 'Defina sua senha para entrar.',
+          title: 'Erro ao enviar',
+          description: error.message.includes('invalid_') ? 'Verifique os campos.' : 'Tente novamente.',
+          variant: 'destructive',
         });
-        navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
         setIsSubmitting(false);
         return;
       }
 
-      // Check for existing application
-      const { data: existing, error: fetchErr } = await supabase
-        .from('coach_applications')
-        .select('id, status')
-        .eq('email', normalizedEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      console.log('[CoachAuth] submit_coach_application result:', row);
 
-      if (fetchErr) {
-        console.error('[CoachAuth] fetch existing error:', fetchErr);
-      }
-
-      // Handle existing applications
-      if (existing) {
-        if (existing.status === 'pending') {
-          toast({
-            title: 'Solicitação já existe',
-            description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
-          });
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (existing.status === 'rejected') {
-          // Reopen rejected application
-          const { error: updateErr } = await supabase
-            .from('coach_applications')
-            .update({
-              full_name: contactName.trim(),
-              instagram: contactPhone.trim(),
-              status: 'pending',
-              rejection_reason: null,
-              reviewed_at: null,
-              reviewed_by: null,
-            })
-            .eq('id', existing.id);
-
-          if (updateErr) {
-            console.error('[CoachAuth] update rejected error:', updateErr);
-            toast({
-              title: 'Erro ao reenviar',
-              description: 'Tente novamente.',
-              variant: 'destructive',
-            });
-          } else {
-            setFlowState('contact_sent');
-          }
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // No existing → create new application
-      const { error: insertErr } = await supabase
-        .from('coach_applications')
-        .insert({
-          full_name: contactName.trim(),
-          email: normalizedEmail,
-          instagram: contactPhone.trim(),
-          status: 'pending',
+      if (!row) {
+        toast({
+          title: 'Erro',
+          description: 'Resposta inesperada. Tente novamente.',
+          variant: 'destructive',
         });
+        setIsSubmitting(false);
+        return;
+      }
 
-      if (insertErr) {
-        // Handle race condition: unique constraint violation
-        if (insertErr.code === '23505') {
+      // If approved → redirect
+      if (row.approved) {
+        toast({
+          title: 'Acesso já aprovado!',
+          description: 'Defina sua senha para entrar.',
+        });
+        navigate(`/coach/definir-senha?email=${encodeURIComponent(contactEmail.toLowerCase().trim())}`, { replace: true });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // If not created (existing pending/rejected record)
+      if (!row.created) {
+        const st = String(row.status).toLowerCase();
+        if (st === 'pending') {
           toast({
-            title: 'Solicitação já existe',
-            description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
+            title: 'Solicitação já registrada',
+            description: 'Aguarde a aprovação do admin.',
           });
-        } else {
-          console.error('[CoachAuth] Contact submit error:', insertErr);
+        } else if (st === 'rejected') {
           toast({
-            title: 'Erro ao enviar',
-            description: 'Tente novamente.',
+            title: 'Solicitação já recusada',
+            description: 'Fale com o suporte para mais informações.',
             variant: 'destructive',
           });
+        } else {
+          toast({
+            title: 'Solicitação já existe',
+            description: 'Verifique o status da sua solicitação.',
+          });
         }
-      } else {
-        setFlowState('contact_sent');
+        setIsSubmitting(false);
+        return;
       }
+
+      // Created new → show success
+      setFlowState('contact_sent');
     } catch (err) {
       console.error('[CoachAuth] Contact submit error:', err);
       toast({
