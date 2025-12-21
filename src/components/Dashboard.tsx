@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek, type AthleteLevel } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,7 @@ import { useAppState } from '@/hooks/useAppState';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { getCoachCopy } from '@/config/coachCopy';
+import { WeekNavigator } from './WeekNavigator';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -82,7 +83,20 @@ export function Dashboard() {
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
-  const { plan: athletePlan, workouts: planWorkouts, loading: loadingPlan, hasCoach } = useAthletePlan();
+  const { 
+    plan: athletePlan, 
+    workouts: planWorkouts, 
+    loading: loadingPlan, 
+    hasCoach,
+    // Navegação por semana
+    currentWeek,
+    canNavigateToPast,
+    canNavigateToFuture,
+    goToPreviousWeek,
+    goToNextWeek,
+    goToCurrentWeek,
+    isViewingHistory,
+  } = useAthletePlan();
   
   // Carregar configurações do atleta do banco (persistência)
   useAthleteProfile();
@@ -472,10 +486,32 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Day Tabs */}
-      <div className="sticky top-[73px] z-40 bg-background border-b border-border overflow-x-auto">
+      {/* Week Navigator + Day Tabs */}
+      <div className="sticky top-[73px] z-40 bg-background border-b border-border">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-1 py-2">
+          {/* Week Navigator */}
+          <div className="py-2 border-b border-border/50">
+            <WeekNavigator
+              currentWeek={currentWeek}
+              canNavigateToPast={canNavigateToPast}
+              canNavigateToFuture={canNavigateToFuture}
+              onPreviousWeek={goToPreviousWeek}
+              onNextWeek={goToNextWeek}
+              onCurrentWeek={goToCurrentWeek}
+              isViewingHistory={isViewingHistory}
+            />
+          </div>
+          
+          {/* History Banner */}
+          {isViewingHistory && (
+            <div className="py-2 flex items-center justify-center gap-2 text-amber-500 text-sm">
+              <History className="w-4 h-4" />
+              <span>Visualizando histórico (somente leitura)</span>
+            </div>
+          )}
+          
+          {/* Day Tabs */}
+          <div className="flex gap-1 py-2 overflow-x-auto">
             {dayTabs.map((day) => {
               const hasWorkout = displayWorkouts.some((w) => w.day === day);
               return (
@@ -490,11 +526,12 @@ export function Dashboard() {
                         ? 'text-foreground hover:bg-secondary'
                         : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary'
                     }
+                    ${isViewingHistory ? 'opacity-80' : ''}
                   `}
                 >
                   {DAY_NAMES[day].slice(0, 3).toUpperCase()}
                   {hasWorkout && activeDay !== day && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+                    <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isViewingHistory ? 'bg-amber-500' : 'bg-primary'}`} />
                   )}
                 </button>
               );

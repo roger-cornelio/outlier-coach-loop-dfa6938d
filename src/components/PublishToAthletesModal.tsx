@@ -422,10 +422,52 @@ export function PublishToAthletesModal({
             </div>
 
             {scheduledDate && (
-              <div className="text-center">
+              <div className="space-y-2 text-center">
                 <p className="text-sm font-medium text-primary">
                   Data selecionada: {format(scheduledDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
+                
+                {/* Mensagem informativa para o coach sobre quando o atleta verá */}
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const selectedDay = new Date(scheduledDate);
+                  selectedDay.setHours(0, 0, 0, 0);
+                  
+                  // Calcular início da semana da data selecionada
+                  const selectedDayOfWeek = selectedDay.getDay();
+                  const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
+                  const weekStart = new Date(selectedDay);
+                  weekStart.setDate(selectedDay.getDate() + daysToMonday);
+                  
+                  // Calcular início da semana atual
+                  const todayDayOfWeek = today.getDay();
+                  const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
+                  const currentWeekStart = new Date(today);
+                  currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
+                  
+                  const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
+                  const isFutureWeek = weekStart > currentWeekStart;
+                  
+                  if (isFutureWeek) {
+                    return (
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-xs text-blue-500">
+                          ℹ️ O atleta verá este treino apenas quando a semana de {format(weekStart, "dd/MM", { locale: ptBR })} iniciar.
+                        </p>
+                      </div>
+                    );
+                  } else if (isSameWeek) {
+                    return (
+                      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <p className="text-xs text-green-500">
+                          ✓ Treino aparecerá imediatamente no painel do atleta.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
             
