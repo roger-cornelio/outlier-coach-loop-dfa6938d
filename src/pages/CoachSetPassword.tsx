@@ -221,16 +221,23 @@ export default function CoachSetPassword() {
 
         if (loginError) {
           console.error('[CoachSetPassword] Login error:', loginError);
-          toast({
-            title: 'Conta criada!',
-            description: 'Faça login com sua nova senha.',
-          });
-          navigate('/login/coach', { replace: true });
-          return;
+          // Conta criada mas login falhou - tentar refresh novamente
+          await refreshSession();
+          const { data: retrySession } = await supabase.auth.getSession();
+          if (!retrySession.session) {
+            toast({
+              title: 'Conta criada!',
+              description: 'Use a nova senha para entrar.',
+            });
+            // Não redirecionar para /login/coach para evitar loop
+            // O usuário já está na página correta ou pode clicar voltar
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 
-      // Success - refresh and redirect
+      // Success - refresh and redirect DIRECTLY to dashboard
       await refreshSession();
       toast({
         title: 'Conta ativada!',
