@@ -735,7 +735,7 @@ Terça-feira 📅
         title={programName || (selectedWeek ? `Semana ${selectedWeek.label}` : `Semana ${new Date().toLocaleDateString('pt-BR')}`)}
         linkedAthletes={linkedAthletes}
         loadingAthletes={loadingAthletes}
-        weekPeriod={selectedWeek}
+        weekStart={selectedWeek?.startDate || null}
       />
     </div>
   );
