@@ -1,19 +1,20 @@
 /**
- * AppGate - SINGLE POINT of routing/rendering decisions
+ * AppGate - BLINDAGEM DEFINITIVA
  * 
- * ROTAS OFICIAIS (entry points):
- * - /login: Login usuário/atleta
- * - /login/coach: Login coach (tela dedicada)
- * - /login/admin: Login admin
+ * REGRA IMUTÁVEL: Rotas públicas são processadas PRIMEIRO,
+ * antes de qualquer verificação de state/role.
  * 
- * DESTINOS (pós-login, protegidos):
- * - /app: App principal (requer auth, BLOQUEADO para coach)
- * - /painel-admin: Dashboard admin (requer role admin)
- * - /coach/dashboard: Dashboard coach (requer role coach)
+ * ROTAS PÚBLICAS (sempre acessíveis):
+ * - /login, /login/admin, /login/coach
+ * - /coach-request, /coach-pending, /coach/definir-senha
  * 
- * REDIRECTS (aliases):
- * - /, /auth, /longin → /login
- * - /coach → /coach/dashboard
+ * ROTAS PROTEGIDAS (requerem auth + role):
+ * - /coach/dashboard (requer coach)
+ * - /painel-admin (requer admin)
+ * - /app (requer user autenticado)
+ * 
+ * AppGate NÃO decide destino de coach - apenas allow/deny.
+ * CoachAuth.tsx é o ÚNICO lugar autorizado a decidir fluxo.
  */
 
 import { ReactNode } from 'react';
@@ -25,14 +26,57 @@ interface AppGateProps {
   children: ReactNode;
 }
 
+// Rotas públicas - NUNCA bloquear, NUNCA redirecionar
+const PUBLIC_ROUTES = [
+  '/login',
+  '/login/admin', 
+  '/login/coach',
+  '/coach-request',
+  '/coach-pending',
+  '/coach/definir-senha',
+];
+
 export function AppGate({ children }: AppGateProps) {
   const location = useLocation();
   const { state, loading, profileLoading } = useAppState();
   const pathname = location.pathname;
 
-  console.log('[AppGate] state:', state, '| pathname:', pathname, '| loading:', loading, '| profileLoading:', profileLoading);
+  console.log('[AppGate] state:', state, '| pathname:', pathname);
 
-  // ===== RULE 1: While loading (auth OR profile), ONLY show loader =====
+  // ===== REGRA 0: ROTAS PÚBLICAS - SEMPRE PERMITIR =====
+  // Processado ANTES de loading/state para evitar flicker
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  
+  if (isPublicRoute) {
+    // Exceção: usuário já autenticado em /login → redirecionar para destino apropriado
+    if (pathname === '/login' && state !== 'anon' && state !== 'loading' && !loading) {
+      if (state === 'admin' || state === 'superadmin') {
+        return <Navigate to="/painel-admin" replace />;
+      }
+      if (state === 'coach') {
+        return <Navigate to="/coach/dashboard" replace />;
+      }
+      // Atleta autenticado
+      return <Navigate to="/app" replace />;
+    }
+    
+    // Exceção: coach já autenticado em /login/coach → dashboard
+    if (pathname === '/login/coach' && state === 'coach' && !loading) {
+      return <Navigate to="/coach/dashboard" replace />;
+    }
+    
+    // Exceção: admin já autenticado em /login/admin → painel
+    if (pathname === '/login/admin' && (state === 'admin' || state === 'superadmin') && !loading) {
+      return <Navigate to="/painel-admin" replace />;
+    }
+    
+    // Para TODAS as outras rotas públicas: SEMPRE renderizar children
+    // Isso inclui /coach-request, /coach-pending, /coach/definir-senha
+    // NÃO verificar state, NÃO redirecionar, NÃO bloquear
+    return <>{children}</>;
+  }
+
+  // ===== REGRA 1: LOADING - mostrar loader apenas para rotas protegidas =====
   if (loading || profileLoading || state === 'loading') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
@@ -42,90 +86,19 @@ export function AppGate({ children }: AppGateProps) {
     );
   }
 
-  // ===== RULE 2: ANON user handling =====
-  if (state === 'anon') {
-    // PUBLIC ROUTES: Allow anon users on all login entry points + coach flow pages
-    const isPublicRoute = 
-      pathname === '/login' || 
-      pathname === '/login/admin' || 
-      pathname === '/login/coach' ||
-      pathname === '/coach/definir-senha' ||
-      pathname === '/coach-pending' ||
-      pathname === '/coach-request';
-    
-    if (isPublicRoute) {
-      return <>{children}</>;
-    }
-    
-    // PROTECTED ROUTE: /painel-admin → redirect to /login/admin
-    if (pathname.startsWith('/painel-admin')) {
-      console.log('[AppGate] REDIRECT → /login/admin | Reason: anon user on admin route');
-      return <Navigate to="/login/admin" replace />;
-    }
-    
-    // PROTECTED ROUTE: /coach/dashboard → redirect to /login/coach
-    if (pathname.startsWith('/coach')) {
-      console.log('[AppGate] REDIRECT → /login/coach | Reason: anon user on coach route');
-      return <Navigate to="/login/coach" replace />;
-    }
-    
-    // OTHER PROTECTED ROUTES: Redirect to /login
-    console.log('[AppGate] REDIRECT → /login | Reason: anon user on protected route:', pathname);
-    return <Navigate to="/login" replace />;
-  }
-
-  // ===== RULE 3: SUPERADMIN has unrestricted access =====
+  // ===== REGRA 2: SUPERADMIN - acesso irrestrito =====
   if (state === 'superadmin') {
     return <>{children}</>;
   }
 
-  // ===== RULE 4: Authenticated user routing based on context =====
-
-  // /login/coach - Coach login page
-  // If already coach → go to /coach/dashboard
-  // Otherwise let CoachAuth handle the flow (it manages its own states)
-  if (pathname === '/login/coach') {
-    if (state === 'coach') {
-      console.log('[AppGate] REDIRECT /login/coach → /coach/dashboard | Reason: already coach');
-      return <Navigate to="/coach/dashboard" replace />;
-    }
-    // CoachAuth handles everything: login, contact modal, set password
-    return <>{children}</>;
-  }
-
-  // /login/admin - Admin login page
-  // If already admin → go to /painel-admin
-  // If not admin → show access denied (Auth component handles this)
-  if (pathname === '/login/admin') {
-    if (state === 'admin') {
-      console.log('[AppGate] REDIRECT /login/admin → /painel-admin | Reason: already admin');
-      return <Navigate to="/painel-admin" replace />;
-    }
-    // Let Auth component handle non-admin case (shows access denied)
-    return <>{children}</>;
-  }
-
-  // /login - User login page
-  // Redirect authenticated users to their appropriate destination
-  if (pathname === '/login') {
-    if (state === 'admin') {
-      console.log('[AppGate] REDIRECT /login → /painel-admin | Reason: admin user');
-      return <Navigate to="/painel-admin" replace />;
-    }
-    if (state === 'coach') {
-      console.log('[AppGate] REDIRECT /login → /coach/dashboard | Reason: coach user');
-      return <Navigate to="/coach/dashboard" replace />;
-    }
-    // Athlete - go to main app
-    console.log('[AppGate] REDIRECT /login → /app | Reason: authenticated athlete');
-    return <Navigate to="/app" replace />;
-  }
-
-  // /painel-admin - requires admin role
+  // ===== REGRA 3: ROTAS PROTEGIDAS - verificar auth =====
+  
+  // /painel-admin - requer admin
   if (pathname.startsWith('/painel-admin')) {
+    if (state === 'anon') {
+      return <Navigate to="/login/admin" replace />;
+    }
     if (state !== 'admin') {
-      console.log('[AppGate] BLOCKED /painel-admin | Reason: not admin, state:', state);
-      // Show access denied inline, don't redirect to generic login
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-4">
           <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center max-w-md">
@@ -136,26 +109,29 @@ export function AppGate({ children }: AppGateProps) {
             </div>
             <h1 className="font-display text-2xl text-foreground mb-4">Acesso Restrito</h1>
             <p className="text-muted-foreground mb-6">
-              Você não possui permissão de administrador para acessar este painel.
+              Você não possui permissão de administrador.
             </p>
             <Link
               to="/login/admin"
               className="inline-block w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-center"
             >
-              Voltar ao login admin
+              Voltar ao login
             </Link>
           </div>
         </div>
       );
     }
-    // Admin user - allow access
     return <>{children}</>;
   }
 
-  // /coach/dashboard - requires coach role (protected)
+  // /coach/dashboard - requer coach (ÚNICA rota coach protegida)
   if (pathname === '/coach/dashboard' || pathname === '/coach') {
-    if (state !== 'coach') {
-      console.log('[AppGate] BLOCKED /coach/dashboard | Reason: not coach, state:', state);
+    if (state === 'anon') {
+      return <Navigate to="/login/coach" replace />;
+    }
+    // Após excluir anon, restam: athlete, coach, admin (superadmin já passou)
+    // Bloquear apenas athlete
+    if (state === 'athlete') {
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-4">
           <div className="bg-card border border-border/50 p-8 rounded-2xl shadow-2xl text-center max-w-md">
@@ -166,7 +142,7 @@ export function AppGate({ children }: AppGateProps) {
             </div>
             <h1 className="font-display text-2xl text-foreground mb-4">Área de Coach</h1>
             <p className="text-muted-foreground mb-6">
-              Esta área é restrita para coaches. Faça login com uma conta de coach.
+              Esta área é restrita para coaches.
             </p>
             <Link
               to="/login/coach"
@@ -178,23 +154,27 @@ export function AppGate({ children }: AppGateProps) {
         </div>
       );
     }
+    // coach ou admin passam
     return <>{children}</>;
   }
 
-  // /coach/definir-senha - public (handled by the page itself)
-  if (pathname === '/coach/definir-senha') {
+  // /app - requer usuário autenticado (não coach)
+  if (pathname === '/app') {
+    if (state === 'anon') {
+      return <Navigate to="/login" replace />;
+    }
+    // Coach não pode acessar app de atleta
+    if (state === 'coach') {
+      return <Navigate to="/coach/dashboard" replace />;
+    }
     return <>{children}</>;
   }
 
-  // ===== RULE 5: COACH cannot access athlete routes (/app) =====
-  // If coach tries to access /app, redirect to /coach/dashboard
-  if (pathname === '/app' && state === 'coach') {
-    console.log('[AppGate] REDIRECT /app → /coach/dashboard | Reason: coach cannot access athlete app');
-    return <Navigate to="/coach/dashboard" replace />;
+  // Qualquer outra rota protegida não listada - redirecionar anon para login
+  if (state === 'anon') {
+    return <Navigate to="/login" replace />;
   }
 
-  // /app - main application (requires authentication, already verified above)
-  
-  // ===== RULE 6: Render children for all other cases =====
+  // ===== REGRA FINAL: Permitir acesso =====
   return <>{children}</>;
 }
