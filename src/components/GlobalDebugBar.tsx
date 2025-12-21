@@ -13,6 +13,7 @@ import { ChevronUp, ChevronDown, Bug, X, Clock, AlertTriangle } from 'lucide-rea
 import { useLocation } from 'react-router-dom';
 import { useDebugAllowed } from '@/hooks/useDebugAllowed';
 import { useAuth } from '@/hooks/useAuth';
+import { useLinkDebug } from '@/hooks/useLinkDebug';
 
 export function GlobalDebugBar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -29,6 +30,7 @@ export function GlobalDebugBar() {
     userId 
   } = useDebugAllowed();
   const { user, profile, loading } = useAuth();
+  const linkDebug = useLinkDebug();
 
   // Only show for allowed users with debug flag
   if (!isAllowed) {
@@ -62,6 +64,15 @@ export function GlobalDebugBar() {
     { label: 'auth.status', value: authStatus, color: authStatus === 'authenticated' ? 'text-green-400' : 'text-red-400' },
   ];
 
+  // Link debug items (only show if there's data)
+  const linkItems = linkDebug.lastTimestamp ? [
+    { label: 'upsertOk', value: String(linkDebug.lastUpsertOk ?? '—'), color: linkDebug.lastUpsertOk ? 'text-green-400' : linkDebug.lastUpsertOk === false ? 'text-red-400' : 'text-gray-400' },
+    { label: 'verifyCount', value: String(linkDebug.lastVerifyCount ?? '—'), color: (linkDebug.lastVerifyCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
+    { label: 'linksCount', value: String(linkDebug.lastLinksCount ?? '—'), color: (linkDebug.lastLinksCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
+    { label: 'joinCount', value: String(linkDebug.lastJoinCount ?? '—'), color: (linkDebug.lastJoinCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
+    { label: 'lastError', value: linkDebug.lastUpsertError?.slice(0, 30) || '—', color: linkDebug.lastUpsertError ? 'text-red-400' : 'text-gray-400' },
+  ] : [];
+
   // Owner Mode: more data
   const ownerItems = [
     { label: 'auth.status', value: authStatus, color: authStatus === 'authenticated' ? 'text-green-400' : authStatus === 'loading' ? 'text-yellow-400' : 'text-red-400' },
@@ -71,7 +82,7 @@ export function GlobalDebugBar() {
     { label: 'pathname', value: location.pathname, color: 'text-cyan-400' },
   ];
 
-  const items = debugMode === 'qa' ? qaItems : ownerItems;
+  const items = debugMode === 'qa' ? [...qaItems, ...linkItems] : [...ownerItems, ...linkItems];
   const isQA = debugMode === 'qa';
 
   // Force expanded in QA mode
@@ -179,7 +190,7 @@ export function GlobalDebugBar() {
           style={{
             padding: '12px 16px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
             gap: '8px 24px',
             borderTop: '1px solid rgba(255,255,255,0.1)',
             background: 'rgba(0,0,0,0.3)',

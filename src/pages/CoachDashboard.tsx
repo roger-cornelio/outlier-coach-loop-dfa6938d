@@ -2,7 +2,7 @@
  * CoachDashboard - Painel COMPLETO do Coach
  * 
  * Tabs:
- * - Atletas: atletas vinculados (via profiles.coach_id)
+ * - Atletas: atletas vinculados (via coach_athletes)
  * - Treinos: CRUD de treinos do coach
  * - Planilha: Template padrão do coach (AdminSpreadsheet)
  * - Benchmarks: Gerenciar benchmarks
@@ -16,6 +16,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/useLogout';
+import { useLinkDebug } from '@/hooks/useLinkDebug';
+import { useQADebugMode } from '@/hooks/useQADebugMode';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, Dumbbell, LogOut, User, FileText, Plus, 
-  LayoutGrid, Settings2, Trophy, Send, Archive, Trash2, Eye, UserPlus, UserMinus
+  LayoutGrid, Settings2, Trophy, Send, Archive, Trash2, Eye, UserPlus, UserMinus,
+  AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CreateWorkoutModal } from '@/components/CreateWorkoutModal';
@@ -50,10 +53,19 @@ interface CoachWorkout {
   price: number;
 }
 
+interface DiagnosticCounts {
+  linksCount: number | null;
+  joinCount: number | null;
+  profilesSample: string | null;
+  error: string | null;
+}
+
 export default function CoachDashboard() {
   const { profile, isAdmin } = useAuth();
   const { logout, isLoggingOut } = useLogout();
   const { toast } = useToast();
+  const { isQAActive } = useQADebugMode();
+  const { setDiagnosticCounts } = useLinkDebug();
 
   const [athletes, setAthletes] = useState<LinkedAthlete[]>([]);
   const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
@@ -62,6 +74,12 @@ export default function CoachDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState('atletas');
+  const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
+    linksCount: null,
+    joinCount: null,
+    profilesSample: null,
+    error: null,
+  });
 
   // Função para recarregar treinos
   const fetchWorkouts = async () => {
@@ -137,10 +155,73 @@ export default function CoachDashboard() {
     }
   };
 
+  // Diagnostic function for QA mode
+  const runDiagnostics = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        setDiagnostics({ linksCount: null, joinCount: null, profilesSample: null, error: 'No user' });
+        return;
+      }
+
+      // 1. Count links in coach_athletes
+      const { count: linksCount, error: linksErr } = await supabase
+        .from('coach_athletes')
+        .select('*', { count: 'exact', head: true })
+        .eq('coach_id', user.id);
+
+      // 2. Count joins (simplified - just count links and assume profiles exist)
+      const { data: joinData, error: joinErr } = await supabase
+        .from('coach_athletes')
+        .select('athlete_id')
+        .eq('coach_id', user.id);
+
+      let joinCount = 0;
+      if (joinData && !joinErr) {
+        // For each athlete_id, check if profile is readable
+        for (const row of joinData) {
+          const { data: pData } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('user_id', row.athlete_id)
+            .maybeSingle();
+          if (pData) joinCount++;
+        }
+      }
+
+      // 3. Try to read any profile (test RLS)
+      const { data: sampleData, error: sampleErr } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .limit(1)
+        .maybeSingle();
+
+      const sample = sampleData ? `${sampleData.email?.slice(0, 8)}...` : (sampleErr ? `ERR: ${sampleErr.message}` : 'null');
+
+      const newDiag = {
+        linksCount: linksCount ?? 0,
+        joinCount,
+        profilesSample: sample,
+        error: linksErr?.message || joinErr?.message || null,
+      };
+
+      setDiagnostics(newDiag);
+      setDiagnosticCounts(newDiag.linksCount, newDiag.joinCount, newDiag.profilesSample);
+
+      console.log('[CoachDashboard] Diagnostics:', newDiag);
+    } catch (err) {
+      console.error('[CoachDashboard] Diagnostics error:', err);
+      setDiagnostics({ linksCount: null, joinCount: null, profilesSample: null, error: String(err) });
+    }
+  };
+
   // Buscar atletas vinculados ao coach (via coach_athletes)
   useEffect(() => {
     fetchAthletes();
-  }, []);
+    if (isQAActive) {
+      runDiagnostics();
+    }
+  }, [isQAActive]);
 
   // Desvincular atleta - remove from coach_athletes
   const handleUnlinkAthlete = async (athleteUserId: string, athleteName: string) => {
@@ -232,21 +313,77 @@ export default function CoachDashboard() {
     switch (activeTab) {
       case 'atletas':
         return (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="w-5 h-5 text-primary" />
-                  Atletas Vinculados
-                </CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setShowLinkAthleteModal(true)}
-                  className="flex items-center gap-1.5"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Vincular Atleta
-                </Button>
+          <>
+            {/* QA Diagnostic Panel */}
+            {isQAActive && (
+              <Card className="mb-4 border-amber-500 bg-amber-500/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm text-amber-400">
+                    <AlertTriangle className="w-4 h-4" />
+                    QA Diagnóstico - coach_athletes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+                    <div>
+                      <span className="text-muted-foreground">linksCount:</span>
+                      <span className={`ml-2 ${diagnostics.linksCount && diagnostics.linksCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {diagnostics.linksCount ?? '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">joinCount:</span>
+                      <span className={`ml-2 ${diagnostics.joinCount && diagnostics.joinCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {diagnostics.joinCount ?? '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">profilesSample:</span>
+                      <span className="ml-2 text-blue-400">{diagnostics.profilesSample ?? '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">error:</span>
+                      <span className="ml-2 text-red-400">{diagnostics.error ?? 'none'}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {diagnostics.linksCount !== null && diagnostics.linksCount > 0 && diagnostics.joinCount === 0 && (
+                      <p className="text-amber-400">⚠️ Links existem mas JOIN retorna 0 → RLS de profiles bloqueando</p>
+                    )}
+                    {diagnostics.linksCount === 0 && (
+                      <p className="text-red-400">❌ Nenhum link em coach_athletes → insert não persistindo</p>
+                    )}
+                    {diagnostics.linksCount !== null && diagnostics.linksCount > 0 && diagnostics.joinCount !== null && diagnostics.joinCount > 0 && (
+                      <p className="text-green-400">✅ Links e JOIN funcionando corretamente</p>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3"
+                    onClick={runDiagnostics}
+                  >
+                    Re-rodar diagnóstico
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="w-5 h-5 text-primary" />
+                    Atletas Vinculados
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowLinkAthleteModal(true)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Vincular Atleta
+                  </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -312,6 +449,7 @@ export default function CoachDashboard() {
               )}
             </CardContent>
           </Card>
+          </>
         );
 
       case 'treinos':

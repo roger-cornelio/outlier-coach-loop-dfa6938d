@@ -3,15 +3,16 @@
  * 
  * Fluxo:
  * 1. Coach digita email do atleta
- * 2. Busca profile pelo email
- * 3. Valida se é role='user' (atleta)
- * 4. Valida se não está vinculado a outro coach
- * 5. Seta profiles.coach_id = currentCoachId
+ * 2. Busca profile pelo email via RPC
+ * 3. Valida se é atleta (não coach/admin)
+ * 4. Insere em coach_athletes (source of truth)
+ * 5. Verifica persistência pós-insert
  */
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useLinkDebug } from '@/hooks/useLinkDebug';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ interface LinkAthleteModalProps {
 export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteModalProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { setUpsertResult, setVerifyCount } = useLinkDebug();
   
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -111,26 +113,59 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
       const { data: { user } } = await supabase.auth.getUser();
       if (!user?.id) {
         setSearchResult({ status: 'ERROR', message: 'Usuário não autenticado' });
+        setUpsertResult(false, 'No authenticated user');
         return;
       }
+
+      console.log('[LinkAthleteModal] Attempting upsert:', { coach_id: user.id, athlete_id: searchResult.user_id });
 
       // Insert into coach_athletes (source of truth)
       const { data: insertData, error: insertError } = await supabase
         .from('coach_athletes')
-        .upsert(
-          { coach_id: user.id, athlete_id: searchResult.user_id },
-          { onConflict: 'coach_id,athlete_id', ignoreDuplicates: true }
-        )
+        .insert({ coach_id: user.id, athlete_id: searchResult.user_id })
         .select()
         .single();
 
       if (insertError) {
         console.error('[LinkAthleteModal] Insert error:', insertError);
-        setSearchResult({ status: 'ERROR', message: `Erro ao vincular atleta: ${insertError.message}` });
+        setUpsertResult(false, insertError.message);
+        setSearchResult({ status: 'ERROR', message: `Erro ao vincular: ${insertError.message}` });
+        toast({
+          title: 'Erro ao vincular',
+          description: insertError.message,
+          variant: 'destructive',
+        });
         return;
       }
 
-      console.log('[LinkAthleteModal] Link created:', insertData);
+      console.log('[LinkAthleteModal] Insert success:', insertData);
+      setUpsertResult(true, null);
+
+      // VERIFICATION: Check if it actually persisted
+      const { count, error: countError } = await supabase
+        .from('coach_athletes')
+        .select('*', { count: 'exact', head: true })
+        .eq('coach_id', user.id)
+        .eq('athlete_id', searchResult.user_id);
+
+      const verifyCount = count ?? 0;
+      setVerifyCount(verifyCount);
+
+      if (countError) {
+        console.error('[LinkAthleteModal] Verify error:', countError);
+      }
+
+      console.log('[LinkAthleteModal] Verify count:', verifyCount);
+
+      if (verifyCount === 0) {
+        toast({
+          title: 'Falha: vínculo não persistiu',
+          description: 'O insert retornou sucesso mas a verificação encontrou 0 registros.',
+          variant: 'destructive',
+        });
+        setSearchResult({ status: 'ERROR', message: 'Vínculo não persistiu - verifique RLS' });
+        return;
+      }
 
       toast({
         title: 'Atleta vinculado!',
@@ -141,6 +176,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
       handleClose();
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
+      setUpsertResult(false, String(err));
       setSearchResult({ status: 'ERROR', message: 'Erro inesperado ao vincular atleta' });
     } finally {
       setIsLoading(false);
