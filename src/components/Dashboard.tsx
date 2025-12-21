@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { UserHeader } from './UserHeader';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { AthleteViewSelector } from './AthleteViewSelector';
@@ -82,6 +83,9 @@ export function Dashboard() {
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
   const { plan: athletePlan, workouts: planWorkouts, loading: loadingPlan, hasCoach } = useAthletePlan();
+  
+  // Carregar configurações do atleta do banco (persistência)
+  useAthleteProfile();
   // Chave estável para detectar mudança real de plano
   const planId = athletePlan?.id ?? null;
   const planWeekStart = athletePlan?.week_start ?? null;

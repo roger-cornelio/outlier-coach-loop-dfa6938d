@@ -44,6 +44,8 @@ type AuthContextValue = {
   profileLoaded: boolean;
   sessionExpired: boolean;
   updateProfileOptimistic: (patch: Partial<UserProfile>) => void;
+  /** Recarrega o perfil do banco de dados */
+  refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: unknown | null }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: unknown | null }>;
   signOut: () => Promise<{ error: null }>;
@@ -394,6 +396,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  }, [user?.id, fetchProfile]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -409,6 +417,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoaded,
       sessionExpired,
       updateProfileOptimistic,
+      refreshProfile,
       signIn,
       signUp,
       signOut,
@@ -428,6 +437,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoaded,
       sessionExpired,
       updateProfileOptimistic,
+      refreshProfile,
       signIn,
       signUp,
       signOut,
