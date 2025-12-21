@@ -102,9 +102,9 @@ export function PublishToAthletesModal({
     : null;
 
   /**
-   * Verifica se a semana está dentro da janela de publicação (atual ou próxima)
+   * Verifica se a semana é passada (apenas para aviso informativo, não bloqueante)
    */
-  const isWeekInPublishWindow = (): boolean => {
+  const isWeekInPast = (): boolean => {
     if (!weekStart) return false;
     
     const weekStartDate = parseISO(weekStart);
@@ -114,21 +114,15 @@ export function PublishToAthletesModal({
     // Calcular início da semana atual (segunda-feira)
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
     
-    // Calcular início da próxima semana (segunda-feira)
-    const nextWeekStart = addDays(currentWeekStart, 7);
-    
     // Normalizar para comparação
     weekStartDate.setHours(0, 0, 0, 0);
     currentWeekStart.setHours(0, 0, 0, 0);
-    nextWeekStart.setHours(0, 0, 0, 0);
     
-    const isSameWeek = weekStartDate.getTime() === currentWeekStart.getTime();
-    const isNextWeek = weekStartDate.getTime() === nextWeekStart.getTime();
-    
-    return isSameWeek || isNextWeek;
+    return weekStartDate.getTime() < currentWeekStart.getTime();
   };
 
-  const canPublish = Boolean(weekStart && isWeekInPublishWindow());
+  // Publicação permitida se tem week_start (sem bloqueio por data)
+  const canPublish = Boolean(weekStart);
 
   const copyErrorToClipboard = () => {
     if (!errorData) return;
@@ -483,19 +477,14 @@ export function PublishToAthletesModal({
               </div>
             )}
 
-            {/* Aviso quando fora da janela de publicação */}
-            {weekStart && !canPublish && (
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            {/* Aviso informativo quando semana passada (não bloqueante) */}
+            {weekStart && isWeekInPast() && (
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-amber-600">
-                      Publicação não permitida para esta semana
-                    </p>
-                    <p className="text-xs text-amber-600">
-                      A publicação para atletas só é permitida na semana atual ou na próxima.
-                    </p>
-                  </div>
+                  <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-600">
+                    ℹ️ Esta semana já passou. O atleta não verá este treino automaticamente na navegação.
+                  </p>
                 </div>
               </div>
             )}
