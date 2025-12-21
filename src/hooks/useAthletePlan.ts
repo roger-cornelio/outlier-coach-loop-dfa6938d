@@ -65,20 +65,42 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [error, setError] = useState<string | null>(null);
 
   // Calcular semanas permitidas usando função canônica
-  const allowedWeeks = useMemo(() => getAthleteAllowedWeeks(new Date()), []);
+  // Normalizar para meia-noite local para evitar bugs de timezone
+  const now = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  
+  const allowedWeeks = useMemo(() => getAthleteAllowedWeeks(now), [now]);
   
   // Estado: qual das 3 semanas está selecionada (prev, curr, next)
-  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(allowedWeeks.curr);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => 
+    getAthleteCurrentWeekStart(new Date())
+  );
 
-  // LOG: ATHLETE_WEEK_RESOLVE ao inicializar
+  // Sincronizar selectedWeekStart se estiver fora da janela permitida (ex: reload no domingo)
   useEffect(() => {
-    const now = new Date();
+    const { prev, curr, next } = allowedWeeks;
+    if (selectedWeekStart !== prev && selectedWeekStart !== curr && selectedWeekStart !== next) {
+      console.log('ATHLETE_WEEK_SYNC', { 
+        reason: 'selectedWeekStart fora da janela',
+        old: selectedWeekStart,
+        new: curr 
+      });
+      setSelectedWeekStart(curr);
+    }
+  }, [allowedWeeks, selectedWeekStart]);
+
+  // LOG: ATHLETE_WEEK_RESOLVE ao inicializar/navegar
+  useEffect(() => {
     console.log('ATHLETE_WEEK_RESOLVE', {
-      now: now.toISOString(),
-      dayOfWeek: now.getDay(),
+      now: new Date().toISOString(),
+      dayOfWeek: new Date().getDay(),
       currentWeekStart: allowedWeeks.curr,
       selectedWeekStart,
-      allowedWeeks,
+      minWeekStart: allowedWeeks.prev,
+      maxWeekStart: allowedWeeks.next,
     });
   }, [allowedWeeks, selectedWeekStart]);
 

@@ -47,7 +47,7 @@ export function WeekNavigator({
         <ChevronLeft className="w-4 h-4" />
       </Button>
 
-      {/* Indicador de semana - label baseado na semana SELECIONADA (currentWeek.start → +6 dias) */}
+      {/* Indicador de semana - label baseado na semana SELECIONADA (start → end = +6 dias) */}
       <button
         onClick={onCurrentWeek}
         className={cn(
@@ -67,7 +67,7 @@ export function WeekNavigator({
         ) : (
           <Calendar className="w-4 h-4" />
         )}
-        {/* Label: sempre mostra a semana SELECIONADA (currentWeek.label) */}
+        {/* Label: Semana de Segunda (start) a Domingo (end = start + 6 dias) */}
         <span>{currentWeek.label}</span>
         {currentWeek.isCurrent && (
           <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
