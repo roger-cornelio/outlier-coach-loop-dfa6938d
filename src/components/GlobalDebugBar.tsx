@@ -70,6 +70,8 @@ export function GlobalDebugBar() {
     { label: 'verifyCount', value: String(linkDebug.lastVerifyCount ?? '—'), color: (linkDebug.lastVerifyCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
     { label: 'linksCount', value: String(linkDebug.lastLinksCount ?? '—'), color: (linkDebug.lastLinksCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
     { label: 'joinCount', value: String(linkDebug.lastJoinCount ?? '—'), color: (linkDebug.lastJoinCount ?? 0) > 0 ? 'text-green-400' : 'text-red-400' },
+    { label: 'fetchOk', value: String(linkDebug.lastFetchOk ?? '—'), color: linkDebug.lastFetchOk ? 'text-green-400' : linkDebug.lastFetchOk === false ? 'text-red-400' : 'text-gray-400' },
+    { label: 'linkedAthletes', value: String(linkDebug.lastLinkedAthletesCount ?? '—'), color: (linkDebug.lastLinkedAthletesCount ?? 0) > 0 ? 'text-green-400' : 'text-amber-400' },
     { label: 'lastError', value: linkDebug.lastUpsertError?.slice(0, 30) || '—', color: linkDebug.lastUpsertError ? 'text-red-400' : 'text-gray-400' },
   ] : [];
 

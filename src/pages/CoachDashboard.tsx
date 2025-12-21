@@ -65,11 +65,15 @@ export default function CoachDashboard() {
   const { logout, isLoggingOut } = useLogout();
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
-  const { setDiagnosticCounts } = useLinkDebug();
+  const { setDiagnosticCounts, setFetchResult } = useLinkDebug();
 
-  const [athletes, setAthletes] = useState<LinkedAthlete[]>([]);
-  const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
+  // Estado unificado de atletas - FONTE ÚNICA
+  const [linkedAthletes, setLinkedAthletes] = useState<LinkedAthlete[]>([]);
   const [loadingAthletes, setLoadingAthletes] = useState(true);
+  const [athletesError, setAthletesError] = useState<string | null>(null);
+  const [lastFetchOk, setLastFetchOk] = useState<boolean | null>(null);
+  
+  const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
   const [loadingWorkouts, setLoadingWorkouts] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
@@ -104,52 +108,81 @@ export default function CoachDashboard() {
     }
   };
 
-  // Função para recarregar atletas - usando coach_athletes como fonte única
-  const fetchAthletes = async () => {
+  // FONTE ÚNICA: busca atletas via coach_athletes + profiles separadamente
+  const fetchAthletes = async (): Promise<boolean> => {
+    console.log('[CoachDashboard] fetchAthletes called');
+    setLoadingAthletes(true);
+    setAthletesError(null);
+    
     try {
-      setLoadingAthletes(true);
-      
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user?.id) {
         console.error('[CoachDashboard] No authenticated user');
-        setAthletes([]);
-        return;
+        setLinkedAthletes([]);
+        setAthletesError('Usuário não autenticado');
+        setLastFetchOk(false);
+        return false;
       }
 
-      console.log('[CoachDashboard] Fetching athletes for coach:', user.id);
+      console.log('[CoachDashboard] Fetching for coach_id:', user.id);
 
-      // Query coach_athletes joined with profiles
-      const { data, error } = await supabase
+      // Step 1: Get links from coach_athletes
+      const { data: links, error: linksError } = await supabase
         .from('coach_athletes')
-        .select(`
-          athlete_id,
-          created_at,
-          profiles!coach_athletes_athlete_id_fkey (
-            id,
-            user_id,
-            name,
-            email
-          )
-        `)
+        .select('athlete_id')
         .eq('coach_id', user.id);
 
-      if (error) {
-        console.error('[CoachDashboard] Erro ao buscar atletas:', error);
-        setAthletes([]);
-      } else {
-        console.log('[CoachDashboard] Athletes data:', data);
-        // Transform the data to match LinkedAthlete interface
-        const transformedAthletes: LinkedAthlete[] = (data || [])
-          .filter(row => row.profiles) // Filter out any rows without profile
-          .map(row => ({
-            id: (row.profiles as any).id,
-            user_id: (row.profiles as any).user_id,
-            name: (row.profiles as any).name,
-            email: (row.profiles as any).email,
-          }));
-        setAthletes(transformedAthletes);
+      if (linksError) {
+        console.error('[CoachDashboard] Links error:', linksError);
+        setLinkedAthletes([]);
+        setAthletesError(linksError.message);
+        setLastFetchOk(false);
+        return false;
       }
+
+      console.log('[CoachDashboard] Links found:', links?.length ?? 0);
+
+      if (!links || links.length === 0) {
+        setLinkedAthletes([]);
+        setLastFetchOk(true);
+        return true;
+      }
+
+      // Step 2: Get profiles for each athlete_id
+      const athleteIds = links.map(l => l.athlete_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, user_id, name, email')
+        .in('user_id', athleteIds);
+
+      if (profilesError) {
+        console.error('[CoachDashboard] Profiles error:', profilesError);
+        setLinkedAthletes([]);
+        setAthletesError(`Erro ao buscar perfis: ${profilesError.message}`);
+        setLastFetchOk(false);
+        return false;
+      }
+
+      console.log('[CoachDashboard] Profiles found:', profiles?.length ?? 0);
+
+      const transformedAthletes: LinkedAthlete[] = (profiles || []).map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        name: p.name,
+        email: p.email,
+      }));
+
+      setLinkedAthletes(transformedAthletes);
+      setLastFetchOk(true);
+      setFetchResult(true, transformedAthletes.length);
+      console.log('[CoachDashboard] linkedAthletes set:', transformedAthletes.length);
+      return true;
+    } catch (err) {
+      console.error('[CoachDashboard] fetchAthletes exception:', err);
+      setAthletesError(String(err));
+      setLastFetchOk(false);
+      setFetchResult(false, 0);
+      return false;
     } finally {
       setLoadingAthletes(false);
     }
@@ -246,11 +279,20 @@ export default function CoachDashboard() {
         toast({ title: 'Erro ao desvincular', variant: 'destructive' });
       } else {
         toast({ title: 'Atleta desvinculado' });
-        fetchAthletes();
+        await fetchAthletes();
       }
     } catch (err) {
       console.error('[CoachDashboard] Unlink error:', err);
       toast({ title: 'Erro ao desvincular', variant: 'destructive' });
+    }
+  };
+
+  // Callback para quando vincular atleta com sucesso
+  const handleAthleteLinked = async () => {
+    console.log('[CoachDashboard] handleAthleteLinked - refetching athletes');
+    await fetchAthletes();
+    if (isQAActive) {
+      await runDiagnostics();
     }
   };
 
@@ -387,11 +429,33 @@ export default function CoachDashboard() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* QA Debug info */}
+              {isQAActive && (
+                <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded text-xs font-mono">
+                  <span className="text-purple-400">linkedAthletes.length: {linkedAthletes.length}</span>
+                  <span className="ml-3 text-purple-400">lastFetchOk: {lastFetchOk === null ? 'null' : lastFetchOk ? '✓' : '✗'}</span>
+                  {athletesError && <span className="ml-3 text-red-400">error: {athletesError}</span>}
+                </div>
+              )}
+              
               {loadingAthletes ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : athletes.length === 0 ? (
+              ) : athletesError ? (
+                <div className="text-center py-8">
+                  <AlertTriangle className="w-10 h-10 mx-auto text-destructive/50 mb-3" />
+                  <p className="text-sm text-destructive">{athletesError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => fetchAthletes()}
+                  >
+                    Tentar novamente
+                  </Button>
+                </div>
+              ) : linkedAthletes.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
                   <p className="text-sm text-muted-foreground">
@@ -410,7 +474,7 @@ export default function CoachDashboard() {
               ) : (
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-2">
-                    {athletes.map((athlete) => (
+                    {linkedAthletes.map((athlete) => (
                       <div
                         key={athlete.id}
                         className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
@@ -681,7 +745,7 @@ export default function CoachDashboard() {
       <LinkAthleteModal
         open={showLinkAthleteModal}
         onOpenChange={setShowLinkAthleteModal}
-        onSuccess={fetchAthletes}
+        onSuccess={handleAthleteLinked}
       />
     </div>
   );
