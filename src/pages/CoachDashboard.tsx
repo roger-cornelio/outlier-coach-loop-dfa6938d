@@ -34,12 +34,16 @@ import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { useToast } from '@/hooks/use-toast';
+import { TRAINING_LEVEL_NAMES, TrainingLevel } from '@/types/outlier';
 
 interface LinkedAthlete {
   id: string;
   user_id: string;
   name: string | null;
   email: string;
+  // Status do atleta (para visualização)
+  training_level?: string | null;
+  sexo?: string | null;
 }
 
 interface DiagnosticCounts {
@@ -111,11 +115,11 @@ export default function CoachDashboard() {
         return true;
       }
 
-      // Step 2: Get profiles for each athlete_id
+      // Step 2: Get profiles for each athlete_id (including training_level and sexo for display)
       const athleteIds = links.map(l => l.athlete_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, name, email')
+        .select('id, user_id, name, email, training_level, sexo')
         .in('user_id', athleteIds);
 
       if (profilesError) {
@@ -133,6 +137,8 @@ export default function CoachDashboard() {
         user_id: p.user_id,
         name: p.name,
         email: p.email,
+        training_level: p.training_level,
+        sexo: p.sexo,
       }));
 
       setLinkedAthletes(transformedAthletes);
@@ -387,42 +393,70 @@ export default function CoachDashboard() {
               ) : (
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-2">
-                    {linkedAthletes.map((athlete) => (
-                      <div
-                        key={athlete.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
-                      >
-                        <UserAvatar
-                          name={athlete.name || athlete.email}
-                          size="md"
-                          showGlow
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {athlete.name || athlete.email}
-                          </p>
-                          {athlete.name && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {athlete.email}
+                    {linkedAthletes.map((athlete) => {
+                      // Determinar label do status para exibição
+                      const statusLabel = athlete.training_level 
+                        ? TRAINING_LEVEL_NAMES[athlete.training_level as TrainingLevel] || athlete.training_level
+                        : null;
+                      
+                      return (
+                        <div
+                          key={athlete.id}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
+                        >
+                          <UserAvatar
+                            name={athlete.name || athlete.email}
+                            gender={athlete.sexo as 'masculino' | 'feminino' | null}
+                            trainingLevel={athlete.training_level as TrainingLevel | null}
+                            size="md"
+                            showGlow
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">
+                              {athlete.name || athlete.email}
                             </p>
-                          )}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {athlete.name && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {athlete.email}
+                                </p>
+                              )}
+                              {statusLabel && (
+                                <span className="text-xs text-primary">
+                                  • Status: {statusLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {statusLabel && (
+                              <Badge 
+                                variant="outline" 
+                                className={`
+                                  ${athlete.training_level === 'performance' 
+                                    ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                                    : athlete.training_level === 'progressivo'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                      : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                  }
+                                `}
+                              >
+                                {statusLabel}
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleUnlinkAthlete(athlete.user_id, athlete.name || athlete.email)}
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              title="Desvincular atleta"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
-                            Ativo
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleUnlinkAthlete(athlete.user_id, athlete.name || athlete.email)}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            title="Desvincular atleta"
-                          >
-                            <UserMinus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}

@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star
+  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star, AlertTriangle
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getBenchmarkCopy, getMainBlockCopy } from '@/config/workoutConceptsCopy';
+import { getBenchmarkCopy, getMainBlockCopy, getUIConceptsCopy } from '@/config/workoutConceptsCopy';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -166,10 +166,35 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
   // OBRIGATÓRIO: Semana de referência
   const [selectedWeek, setSelectedWeek] = useState<WeekPeriod | null>(null);
 
-  // Validação: não pode salvar/publicar sem semana
+  // Validação: cada dia deve ter exatamente 1 WOD principal
+  const mainWodValidation = useMemo(() => {
+    if (!parsedWorkouts) return { isValid: true, missingDays: [] };
+    
+    const missingDays: string[] = [];
+    
+    for (const workout of parsedWorkouts) {
+      // Verificar se há WOD principal definido (manual ou auto)
+      const hasManualMain = workout.blocks.some(b => b.isMainWod === true);
+      const autoMain = identifyMainBlock(workout.blocks);
+      
+      if (!hasManualMain && autoMain.blockIndex === -1) {
+        missingDays.push(DAY_NAMES[workout.day]);
+      }
+    }
+    
+    return {
+      isValid: missingDays.length === 0,
+      missingDays,
+    };
+  }, [parsedWorkouts]);
+
+  // Validação: não pode salvar/publicar sem semana E sem WOD principal em todos os dias
   const canSaveOrPublish = useMemo(() => {
-    return selectedWeek !== null && parsedWorkouts !== null && parsedWorkouts.length > 0;
-  }, [selectedWeek, parsedWorkouts]);
+    return selectedWeek !== null && 
+           parsedWorkouts !== null && 
+           parsedWorkouts.length > 0 &&
+           mainWodValidation.isValid;
+  }, [selectedWeek, parsedWorkouts, mainWodValidation.isValid]);
 
   const handleClearWorkouts = () => {
     setSpreadsheetText('');
@@ -473,6 +498,16 @@ Terça-feira 📅
                         className="overflow-hidden"
                       >
                         <div className="p-3 space-y-3 bg-background">
+                          {/* CALLOUT FIXO: WOD Principal obrigatório */}
+                          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                            <div className="flex items-start gap-2">
+                              <Star className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-amber-700 dark:text-amber-300 whitespace-pre-line">
+                                {getMainBlockCopy().calloutText}
+                              </div>
+                            </div>
+                          </div>
+                          
                           {workout.blocks.map((block, blockIndex) => {
                             const benchmarkCopy = getBenchmarkCopy();
                             const mainBlockCopy = getMainBlockCopy();
@@ -569,17 +604,39 @@ Terça-feira 📅
               onWeekSelect={setSelectedWeek}
             />
 
+            {/* Erro de WOD Principal faltando */}
+            {!mainWodValidation.isValid && (
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-destructive">
+                      WOD Principal não definido
+                    </p>
+                    <p className="text-xs text-destructive/80 mt-1">
+                      {mainWodValidation.missingDays.map(day => 
+                        getMainBlockCopy().missingError(day)
+                      ).join('\n')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Configurações de salvamento */}
             <div className="pt-4 border-t border-border space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="programName">Nome da Programação</Label>
+                  <Label htmlFor="programName">{getUIConceptsCopy().programNameLabel}</Label>
                   <Input
                     id="programName"
                     value={programName}
                     onChange={(e) => setProgramName(e.target.value)}
-                    placeholder={selectedWeek ? `Semana ${selectedWeek.label}` : 'Selecione a semana primeiro'}
+                    placeholder="Ex: Construção Aeróbia"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {getUIConceptsCopy().programNameSuggestion}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Status ao Salvar</Label>
@@ -631,7 +688,12 @@ Terça-feira 📅
                   </TooltipTrigger>
                   {!canSaveOrPublish && (
                     <TooltipContent>
-                      <p>Selecione a semana de referência para salvar</p>
+                      {!selectedWeek 
+                        ? <p>Selecione a semana de referência para salvar</p>
+                        : !mainWodValidation.isValid
+                          ? <p>Defina WOD Principal em todos os dias</p>
+                          : <p>Adicione treinos para salvar</p>
+                      }
                     </TooltipContent>
                   )}
                 </Tooltip>
