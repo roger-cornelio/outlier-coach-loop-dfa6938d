@@ -9,22 +9,15 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Target, Info, Trophy, Clock, Send, Upload 
+  Save, Zap, Dumbbell, Info, Trophy, Send, Upload 
 } from 'lucide-react';
-import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, LEVEL_NAMES } from '@/types/outlier';
+import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
+import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,14 +57,6 @@ const DAY_NAMES: Record<DayOfWeek, string> = {
   dom: 'Domingo',
 };
 
-const WOD_TYPES: { value: WodType; label: string; icon: string }[] = [
-  { value: 'engine', label: 'Engine', icon: '🔥' },
-  { value: 'strength', label: 'Força', icon: '💪' },
-  { value: 'skill', label: 'Skill', icon: '🎯' },
-  { value: 'mixed', label: 'Misto', icon: '⚡' },
-  { value: 'hyrox', label: 'HYROX', icon: '🛷' },
-  { value: 'benchmark', label: 'Benchmark', icon: '🏆' },
-];
 
 function parseSpreadsheet(text: string): DayWorkout[] {
   const lines = text.split('\n');
@@ -155,10 +140,10 @@ interface CoachSpreadsheetTabProps {
 }
 
 export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }: CoachSpreadsheetTabProps) {
-  const { setWeeklyWorkouts, weeklyWorkouts } = useOutlierStore();
   const { profile } = useAuth();
   const { saveWorkout: saveToDb } = useCoachWorkouts();
   
+  // ESTADO LOCAL APENAS - nunca depende do banco
   const [spreadsheetText, setSpreadsheetText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +156,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
   const [showPublishModal, setShowPublishModal] = useState(false);
 
   const handleClearWorkouts = () => {
-    setWeeklyWorkouts([]);
     setSpreadsheetText('');
     setParsedWorkouts(null);
     setProgramName('');
@@ -246,8 +230,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     setError(null);
     
     try {
-      setWeeklyWorkouts(parsedWorkouts);
-      
       const title = programName.trim() || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
       const status = programStatus === 'published' ? 'published' : 'draft';
       
@@ -255,13 +237,13 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
       
       if (workoutId) {
         setSuccess(`${parsedWorkouts.length} dia(s) salvos! ${status === 'published' ? '(Publicado)' : '(Rascunho)'}`);
+        // Limpa preview após salvar com sucesso
+        setParsedWorkouts(null);
+        setSpreadsheetText('');
+        setProgramName('');
       } else {
-        setSuccess(`${parsedWorkouts.length} dia(s) salvos localmente.`);
+        setError('Erro ao salvar no banco de dados.');
       }
-      
-      setParsedWorkouts(null);
-      setSpreadsheetText('');
-      setProgramName('');
     } catch (err) {
       console.error('[CoachSpreadsheetTab] Error saving:', err);
       setError('Erro ao salvar treino');
@@ -368,7 +350,7 @@ Terça-feira 📅
                 )}
               </Button>
               
-              {weeklyWorkouts.length > 0 && (
+              {(parsedWorkouts || spreadsheetText.trim()) && (
                 <Button variant="outline" onClick={handleClearWorkouts}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Limpar
