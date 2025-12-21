@@ -76,7 +76,8 @@ export function Dashboard() {
     adaptationPending,
     athleteConfig,
     viewingAsAthlete,
-    forceSetBaseWorkouts
+    setBaseWorkouts,
+    clearBaseWorkouts
   } = useOutlierStore();
   
   const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
@@ -105,12 +106,6 @@ export function Dashboard() {
   // Carregar configurações do atleta do banco (persistência)
   useAthleteProfile();
   
-  // CRÍTICO: Chave composta para detectar mudança de plano/semana
-  // Usar selectedWeekStart do hook para garantir reatividade
-  const planId = athletePlan?.id ?? null;
-  const selectedWeekForPlan = debugInfo?.selectedWeekStart ?? null;
-  // Ref para rastrear qual semana+plano foi aplicado
-  const lastAppliedKeyRef = useRef<string | null>(null);
   const navigate = useNavigate();
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
@@ -122,38 +117,33 @@ export function Dashboard() {
   const [isLoadingFromDb, setIsLoadingFromDb] = useState(false);
 
   // ============================================
-  // REGRA: Aplicar treinos da semana selecionada
-  // Chave: selectedWeekStart + planId
-  // Se não há plano, limpar treinos (sem fallback)
+  // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
+  // Deps: [selectedWeekStart, hasPlan]
+  // Se hasPlan === false → clearBaseWorkouts()
+  // Se hasPlan === true → setBaseWorkouts(workoutsDaSemana)
   // ============================================
   
+  const selectedWeekStart = debugInfo?.selectedWeekStart;
+  const hasPlan = planWorkouts.length > 0;
+  
   useEffect(() => {
-    // Se está carregando, não fazer nada ainda
+    // Aguardar carregamento
     if (loadingPlan) return;
     
-    // Chave única: semana + id do plano (ou "empty" se não há plano)
-    const currentKey = `${selectedWeekForPlan}|${planId ?? 'empty'}`;
-    
-    // Se já aplicamos essa combinação, não refazer
-    if (lastAppliedKeyRef.current === currentKey) return;
-    
-    console.log('[Dashboard] Week/Plan changed:', { 
-      selectedWeek: selectedWeekForPlan, 
-      planId, 
+    console.log('[Dashboard] Week sync:', { 
+      selectedWeekStart, 
+      hasPlan, 
       workoutsCount: planWorkouts.length 
     });
     
-    lastAppliedKeyRef.current = currentKey;
-    
-    // Aplicar os treinos da semana (FORÇA atualização para garantir limpeza)
-    if (planId && planWorkouts.length > 0) {
-      console.log('[Dashboard] Applying coach plan:', planId);
-      forceSetBaseWorkouts(planWorkouts);
+    if (hasPlan) {
+      console.log('[Dashboard] Applying workouts for week:', selectedWeekStart);
+      setBaseWorkouts(planWorkouts);
     } else {
-      console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekForPlan);
-      forceSetBaseWorkouts([]);
+      console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekStart);
+      clearBaseWorkouts();
     }
-  }, [selectedWeekForPlan, planId, planWorkouts, forceSetBaseWorkouts, loadingPlan]);
+  }, [selectedWeekStart, hasPlan, planWorkouts, setBaseWorkouts, clearBaseWorkouts, loadingPlan]);
 
   // REMOVIDO: Fallback para buscar do banco
   // REGRA: Exibir APENAS treinos publicados especificamente para a semana selecionada

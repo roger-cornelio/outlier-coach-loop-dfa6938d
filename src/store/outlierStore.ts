@@ -3,34 +3,11 @@ import { persist } from 'zustand/middleware';
 import type { AthleteConfig, CoachStyle, WorkoutResult, DayWorkout } from '@/types/outlier';
 import { migrateWorkouts } from '@/utils/benchmarkMigration';
 
-function workoutsSignature(workouts: DayWorkout[]): string {
-  // MVP: assinatura estável para evitar setState redundante (previne loops de render)
-  // Inclui conteúdo dos blocos para detectar mudanças reais.
-  try {
-    return JSON.stringify(
-      workouts.map((w) => ({
-        day: w.day,
-        stimulus: w.stimulus ?? null,
-        estimatedTime: w.estimatedTime ?? null,
-        blocks: (w.blocks ?? []).map((b) => ({
-          id: b.id,
-          type: b.type,
-          title: b.title,
-          content: b.content,
-          isMainWod: (b as any).isMainWod ?? null,
-        })),
-      }))
-    );
-  } catch {
-    return String(workouts?.length ?? 0);
-  }
-}
-
 // ============================================
-// SEPARAÇÃO DE FONTES DE VERDADE
+// STORE SIMPLIFICADO - SEM GUARDS OU ASSINATURAS
 // ============================================
-// baseWorkouts: planilha original do coach (IMUTÁVEL)
-// adaptedWorkouts: treino gerado para o atleta (MUTÁVEL)
+// Todas as funções de set devem SEMPRE atualizar o estado
+// Lógica de controle fica no Dashboard
 // ============================================
 
 interface ViewingAsAthlete {
@@ -44,19 +21,19 @@ interface OutlierState {
   athleteConfig: AthleteConfig | null;
   workoutResults: WorkoutResult[];
   
-  // PLANILHA BASE (imutável - definida pelo coach)
+  // PLANILHA BASE (definida pelo coach)
   baseWorkouts: DayWorkout[];
   
-  // TREINO ADAPTADO (mutável - gerado para o atleta)
+  // TREINO ADAPTADO (gerado para o atleta)
   adaptedWorkouts: DayWorkout[];
   
   // Flag para indicar se adaptação está pendente
   adaptationPending: boolean;
   
-  // Timestamp da última adaptação (para invalidar quando config muda)
+  // Timestamp da última adaptação
   lastAdaptationTimestamp: number | null;
   
-  // Legacy: mantido para compatibilidade (aponta para adaptedWorkouts ou baseWorkouts)
+  // Legacy: mantido para compatibilidade
   weeklyWorkouts: DayWorkout[];
   
   currentView: 'welcome' | 'athleteWelcome' | 'config' | 'dashboard' | 'preWorkout' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks' | 'params' | 'coachPerformance' | 'coachApplication' | 'coachApplicationsAdmin';
@@ -72,11 +49,11 @@ interface OutlierState {
   setAthleteConfig: (config: AthleteConfig) => void;
   addWorkoutResult: (result: WorkoutResult) => void;
   
-  // Base workouts (coach)
+  // Base workouts - SEMPRE atualiza, sem condições
   setBaseWorkouts: (workouts: DayWorkout[]) => void;
-  forceSetBaseWorkouts: (workouts: DayWorkout[]) => void; // Força atualização sem verificar assinatura
+  clearBaseWorkouts: () => void;
   
-  // Adapted workouts (athlete)
+  // Adapted workouts
   setAdaptedWorkouts: (workouts: DayWorkout[]) => void;
   clearAdaptedWorkouts: () => void;
   markAdaptationPending: () => void;
@@ -89,8 +66,8 @@ interface OutlierState {
   setSelectedWorkout: (workout: DayWorkout | null) => void;
   triggerExternalResultsRefresh: () => void;
   resetConfig: () => void;
-  resetToDefaults: () => void; // Reset completo para novo usuário
-  resetUserPreferencesOnly: () => void; // Reset apenas configs, mantém treinos do banco
+  resetToDefaults: () => void;
+  resetUserPreferencesOnly: () => void;
   
   // Admin: Visualizar como atleta
   setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
@@ -107,7 +84,7 @@ export const useOutlierStore = create<OutlierState>()(
       adaptedWorkouts: [],
       adaptationPending: false,
       lastAdaptationTimestamp: null,
-      weeklyWorkouts: [], // Legacy: aponta para adaptedWorkouts quando existir
+      weeklyWorkouts: [],
       currentView: 'welcome',
       selectedDay: null,
       selectedWorkout: null,
@@ -126,7 +103,6 @@ export const useOutlierStore = create<OutlierState>()(
         
         set({ 
           athleteConfig: config,
-          // Marcar adaptação como pendente se config mudou
           adaptationPending: configChanged ? true : get().adaptationPending,
         });
       },
@@ -134,60 +110,45 @@ export const useOutlierStore = create<OutlierState>()(
       addWorkoutResult: (result) =>
         set((state) => ({ workoutResults: [...state.workoutResults, result] })),
       
-      // PLANILHA BASE (coach) - também atualiza weeklyWorkouts para legacy
-      setBaseWorkouts: (workouts) => {
-        const current = get().baseWorkouts;
-        if (current === workouts) return;
-        if (workoutsSignature(current) === workoutsSignature(workouts)) return;
-
-        set({
-          baseWorkouts: workouts,
-          weeklyWorkouts: workouts, // Legacy fallback
-          adaptationPending: true, // Nova base = precisa readaptar
-          adaptedWorkouts: [], // Limpa adaptações antigas
-        });
-      },
+      // PLANILHA BASE - SEMPRE atualiza, sem condições
+      setBaseWorkouts: (workouts) => set({
+        baseWorkouts: workouts,
+        weeklyWorkouts: workouts,
+        adaptationPending: workouts.length > 0,
+        adaptedWorkouts: [],
+      }),
       
-      // Força atualização ignorando verificação de assinatura
-      // Usado quando navegamos entre semanas e precisamos garantir limpeza
-      forceSetBaseWorkouts: (workouts) => {
-        set({
-          baseWorkouts: workouts,
-          weeklyWorkouts: workouts,
-          adaptationPending: workouts.length > 0,
-          adaptedWorkouts: [],
-        });
-      },
+      // Limpar base workouts
+      clearBaseWorkouts: () => set({
+        baseWorkouts: [],
+        weeklyWorkouts: [],
+        adaptationPending: false,
+        adaptedWorkouts: [],
+      }),
       
-      // TREINO ADAPTADO (atleta)
+      // TREINO ADAPTADO
       setAdaptedWorkouts: (workouts) => set({ 
         adaptedWorkouts: workouts,
-        weeklyWorkouts: workouts, // Agora weeklyWorkouts aponta para adaptado
+        weeklyWorkouts: workouts,
         adaptationPending: false,
         lastAdaptationTimestamp: Date.now(),
       }),
       
       clearAdaptedWorkouts: () => set((state) => ({ 
         adaptedWorkouts: [],
-        weeklyWorkouts: state.baseWorkouts, // Volta para base
+        weeklyWorkouts: state.baseWorkouts,
         adaptationPending: true,
       })),
       
       markAdaptationPending: () => set({ adaptationPending: true }),
       
-      // Legacy: agora setWeeklyWorkouts define a BASE (para compatibilidade com AdminSpreadsheet)
-      setWeeklyWorkouts: (workouts) => {
-        const current = get().baseWorkouts;
-        if (current === workouts) return;
-        if (workoutsSignature(current) === workoutsSignature(workouts)) return;
-
-        set({
-          baseWorkouts: workouts,
-          weeklyWorkouts: workouts,
-          adaptationPending: true,
-          adaptedWorkouts: [],
-        });
-      },
+      // Legacy: define a BASE
+      setWeeklyWorkouts: (workouts) => set({
+        baseWorkouts: workouts,
+        weeklyWorkouts: workouts,
+        adaptationPending: workouts.length > 0,
+        adaptedWorkouts: [],
+      }),
       
       setCurrentView: (view) => set({ currentView: view }),
       setSelectedDay: (day) => set({ selectedDay: day }),
@@ -195,12 +156,7 @@ export const useOutlierStore = create<OutlierState>()(
       triggerExternalResultsRefresh: () => set((state) => ({ externalResultsRefreshKey: state.externalResultsRefreshKey + 1 })),
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
       
-      // Reset completo para novo usuário - zera TUDO para defaults
-      // ATENÇÃO: Este reset é para LOGOUT ou troca de usuário
-      // NÃO afeta treinos do banco (esses são carregados via useCoachWorkouts)
-      // NÃO reseta coachStyle - ele é persistido no banco e carregado do perfil
       resetToDefaults: () => set({
-        // coachStyle NÃO é resetado - será carregado do perfil no próximo login
         athleteConfig: null,
         workoutResults: [],
         baseWorkouts: [],
@@ -215,23 +171,15 @@ export const useOutlierStore = create<OutlierState>()(
         viewingAsAthlete: null,
       }),
       
-      // Reset APENAS preferências do usuário - preserva treinos carregados do banco
-      // Usado quando há treinos do banco disponíveis e não queremos sobrescrevê-los
-      // NÃO reseta coachStyle - ele é persistido no banco
       resetUserPreferencesOnly: () => set({
-        // Limpa apenas configurações pessoais (NÃO coachStyle)
         athleteConfig: null,
-        // NÃO limpa treinos - baseWorkouts, adaptedWorkouts, weeklyWorkouts permanecem
-        adaptationPending: true, // Marca para readaptar com nova config
-        // Limpa estado de navegação
+        adaptationPending: true,
         currentView: 'welcome',
         selectedDay: null,
         selectedWorkout: null,
         viewingAsAthlete: null,
-        // Mantém workoutResults e externalResultsRefreshKey
       }),
       
-      // Admin: Visualizar como atleta
       setViewingAsAthlete: (athlete) => set({ viewingAsAthlete: athlete }),
       clearViewingAsAthlete: () => set({ viewingAsAthlete: null }),
     }),
