@@ -79,9 +79,9 @@ export function WeekNavigator({
             PRÓXIMA
           </span>
         )}
-        {isViewingHistory && (
+        {currentWeek.isPast && (
           <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded">
-            HISTÓRICO
+            ANTERIOR
           </span>
         )}
       </button>

@@ -8,9 +8,10 @@
  * 4. Logs padronizados: ATHLETE_WEEK_RESOLVE, ATHLETE_PLAN_FETCH
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 import type { DayWorkout } from '@/types/outlier';
 import {
   getAthleteCurrentWeekStart,
@@ -40,6 +41,16 @@ export interface WeekInfo {
   isFuture: boolean;
 }
 
+export interface WeekDebugInfo {
+  now: string;
+  currentWeekStart: string;
+  selectedWeekStart: string;
+  minWeekStart: string;
+  maxWeekStart: string;
+  hasPlanForSelectedWeek: boolean;
+  plansFoundWeekStarts: string[];
+}
+
 interface UseAthletePlanReturn {
   plans: AthletePlan[];
   plan: AthletePlan | null;
@@ -56,6 +67,9 @@ interface UseAthletePlanReturn {
   goToNextWeek: () => void;
   goToCurrentWeek: () => void;
   isViewingHistory: boolean;
+  // Debug info para a debug bar
+  debugInfo: WeekDebugInfo;
+  resetToCurrentWeek: () => void;
 }
 
 export function useAthletePlan(): UseAthletePlanReturn {
@@ -64,20 +78,15 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // CRÍTICO: Calcular semanas permitidas de forma estável
-  // Usar useMemo para evitar recálculo em cada render
+  // CRÍTICO: Calcular semanas permitidas de forma estável usando useRef
+  // Isso evita recálculo em cada render mas permite atualização manual
+  const nowRef = useRef(new Date());
+  
+  // Calcular allowedWeeks de forma estável
   const allowedWeeks = useMemo(() => {
-    const curr = getAthleteCurrentWeekStart(new Date());
-    const prevDate = new Date(curr + 'T12:00:00');
-    prevDate.setDate(prevDate.getDate() - 7);
-    const prev = prevDate.toISOString().split('T')[0];
-    
-    const nextDate = new Date(curr + 'T12:00:00');
-    nextDate.setDate(nextDate.getDate() + 7);
-    const next = nextDate.toISOString().split('T')[0];
-    
-    return { prev, curr, next };
-  }, []); // Recalcula apenas no mount - suficiente para sessão normal
+    const now = nowRef.current;
+    return getAthleteAllowedWeeks(now);
+  }, []); // Deps vazias - calculado apenas no mount
   
   // Estado: qual das 3 semanas está selecionada
   // CRÍTICO: Usar função inicializadora lazy para evitar erro "Should have a queue"
@@ -86,10 +95,12 @@ export function useAthletePlan(): UseAthletePlanReturn {
   );
 
   // Sincronizar selectedWeekStart se estiver fora da janela permitida
+  // Usando functional update para evitar loops
   useEffect(() => {
     const { prev, curr, next } = allowedWeeks;
+    const allowed = new Set([prev, curr, next]);
+    
     setSelectedWeekStart(prevSelected => {
-      const allowed = new Set([prev, curr, next]);
       if (!allowed.has(prevSelected)) {
         console.log('ATHLETE_WEEK_SYNC', { 
           reason: 'selectedWeekStart fora da janela',
@@ -105,8 +116,8 @@ export function useAthletePlan(): UseAthletePlanReturn {
   // LOG: ATHLETE_WEEK_RESOLVE ao inicializar/navegar
   useEffect(() => {
     console.log('ATHLETE_WEEK_RESOLVE', {
-      now: new Date().toISOString(),
-      dayOfWeek: new Date().getDay(),
+      now: nowRef.current.toISOString(),
+      dayOfWeek: nowRef.current.getDay(),
       currentWeekStart: allowedWeeks.curr,
       selectedWeekStart,
       minWeekStart: allowedWeeks.prev,
@@ -137,27 +148,62 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const canNavigateToPast = selectedWeekStart !== allowedWeeks.prev;
   const canNavigateToFuture = selectedWeekStart !== allowedWeeks.next;
 
+  // Guard: verificar se destino está dentro da janela permitida
+  const isAllowedWeek = useCallback((weekStart: string): boolean => {
+    const allowed = new Set([allowedWeeks.prev, allowedWeeks.curr, allowedWeeks.next]);
+    return allowed.has(weekStart);
+  }, [allowedWeeks]);
+
   const goToPreviousWeek = useCallback(() => {
-    if (selectedWeekStart === allowedWeeks.curr) {
-      setSelectedWeekStart(allowedWeeks.prev);
-    } else if (selectedWeekStart === allowedWeeks.next) {
-      setSelectedWeekStart(allowedWeeks.curr);
+    const { prev, curr, next } = allowedWeeks;
+    
+    let target: string | null = null;
+    if (selectedWeekStart === curr) {
+      target = prev;
+    } else if (selectedWeekStart === next) {
+      target = curr;
     }
-    // Se já está no prev, não faz nada (guard interno)
-  }, [selectedWeekStart, allowedWeeks]);
+    
+    if (target && isAllowedWeek(target)) {
+      setSelectedWeekStart(target);
+    } else if (!canNavigateToPast) {
+      toast({
+        title: "Limite atingido",
+        description: "Você só pode navegar entre semana anterior, atual e próxima.",
+        variant: "destructive",
+      });
+    }
+  }, [selectedWeekStart, allowedWeeks, isAllowedWeek, canNavigateToPast]);
 
   const goToNextWeek = useCallback(() => {
-    if (selectedWeekStart === allowedWeeks.prev) {
-      setSelectedWeekStart(allowedWeeks.curr);
-    } else if (selectedWeekStart === allowedWeeks.curr) {
-      setSelectedWeekStart(allowedWeeks.next);
+    const { prev, curr, next } = allowedWeeks;
+    
+    let target: string | null = null;
+    if (selectedWeekStart === prev) {
+      target = curr;
+    } else if (selectedWeekStart === curr) {
+      target = next;
     }
-    // Se já está no next, não faz nada (guard interno)
-  }, [selectedWeekStart, allowedWeeks]);
+    
+    if (target && isAllowedWeek(target)) {
+      setSelectedWeekStart(target);
+    } else if (!canNavigateToFuture) {
+      toast({
+        title: "Limite atingido",
+        description: "Você só pode navegar entre semana anterior, atual e próxima.",
+        variant: "destructive",
+      });
+    }
+  }, [selectedWeekStart, allowedWeeks, isAllowedWeek, canNavigateToFuture]);
 
   const goToCurrentWeek = useCallback(() => {
     setSelectedWeekStart(allowedWeeks.curr);
   }, [allowedWeeks]);
+
+  const resetToCurrentWeek = useCallback(() => {
+    nowRef.current = new Date();
+    setSelectedWeekStart(getAthleteCurrentWeekStart(nowRef.current));
+  }, []);
 
   // Fetch plans por week_start
   const fetchPlans = useCallback(async () => {
@@ -272,6 +318,17 @@ export function useAthletePlan(): UseAthletePlanReturn {
     return map;
   }, [plans]);
 
+  // Debug info para a debug bar
+  const debugInfo: WeekDebugInfo = useMemo(() => ({
+    now: nowRef.current.toISOString(),
+    currentWeekStart: allowedWeeks.curr,
+    selectedWeekStart,
+    minWeekStart: allowedWeeks.prev,
+    maxWeekStart: allowedWeeks.next,
+    hasPlanForSelectedWeek: plans.length > 0,
+    plansFoundWeekStarts: plans.map(p => p.week_start),
+  }), [allowedWeeks, selectedWeekStart, plans]);
+
   return {
     plans,
     plan,
@@ -288,5 +345,7 @@ export function useAthletePlan(): UseAthletePlanReturn {
     goToNextWeek,
     goToCurrentWeek,
     isViewingHistory: currentWeek.isPast,
+    debugInfo,
+    resetToCurrentWeek,
   };
 }
