@@ -38,6 +38,53 @@ export type Database = {
         }
         Relationships: []
       }
+      athlete_plans: {
+        Row: {
+          athlete_user_id: string
+          coach_id: string
+          created_at: string
+          id: string
+          plan_json: Json
+          published_at: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          athlete_user_id: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          plan_json?: Json
+          published_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          athlete_user_id?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          plan_json?: Json
+          published_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_plans_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       benchmark_results: {
         Row: {
           athlete_level: string | null

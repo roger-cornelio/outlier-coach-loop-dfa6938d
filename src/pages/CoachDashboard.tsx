@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, Dumbbell, LogOut, User, FileText, Plus, 
-  LayoutGrid, Settings2, Trophy, Send, Archive, Trash2, Eye
+  LayoutGrid, Settings2, Trophy, Send, Archive, Trash2, Eye, UserPlus, UserMinus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CreateWorkoutModal } from '@/components/CreateWorkoutModal';
@@ -32,6 +32,7 @@ import { CoachWorkoutManager } from '@/components/CoachWorkoutManager';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachBenchmarksTab } from '@/components/CoachBenchmarksTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
+import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { useToast } from '@/hooks/use-toast';
 
 interface LinkedAthlete {
@@ -59,6 +60,7 @@ export default function CoachDashboard() {
   const [loadingAthletes, setLoadingAthletes] = useState(true);
   const [loadingWorkouts, setLoadingWorkouts] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState('atletas');
 
   // Função para recarregar treinos
@@ -84,33 +86,52 @@ export default function CoachDashboard() {
     }
   };
 
+  // Função para recarregar atletas
+  const fetchAthletes = async () => {
+    if (!profile?.id) return;
+
+    try {
+      setLoadingAthletes(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, user_id, name, email')
+        .eq('coach_id', profile.id);
+
+      if (error) {
+        console.error('[CoachDashboard] Erro ao buscar atletas:', error);
+        setAthletes([]);
+      } else {
+        setAthletes(data || []);
+      }
+    } finally {
+      setLoadingAthletes(false);
+    }
+  };
+
   // Buscar atletas vinculados ao coach (via profiles.coach_id)
   useEffect(() => {
-    async function fetchAthletes() {
-      if (!profile?.id) return;
-
-      try {
-        setLoadingAthletes(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, user_id, name, email')
-          .eq('coach_id', profile.id);
-
-        if (error) {
-          console.error('[CoachDashboard] Erro ao buscar atletas:', error);
-          setAthletes([]);
-        } else {
-          setAthletes(data || []);
-        }
-      } finally {
-        setLoadingAthletes(false);
-      }
-    }
-
     if (profile?.id) {
       fetchAthletes();
     }
   }, [profile?.id]);
+
+  // Desvincular atleta
+  const handleUnlinkAthlete = async (athleteId: string, athleteName: string) => {
+    const confirmed = window.confirm(`Desvincular ${athleteName}?`);
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ coach_id: null })
+      .eq('id', athleteId);
+
+    if (error) {
+      toast({ title: 'Erro ao desvincular', variant: 'destructive' });
+    } else {
+      toast({ title: 'Atleta desvinculado' });
+      fetchAthletes();
+    }
+  };
 
   // Buscar treinos do coach ao montar
   useEffect(() => {
@@ -173,10 +194,20 @@ export default function CoachDashboard() {
         return (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="w-5 h-5 text-primary" />
-                Atletas Vinculados
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="w-5 h-5 text-primary" />
+                  Atletas Vinculados
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => setShowLinkAthleteModal(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Vincular Atleta
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingAthletes ? (
@@ -187,11 +218,17 @@ export default function CoachDashboard() {
                 <div className="text-center py-8">
                   <Users className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    Atletas vinculados aparecerão aqui.
+                    Nenhum atleta vinculado ainda.
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Para vincular um atleta, ele deve selecionar você como coach no perfil dele.
-                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => setShowLinkAthleteModal(true)}
+                  >
+                    <UserPlus className="w-4 h-4 mr-1.5" />
+                    Vincular primeiro atleta
+                  </Button>
                 </div>
               ) : (
                 <ScrollArea className="max-h-[400px]">
@@ -214,9 +251,20 @@ export default function CoachDashboard() {
                             </p>
                           )}
                         </div>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
-                          Ativo
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
+                            Ativo
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlinkAthlete(athlete.id, athlete.name || athlete.email)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Desvincular atleta"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -449,6 +497,13 @@ export default function CoachDashboard() {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onSuccess={fetchWorkouts}
+      />
+
+      {/* Modal de vincular atleta */}
+      <LinkAthleteModal
+        open={showLinkAthleteModal}
+        onOpenChange={setShowLinkAthleteModal}
+        onSuccess={fetchAthletes}
       />
     </div>
   );
