@@ -17,6 +17,9 @@ interface ViewingAsAthlete {
 }
 
 interface OutlierState {
+  // Hydration flag - evita loops durante rehydrate
+  hasHydrated: boolean;
+  
   coachStyle: CoachStyle | null;
   athleteConfig: AthleteConfig | null;
   workoutResults: WorkoutResult[];
@@ -45,6 +48,7 @@ interface OutlierState {
   viewingAsAthlete: ViewingAsAthlete | null;
   
   // Actions
+  setHasHydrated: (v: boolean) => void;
   setCoachStyle: (style: CoachStyle) => void;
   setAthleteConfig: (config: AthleteConfig) => void;
   addWorkoutResult: (result: WorkoutResult) => void;
@@ -77,6 +81,7 @@ interface OutlierState {
 export const useOutlierStore = create<OutlierState>()(
   persist(
     (set, get) => ({
+      hasHydrated: false,
       coachStyle: null,
       athleteConfig: null,
       workoutResults: [],
@@ -91,6 +96,7 @@ export const useOutlierStore = create<OutlierState>()(
       externalResultsRefreshKey: 0,
       viewingAsAthlete: null,
 
+      setHasHydrated: (v) => set({ hasHydrated: v }),
       setCoachStyle: (style) => set({ coachStyle: style }),
       
       setAthleteConfig: (config) => {
@@ -195,14 +201,19 @@ export const useOutlierStore = create<OutlierState>()(
       }),
       // Run migration when store is rehydrated from storage
       onRehydrateStorage: () => (state) => {
-        if (state && state.baseWorkouts && state.baseWorkouts.length > 0) {
-          const migrated = migrateWorkouts(state.baseWorkouts);
-          if (migrated) {
-            // Update store with migrated workouts
-            state.baseWorkouts = migrated;
-            state.weeklyWorkouts = migrated;
-            console.log('[outlierStore] Benchmarks migrated with paramsVersionUsed');
+        if (state) {
+          // Migrar workouts se necessário
+          if (state.baseWorkouts && state.baseWorkouts.length > 0) {
+            const migrated = migrateWorkouts(state.baseWorkouts);
+            if (migrated) {
+              state.baseWorkouts = migrated;
+              state.weeklyWorkouts = migrated;
+              console.log('[outlierStore] Benchmarks migrated with paramsVersionUsed');
+            }
           }
+          // Marcar como hidratado APÓS migração
+          state.hasHydrated = true;
+          console.log('[outlierStore] Hydration complete');
         }
       },
     }

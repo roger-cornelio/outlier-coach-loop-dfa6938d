@@ -77,7 +77,8 @@ export function Dashboard() {
     athleteConfig,
     viewingAsAthlete,
     setBaseWorkouts,
-    clearBaseWorkouts
+    clearBaseWorkouts,
+    hasHydrated
   } = useOutlierStore();
   
   const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
@@ -118,16 +119,16 @@ export function Dashboard() {
 
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
-  // Deps: [selectedWeekStart, hasPlan]
-  // Se hasPlan === false → clearBaseWorkouts()
-  // Se hasPlan === true → setBaseWorkouts(workoutsDaSemana)
+  // Guard: aguardar hydration do Zustand para evitar loops
   // ============================================
   
   const selectedWeekStart = debugInfo?.selectedWeekStart;
   const hasPlan = planWorkouts.length > 0;
   
   useEffect(() => {
-    // Aguardar carregamento
+    // Guard: aguardar hydration do store
+    if (!hasHydrated) return;
+    // Guard: aguardar carregamento do plano
     if (loadingPlan) return;
     
     console.log('[Dashboard] Week sync:', { 
@@ -143,7 +144,7 @@ export function Dashboard() {
       console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekStart);
       clearBaseWorkouts();
     }
-  }, [selectedWeekStart, hasPlan, planWorkouts, setBaseWorkouts, clearBaseWorkouts, loadingPlan]);
+  }, [hasHydrated, selectedWeekStart, hasPlan, planWorkouts, setBaseWorkouts, clearBaseWorkouts, loadingPlan]);
 
   // REMOVIDO: Fallback para buscar do banco
   // REGRA: Exibir APENAS treinos publicados especificamente para a semana selecionada
