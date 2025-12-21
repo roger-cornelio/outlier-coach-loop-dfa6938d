@@ -9,23 +9,14 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
 import CoachSetPassword from "./pages/CoachSetPassword";
+import CoachPending from "./pages/CoachPending";
+import CoachRequest from "./pages/CoachRequest";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-/**
- * App component with provider tree
- *
- * CRITICAL: Provider order matters!
- * 1. QueryClientProvider (external, no deps)
- * 2. BrowserRouter (routing)
- * 3. TooltipProvider (UI utils)
- * 4. AppGate + Routes (uses auth via useAppState)
- *
- * NOTE: AuthProvider lives in src/main.tsx and wraps the entire app.
- */
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -39,34 +30,26 @@ const App = () => (
             <Route path="/app" element={<Index />} />
 
             {/* === LOGIN ROUTES === */}
-            {/* USER login */}
             <Route path="/login" element={<Auth context="user" />} />
-
-            {/* ADMIN login - shows admin login screen, then goes to /painel-admin */}
             <Route path="/login/admin" element={<Auth context="admin" />} />
-
-            {/* COACH login - fluxo único e linear */}
             <Route path="/login/coach" element={<CoachAuth />} />
 
-            {/* COACH definir senha - coach aprovado sem senha */}
+            {/* === COACH ROUTES === */}
             <Route path="/coach/definir-senha" element={<CoachSetPassword />} />
-
-            {/* COACH dashboard - rota oficial do painel do coach */}
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
-            
-            {/* /coach redireciona para /coach/dashboard automaticamente */}
             <Route path="/coach" element={<Navigate to="/coach/dashboard" replace />} />
+            <Route path="/coach-pending" element={<CoachPending />} />
+            <Route path="/coach-request" element={<CoachRequest />} />
 
             {/* === PROTECTED DASHBOARDS === */}
-            {/* Admin dashboard (requires admin role) */}
             <Route path="/painel-admin" element={<AdminPortal />} />
 
-            {/* === REDIRECTS - Normalize legacy routes to /login === */}
+            {/* === REDIRECTS === */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/auth" element={<Navigate to="/login" replace />} />
             <Route path="/longin" element={<Navigate to="/login" replace />} />
 
-            {/* CATCH-ALL: 404 */}
+            {/* CATCH-ALL */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppGate>
@@ -74,6 +57,5 @@ const App = () => (
     </BrowserRouter>
   </QueryClientProvider>
 );
-
 
 export default App;

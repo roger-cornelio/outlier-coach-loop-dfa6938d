@@ -56,6 +56,7 @@ export default function CoachSetPassword() {
 
   // Check if email is approved before showing the form (via RPC - bypasses RLS)
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
   
   useEffect(() => {
     const checkApproval = async () => {
@@ -66,14 +67,20 @@ export default function CoachSetPassword() {
         .rpc('get_coach_approval_by_email', { _email: email });
       
       if (error) {
-        console.error('[CoachSetPassword] get_coach_approval_by_email error:', error);
+        console.error('[CoachSetPassword] RPC error:', error);
         setIsApproved(false);
         return;
       }
       
       const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
       console.log('[CoachSetPassword] Approval result:', row);
-      setIsApproved(row ? !!row.approved : false);
+      
+      if (row && row.approved) {
+        setIsApproved(true);
+        setApplicationId(row.application_id);
+      } else {
+        setIsApproved(false);
+      }
     };
     
     checkApproval();
@@ -189,21 +196,14 @@ export default function CoachSetPassword() {
       // STEP 3: Grant coach role via edge function (uses service role)
       console.log('[CoachSetPassword] Granting coach role via edge function');
       
-      // Get application info via RPC (bypasses RLS)
-      const { data: approvalData, error: approvalErr } = await supabase
-        .rpc('get_coach_approval_by_email', { _email: email });
-
-      if (!approvalErr) {
-        const appRow = Array.isArray(approvalData) && approvalData.length > 0 ? approvalData[0] : null;
-        if (appRow && appRow.application_id) {
-          // Call edge function to ensure coach role
-          await supabase.functions.invoke('create-coach-user', {
-            body: {
-              email,
-              application_id: appRow.application_id,
-            },
-          });
-        }
+      if (applicationId) {
+        // Call edge function to ensure coach role
+        await supabase.functions.invoke('create-coach-user', {
+          body: {
+            email,
+            application_id: applicationId,
+          },
+        });
       }
 
       // STEP 4: Login (session may already exist from signUp)
