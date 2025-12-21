@@ -47,7 +47,7 @@ export function WeekNavigator({
         <ChevronLeft className="w-4 h-4" />
       </Button>
 
-      {/* Indicador de semana */}
+      {/* Indicador de semana - label baseado na semana SELECIONADA (currentWeek.start → +6 dias) */}
       <button
         onClick={onCurrentWeek}
         className={cn(
@@ -67,6 +67,7 @@ export function WeekNavigator({
         ) : (
           <Calendar className="w-4 h-4" />
         )}
+        {/* Label: sempre mostra a semana SELECIONADA (currentWeek.label) */}
         <span>{currentWeek.label}</span>
         {currentWeek.isCurrent && (
           <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
@@ -85,14 +86,14 @@ export function WeekNavigator({
         )}
       </button>
 
-      {/* Botão próxima semana - BLOQUEADO para atletas */}
+      {/* Botão próxima semana - habilitado se há treino publicado na próxima */}
       <Button
         variant="ghost"
         size="sm"
         onClick={onNextWeek}
         disabled={!canNavigateToFuture}
         className="h-8 w-8 p-0"
-        title={canNavigateToFuture ? "Próxima semana" : "Treinos futuros não disponíveis"}
+        title={canNavigateToFuture ? "Próxima semana" : "Sem treino publicado para a próxima semana"}
       >
         <ChevronRight className="w-4 h-4" />
       </Button>
