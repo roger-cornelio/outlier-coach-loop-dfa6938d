@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
+import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
@@ -24,6 +25,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <SessionRefreshBanner />
+        <DebugKeyboardToggle />
         <AppGate>
           <Routes>
             {/* Main app route (protected) */}
