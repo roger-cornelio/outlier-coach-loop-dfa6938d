@@ -2,15 +2,13 @@
  * CoachDashboard - Painel COMPLETO do Coach
  * 
  * Tabs:
- * - Atletas: atletas vinculados (via coach_athletes)
- * - Treinos: CRUD de treinos do coach
- * - Planilha: Template padrão do coach (AdminSpreadsheet)
- * - Benchmarks: Gerenciar benchmarks
- * - Parâmetros: Regras e configurações do coach (AdminParamsEditor)
+ * - IMPORTAR: Cole e processe planilha (preview local)
+ * - PROGRAMAÇÕES: Semanas salvas/publicadas (dados do banco)
  * 
  * Regras:
  * - Apenas coach, admin ou superadmin podem acessar (protegido por AppGate)
  * - Coach NUNCA acessa /app (fluxo de atleta)
+ * - IMPORTAR = preview local; PROGRAMAÇÕES = dados persistidos
  */
 
 import { useEffect, useState } from 'react';
@@ -25,15 +23,13 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Loader2, Users, Dumbbell, LogOut, User, FileText, Plus, 
-  LayoutGrid, Settings2, Trophy, Send, Archive, Trash2, Eye, UserPlus, UserMinus,
-  AlertTriangle
+  Loader2, Users, LogOut, User, FileText,
+  LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
+  AlertTriangle, Upload, Calendar
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { CreateWorkoutModal } from '@/components/CreateWorkoutModal';
-import { CoachWorkoutManager } from '@/components/CoachWorkoutManager';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
-import { CoachBenchmarksTab } from '@/components/CoachBenchmarksTab';
+import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { useToast } from '@/hooks/use-toast';
@@ -43,14 +39,6 @@ interface LinkedAthlete {
   user_id: string;
   name: string | null;
   email: string;
-}
-
-interface CoachWorkout {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-  price: number;
 }
 
 interface DiagnosticCounts {
@@ -73,40 +61,14 @@ export default function CoachDashboard() {
   const [athletesError, setAthletesError] = useState<string | null>(null);
   const [lastFetchOk, setLastFetchOk] = useState<boolean | null>(null);
   
-  const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
-  const [loadingWorkouts, setLoadingWorkouts] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('atletas');
+  const [activeTab, setActiveTab] = useState('importar');
   const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
     linksCount: null,
     joinCount: null,
     profilesSample: null,
     error: null,
   });
-
-  // Função para recarregar treinos
-  const fetchWorkouts = async () => {
-    if (!profile?.id) return;
-
-    try {
-      setLoadingWorkouts(true);
-      const { data, error } = await supabase
-        .from('workouts')
-        .select('id, title, status, created_at, price')
-        .eq('coach_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('[CoachDashboard] Erro ao buscar treinos:', error);
-        setWorkouts([]);
-      } else {
-        setWorkouts(data || []);
-      }
-    } finally {
-      setLoadingWorkouts(false);
-    }
-  };
 
   // FONTE ÚNICA: busca atletas via coach_athletes + profiles separadamente
   const fetchAthletes = async (): Promise<boolean> => {
@@ -296,56 +258,6 @@ export default function CoachDashboard() {
     }
   };
 
-  // Buscar treinos do coach ao montar
-  useEffect(() => {
-    if (profile?.id) {
-      fetchWorkouts();
-    }
-  }, [profile?.id]);
-
-  // Ações rápidas de treino
-  const handlePublishWorkout = async (workoutId: string) => {
-    const { error } = await supabase
-      .from('workouts')
-      .update({ status: 'published' })
-      .eq('id', workoutId);
-    
-    if (error) {
-      toast({ title: 'Erro ao publicar', variant: 'destructive' });
-    } else {
-      toast({ title: 'Treino publicado!' });
-      fetchWorkouts();
-    }
-  };
-
-  const handleArchiveWorkout = async (workoutId: string) => {
-    const { error } = await supabase
-      .from('workouts')
-      .update({ status: 'archived' })
-      .eq('id', workoutId);
-    
-    if (error) {
-      toast({ title: 'Erro ao arquivar', variant: 'destructive' });
-    } else {
-      toast({ title: 'Treino arquivado' });
-      fetchWorkouts();
-    }
-  };
-
-  const handleDeleteWorkout = async (workoutId: string) => {
-    const { error } = await supabase
-      .from('workouts')
-      .delete()
-      .eq('id', workoutId);
-    
-    if (error) {
-      toast({ title: 'Erro ao deletar', variant: 'destructive' });
-    } else {
-      toast({ title: 'Treino deletado' });
-      fetchWorkouts();
-    }
-  };
-
   const handleLogout = () => {
     logout();
   };
@@ -516,143 +428,11 @@ export default function CoachDashboard() {
           </>
         );
 
-      case 'treinos':
-        return (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Dumbbell className="w-5 h-5 text-primary" />
-                  Treinos do Coach
-                </CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  Criar Treino
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loadingWorkouts ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : workouts.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum treino criado ainda.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    Criar primeiro treino
-                  </Button>
-                </div>
-              ) : (
-                <ScrollArea className="max-h-[400px]">
-                  <div className="space-y-2">
-                    {workouts.map((workout) => (
-                      <div
-                        key={workout.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Dumbbell className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {workout.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(workout.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              workout.status === 'published'
-                                ? 'bg-green-500/10 text-green-400 border-green-500/30'
-                                : workout.status === 'draft'
-                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                                : 'bg-muted text-muted-foreground'
-                            }
-                          >
-                            {workout.status === 'published'
-                              ? 'Publicado'
-                              : workout.status === 'draft'
-                              ? 'Rascunho'
-                              : 'Arquivado'}
-                          </Badge>
-                          
-                          {/* Ações rápidas */}
-                          <div className="flex gap-1">
-                            {workout.status === 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePublishWorkout(workout.id)}
-                                className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
-                                title="Publicar"
-                              >
-                                <Send className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {workout.status === 'published' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleArchiveWorkout(workout.id)}
-                                className="h-8 w-8 p-0"
-                                title="Arquivar"
-                              >
-                                <Archive className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {workout.status === 'archived' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePublishWorkout(workout.id)}
-                                className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
-                                title="Republicar"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteWorkout(workout.id)}
-                              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                              title="Deletar"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        );
-
-      case 'planilha':
+      case 'importar':
         return <CoachSpreadsheetTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
 
-      case 'benchmarks':
-        return <CoachBenchmarksTab />;
+      case 'programacoes':
+        return <CoachProgramsTab />;
 
       case 'parametros':
         return <AdminParamsEditor />;
@@ -698,22 +478,18 @@ export default function CoachDashboard() {
       {/* Navegação por Tabs */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} mb-6`}>
             <TabsTrigger value="atletas" className="gap-1.5 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Atletas</span>
             </TabsTrigger>
-            <TabsTrigger value="treinos" className="gap-1.5 text-xs sm:text-sm">
-              <Dumbbell className="w-4 h-4" />
-              <span className="hidden sm:inline">Treinos</span>
+            <TabsTrigger value="importar" className="gap-1.5 text-xs sm:text-sm">
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Importar</span>
             </TabsTrigger>
-            <TabsTrigger value="planilha" className="gap-1.5 text-xs sm:text-sm">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Planilha</span>
-            </TabsTrigger>
-            <TabsTrigger value="benchmarks" className="gap-1.5 text-xs sm:text-sm">
-              <Trophy className="w-4 h-4" />
-              <span className="hidden sm:inline">Benchmarks</span>
+            <TabsTrigger value="programacoes" className="gap-1.5 text-xs sm:text-sm">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Programações</span>
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="parametros" className="gap-1.5 text-xs sm:text-sm">
@@ -733,13 +509,6 @@ export default function CoachDashboard() {
           </motion.div>
         </Tabs>
       </div>
-
-      {/* Modal de criação de treino */}
-      <CreateWorkoutModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        onSuccess={fetchWorkouts}
-      />
 
       {/* Modal de vincular atleta */}
       <LinkAthleteModal
