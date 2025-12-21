@@ -410,7 +410,7 @@ export function AdminSpreadsheet() {
       setWeeklyWorkouts(parsedWorkouts);
       
       // 2. Salvar no banco de dados para persistência e visibilidade
-      const title = programName.trim() || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
+      const title = programName.trim() || "Treino semanal";
       const status = programStatus === 'published' ? 'published' : 'draft';
       
       const workoutId = await saveToDb(title, parsedWorkouts, status, 0);
