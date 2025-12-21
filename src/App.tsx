@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
@@ -23,42 +24,44 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SessionRefreshBanner />
-        <DebugKeyboardToggle />
-        <AppGate>
-          <Routes>
-            {/* Main app route (protected) */}
-            <Route path="/app" element={<Index />} />
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <SessionRefreshBanner />
+          <DebugKeyboardToggle />
+          <AppGate>
+            <Routes>
+              {/* Main app route (protected) */}
+              <Route path="/app" element={<Index />} />
 
-            {/* === LOGIN ROUTES === */}
-            <Route path="/login" element={<Auth context="user" />} />
-            <Route path="/login/admin" element={<Auth context="admin" />} />
-            <Route path="/login/coach" element={<CoachAuth />} />
+              {/* === LOGIN ROUTES === */}
+              <Route path="/login" element={<Auth context="user" />} />
+              <Route path="/login/admin" element={<Auth context="admin" />} />
+              <Route path="/login/coach" element={<CoachAuth />} />
 
-            {/* === COACH ROUTES === */}
-            <Route path="/coach/definir-senha" element={<CoachSetPassword />} />
-            <Route path="/coach/dashboard" element={<CoachDashboard />} />
-            <Route path="/coach" element={<Navigate to="/coach/dashboard" replace />} />
-            <Route path="/coach-pending" element={<CoachPending />} />
-            <Route path="/coach-request" element={<CoachRequest />} />
+              {/* === COACH ROUTES === */}
+              <Route path="/coach/definir-senha" element={<CoachSetPassword />} />
+              <Route path="/coach/dashboard" element={<CoachDashboard />} />
+              <Route path="/coach" element={<Navigate to="/coach/dashboard" replace />} />
+              <Route path="/coach-pending" element={<CoachPending />} />
+              <Route path="/coach-request" element={<CoachRequest />} />
 
-            {/* === PROTECTED DASHBOARDS === */}
-            <Route path="/painel-admin" element={<AdminPortal />} />
+              {/* === PROTECTED DASHBOARDS === */}
+              <Route path="/painel-admin" element={<AdminPortal />} />
 
-            {/* === REDIRECTS === */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/auth" element={<Navigate to="/login" replace />} />
-            <Route path="/longin" element={<Navigate to="/login" replace />} />
+              {/* === REDIRECTS === */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/auth" element={<Navigate to="/login" replace />} />
+              <Route path="/longin" element={<Navigate to="/login" replace />} />
 
-            {/* CATCH-ALL */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppGate>
-        
-        {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
-        <GlobalDebugBar />
+              {/* CATCH-ALL */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppGate>
+          
+          {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
+          <GlobalDebugBar />
+        </AuthProvider>
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>
