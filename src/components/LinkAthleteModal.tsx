@@ -102,21 +102,35 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
   const canLink = searchResult?.status === 'OK' || searchResult?.status === 'PROFILE_CREATED';
 
   const handleLink = async () => {
-    if (!canLink || !searchResult?.profile_id || !profile?.id) return;
+    if (!canLink || !searchResult?.user_id) return;
 
     setIsLoading(true);
 
     try {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ coach_id: profile.id })
-        .eq('id', searchResult.profile_id);
-
-      if (updateError) {
-        console.error('[LinkAthleteModal] Update error:', updateError);
-        setSearchResult({ status: 'ERROR', message: 'Erro ao vincular atleta' });
+      // Get current user id (coach's auth.uid)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        setSearchResult({ status: 'ERROR', message: 'Usuário não autenticado' });
         return;
       }
+
+      // Insert into coach_athletes (source of truth)
+      const { data: insertData, error: insertError } = await supabase
+        .from('coach_athletes')
+        .upsert(
+          { coach_id: user.id, athlete_id: searchResult.user_id },
+          { onConflict: 'coach_id,athlete_id', ignoreDuplicates: true }
+        )
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('[LinkAthleteModal] Insert error:', insertError);
+        setSearchResult({ status: 'ERROR', message: `Erro ao vincular atleta: ${insertError.message}` });
+        return;
+      }
+
+      console.log('[LinkAthleteModal] Link created:', insertData);
 
       toast({
         title: 'Atleta vinculado!',
