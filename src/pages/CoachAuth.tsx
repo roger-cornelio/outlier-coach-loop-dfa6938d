@@ -2,11 +2,15 @@
  * CoachAuth - Fluxo ÚNICO e LINEAR para coaches
  * 
  * FLUXO:
- * 1. Tela de login (email + senha) + link discreto "Solicitar acesso"
+ * 1. Tela de login (email + senha)
  * 2. Ao tentar login:
- *    a) Email NÃO aprovado → abre modal "Deixe seu contato" → salva como pendente
- *    b) Email APROVADO mas sem conta → abre tela "Defina sua senha"
- *    c) Email APROVADO com conta → login normal → redireciona para /coach/dashboard
+ *    a) Login OK + user_roles=coach → /coach/dashboard
+ *    b) Login FALHOU por credenciais + email aprovado (coach_applications.status='approved') → /coach/definir-senha
+ *    c) Login FALHOU + email NÃO aprovado → modal "Deixe seu contato"
+ * 
+ * FONTE DE VERDADE:
+ * - user_roles (quando user_id existe)
+ * - coach_applications.status='approved' (quando user_id não existe ainda)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -23,8 +27,6 @@ const loginSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
 });
-
-// Removed setPasswordSchema - now handled by /coach/definir-senha
 
 const contactSchema = z.object({
   full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome muito longo'),
@@ -43,9 +45,7 @@ export default function CoachAuth() {
   const [flowState, setFlowState] = useState<CoachFlowState>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -68,7 +68,7 @@ export default function CoachAuth() {
     flowState,
   });
 
-  // ===== REDIRECT IF ALREADY COACH (user_roles is source of truth) =====
+  // ===== REDIRECT IF ALREADY COACH (user_roles is source of truth for logged-in users) =====
   useEffect(() => {
     if (!authLoading && user && isCoach) {
       console.log('[CoachAuth] REDIRECT → /coach/dashboard | Reason: isCoach=true (user_roles)');
@@ -76,6 +76,29 @@ export default function CoachAuth() {
     }
   }, [user, isCoach, authLoading, navigate]);
 
+  // ===== CHECK IF EMAIL IS APPROVED (coach_applications.status='approved') =====
+  // This is used BEFORE account exists - pre-account source of truth
+  const checkEmailApproved = async (emailToCheck: string): Promise<boolean> => {
+    const normalizedEmail = emailToCheck.toLowerCase().trim();
+    
+    const { data, error } = await supabase
+      .from('coach_applications')
+      .select('status')
+      .eq('email', normalizedEmail)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[CoachAuth] checkEmailApproved error:', error);
+      return false;
+    }
+
+    return !!data;
+  };
+
+  // ===== CHECK USER ROLES (for logged-in user) =====
   const fetchUserRoles = useCallback(async (userId: string): Promise<string[]> => {
     const { data, error } = await supabase
       .from('user_roles')
@@ -89,70 +112,6 @@ export default function CoachAuth() {
 
     return (data || []).map((r) => String(r.role));
   }, []);
-
-  const runPostAuthDecision = useCallback(
-    async (emailForUi: string) => {
-      console.log('[CoachAuth] post-auth decision START');
-
-      // (a) getSession
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error('[CoachAuth] getSession error:', sessionError);
-      }
-
-      const authedUserId = sessionData.session?.user?.id;
-      console.log('[CoachAuth] post-auth session:', {
-        hasSession: !!sessionData.session,
-        userId: authedUserId || 'null',
-      });
-
-      if (!authedUserId) {
-        return;
-      }
-
-      // (b) refresh + refetch roles/profile (ensures role sync runs)
-      await refreshSession();
-
-      const roleNames = await fetchUserRoles(authedUserId);
-      console.log('[CoachAuth] post-auth roles loaded:', roleNames);
-
-      // (c) decide route ONLY by user_roles
-      if (roleNames.includes('coach')) {
-        console.log('[CoachAuth] DECISION: allow → /coach/dashboard');
-        navigate('/coach/dashboard', { replace: true });
-        return;
-      }
-
-      console.log('[CoachAuth] DECISION: deny (no coach role) → signOut + open contact modal');
-      await supabase.auth.signOut();
-      setContactEmail(emailForUi);
-      setFlowState('contact_modal');
-    },
-    [fetchUserRoles, navigate, refreshSession]
-  );
-
-  // ===== CHECK IF EMAIL HAS COACH ROLE (source of truth: user_roles via profile email) =====
-  const checkCoachRoleByEmail = async (emailToCheck: string): Promise<boolean> => {
-    const normalizedEmail = emailToCheck.toLowerCase().trim();
-
-    // Find profile with this email, then check user_roles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
-
-    if (!profile?.user_id) {
-      return false;
-    }
-
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', profile.user_id);
-
-    return (roles || []).some((r) => String(r.role) === 'coach');
-  };
 
   // ===== HANDLE LOGIN =====
   const handleLogin = async (e: React.FormEvent) => {
@@ -174,21 +133,8 @@ export default function CoachAuth() {
     const normalizedEmail = email.toLowerCase().trim();
 
     try {
-      // STEP 1: Check if email has coach role (source of truth)
-      const hasCoachRole = await checkCoachRoleByEmail(normalizedEmail);
-      console.log('[CoachAuth] hasCoachRole for', normalizedEmail, ':', hasCoachRole);
-
-      if (!hasCoachRole) {
-        // No coach role → show contact modal
-        console.log('[CoachAuth] No coach role → contact modal');
-        setContactEmail(normalizedEmail);
-        setFlowState('contact_modal');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // STEP 2: Coach role exists → try login
-      const { error: loginError } = await supabase.auth.signInWithPassword({
+      // STEP 1: Try to login
+      const { data: signInData, error: loginError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
@@ -196,10 +142,22 @@ export default function CoachAuth() {
       if (loginError) {
         console.log('[CoachAuth] Login error:', loginError.message);
 
-        // If credentials invalid but role exists → needs to set password
+        // Login failed - check if email is approved (pre-account source of truth)
         if (loginError.message.includes('Invalid login credentials')) {
-          console.log('[CoachAuth] Coach role exists but login failed → redirect to set password');
-          navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+          const isApproved = await checkEmailApproved(normalizedEmail);
+          console.log('[CoachAuth] Email approved?', isApproved);
+
+          if (isApproved) {
+            // Email is approved but no account or wrong password
+            // → redirect to set password page
+            console.log('[CoachAuth] Approved email, redirecting to /coach/definir-senha');
+            navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+          } else {
+            // Not approved → show contact modal
+            console.log('[CoachAuth] Not approved, showing contact modal');
+            setContactEmail(normalizedEmail);
+            setFlowState('contact_modal');
+          }
         } else {
           toast({
             title: 'Erro no login',
@@ -211,8 +169,33 @@ export default function CoachAuth() {
         return;
       }
 
-      // STEP 3: Login successful → verify roles and redirect
-      await runPostAuthDecision(normalizedEmail);
+      // STEP 2: Login successful → verify user_roles
+      const userId = signInData.user?.id;
+      if (!userId) {
+        console.error('[CoachAuth] No user ID after login');
+        setIsSubmitting(false);
+        return;
+      }
+
+      await refreshSession();
+      const roles = await fetchUserRoles(userId);
+      console.log('[CoachAuth] User roles:', roles);
+
+      if (roles.includes('coach')) {
+        console.log('[CoachAuth] User has coach role, redirecting to dashboard');
+        navigate('/coach/dashboard', { replace: true });
+      } else {
+        // Logged in but no coach role → deny access
+        console.log('[CoachAuth] No coach role, signing out');
+        await supabase.auth.signOut();
+        toast({
+          title: 'Acesso negado',
+          description: 'Você não tem permissão de coach.',
+          variant: 'destructive',
+        });
+        setContactEmail(normalizedEmail);
+        setFlowState('contact_modal');
+      }
     } catch (err) {
       console.error('[CoachAuth] Login error:', err);
       toast({
@@ -224,8 +207,6 @@ export default function CoachAuth() {
       setIsSubmitting(false);
     }
   };
-
-  // handleSetPassword removed - now handled by /coach/definir-senha
 
   // ===== HANDLE CONTACT SUBMIT (smart upsert - no duplicates) =====
   const handleContactSubmit = async (e: React.FormEvent) => {
@@ -249,26 +230,24 @@ export default function CoachAuth() {
     }
 
     setIsSubmitting(true);
-
     const normalizedEmail = contactEmail.toLowerCase().trim();
 
     try {
-      // FONTE DA VERDADE: user_roles (não coach_applications)
-      const hasCoachRole = await checkCoachRoleByEmail(normalizedEmail);
+      // Check if email is already approved
+      const isApproved = await checkEmailApproved(normalizedEmail);
       
-      if (hasCoachRole) {
-        // Já é coach aprovado → redirecionar para login/definir senha
+      if (isApproved) {
+        // Already approved → redirect to set password
         toast({
-          title: 'Acesso já aprovado',
-          description: 'Seu acesso já foi aprovado. Faça login ou defina sua senha.',
+          title: 'Acesso já aprovado!',
+          description: 'Defina sua senha para entrar.',
         });
-        setFlowState('login');
-        setEmail(normalizedEmail);
+        navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
         setIsSubmitting(false);
         return;
       }
 
-      // (a) Check for existing application for this email (apenas para evitar duplicatas)
+      // Check for existing application
       const { data: existing, error: fetchErr } = await supabase
         .from('coach_applications')
         .select('id, status')
@@ -281,45 +260,47 @@ export default function CoachAuth() {
         console.error('[CoachAuth] fetch existing error:', fetchErr);
       }
 
-      // (b) If pending → don't insert, show toast (apenas para evitar duplicatas, não para gate)
-      if (existing?.status === 'pending') {
-        toast({
-          title: 'Solicitação já existe',
-          description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // (c) If rejected → update existing to pending (reopen)
-      if (existing?.status === 'rejected') {
-        const { error: updateErr } = await supabase
-          .from('coach_applications')
-          .update({
-            full_name: contactName.trim(),
-            instagram: contactPhone.trim(),
-            status: 'pending',
-            rejection_reason: null,
-            reviewed_at: null,
-            reviewed_by: null,
-          })
-          .eq('id', existing.id);
-
-        if (updateErr) {
-          console.error('[CoachAuth] update rejected error:', updateErr);
+      // Handle existing applications
+      if (existing) {
+        if (existing.status === 'pending') {
           toast({
-            title: 'Erro ao reenviar',
-            description: 'Tente novamente.',
-            variant: 'destructive',
+            title: 'Solicitação já existe',
+            description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
           });
-        } else {
-          setFlowState('contact_sent');
+          setIsSubmitting(false);
+          return;
         }
-        setIsSubmitting(false);
-        return;
+
+        if (existing.status === 'rejected') {
+          // Reopen rejected application
+          const { error: updateErr } = await supabase
+            .from('coach_applications')
+            .update({
+              full_name: contactName.trim(),
+              instagram: contactPhone.trim(),
+              status: 'pending',
+              rejection_reason: null,
+              reviewed_at: null,
+              reviewed_by: null,
+            })
+            .eq('id', existing.id);
+
+          if (updateErr) {
+            console.error('[CoachAuth] update rejected error:', updateErr);
+            toast({
+              title: 'Erro ao reenviar',
+              description: 'Tente novamente.',
+              variant: 'destructive',
+            });
+          } else {
+            setFlowState('contact_sent');
+          }
+          setIsSubmitting(false);
+          return;
+        }
       }
 
-      // (d) No existing → create new
+      // No existing → create new application
       const { error: insertErr } = await supabase
         .from('coach_applications')
         .insert({
@@ -363,7 +344,6 @@ export default function CoachAuth() {
   const resetToLogin = () => {
     setFlowState('login');
     setPassword('');
-    setConfirmPassword('');
     setContactName('');
     setContactPhone('');
     setErrors({});
@@ -377,8 +357,6 @@ export default function CoachAuth() {
       </div>
     );
   }
-
-  // set_password screen removed - now using /coach/definir-senha route
 
   // ===== RENDER: LOGIN SCREEN =====
   return (
@@ -494,7 +472,7 @@ export default function CoachAuth() {
           className="mt-6 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.8 }}
         >
           <button
             onClick={() => {
@@ -503,163 +481,168 @@ export default function CoachAuth() {
             }}
             className="text-muted-foreground/50 hover:text-muted-foreground text-xs transition-colors"
           >
-            Ainda não tem acesso? Solicitar acesso
+            Solicitar acesso de Coach
           </button>
+        </motion.div>
 
-          <div className="mt-4">
-            <Link
-              to="/login"
-              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors flex items-center gap-1 justify-center"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Voltar
-            </Link>
-          </div>
+        {/* Back to user login */}
+        <motion.div 
+          className="mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+        >
+          <Link
+            to="/login"
+            className="text-muted-foreground/40 hover:text-muted-foreground text-xs flex items-center gap-1 transition-colors"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Voltar
+          </Link>
         </motion.div>
       </motion.div>
 
       {/* ===== CONTACT MODAL ===== */}
       <AnimatePresence>
-        {(flowState === 'contact_modal' || flowState === 'contact_sent') && (
+        {flowState === 'contact_modal' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={resetToLogin}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && resetToLogin()}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[400px] bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm bg-card border border-border/30 rounded-lg overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border/30">
-                <h2 className="font-display text-lg font-semibold text-foreground">
-                  Deixe seu contato
-                </h2>
+              <div className="px-4 py-3 border-b border-border/20 flex items-center justify-between">
+                <h3 className="font-display font-semibold text-foreground">
+                  Solicitar Acesso
+                </h3>
                 <button
                   onClick={resetToLogin}
-                  className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <X className="w-5 h-5 text-muted-foreground" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Content */}
-              <div className="p-4">
-                {/* Success State */}
-                {flowState === 'contact_sent' && (
-                  <div className="text-center py-6">
-                    <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-4">
-                      <CheckCircle className="w-8 h-8 text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Contato Enviado!
-                    </h3>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      Aguarde aprovação do admin. Você receberá acesso em breve.
-                    </p>
-                    <button
-                      onClick={resetToLogin}
-                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 transition-opacity"
-                    >
-                      Fechar
-                    </button>
+              {/* Form */}
+              <form onSubmit={handleContactSubmit} className="p-4 space-y-3">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Deixe seu contato para solicitar acesso ao painel de coach.
+                </p>
+
+                {/* Name */}
+                <div>
+                  <div className="relative">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <input
+                      type="text"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.full_name ? 'border-destructive/50' : 'border-border/30'
+                      }`}
+                      placeholder="Seu nome completo"
+                    />
                   </div>
-                )}
+                  {errors.full_name && (
+                    <p className="text-destructive text-xs mt-1">{errors.full_name}</p>
+                  )}
+                </div>
 
-                {/* Form State */}
-                {flowState === 'contact_modal' && (
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
-                    <p className="text-muted-foreground text-sm mb-4">
-                      Preencha seus dados para solicitar acesso como Coach.
-                    </p>
+                {/* Email */}
+                <div>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.email ? 'border-destructive/50' : 'border-border/30'
+                      }`}
+                      placeholder="Seu email"
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-destructive text-xs mt-1">{errors.email}</p>
+                  )}
+                </div>
 
-                    {/* Full Name */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Nome Completo *
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                          type="text"
-                          value={contactName}
-                          onChange={(e) => setContactName(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                            errors.full_name ? 'border-destructive' : 'border-border'
-                          }`}
-                          placeholder="Seu nome completo"
-                        />
-                      </div>
-                      {errors.full_name && (
-                        <p className="text-destructive text-xs mt-1">{errors.full_name}</p>
-                      )}
-                    </div>
+                {/* Contact (WhatsApp/Instagram) */}
+                <div>
+                  <div className="relative">
+                    <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <input
+                      type="text"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.contact ? 'border-destructive/50' : 'border-border/30'
+                      }`}
+                      placeholder="WhatsApp ou Instagram"
+                    />
+                  </div>
+                  {errors.contact && (
+                    <p className="text-destructive text-xs mt-1">{errors.contact}</p>
+                  )}
+                </div>
 
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Email *
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                          type="email"
-                          value={contactEmail}
-                          onChange={(e) => setContactEmail(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                            errors.email ? 'border-destructive' : 'border-border'
-                          }`}
-                          placeholder="seu@email.com"
-                        />
-                      </div>
-                      {errors.email && (
-                        <p className="text-destructive text-xs mt-1">{errors.email}</p>
-                      )}
-                    </div>
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  ENVIAR
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                    {/* Contact */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        WhatsApp ou Instagram *
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                          type="text"
-                          value={contactPhone}
-                          onChange={(e) => setContactPhone(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                            errors.contact ? 'border-destructive' : 'border-border'
-                          }`}
-                          placeholder="(11) 99999-9999 ou @seuinsta"
-                        />
-                      </div>
-                      {errors.contact && (
-                        <p className="text-destructive text-xs mt-1">{errors.contact}</p>
-                      )}
-                    </div>
-
-                    {/* Submit */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                      Enviar contato
-                    </button>
-                  </form>
-                )}
+      {/* ===== CONTACT SENT CONFIRMATION ===== */}
+      <AnimatePresence>
+        {flowState === 'contact_sent' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm bg-card border border-border/30 rounded-lg p-6 text-center"
+            >
+              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
+              <h3 className="font-display font-semibold text-lg text-foreground mb-2">
+                Solicitação Enviada!
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Sua solicitação foi recebida. Entraremos em contato em breve.
+              </p>
+              <button
+                onClick={resetToLogin}
+                className="px-6 py-2 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all"
+              >
+                OK
+              </button>
             </motion.div>
           </motion.div>
         )}
