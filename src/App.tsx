@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
+import { GlobalDebugBar } from "@/components/GlobalDebugBar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
@@ -55,6 +56,9 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppGate>
+        
+        {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
+        <GlobalDebugBar />
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>
