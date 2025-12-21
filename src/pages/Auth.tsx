@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus } from 'lucide-react';
 import { CoachApplicationModal } from '@/components/CoachApplicationModal';
+import { QAActivationModal } from '@/components/QAActivationModal';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password';
 type AuthContext = 'user' | 'coach' | 'admin';
@@ -42,6 +43,34 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [resetSent, setResetSent] = useState(false);
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showQAModal, setShowQAModal] = useState(false);
+  
+  // Hidden QA trigger - 5 clicks on logo
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleLogoClick = () => {
+    // Only in dev/preview
+    if (import.meta.env.PROD) return;
+    
+    logoClickCount.current += 1;
+    
+    // Reset timer on each click
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+    
+    // Check if 5 clicks
+    if (logoClickCount.current >= 5) {
+      logoClickCount.current = 0;
+      setShowQAModal(true);
+    }
+    
+    // Reset after 2 seconds of no clicks
+    logoClickTimer.current = setTimeout(() => {
+      logoClickCount.current = 0;
+    }, 2000);
+  };
 
   const { user, canManageWorkouts, isAdmin, isCoach, loading: authLoading } = useAuth();
   const { setCurrentView } = useOutlierStore();
@@ -443,12 +472,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
       >
         {/* HERO BRANDING - Maximum emphasis */}
         <div className="text-center mb-12">
-          {/* Logo - Identical to WelcomeScreen */}
+          {/* Logo - Identical to WelcomeScreen - Hidden QA trigger with 5 clicks */}
           <motion.h1 
-            className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo mb-3"
+            className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo mb-3 cursor-default select-none"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
+            onClick={handleLogoClick}
           >
             {context === 'user' ? 'OUTLIER' : context === 'coach' ? 'COACH' : 'ADMIN'}
           </motion.h1>
@@ -710,6 +740,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
           onClose={() => setShowApplicationModal(false)} 
         />
       )}
+      
+      {/* QA Debug Activation Modal - dev/preview only */}
+      <QAActivationModal 
+        isOpen={showQAModal} 
+        onClose={() => setShowQAModal(false)} 
+      />
     </div>
   );
 }
