@@ -19,6 +19,7 @@ import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { getCoachCopy } from '@/config/coachCopy';
 import { WeekNavigator } from './WeekNavigator';
+import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -96,6 +97,9 @@ export function Dashboard() {
     goToNextWeek,
     goToCurrentWeek,
     isViewingHistory,
+    // Debug info
+    debugInfo,
+    resetToCurrentWeek,
   } = useAthletePlan();
   
   // Carregar configurações do atleta do banco (persistência)
@@ -843,6 +847,23 @@ export function Dashboard() {
         onClose={() => setIsAdaptModalOpen(false)}
         onApply={handleSaveEquipmentAdaptations}
         initialSelection={savedUnavailableEquipment}
+      />
+
+      {/* Debug Bar para navegação semanal (Ctrl+Shift+D ou ?debug=1) */}
+      <AthleteWeekDebugBar
+        now={debugInfo.now}
+        currentWeekStart={debugInfo.currentWeekStart}
+        selectedWeekStart={debugInfo.selectedWeekStart}
+        minWeekStart={debugInfo.minWeekStart}
+        maxWeekStart={debugInfo.maxWeekStart}
+        hasPlanForSelectedWeek={debugInfo.hasPlanForSelectedWeek}
+        plansFoundWeekStarts={debugInfo.plansFoundWeekStarts}
+        onGoToPrev={goToPreviousWeek}
+        onGoToCurrent={goToCurrentWeek}
+        onGoToNext={goToNextWeek}
+        onReset={resetToCurrentWeek}
+        canGoToPrev={canNavigateToPast}
+        canGoToNext={canNavigateToFuture}
       />
     </div>
   );
