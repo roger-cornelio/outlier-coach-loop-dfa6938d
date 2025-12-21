@@ -65,19 +65,25 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [error, setError] = useState<string | null>(null);
 
   // Calcular semanas permitidas usando função canônica
-  // Normalizar para meia-noite local para evitar bugs de timezone
-  const now = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+  // CRÍTICO: Não usar useMemo com deps vazias - recalcular baseado no currentWeekStart
+  const currentWeekStart = getAthleteCurrentWeekStart(new Date());
   
-  const allowedWeeks = useMemo(() => getAthleteAllowedWeeks(now), [now]);
+  const allowedWeeks = useMemo(() => ({
+    prev: (() => {
+      const d = new Date(currentWeekStart + 'T12:00:00');
+      d.setDate(d.getDate() - 7);
+      return d.toISOString().split('T')[0];
+    })(),
+    curr: currentWeekStart,
+    next: (() => {
+      const d = new Date(currentWeekStart + 'T12:00:00');
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split('T')[0];
+    })(),
+  }), [currentWeekStart]);
   
   // Estado: qual das 3 semanas está selecionada (prev, curr, next)
-  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => 
-    getAthleteCurrentWeekStart(new Date())
-  );
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(currentWeekStart);
 
   // Sincronizar selectedWeekStart se estiver fora da janela permitida (ex: reload no domingo)
   useEffect(() => {
