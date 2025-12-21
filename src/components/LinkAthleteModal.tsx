@@ -38,20 +38,19 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
   
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [foundAthlete, setFoundAthlete] = useState<{
-    id: string;
-    user_id: string;
-    name: string | null;
-    email: string;
-    coach_id: string | null;
-    profileWasCreated?: boolean;
+  const [searchResult, setSearchResult] = useState<{
+    status: string;
+    message: string;
+    profile_id?: string;
+    user_id?: string;
+    name?: string;
+    email?: string;
+    coach_id?: string;
   } | null>(null);
 
   const resetState = () => {
     setEmail('');
-    setError(null);
-    setFoundAthlete(null);
+    setSearchResult(null);
     setIsLoading(false);
   };
 
@@ -64,102 +63,71 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
     const normalizedEmail = email.trim().toLowerCase();
     
     if (!normalizedEmail) {
-      setError('Digite o email do atleta');
+      setSearchResult({ status: 'INVALID_EMAIL', message: 'Digite o email do atleta' });
       return;
     }
 
     setIsLoading(true);
-    setError(null);
-    setFoundAthlete(null);
+    setSearchResult(null);
 
     try {
-      // Usar função security definer que bypassa RLS para busca e cria profile se necessário
-      const { data, error: searchError } = await supabase
-        .rpc('search_athlete_by_email', { _email: normalizedEmail });
+      const { data, error: rpcError } = await supabase
+        .rpc('coach_find_athlete_by_email', { _email: normalizedEmail });
 
-      if (searchError) {
-        console.error('[LinkAthleteModal] Search error:', searchError);
-        setError('Erro ao buscar atleta');
+      if (rpcError) {
+        console.error('[LinkAthleteModal] RPC error:', rpcError);
+        setSearchResult({ status: 'ERROR', message: 'Erro ao buscar atleta' });
         return;
       }
 
-      // A função retorna array, pegar primeiro resultado
-      const athleteResult = Array.isArray(data) ? data[0] : data;
-
-      if (!athleteResult) {
-        setError('Nenhum usuário encontrado com esse email. Verifique se o atleta já criou uma conta no app.');
-        return;
-      }
-
-      // Verificar se já é o próprio coach
-      if (athleteResult.profile_id === profile?.id) {
-        setError('Você não pode vincular a si mesmo');
-        return;
-      }
-
-      // Verificar se é coach/admin (não pode ser vinculado como atleta)
-      if (athleteResult.is_coach_or_admin) {
-        setError('Este usuário é coach/admin e não pode ser vinculado como atleta');
-        return;
-      }
-
-      // Verificar se já está vinculado a outro coach
-      if (athleteResult.coach_id && athleteResult.coach_id !== profile?.id) {
-        setError('Este atleta já está vinculado a outro coach');
-        return;
-      }
-
-      // Se já está vinculado a este coach
-      if (athleteResult.coach_id === profile?.id) {
-        setError('Este atleta já está vinculado a você');
-        return;
-      }
-
-      setFoundAthlete({
-        id: athleteResult.profile_id,
-        user_id: athleteResult.user_id,
-        name: athleteResult.name,
-        email: athleteResult.email,
-        coach_id: athleteResult.coach_id,
-        profileWasCreated: athleteResult.profile_was_created
-      });
+      // data is jsonb, cast to our type
+      const result = data as {
+        status: string;
+        message: string;
+        profile_id?: string;
+        user_id?: string;
+        name?: string;
+        email?: string;
+        coach_id?: string;
+      };
+      setSearchResult(result);
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
-      setError('Erro inesperado ao buscar atleta');
+      setSearchResult({ status: 'ERROR', message: 'Erro inesperado ao buscar atleta' });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const canLink = searchResult?.status === 'OK' || searchResult?.status === 'PROFILE_CREATED';
+
   const handleLink = async () => {
-    if (!foundAthlete || !profile?.id) return;
+    if (!canLink || !searchResult?.profile_id || !profile?.id) return;
 
     setIsLoading(true);
-    setError(null);
 
     try {
-      // Atualizar coach_id no profile do atleta
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ coach_id: profile.id })
-        .eq('id', foundAthlete.id);
+        .eq('id', searchResult.profile_id);
 
       if (updateError) {
         console.error('[LinkAthleteModal] Update error:', updateError);
-        setError('Erro ao vincular atleta');
+        setSearchResult({ status: 'ERROR', message: 'Erro ao vincular atleta' });
         return;
       }
 
       toast({
         title: 'Atleta vinculado!',
-        description: `${foundAthlete.name || foundAthlete.email} agora é seu atleta.`,
+        description: `${searchResult.name || searchResult.email} agora é seu atleta.`,
       });
 
       onSuccess();
       handleClose();
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
-      setError('Erro inesperado ao vincular atleta');
+      setSearchResult({ status: 'ERROR', message: 'Erro inesperado ao vincular atleta' });
     } finally {
       setIsLoading(false);
     }
@@ -190,9 +158,9 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                disabled={isLoading || !!foundAthlete}
+                disabled={isLoading || canLink}
               />
-              {!foundAthlete && (
+              {!canLink && (
                 <Button onClick={handleSearch} disabled={isLoading || !email.trim()}>
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -204,37 +172,55 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
             </div>
           </div>
 
-          {/* Mensagem de erro */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">{error}</p>
+          {/* Status messages */}
+          {searchResult && !canLink && (
+            <div className={`flex items-center gap-2 p-3 rounded-lg ${
+              searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
+              searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
+              searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
+                ? 'bg-destructive/10 border border-destructive/20'
+                : 'bg-muted'
+            }`}>
+              <AlertCircle className={`w-4 h-4 flex-shrink-0 ${
+                searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
+                searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
+                searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
+              }`} />
+              <p className={`text-sm ${
+                searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
+                searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
+                searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
+              }`}>{searchResult.message}</p>
+            </div>
+          )}
+
+          {/* Profile created message */}
+          {searchResult?.status === 'PROFILE_CREATED' && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                {searchResult.message}
+              </p>
             </div>
           )}
 
           {/* Atleta encontrado */}
-          {foundAthlete && (
-            <div className="space-y-2">
-              {foundAthlete.profileWasCreated && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Usuário existe no Auth mas profile estava faltando — corrigido automaticamente.
-                  </p>
+          {canLink && searchResult && (
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
                 </div>
-              )}
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {foundAthlete.name || 'Sem nome'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {foundAthlete.email}
-                    </p>
-                  </div>
+                <div>
+                  <p className="font-medium text-foreground">
+                    {searchResult.name || 'Sem nome'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {searchResult.email}
+                  </p>
                 </div>
               </div>
             </div>
@@ -245,7 +231,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          {foundAthlete && (
+          {canLink && (
             <Button onClick={handleLink} disabled={isLoading}>
               {isLoading ? (
                 <>
