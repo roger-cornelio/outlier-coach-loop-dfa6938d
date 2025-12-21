@@ -23,10 +23,11 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Loader2, Users, LogOut, User, FileText,
+  Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
   AlertTriangle, Upload, Calendar
 } from 'lucide-react';
+import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
@@ -391,9 +392,11 @@ export default function CoachDashboard() {
                         key={athlete.id}
                         className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="w-5 h-5 text-primary" />
-                        </div>
+                        <UserAvatar
+                          name={athlete.name || athlete.email}
+                          size="md"
+                          showGlow
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground truncate">
                             {athlete.name || athlete.email}
