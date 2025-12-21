@@ -45,6 +45,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
     name: string | null;
     email: string;
     coach_id: string | null;
+    profileWasCreated?: boolean;
   } | null>(null);
 
   const resetState = () => {
@@ -60,7 +61,9 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
   };
 
   const handleSearch = async () => {
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    if (!normalizedEmail) {
       setError('Digite o email do atleta');
       return;
     }
@@ -70,9 +73,9 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
     setFoundAthlete(null);
 
     try {
-      // Usar função security definer que bypassa RLS para busca
+      // Usar função security definer que bypassa RLS para busca e cria profile se necessário
       const { data, error: searchError } = await supabase
-        .rpc('search_athlete_by_email', { _email: email.trim() });
+        .rpc('search_athlete_by_email', { _email: normalizedEmail });
 
       if (searchError) {
         console.error('[LinkAthleteModal] Search error:', searchError);
@@ -84,7 +87,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
       const athleteResult = Array.isArray(data) ? data[0] : data;
 
       if (!athleteResult) {
-        setError('Nenhum usuário encontrado com esse email. Verifique se o atleta já criou uma conta.');
+        setError('Nenhum usuário encontrado com esse email. Verifique se o atleta já criou uma conta no app.');
         return;
       }
 
@@ -117,7 +120,8 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
         user_id: athleteResult.user_id,
         name: athleteResult.name,
         email: athleteResult.email,
-        coach_id: athleteResult.coach_id
+        coach_id: athleteResult.coach_id,
+        profileWasCreated: athleteResult.profile_was_created
       });
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
@@ -210,18 +214,27 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
 
           {/* Atleta encontrado */}
           {foundAthlete && (
-            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
+            <div className="space-y-2">
+              {foundAthlete.profileWasCreated && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Usuário existe no Auth mas profile estava faltando — corrigido automaticamente.
+                  </p>
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    {foundAthlete.name || 'Sem nome'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {foundAthlete.email}
-                  </p>
+              )}
+              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {foundAthlete.name || 'Sem nome'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {foundAthlete.email}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
