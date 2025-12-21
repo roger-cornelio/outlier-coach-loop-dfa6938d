@@ -70,12 +70,9 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
     setFoundAthlete(null);
 
     try {
-      // Buscar profile pelo email (case-insensitive)
-      const { data: athleteProfile, error: searchError } = await supabase
-        .from('profiles')
-        .select('id, user_id, name, email, coach_id')
-        .ilike('email', email.trim())
-        .maybeSingle();
+      // Usar função security definer que bypassa RLS para busca
+      const { data, error: searchError } = await supabase
+        .rpc('search_athlete_by_email', { _email: email.trim() });
 
       if (searchError) {
         console.error('[LinkAthleteModal] Search error:', searchError);
@@ -83,42 +80,45 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
         return;
       }
 
-      if (!athleteProfile) {
-        setError('Nenhum usuário encontrado com esse email');
+      // A função retorna array, pegar primeiro resultado
+      const athleteResult = Array.isArray(data) ? data[0] : data;
+
+      if (!athleteResult) {
+        setError('Nenhum usuário encontrado com esse email. Verifique se o atleta já criou uma conta.');
         return;
       }
 
       // Verificar se já é o próprio coach
-      if (athleteProfile.id === profile?.id) {
+      if (athleteResult.profile_id === profile?.id) {
         setError('Você não pode vincular a si mesmo');
         return;
       }
 
-      // Verificar se é coach (coaches não podem ser vinculados como atletas)
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', athleteProfile.user_id);
-
-      const isCoachOrAdmin = roles?.some(r => r.role === 'coach' || r.role === 'admin' || r.role === 'superadmin');
-      if (isCoachOrAdmin) {
+      // Verificar se é coach/admin (não pode ser vinculado como atleta)
+      if (athleteResult.is_coach_or_admin) {
         setError('Este usuário é coach/admin e não pode ser vinculado como atleta');
         return;
       }
 
       // Verificar se já está vinculado a outro coach
-      if (athleteProfile.coach_id && athleteProfile.coach_id !== profile?.id) {
+      if (athleteResult.coach_id && athleteResult.coach_id !== profile?.id) {
         setError('Este atleta já está vinculado a outro coach');
         return;
       }
 
       // Se já está vinculado a este coach
-      if (athleteProfile.coach_id === profile?.id) {
+      if (athleteResult.coach_id === profile?.id) {
         setError('Este atleta já está vinculado a você');
         return;
       }
 
-      setFoundAthlete(athleteProfile);
+      setFoundAthlete({
+        id: athleteResult.profile_id,
+        user_id: athleteResult.user_id,
+        name: athleteResult.name,
+        email: athleteResult.email,
+        coach_id: athleteResult.coach_id
+      });
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
       setError('Erro inesperado ao buscar atleta');
