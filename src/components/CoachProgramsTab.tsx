@@ -614,6 +614,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
         linkedAthletes={linkedAthletes}
         loadingAthletes={loadingAthletes}
         onSuccess={handlePublishSuccess}
+        weekStart={publishTarget?.week_start || null}
       />
     </div>
   );

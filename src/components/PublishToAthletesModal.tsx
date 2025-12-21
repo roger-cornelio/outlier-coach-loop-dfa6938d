@@ -1,21 +1,20 @@
 /**
  * PublishToAthletesModal - Modal para publicar treino para atletas vinculados
  * 
- * REGRAS OBRIGATÓRIAS (ANTI-BUG):
+ * REGRAS OBRIGATÓRIAS:
  * 1. Selecionar atletas (obrigatório)
- * 2. Selecionar data de agendamento (obrigatório - scheduled_date)
- * 3. É PROIBIDO publicar sem scheduled_date
- * 4. Confirmar e publicar
+ * 2. A semana de publicação vem de weekStart (segunda-feira da semana)
+ * 3. Confirmar e publicar
  * 
- * O treino só aparece no quadro semanal do atleta na scheduled_date.
+ * O treino aparece no quadro semanal do atleta na semana correspondente.
  */
 
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, addDays, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { DayWorkout, DayOfWeek, DAY_NAMES } from '@/types/outlier';
+import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { validateWorkoutForPublish } from '@/utils/workoutValidation';
 import {
@@ -30,16 +29,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, Send, Users, User, CheckCircle, AlertCircle, Copy, 
-  CalendarIcon, ChevronRight, ChevronLeft 
+  CalendarIcon 
 } from 'lucide-react';
 
 interface LinkedAthlete {
@@ -47,12 +40,6 @@ interface LinkedAthlete {
   user_id: string;
   name: string | null;
   email: string;
-}
-
-interface WeekPeriod {
-  startDate: string; // YYYY-MM-DD (Monday)
-  endDate: string;   // YYYY-MM-DD (Sunday)
-  label: string;
 }
 
 export interface PublishToAthletesModalProps {
@@ -63,11 +50,12 @@ export interface PublishToAthletesModalProps {
   linkedAthletes: LinkedAthlete[];
   loadingAthletes?: boolean;
   onSuccess?: () => void;
-  weekPeriod?: WeekPeriod | null;
+  /** Segunda-feira da semana (YYYY-MM-DD) - fonte única da verdade */
+  weekStart: string | null;
 }
 
-// Step enum for the wizard
-type PublishStep = 'athletes' | 'date' | 'confirm';
+// Step enum for the wizard - agora só 2 steps
+type PublishStep = 'athletes' | 'confirm';
 
 export function PublishToAthletesModal({ 
   open, 
@@ -77,7 +65,7 @@ export function PublishToAthletesModal({
   linkedAthletes,
   loadingAthletes = false,
   onSuccess,
-  weekPeriod,
+  weekStart,
 }: PublishToAthletesModalProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -85,12 +73,11 @@ export function PublishToAthletesModal({
   const athletes = linkedAthletes;
   const isLoading = loadingAthletes;
   
-  // Wizard state
+  // Wizard state - sem step de data
   const [currentStep, setCurrentStep] = useState<PublishStep>('athletes');
   
   // Selection state
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
-  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   
   // Publishing state
   const [isPublishing, setIsPublishing] = useState(false);
@@ -105,49 +92,43 @@ export function PublishToAthletesModal({
   } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
 
+  // Calcula o período da semana a partir de weekStart
+  const weekPeriodLabel = weekStart 
+    ? (() => {
+        const monday = parseISO(weekStart);
+        const sunday = addDays(monday, 6);
+        return `${format(monday, 'dd/MM', { locale: ptBR })} → ${format(sunday, 'dd/MM', { locale: ptBR })}`;
+      })()
+    : null;
+
   /**
-   * FUNÇÃO UTILITÁRIA ÚNICA: Verifica se a data está dentro da janela de publicação
-   * REGRA: Só pode publicar para semana atual ou próxima (segunda a domingo)
-   * Usada por: canProceed, handlePublish, UI de confirmação
+   * Verifica se a semana está dentro da janela de publicação (atual ou próxima)
    */
-  const isDateInPublishWindow = (date: Date | undefined): boolean => {
-    if (!date) return false;
+  const isWeekInPublishWindow = (): boolean => {
+    if (!weekStart) return false;
     
+    const weekStartDate = parseISO(weekStart);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const selectedDay = new Date(date);
-    selectedDay.setHours(0, 0, 0, 0);
-    
-    // Calcular início da semana da data selecionada (segunda-feira)
-    const selectedDayOfWeek = selectedDay.getDay();
-    const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
-    const weekStart = new Date(selectedDay);
-    weekStart.setDate(selectedDay.getDate() + daysToMonday);
-    weekStart.setHours(0, 0, 0, 0);
     
     // Calcular início da semana atual (segunda-feira)
-    const todayDayOfWeek = today.getDay();
-    const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
-    currentWeekStart.setHours(0, 0, 0, 0);
+    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
     
     // Calcular início da próxima semana (segunda-feira)
-    const nextWeekStart = new Date(currentWeekStart);
-    nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+    const nextWeekStart = addDays(currentWeekStart, 7);
     
-    const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
-    const isNextWeek = weekStart.getTime() === nextWeekStart.getTime();
+    // Normalizar para comparação
+    weekStartDate.setHours(0, 0, 0, 0);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    nextWeekStart.setHours(0, 0, 0, 0);
+    
+    const isSameWeek = weekStartDate.getTime() === currentWeekStart.getTime();
+    const isNextWeek = weekStartDate.getTime() === nextWeekStart.getTime();
     
     return isSameWeek || isNextWeek;
   };
 
-  // Determina se pode publicar baseado na data selecionada OU weekPeriod
-  const effectiveDateForValidation = weekPeriod 
-    ? new Date(weekPeriod.startDate + 'T00:00:00') 
-    : scheduledDate;
-  
-  const canPublish = Boolean(effectiveDateForValidation && isDateInPublishWindow(effectiveDateForValidation));
+  const canPublish = Boolean(weekStart && isWeekInPublishWindow());
 
   const copyErrorToClipboard = () => {
     if (!errorData) return;
@@ -172,19 +153,17 @@ export function PublishToAthletesModal({
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      console.log('[PublishToAthletesModal] Modal opened with athletes:', linkedAthletes);
+      console.log('[PublishToAthletesModal] Modal opened with athletes:', linkedAthletes, 'weekStart:', weekStart);
       setSelectedAthletes(new Set(linkedAthletes.map(a => a.user_id)));
-      setScheduledDate(undefined);
       setCurrentStep('athletes');
       setPublishedCount(0);
       setError(null);
       setErrorData(null);
     }
-  }, [open, linkedAthletes]);
+  }, [open, linkedAthletes, weekStart]);
 
   const handleClose = () => {
     setSelectedAthletes(new Set());
-    setScheduledDate(undefined);
     setCurrentStep('athletes');
     setPublishedCount(0);
     setError(null);
@@ -214,24 +193,25 @@ export function PublishToAthletesModal({
 
   const handleNext = () => {
     if (currentStep === 'athletes' && selectedAthletes.size > 0) {
-      setCurrentStep('date');
-    } else if (currentStep === 'date' && (scheduledDate || weekPeriod)) {
       setCurrentStep('confirm');
     }
   };
 
   const handleBack = () => {
-    if (currentStep === 'date') {
+    if (currentStep === 'confirm') {
       setCurrentStep('athletes');
-    } else if (currentStep === 'confirm') {
-      setCurrentStep('date');
     }
   };
 
   const handlePublish = async () => {
-    // VALIDAÇÃO DE JANELA DE PUBLICAÇÃO (semana atual ou próxima)
+    if (!weekStart) {
+      setError('Semana não definida. Salve a programação com uma semana selecionada.');
+      return;
+    }
+
+    // VALIDAÇÃO DE JANELA DE PUBLICAÇÃO
     if (!canPublish) {
-      const msg = 'Esta data está fora da janela de publicação. Só é possível publicar para atletas na semana atual ou na próxima.';
+      const msg = 'Esta semana está fora da janela de publicação. Só é possível publicar para atletas na semana atual ou na próxima.';
       setError(msg);
       toast({
         title: 'Publicação não permitida',
@@ -241,13 +221,10 @@ export function PublishToAthletesModal({
       return;
     }
 
-    // Use weekPeriod.startDate se disponível, senão usa scheduledDate
-    const effectiveDate = weekPeriod?.startDate || (scheduledDate ? format(scheduledDate, 'yyyy-MM-dd') : null);
-    
-    // VALIDAÇÃO OBRIGATÓRIA: Data é indispensável
+    // VALIDAÇÃO OBRIGATÓRIA
     const validation = validateWorkoutForPublish(
       workouts,
-      effectiveDate,
+      weekStart,
       Array.from(selectedAthletes)
     );
 
@@ -262,8 +239,8 @@ export function PublishToAthletesModal({
       return;
     }
 
-    if (!profile?.id || !effectiveDate) {
-      setError('Dados incompletos. Verifique se a semana/data foi selecionada.');
+    if (!profile?.id) {
+      setError('Dados incompletos. Perfil não encontrado.');
       return;
     }
 
@@ -271,10 +248,6 @@ export function PublishToAthletesModal({
     setError(null);
     setPublishedCount(0);
 
-    // Week start is still used for the unique constraint, but scheduled_date is what matters for display
-    const dateForWeekCalc = weekPeriod ? new Date(weekPeriod.startDate + 'T00:00:00') : scheduledDate!;
-    const weekStart = getWeekStartFromDate(dateForWeekCalc);
-    
     let successCount = 0;
     const errors: Array<{ athleteId: string; error: any }> = [];
 
@@ -284,9 +257,9 @@ export function PublishToAthletesModal({
           athlete_user_id: athleteUserId,
           coach_id: profile.id,
           week_start: weekStart,
-          scheduled_date: effectiveDate,
+          scheduled_date: weekStart, // Usa a segunda-feira como scheduled_date
           plan_json: { workouts },
-          title: title || `Treino ${effectiveDate}`,
+          title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),
         };
@@ -299,7 +272,6 @@ export function PublishToAthletesModal({
           status: payload.status,
         });
 
-        // Insert instead of upsert to allow multiple workouts per week
         const { error: insertError } = await supabase
           .from('athlete_plans')
           .insert(payload as any);
@@ -322,8 +294,8 @@ export function PublishToAthletesModal({
 
       if (successCount > 0) {
         toast({
-          title: 'Treino agendado!',
-          description: `Publicado para ${successCount} atleta(s) em ${effectiveDate}.`,
+          title: 'Treino publicado!',
+          description: `Publicado para ${successCount} atleta(s) - Semana ${weekPeriodLabel}.`,
         });
         onSuccess?.();
         
@@ -354,7 +326,7 @@ export function PublishToAthletesModal({
           payload: {
             athlete_user_id: errors[0]?.athleteId,
             coach_id: profile?.id,
-            scheduled_date: effectiveDate,
+            scheduled_date: weekStart,
           },
         });
         
@@ -381,10 +353,9 @@ export function PublishToAthletesModal({
   const allSelected = selectedAthletes.size === athletes.length && athletes.length > 0;
   const someSelected = selectedAthletes.size > 0 && selectedAthletes.size < athletes.length;
 
-  // Step indicators
+  // Step indicators - apenas 2 steps agora
   const steps = [
     { key: 'athletes', label: 'Atletas', completed: selectedAthletes.size > 0 },
-    { key: 'date', label: 'Data', completed: !!scheduledDate },
     { key: 'confirm', label: 'Confirmar', completed: publishedCount > 0 },
   ];
 
@@ -413,6 +384,18 @@ export function PublishToAthletesModal({
 
             {!isLoading && athletes.length > 0 && (
               <>
+                {/* Mostrar semana que será publicada */}
+                {weekPeriodLabel && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">
+                        Semana: {weekPeriodLabel}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-2 pb-2 border-b border-border">
                   <Checkbox
                     id="select-all"
@@ -462,136 +445,6 @@ export function PublishToAthletesModal({
           </div>
         );
 
-      case 'date':
-        return (
-          <div className="space-y-4">
-            {weekPeriod ? (
-              // Semana já selecionada pelo coach - mostrar resumo
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">Semana de Referência</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{weekPeriod.label}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Os treinos serão publicados com as datas desta semana ({weekPeriod.startDate} → {weekPeriod.endDate})
-                  </p>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <p className="text-xs text-green-600">
-                    ✓ Cada dia (Seg-Dom) será mapeado para a data correspondente da semana selecionada.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              // Fallback: seletor de data manual - SEM RESTRIÇÕES
-              <>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">Selecione a Data</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Escolha a data em que o treino deve aparecer no calendário dos atletas.
-                  </p>
-                </div>
-                
-                <div className="flex justify-center">
-                  <Calendar
-                    mode="single"
-                    selected={scheduledDate}
-                    onSelect={setScheduledDate}
-                    locale={ptBR}
-                    className={cn("rounded-md border pointer-events-auto")}
-                    // ⚠️ REGRA: Calendário NUNCA bloqueia datas - validação acontece na publicação
-                  />
-                </div>
-              </>
-            )}
-
-            {scheduledDate && (
-              <div className="space-y-2 text-center">
-                <p className="text-sm font-medium text-primary">
-                  Data selecionada: {format(scheduledDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-                
-                {/* Mensagem informativa usando a função utilitária única */}
-                {(() => {
-                  const isInWindow = isDateInPublishWindow(scheduledDate);
-                  
-                  // Determinar se é semana atual, próxima, passada ou futuro distante
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const selectedDay = new Date(scheduledDate);
-                  selectedDay.setHours(0, 0, 0, 0);
-                  
-                  const selectedDayOfWeek = selectedDay.getDay();
-                  const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
-                  const weekStart = new Date(selectedDay);
-                  weekStart.setDate(selectedDay.getDate() + daysToMonday);
-                  
-                  const todayDayOfWeek = today.getDay();
-                  const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
-                  const currentWeekStart = new Date(today);
-                  currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
-                  
-                  const nextWeekStart = new Date(currentWeekStart);
-                  nextWeekStart.setDate(currentWeekStart.getDate() + 7);
-                  
-                  const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
-                  const isNextWeek = weekStart.getTime() === nextWeekStart.getTime();
-                  const isPastWeek = weekStart < currentWeekStart;
-                  
-                  if (isSameWeek) {
-                    return (
-                      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <p className="text-xs text-green-500">
-                          ✓ Treino aparecerá imediatamente no painel do atleta.
-                        </p>
-                      </div>
-                    );
-                  } else if (isNextWeek) {
-                    return (
-                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <p className="text-xs text-blue-500">
-                          ℹ️ O atleta verá este treino quando a semana de {format(weekStart, "dd/MM", { locale: ptBR })} iniciar.
-                        </p>
-                      </div>
-                    );
-                  } else if (isPastWeek) {
-                    return (
-                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-xs text-amber-600">
-                          📅 Esta data está no passado. Você pode salvar como rascunho, mas a publicação para atletas só é permitida na semana atual ou próxima.
-                        </p>
-                      </div>
-                    );
-                  } else {
-                    // Futuro distante
-                    return (
-                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-xs text-amber-600">
-                          📅 Esta data pode ser salva, mas só pode ser publicada para atletas na semana atual ou na próxima.
-                        </p>
-                      </div>
-                    );
-                  }
-                })()}
-              </div>
-            )}
-            
-            {!scheduledDate && (
-              <div className="text-center p-2 rounded-lg bg-muted border border-border">
-                <p className="text-xs text-muted-foreground">
-                  Selecione uma data para continuar
-                </p>
-              </div>
-            )}
-          </div>
-        );
-
       case 'confirm':
         return (
           <div className="space-y-4">
@@ -606,7 +459,7 @@ export function PublishToAthletesModal({
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium">
-                  {scheduledDate && format(scheduledDate, "dd/MM/yyyy (EEEE)", { locale: ptBR })}
+                  Semana: {weekPeriodLabel || 'Não definida'}
                 </span>
               </div>
               
@@ -618,18 +471,29 @@ export function PublishToAthletesModal({
               </div>
             </div>
 
-            {/* Aviso quando data está fora da janela de publicação */}
-            {!canPublish && scheduledDate && (
+            {/* Aviso quando semana não definida */}
+            {!weekStart && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-600">
+                    Semana não definida. Salve a programação com uma semana selecionada antes de publicar.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Aviso quando fora da janela de publicação */}
+            {weekStart && !canPublish && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-amber-600">
-                      Publicação não permitida para esta data
+                      Publicação não permitida para esta semana
                     </p>
                     <p className="text-xs text-amber-600">
-                      A publicação para atletas só é permitida na semana atual ou na próxima. 
-                      Você pode salvar este treino como rascunho e publicá-lo quando a data estiver dentro da janela permitida.
+                      A publicação para atletas só é permitida na semana atual ou na próxima.
                     </p>
                   </div>
                 </div>
@@ -687,11 +551,7 @@ export function PublishToAthletesModal({
     switch (currentStep) {
       case 'athletes':
         return selectedAthletes.size > 0 && athletes.length > 0;
-      case 'date':
-        // Pode avançar para confirmação se tem data selecionada
-        return !!scheduledDate;
       case 'confirm':
-        // Só pode publicar se estiver dentro da janela de publicação
         return canPublish;
       default:
         return false;
@@ -706,16 +566,10 @@ export function PublishToAthletesModal({
             <Send className="w-5 h-5 text-primary" />
             Publicar Treino
           </DialogTitle>
-        <DialogDescription>
-          {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
-          {currentStep === 'date' && (
-            <span className="flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-              Escolha a data de agendamento (obrigatório).
-            </span>
-          )}
-          {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
-        </DialogDescription>
+          <DialogDescription>
+            {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
+            {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Step indicators */}
@@ -762,7 +616,6 @@ export function PublishToAthletesModal({
                 onClick={handleBack} 
                 disabled={isPublishing}
               >
-                <ChevronLeft className="w-4 h-4 mr-1" />
                 Voltar
               </Button>
             )}
@@ -779,7 +632,6 @@ export function PublishToAthletesModal({
                 disabled={!canProceed()}
               >
                 Próximo
-                <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
               <Button 
@@ -804,13 +656,4 @@ export function PublishToAthletesModal({
       </DialogContent>
     </Dialog>
   );
-}
-
-// Helper: Get week start (Monday) from a given date
-function getWeekStartFromDate(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split('T')[0];
 }
