@@ -7,10 +7,26 @@
  * REGRA: Este arquivo é a fonte única para estimativas de tempo/calorias.
  */
 
-import type { AthleteConfig, WorkoutBlock, DayWorkout, AthleteLevel } from '@/types/outlier';
+import type { AthleteConfig, WorkoutBlock, DayWorkout, AthleteLevel, TrainingLevel } from '@/types/outlier';
 import { getActiveParams, getModalityKcal, getIntensityFactor, getLevelSpeedKmh, getNumericParam } from '@/config/outlierParams';
 import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
 
+// ============================================
+// MULTIPLICADORES DE INTENSIDADE POR MODO
+// ============================================
+
+const INTENSITY_MULTIPLIERS: Record<TrainingLevel, number> = {
+  base: 0.90,        // Treino mais leve, menos calorias
+  progressivo: 1.00, // Intensidade padrão
+  performance: 1.10, // Treino mais intenso, mais calorias
+};
+
+/**
+ * Retorna o multiplicador de intensidade baseado no modo de treino
+ */
+export function getModeIntensityMultiplier(trainingLevel: TrainingLevel | undefined): number {
+  return INTENSITY_MULTIPLIERS[trainingLevel || 'progressivo'] || 1.0;
+}
 // ============================================
 // TIPOS
 // ============================================
@@ -386,11 +402,14 @@ export function estimateBlock(
     }
   }
   
+  // GARANTIA: calorias nunca podem ser negativas
+  estimatedKcal = Math.max(0, estimatedKcal);
+  
   return {
     blockId: block.id,
     title: block.title,
     type: block.type,
-    estimatedMinutes,
+    estimatedMinutes: Math.max(0, estimatedMinutes),
     estimatedKcal,
     confidence,
   };
@@ -403,6 +422,7 @@ export function estimateBlock(
 /**
  * Calcula tempo e calorias para um DayWorkout completo.
  * Recebe o treino JÁ ADAPTADO.
+ * Aplica multiplicador de intensidade baseado no modo (BASE/PROGRESSIVO/PERFORMANCE).
  */
 export function estimateWorkout(
   workoutDay: DayWorkout,
@@ -411,13 +431,24 @@ export function estimateWorkout(
 ): WorkoutEstimation {
   const biometrics = getUserBiometrics(athleteConfig);
   
-  const blocks: BlockEstimate[] = workoutDay.blocks.map(block => 
-    estimateBlock(block, biometrics, level)
-  );
+  // Multiplicador de intensidade por modo de treino
+  const intensityMultiplier = getModeIntensityMultiplier(athleteConfig?.trainingLevel);
+  
+  const blocks: BlockEstimate[] = workoutDay.blocks.map(block => {
+    const estimate = estimateBlock(block, biometrics, level);
+    
+    // Aplicar multiplicador de intensidade nas calorias
+    const adjustedKcal = Math.max(0, Math.round(estimate.estimatedKcal * intensityMultiplier));
+    
+    return {
+      ...estimate,
+      estimatedKcal: adjustedKcal,
+    };
+  });
   
   const totals = {
     estimatedMinutesTotal: blocks.reduce((sum, b) => sum + b.estimatedMinutes, 0),
-    estimatedKcalTotal: blocks.reduce((sum, b) => sum + b.estimatedKcal, 0),
+    estimatedKcalTotal: Math.max(0, blocks.reduce((sum, b) => sum + b.estimatedKcal, 0)),
   };
   
   return {
@@ -442,9 +473,10 @@ export function formatEstimatedTime(minutes: number): string {
 }
 
 /**
- * Formata calorias para exibição
+ * Formata calorias para exibição (sempre valor absoluto)
  */
 export function formatEstimatedKcal(kcal: number): string {
-  if (kcal <= 0) return '--';
-  return `~${kcal} kcal`;
+  const absKcal = Math.abs(kcal);
+  if (absKcal <= 0) return '--';
+  return `~${absKcal} kcal`;
 }
