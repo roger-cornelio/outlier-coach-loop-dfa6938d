@@ -243,38 +243,34 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
   };
 
   /**
-   * Extrai o período da semana do título do workout
-   * Formato esperado: "Nome [Semana: dd/MM → dd/MM]" ou "Semana: dd/MM - dd/MM"
-   * Retorna o período formatado ou null se não encontrar
-   */
-  const extractWeekFromTitle = (title: string): string | null => {
-    // Padrão 1: [Semana: dd/MM → dd/MM]
-    const match1 = title.match(/\[Semana:\s*(\d{2}\/\d{2})\s*[→-]\s*(\d{2}\/\d{2})\]/i);
-    if (match1) {
-      return `Semana: ${match1[1]} → ${match1[2]}`;
-    }
-    
-    // Padrão 2: Semana: dd/MM - dd/MM ou Semana dd/MM - dd/MM
-    const match2 = title.match(/Semana:?\s*(\d{2}\/\d{2})\s*[-–→]\s*(\d{2}\/\d{2})/i);
-    if (match2) {
-      return `Semana: ${match2[1]} → ${match2[2]}`;
-    }
-    
-    return null;
-  };
-
-  /**
    * Formata período da semana para exibição
-   * Prioridade: 1) Extrai do título, 2) Fallback para data de criação
+   * PRIORIDADE:
+   * 1. Usar week_start (campo canônico)
+   * 2. Fallback: extrair do título (dados legados)
+   * 3. Fallback final: calcular da data de criação
    */
-  const formatWeekPeriod = (workout: { title: string; created_at: string }) => {
-    // Tentar extrair do título primeiro (fonte correta)
-    const fromTitle = extractWeekFromTitle(workout.title);
-    if (fromTitle) {
-      return fromTitle;
+  const formatWeekPeriod = (workout: { title: string; created_at: string; week_start?: string | null }) => {
+    // PRIORIDADE 1: Usar campo canônico week_start
+    if (workout.week_start) {
+      const monday = new Date(workout.week_start + 'T12:00:00');
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      
+      const formatShort = (d: Date) => d.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+      });
+      
+      return `Semana: ${formatShort(monday)} → ${formatShort(sunday)}`;
     }
     
-    // Fallback: calcular da data de criação (menos preciso)
+    // FALLBACK 2: Extrair do título (dados legados com [Semana: dd/MM → dd/MM])
+    const match = workout.title.match(/\[?Semana:?\s*(\d{2}\/\d{2})\s*[→\-–]\s*(\d{2}\/\d{2})\]?/i);
+    if (match) {
+      return `Semana: ${match[1]} → ${match[2]}`;
+    }
+    
+    // FALLBACK 3: Calcular da data de criação (menos preciso)
     const date = new Date(workout.created_at);
     const dayOfWeek = date.getDay();
     const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;

@@ -368,6 +368,7 @@ export type Database = {
           status: Database["public"]["Enums"]["workout_status"]
           title: string
           updated_at: string
+          week_start: string | null
           workout_json: Json
         }
         Insert: {
@@ -378,6 +379,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["workout_status"]
           title: string
           updated_at?: string
+          week_start?: string | null
           workout_json?: Json
         }
         Update: {
@@ -388,6 +390,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["workout_status"]
           title?: string
           updated_at?: string
+          week_start?: string | null
           workout_json?: Json
         }
         Relationships: [
