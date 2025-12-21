@@ -2,14 +2,15 @@
  * useDebugAllowed - Hook para controlar acesso à Debug Bar
  * 
  * Regras:
- * 1. Só permite se profile.email === owner whitelist
- * 2. Só mostra se ?debug=1 na URL OU localStorage.DEBUG_BAR === '1'
- * 3. Reage a mudanças via Ctrl+Shift+D (evento customizado)
+ * 1. Owner Mode: profile.email === owner whitelist + debug flag
+ * 2. QA Mode: sessionStorage.QA_DEBUG === '1' (dev/preview only, any user)
+ * 3. QA Mode mostra dados limitados/mascarados
  */
 
 import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
+import { useQADebugMode } from '@/hooks/useQADebugMode';
 
 const OWNER_WHITELIST = ['roger.bm2016@gmail.com'];
 const DEBUG_STORAGE_KEY = 'DEBUG_BAR';
@@ -18,6 +19,8 @@ const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 export function useDebugAllowed() {
   const { profile, user } = useAuth();
   const [searchParams] = useSearchParams();
+  const { isQAActive, deactivateQA, getRemainingMinutes } = useQADebugMode();
+  
   const [debugStorageValue, setDebugStorageValue] = useState(() => 
     typeof window !== 'undefined' ? localStorage.getItem(DEBUG_STORAGE_KEY) === '1' : false
   );
@@ -32,19 +35,24 @@ export function useDebugAllowed() {
     return () => window.removeEventListener(DEBUG_TOGGLE_EVENT, handleToggle);
   }, []);
 
-  const isAllowed = useMemo(() => {
-    // Must be authenticated
+  // Check if user is owner
+  const isOwner = useMemo(() => {
     if (!profile?.email) return false;
+    return OWNER_WHITELIST.includes(profile.email.toLowerCase());
+  }, [profile?.email]);
 
-    // Must be in owner whitelist
-    const isOwner = OWNER_WHITELIST.includes(profile.email.toLowerCase());
+  // Owner mode: full access with debug flag
+  const isOwnerModeActive = useMemo(() => {
     if (!isOwner) return false;
-
-    // Must have debug flag enabled
     const debugParam = searchParams.get('debug') === '1';
-
     return debugParam || debugStorageValue;
-  }, [profile?.email, searchParams, debugStorageValue]);
+  }, [isOwner, searchParams, debugStorageValue]);
+
+  // Final allowed state: owner mode OR QA mode
+  const isAllowed = isOwnerModeActive || isQAActive;
+
+  // Determine mode for UI differentiation
+  const debugMode: 'owner' | 'qa' | null = isOwnerModeActive ? 'owner' : isQAActive ? 'qa' : null;
 
   // Helper to mask sensitive data
   const maskValue = (value: string | null | undefined, visibleChars = 4): string => {
@@ -63,6 +71,11 @@ export function useDebugAllowed() {
 
   return {
     isAllowed,
+    debugMode,
+    isOwner,
+    isQAActive,
+    deactivateQA,
+    getRemainingMinutes,
     maskValue,
     maskEmail,
     userId: user?.id,

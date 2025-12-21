@@ -1,13 +1,14 @@
 /**
- * DebugKeyboardToggle - Global keyboard shortcut for debug toggle
+ * DebugKeyboardToggle - Global keyboard shortcuts for debug
  * 
- * Ctrl+Shift+D toggles localStorage.DEBUG_BAR for owner only
- * Works on any route when authenticated as owner
+ * Ctrl+Shift+D: Toggle localStorage.DEBUG_BAR for owner only
+ * Ctrl+Shift+Q: Open QA activation modal (dev/preview only)
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { QAActivationModal } from '@/components/QAActivationModal';
 
 const OWNER_EMAIL = 'roger.bm2016@gmail.com';
 const DEBUG_STORAGE_KEY = 'DEBUG_BAR';
@@ -16,10 +17,11 @@ const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 export function DebugKeyboardToggle() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const [showQAModal, setShowQAModal] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+D
+      // Ctrl+Shift+D - Owner debug toggle
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault();
 
@@ -49,13 +51,30 @@ export function DebugKeyboardToggle() {
         // Dispatch custom event to notify useDebugAllowed
         window.dispatchEvent(new CustomEvent(DEBUG_TOGGLE_EVENT));
       }
+
+      // Ctrl+Shift+Q - QA modal (dev/preview only)
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        
+        // Only in dev/preview
+        if (import.meta.env.PROD) {
+          return;
+        }
+
+        setShowQAModal(true);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [profile?.email, toast]);
 
-  return null;
+  return (
+    <QAActivationModal 
+      isOpen={showQAModal} 
+      onClose={() => setShowQAModal(false)} 
+    />
+  );
 }
 
 export { DEBUG_TOGGLE_EVENT };
