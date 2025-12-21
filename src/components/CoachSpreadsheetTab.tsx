@@ -1,27 +1,31 @@
 /**
  * CoachSpreadsheetTab - Aba IMPORTAR do Coach
  * 
- * REGRA ANTI-BUG:
- * - Preview = estado local (parsedWorkouts)
- * - Nunca depende do banco para renderizar preview
- * - "Publicar para Atletas" usa preview local como fonte
+ * REGRAS ANTI-BUG:
+ * 1. Preview = estado local (parsedWorkouts)
+ * 2. Nunca depende do banco para renderizar preview
+ * 3. "Publicar para Atletas" usa preview local como fonte
+ * 4. OBRIGATÓRIO: semana de referência antes de salvar/publicar
+ * 5. WOD Principal: máximo 1 por dia, diferente de Benchmark
  * 
  * CONCEITOS:
  * - WOD Principal ≠ Benchmark (conceitos independentes)
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, HelpCircle 
+  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
+import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
 import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
+import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getBenchmarkCopy } from '@/config/workoutConceptsCopy';
+import { getBenchmarkCopy, getMainBlockCopy } from '@/config/workoutConceptsCopy';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -158,14 +162,48 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
   const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
   const [isSavingToDb, setIsSavingToDb] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  
+  // OBRIGATÓRIO: Semana de referência
+  const [selectedWeek, setSelectedWeek] = useState<WeekPeriod | null>(null);
+
+  // Validação: não pode salvar/publicar sem semana
+  const canSaveOrPublish = useMemo(() => {
+    return selectedWeek !== null && parsedWorkouts !== null && parsedWorkouts.length > 0;
+  }, [selectedWeek, parsedWorkouts]);
 
   const handleClearWorkouts = () => {
     setSpreadsheetText('');
     setParsedWorkouts(null);
     setProgramName('');
     setProgramStatus('draft');
+    setSelectedWeek(null);
     setSuccess(null);
     setError(null);
+  };
+
+  // Toggle WOD principal para um bloco específico (máximo 1 por dia)
+  const toggleMainWod = (dayIndex: number, blockIndex: number) => {
+    if (!parsedWorkouts) return;
+    
+    const updated = [...parsedWorkouts];
+    const day = updated[dayIndex];
+    const clickedBlock = day.blocks[blockIndex];
+    
+    // Se já está marcado como principal manual, remove
+    if (clickedBlock.isMainWod === true) {
+      clickedBlock.isMainWod = undefined;
+    } else {
+      // Remove marcação de todos os outros blocos do dia
+      day.blocks.forEach((block, idx) => {
+        if (idx === blockIndex) {
+          block.isMainWod = true;
+        } else {
+          block.isMainWod = undefined;
+        }
+      });
+    }
+    
+    setParsedWorkouts(updated);
   };
 
   const processSpreadsheet = async () => {
@@ -385,15 +423,18 @@ Terça-feira 📅
                         size="sm"
                         onClick={() => setShowPublishModal(true)}
                         className="flex items-center gap-1.5"
-                        disabled={linkedAthletes.length === 0}
+                        disabled={linkedAthletes.length === 0 || !selectedWeek}
                       >
                         <Send className="w-4 h-4" />
                         Publicar para Atletas
                       </Button>
                     </TooltipTrigger>
-                    {linkedAthletes.length === 0 && (
+                    {(linkedAthletes.length === 0 || !selectedWeek) && (
                       <TooltipContent>
-                        <p>Vincule atletas primeiro na aba Atletas</p>
+                        {!selectedWeek 
+                          ? <p>Selecione a semana de referência primeiro</p>
+                          : <p>Vincule atletas primeiro na aba Atletas</p>
+                        }
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -434,11 +475,31 @@ Terça-feira 📅
                         <div className="p-3 space-y-3 bg-background">
                           {workout.blocks.map((block, blockIndex) => {
                             const benchmarkCopy = getBenchmarkCopy();
+                            const mainBlockCopy = getMainBlockCopy();
+                            // Determinar se este bloco é o principal (manual ou auto)
+                            const mainBlockResult = identifyMainBlock(workout.blocks);
+                            const isMainBlock = mainBlockResult.blockIndex === blockIndex;
+                            const isManualMain = block.isMainWod === true;
+                            const isAutoMain = isMainBlock && !isManualMain && mainBlockResult.reason !== 'manual';
+                            
                             return (
-                            <div key={block.id} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
+                            <div key={block.id} className={`p-3 rounded-lg border ${
+                              isMainBlock 
+                                ? 'bg-primary/10 border-primary/30' 
+                                : 'bg-secondary/20 border-border/50'
+                            }`}>
+                              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm font-medium">{block.title}</span>
+                                  {isMainBlock && (
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                      isManualMain 
+                                        ? 'bg-primary/20 text-primary' 
+                                        : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      {mainBlockCopy.icon} {isManualMain ? mainBlockCopy.manualLabel : mainBlockCopy.autoLabel}
+                                    </span>
+                                  )}
                                   {block.isBenchmark && (
                                     <span className="text-xs bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
                                       {benchmarkCopy.icon} {benchmarkCopy.shortLabel}
@@ -446,6 +507,28 @@ Terça-feira 📅
                                   )}
                                 </div>
                                 <div className="flex gap-2">
+                                  {/* Botão WOD Principal */}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant={isManualMain ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
+                                          className={`h-7 text-xs ${isManualMain ? 'bg-primary hover:bg-primary/90' : ''}`}
+                                        >
+                                          <Star className={`w-3 h-3 mr-1 ${isManualMain ? 'fill-current' : ''}`} />
+                                          Principal
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p className="font-medium mb-1">{mainBlockCopy.label}</p>
+                                        <p className="text-xs text-muted-foreground">{mainBlockCopy.editorDescription}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  
+                                  {/* Botão Benchmark */}
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -480,6 +563,12 @@ Terça-feira 📅
               ))}
             </div>
 
+            {/* OBRIGATÓRIO: Seletor de Semana */}
+            <WeekPeriodSelector
+              selectedWeek={selectedWeek}
+              onWeekSelect={setSelectedWeek}
+            />
+
             {/* Configurações de salvamento */}
             <div className="pt-4 border-t border-border space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -489,7 +578,7 @@ Terça-feira 📅
                     id="programName"
                     value={programName}
                     onChange={(e) => setProgramName(e.target.value)}
-                    placeholder={`Semana ${new Date().toLocaleDateString('pt-BR')}`}
+                    placeholder={selectedWeek ? `Semana ${selectedWeek.label}` : 'Selecione a semana primeiro'}
                   />
                 </div>
                 <div className="space-y-2">
@@ -500,6 +589,7 @@ Terça-feira 📅
                       size="sm"
                       onClick={() => setProgramStatus('draft')}
                       className="flex-1"
+                      disabled={!canSaveOrPublish}
                     >
                       Rascunho
                     </Button>
@@ -508,6 +598,7 @@ Terça-feira 📅
                       size="sm"
                       onClick={() => setProgramStatus('published')}
                       className="flex-1"
+                      disabled={!canSaveOrPublish}
                     >
                       Publicar
                     </Button>
@@ -515,23 +606,36 @@ Terça-feira 📅
                 </div>
               </div>
               
-              <Button
-                onClick={saveWorkouts}
-                disabled={isSavingToDb}
-                className="w-full"
-              >
-                {isSavingToDb ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar Programação
-                  </>
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        onClick={saveWorkouts}
+                        disabled={isSavingToDb || !canSaveOrPublish}
+                        className="w-full"
+                      >
+                        {isSavingToDb ? (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Salvar {parsedWorkouts?.length || 0} dia(s)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!canSaveOrPublish && (
+                    <TooltipContent>
+                      <p>Selecione a semana de referência para salvar</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -555,9 +659,10 @@ Terça-feira 📅
         open={showPublishModal}
         onOpenChange={setShowPublishModal}
         workouts={parsedWorkouts || []}
-        title={programName || `Semana ${new Date().toLocaleDateString('pt-BR')}`}
+        title={programName || (selectedWeek ? `Semana ${selectedWeek.label}` : `Semana ${new Date().toLocaleDateString('pt-BR')}`)}
         linkedAthletes={linkedAthletes}
         loadingAthletes={loadingAthletes}
+        weekPeriod={selectedWeek}
       />
     </div>
   );
