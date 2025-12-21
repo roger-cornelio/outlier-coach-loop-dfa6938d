@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek, type AthleteLevel } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp } from 'lucide-react';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
@@ -513,6 +513,36 @@ export function Dashboard() {
               {/* Day Header */}
               <div className="mb-8">
                 <h2 className="font-display text-4xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
+                
+                {/* Training Level Badge */}
+                <div className="mb-3">
+                  {athleteConfig?.trainingLevel ? (
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold uppercase text-sm tracking-wide ${
+                      athleteConfig.trainingLevel === 'base' 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : athleteConfig.trainingLevel === 'performance'
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}>
+                      {athleteConfig.trainingLevel === 'base' && <Target className="w-4 h-4" />}
+                      {athleteConfig.trainingLevel === 'progressivo' && <TrendingUp className="w-4 h-4" />}
+                      {athleteConfig.trainingLevel === 'performance' && <Flame className="w-4 h-4" />}
+                      <span>NÍVEL: {athleteConfig.trainingLevel.toUpperCase()}</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold uppercase text-sm tracking-wide bg-muted/50 text-muted-foreground border border-border">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>NÍVEL: NÃO DEFINIDO</span>
+                      <button 
+                        onClick={() => setCurrentView('config')}
+                        className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded hover:bg-primary/30 transition-colors"
+                      >
+                        Definir
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
