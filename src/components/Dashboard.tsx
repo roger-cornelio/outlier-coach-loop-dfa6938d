@@ -204,63 +204,67 @@ export function Dashboard() {
     }
   };
 
-  // Fetch AI feedback when workout or coach style changes - with anti-loop protection
-  const feedbackLockRef = useRef(false);
-  const lastFeedbackKeyRef = useRef<string | null>(null);
-  
-  useEffect(() => {
-    const fetchFeedback = async () => {
-      // Guard: no workout or coach style
-      if (!currentWorkout || !athleteConfig?.coachStyle) {
+  // === FEEDBACK: Manual only, NO auto-call ===
+  const isGeneratingFeedbackRef = useRef(false);
+  const lastFeedbackTimestampRef = useRef(0);
+  const FEEDBACK_COOLDOWN_MS = 5000; // 5 second cooldown
+
+  const handleGenerateFeedback = async () => {
+    // Guard: no workout or coach style
+    if (!currentWorkout || !athleteConfig?.coachStyle) {
+      toast.error('Nenhum treino disponível para gerar feedback.');
+      return;
+    }
+
+    // Lock: prevent duplicate calls
+    if (isGeneratingFeedbackRef.current) {
+      console.log('[Feedback] Already generating, skipping...');
+      return;
+    }
+
+    // Cooldown: prevent rapid successive calls
+    const now = Date.now();
+    if (now - lastFeedbackTimestampRef.current < FEEDBACK_COOLDOWN_MS) {
+      toast.info('Aguarde alguns segundos antes de tentar novamente.');
+      return;
+    }
+
+    isGeneratingFeedbackRef.current = true;
+    lastFeedbackTimestampRef.current = now;
+    setIsLoadingFeedback(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-workout-feedback', {
+        body: {
+          coachStyle: athleteConfig.coachStyle,
+          blocks: currentWorkout.blocks.map(b => ({
+            type: b.type,
+            title: b.title,
+            content: b.content,
+          })),
+          dayName: DAY_NAMES[currentWorkout.day],
+          sex: athleteConfig.sexo,
+        },
+      });
+
+      // Defensive: don't throw, handle gracefully
+      if (error || !data?.feedback) {
+        console.warn('[Feedback] Error or no data:', error);
+        toast.error('Não foi possível gerar feedback agora. Tente novamente.');
         setWorkoutFeedback(null);
-        return;
+      } else {
+        setWorkoutFeedback(data.feedback);
       }
-
-      // Anti-loop: create unique key for this request
-      const feedbackKey = `${currentWorkout.day}-${athleteConfig.coachStyle}-${isShowingAdapted}`;
-      
-      // Skip if already fetching or same request
-      if (feedbackLockRef.current || lastFeedbackKeyRef.current === feedbackKey) {
-        return;
-      }
-
-      feedbackLockRef.current = true;
-      lastFeedbackKeyRef.current = feedbackKey;
-      setIsLoadingFeedback(true);
-      
-      try {
-        const { data, error } = await supabase.functions.invoke('generate-workout-feedback', {
-          body: {
-            coachStyle: athleteConfig.coachStyle,
-            blocks: currentWorkout.blocks.map(b => ({
-              type: b.type,
-              title: b.title,
-              content: b.content,
-            })),
-            dayName: DAY_NAMES[currentWorkout.day],
-            sex: athleteConfig.sexo,
-          },
-        });
-
-        // Defensive: don't throw, just handle gracefully
-        if (error || !data?.feedback) {
-          console.warn('[Feedback] Error or no data:', error);
-          setWorkoutFeedback(null);
-        } else {
-          setWorkoutFeedback(data.feedback);
-        }
-      } catch (err) {
-        // Catch-all: never crash the app
-        console.error('[Feedback] Fetch failed:', err);
-        setWorkoutFeedback(null);
-      } finally {
-        setIsLoadingFeedback(false);
-        feedbackLockRef.current = false;
-      }
-    };
-
-    fetchFeedback();
-  }, [currentWorkout?.day, athleteConfig?.coachStyle, isShowingAdapted]);
+    } catch (err) {
+      // Catch-all: never crash the app
+      console.error('[Feedback] Fetch failed:', err);
+      toast.error('Erro ao gerar feedback. Tente novamente.');
+      setWorkoutFeedback(null);
+    } finally {
+      setIsLoadingFeedback(false);
+      isGeneratingFeedbackRef.current = false;
+    }
+  };
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -661,9 +665,19 @@ export function Dashboard() {
                     </div>
 
                     <div className="pt-3 border-t border-border/50">
-                      <p className="text-sm text-muted-foreground font-medium mb-1">
-                        {summaryStyle.objectiveLabel}
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm text-muted-foreground font-medium">
+                          {summaryStyle.objectiveLabel}
+                        </p>
+                        <button
+                          onClick={handleGenerateFeedback}
+                          disabled={isLoadingFeedback}
+                          className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <RefreshCcw className={`w-3 h-3 ${isLoadingFeedback ? 'animate-spin' : ''}`} />
+                          {isLoadingFeedback ? 'Gerando...' : 'Gerar feedback'}
+                        </button>
+                      </div>
                       {isLoadingFeedback ? (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Loader2 className="w-4 h-4 animate-spin" />
