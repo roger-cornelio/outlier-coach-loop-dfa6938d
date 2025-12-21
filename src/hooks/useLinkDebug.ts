@@ -14,11 +14,14 @@ interface LinkDebugState {
   lastJoinCount: number | null;
   lastProfilesSample: string | null;
   lastTimestamp: string | null;
+  lastFetchOk: boolean | null;
+  lastLinkedAthletesCount: number | null;
   
   // Actions
   setUpsertResult: (ok: boolean, error: string | null) => void;
   setVerifyCount: (count: number) => void;
   setDiagnosticCounts: (links: number, join: number, profilesSample: string | null) => void;
+  setFetchResult: (ok: boolean, count: number) => void;
   reset: () => void;
 }
 
@@ -30,6 +33,8 @@ export const useLinkDebug = create<LinkDebugState>((set) => ({
   lastJoinCount: null,
   lastProfilesSample: null,
   lastTimestamp: null,
+  lastFetchOk: null,
+  lastLinkedAthletesCount: null,
 
   setUpsertResult: (ok, error) => set({
     lastUpsertOk: ok,
@@ -49,6 +54,12 @@ export const useLinkDebug = create<LinkDebugState>((set) => ({
     lastTimestamp: new Date().toISOString(),
   }),
 
+  setFetchResult: (ok, count) => set({
+    lastFetchOk: ok,
+    lastLinkedAthletesCount: count,
+    lastTimestamp: new Date().toISOString(),
+  }),
+
   reset: () => set({
     lastUpsertOk: null,
     lastUpsertError: null,
@@ -57,5 +68,7 @@ export const useLinkDebug = create<LinkDebugState>((set) => ({
     lastJoinCount: null,
     lastProfilesSample: null,
     lastTimestamp: null,
+    lastFetchOk: null,
+    lastLinkedAthletesCount: null,
   }),
 }));

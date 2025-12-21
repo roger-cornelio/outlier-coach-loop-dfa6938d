@@ -30,7 +30,7 @@ import { Loader2, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 interface LinkAthleteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void> | void;
 }
 
 export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteModalProps) {
@@ -164,6 +164,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
           variant: 'destructive',
         });
         setSearchResult({ status: 'ERROR', message: 'Vínculo não persistiu - verifique RLS' });
+        // Não fecha modal em caso de falha
         return;
       }
 
@@ -172,12 +173,14 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
         description: `${searchResult.name || searchResult.email} agora é seu atleta.`,
       });
 
-      onSuccess();
+      // Aguardar refetch antes de fechar
+      await onSuccess();
       handleClose();
     } catch (err) {
       console.error('[LinkAthleteModal] Error:', err);
       setUpsertResult(false, String(err));
       setSearchResult({ status: 'ERROR', message: 'Erro inesperado ao vincular atleta' });
+      // Não fecha modal em caso de erro
     } finally {
       setIsLoading(false);
     }
@@ -282,7 +285,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
             Cancelar
           </Button>
           {canLink && (
-            <Button onClick={handleLink} disabled={isLoading}>
+            <Button onClick={handleLink} disabled={isLoading || !searchResult?.user_id}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -291,7 +294,7 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
               ) : (
                 <>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Vincular Atleta
+                  Confirmar vínculo
                 </>
               )}
             </Button>
