@@ -74,6 +74,7 @@ interface OutlierState {
   
   // Base workouts (coach)
   setBaseWorkouts: (workouts: DayWorkout[]) => void;
+  forceSetBaseWorkouts: (workouts: DayWorkout[]) => void; // Força atualização sem verificar assinatura
   
   // Adapted workouts (athlete)
   setAdaptedWorkouts: (workouts: DayWorkout[]) => void;
@@ -144,6 +145,17 @@ export const useOutlierStore = create<OutlierState>()(
           weeklyWorkouts: workouts, // Legacy fallback
           adaptationPending: true, // Nova base = precisa readaptar
           adaptedWorkouts: [], // Limpa adaptações antigas
+        });
+      },
+      
+      // Força atualização ignorando verificação de assinatura
+      // Usado quando navegamos entre semanas e precisamos garantir limpeza
+      forceSetBaseWorkouts: (workouts) => {
+        set({
+          baseWorkouts: workouts,
+          weeklyWorkouts: workouts,
+          adaptationPending: workouts.length > 0,
+          adaptedWorkouts: [],
         });
       },
       

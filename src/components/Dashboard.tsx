@@ -76,7 +76,7 @@ export function Dashboard() {
     adaptationPending,
     athleteConfig,
     viewingAsAthlete,
-    setBaseWorkouts
+    forceSetBaseWorkouts
   } = useOutlierStore();
   
   const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
@@ -145,15 +145,15 @@ export function Dashboard() {
     
     lastAppliedKeyRef.current = currentKey;
     
-    // Aplicar os treinos da semana (pode ser array vazio)
+    // Aplicar os treinos da semana (FORÇA atualização para garantir limpeza)
     if (planId && planWorkouts.length > 0) {
       console.log('[Dashboard] Applying coach plan:', planId);
-      setBaseWorkouts(planWorkouts);
+      forceSetBaseWorkouts(planWorkouts);
     } else {
       console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekForPlan);
-      setBaseWorkouts([]);
+      forceSetBaseWorkouts([]);
     }
-  }, [selectedWeekForPlan, planId, planWorkouts, setBaseWorkouts, loadingPlan]);
+  }, [selectedWeekForPlan, planId, planWorkouts, forceSetBaseWorkouts, loadingPlan]);
 
   // REMOVIDO: Fallback para buscar do banco
   // REGRA: Exibir APENAS treinos publicados especificamente para a semana selecionada
