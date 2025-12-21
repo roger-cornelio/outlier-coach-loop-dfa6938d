@@ -242,6 +242,31 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
     });
   };
 
+  /**
+   * Formata período da semana (7 dias) a partir da data inicial
+   * Calcula segunda a domingo da semana correspondente
+   * Ex: "Semana: 22/12 → 28/12"
+   */
+  const formatWeekPeriod = (startDateString: string, workoutDays: number = 7) => {
+    const date = new Date(startDateString);
+    // Ajustar para início da semana (segunda-feira)
+    const dayOfWeek = date.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + diffToMonday);
+    
+    // Fim da semana é domingo (6 dias depois de segunda)
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const formatShort = (d: Date) => d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+    });
+    
+    return `Semana: ${formatShort(monday)} → ${formatShort(sunday)}`;
+  };
+
   const handleView = (workout: CoachWorkout) => {
     setSelectedWorkout(workout);
     setShowDetailModal(true);
@@ -398,8 +423,8 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
                               {workoutCount} dia(s)
                             </span>
                             <span className="text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(workout.updated_at)}
+                            <span className="text-xs font-medium text-primary">
+                              {formatWeekPeriod(workout.created_at)}
                             </span>
                           </div>
                         </div>
