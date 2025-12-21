@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2, User, Check } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
@@ -45,14 +46,18 @@ const sexOptions = [
 
 export function AthleteConfig() {
   const { coachStyle, athleteConfig, setAthleteConfig, setCurrentView, baseWorkouts } = useOutlierStore();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
+  const { saveProfileConfig, updateName, isSaving: isSavingProfile } = useAthleteProfile();
   
   // Detectar se é primeiro setup (onboarding) - agora baseado em coach_style
-  // Se coach_style existe, setup já foi feito
   const isFirstSetup = !profile?.coach_style;
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Nome do atleta
+  const [displayName, setDisplayName] = useState(profile?.name || '');
+  const [nameError, setNameError] = useState('');
   
   // Use existing values as defaults
   const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>(
@@ -64,9 +69,42 @@ export function AthleteConfig() {
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
 
+  // Atualizar campos quando profile ou athleteConfig mudar
+  useEffect(() => {
+    if (profile?.name && !displayName) {
+      setDisplayName(profile.name);
+    }
+  }, [profile?.name]);
+
+  useEffect(() => {
+    if (athleteConfig) {
+      if (athleteConfig.trainingLevel) setTrainingLevel(athleteConfig.trainingLevel);
+      if (athleteConfig.sessionDuration) setDuration(athleteConfig.sessionDuration);
+      if (athleteConfig.altura) setAltura(athleteConfig.altura.toString());
+      if (athleteConfig.peso) setPeso(athleteConfig.peso.toString());
+      if (athleteConfig.idade) setIdade(athleteConfig.idade.toString());
+      if (athleteConfig.sexo) setSexo(athleteConfig.sexo);
+    }
+  }, [athleteConfig]);
+
+  // Validar nome
+  const validateName = (name: string): boolean => {
+    if (!name || name.trim().length < 2) {
+      setNameError('Nome deve ter pelo menos 2 caracteres');
+      return false;
+    }
+    setNameError('');
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!coachStyle) {
       toast.error('Selecione um estilo de coach primeiro');
+      return;
+    }
+
+    // Validar nome se foi alterado
+    if (displayName !== profile?.name && !validateName(displayName)) {
       return;
     }
 
@@ -84,13 +122,24 @@ export function AthleteConfig() {
       sexo,
     };
     
+    // Atualizar store local
     setAthleteConfig(newConfig);
 
-    // Nota: first_setup_completed já é marcado automaticamente quando coach_style é salvo
-    // Não precisamos chamar markSetupCompleted aqui
+    // Persistir no banco de dados
+    const nameToSave = displayName !== profile?.name ? displayName.trim() : undefined;
+    const saved = await saveProfileConfig(newConfig, nameToSave);
+    
+    if (saved) {
+      toast.success('Configurações salvas!');
+      // Atualizar profile no contexto de auth
+      if (nameToSave) {
+        refreshProfile?.();
+      }
+    } else {
+      toast.error('Erro ao salvar configurações');
+    }
 
     // Gerar treino adaptado se houver planilha base
-    // Passa config diretamente para evitar race condition com o store
     if (hasBaseWorkouts) {
       const result = generateAdaptedWorkouts({ overrideConfig: newConfig });
       if (result.success) {
@@ -151,6 +200,42 @@ export function AthleteConfig() {
 
       {/* Coach Style Changer */}
       <CoachStyleChanger />
+
+      {/* Perfil / Nome de Exibição */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-8"
+      >
+        <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
+          <User className="w-6 h-6 text-primary" />
+          PERFIL
+        </h2>
+        <div className="max-w-md">
+          <label className="block text-sm text-muted-foreground mb-2">Nome de exibição</label>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => {
+              setDisplayName(e.target.value);
+              if (nameError) validateName(e.target.value);
+            }}
+            placeholder="Seu nome"
+            minLength={2}
+            maxLength={50}
+            className={`w-full px-4 py-3 rounded-lg bg-secondary border font-body text-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50 ${
+              nameError ? 'border-destructive' : 'border-border'
+            }`}
+          />
+          {nameError && (
+            <p className="text-sm text-destructive mt-1">{nameError}</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            Este nome aparecerá no app e para seu coach.
+          </p>
+        </div>
+      </motion.section>
 
       {/* Athlete Data */}
       <motion.section

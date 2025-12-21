@@ -269,36 +269,60 @@ export type Database = {
       }
       profiles: {
         Row: {
+          altura: number | null
           coach_id: string | null
           coach_style: string | null
           created_at: string
           email: string
+          equipment_notes: string | null
           first_setup_completed: boolean
           id: string
+          idade: number | null
           last_active_at: string | null
           name: string | null
+          peso: number | null
+          session_duration: string | null
+          sexo: string | null
+          training_level: string | null
+          unavailable_equipment: Json | null
           user_id: string
         }
         Insert: {
+          altura?: number | null
           coach_id?: string | null
           coach_style?: string | null
           created_at?: string
           email: string
+          equipment_notes?: string | null
           first_setup_completed?: boolean
           id?: string
+          idade?: number | null
           last_active_at?: string | null
           name?: string | null
+          peso?: number | null
+          session_duration?: string | null
+          sexo?: string | null
+          training_level?: string | null
+          unavailable_equipment?: Json | null
           user_id: string
         }
         Update: {
+          altura?: number | null
           coach_id?: string | null
           coach_style?: string | null
           created_at?: string
           email?: string
+          equipment_notes?: string | null
           first_setup_completed?: boolean
           id?: string
+          idade?: number | null
           last_active_at?: string | null
           name?: string | null
+          peso?: number | null
+          session_duration?: string | null
+          sexo?: string | null
+          training_level?: string | null
+          unavailable_equipment?: Json | null
           user_id?: string
         }
         Relationships: [
