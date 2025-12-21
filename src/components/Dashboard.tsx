@@ -120,31 +120,40 @@ export function Dashboard() {
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
   // Guard: aguardar hydration do Zustand para evitar loops
+  // Dep única: selectedWeekStart (hasPlan calculado localmente)
   // ============================================
   
   const selectedWeekStart = debugInfo?.selectedWeekStart;
-  const hasPlan = planWorkouts.length > 0;
   
   useEffect(() => {
     // Guard: aguardar hydration do store
-    if (!hasHydrated) return;
+    if (!hasHydrated) {
+      console.log('[Dashboard] Waiting for hydration...');
+      return;
+    }
     // Guard: aguardar carregamento do plano
-    if (loadingPlan) return;
+    if (loadingPlan) {
+      console.log('[Dashboard] Waiting for plan load...');
+      return;
+    }
+    
+    // Calcular localmente se há plano para evitar dep instável
+    const hasPlanForWeek = planWorkouts.length > 0;
     
     console.log('[Dashboard] Week sync:', { 
       selectedWeekStart, 
-      hasPlan, 
+      hasPlanForWeek, 
       workoutsCount: planWorkouts.length 
     });
     
-    if (hasPlan) {
+    if (hasPlanForWeek) {
       console.log('[Dashboard] Applying workouts for week:', selectedWeekStart);
       setBaseWorkouts(planWorkouts);
     } else {
       console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekStart);
       clearBaseWorkouts();
     }
-  }, [hasHydrated, selectedWeekStart, hasPlan, planWorkouts, setBaseWorkouts, clearBaseWorkouts, loadingPlan]);
+  }, [hasHydrated, selectedWeekStart, loadingPlan]); // Deps mínimas - planWorkouts lido dentro do effect
 
   // REMOVIDO: Fallback para buscar do banco
   // REGRA: Exibir APENAS treinos publicados especificamente para a semana selecionada
