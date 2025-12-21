@@ -251,6 +251,14 @@ export function PublishToAthletesModal({
     setError(null);
     setPublishedCount(0);
 
+    // LOG: PUBLISH_ATTEMPT (antes de iniciar)
+    console.log('PUBLISH_ATTEMPT', {
+      week_start: weekStart,
+      athleteCount: selectedAthletes.size,
+      coachId: profile.id,
+      title: title || `Treino Semana ${weekPeriodLabel}`,
+    });
+
     let successCount = 0;
     const errors: Array<{ athleteId: string; error: any }> = [];
 
@@ -268,12 +276,6 @@ export function PublishToAthletesModal({
           updated_at: new Date().toISOString(),
         };
 
-        console.log('[PublishToAthletesModal] UPSERT attempt:', {
-          athleteUserId,
-          week_start: weekStart,
-          coach_id: profile.id,
-        });
-
         // UPSERT REAL: usa onConflict para criar ou atualizar
         const { error: upsertError } = await supabase
           .from('athlete_plans')
@@ -283,27 +285,30 @@ export function PublishToAthletesModal({
           });
 
         if (upsertError) {
-          // LOG OBRIGATÓRIO com formato específico
+          // LOG: PUBLISH_FAIL com formato específico
           console.error('PUBLISH_FAIL', {
-            athleteId: athleteUserId,
             week_start: weekStart,
-            error: {
-              code: upsertError.code,
-              message: upsertError.message,
-              details: upsertError.details,
-              hint: upsertError.hint,
-            },
+            athleteId: athleteUserId,
+            errorCode: upsertError.code,
+            message: upsertError.message,
+            details: upsertError.details,
+            hint: upsertError.hint,
           });
           errors.push({ athleteId: athleteUserId, error: upsertError });
         } else {
-          console.log('[PublishToAthletesModal] UPSERT SUCCESS for athlete:', athleteUserId);
           successCount++;
         }
       }
 
       setPublishedCount(successCount);
 
+      // LOG: PUBLISH_SUCCESS (se teve algum sucesso)
       if (successCount > 0) {
+        console.log('PUBLISH_SUCCESS', {
+          week_start: weekStart,
+          athleteCount: successCount,
+        });
+
         toast({
           title: 'Treino publicado!',
           description: `Publicado para ${successCount} atleta(s) - Semana ${weekPeriodLabel}.`,
