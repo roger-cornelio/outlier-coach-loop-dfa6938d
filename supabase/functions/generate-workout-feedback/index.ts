@@ -331,9 +331,16 @@ Responda APENAS com o feedback, sem introduções ou explicações adicionais.`;
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Error generating feedback:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
-      status: 500,
+    // Log the real error for debugging
+    console.error("[generate-workout-feedback] Error:", e instanceof Error ? e.message : String(e));
+    
+    // Return 200 with fallback feedback to prevent app crashes
+    // Frontend will display this generic message instead of breaking
+    return new Response(JSON.stringify({ 
+      feedback: "Treino preparado para você evoluir!",
+      fallback: true 
+    }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
