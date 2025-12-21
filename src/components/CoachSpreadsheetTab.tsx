@@ -297,8 +297,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     setError(null);
     
     try {
-      // Título limpo (sem informação de semana - isso agora vai no campo week_start)
-      const title = programName.trim() || `Programação ${new Date().toLocaleDateString('pt-BR')}`;
+      // Título limpo - default "Treino semanal" se vazio
+      const title = programName.trim() || "Treino semanal";
       const status = programStatus === 'published' ? 'published' : 'draft';
       
       // CAMPO CANÔNICO: week_start é a segunda-feira da semana selecionada
