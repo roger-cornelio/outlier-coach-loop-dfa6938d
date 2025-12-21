@@ -259,65 +259,44 @@ export function PublishToAthletesModal({
         const payload = {
           athlete_user_id: athleteUserId,
           coach_id: profile.id,
-          week_start: weekStart,
+          week_start: weekStart, // YYYY-MM-DD string (segunda-feira)
           scheduled_date: weekStart,
           plan_json: { workouts },
           title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
 
-        // Verificar se já existe plano para este atleta nesta semana (UPSERT logic)
-        const { data: existingPlan } = await supabase
+        console.log('[PublishToAthletesModal] UPSERT attempt:', {
+          athleteUserId,
+          week_start: weekStart,
+          coach_id: profile.id,
+        });
+
+        // UPSERT REAL: usa onConflict para criar ou atualizar
+        const { error: upsertError } = await supabase
           .from('athlete_plans')
-          .select('id')
-          .eq('athlete_user_id', athleteUserId)
-          .eq('week_start', weekStart)
-          .maybeSingle();
-
-        let operationError = null;
-
-        if (existingPlan?.id) {
-          // UPDATE: substituir treino existente
-          console.log('[PublishToAthletesModal] Updating existing plan:', existingPlan.id, 'for athlete:', athleteUserId);
-          const { error: updateError } = await supabase
-            .from('athlete_plans')
-            .update({
-              plan_json: payload.plan_json,
-              title: payload.title,
-              status: payload.status,
-              published_at: payload.published_at,
-              scheduled_date: payload.scheduled_date,
-              updated_at: new Date().toISOString(),
-            } as any)
-            .eq('id', existingPlan.id);
-          
-          operationError = updateError;
-          if (!updateError) {
-            console.log('[PublishToAthletesModal] Update SUCCESS for athlete:', athleteUserId);
-          }
-        } else {
-          // INSERT: criar novo plano
-          console.log('[PublishToAthletesModal] Inserting new plan for athlete:', athleteUserId);
-          const { error: insertError } = await supabase
-            .from('athlete_plans')
-            .insert(payload as any);
-          
-          operationError = insertError;
-          if (!insertError) {
-            console.log('[PublishToAthletesModal] Insert SUCCESS for athlete:', athleteUserId);
-          }
-        }
-
-        if (operationError) {
-          console.error('[PublishToAthletesModal] Operation FAILED for athlete:', athleteUserId, {
-            code: operationError.code,
-            message: operationError.message,
-            details: operationError.details,
-            hint: operationError.hint,
+          .upsert(payload as any, { 
+            onConflict: 'athlete_user_id,week_start',
+            ignoreDuplicates: false 
           });
-          errors.push({ athleteId: athleteUserId, error: operationError });
+
+        if (upsertError) {
+          // LOG OBRIGATÓRIO com formato específico
+          console.error('PUBLISH_FAIL', {
+            athleteId: athleteUserId,
+            week_start: weekStart,
+            error: {
+              code: upsertError.code,
+              message: upsertError.message,
+              details: upsertError.details,
+              hint: upsertError.hint,
+            },
+          });
+          errors.push({ athleteId: athleteUserId, error: upsertError });
         } else {
+          console.log('[PublishToAthletesModal] UPSERT SUCCESS for athlete:', athleteUserId);
           successCount++;
         }
       }
