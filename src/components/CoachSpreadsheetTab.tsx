@@ -516,6 +516,10 @@ Terça-feira 📅
                             const isMainBlock = mainBlockResult.blockIndex === blockIndex;
                             const isManualMain = block.isMainWod === true;
                             const isAutoMain = isMainBlock && !isManualMain && mainBlockResult.reason !== 'manual';
+                            const isSingleBlock = mainBlockResult.reason === 'single_block';
+                            
+                            // Determinar label: Manual > Único > Auto
+                            const autoLabel = isSingleBlock ? 'Único' : mainBlockCopy.autoLabel;
                             
                             return (
                             <div key={block.id} className={`p-3 rounded-lg border ${
@@ -530,9 +534,11 @@ Terça-feira 📅
                                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                                       isManualMain 
                                         ? 'bg-primary/20 text-primary' 
-                                        : 'bg-muted text-muted-foreground'
+                                        : isSingleBlock
+                                          ? 'bg-green-500/20 text-green-500'
+                                          : 'bg-muted text-muted-foreground'
                                     }`}>
-                                      {mainBlockCopy.icon} {isManualMain ? mainBlockCopy.manualLabel : mainBlockCopy.autoLabel}
+                                      {mainBlockCopy.icon} {isManualMain ? mainBlockCopy.manualLabel : autoLabel}
                                     </span>
                                   )}
                                   {block.isBenchmark && (
