@@ -8,8 +8,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
-import { FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, Info, Trophy, Clock } from 'lucide-react';
+import { FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, Info, Trophy, Clock, Send } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, LEVEL_NAMES } from '@/types/outlier';
+import { PublishToAthletesModal } from './PublishToAthletesModal';
 import {
   Accordion,
   AccordionContent,
@@ -147,6 +148,7 @@ export function CoachSpreadsheetTab() {
   const [programName, setProgramName] = useState('');
   const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
   const [isSavingToDb, setIsSavingToDb] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   const handleClearWorkouts = () => {
     setWeeklyWorkouts([]);
@@ -494,10 +496,20 @@ Terça-feira 📅
       {weeklyWorkouts.length > 0 && !parsedWorkouts && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              Treinos Carregados ({weeklyWorkouts.length} dias)
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Treinos Carregados ({weeklyWorkouts.length} dias)
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={() => setShowPublishModal(true)}
+                className="flex items-center gap-1.5"
+              >
+                <Send className="w-4 h-4" />
+                Publicar para Atletas
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -510,6 +522,14 @@ Terça-feira 📅
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de publicar para atletas */}
+      <PublishToAthletesModal
+        open={showPublishModal}
+        onOpenChange={setShowPublishModal}
+        workouts={weeklyWorkouts}
+        title={programName || `Semana ${new Date().toLocaleDateString('pt-BR')}`}
+      />
     </div>
   );
 }

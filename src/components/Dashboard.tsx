@@ -17,6 +17,7 @@ import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { AthleteViewSelector } from './AthleteViewSelector';
 import { useAppState } from '@/hooks/useAppState';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
+import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { getCoachCopy } from '@/config/coachCopy';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
@@ -82,6 +83,7 @@ export function Dashboard() {
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
+  const { plan: athletePlan, workouts: planWorkouts, loading: loadingPlan, hasCoach } = useAthletePlan();
   const navigate = useNavigate();
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
@@ -93,14 +95,26 @@ export function Dashboard() {
   const [isLoadingFromDb, setIsLoadingFromDb] = useState(false);
 
   // ============================================
-  // REGRA: Carregar treinos do banco se não houver localmente
+  // REGRA: Prioridade de treinos
+  // 1. Treinos do coach (athlete_plans) se atleta tem coach vinculado
+  // 2. Treinos locais (baseWorkouts/adaptedWorkouts)
+  // 3. Fallback: buscar do banco (workouts publicados)
   // ============================================
   useEffect(() => {
-    async function loadFromDatabase() {
+    async function loadWorkouts() {
+      // Se tem plano do coach, usar esse
+      if (planWorkouts.length > 0) {
+        console.log('[Dashboard] Using coach plan:', planWorkouts.length, 'days');
+        setBaseWorkouts(planWorkouts);
+        return;
+      }
+
       // Se já tem treinos locais, não buscar do banco
       if (baseWorkouts.length > 0) return;
       // Se é coach/admin, não precisa buscar (eles criam)
       if (canManageWorkouts) return;
+      // Se ainda está carregando o plano do coach, esperar
+      if (loadingPlan) return;
       
       setIsLoadingFromDb(true);
       try {
@@ -116,8 +130,8 @@ export function Dashboard() {
       }
     }
     
-    loadFromDatabase();
-  }, [baseWorkouts.length, canManageWorkouts, fetchAvailableWorkouts, setBaseWorkouts]);
+    loadWorkouts();
+  }, [baseWorkouts.length, canManageWorkouts, fetchAvailableWorkouts, setBaseWorkouts, planWorkouts, loadingPlan]);
 
   // ============================================
   // REGRA: Usar SEMPRE adaptedWorkouts quando existir
