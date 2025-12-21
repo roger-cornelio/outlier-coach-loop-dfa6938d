@@ -422,6 +422,7 @@ export type Database = {
           is_coach_or_admin: boolean
           name: string
           profile_id: string
+          profile_was_created: boolean
           user_id: string
         }[]
       }
