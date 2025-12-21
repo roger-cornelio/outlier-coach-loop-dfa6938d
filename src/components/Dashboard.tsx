@@ -2,16 +2,14 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { DAY_NAMES, LEVEL_NAMES, DIFFICULTY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Shield, Trophy, Activity, AlertCircle, RefreshCw, RefreshCcw, Info } from 'lucide-react';
+import { DAY_NAMES, type DayOfWeek, type AthleteLevel } from '@/types/outlier';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale } from 'lucide-react';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
-import { formatBlockTimeSec, getBlockDurationSec, calculateCalories } from '@/utils/workoutCalculations';
-import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
+import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { StatusDisplay } from './StatusDisplay';
 import { UserHeader } from './UserHeader';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { AthleteViewSelector } from './AthleteViewSelector';
@@ -275,41 +273,32 @@ export function Dashboard() {
   const hasAdaptations = savedUnavailableEquipment.length > 0;
 
   // ============================================
-  // REGRA INVIOLÁVEL:
-  // Tempo total exibido = soma real dos durationSec de TODOS os blocos
-  // Tempo no card = durationSec daquele bloco
-  // Fonte única: sumBlocksDurationSec
+  // ESTIMATIVA DE TEMPO E CALORIAS
+  // Fonte única: estimateWorkout() do workoutEstimation.ts
+  // Usa treino ADAPTADO e dados biométricos do atleta
   // ============================================
-  const blockMetrics = useMemo(() => {
-    if (!currentWorkout) return { totalSec: 0, byBlockSec: {}, blockData: [] };
+  const workoutEstimation = useMemo(() => {
+    if (!currentWorkout) return null;
     
-    // Converter blocos para TimeBlock com durationSec calculado
-    const timeBlocks: TimeBlock[] = currentWorkout.blocks.map((block) => {
-      const durationSec = getBlockDurationSec(block, effectiveLevel);
-      return {
-        id: block.id,
-        title: block.title,
-        durationSec,
-      };
-    });
+    // Mapear trainingLevel para AthleteLevel
+    const levelMap: Record<string, AthleteLevel> = {
+      'base': 'iniciante',
+      'progressivo': 'intermediario',
+      'performance': 'avancado',
+    };
+    const level = levelMap[athleteConfig?.trainingLevel || 'progressivo'] || effectiveLevel;
     
-    const { totalSec, byBlockSec } = sumBlocksDurationSec(timeBlocks);
-    
-    // Calcular calorias para cada bloco
-    const blockData = currentWorkout.blocks.map((block) => {
-      const sec = byBlockSec[block.id] || 0;
-      const kcal = calculateCalories(block, athleteConfig, effectiveLevel) || 0;
-      return { sec, kcal };
-    });
-    
-    return { totalSec, byBlockSec, blockData };
+    return estimateWorkout(currentWorkout, athleteConfig, level);
   }, [currentWorkout, athleteConfig, effectiveLevel]);
-
-  // Tempo total em minutos (convertido de segundos)
-  const totalTime = Math.round(blockMetrics.totalSec / 60);
   
-  // Calorias totais = soma das calorias de cada bloco
-  const totalCalories = blockMetrics.blockData.reduce((sum, b) => sum + b.kcal, 0);
+  // Verificar se peso está configurado
+  const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
+  
+  // Tempo total em minutos
+  const totalTime = workoutEstimation?.totals.estimatedMinutesTotal || 0;
+  
+  // Calorias totais
+  const totalCalories = workoutEstimation?.totals.estimatedKcalTotal || 0;
 
   // Fallback objective if AI fails
   const getFallbackObjective = (): string => {
@@ -602,13 +591,38 @@ export function Dashboard() {
                 );
               })()}
 
+              {/* Missing Weight Warning */}
+              {biometrics.missingWeight && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10"
+                >
+                  <div className="flex items-start gap-3">
+                    <Scale className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-500">
+                        Para calcular tempo e calorias, informe seu peso em Configurações.
+                      </p>
+                      <button
+                        onClick={() => setCurrentView('config')}
+                        className="text-xs text-amber-500/80 hover:text-amber-500 underline mt-1"
+                      >
+                        Ir para Configurações →
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
-                  // Tempo e calorias vêm de blockMetrics (fonte única de verdade)
-                  const blockData = blockMetrics.blockData[index];
-                  const durationSec = blockData?.sec || 0;
-                  const calories = blockData?.kcal || 0;
+                  // Tempo e calorias vêm do workoutEstimation (fonte única)
+                  const blockEstimate = workoutEstimation?.blocks[index];
+                  const estimatedMinutes = blockEstimate?.estimatedMinutes || 0;
+                  const estimatedKcal = blockEstimate?.estimatedKcal || 0;
+                  const confidence = blockEstimate?.confidence || 'low';
 
                   return (
                     <motion.div
@@ -639,29 +653,26 @@ export function Dashboard() {
                       {/* Block Stats */}
                       {block.type !== 'notas' && (
                         <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-                          {durationSec > 0 ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              {confidence === 'low' ? '~' : ''}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {formatEstimatedTime(estimatedMinutes)}
+                            </span>
+                            {confidence === 'low' && (
+                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                            )}
+                          </div>
+                          {biometrics.isValid && (
                             <div className="flex items-center gap-2 text-sm">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Tempo:
+                              <Flame className="w-4 h-4 text-orange-500" />
+                              <span className="text-orange-500 font-medium">
+                                {formatEstimatedKcal(estimatedKcal)}
                               </span>
-                              <span className="font-medium text-foreground">{formatBlockTimeSec(durationSec)}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Tempo:
-                              </span>
-                              <span className="font-medium text-foreground">—</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-sm">
-                            <Flame className="w-4 h-4 text-orange-500" />
-                            <span className="text-orange-500 font-medium">
-                              {calories > 0 ? `~${calories} kcal` : '-'}
-                            </span>
-                          </div>
                         </div>
                       )}
                     </motion.div>

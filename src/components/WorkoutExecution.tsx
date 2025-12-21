@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
-import { DAY_NAMES } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info, Timer, Target, Wrench } from 'lucide-react';
-import { getBlockDuration, getReferenceTimeForLevel, calculateCalories, formatBlockTime } from '@/utils/workoutCalculations';
+import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale } from 'lucide-react';
+import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
-import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
@@ -149,7 +148,23 @@ export function WorkoutExecution() {
   const mainWod = displayedWorkout.blocks.find((b) => b.isMainWod);
   const allBlocksComplete = displayedWorkout.blocks.every((b) => completedBlocks.includes(b.id));
 
-  const handleFinishWorkout = () => {
+  // ============================================
+  // ESTIMATIVA DE TEMPO E CALORIAS
+  // Fonte única: estimateWorkout()
+  // ============================================
+  const levelMap: Record<string, AthleteLevel> = {
+    'base': 'iniciante',
+    'progressivo': 'intermediario',
+    'performance': 'avancado',
+  };
+  const effectiveLevel = levelMap[athleteConfig?.trainingLevel || 'progressivo'] || 'intermediario';
+  
+  const workoutEstimation = useMemo(() => {
+    if (!displayedWorkout) return null;
+    return estimateWorkout(displayedWorkout, athleteConfig, effectiveLevel);
+  }, [displayedWorkout, athleteConfig, effectiveLevel]);
+  
+  const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
     if (mainWod) {
       setCurrentView('result');
     } else {
@@ -226,10 +241,6 @@ export function WorkoutExecution() {
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
             
-            // Get effective level from training level
-            const effectiveLevel = athleteConfig?.trainingLevel === 'base' ? 'iniciante' : 
-                                   athleteConfig?.trainingLevel === 'performance' ? 'avancado' : 'intermediario';
-            
             // Get effective content and notes based on athlete level
             const effectiveContent = getEffectiveContent(block, effectiveLevel);
             const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
@@ -238,20 +249,11 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            // Block duration (used for calories) - from durationMinutes
-            const blockDuration = athleteConfig 
-              ? getBlockDuration(block, effectiveLevel)
-              : null;
-            
-            // Reference time (informational only) - estimated from content
-            const referenceTime = athleteConfig 
-              ? getReferenceTimeForLevel(block, effectiveLevel)
-              : null;
-            
-            // Calories use ONLY blockDuration
-            const calories = athleteConfig 
-              ? calculateCalories(block, athleteConfig, effectiveLevel)
-              : null;
+            // Tempo e calorias do workoutEstimation (fonte única)
+            const blockEstimate = workoutEstimation?.blocks[index];
+            const estimatedMinutes = blockEstimate?.estimatedMinutes || 0;
+            const estimatedKcal = blockEstimate?.estimatedKcal || 0;
+            const confidence = blockEstimate?.confidence || 'low';
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
 
@@ -327,31 +329,31 @@ export function WorkoutExecution() {
                     )}
 
                     {/* Block Stats */}
-                    {(blockDuration || referenceTime || calories || pseInfo || effectivePace) && block.type !== 'notas' && (
+                    {block.type !== 'notas' && (estimatedMinutes > 0 || pseInfo || effectivePace) && (
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-border/50">
-                        {/* Block Duration - used for calories */}
-                        {blockDuration && (
+                        {/* Tempo estimado */}
+                        {estimatedMinutes > 0 && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Timer className="w-4 h-4 text-primary" />
-                            <span className="text-muted-foreground">Duração:</span>
-                            <span className="font-medium text-foreground">{formatBlockTime(blockDuration)}</span>
+                            <Clock className="w-4 h-4 text-primary" />
+                            <span className="text-muted-foreground">
+                              {confidence === 'low' ? '~' : ''}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {formatEstimatedTime(estimatedMinutes)}
+                            </span>
+                            {confidence === 'low' && (
+                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                            )}
                           </div>
                         )}
                         
-                        {/* Reference Time - informational only */}
-                        {referenceTime && !blockDuration && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Ref:</span>
-                            <span className="text-muted-foreground italic">~{formatBlockTime(referenceTime)}</span>
-                          </div>
-                        )}
-                        
-                        {/* Calories - only shown if blockDuration exists */}
-                        {calories && (
+                        {/* Calorias - só exibir se peso configurado */}
+                        {biometrics.isValid && estimatedKcal > 0 && (
                           <div className="flex items-center gap-2 text-sm">
                             <Flame className="w-4 h-4 text-orange-500" />
-                            <span className="text-orange-500 font-medium">~{calories} kcal</span>
+                            <span className="text-orange-500 font-medium">
+                              {formatEstimatedKcal(estimatedKcal)}
+                            </span>
                           </div>
                         )}
                         
