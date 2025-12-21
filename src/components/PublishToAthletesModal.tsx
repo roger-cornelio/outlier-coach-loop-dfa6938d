@@ -106,10 +106,11 @@ export function PublishToAthletesModal({
   const [publishedCount, setPublishedCount] = useState(0);
 
   /**
-   * Verifica se a data selecionada está dentro da janela de publicação
-   * REGRA: Só pode publicar para semana atual ou próxima
+   * FUNÇÃO UTILITÁRIA ÚNICA: Verifica se a data está dentro da janela de publicação
+   * REGRA: Só pode publicar para semana atual ou próxima (segunda a domingo)
+   * Usada por: canProceed, handlePublish, UI de confirmação
    */
-  const isDateWithinPublishWindow = (date: Date | undefined): boolean => {
+  const isDateInPublishWindow = (date: Date | undefined): boolean => {
     if (!date) return false;
     
     const today = new Date();
@@ -117,19 +118,21 @@ export function PublishToAthletesModal({
     const selectedDay = new Date(date);
     selectedDay.setHours(0, 0, 0, 0);
     
-    // Calcular início da semana da data selecionada
+    // Calcular início da semana da data selecionada (segunda-feira)
     const selectedDayOfWeek = selectedDay.getDay();
     const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
     const weekStart = new Date(selectedDay);
     weekStart.setDate(selectedDay.getDate() + daysToMonday);
+    weekStart.setHours(0, 0, 0, 0);
     
-    // Calcular início da semana atual
+    // Calcular início da semana atual (segunda-feira)
     const todayDayOfWeek = today.getDay();
     const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
     const currentWeekStart = new Date(today);
     currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
+    currentWeekStart.setHours(0, 0, 0, 0);
     
-    // Calcular início da próxima semana
+    // Calcular início da próxima semana (segunda-feira)
     const nextWeekStart = new Date(currentWeekStart);
     nextWeekStart.setDate(currentWeekStart.getDate() + 7);
     
@@ -139,7 +142,12 @@ export function PublishToAthletesModal({
     return isSameWeek || isNextWeek;
   };
 
-  const canPublish = scheduledDate && isDateWithinPublishWindow(scheduledDate);
+  // Determina se pode publicar baseado na data selecionada OU weekPeriod
+  const effectiveDateForValidation = weekPeriod 
+    ? new Date(weekPeriod.startDate + 'T00:00:00') 
+    : scheduledDate;
+  
+  const canPublish = Boolean(effectiveDateForValidation && isDateInPublishWindow(effectiveDateForValidation));
 
   const copyErrorToClipboard = () => {
     if (!errorData) return;
@@ -221,6 +229,18 @@ export function PublishToAthletesModal({
   };
 
   const handlePublish = async () => {
+    // VALIDAÇÃO DE JANELA DE PUBLICAÇÃO (semana atual ou próxima)
+    if (!canPublish) {
+      const msg = 'Esta data está fora da janela de publicação. Só é possível publicar para atletas na semana atual ou na próxima.';
+      setError(msg);
+      toast({
+        title: 'Publicação não permitida',
+        description: msg,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Use weekPeriod.startDate se disponível, senão usa scheduledDate
     const effectiveDate = weekPeriod?.startDate || (scheduledDate ? format(scheduledDate, 'yyyy-MM-dd') : null);
     
@@ -497,34 +517,32 @@ export function PublishToAthletesModal({
                   Data selecionada: {format(scheduledDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
                 
-                {/* Mensagem informativa com validação de janela de publicação */}
+                {/* Mensagem informativa usando a função utilitária única */}
                 {(() => {
+                  const isInWindow = isDateInPublishWindow(scheduledDate);
+                  
+                  // Determinar se é semana atual, próxima, passada ou futuro distante
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   const selectedDay = new Date(scheduledDate);
                   selectedDay.setHours(0, 0, 0, 0);
                   
-                  // Calcular início da semana da data selecionada
                   const selectedDayOfWeek = selectedDay.getDay();
                   const daysToMonday = selectedDayOfWeek === 0 ? -6 : 1 - selectedDayOfWeek;
                   const weekStart = new Date(selectedDay);
                   weekStart.setDate(selectedDay.getDate() + daysToMonday);
                   
-                  // Calcular início da semana atual
                   const todayDayOfWeek = today.getDay();
                   const todayDaysToMonday = todayDayOfWeek === 0 ? -6 : 1 - todayDayOfWeek;
                   const currentWeekStart = new Date(today);
                   currentWeekStart.setDate(today.getDate() + todayDaysToMonday);
                   
-                  // Calcular início da próxima semana
                   const nextWeekStart = new Date(currentWeekStart);
                   nextWeekStart.setDate(currentWeekStart.getDate() + 7);
                   
                   const isSameWeek = weekStart.getTime() === currentWeekStart.getTime();
                   const isNextWeek = weekStart.getTime() === nextWeekStart.getTime();
-                  const isWithinPublishWindow = isSameWeek || isNextWeek;
                   const isPastWeek = weekStart < currentWeekStart;
-                  const isFarFutureWeek = weekStart > nextWeekStart;
                   
                   if (isSameWeek) {
                     return (
@@ -550,7 +568,8 @@ export function PublishToAthletesModal({
                         </p>
                       </div>
                     );
-                  } else if (isFarFutureWeek) {
+                  } else {
+                    // Futuro distante
                     return (
                       <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                         <p className="text-xs text-amber-600">
@@ -559,7 +578,6 @@ export function PublishToAthletesModal({
                       </div>
                     );
                   }
-                  return null;
                 })()}
               </div>
             )}
