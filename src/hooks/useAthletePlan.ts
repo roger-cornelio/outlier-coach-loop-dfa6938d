@@ -121,6 +121,9 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Semanas com treinos publicados (para navegação)
+  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
+  
   // Estado de navegação por semana
   const [weekOffset, setWeekOffset] = useState(0); // 0 = semana atual, -1 = semana anterior, etc.
 
@@ -139,35 +142,66 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const hasCoach = !!profile?.coach_id;
   const userId = user?.id ?? null;
 
-  // Navegação
+  // Navegação - permitir navegar livremente para semanas com treino publicado
   const goToPreviousWeek = useCallback(() => {
-    // Atleta pode voltar para semana atual se estiver na próxima
-    if (weekOffset > 0) {
-      setWeekOffset(0);
-    }
-  }, [weekOffset]);
+    setWeekOffset(prev => prev - 1);
+  }, []);
 
   const goToNextWeek = useCallback(() => {
-    // Permitir navegar para próxima semana APENAS no domingo
-    const today = new Date();
-    const isSunday = today.getDay() === 0;
-    
-    if (isSunday && weekOffset === 0) {
-      setWeekOffset(1);
-    }
-  }, [weekOffset]);
+    setWeekOffset(prev => prev + 1);
+  }, []);
 
   const goToCurrentWeek = useCallback(() => {
     setWeekOffset(0);
   }, []);
 
-  // Verificar se hoje é domingo
-  const isSunday = useMemo(() => new Date().getDay() === 0, []);
+  // Calcular semana atual para comparação
+  const todayWeekStart = useMemo(() => getWeekStart(new Date()), []);
 
-  // Atleta pode ver próxima semana APENAS no domingo e se estiver na semana atual
-  const canNavigateToFuture = isSunday && weekOffset === 0;
-  // Atleta pode voltar para semana atual se estiver na próxima
-  const canNavigateToPast = weekOffset > 0;
+  // Atleta pode navegar para o passado livremente (histórico)
+  const canNavigateToPast = true;
+  
+  // Atleta pode navegar para o futuro se há treino publicado para semana futura
+  const canNavigateToFuture = useMemo(() => {
+    // Calcular qual seria a próxima semana
+    const nextWeekDate = new Date();
+    nextWeekDate.setDate(nextWeekDate.getDate() + ((weekOffset + 1) * 7));
+    const nextWeekStart = getWeekStart(nextWeekDate);
+    
+    // Verificar se há treino publicado para a próxima semana
+    return availableWeeks.includes(nextWeekStart);
+  }, [weekOffset, availableWeeks]);
+
+  // Buscar semanas disponíveis (com treinos publicados)
+  const fetchAvailableWeeks = useCallback(async () => {
+    if (!userId || canManageWorkouts) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('athlete_plans')
+        .select('week_start')
+        .eq('athlete_user_id', userId)
+        .eq('status', 'published');
+      
+      if (error) {
+        console.error('[useAthletePlan] Error fetching available weeks:', error);
+        return;
+      }
+      
+      if (data) {
+        const weeks = [...new Set(data.map(d => d.week_start))];
+        setAvailableWeeks(weeks);
+        console.log('[useAthletePlan] Available weeks:', weeks);
+      }
+    } catch (err) {
+      console.error('[useAthletePlan] Exception fetching weeks:', err);
+    }
+  }, [userId, canManageWorkouts]);
+
+  // Buscar semanas disponíveis ao montar
+  useEffect(() => {
+    fetchAvailableWeeks();
+  }, [fetchAvailableWeeks]);
 
   const fetchPlans = useCallback(async () => {
     // Se é coach/admin, não precisa buscar plano de atleta
@@ -185,15 +219,14 @@ export function useAthletePlan(): UseAthletePlanReturn {
     setError(null);
 
     try {
-      // Buscar treinos publicados com scheduled_date dentro da semana SELECIONADA
+      // FONTE ÚNICA: Buscar treinos publicados onde week_start === semana selecionada
+      // NÃO usar scheduled_date para filtrar semana - usar week_start
       const { data, error: fetchError } = await supabase
         .from('athlete_plans')
         .select('id, week_start, scheduled_date, title, plan_json, published_at, coach_id')
         .eq('athlete_user_id', userId)
         .eq('status', 'published')
-        .not('scheduled_date', 'is', null)
-        .gte('scheduled_date', weekStart)
-        .lte('scheduled_date', weekEnd)
+        .eq('week_start', weekStart) // CRÍTICO: Filtrar por week_start, não scheduled_date
         .order('scheduled_date', { ascending: true });
 
       if (fetchError) {
@@ -204,10 +237,7 @@ export function useAthletePlan(): UseAthletePlanReturn {
       }
 
       if (data && data.length > 0) {
-        // Filtrar treinos válidos (com scheduled_date) - loga legados automaticamente
-        const validData = filterValidWorkouts(data, 'useAthletePlan');
-
-        const parsedPlans: AthletePlan[] = validData.map((row: any) => {
+        const parsedPlans: AthletePlan[] = data.map((row: any) => {
           const planJson = row.plan_json as { workouts?: DayWorkout[] } | null;
           return {
             id: row.id,
@@ -220,10 +250,10 @@ export function useAthletePlan(): UseAthletePlanReturn {
           };
         });
 
-        console.log(`[useAthletePlan] Found ${parsedPlans.length} plans for week:`, weekStart, '-', weekEnd);
+        console.log(`[useAthletePlan] Found ${parsedPlans.length} plans for week_start:`, weekStart);
         setPlans(parsedPlans);
       } else {
-        console.log('[useAthletePlan] No plans found for week:', weekStart, '-', weekEnd);
+        console.log('[useAthletePlan] No plans found for week_start:', weekStart);
         setPlans([]);
       }
     } catch (err: any) {
@@ -232,7 +262,7 @@ export function useAthletePlan(): UseAthletePlanReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, canManageWorkouts, weekStart, weekEnd]);
+  }, [userId, canManageWorkouts, weekStart]);
 
   // Re-fetch quando a semana mudar
   useEffect(() => {
