@@ -56,7 +56,7 @@ function hasMainKeyword(title: string): boolean {
  * Estima a duração de um bloco em minutos
  * Usa durationMinutes se disponível, ou estima pelo conteúdo
  */
-function estimateBlockDuration(block: WorkoutBlock): number {
+export function estimateBlockDuration(block: WorkoutBlock): number {
   // Se tem duração explícita, usa ela
   if (block.durationMinutes && block.durationMinutes > 0) {
     return block.durationMinutes;

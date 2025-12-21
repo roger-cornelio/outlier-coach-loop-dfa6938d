@@ -14,6 +14,14 @@
 
 import type { WorkoutBlock, DayWorkout, TrainingLevel } from '@/types/outlier';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
+import { 
+  adaptWorkoutForTime, 
+  validateTimeAdaptation,
+  calculateTotalTime,
+  classifyBlocksWithPriority,
+  TimeAdaptationResult,
+  INTELLIGENT_ADAPTATION_INFO,
+} from '@/utils/intelligentTimeAdaptation';
 
 // ============================================
 // TIPOS INTERNOS (INVISÍVEIS ao usuário)
@@ -1042,6 +1050,15 @@ export interface AdaptedWorkoutResult {
   densityIncreased: boolean;
   timeRelationTier: TimeRelationTier;
   timeRelationRatio: number;
+  // Novo: informações detalhadas da adaptação inteligente
+  adaptationDetails?: {
+    removedBlocks: WorkoutBlock[];
+    mainBlockReduced: boolean;
+    mainBlockMinReached: boolean;
+    warnings: string[];
+    suggestAlternative: boolean;
+    alternativeMessage?: string;
+  };
 }
 
 export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWorkoutResult {
@@ -1072,6 +1089,7 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
   let wasCondensed = false;
   let blocksRemoved = 0;
   let densityIncreased = false;
+  let adaptationDetails: AdaptedWorkoutResult['adaptationDetails'] | undefined;
   
   // 5. Se tempo ilimitado, retorna após adaptação de nível/sexo
   if (tempoDisponivel >= 9999) {
@@ -1087,10 +1105,8 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
     };
   }
   
-  const targetSeconds = tempoDisponivel * 60;
-  
   // 6. Verificar se já cabe (tempo suficiente)
-  if (afterLevelTime.totalSeconds <= targetSeconds) {
+  if (afterLevelTime.totalSeconds <= tempoDisponivel * 60) {
     return {
       workout: { ...wodBase, blocks: adaptedBlocks, estimatedTime: tempoBase },
       originalDuration: originalMinutes,
@@ -1103,54 +1119,98 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
     };
   }
   
-  // 7. APLICAR ESTRATÉGIA CONFORME TIER
+  // 7. USAR MOTOR DE ADAPTAÇÃO INTELIGENTE POR TEMPO
+  // Este motor remove blocos secundários primeiro, depois reduz o bloco principal
+  const timeAdaptationResult = adaptWorkoutForTime({
+    blocks: adaptedBlocks,
+    tempoDisponivel,
+    nivel,
+    sexo,
+  });
   
-  if (tier === 'full') {
-    // ≥80%: Manter estrutura, ajustar proporcionalmente
-    adaptedBlocks = applyFullTierStrategy(adaptedBlocks, ratio, nivel, sexKey);
-    wasCondensed = ratio < 1.0;
+  // 8. Processar resultado da adaptação inteligente
+  if (timeAdaptationResult.success) {
+    adaptedBlocks = timeAdaptationResult.blocks;
+    blocksRemoved = timeAdaptationResult.removedBlocks.length;
+    wasCondensed = timeAdaptationResult.mainBlockReduced || blocksRemoved > 0;
+    densityIncreased = timeAdaptationResult.mainBlockReduced;
     
-  } else if (tier === 'reduced') {
-    // 50-79%: Remover acessórios, manter WOD principal
-    const result = applyReducedTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
-    adaptedBlocks = result.blocks;
-    blocksRemoved = result.removed;
-    wasCondensed = true;
+    adaptationDetails = {
+      removedBlocks: timeAdaptationResult.removedBlocks,
+      mainBlockReduced: timeAdaptationResult.mainBlockReduced,
+      mainBlockMinReached: timeAdaptationResult.mainBlockMinReached,
+      warnings: timeAdaptationResult.warnings,
+      suggestAlternative: timeAdaptationResult.suggestAlternative,
+      alternativeMessage: timeAdaptationResult.alternativeMessage,
+    };
     
+    // Log warnings para debug
+    if (timeAdaptationResult.warnings.length > 0) {
+      console.warn('⚠️ Adaptação inteligente warnings:', timeAdaptationResult.warnings);
+    }
   } else {
-    // <50% (CONDENSED): APENAS WOD principal, máxima densidade
-    // Remove: aquecimento, acessórios, exercícios secundários
-    // Mantém: WOD principal com menos pausas, transições mínimas
-    // O treino deve parecer mais pesado e mais direto
-    const result = applyMinimalTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
-    adaptedBlocks = result.blocks;
-    blocksRemoved = result.removed;
-    wasCondensed = true;
-    densityIncreased = true;
+    // Fallback para estratégias anteriores se adaptação inteligente falhar
+    console.warn('⚠️ Adaptação inteligente falhou, usando fallback');
+    
+    const targetSeconds = tempoDisponivel * 60;
+    
+    if (tier === 'full') {
+      adaptedBlocks = applyFullTierStrategy(adaptedBlocks, ratio, nivel, sexKey);
+      wasCondensed = ratio < 1.0;
+    } else if (tier === 'reduced') {
+      const result = applyReducedTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
+      adaptedBlocks = result.blocks;
+      blocksRemoved = result.removed;
+      wasCondensed = true;
+    } else {
+      const result = applyMinimalTierStrategy(adaptedBlocks, ratio, nivel, sexKey, targetSeconds);
+      adaptedBlocks = result.blocks;
+      blocksRemoved = result.removed;
+      wasCondensed = true;
+      densityIncreased = true;
+    }
+    
+    adaptationDetails = {
+      removedBlocks: [],
+      mainBlockReduced: false,
+      mainBlockMinReached: false,
+      warnings: ['Usado fallback para estratégia anterior'],
+      suggestAlternative: false,
+    };
   }
   
-  // 8. Calcular tempo final
+  // 9. Calcular tempo final
   const finalTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   
-  // 9. VALIDAÇÃO FINAL: tempo deve estar ±5% do alvo
-  const tolerance = targetSeconds * 0.05;
-  if (finalTime.totalSeconds > targetSeconds + tolerance) {
-    // Ajuste fino: condensar mais
-    const finalRatio = targetSeconds / finalTime.totalSeconds;
-    adaptedBlocks = adaptedBlocks.map(block => {
-      const priority = BLOCK_PRIORITIES[block.type];
-      if (priority?.canCondense) {
-        return condenseBlockVolumes(block, finalRatio);
-      }
-      return block;
-    });
+  // 10. VALIDAÇÃO FINAL usando o novo sistema
+  const validation = validateTimeAdaptation(tempoDisponivel, finalTime.totalMinutes, adaptedBlocks);
+  
+  if (!validation.isValid) {
+    console.error('❌ Validação de adaptação falhou:', validation.errors);
+    
+    // Tentar ajuste fino se validação falhar
+    const tolerance = tempoDisponivel * 60 * 0.05;
+    if (finalTime.totalSeconds > tempoDisponivel * 60 + tolerance) {
+      const finalRatio = tempoDisponivel * 60 / finalTime.totalSeconds;
+      adaptedBlocks = adaptedBlocks.map(block => {
+        const priority = BLOCK_PRIORITIES[block.type];
+        if (priority?.canCondense) {
+          return condenseBlockVolumes(block, finalRatio);
+        }
+        return block;
+      });
+    }
+  }
+  
+  if (validation.warnings.length > 0) {
+    console.warn('⚠️ Warnings de validação:', validation.warnings);
   }
   
   const validatedTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   
-  // 10. Debug log
+  // 11. Debug log
   if (process.env.NODE_ENV === 'development') {
-    console.log('🏋️ buildWorkoutByTime v3 (Regra-Mãe):', {
+    console.log('🏋️ buildWorkoutByTime v4 (Adaptação Inteligente):', {
       nivel,
       sexo,
       tempoDisponivel,
@@ -1162,6 +1222,8 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
       wasCondensed,
       blocksRemoved,
       densityIncreased,
+      mainBlockReduced: adaptationDetails?.mainBlockReduced,
+      removedBlockNames: adaptationDetails?.removedBlocks.map(b => b.title),
       breakdown: {
         movementMin: Math.ceil(validatedTime.movementSeconds / 60),
         transitionMin: Math.ceil(validatedTime.transitionSeconds / 60),
@@ -1183,6 +1245,7 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
     densityIncreased,
     timeRelationTier: tier,
     timeRelationRatio: ratio,
+    adaptationDetails,
   };
 }
 
@@ -1266,10 +1329,10 @@ export function validateAdaptation(
  * Exporta informações do motor para debug/documentação
  */
 export const ENGINE_VERSION = {
-  version: '3.0.0',
-  name: 'Motor de Adaptação por Tempo Real',
-  frozen: true, // Motor congelado - não alterar sem revisão
-  lastUpdate: '2025-01-19',
+  version: '4.0.0',
+  name: 'Motor de Adaptação Inteligente por Tempo',
+  frozen: false, // Atualizado para incluir adaptação inteligente
+  lastUpdate: '2025-01-21',
   rules: {
     tiers: ['full (≥80%)', 'reduced (50-79%)', 'condensed (<50%)'],
     transitions: {
@@ -1279,6 +1342,7 @@ export const ENGINE_VERSION = {
     },
     tolerance: '±5%',
     unknownMovementFactor: '+15%',
+    mainBlockMinDuration: '8min',
   },
   principles: [
     'Tempo diferente = WOD diferente',
@@ -1286,4 +1350,30 @@ export const ENGINE_VERSION = {
     'Percepção de esforço equivalente em qualquer duração',
     'Nunca subestimar tempo de execução',
   ],
+  intelligentAdaptation: {
+    description: 'Integra identificação de bloco principal com adaptação por tempo',
+    phases: [
+      '1. Remover blocos secundários em ordem de prioridade',
+      '2. Reduzir bloco principal (respeitando mínimo)',
+      '3. Sugerir alternativo se tempo insuficiente',
+    ],
+    removalOrder: [
+      'Notas → Core → Específico → Corrida → Força → Conditioning → Aquecimento',
+    ],
+    mainBlockRules: [
+      'Override manual do coach tem prioridade máxima',
+      'Lógica automática identifica bloco principal se não marcado',
+      'Bloco principal nunca é removido, apenas reduzido',
+      'Mínimo de 8 minutos para bloco principal',
+    ],
+  },
 };
+
+// Re-exportar funções do motor de adaptação inteligente para uso externo
+export { 
+  adaptWorkoutForTime,
+  validateTimeAdaptation,
+  calculateTotalTime,
+  classifyBlocksWithPriority,
+  INTELLIGENT_ADAPTATION_INFO,
+} from '@/utils/intelligentTimeAdaptation';
