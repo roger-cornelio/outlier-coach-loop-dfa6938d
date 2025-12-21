@@ -116,30 +116,47 @@ export function PublishToAthletesModal({
 
     const weekStart = getWeekStart();
     let successCount = 0;
-    let errorCount = 0;
+    const errors: Array<{ athleteId: string; error: any }> = [];
 
     try {
       // Publicar para cada atleta selecionado
       for (const athleteUserId of selectedAthletes) {
-        // Note: Using 'any' cast temporarily until types are regenerated after migration
+        const payload = {
+          athlete_user_id: athleteUserId,
+          coach_id: profile.id,
+          week_start: weekStart,
+          plan_json: { workouts },
+          title: title || `Semana ${weekStart}`,
+          status: 'published',
+          published_at: new Date().toISOString(),
+        };
+
+        // Log payload para debug
+        console.log('[PublishToAthletesModal] Upsert payload:', {
+          athlete_user_id: payload.athlete_user_id,
+          coach_id: payload.coach_id,
+          week_start: payload.week_start,
+          status: payload.status,
+          published_at: payload.published_at,
+          plan_json_size: JSON.stringify(payload.plan_json).length,
+        });
+
         const { error: upsertError } = await (supabase as any)
           .from('athlete_plans')
-          .upsert({
-            athlete_user_id: athleteUserId,
-            coach_id: profile.id,
-            week_start: weekStart,
-            plan_json: { workouts },
-            title: title || `Semana ${weekStart}`,
-            status: 'published',
-            published_at: new Date().toISOString(),
-          }, {
+          .upsert(payload, {
             onConflict: 'athlete_user_id,week_start'
           });
 
         if (upsertError) {
-          console.error('[PublishToAthletesModal] Upsert error for', athleteUserId, upsertError);
-          errorCount++;
+          console.error('[PublishToAthletesModal] Upsert FAILED for athlete:', athleteUserId, {
+            code: upsertError.code,
+            message: upsertError.message,
+            details: upsertError.details,
+            hint: upsertError.hint,
+          });
+          errors.push({ athleteId: athleteUserId, error: upsertError });
         } else {
+          console.log('[PublishToAthletesModal] Upsert SUCCESS for athlete:', athleteUserId);
           successCount++;
         }
       }
@@ -153,18 +170,42 @@ export function PublishToAthletesModal({
         });
         onSuccess?.();
         
-        // Fechar modal após sucesso
-        setTimeout(() => {
-          handleClose();
-        }, 1500);
+        // Fechar modal após sucesso (só se não houve erros)
+        if (errors.length === 0) {
+          setTimeout(() => {
+            handleClose();
+          }, 1500);
+        }
       }
 
-      if (errorCount > 0) {
-        setError(`Erro ao publicar para ${errorCount} atleta(s).`);
+      if (errors.length > 0) {
+        const firstError = errors[0].error;
+        const errorDetails = [
+          `Erro ao publicar para ${errors.length} atleta(s).`,
+          `Código: ${firstError.code || 'N/A'}`,
+          `Mensagem: ${firstError.message || 'Erro desconhecido'}`,
+          firstError.hint ? `Hint: ${firstError.hint}` : null,
+          firstError.details ? `Detalhes: ${firstError.details}` : null,
+          `Atletas afetados: ${errors.map(e => e.athleteId.slice(0, 8)).join(', ')}...`,
+        ].filter(Boolean).join('\n');
+        
+        setError(errorDetails);
+        
+        toast({
+          title: 'Erro ao publicar',
+          description: `${firstError.code}: ${firstError.message}`,
+          variant: 'destructive',
+        });
       }
-    } catch (err) {
-      console.error('[PublishToAthletesModal] Error:', err);
-      setError('Erro inesperado ao publicar');
+    } catch (err: any) {
+      console.error('[PublishToAthletesModal] Exception:', err);
+      const errorMsg = err?.message || String(err);
+      setError(`Exceção: ${errorMsg}`);
+      toast({
+        title: 'Erro inesperado',
+        description: errorMsg,
+        variant: 'destructive',
+      });
     } finally {
       setIsPublishing(false);
     }
