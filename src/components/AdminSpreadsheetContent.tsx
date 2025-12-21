@@ -4,13 +4,18 @@
  * This is a clean version of the spreadsheet functionality for the Admin Portal.
  * It does NOT include the coach header or coach-specific navigation.
  * This component is meant to be rendered inside AdminPortal's layout.
+ * 
+ * CONCEITOS:
+ * - WOD Principal: bloco central do treino (para adaptação)
+ * - Benchmark: treino repetível (para análise histórica)
+ * - São conceitos INDEPENDENTES
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Sparkles, AlertCircle, Trash2, CheckCircle, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, Eye, Wand2, Info } from 'lucide-react';
+import { FileText, Sparkles, AlertCircle, Trash2, CheckCircle, Trophy, Clock, ChevronDown, ChevronUp, Save, Zap, Dumbbell, Target, Eye, Wand2, Info, HelpCircle } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock, WodType, AthleteLevel, TargetTimeRange, LEVEL_NAMES } from '@/types/outlier';
 import {
   Accordion,
@@ -18,9 +23,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { generateBenchmarkTimeRanges, formatTimeRange, describeTimeRange } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock, setAsMainBlock, clearMainBlock } from '@/utils/mainBlockIdentifier';
+import { getMainBlockCopy, getBenchmarkCopy, getUIConceptsCopy } from '@/config/workoutConceptsCopy';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -449,6 +456,24 @@ Pull-ups
             </div>
           </div>
 
+          {/* Legenda de conceitos */}
+          <div className="mb-4 p-3 rounded-lg bg-secondary/30 border border-border/50">
+            <div className="flex items-start gap-2 mb-2">
+              <Info className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <p className="text-xs text-muted-foreground font-medium">Conceitos independentes:</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-xs">
+              <div className="flex items-start gap-2">
+                <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded">⚡ Principal</span>
+                <span className="text-muted-foreground">Bloco central do treino. Usado para adaptação e performance contextual.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded">🏆 Benchmark</span>
+                <span className="text-muted-foreground">Treino repetível para análise de evolução ao longo do tempo.</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 mb-6">
             {parsedWorkouts.map((day, dayIndex) => (
               <div key={day.day} className="rounded-xl bg-card border border-border overflow-hidden">
@@ -485,15 +510,21 @@ Pull-ups
                           const isManualMain = block.isMainWod === true;
                           const isAutoMain = isMainBlock && !isManualMain;
                           
+                          const mainBlockCopy = getMainBlockCopy();
+                          const benchmarkCopy = getBenchmarkCopy();
+                          const uiCopy = getUIConceptsCopy();
+                          
                           return (
                           <div 
                             key={block.id} 
                             className={`p-3 rounded-lg border ${
-                              block.isBenchmark 
-                                ? 'border-amber-500/30 bg-amber-500/5' 
-                                : isMainBlock
-                                  ? 'border-primary/30 bg-primary/5'
-                                  : 'border-border bg-secondary/30'
+                              block.isBenchmark && isMainBlock
+                                ? 'border-amber-500/30 bg-gradient-to-r from-primary/5 to-amber-500/5'
+                                : block.isBenchmark 
+                                  ? 'border-amber-500/30 bg-amber-500/5' 
+                                  : isMainBlock
+                                    ? 'border-primary/30 bg-primary/5'
+                                    : 'border-border bg-secondary/30'
                             }`}
                           >
                             <div className="flex items-start justify-between mb-2">
@@ -501,39 +532,66 @@ Pull-ups
                                 <span className="text-sm font-medium">{block.title}</span>
                                 {isManualMain && (
                                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
-                                    ⚡ Principal (definido)
+                                    {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
                                   </span>
                                 )}
                                 {isAutoMain && (
                                   <span className="text-xs bg-primary/10 text-primary/70 px-2 py-0.5 rounded-full">
-                                    ⚡ Principal (auto)
+                                    {mainBlockCopy.icon} {mainBlockCopy.autoLabel}
+                                  </span>
+                                )}
+                                {block.isBenchmark && (
+                                  <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-medium">
+                                    {benchmarkCopy.icon} {benchmarkCopy.shortLabel}
                                   </span>
                                 )}
                               </div>
                               <div className="flex gap-2">
-                                <button
-                                  onClick={() => toggleBlockMainWod(dayIndex, blockIndex)}
-                                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
-                                    isManualMain 
-                                      ? 'bg-primary/20 text-primary' 
-                                      : isAutoMain
-                                        ? 'bg-primary/10 text-primary/70'
-                                        : 'bg-secondary text-muted-foreground hover:text-foreground'
-                                  }`}
-                                  title={isManualMain ? 'Remover marcação manual (voltar para automático)' : 'Marcar como bloco principal'}
-                                >
-                                  <Dumbbell className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={() => toggleBlockBenchmark(dayIndex, blockIndex)}
-                                  className={`text-xs px-2 py-1 rounded ${
-                                    block.isBenchmark 
-                                      ? 'bg-amber-500/20 text-amber-500' 
-                                      : 'bg-secondary text-muted-foreground hover:text-foreground'
-                                  }`}
-                                >
-                                  <Trophy className="w-3 h-3" />
-                                </button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => toggleBlockMainWod(dayIndex, blockIndex)}
+                                        className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                                          isManualMain 
+                                            ? 'bg-primary/20 text-primary' 
+                                            : isAutoMain
+                                              ? 'bg-primary/10 text-primary/70'
+                                              : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                                        }`}
+                                      >
+                                        <Dumbbell className="w-3 h-3" />
+                                        <span className="hidden sm:inline">Principal</span>
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p className="font-medium mb-1">{mainBlockCopy.label}</p>
+                                      <p className="text-xs text-muted-foreground">{mainBlockCopy.tooltip}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => toggleBlockBenchmark(dayIndex, blockIndex)}
+                                        className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                                          block.isBenchmark 
+                                            ? 'bg-amber-500/20 text-amber-500' 
+                                            : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                                        }`}
+                                      >
+                                        <Trophy className="w-3 h-3" />
+                                        <span className="hidden sm:inline">Benchmark</span>
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p className="font-medium mb-1">{benchmarkCopy.label}</p>
+                                      <p className="text-xs text-muted-foreground">{benchmarkCopy.tooltip}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                             </div>
                             <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
