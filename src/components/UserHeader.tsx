@@ -2,8 +2,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/useLogout';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { LogOut, User, Settings, UserCircle, ChevronDown, Loader2 } from 'lucide-react';
+import { LogOut, Settings, UserCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
+import { UserAvatar } from './UserAvatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +22,7 @@ interface UserHeaderProps {
 export function UserHeader({ showLogout = true, className = '' }: UserHeaderProps) {
   const { user, profile, role } = useAuth();
   const { logout, isLoggingOut } = useLogout();
-  const { setCurrentView } = useOutlierStore();
+  const { setCurrentView, athleteConfig } = useOutlierStore();
   const { status: athleteStatus } = useAthleteStatus();
 
   if (!user) return null;
@@ -59,10 +60,15 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card/50 border border-border/30 hover:bg-card/80 hover:border-border/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20">
-            {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-primary" />
-            </div>
+            {/* Avatar automático baseado em sexo e nível */}
+            <UserAvatar
+              name={displayName}
+              gender={athleteConfig?.sexo}
+              trainingLevel={athleteConfig?.trainingLevel}
+              athleteStatus={athleteStatus}
+              size="md"
+              showGlow
+            />
             
             {/* Identity Block */}
             <div className="flex flex-col items-start text-left min-w-0">
