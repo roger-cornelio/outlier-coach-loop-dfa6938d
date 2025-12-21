@@ -3,9 +3,12 @@
  * 
  * Ctrl+Shift+D: Toggle localStorage.DEBUG_BAR for owner only
  * Ctrl+Shift+Q: Toggle QA mode - if inactive opens modal, if active toggles visibility
+ * 
+ * NOTA: Desativado em /app (dashboard do atleta) para evitar re-renders
  */
 
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { QAActivationModal } from '@/components/QAActivationModal';
@@ -16,12 +19,24 @@ const DEBUG_STORAGE_KEY = 'DEBUG_BAR';
 const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 
 export function DebugKeyboardToggle() {
+  const location = useLocation();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [showQAModal, setShowQAModal] = useState(false);
-  const { isQAActive, deactivateQA, canActivate } = useQADebugMode(profile?.email);
+  
+  // Desativar em rotas de atleta para evitar re-renders
+  const isAthleteRoute = location.pathname === '/app' || location.pathname.startsWith('/app/');
+  
+  // Só chamar useQADebugMode se NÃO for rota de atleta
+  const qaMode = useQADebugMode(isAthleteRoute ? null : profile?.email);
+  const { isQAActive, deactivateQA, canActivate } = isAthleteRoute 
+    ? { isQAActive: false, deactivateQA: () => {}, canActivate: false }
+    : qaMode;
 
   useEffect(() => {
+    // Não registrar atalhos em rotas de atleta
+    if (isAthleteRoute) return;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+Shift+D - Owner debug toggle
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
@@ -85,7 +100,10 @@ export function DebugKeyboardToggle() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [profile?.email, toast, isQAActive, deactivateQA, canActivate]);
+  }, [profile?.email, toast, isQAActive, deactivateQA, canActivate, isAthleteRoute]);
+
+  // Não renderizar modal em rotas de atleta
+  if (isAthleteRoute) return null;
 
   return (
     <QAActivationModal 
