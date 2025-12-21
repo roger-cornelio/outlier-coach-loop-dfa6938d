@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, UserPlus, AlertCircle, CheckCircle, Copy, Search } from 'lucide-react';
 
 interface LinkAthleteModalProps {
   open: boolean;
@@ -49,10 +49,37 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
     email?: string;
     coach_id?: string;
   } | null>(null);
+  const [linkError, setLinkError] = useState<{
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+    payload?: { coach_id?: string; athlete_id?: string };
+  } | null>(null);
+
+  const copyErrorToClipboard = () => {
+    if (!linkError) return;
+    const errorReport = {
+      action: 'link_athlete',
+      timestamp: new Date().toISOString(),
+      supabase_error: {
+        code: linkError.code || 'N/A',
+        message: linkError.message || 'N/A',
+        details: linkError.details || null,
+        hint: linkError.hint || null,
+      },
+      payload: linkError.payload || {},
+    };
+    const text = JSON.stringify(errorReport, null, 2);
+    navigator.clipboard.writeText(text);
+    console.error('[LinkAthleteModal] Error report copied:', errorReport);
+    toast({ title: 'Erro copiado para clipboard' });
+  };
 
   const resetState = () => {
     setEmail('');
     setSearchResult(null);
+    setLinkError(null);
     setIsLoading(false);
   };
 
@@ -127,12 +154,27 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
         .single();
 
       if (insertError) {
-        console.error('[LinkAthleteModal] Insert error:', insertError);
+        const errData = {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          payload: { coach_id: user.id, athlete_id: searchResult.user_id },
+        };
+        console.error('[LinkAthleteModal] LINK FAILED:', {
+          action: 'link_athlete',
+          timestamp: new Date().toISOString(),
+          supabase_error: errData,
+        });
         setUpsertResult(false, insertError.message);
-        setSearchResult({ status: 'ERROR', message: `Erro ao vincular: ${insertError.message}` });
+        setLinkError(errData);
+        setSearchResult({ 
+          status: 'ERROR', 
+          message: `Erro: ${insertError.code} - ${insertError.message}` 
+        });
         toast({
           title: 'Erro ao vincular',
-          description: insertError.message,
+          description: `${insertError.code}: ${insertError.message}`,
           variant: 'destructive',
         });
         return;
@@ -227,27 +269,40 @@ export function LinkAthleteModal({ open, onOpenChange, onSuccess }: LinkAthleteM
 
           {/* Status messages */}
           {searchResult && !canLink && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg ${
+            <div className={`p-3 rounded-lg ${
               searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
               searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
               searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
                 ? 'bg-destructive/10 border border-destructive/20'
                 : 'bg-muted'
             }`}>
-              <AlertCircle className={`w-4 h-4 flex-shrink-0 ${
-                searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
-                searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
-                searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
-                  ? 'text-destructive'
-                  : 'text-muted-foreground'
-              }`} />
-              <p className={`text-sm ${
-                searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
-                searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
-                searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
-                  ? 'text-destructive'
-                  : 'text-muted-foreground'
-              }`}>{searchResult.message}</p>
+              <div className="flex items-start gap-2">
+                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                  searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
+                  searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
+                  searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
+                }`} />
+                <p className={`text-sm flex-1 ${
+                  searchResult.status === 'ERROR' || searchResult.status === 'NO_AUTH_USER' || 
+                  searchResult.status === 'NOT_ATHLETE' || searchResult.status === 'ALREADY_LINKED' ||
+                  searchResult.status === 'ALREADY_YOURS' || searchResult.status === 'INVALID_EMAIL'
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
+                }`}>{searchResult.message}</p>
+                {linkError && searchResult.status === 'ERROR' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyErrorToClipboard}
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/20"
+                    title="Copiar erro"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

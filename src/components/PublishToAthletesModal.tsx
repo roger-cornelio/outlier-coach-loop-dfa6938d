@@ -22,7 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, Users, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Send, Users, User, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 
 interface LinkedAthlete {
   id: string;
@@ -69,7 +69,35 @@ export function PublishToAthletesModal({
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorData, setErrorData] = useState<{
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+    athleteIds?: string[];
+    payload?: { athlete_user_id?: string; coach_id?: string; week_start?: string };
+  } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
+
+  const copyErrorToClipboard = () => {
+    if (!errorData) return;
+    const errorReport = {
+      action: 'publish_plan',
+      timestamp: new Date().toISOString(),
+      supabase_error: {
+        code: errorData.code || 'N/A',
+        message: errorData.message || 'N/A',
+        details: errorData.details || null,
+        hint: errorData.hint || null,
+      },
+      payload: errorData.payload || {},
+      affected_athletes: errorData.athleteIds || [],
+    };
+    const text = JSON.stringify(errorReport, null, 2);
+    navigator.clipboard.writeText(text);
+    console.error('[PublishToAthletesModal] Error report copied:', errorReport);
+    toast({ title: 'Erro copiado para clipboard' });
+  };
 
   // Log ao abrir para QA
   useEffect(() => {
@@ -190,6 +218,32 @@ export function PublishToAthletesModal({
         ].filter(Boolean).join('\n');
         
         setError(errorDetails);
+        setErrorData({
+          code: firstError.code,
+          message: firstError.message,
+          details: firstError.details,
+          hint: firstError.hint,
+          athleteIds: errors.map(e => e.athleteId),
+          payload: {
+            athlete_user_id: errors[0]?.athleteId,
+            coach_id: profile?.id,
+            week_start: weekStart,
+          },
+        });
+
+        // Console error com detalhes completos
+        console.error('[PublishToAthletesModal] PUBLISH FAILED:', {
+          action: 'publish_plan',
+          timestamp: new Date().toISOString(),
+          supabase_error: {
+            code: firstError.code,
+            message: firstError.message,
+            details: firstError.details,
+            hint: firstError.hint,
+          },
+          payload: { coach_id: profile?.id, week_start: weekStart },
+          affected_athletes: errors.map(e => e.athleteId),
+        });
         
         toast({
           title: 'Erro ao publicar',
@@ -306,9 +360,22 @@ export function PublishToAthletesModal({
 
           {/* Erro */}
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                <pre className="text-xs text-destructive whitespace-pre-wrap flex-1 font-mono">{error}</pre>
+                {errorData && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyErrorToClipboard}
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/20"
+                    title="Copiar erro"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
