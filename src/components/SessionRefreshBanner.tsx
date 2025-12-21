@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthContext } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 export function SessionRefreshBanner() {
-  const { sessionExpired, refreshSession, user } = useAuth();
+  // Use useContext directly to avoid throwing if provider is missing
+  const authCtx = useContext(AuthContext);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  // Guard: if context not available, render nothing (avoids crash on public routes during HMR)
+  if (!authCtx) {
+    return null;
+  }
+
+  const { sessionExpired, refreshSession, user } = authCtx;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
