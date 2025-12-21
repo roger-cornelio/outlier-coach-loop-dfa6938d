@@ -15,9 +15,9 @@ export const WORKOUT_CONCEPTS = {
     shortLabel: 'Principal',
     icon: '⚡',
     
-    // Copy para o coach
-    description: 'Bloco central do treino do dia.',
-    tooltip: 'WOD principal é o bloco central do treino do dia. É ele que usamos para medir performance no contexto do atleta e ajustar o treino com justiça.',
+    // COPY OFICIAL (NÃO ALTERAR)
+    description: 'O WOD principal é o parâmetro de ajuste do treino.',
+    tooltip: 'O WOD principal é o parâmetro de ajuste do treino. É a partir dele que o app calibra intensidade, volume e frequência para o atleta.',
     
     // Estados
     manualLabel: 'Principal',
@@ -30,8 +30,14 @@ export const WORKOUT_CONCEPTS = {
     // Feedback
     autoDetectedMessage: 'Bloco principal identificado automaticamente com base no tipo e duração.',
     
+    // COPY OFICIAL PARA CALLOUT (NÃO ALTERAR)
+    calloutText: 'O WOD principal é o parâmetro de ajuste do treino.\nÉ a partir dele que o app calibra intensidade, volume e frequência para o atleta.\n\nSem ele, o ajuste do treino do atleta fica menos preciso.',
+    
+    // Copy para erro bloqueante
+    missingError: (day: string) => `${day} não tem WOD principal definido. Defina um bloco como Principal antes de salvar.`,
+    
     // Copy detalhada para exibição no editor
-    editorDescription: 'WOD principal é o bloco central do treino do dia. É ele que usamos para medir performance no contexto do atleta e ajustar o treino com justiça.',
+    editorDescription: 'O WOD principal é o parâmetro de ajuste do treino. É a partir dele que o app calibra intensidade, volume e frequência para o atleta. Sem ele, o ajuste do treino do atleta fica menos preciso.',
   },
 
   // ============================================
@@ -74,6 +80,10 @@ export const WORKOUT_CONCEPTS = {
     // Legenda
     legendMainBlock: 'WOD Principal: bloco central para adaptação e performance contextual',
     legendBenchmark: 'Benchmark: treino repetível para análise histórica de evolução',
+    
+    // Sugestão para nome da programação
+    programNameLabel: 'Nome da Programação (Periodização semanal)',
+    programNameSuggestion: 'Sugestão: Ex: Construção Aeróbia',
   },
 } as const;
 
