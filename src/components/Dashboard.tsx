@@ -204,15 +204,30 @@ export function Dashboard() {
     }
   };
 
-  // Fetch AI feedback when workout or coach style changes
+  // Fetch AI feedback when workout or coach style changes - with anti-loop protection
+  const feedbackLockRef = useRef(false);
+  const lastFeedbackKeyRef = useRef<string | null>(null);
+  
   useEffect(() => {
     const fetchFeedback = async () => {
+      // Guard: no workout or coach style
       if (!currentWorkout || !athleteConfig?.coachStyle) {
         setWorkoutFeedback(null);
         return;
       }
 
+      // Anti-loop: create unique key for this request
+      const feedbackKey = `${currentWorkout.day}-${athleteConfig.coachStyle}-${isShowingAdapted}`;
+      
+      // Skip if already fetching or same request
+      if (feedbackLockRef.current || lastFeedbackKeyRef.current === feedbackKey) {
+        return;
+      }
+
+      feedbackLockRef.current = true;
+      lastFeedbackKeyRef.current = feedbackKey;
       setIsLoadingFeedback(true);
+      
       try {
         const { data, error } = await supabase.functions.invoke('generate-workout-feedback', {
           body: {
@@ -227,16 +242,20 @@ export function Dashboard() {
           },
         });
 
-        if (error) throw error;
-        
-        if (data?.feedback) {
+        // Defensive: don't throw, just handle gracefully
+        if (error || !data?.feedback) {
+          console.warn('[Feedback] Error or no data:', error);
+          setWorkoutFeedback(null);
+        } else {
           setWorkoutFeedback(data.feedback);
         }
       } catch (err) {
-        console.error('Error fetching feedback:', err);
+        // Catch-all: never crash the app
+        console.error('[Feedback] Fetch failed:', err);
         setWorkoutFeedback(null);
       } finally {
         setIsLoadingFeedback(false);
+        feedbackLockRef.current = false;
       }
     };
 
