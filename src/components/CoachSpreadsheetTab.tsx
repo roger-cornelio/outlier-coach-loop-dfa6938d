@@ -5,6 +5,9 @@
  * - Preview = estado local (parsedWorkouts)
  * - Nunca depende do banco para renderizar preview
  * - "Publicar para Atletas" usa preview local como fonte
+ * 
+ * CONCEITOS:
+ * - WOD Principal ≠ Benchmark (conceitos independentes)
  */
 
 import { useState } from 'react';
@@ -13,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Info, Trophy, Send, Upload 
+  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, HelpCircle 
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
@@ -26,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getBenchmarkCopy } from '@/config/workoutConceptsCopy';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -428,27 +432,46 @@ Terça-feira 📅
                         className="overflow-hidden"
                       >
                         <div className="p-3 space-y-3 bg-background">
-                          {workout.blocks.map((block, blockIndex) => (
+                          {workout.blocks.map((block, blockIndex) => {
+                            const benchmarkCopy = getBenchmarkCopy();
+                            return (
                             <div key={block.id} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium">{block.title}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">{block.title}</span>
+                                  {block.isBenchmark && (
+                                    <span className="text-xs bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
+                                      {benchmarkCopy.icon} {benchmarkCopy.shortLabel}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex gap-2">
-                                  <Button
-                                    variant={block.isBenchmark ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleBlockBenchmark(dayIndex, blockIndex)}
-                                    className="h-7 text-xs"
-                                  >
-                                    <Trophy className="w-3 h-3 mr-1" />
-                                    Benchmark
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant={block.isBenchmark ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => toggleBlockBenchmark(dayIndex, blockIndex)}
+                                          className={`h-7 text-xs ${block.isBenchmark ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+                                        >
+                                          <Trophy className="w-3 h-3 mr-1" />
+                                          Benchmark
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p className="font-medium mb-1">{benchmarkCopy.label}</p>
+                                        <p className="text-xs text-muted-foreground">{benchmarkCopy.tooltip}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                               </div>
                               <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
                                 {block.content}
                               </pre>
                             </div>
-                          ))}
+                          );})}
                         </div>
                       </motion.div>
                     )}
