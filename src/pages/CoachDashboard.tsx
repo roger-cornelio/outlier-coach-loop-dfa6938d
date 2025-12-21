@@ -394,8 +394,9 @@ export default function CoachDashboard() {
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-2">
                     {linkedAthletes.map((athlete) => {
-                      // Determinar label do status para exibição
-                      const statusLabel = athlete.training_level 
+                      // training_level = intenção de treino escolhida pelo atleta (Base/Progressivo/Performance)
+                      // NÃO confundir com AthleteStatus (HYROX PRO, etc.) que é calculado de benchmarks
+                      const trainingLevelLabel = athlete.training_level 
                         ? TRAINING_LEVEL_NAMES[athlete.training_level as TrainingLevel] || athlete.training_level
                         : null;
                       
@@ -421,15 +422,15 @@ export default function CoachDashboard() {
                                   {athlete.email}
                                 </p>
                               )}
-                              {statusLabel && (
-                                <span className="text-xs text-primary">
-                                  • Status: {statusLabel}
+                              {trainingLevelLabel && (
+                                <span className="text-xs text-muted-foreground">
+                                  • Nível: {trainingLevelLabel}
                                 </span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {statusLabel && (
+                            {trainingLevelLabel && (
                               <Badge 
                                 variant="outline" 
                                 className={`
@@ -441,7 +442,7 @@ export default function CoachDashboard() {
                                   }
                                 `}
                               >
-                                {statusLabel}
+                                {trainingLevelLabel}
                               </Badge>
                             )}
                             <Button

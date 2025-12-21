@@ -41,7 +41,7 @@ const NEVER_MAIN_TYPES: WorkoutBlock['type'][] = ['aquecimento', 'notas'];
 export interface MainBlockResult {
   block: WorkoutBlock | null;
   blockIndex: number;
-  reason: 'manual' | 'type' | 'duration' | 'keyword' | 'fallback' | 'none';
+  reason: 'manual' | 'type' | 'duration' | 'keyword' | 'fallback' | 'single_block' | 'none';
 }
 
 /**
@@ -133,6 +133,15 @@ export function identifyMainBlock(blocks: WorkoutBlock[]): MainBlockResult {
   
   if (eligibleBlocks.length === 0) {
     return { block: null, blockIndex: -1, reason: 'none' };
+  }
+  
+  // 2. BLOCO ÚNICO: Se há apenas 1 bloco elegível, ele é o principal automaticamente
+  if (eligibleBlocks.length === 1) {
+    return {
+      block: eligibleBlocks[0].block,
+      blockIndex: eligibleBlocks[0].index,
+      reason: 'single_block',
+    };
   }
   
   // 2. Blocos com tipo de alta prioridade
