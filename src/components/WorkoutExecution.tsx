@@ -165,6 +165,8 @@ export function WorkoutExecution() {
   }, [displayedWorkout, athleteConfig, effectiveLevel]);
   
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
+
+  const handleFinishWorkout = () => {
     if (mainWod) {
       setCurrentView('result');
     } else {
