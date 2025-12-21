@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -67,8 +67,10 @@ const getCoachSummaryStyle = (coachStyle: string | undefined) => {
 };
 
 export function Dashboard() {
+  console.count('Dashboard render');
+
   const { 
-    setCurrentView, 
+    setCurrentView,
     setSelectedWorkout, 
     baseWorkouts,
     adaptedWorkouts,
@@ -84,6 +86,8 @@ export function Dashboard() {
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
   const { plan: athletePlan, workouts: planWorkouts, loading: loadingPlan, hasCoach } = useAthletePlan();
+  const coachPlanKey = athletePlan ? `${athletePlan.id}:${athletePlan.week_start}` : null;
+  const lastAppliedCoachPlanKeyRef = useRef<string | null>(null);
   const navigate = useNavigate();
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>('seg');
@@ -103,9 +107,12 @@ export function Dashboard() {
   useEffect(() => {
     async function loadWorkouts() {
       // Se tem plano do coach, usar esse
-      if (planWorkouts.length > 0) {
-        console.log('[Dashboard] Using coach plan:', planWorkouts.length, 'days');
-        setBaseWorkouts(planWorkouts);
+      if (planWorkouts.length > 0 && coachPlanKey) {
+        if (lastAppliedCoachPlanKeyRef.current !== coachPlanKey) {
+          console.log('[Dashboard] Using coach plan:', coachPlanKey, planWorkouts.length, 'days');
+          lastAppliedCoachPlanKeyRef.current = coachPlanKey;
+          setBaseWorkouts(planWorkouts);
+        }
         return;
       }
 
@@ -131,7 +138,15 @@ export function Dashboard() {
     }
     
     loadWorkouts();
-  }, [baseWorkouts.length, canManageWorkouts, fetchAvailableWorkouts, setBaseWorkouts, planWorkouts, loadingPlan]);
+  }, [
+    baseWorkouts.length,
+    canManageWorkouts,
+    fetchAvailableWorkouts,
+    setBaseWorkouts,
+    planWorkouts,
+    coachPlanKey,
+    loadingPlan,
+  ]);
 
   // ============================================
   // REGRA: Usar SEMPRE adaptedWorkouts quando existir

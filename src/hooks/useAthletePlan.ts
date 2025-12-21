@@ -6,10 +6,12 @@
  * 2. Se não tem plano publicado, retornar empty state
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { DayWorkout } from '@/types/outlier';
+
+const EMPTY_WORKOUTS: DayWorkout[] = [];
 
 export interface AthletePlan {
   id: string;
@@ -44,6 +46,10 @@ export function useAthletePlan(): UseAthletePlanReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // week_start estável durante a sessão (evita loop por Date() em deps)
+  const weekStart = useMemo(() => getWeekStart(), []);
+  const lastPlanKeyRef = useRef<string | null>(null);
+
   const hasCoach = !!profile?.coach_id;
 
   const fetchPlan = useCallback(async () => {
@@ -62,8 +68,6 @@ export function useAthletePlan(): UseAthletePlanReturn {
     setError(null);
 
     try {
-      const weekStart = getWeekStart();
-      
       // Buscar plano da semana atual (usando any para evitar erro de tipos não gerados)
       const { data, error: fetchError } = await (supabase as any)
         .from('athlete_plans')
@@ -74,41 +78,78 @@ export function useAthletePlan(): UseAthletePlanReturn {
         .maybeSingle();
 
       if (fetchError) {
-        console.error('[useAthletePlan] Fetch error:', fetchError);
-        setError('Erro ao carregar treino');
-        setPlan(null);
+        const details = {
+          code: fetchError.code,
+          message: fetchError.message,
+          details: fetchError.details,
+          hint: fetchError.hint,
+          athlete_user_id: user.id,
+          week_start: weekStart,
+        };
+        console.error('[useAthletePlan] Fetch error:', details);
+
+        setError(fetchError.message || 'Erro ao carregar treino');
+        // Evitar setState redundante
+        if (lastPlanKeyRef.current !== null) {
+          lastPlanKeyRef.current = null;
+          setPlan(null);
+        }
         return;
       }
 
       if (data) {
         const planJson = data.plan_json as { workouts?: DayWorkout[] } | null;
-        setPlan({
+        const nextPlan: AthletePlan = {
           id: data.id,
           week_start: data.week_start,
           title: data.title,
-          workouts: planJson?.workouts || [],
+          workouts: planJson?.workouts || EMPTY_WORKOUTS,
           published_at: data.published_at,
           coach_id: data.coach_id,
-        });
+        };
+
+        const nextKey = `${nextPlan.id}:${nextPlan.week_start}`;
+        if (lastPlanKeyRef.current === nextKey) {
+          // Mesmo plano, não atualizar estado
+          return;
+        }
+
+        lastPlanKeyRef.current = nextKey;
+        setPlan(nextPlan);
       } else {
-        setPlan(null);
+        // Sem plano publicado
+        if (lastPlanKeyRef.current !== null) {
+          lastPlanKeyRef.current = null;
+          setPlan(null);
+        }
       }
-    } catch (err) {
-      console.error('[useAthletePlan] Error:', err);
-      setError('Erro inesperado');
+    } catch (err: any) {
+      console.error('[useAthletePlan] Exception:', {
+        message: err?.message || String(err),
+        athlete_user_id: user?.id,
+        week_start: weekStart,
+      });
+      setError(err?.message || 'Erro inesperado');
     } finally {
       setLoading(false);
     }
-  }, [user?.id, canManageWorkouts]);
+  }, [user?.id, canManageWorkouts, weekStart]);
 
-  // Fetch on mount e quando user muda
+  // Fetch on mount e quando user.id ou weekStart mudar
   useEffect(() => {
+    console.count('useAthletePlan effect');
+    console.log('[useAthletePlan] deps:', {
+      userId: user?.id || null,
+      weekStart,
+      canManageWorkouts,
+    });
+
     fetchPlan();
   }, [fetchPlan]);
 
   return {
     plan,
-    workouts: plan?.workouts || [],
+    workouts: plan?.workouts ?? EMPTY_WORKOUTS,
     loading,
     error,
     hasCoach,
