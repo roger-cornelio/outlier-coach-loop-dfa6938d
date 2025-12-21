@@ -363,11 +363,26 @@ function calculateBenchmarkLevelScore(
 }
 
 // ============================================================
+// UTILITÁRIOS DE DATA DEFENSIVOS
+// ============================================================
+
+function isValidDate(date: Date): boolean {
+  return date instanceof Date && !isNaN(date.getTime());
+}
+
+function safeParseDate(dateString: string | undefined | null): Date | null {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return isValidDate(date) ? date : null;
+}
+
+// ============================================================
 // PROCESSAMENTO DE PROVAS OFICIAIS
 // ============================================================
 
 function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: string): boolean {
-  const date = eventDate ? new Date(eventDate) : new Date(createdAt);
+  const date = safeParseDate(eventDate) ?? safeParseDate(createdAt);
+  if (!date) return false;
   const now = new Date();
   const daysDiff = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
   return daysDiff <= OFFICIAL_COMPETITION_VALIDITY_DAYS;
@@ -387,8 +402,8 @@ export function processOfficialCompetitions(
       let ageAtRace: number | undefined;
       let ageBracket: HyroxAgeBracket | undefined;
       
-      if (athleteBirthDate) {
-        const raceDate = r.event_date ? new Date(r.event_date) : new Date(r.created_at);
+      if (athleteBirthDate && isValidDate(athleteBirthDate)) {
+        const raceDate = safeParseDate(r.event_date) ?? safeParseDate(r.created_at) ?? new Date();
         ageAtRace = calculateAgeAtDate(athleteBirthDate, raceDate);
         ageBracket = getAgeBracket(ageAtRace);
       }
@@ -413,8 +428,8 @@ export function processOfficialCompetitions(
       };
     })
     .sort((a, b) => {
-      const dateA = a.event_date ? new Date(a.event_date) : new Date(a.created_at);
-      const dateB = b.event_date ? new Date(b.event_date) : new Date(b.created_at);
+      const dateA = safeParseDate(a.event_date) ?? safeParseDate(a.created_at) ?? new Date(0);
+      const dateB = safeParseDate(b.event_date) ?? safeParseDate(b.created_at) ?? new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
 
@@ -430,7 +445,8 @@ export function processOfficialCompetitions(
 
 function calculateTemporalWeight(createdAt: string): number {
   const now = new Date();
-  const created = new Date(createdAt);
+  const created = safeParseDate(createdAt);
+  if (!created) return MIN_WEIGHT;
   const daysDiff = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
   const weight = Math.pow(0.5, daysDiff / DECAY_HALF_LIFE_DAYS);
   return Math.max(MIN_WEIGHT, weight);
@@ -467,7 +483,9 @@ function calculateWeeksWithGoodPerformance(results: BenchmarkResult[]): number {
   const weekMap = new Map<string, { good: number; total: number }>();
   
   for (const result of results) {
-    const date = new Date(result.created_at);
+    const date = safeParseDate(result.created_at);
+    if (!date) continue; // Skip invalid dates
+    
     const weekStart = new Date(date);
     weekStart.setDate(date.getDate() - date.getDay() + 1);
     const weekKey = weekStart.toISOString().split('T')[0];
