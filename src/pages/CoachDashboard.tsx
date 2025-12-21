@@ -435,7 +435,7 @@ export default function CoachDashboard() {
         return <CoachSpreadsheetTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
 
       case 'programacoes':
-        return <CoachProgramsTab />;
+        return <CoachProgramsTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
 
       case 'parametros':
         return <AdminParamsEditor />;

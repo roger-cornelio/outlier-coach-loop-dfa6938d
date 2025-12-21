@@ -3,10 +3,12 @@
  * 
  * Lê dados do banco (workouts) e exibe com ações:
  * - Ver detalhes (modal com semana completa)
- * - Despublicar (volta para rascunho)
+ * - Publicar para atletas (abre modal de seleção)
+ * - Arquivar / Despublicar
  * - Excluir
  * 
- * REGRA: Apenas dados do banco, nunca preview local.
+ * REGRA CRÍTICA: Publicar SEMPRE abre modal de seleção de atletas.
+ * NUNCA publicar automaticamente ou para todos os atletas.
  */
 
 import { useState } from 'react';
@@ -22,7 +24,6 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  X,
 } from 'lucide-react';
 import { useCoachWorkouts, type CoachWorkout, type WorkoutStatus } from '@/hooks/useCoachWorkouts';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +48,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
+
+interface LinkedAthlete {
+  id: string;
+  user_id: string;
+  name: string | null;
+  email: string;
+}
+
+interface CoachProgramsTabProps {
+  linkedAthletes: LinkedAthlete[];
+  loadingAthletes?: boolean;
+}
 
 const DAY_NAMES: Record<DayOfWeek, string> = {
   seg: 'Segunda',
@@ -180,13 +194,17 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
   );
 }
 
-export function CoachProgramsTab() {
-  const { workouts, loading, error, publishWorkout, archiveWorkout, deleteWorkout, refetch } = useCoachWorkouts();
+export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: CoachProgramsTabProps) {
+  const { workouts, loading, error, archiveWorkout, deleteWorkout, refetch } = useCoachWorkouts();
   const { toast } = useToast();
   const [selectedWorkout, setSelectedWorkout] = useState<CoachWorkout | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CoachWorkout | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Estado para modal de publicação
+  const [publishTarget, setPublishTarget] = useState<CoachWorkout | null>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -201,15 +219,16 @@ export function CoachProgramsTab() {
     setShowDetailModal(true);
   };
 
-  const handlePublish = async (id: string) => {
-    setIsProcessing(true);
-    const success = await publishWorkout(id);
-    setIsProcessing(false);
-    if (success) {
-      toast({ title: 'Programação publicada!' });
-    } else {
-      toast({ title: 'Erro ao publicar', variant: 'destructive' });
-    }
+  // Abre modal de seleção de atletas para publicar
+  const handlePublishClick = (workout: CoachWorkout) => {
+    setPublishTarget(workout);
+    setShowPublishModal(true);
+  };
+
+  // Callback quando publicação for bem-sucedida
+  const handlePublishSuccess = () => {
+    refetch();
+    toast({ title: 'Treino publicado para atletas selecionados!' });
   };
 
   const handleUnpublish = async (id: string) => {
@@ -356,10 +375,10 @@ export function CoachProgramsTab() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handlePublish(workout.id)}
+                                onClick={() => handlePublishClick(workout)}
                                 disabled={isProcessing}
                                 className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
-                                title="Publicar"
+                                title="Publicar para atletas"
                               >
                                 <Send className="w-4 h-4" />
                               </Button>
@@ -382,10 +401,10 @@ export function CoachProgramsTab() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handlePublish(workout.id)}
+                                onClick={() => handlePublishClick(workout)}
                                 disabled={isProcessing}
                                 className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
-                                title="Republicar"
+                                title="Republicar para atletas"
                               >
                                 <Send className="w-4 h-4" />
                               </Button>
@@ -440,6 +459,17 @@ export function CoachProgramsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Publish to Athletes Modal */}
+      <PublishToAthletesModal
+        open={showPublishModal}
+        onOpenChange={setShowPublishModal}
+        workouts={publishTarget?.workout_json || []}
+        title={publishTarget?.title || ''}
+        linkedAthletes={linkedAthletes}
+        loadingAthletes={loadingAthletes}
+        onSuccess={handlePublishSuccess}
+      />
     </div>
   );
 }
