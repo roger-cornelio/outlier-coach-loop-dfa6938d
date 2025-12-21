@@ -20,8 +20,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Users, Dumbbell, LogOut, User, FileText } from 'lucide-react';
+import { Loader2, Users, Dumbbell, LogOut, User, FileText, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CreateWorkoutModal } from '@/components/CreateWorkoutModal';
 
 interface LinkedAthlete {
   id: string;
@@ -45,6 +46,30 @@ export default function CoachDashboard() {
   const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
   const [loadingAthletes, setLoadingAthletes] = useState(true);
   const [loadingWorkouts, setLoadingWorkouts] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Função para recarregar treinos
+  const fetchWorkouts = async () => {
+    if (!profile?.id) return;
+
+    try {
+      setLoadingWorkouts(true);
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('id, title, status, created_at')
+        .eq('coach_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[CoachDashboard] Erro ao buscar treinos:', error);
+        setWorkouts([]);
+      } else {
+        setWorkouts(data || []);
+      }
+    } finally {
+      setLoadingWorkouts(false);
+    }
+  };
 
   // Buscar atletas vinculados ao coach (via profiles.coach_id)
   useEffect(() => {
@@ -74,30 +99,8 @@ export default function CoachDashboard() {
     }
   }, [profile?.id]);
 
-  // Buscar treinos do coach (via workouts.coach_id)
+  // Buscar treinos do coach ao montar
   useEffect(() => {
-    async function fetchWorkouts() {
-      if (!profile?.id) return;
-
-      try {
-        setLoadingWorkouts(true);
-        const { data, error } = await supabase
-          .from('workouts')
-          .select('id, title, status, created_at')
-          .eq('coach_id', profile.id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('[CoachDashboard] Erro ao buscar treinos:', error);
-          setWorkouts([]);
-        } else {
-          setWorkouts(data || []);
-        }
-      } finally {
-        setLoadingWorkouts(false);
-      }
-    }
-
     if (profile?.id) {
       fetchWorkouts();
     }
@@ -205,10 +208,20 @@ export default function CoachDashboard() {
         >
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Dumbbell className="w-5 h-5 text-primary" />
-                Treinos
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Dumbbell className="w-5 h-5 text-primary" />
+                  Treinos
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Criar Treino
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingWorkouts ? (
@@ -266,6 +279,13 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Modal de criação de treino */}
+      <CreateWorkoutModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={fetchWorkouts}
+      />
     </div>
   );
 }
