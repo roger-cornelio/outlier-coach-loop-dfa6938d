@@ -3,6 +3,29 @@ import { persist } from 'zustand/middleware';
 import type { AthleteConfig, CoachStyle, WorkoutResult, DayWorkout } from '@/types/outlier';
 import { migrateWorkouts } from '@/utils/benchmarkMigration';
 
+function workoutsSignature(workouts: DayWorkout[]): string {
+  // MVP: assinatura estável para evitar setState redundante (previne loops de render)
+  // Inclui conteúdo dos blocos para detectar mudanças reais.
+  try {
+    return JSON.stringify(
+      workouts.map((w) => ({
+        day: w.day,
+        stimulus: w.stimulus ?? null,
+        estimatedTime: w.estimatedTime ?? null,
+        blocks: (w.blocks ?? []).map((b) => ({
+          id: b.id,
+          type: b.type,
+          title: b.title,
+          content: b.content,
+          isMainWod: (b as any).isMainWod ?? null,
+        })),
+      }))
+    );
+  } catch {
+    return String(workouts?.length ?? 0);
+  }
+}
+
 // ============================================
 // SEPARAÇÃO DE FONTES DE VERDADE
 // ============================================
@@ -111,12 +134,18 @@ export const useOutlierStore = create<OutlierState>()(
         set((state) => ({ workoutResults: [...state.workoutResults, result] })),
       
       // PLANILHA BASE (coach) - também atualiza weeklyWorkouts para legacy
-      setBaseWorkouts: (workouts) => set({ 
-        baseWorkouts: workouts,
-        weeklyWorkouts: workouts, // Legacy fallback
-        adaptationPending: true, // Nova base = precisa readaptar
-        adaptedWorkouts: [], // Limpa adaptações antigas
-      }),
+      setBaseWorkouts: (workouts) => {
+        const current = get().baseWorkouts;
+        if (current === workouts) return;
+        if (workoutsSignature(current) === workoutsSignature(workouts)) return;
+
+        set({
+          baseWorkouts: workouts,
+          weeklyWorkouts: workouts, // Legacy fallback
+          adaptationPending: true, // Nova base = precisa readaptar
+          adaptedWorkouts: [], // Limpa adaptações antigas
+        });
+      },
       
       // TREINO ADAPTADO (atleta)
       setAdaptedWorkouts: (workouts) => set({ 
@@ -135,12 +164,18 @@ export const useOutlierStore = create<OutlierState>()(
       markAdaptationPending: () => set({ adaptationPending: true }),
       
       // Legacy: agora setWeeklyWorkouts define a BASE (para compatibilidade com AdminSpreadsheet)
-      setWeeklyWorkouts: (workouts) => set({ 
-        baseWorkouts: workouts,
-        weeklyWorkouts: workouts,
-        adaptationPending: true,
-        adaptedWorkouts: [],
-      }),
+      setWeeklyWorkouts: (workouts) => {
+        const current = get().baseWorkouts;
+        if (current === workouts) return;
+        if (workoutsSignature(current) === workoutsSignature(workouts)) return;
+
+        set({
+          baseWorkouts: workouts,
+          weeklyWorkouts: workouts,
+          adaptationPending: true,
+          adaptedWorkouts: [],
+        });
+      },
       
       setCurrentView: (view) => set({ currentView: view }),
       setSelectedDay: (day) => set({ selectedDay: day }),
