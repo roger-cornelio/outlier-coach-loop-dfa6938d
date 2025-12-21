@@ -1,12 +1,13 @@
 /**
- * DEBUG PANEL - Development only
+ * DEBUG PANEL - Owner-only debug bar
  * 
  * Painel de diagnóstico para rastrear estado de onboarding/coach_style.
- * Só aparece em ambiente de desenvolvimento.
+ * Só aparece para owner whitelist com ?debug=1 ou localStorage.DEBUG_BAR === '1'
  */
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Bug } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useDebugAllowed } from '@/hooks/useDebugAllowed';
 
 export interface DebugState {
   authStatus: 'loading' | 'authenticated' | 'unauthenticated';
@@ -28,15 +29,17 @@ interface DebugPanelProps {
 export function DebugPanel({ state }: DebugPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const location = useLocation();
+  const { isAllowed, maskValue, maskEmail, userId, userEmail } = useDebugAllowed();
 
-  // Only show in development
-  if (import.meta.env.PROD) {
+  // Only show for allowed users with debug flag
+  if (!isAllowed) {
     return null;
   }
 
   const items = [
     { label: 'auth.status', value: state.authStatus, color: state.authStatus === 'authenticated' ? 'text-green-400' : state.authStatus === 'loading' ? 'text-yellow-400' : 'text-red-400' },
-    { label: 'user.id', value: state.userId?.slice(0, 8) || 'null', color: state.userId ? 'text-blue-400' : 'text-gray-500' },
+    { label: 'user.id', value: maskValue(state.userId, 4), color: state.userId ? 'text-blue-400' : 'text-gray-500' },
+    { label: 'user.email', value: maskEmail(userEmail), color: userEmail ? 'text-blue-400' : 'text-gray-500' },
     { label: 'profileLoaded', value: String(state.profileLoaded), color: state.profileLoaded ? 'text-green-400' : 'text-yellow-400' },
     { label: 'first_setup_completed', value: String(state.firstSetupCompleted), color: state.firstSetupCompleted ? 'text-green-400' : 'text-orange-400' },
     { label: 'profile.coach_style', value: state.profileCoachStyle || 'null', color: state.profileCoachStyle ? 'text-green-400' : 'text-red-400' },
