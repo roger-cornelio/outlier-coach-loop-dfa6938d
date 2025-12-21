@@ -123,41 +123,31 @@ export function Dashboard() {
   
   // Efeito 1: Aplicar plano do coach quando planId muda
   useEffect(() => {
-    if (!planId || planWorkouts.length === 0) return;
+    // Se está carregando, não fazer nada ainda
+    if (loadingPlan) return;
+    
+    // Se não tem plano do coach para esta semana, limpar workouts
+    if (!planId || planWorkouts.length === 0) {
+      // CRÍTICO: Limpar treinos quando não há publicação para a semana
+      // Isso evita o fallback/reaproveitamento de treinos de outras semanas
+      if (lastAppliedPlanIdRef.current !== null) {
+        console.log('[Dashboard] Clearing workouts - no plan for this week');
+        lastAppliedPlanIdRef.current = null;
+        setBaseWorkouts([]);
+      }
+      return;
+    }
+    
     if (lastAppliedPlanIdRef.current === planId) return;
     
     console.log('[Dashboard] Applying coach plan:', planId);
     lastAppliedPlanIdRef.current = planId;
     setBaseWorkouts(planWorkouts);
-  }, [planId, planWorkouts, setBaseWorkouts]);
+  }, [planId, planWorkouts, setBaseWorkouts, loadingPlan]);
 
-  // Efeito 2: Fallback - buscar do banco se não tem plano do coach nem treinos locais
-  const hasLocalWorkouts = baseWorkouts.length > 0;
-  const hasPlanWorkouts = planWorkouts.length > 0;
-  
-  useEffect(() => {
-    if (hasPlanWorkouts || hasLocalWorkouts || canManageWorkouts || loadingPlan) return;
-    
-    let cancelled = false;
-    setIsLoadingFromDb(true);
-    
-    fetchAvailableWorkouts()
-      .then((workoutsFromDb) => {
-        if (cancelled) return;
-        if (workoutsFromDb.length > 0) {
-          console.log('[Dashboard] Loaded workouts from database:', workoutsFromDb.length, 'days');
-          setBaseWorkouts(workoutsFromDb);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) console.error('[Dashboard] Error loading workouts from DB:', err);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingFromDb(false);
-      });
-    
-    return () => { cancelled = true; };
-  }, [hasPlanWorkouts, hasLocalWorkouts, canManageWorkouts, loadingPlan, fetchAvailableWorkouts, setBaseWorkouts]);
+  // REMOVIDO: Fallback para buscar do banco
+  // REGRA: Exibir APENAS treinos publicados especificamente para a semana selecionada
+  // Sem fallback, sem reaproveitamento de outras semanas
 
   // ============================================
   // REGRA: Usar SEMPRE adaptedWorkouts quando existir
@@ -813,13 +803,22 @@ export function Dashboard() {
                       Aproveite para descansar ou confira outro dia.
                     </p>
                   </>
+                ) : loadingPlan ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    <p className="text-muted-foreground text-center text-sm">
+                      Carregando treinos...
+                    </p>
+                  </>
                 ) : (
                   <>
                     <h3 className="font-display text-xl text-foreground">
-                      Aguardando treino do coach
+                      📭 Nenhum treino publicado para esta semana
                     </h3>
                     <p className="text-muted-foreground text-center text-sm max-w-md">
-                      A planilha semanal ainda não foi inserida. Os treinos aparecerão aqui assim que um coach configurá-los.
+                      {currentWeek.isFuture 
+                        ? 'Seu coach ainda não publicou treinos para a próxima semana.'
+                        : 'Seu coach ainda não publicou treinos para esta semana. Aguarde ou entre em contato.'}
                     </p>
                     {canManageWorkouts && (
                       <button

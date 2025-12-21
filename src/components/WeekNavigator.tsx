@@ -54,9 +54,11 @@ export function WeekNavigator({
           "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
           currentWeek.isCurrent
             ? "bg-primary/10 text-primary border border-primary/20"
-            : isViewingHistory
-              ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-              : "bg-secondary text-foreground border border-border"
+            : currentWeek.isFuture
+              ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+              : isViewingHistory
+                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                : "bg-secondary text-foreground border border-border"
         )}
         title={currentWeek.isCurrent ? "Semana atual" : "Clique para voltar à semana atual"}
       >
@@ -69,6 +71,11 @@ export function WeekNavigator({
         {currentWeek.isCurrent && (
           <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
             ATUAL
+          </span>
+        )}
+        {currentWeek.isFuture && (
+          <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
+            PRÓXIMA
           </span>
         )}
         {isViewingHistory && (
