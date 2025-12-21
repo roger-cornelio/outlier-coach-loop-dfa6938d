@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
-import { validateWorkoutForPublish } from '@/utils/workoutValidation';
+
 import {
   Dialog,
   DialogContent,
@@ -226,38 +226,19 @@ export function PublishToAthletesModal({
   };
 
   const handlePublish = async () => {
+    // Validação simples: week_start e atletas
     if (!weekStart) {
       setError('Semana não definida. Salve a programação com uma semana selecionada.');
       return;
     }
 
-    // VALIDAÇÃO DE JANELA DE PUBLICAÇÃO
-    if (!canPublish) {
-      const msg = 'Esta semana está fora da janela de publicação. Só é possível publicar para atletas na semana atual ou na próxima.';
-      setError(msg);
-      toast({
-        title: 'Publicação não permitida',
-        description: msg,
-        variant: 'destructive',
-      });
+    if (selectedAthletes.size === 0) {
+      setError('Selecione pelo menos um atleta.');
       return;
     }
 
-    // VALIDAÇÃO OBRIGATÓRIA
-    const validation = validateWorkoutForPublish(
-      workouts,
-      weekStart,
-      Array.from(selectedAthletes)
-    );
-
-    if (!validation.isValid) {
-      console.error('[PublishToAthletesModal] Validation failed:', validation.errors);
-      setError(validation.errors.join('\n'));
-      toast({
-        title: 'Erro de validação',
-        description: validation.errors[0],
-        variant: 'destructive',
-      });
+    if (!workouts || workouts.length === 0) {
+      setError('Nenhum treino para publicar.');
       return;
     }
 
@@ -358,16 +339,23 @@ export function PublishToAthletesModal({
       }
 
       if (errors.length > 0) {
-        const firstError = errors[0].error;
-        const errorDetails = [
-          `Erro ao publicar para ${errors.length} atleta(s).`,
-          `Código: ${firstError.code || 'N/A'}`,
-          `Mensagem: ${firstError.message || 'Erro desconhecido'}`,
-          firstError.hint ? `Hint: ${firstError.hint}` : null,
-          firstError.details ? `Detalhes: ${firstError.details}` : null,
-        ].filter(Boolean).join('\n');
+        // Mensagem user-friendly sem detalhes técnicos
+        const humanMessage = `Não foi possível publicar para ${errors.length} atleta(s). Tente novamente.`;
         
-        setError(errorDetails);
+        // Log detalhado no console para debug
+        const firstError = errors[0].error;
+        console.error('[PublishToAthletesModal] Publication errors:', {
+          count: errors.length,
+          firstError: {
+            code: firstError.code,
+            message: firstError.message,
+            details: firstError.details,
+            hint: firstError.hint,
+          },
+          athleteIds: errors.map(e => e.athleteId),
+        });
+        
+        setError(humanMessage);
         setErrorData({
           code: firstError.code,
           message: firstError.message,
@@ -383,7 +371,7 @@ export function PublishToAthletesModal({
         
         toast({
           title: 'Erro ao publicar',
-          description: `${firstError.code}: ${firstError.message}`,
+          description: humanMessage,
           variant: 'destructive',
         });
       }

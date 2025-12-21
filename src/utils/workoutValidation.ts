@@ -57,36 +57,32 @@ export function validateWorkoutForSave(
 
 /**
  * Valida se um treino pode ser publicado para atletas
- * REGRA: scheduled_date é OBRIGATÓRIA + verificação de data futura
+ * REGRA: week_start é a fonte única - não bloqueamos por data passada
  */
 export function validateWorkoutForPublish(
   workouts: DayWorkout[],
-  scheduledDate: string | null | undefined,
+  weekStartOrScheduledDate: string | null | undefined,
   selectedAthletes: string[]
 ): WorkoutValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Validação base
-  const baseValidation = validateWorkoutForSave(workouts, scheduledDate);
-  errors.push(...baseValidation.errors);
-  warnings.push(...baseValidation.warnings);
+  // REGRA: Verificar se workouts existe
+  if (!workouts || workouts.length === 0) {
+    errors.push('Nenhum treino para publicar.');
+  }
 
   // REGRA: Pelo menos um atleta selecionado
   if (!selectedAthletes || selectedAthletes.length === 0) {
     errors.push('Selecione pelo menos um atleta.');
   }
 
-  // REGRA: Data não pode ser no passado (exceto hoje)
-  if (scheduledDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const schedDate = new Date(scheduledDate + 'T00:00:00');
-    
-    if (schedDate < today) {
-      errors.push('Data de agendamento não pode ser no passado.');
-    }
+  // REGRA: week_start/scheduledDate deve existir
+  if (!weekStartOrScheduledDate) {
+    errors.push('Semana não definida. Salve a programação com uma semana selecionada.');
   }
+
+  // NOTA: Não bloqueamos por data passada - permitimos publicar qualquer semana
 
   return {
     isValid: errors.length === 0,
