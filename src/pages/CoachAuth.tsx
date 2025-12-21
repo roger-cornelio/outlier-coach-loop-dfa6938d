@@ -253,7 +253,22 @@ export default function CoachAuth() {
     const normalizedEmail = contactEmail.toLowerCase().trim();
 
     try {
-      // (a) Check for existing application for this email
+      // FONTE DA VERDADE: user_roles (não coach_applications)
+      const hasCoachRole = await checkCoachRoleByEmail(normalizedEmail);
+      
+      if (hasCoachRole) {
+        // Já é coach aprovado → redirecionar para login/definir senha
+        toast({
+          title: 'Acesso já aprovado',
+          description: 'Seu acesso já foi aprovado. Faça login ou defina sua senha.',
+        });
+        setFlowState('login');
+        setEmail(normalizedEmail);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // (a) Check for existing application for this email (apenas para evitar duplicatas)
       const { data: existing, error: fetchErr } = await supabase
         .from('coach_applications')
         .select('id, status')
@@ -266,22 +281,12 @@ export default function CoachAuth() {
         console.error('[CoachAuth] fetch existing error:', fetchErr);
       }
 
-      // (b) If pending or approved → don't insert, show toast
+      // (b) If pending → don't insert, show toast (apenas para evitar duplicatas, não para gate)
       if (existing?.status === 'pending') {
         toast({
           title: 'Solicitação já existe',
           description: 'Sua solicitação já está em análise. Aguarde a aprovação.',
         });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (existing?.status === 'approved') {
-        toast({
-          title: 'Acesso já aprovado',
-          description: 'Seu acesso já foi aprovado. Faça login.',
-        });
-        setFlowState('login');
         setIsSubmitting(false);
         return;
       }
