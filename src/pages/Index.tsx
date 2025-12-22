@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
 import { useEvents } from "@/hooks/useEvents";
@@ -37,21 +38,30 @@ import { useCoachTheme } from "@/hooks/useCoachTheme";
 import { useLevelTheme } from "@/hooks/useLevelTheme";
 import { Loader2 } from "lucide-react";
 
+const LAST_ROUTE_KEY = "outlier_last_route";
+
+function loadLastRoute(): string | null {
+  try {
+    return localStorage.getItem(LAST_ROUTE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 const Index = () => {
-  const { currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig } = useOutlierStore();
+  const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Centralized onboarding decision
   const onboardingDecision = useOnboardingDecision();
 
   // Track if we've already done the initial navigation check
   const initialCheckDone = useRef(false);
-  
-  // CRÍTICO: Detectar se currentView foi restaurado do localStorage (não é 'welcome' default)
-  // Se sim, NÃO sobrescrever com lógica de onboarding
-  const viewRestoredFromStorage = useRef(
-    currentView !== 'welcome' && currentView !== 'athleteWelcome'
-  );
+
+  // CRÍTICO: só considerar "restaurado" após hydration do zustand
+  const viewRestoredFromStorage = hasHydrated && currentView !== "welcome" && currentView !== "athleteWelcome";
 
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();
@@ -70,11 +80,29 @@ const Index = () => {
     }
 
     const coachStyleFromProfile = profile?.coach_style;
+    const lastRoute = loadLastRoute();
+    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+
+    // ===== PRIORIDADE: RESTAURAR ROTA (F5) E ENCERRAR REDIRECTS =====
+    // Se onboarding já foi concluído e existe última rota válida, respeitar e encerrar.
+    if (!onboardingDecision.shouldShowOnboarding && lastRoute) {
+      if (lastRoute !== currentPath) {
+        navigate(lastRoute, { replace: true });
+      }
+      initialCheckDone.current = true;
+      return;
+    }
+
+    // ===== BLOQUEIO: NUNCA RODAR ONBOARDING NO RELOAD SE lastRoute EXISTE =====
+    if (onboardingDecision.shouldShowOnboarding && lastRoute) {
+      initialCheckDone.current = true;
+      return;
+    }
 
     // ===== PROTEÇÃO DE RELOAD (F5) =====
     // Se currentView foi restaurado do localStorage (ex: 'dashboard', 'preWorkout'),
     // NÃO sobrescrever com lógica de onboarding - respeitar contexto do usuário
-    if (viewRestoredFromStorage.current) {
+    if (viewRestoredFromStorage) {
       // Apenas sincronizar coach_style se necessário
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
@@ -150,8 +178,8 @@ const Index = () => {
     }
   }, [state, currentView, isCoach, canManageWorkouts, setCurrentView]);
 
-  // Show loading while checking auth
-  if (state === 'loading') {
+  // Show loading while checking auth/profile (não navegar enquanto carrega)
+  if (state === 'loading' || profileLoading || !profileLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
@@ -20,9 +21,48 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const LAST_ROUTE_KEY = "outlier_last_route";
+
+const EXCLUDED_LAST_ROUTES = new Set([
+  "/",
+  "/auth",
+  "/longin",
+  "/login",
+  "/login/admin",
+  "/login/coach",
+  "/coach-request",
+  "/coach-pending",
+  "/coach/definir-senha",
+  "/coach",
+]);
+
+function shouldPersistLastRoute(pathname: string) {
+  if (EXCLUDED_LAST_ROUTES.has(pathname)) return false;
+  if (pathname.startsWith("/login")) return false;
+  return true;
+}
+
+function LastRoutePersistor() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!shouldPersistLastRoute(location.pathname)) return;
+
+    const fullPath = `${location.pathname}${location.search}${location.hash}`;
+    try {
+      localStorage.setItem(LAST_ROUTE_KEY, fullPath);
+    } catch {
+      // silent
+    }
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
+      <LastRoutePersistor />
       <TooltipProvider>
         <AuthProvider>
           <Toaster />
