@@ -31,13 +31,15 @@ export function useLogout() {
       resetToDefaults();
       console.log('[useLogout] Store resetado');
       
-      // STEP 3: Limpar localStorage relacionado a auth (opcional, Supabase já faz isso)
-      // Mas garantimos limpeza extra
+      // STEP 3: Limpar localStorage relacionado a auth e navegação
       const keysToRemove = Object.keys(localStorage).filter(
-        key => key.includes('supabase') || key.includes('auth') || key.includes('session')
+        key => key.includes('supabase') || 
+               key.includes('auth') || 
+               key.includes('session') ||
+               key === 'outlier_week_user_navigated' ||
+               key === 'outlier_last_route'
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
-      console.log('[useLogout] localStorage limpo');
       
       // STEP 4: Reload forçado para garantir sessão anônima
       // Isso garante que o Preview do Lovable fique em estado anônimo
