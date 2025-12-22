@@ -1,7 +1,11 @@
 /**
  * ATHLETE WELCOME SCREEN
- * Exibido após login/seleção de coach
- * Auto-avança após 15s
+ * 
+ * IMPORTANTE: Esta tela é exibida APENAS durante o setup inicial,
+ * após o usuário selecionar o coach_style pela primeira vez.
+ * 
+ * NUNCA deve aparecer para usuários com setup completo.
+ * Auto-avança para config após 10s (apenas no primeiro setup).
  */
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -15,16 +19,6 @@ const coachIcons: Record<CoachStyle, React.ReactNode> = {
   IRON: <Flame className="w-6 h-6" />,
   PULSE: <Heart className="w-6 h-6" />,
   SPARK: <Zap className="w-6 h-6" />,
-};
-
-// Emoji que aparece ao lado do nome do atleta, varia por coach
-const coachEmoji = (style: CoachStyle | null): string => {
-  if (!style) return '🔥';
-  const key = style.toUpperCase();
-  if (key === 'IRON') return '👊';
-  if (key === 'PULSE') return '🤝';
-  if (key === 'SPARK') return '⚡';
-  return '🔥';
 };
 
 export function AthleteWelcomeScreen() {
@@ -43,13 +37,14 @@ export function AthleteWelcomeScreen() {
     }
   }, [authLoading, user, coachStyle]);
 
-  // Auto-advance after 2.4s when ready
+  // Auto-advance to config after 10s (setup inicial only)
+  // Esta tela só aparece no primeiro setup, então o auto-advance é seguro
   useEffect(() => {
     if (!isReady) return;
 
     const timer = setTimeout(() => {
       setCurrentView('config');
-    }, 13000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, [isReady, setCurrentView]);

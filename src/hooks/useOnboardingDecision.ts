@@ -3,17 +3,19 @@
  * 
  * Centraliza TODA a lógica de decisão sobre mostrar onboarding.
  * 
- * REGRA-MÃE: A tela "Escolha o estilo do seu treinador" só aparece
- * quando profile.coach_style estiver AUSENTE.
+ * DEFINIÇÃO DE "SETUP COMPLETO":
+ * - first_setup_completed === true no perfil
+ * - OU coach_style existe E athleteConfig tem trainingLevel (inferido)
  * 
  * REGRAS:
  * 1. Se auth.status === "loading" OU profileLoaded === false → não redirecionar
- * 2. Se authenticated E coach_style EXISTE → shouldShowOnboarding = false (COACH_STYLE_PRESENT)
- * 3. Se authenticated E coach_style AUSENTE → shouldShowOnboarding = true (COACH_STYLE_MISSING)
+ * 2. Se authenticated E setup completo → shouldShowOnboarding = false
+ * 3. Se authenticated E setup incompleto → shouldShowOnboarding = true
  * 4. Se unauthenticated → shouldShowOnboarding = false
  * 
- * MIGRAÇÃO AUTOMÁTICA: Se coach_style existe mas first_setup_completed é null/false,
- * dispara atualização automática para first_setup_completed = true
+ * IMPORTANTE:
+ * - Login, logout, novo dispositivo NÃO redefinem setup
+ * - Setup concluído é estado do perfil, não da sessão
  */
 
 import { useMemo, useEffect, useRef } from 'react';
@@ -23,15 +25,15 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type RedirectReason =
   | 'WAITING_FOR_DATA'
-  | 'COACH_STYLE_PRESENT'
-  | 'COACH_STYLE_MISSING'
-  | 'NOT_LOGGED_IN'
-  | 'BLOCKED_REDIRECT_FROM_SETTINGS';
+  | 'SETUP_COMPLETE'
+  | 'SETUP_INCOMPLETE'
+  | 'NOT_LOGGED_IN';
 
 export interface OnboardingDecision {
   shouldShowOnboarding: boolean;
   canRedirect: boolean;
   lastRedirectReason: RedirectReason;
+  isSetupComplete: boolean;
   // Debug info
   authStatus: 'loading' | 'authenticated' | 'unauthenticated';
   userId: string | null;
@@ -44,20 +46,22 @@ export interface OnboardingDecision {
 
 export function useOnboardingDecision(): OnboardingDecision {
   const { state, user, profile, profileLoaded, updateProfileOptimistic } = useAppState();
-  const { coachStyle, currentView } = useOutlierStore();
+  const { coachStyle, currentView, athleteConfig } = useOutlierStore();
   
   // Track if we've already done the auto-migration
   const autoMigrationDone = useRef(false);
 
-  // MIGRAÇÃO AUTOMÁTICA: Se coach_style existe mas first_setup_completed é null/false
+  // MIGRAÇÃO AUTOMÁTICA: Se setup está completo mas first_setup_completed é null/false
   useEffect(() => {
     if (autoMigrationDone.current) return;
     if (!profileLoaded || !user?.id) return;
     
     const hasCoachStyle = profile?.coach_style && ['IRON', 'PULSE', 'SPARK'].includes(profile.coach_style);
+    const hasTrainingLevel = athleteConfig?.trainingLevel;
     const setupNotCompleted = profile?.first_setup_completed !== true;
     
-    if (hasCoachStyle && setupNotCompleted) {
+    // Se tem coach_style E training_level, marca como completo
+    if (hasCoachStyle && hasTrainingLevel && setupNotCompleted) {
       autoMigrationDone.current = true;
       
       // Optimistic update
@@ -74,7 +78,7 @@ export function useOnboardingDecision(): OnboardingDecision {
           }
         });
     }
-  }, [profileLoaded, user?.id, profile?.coach_style, profile?.first_setup_completed, updateProfileOptimistic]);
+  }, [profileLoaded, user?.id, profile?.coach_style, profile?.first_setup_completed, athleteConfig?.trainingLevel, updateProfileOptimistic]);
 
   const decision = useMemo(() => {
     // Map app state to auth status
@@ -89,6 +93,14 @@ export function useOnboardingDecision(): OnboardingDecision {
     
     // Validate coach_style
     const hasValidCoachStyle = profileCoachStyle && ['IRON', 'PULSE', 'SPARK'].includes(profileCoachStyle);
+    
+    // Check training parameters (from local athleteConfig)
+    const hasTrainingLevel = athleteConfig?.trainingLevel;
+    
+    // SETUP COMPLETO = flag explícita OU (coach_style + training_level inferido)
+    const isSetupComplete = 
+      firstSetupCompleted === true || 
+      (hasValidCoachStyle && hasTrainingLevel);
 
     // ===== DECISION LOGIC =====
 
@@ -98,6 +110,7 @@ export function useOnboardingDecision(): OnboardingDecision {
         shouldShowOnboarding: false,
         canRedirect: false,
         lastRedirectReason: 'WAITING_FOR_DATA' as RedirectReason,
+        isSetupComplete: false,
         authStatus,
         userId,
         profileLoaded,
@@ -114,6 +127,7 @@ export function useOnboardingDecision(): OnboardingDecision {
         shouldShowOnboarding: false,
         canRedirect: false,
         lastRedirectReason: 'NOT_LOGGED_IN' as RedirectReason,
+        isSetupComplete: false,
         authStatus,
         userId,
         profileLoaded,
@@ -124,12 +138,13 @@ export function useOnboardingDecision(): OnboardingDecision {
       };
     }
 
-    // REGRA-MÃE: Se coach_style existe → NÃO mostrar onboarding
-    if (hasValidCoachStyle) {
+    // SETUP COMPLETO → NÃO mostrar onboarding
+    if (isSetupComplete) {
       return {
         shouldShowOnboarding: false,
         canRedirect: true,
-        lastRedirectReason: 'COACH_STYLE_PRESENT' as RedirectReason,
+        lastRedirectReason: 'SETUP_COMPLETE' as RedirectReason,
+        isSetupComplete: true,
         authStatus,
         userId,
         profileLoaded,
@@ -140,11 +155,12 @@ export function useOnboardingDecision(): OnboardingDecision {
       };
     }
 
-    // Rule 3: coach_style ausente → mostrar onboarding
+    // SETUP INCOMPLETO → mostrar onboarding
     return {
       shouldShowOnboarding: true,
       canRedirect: true,
-      lastRedirectReason: 'COACH_STYLE_MISSING' as RedirectReason,
+      lastRedirectReason: 'SETUP_INCOMPLETE' as RedirectReason,
+      isSetupComplete: false,
       authStatus,
       userId,
       profileLoaded,
@@ -153,7 +169,7 @@ export function useOnboardingDecision(): OnboardingDecision {
       localCoachStyle,
       currentView,
     };
-  }, [state, user?.id, profile?.coach_style, profile?.first_setup_completed, profileLoaded, coachStyle, currentView]);
+  }, [state, user?.id, profile?.coach_style, profile?.first_setup_completed, profileLoaded, coachStyle, currentView, athleteConfig?.trainingLevel]);
 
   return decision;
 }
