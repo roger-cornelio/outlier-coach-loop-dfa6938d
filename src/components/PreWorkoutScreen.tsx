@@ -197,11 +197,13 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
     if (onContinue) {
       onContinue();
     } else {
+      console.log(`[NAV][PreWorkoutScreen] from_view=preWorkout to_view=dashboard first_setup_completed=${profile?.first_setup_completed} coachStyle=${currentCoachStyle} reason=user_clicked_bora_treinar ts=${new Date().toISOString()}`);
       setCurrentView('dashboard');
     }
   };
 
   const handleSkipToConfig = () => {
+    console.log(`[NAV][PreWorkoutScreen] from_view=preWorkout to_view=config first_setup_completed=${profile?.first_setup_completed} coachStyle=${currentCoachStyle} reason=user_clicked_ir_para_config ts=${new Date().toISOString()}`);
     setCurrentView('config');
   };
 

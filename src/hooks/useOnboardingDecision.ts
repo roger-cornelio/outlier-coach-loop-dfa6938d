@@ -62,6 +62,9 @@ export function useOnboardingDecision(): OnboardingDecision {
     // REGRA MESTRA: Usar APENAS first_setup_completed === true
     // NÃO usar inferência de outros campos
     const isSetupComplete = firstSetupCompleted === true;
+    
+    // ========== DEBUG LOG ==========
+    console.log(`[GATE][useOnboardingDecision] authStatus=${authStatus} profileLoaded=${profileLoaded} first_setup_completed=${firstSetupCompleted} isSetupComplete=${isSetupComplete} coachStyle=${profileCoachStyle} currentView=${currentView} ts=${new Date().toISOString()}`);
 
     // ===== DECISION LOGIC =====
 
