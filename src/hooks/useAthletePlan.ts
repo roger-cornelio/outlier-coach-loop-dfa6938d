@@ -6,6 +6,7 @@
  * 2. Navegação travada em 3 semanas: -1, 0, +1
  * 3. Virada no domingo: se hoje é domingo, "ATUAL" = próxima semana
  * 4. Logs padronizados: ATHLETE_WEEK_RESOLVE, ATHLETE_PLAN_FETCH
+ * 5. Persistência: semana selecionada é salva em localStorage e restaurada no reload
  */
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -21,6 +22,66 @@ import {
 } from '@/utils/weekCalculations';
 
 const EMPTY_WORKOUTS: DayWorkout[] = [];
+const WEEK_ANCHOR_KEY = 'outlier_week_anchor';
+
+// ============================================
+// PERSISTÊNCIA DE SEMANA
+// ============================================
+
+/**
+ * Salva a âncora da semana no localStorage
+ */
+function saveWeekAnchor(weekStart: string): void {
+  try {
+    localStorage.setItem(WEEK_ANCHOR_KEY, weekStart);
+    console.log('[WeekAnchor] Saved:', weekStart);
+  } catch (e) {
+    console.warn('[WeekAnchor] Failed to save:', e);
+  }
+}
+
+/**
+ * Lê a âncora da semana do localStorage
+ * Retorna null se não existir ou for inválida
+ */
+function loadWeekAnchor(): string | null {
+  try {
+    const stored = localStorage.getItem(WEEK_ANCHOR_KEY);
+    if (!stored) return null;
+    
+    // Validar formato YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(stored)) {
+      console.warn('[WeekAnchor] Invalid format:', stored);
+      return null;
+    }
+    
+    console.log('[WeekAnchor] Loaded:', stored);
+    return stored;
+  } catch (e) {
+    console.warn('[WeekAnchor] Failed to load:', e);
+    return null;
+  }
+}
+
+/**
+ * Determina a semana inicial considerando:
+ * 1. Âncora persistida no localStorage (se válida e dentro da janela)
+ * 2. Semana atual como fallback
+ */
+function getInitialWeekStart(allowedWeeks: { prev: string; curr: string; next: string }): string {
+  const storedAnchor = loadWeekAnchor();
+  const allowed = new Set([allowedWeeks.prev, allowedWeeks.curr, allowedWeeks.next]);
+  
+  if (storedAnchor && allowed.has(storedAnchor)) {
+    console.log('[WeekAnchor] Using stored anchor:', storedAnchor);
+    return storedAnchor;
+  }
+  
+  // Fallback: usar semana atual e salvar
+  console.log('[WeekAnchor] Using current week as default:', allowedWeeks.curr);
+  saveWeekAnchor(allowedWeeks.curr);
+  return allowedWeeks.curr;
+}
 
 export interface AthletePlan {
   id: string;
@@ -89,10 +150,11 @@ export function useAthletePlan(): UseAthletePlanReturn {
   }, []); // Deps vazias - calculado apenas no mount
   
   // Estado: qual das 3 semanas está selecionada
-  // CRÍTICO: Usar função inicializadora lazy para evitar erro "Should have a queue"
-  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => 
-    getAthleteCurrentWeekStart(new Date())
-  );
+  // CRÍTICO: Inicializar com âncora persistida ou semana atual
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => {
+    const allowed = getAthleteAllowedWeeks(new Date());
+    return getInitialWeekStart(allowed);
+  });
 
   // Sincronizar selectedWeekStart se estiver fora da janela permitida
   // Usando functional update para evitar loops
@@ -107,11 +169,18 @@ export function useAthletePlan(): UseAthletePlanReturn {
           old: prevSelected,
           new: curr 
         });
+        // Persistir a nova semana
+        saveWeekAnchor(curr);
         return curr;
       }
       return prevSelected;
     });
   }, [allowedWeeks]);
+
+  // Persistir semana selecionada sempre que mudar
+  useEffect(() => {
+    saveWeekAnchor(selectedWeekStart);
+  }, [selectedWeekStart]);
 
   // LOG: ATHLETE_WEEK_RESOLVE ao inicializar/navegar
   useEffect(() => {
