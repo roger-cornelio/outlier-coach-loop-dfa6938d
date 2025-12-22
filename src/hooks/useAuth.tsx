@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
@@ -527,4 +527,12 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
+}
+
+/**
+ * Safe version of useAuth that returns null when outside AuthProvider.
+ * Use this in components that may render before AuthProvider mounts.
+ */
+export function useAuthSafe(): AuthContextValue | null {
+  return useContext(AuthContext);
 }

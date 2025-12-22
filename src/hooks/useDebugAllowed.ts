@@ -8,7 +8,7 @@
  */
 
 import { useMemo, useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthSafe } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useQADebugMode } from '@/hooks/useQADebugMode';
 
@@ -17,7 +17,9 @@ const DEBUG_STORAGE_KEY = 'DEBUG_BAR';
 const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 
 export function useDebugAllowed() {
-  const { profile, user } = useAuth();
+  const auth = useAuthSafe();
+  const profile = auth?.profile;
+  const user = auth?.user;
   const [searchParams] = useSearchParams();
   const { isQAActive, deactivateQA } = useQADebugMode(profile?.email);
   

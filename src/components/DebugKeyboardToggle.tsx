@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthSafe } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { QAActivationModal } from '@/components/QAActivationModal';
 import { useQADebugMode } from '@/hooks/useQADebugMode';
@@ -20,7 +20,8 @@ const DEBUG_TOGGLE_EVENT = 'debug-bar-toggle';
 
 export function DebugKeyboardToggle() {
   const location = useLocation();
-  const { profile } = useAuth();
+  const auth = useAuthSafe();
+  const profile = auth?.profile;
   const { toast } = useToast();
   const [showQAModal, setShowQAModal] = useState(false);
   
