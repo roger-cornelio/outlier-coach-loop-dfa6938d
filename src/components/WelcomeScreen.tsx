@@ -7,7 +7,7 @@
  * FIRST-TIME ONLY: O estilo escolhido é salvo no perfil do usuário.
  * Em logins subsequentes, o usuário vai direto para config/dashboard.
  */
-import { useState, forwardRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -26,7 +26,7 @@ const coachOptions: { style: CoachStyle; icon: React.ReactNode }[] = [
   { style: 'SPARK', icon: <Zap className="w-8 h-8" /> },
 ];
 
-export const WelcomeScreen = forwardRef<HTMLDivElement>(function WelcomeScreen(_props, ref) {
+export function WelcomeScreen() {
   const { setCoachStyle, setCurrentView, coachStyle } = useOutlierStore();
   const { profile, signOut } = useAuth();
   const { saveCoachStyle } = useCoachStylePersistence();
@@ -63,7 +63,7 @@ export const WelcomeScreen = forwardRef<HTMLDivElement>(function WelcomeScreen(_
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
 
   return (
-    <div ref={ref} className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -204,6 +204,4 @@ export const WelcomeScreen = forwardRef<HTMLDivElement>(function WelcomeScreen(_
       </motion.div>
     </div>
   );
-});
-
-WelcomeScreen.displayName = 'WelcomeScreen';
+}
