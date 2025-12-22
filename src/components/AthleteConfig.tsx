@@ -152,8 +152,10 @@ export function AthleteConfig() {
     
     // Se é primeiro setup, vai para preWorkout; senão, vai para dashboard
     if (isFirstSetup) {
+      console.log(`[NAV][AthleteConfig] from_view=config to_view=preWorkout first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=first_setup_complete_go_to_preworkout ts=${new Date().toISOString()}`);
       setCurrentView('preWorkout');
     } else {
+      console.log(`[NAV][AthleteConfig] from_view=config to_view=dashboard first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=config_saved_back_to_dashboard ts=${new Date().toISOString()}`);
       setCurrentView('dashboard');
     }
   };

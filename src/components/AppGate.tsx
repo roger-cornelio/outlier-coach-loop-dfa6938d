@@ -38,8 +38,13 @@ const PUBLIC_ROUTES = [
 
 export function AppGate({ children }: AppGateProps) {
   const location = useLocation();
-  const { state, loading, profileLoading } = useAppState();
+  const { state, loading, profileLoading, profile } = useAppState();
   const pathname = location.pathname;
+
+  // ========== DEBUG LOG ==========
+  const firstSetupCompleted = profile?.first_setup_completed ?? null;
+  console.log(`[GATE][AppGate] pathname=${pathname} state=${state} first_setup_completed=${firstSetupCompleted} loading=${loading} profileLoading=${profileLoading} ts=${new Date().toISOString()}`);
+  // ================================
 
   // ===== REGRA 0: ROTAS PÚBLICAS - SEMPRE PERMITIR =====
   // Processado ANTES de loading/state para evitar flicker
@@ -49,22 +54,27 @@ export function AppGate({ children }: AppGateProps) {
     // Exceção: usuário já autenticado em /login → redirecionar para destino apropriado
     if (pathname === '/login' && state !== 'anon' && state !== 'loading' && !loading) {
       if (state === 'admin' || state === 'superadmin') {
+        console.log(`[NAV][AppGate] from=${pathname} to=/painel-admin first_setup_completed=${firstSetupCompleted} reason=admin_authenticated ts=${new Date().toISOString()}`);
         return <Navigate to="/painel-admin" replace />;
       }
       if (state === 'coach') {
+        console.log(`[NAV][AppGate] from=${pathname} to=/coach/dashboard first_setup_completed=${firstSetupCompleted} reason=coach_authenticated ts=${new Date().toISOString()}`);
         return <Navigate to="/coach/dashboard" replace />;
       }
       // Atleta autenticado
+      console.log(`[NAV][AppGate] from=${pathname} to=/app first_setup_completed=${firstSetupCompleted} reason=athlete_authenticated ts=${new Date().toISOString()}`);
       return <Navigate to="/app" replace />;
     }
     
     // Exceção: coach já autenticado em /login/coach → dashboard
     if (pathname === '/login/coach' && state === 'coach' && !loading) {
+      console.log(`[NAV][AppGate] from=${pathname} to=/coach/dashboard first_setup_completed=${firstSetupCompleted} reason=coach_already_logged ts=${new Date().toISOString()}`);
       return <Navigate to="/coach/dashboard" replace />;
     }
     
     // Exceção: admin já autenticado em /login/admin → painel
     if (pathname === '/login/admin' && (state === 'admin' || state === 'superadmin') && !loading) {
+      console.log(`[NAV][AppGate] from=${pathname} to=/painel-admin first_setup_completed=${firstSetupCompleted} reason=admin_already_logged ts=${new Date().toISOString()}`);
       return <Navigate to="/painel-admin" replace />;
     }
     
@@ -159,10 +169,12 @@ export function AppGate({ children }: AppGateProps) {
   // /app - requer usuário autenticado (não coach)
   if (pathname === '/app') {
     if (state === 'anon') {
+      console.log(`[NAV][AppGate] from=${pathname} to=/login first_setup_completed=${firstSetupCompleted} reason=anon_accessing_app ts=${new Date().toISOString()}`);
       return <Navigate to="/login" replace />;
     }
     // Coach não pode acessar app de atleta
     if (state === 'coach') {
+      console.log(`[NAV][AppGate] from=${pathname} to=/coach/dashboard first_setup_completed=${firstSetupCompleted} reason=coach_accessing_athlete_app ts=${new Date().toISOString()}`);
       return <Navigate to="/coach/dashboard" replace />;
     }
     return <>{children}</>;
@@ -170,6 +182,7 @@ export function AppGate({ children }: AppGateProps) {
 
   // Qualquer outra rota protegida não listada - redirecionar anon para login
   if (state === 'anon') {
+    console.log(`[NAV][AppGate] from=${pathname} to=/login first_setup_completed=${firstSetupCompleted} reason=anon_protected_route ts=${new Date().toISOString()}`);
     return <Navigate to="/login" replace />;
   }
 

@@ -89,6 +89,11 @@ const Index = () => {
     const coachStyleFromProfile = profile?.coach_style;
     const lastRoute = loadLastRoute();
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    const outlierWeekAnchor = localStorage.getItem('outlier_week_anchor');
+    
+    // ========== DEBUG LOG ==========
+    console.log(`[GATE][Index] currentView=${currentView} isSetupComplete=${onboardingDecision.isSetupComplete} first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} lastRoute=${lastRoute} viewRestoredFromStorage=${viewRestoredFromStorage} outlier_week_anchor=${outlierWeekAnchor} ts=${new Date().toISOString()}`);
+    // ================================
 
     // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
     if (onboardingDecision.isSetupComplete) {
@@ -102,6 +107,7 @@ const Index = () => {
       
       // Se tem última rota válida (F5/reload), restaurar
       if (lastRoute && lastRoute !== currentPath) {
+        console.log(`[NAV][Index] from=${currentPath} to=${lastRoute} first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=restore_last_route_F5 ts=${new Date().toISOString()}`);
         navigate(lastRoute, { replace: true });
         initialCheckDone.current = true;
         return;
@@ -109,6 +115,7 @@ const Index = () => {
       
       // Se view foi restaurada do localStorage, respeitar
       if (viewRestoredFromStorage) {
+        console.log(`[NAV][Index] currentView=${currentView} first_setup_completed=${onboardingDecision.firstSetupCompleted} reason=view_restored_from_storage_NO_REDIRECT ts=${new Date().toISOString()}`);
         initialCheckDone.current = true;
         return;
       }
@@ -117,6 +124,7 @@ const Index = () => {
       // NUNCA ir para welcome, athleteWelcome ou config automaticamente
       if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config') {
         // Ir para preWorkout (treino do dia)
+        console.log(`[NAV][Index] from_view=${currentView} to_view=preWorkout first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=setup_complete_redirect_to_preworkout ts=${new Date().toISOString()}`);
         setCurrentView('preWorkout');
       }
       
@@ -133,6 +141,7 @@ const Index = () => {
           setCoachStyle(normalized);
         }
       }
+      console.log(`[NAV][Index] currentView=${currentView} first_setup_completed=${onboardingDecision.firstSetupCompleted} reason=view_restored_but_setup_incomplete ts=${new Date().toISOString()}`);
       initialCheckDone.current = true;
       return;
     }
@@ -146,11 +155,13 @@ const Index = () => {
       if (!hasCoachStyle) {
         // Sem coach_style → começar do início (welcome)
         if (currentView !== 'welcome') {
+          console.log(`[NAV][Index] from_view=${currentView} to_view=welcome first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=onboarding_no_coach_style ts=${new Date().toISOString()}`);
           setCurrentView('welcome');
         }
       } else {
         // Tem coach_style mas first_setup_completed !== true → ir para config
         if (currentView !== 'config' && currentView !== 'athleteWelcome') {
+          console.log(`[NAV][Index] from_view=${currentView} to_view=athleteWelcome first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=onboarding_has_coach_needs_config ts=${new Date().toISOString()}`);
           setCurrentView('athleteWelcome');
         }
       }

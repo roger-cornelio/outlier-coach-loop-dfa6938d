@@ -45,6 +45,7 @@ export function WelcomeScreen() {
     const result = await saveCoachStyle(coachStyle);
     
     if (result.success) {
+      console.log(`[NAV][WelcomeScreen] from_view=welcome to_view=athleteWelcome first_setup_completed=${profile?.first_setup_completed} coachStyle=${coachStyle} reason=user_selected_coach_continuing ts=${new Date().toISOString()}`);
       setCurrentView('athleteWelcome');
     } else {
       toast.error('Erro ao salvar preferência. Tente novamente.');

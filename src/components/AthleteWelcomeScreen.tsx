@@ -43,11 +43,12 @@ export function AthleteWelcomeScreen() {
     if (!isReady) return;
 
     const timer = setTimeout(() => {
+      console.log(`[NAV][AthleteWelcomeScreen] from_view=athleteWelcome to_view=config first_setup_completed=${profile?.first_setup_completed} coachStyle=${coachStyle} reason=auto_advance_10s_timer ts=${new Date().toISOString()}`);
       setCurrentView('config');
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, [isReady, setCurrentView]);
+  }, [isReady, setCurrentView, profile?.first_setup_completed, coachStyle]);
 
   // Show loader while data isn't ready
   if (!isReady) {

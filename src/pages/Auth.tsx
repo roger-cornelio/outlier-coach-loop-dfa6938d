@@ -103,9 +103,14 @@ export default function Auth({ context = 'user' }: AuthProps) {
     // Reset access denied state on user change
     setAccessDenied(null);
 
+    // ========== DEBUG LOG ==========
+    console.log(`[GATE][Auth] context=${context} isAdmin=${isAdmin} isCoach=${isCoach} userId=${user?.id} ts=${new Date().toISOString()}`);
+    // ================================
+
     // CONTEXT: ADMIN - only allow if user is admin
     if (context === 'admin') {
       if (isAdmin) {
+        console.log(`[NAV][Auth] from=/login/admin to=/painel-admin reason=admin_authenticated ts=${new Date().toISOString()}`);
         navigate('/painel-admin');
       } else {
         // Block access - show restricted message, do NOT redirect to user flow
@@ -117,6 +122,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
     // CONTEXT: COACH - validate coach role before allowing access
     if (context === 'coach') {
       if (isCoach) {
+        console.log(`[NAV][Auth] from=/login/coach to=/coach/dashboard reason=coach_authenticated ts=${new Date().toISOString()}`);
         navigate('/coach/dashboard');
       } else {
         // Block access - user is logged in but NOT a coach
@@ -128,17 +134,20 @@ export default function Auth({ context = 'user' }: AuthProps) {
     // CONTEXT: USER (default) - normal athlete flow
     // If admin accessing /login, redirect to /painel-admin
     if (isAdmin) {
+      console.log(`[NAV][Auth] from=/login to=/painel-admin reason=admin_at_user_login ts=${new Date().toISOString()}`);
       navigate('/painel-admin');
       return;
     }
     
     // If coach accessing /login, redirect to coach portal
     if (isCoach) {
+      console.log(`[NAV][Auth] from=/login to=/coach/dashboard reason=coach_at_user_login ts=${new Date().toISOString()}`);
       navigate('/coach/dashboard');
       return;
     }
 
     // Default: go to main app
+    console.log(`[NAV][Auth] from=/login to=/app reason=athlete_authenticated_going_to_app ts=${new Date().toISOString()}`);
     setCurrentView('dashboard');
     navigate('/app');
   }, [user, authLoading, isAdmin, isCoach, context, navigate, setCurrentView]);
