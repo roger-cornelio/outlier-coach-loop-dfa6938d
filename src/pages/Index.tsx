@@ -61,7 +61,9 @@ const Index = () => {
   const initialCheckDone = useRef(false);
 
   // CRÍTICO: só considerar "restaurado" após hydration do zustand
-  const viewRestoredFromStorage = hasHydrated && currentView !== "welcome" && currentView !== "athleteWelcome";
+  // E apenas se currentView não é uma tela de setup
+  const isSetupView = currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config';
+  const viewRestoredFromStorage = hasHydrated && !isSetupView;
 
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();

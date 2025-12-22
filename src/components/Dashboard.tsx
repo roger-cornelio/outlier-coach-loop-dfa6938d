@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -67,7 +67,7 @@ const getCoachSummaryStyle = (coachStyle: string | undefined) => {
   }
 };
 
-export function Dashboard() {
+export const Dashboard = forwardRef<HTMLDivElement>(function Dashboard(_props, ref) {
   const {
     setCurrentView,
     setSelectedWorkout, 
@@ -373,7 +373,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div ref={ref} className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4">
@@ -919,4 +919,6 @@ export function Dashboard() {
       />
     </div>
   );
-}
+});
+
+Dashboard.displayName = 'Dashboard';
