@@ -70,9 +70,14 @@ const Index = () => {
   useCoachTheme();
   useLevelTheme();
 
-  // COACH STYLE FLOW (using centralized decision)
-  // REGRA: Welcome screen APENAS no primeiro acesso (first_setup_completed == false)
-  // Em logins futuros, vai direto para preWorkout/dashboard
+  // FLUXO PRINCIPAL DE NAVEGAÇÃO
+  // 
+  // REGRAS UX DEFINITIVAS:
+  // 1. Setup completo → direto para treino do dia (preWorkout/dashboard)
+  // 2. Setup incompleto → mostrar telas de onboarding
+  // 3. F5/reload → manter tela atual (via outlier_last_route)
+  // 4. Login NÃO é configuração - nunca reexibir setup para usuário configurado
+  //
   useEffect(() => {
     // PROTECTED: Only proceed when we have data and can redirect
     if (!onboardingDecision.canRedirect || initialCheckDone.current) {
@@ -83,9 +88,17 @@ const Index = () => {
     const lastRoute = loadLastRoute();
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
 
-    // ===== PRIORIDADE: RESTAURAR ROTA (F5) E ENCERRAR REDIRECTS =====
-    // Se onboarding já foi concluído e existe última rota válida, respeitar e encerrar.
-    if (!onboardingDecision.shouldShowOnboarding && lastRoute) {
+    // ===== PRIORIDADE 1: SETUP COMPLETO + ÚLTIMA ROTA (F5) =====
+    // Se setup já foi concluído e existe última rota válida, restaurar e encerrar
+    if (onboardingDecision.isSetupComplete && lastRoute) {
+      // Sincronizar coach_style se necessário
+      if (coachStyleFromProfile) {
+        const normalized = coachStyleFromProfile as CoachStyle;
+        if (coachStyle !== normalized) {
+          setCoachStyle(normalized);
+        }
+      }
+      
       if (lastRoute !== currentPath) {
         navigate(lastRoute, { replace: true });
       }
@@ -93,17 +106,34 @@ const Index = () => {
       return;
     }
 
-    // ===== BLOQUEIO: NUNCA RODAR ONBOARDING NO RELOAD SE lastRoute EXISTE =====
-    if (onboardingDecision.shouldShowOnboarding && lastRoute) {
+    // ===== PRIORIDADE 2: SETUP COMPLETO → DIRETO PARA TREINO =====
+    // Usuário configurado deve ir direto para preWorkout/dashboard, NUNCA para telas de setup
+    if (onboardingDecision.isSetupComplete) {
+      // Sincronizar coach_style
+      if (coachStyleFromProfile) {
+        const normalized = coachStyleFromProfile as CoachStyle;
+        if (coachStyle !== normalized) {
+          setCoachStyle(normalized);
+        }
+      }
+      
+      // Ir direto para treino (preWorkout) ou dashboard
+      // NUNCA ir para welcome, athleteWelcome ou config
+      if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config') {
+        if (athleteConfig) {
+          setCurrentView('preWorkout');
+        } else {
+          setCurrentView('dashboard');
+        }
+      }
+      
       initialCheckDone.current = true;
       return;
     }
 
-    // ===== PROTEÇÃO DE RELOAD (F5) =====
-    // Se currentView foi restaurado do localStorage (ex: 'dashboard', 'preWorkout'),
-    // NÃO sobrescrever com lógica de onboarding - respeitar contexto do usuário
+    // ===== PRIORIDADE 3: PROTEÇÃO DE RELOAD (F5) - VIEW RESTAURADA =====
+    // Se currentView foi restaurado do localStorage, respeitar contexto
     if (viewRestoredFromStorage) {
-      // Apenas sincronizar coach_style se necessário
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
         if (coachStyle !== normalized) {
@@ -114,38 +144,33 @@ const Index = () => {
       return;
     }
 
-    // ===== CONDIÇÃO EXATA DE ONBOARDING =====
-    // Using centralized decision - APENAS para primeiro acesso real
+    // ===== PRIORIDADE 4: SETUP INCOMPLETO → ONBOARDING =====
+    // Apenas mostrar telas de setup se realmente necessário
     if (onboardingDecision.shouldShowOnboarding) {
-      if (currentView !== 'welcome' && currentView !== 'athleteWelcome' && currentView !== 'config') {
-        setCurrentView('welcome');
+      // Determinar qual tela de setup mostrar
+      const hasCoachStyle = coachStyleFromProfile && ['IRON', 'PULSE', 'SPARK'].includes(coachStyleFromProfile);
+      
+      if (!hasCoachStyle) {
+        // Sem coach_style → começar do início (welcome)
+        if (currentView !== 'welcome') {
+          setCurrentView('welcome');
+        }
+      } else {
+        // Tem coach_style mas falta parâmetros → ir para config
+        if (currentView !== 'config') {
+          setCurrentView('config');
+        }
       }
+      
       initialCheckDone.current = true;
       return;
-    }
-
-    // Se setup já foi completado, sincroniza coach_style e vai para fluxo principal
-    if (coachStyleFromProfile) {
-      const normalized = coachStyleFromProfile as CoachStyle;
-      if (coachStyle !== normalized) {
-        setCoachStyle(normalized);
-      }
-    }
-
-    // Login subsequente (currentView ainda é 'welcome' porque não foi persistido antes):
-    // Vai direto para preWorkout ou dashboard
-    if (currentView === 'welcome') {
-      if (athleteConfig) {
-        setCurrentView('preWorkout');
-      } else {
-        setCurrentView('dashboard');
-      }
     }
 
     initialCheckDone.current = true;
   }, [
     onboardingDecision.canRedirect,
     onboardingDecision.shouldShowOnboarding,
+    onboardingDecision.isSetupComplete,
     onboardingDecision.lastRedirectReason,
     profile?.coach_style,
     coachStyle,
@@ -153,6 +178,11 @@ const Index = () => {
     athleteConfig,
     setCoachStyle,
     setCurrentView,
+    viewRestoredFromStorage,
+    navigate,
+    location.pathname,
+    location.search,
+    location.hash,
   ]);
 
   // View access control for authenticated users
@@ -241,6 +271,7 @@ const Index = () => {
           profileLoaded: onboardingDecision.profileLoaded,
           profileCoachStyle: onboardingDecision.profileCoachStyle,
           firstSetupCompleted: onboardingDecision.firstSetupCompleted,
+          isSetupComplete: onboardingDecision.isSetupComplete,
           localCoachStyle: onboardingDecision.localCoachStyle,
           shouldShowOnboarding: onboardingDecision.shouldShowOnboarding,
           currentRoute: '/app',
