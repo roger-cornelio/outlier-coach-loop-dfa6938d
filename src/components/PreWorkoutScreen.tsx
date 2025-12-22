@@ -10,12 +10,12 @@
  * - Mensagem coerente com o treino do dia
  * - NÃO genérica, NÃO inventa estímulos inexistentes
  */
-import { useState, useEffect, useMemo, forwardRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
-import type { CoachStyle, DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+import type { CoachStyle, DayOfWeek, DayWorkout } from '@/types/outlier';
 import { Flame, Heart, Zap, Loader2, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -104,7 +104,7 @@ interface PreWorkoutScreenProps {
   onContinue?: () => void;
 }
 
-export const PreWorkoutScreen = forwardRef<HTMLDivElement, PreWorkoutScreenProps>(function PreWorkoutScreen({ onContinue }, ref) {
+export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
   const { setCurrentView, coachStyle, athleteConfig, baseWorkouts, setBaseWorkouts } = useOutlierStore();
   const { profile } = useAuth();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
@@ -208,7 +208,7 @@ export const PreWorkoutScreen = forwardRef<HTMLDivElement, PreWorkoutScreenProps
   };
 
   return (
-    <div ref={ref} className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -301,6 +301,4 @@ export const PreWorkoutScreen = forwardRef<HTMLDivElement, PreWorkoutScreenProps
       </motion.div>
     </div>
   );
-});
-
-PreWorkoutScreen.displayName = 'PreWorkoutScreen';
+}
