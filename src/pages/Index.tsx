@@ -214,7 +214,8 @@ const Index = () => {
   }, [state, currentView, isCoach, canManageWorkouts, setCurrentView]);
 
   // Show loading while checking auth/profile (não navegar enquanto carrega)
-  if (state === 'loading' || profileLoading || !profileLoaded) {
+  // Também bloqueia render enquanto decisão de onboarding não é determinística
+  if (state === 'loading' || profileLoading || !profileLoaded || !onboardingDecision.canRedirect) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

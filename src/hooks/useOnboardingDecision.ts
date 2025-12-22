@@ -6,17 +6,10 @@
  * REGRA MESTRA:
  * A decisão usa APENAS a flag booleana: first_setup_completed === true
  * NÃO usa inferência de outros campos.
- * 
- * REGRAS:
- * 1. Se auth.status === "loading" OU profileLoaded === false → não redirecionar
- * 2. Se authenticated E first_setup_completed === true → shouldShowOnboarding = false
- * 3. Se authenticated E first_setup_completed !== true → shouldShowOnboarding = true
- * 4. Se unauthenticated → shouldShowOnboarding = false
- * 
- * IMPORTANTE:
- * - Login, logout, novo dispositivo NÃO redefinem setup
- * - Setup concluído é estado do perfil (first_setup_completed), não da sessão
- * - A tela de Configuração só abre por ação explícita do usuário
+ *
+ * HOTFIX (tri-state no bootstrap):
+ * - Durante o carregamento/backfill, first_setup_completed pode estar INDEFINIDO.
+ * - NESSA FASE, o gate NÃO pode decidir fluxo; apenas exibir loading neutro.
  */
 
 import { useMemo } from 'react';
@@ -39,7 +32,12 @@ export interface OnboardingDecision {
   userId: string | null;
   profileLoaded: boolean;
   profileCoachStyle: string | null;
-  firstSetupCompleted: boolean | null;
+  /**
+   * Tri-state no bootstrap:
+   * - undefined: aguardando profile/backfill
+   * - false/true: decidido
+   */
+  firstSetupCompleted: boolean | undefined;
   localCoachStyle: string | null;
   currentView: string;
 }
@@ -51,27 +49,42 @@ export function useOnboardingDecision(): OnboardingDecision {
   const decision = useMemo(() => {
     // Map app state to auth status
     const authStatus: 'loading' | 'authenticated' | 'unauthenticated' =
-      state === 'loading' ? 'loading' :
-      state === 'anon' ? 'unauthenticated' : 'authenticated';
+      state === 'loading' ? 'loading' : state === 'anon' ? 'unauthenticated' : 'authenticated';
 
     const userId = user?.id || null;
     const profileCoachStyle = profile?.coach_style || null;
-    // REGRA: first_setup_completed NUNCA pode ser null na decisão
-    // Forçar boolean para garantir decisões determinísticas
-    const firstSetupCompleted = !!profile?.first_setup_completed;
+
+    // Tri-state no bootstrap
+    let firstSetupCompleted: boolean | undefined;
+
+    if (!profileLoaded) {
+      firstSetupCompleted = undefined;
+    } else if (!profile) {
+      // Perfil inexistente (usuário novo) => setup incompleto
+      firstSetupCompleted = false;
+    } else if (profile.first_setup_completed === true) {
+      firstSetupCompleted = true;
+    } else if (profile.first_setup_completed === false) {
+      firstSetupCompleted = false;
+    } else {
+      // Caso legado: valor veio null/undefined do banco
+      firstSetupCompleted = undefined;
+    }
+
     const localCoachStyle = coachStyle || null;
-    
+
     // REGRA MESTRA: Usar APENAS first_setup_completed === true
-    // NÃO usar inferência de outros campos
     const isSetupComplete = firstSetupCompleted === true;
-    
+
     // ========== DEBUG LOG ==========
-    console.log(`[GATE][useOnboardingDecision] authStatus=${authStatus} profileLoaded=${profileLoaded} first_setup_completed=${firstSetupCompleted} isSetupComplete=${isSetupComplete} coachStyle=${profileCoachStyle} currentView=${currentView} ts=${new Date().toISOString()}`);
+    console.log(
+      `[GATE][useOnboardingDecision] authStatus=${authStatus} profileLoaded=${profileLoaded} first_setup_completed=${firstSetupCompleted} isSetupComplete=${isSetupComplete} coachStyle=${profileCoachStyle} currentView=${currentView} ts=${new Date().toISOString()}`
+    );
 
     // ===== DECISION LOGIC =====
 
-    // Rule 1: Still loading - don't redirect
-    if (authStatus === 'loading' || !profileLoaded) {
+    // Rule 1: Still loading OR tri-state unresolved - don't redirect
+    if (authStatus === 'loading' || !profileLoaded || firstSetupCompleted === undefined) {
       return {
         shouldShowOnboarding: false,
         canRedirect: false,
@@ -135,7 +148,17 @@ export function useOnboardingDecision(): OnboardingDecision {
       localCoachStyle,
       currentView,
     };
-  }, [state, user?.id, profile?.coach_style, profile?.first_setup_completed, profileLoaded, coachStyle, currentView]);
+  }, [
+    state,
+    user?.id,
+    profile?.coach_style,
+    // importante: não colapsar aqui; apenas observar mudanças
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (profile as any)?.first_setup_completed,
+    profileLoaded,
+    coachStyle,
+    currentView,
+  ]);
 
   return decision;
 }
