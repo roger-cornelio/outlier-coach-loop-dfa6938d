@@ -34,8 +34,8 @@ const WEEK_ANCHOR_KEY = 'outlier_week_anchor';
 function saveWeekAnchor(weekStart: string): void {
   try {
     localStorage.setItem(WEEK_ANCHOR_KEY, weekStart);
-    console.log('[WeekAnchor] Saved:', weekStart);
   } catch (e) {
+    // Falha silenciosa (ex: storage bloqueado)
     console.warn('[WeekAnchor] Failed to save:', e);
   }
 }
@@ -48,14 +48,10 @@ function loadWeekAnchor(): string | null {
   try {
     const stored = localStorage.getItem(WEEK_ANCHOR_KEY);
     if (!stored) return null;
-    
+
     // Validar formato YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(stored)) {
-      console.warn('[WeekAnchor] Invalid format:', stored);
-      return null;
-    }
-    
-    console.log('[WeekAnchor] Loaded:', stored);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(stored)) return null;
+
     return stored;
   } catch (e) {
     console.warn('[WeekAnchor] Failed to load:', e);
@@ -66,19 +62,17 @@ function loadWeekAnchor(): string | null {
 /**
  * Determina a semana inicial considerando:
  * 1. Âncora persistida no localStorage (se válida e dentro da janela)
- * 2. Semana atual como fallback
+ * 2. Semana atual como fallback (e salva como default)
  */
 function getInitialWeekStart(allowedWeeks: { prev: string; curr: string; next: string }): string {
   const storedAnchor = loadWeekAnchor();
   const allowed = new Set([allowedWeeks.prev, allowedWeeks.curr, allowedWeeks.next]);
-  
+
   if (storedAnchor && allowed.has(storedAnchor)) {
-    console.log('[WeekAnchor] Using stored anchor:', storedAnchor);
     return storedAnchor;
   }
-  
+
   // Fallback: usar semana atual e salvar
-  console.log('[WeekAnchor] Using current week as default:', allowedWeeks.curr);
   saveWeekAnchor(allowedWeeks.curr);
   return allowedWeeks.curr;
 }
@@ -149,63 +143,42 @@ export function useAthletePlan(): UseAthletePlanReturn {
     return getAthleteAllowedWeeks(now);
   }, []); // Deps vazias - calculado apenas no mount
   
-  // ============================================
-  // BOOT: Restauração da semana do localStorage
-  // REGRA: Ler ANTES de qualquer useState para garantir ordem
-  // ============================================
-  const bootAnchorRef = useRef<string | null>(null);
-  const isFirstRenderRef = useRef(true);
-  
   // Estado: qual das 3 semanas está selecionada
   // CRÍTICO: Inicializar com âncora persistida ou semana atual
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => {
-    const storedAnchor = loadWeekAnchor();
     const allowed = getAthleteAllowedWeeks(new Date());
-    const defaultWeek = allowed.curr;
-    
-    console.log('[BOOT] localStorage anchor =', storedAnchor);
-    console.log('[BOOT] defaultWeek =', defaultWeek);
-    console.log('[BOOT] allowedWeeks =', allowed);
-    
-    // Guardar para debug
-    bootAnchorRef.current = storedAnchor;
-    
-    const restoredWeek = getInitialWeekStart(allowed);
-    console.log('[BOOT] restoredWeek =', restoredWeek);
-    
-    return restoredWeek;
+    return getInitialWeekStart(allowed);
   });
+
+  // Ref: impedir overwrite do localStorage no primeiro render
+  const isFirstRenderRef = useRef(true);
 
   // Sincronizar selectedWeekStart se estiver fora da janela permitida
   // Usando functional update para evitar loops
   useEffect(() => {
     const { prev, curr, next } = allowedWeeks;
     const allowed = new Set([prev, curr, next]);
-    
+
     setSelectedWeekStart(prevSelected => {
       if (!allowed.has(prevSelected)) {
-        console.log('[BOOT] SYNC OVERRIDE - week out of window', { 
+        console.log('ATHLETE_WEEK_SYNC', {
+          reason: 'selectedWeekStart fora da janela',
           old: prevSelected,
           new: curr,
-          bootAnchor: bootAnchorRef.current
         });
-        // Persistir a nova semana
-        saveWeekAnchor(curr);
         return curr;
       }
       return prevSelected;
     });
   }, [allowedWeeks]);
 
-  // Persistir semana selecionada APENAS após o primeiro render
-  // CRÍTICO: Não sobrescrever localStorage no boot antes da restauração
+  // Persistir semana selecionada SOMENTE após o primeiro render
+  // (evita sobrescrever a âncora restaurada no boot)
   useEffect(() => {
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
-      console.log('[BOOT] Skipping first save to prevent overwrite. Current:', selectedWeekStart);
       return;
     }
-    console.log('[WEEK_SAVE] Persisting week:', selectedWeekStart);
     saveWeekAnchor(selectedWeekStart);
   }, [selectedWeekStart]);
 
