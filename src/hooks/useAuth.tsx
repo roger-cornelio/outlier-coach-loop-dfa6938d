@@ -63,15 +63,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Profile status (separado): usado para decidir onboarding SEM flicker
-  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'loaded'>('idle');
+  // 'missing' = profile não existe no banco (usuário novo, precisa de onboarding)
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'loaded' | 'missing'>('idle');
   const profileLoading = profileStatus === 'loading';
-  const profileLoaded = profileStatus === 'loaded';
+  const profileLoaded = profileStatus === 'loaded' || profileStatus === 'missing';
 
   // Track previous user ID to detect user changes
   const previousUserIdRef = useRef<string | null>(null);
+  
+  // ANTI-LOOP: Track if we already fetched profile for this user
+  const profileFetchedForUserRef = useRef<string | null>(null);
+  
   const resetToDefaults = useOutlierStore((state) => state.resetToDefaults);
   const resetUserPreferencesOnly = useOutlierStore((state) => state.resetUserPreferencesOnly);
-  const baseWorkouts = useOutlierStore((state) => state.baseWorkouts);
 
   // Computed properties - PRIORITY: superadmin > admin > coach > user
   const isSuperAdmin = role === "superadmin";
@@ -79,24 +83,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isCoach = role === "coach";
   const canManageWorkouts = role === "admin" || role === "coach" || role === "superadmin";
 
+  // ============================================
+  // REGRA FUNDAMENTAL: Profile not found NÃO é erro de auth
+  // Se session existe mas profile não, usuário continua logado
+  // ============================================
   const fetchProfile = useCallback(async (userId: string) => {
+    // ANTI-LOOP: Se já buscamos para este usuário, não buscar novamente
+    if (profileFetchedForUserRef.current === userId) {
+      console.log('[useAuth] Profile already fetched for this user, skipping');
+      return;
+    }
+    
     setProfileStatus('loading');
     try {
       const { data, error } = await fetchProfileWithRetry(userId);
 
       if (error) {
-        console.error("Error fetching profile after retries:", error);
+        // CRÍTICO: Error fetching profile NÃO causa logout
+        // Apenas marca como missing para trigger de onboarding
+        console.warn("[useAuth] Profile fetch error (NOT logging out):", error);
         setProfile(null);
+        setProfileStatus('missing');
       } else if (data) {
         setProfile(data as UserProfile);
+        setProfileStatus('loaded');
       } else {
+        // Profile não existe = usuário novo, precisa onboarding
+        // CRÍTICO: NÃO fazer logout, apenas marcar status
+        console.log("[useAuth] Profile not found - user needs onboarding (NOT logging out)");
         setProfile(null);
+        setProfileStatus('missing');
       }
+      
+      // Mark as fetched for this user
+      profileFetchedForUserRef.current = userId;
     } catch (err) {
-      console.error("Error in fetchProfile:", err);
+      // CRÍTICO: Exceção NÃO causa logout
+      console.error("[useAuth] Exception in fetchProfile (NOT logging out):", err);
       setProfile(null);
-    } finally {
-      setProfileStatus('loaded');
+      setProfileStatus('missing');
+      profileFetchedForUserRef.current = userId;
     }
   }, []);
 
@@ -199,15 +225,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Track if initial session check is done
     let initialCheckDone = false;
 
-    console.log('[DEBUG useAuth] useEffect mount - setting up auth listener');
+    console.log('[useAuth] useEffect mount - setting up auth listener');
 
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[DEBUG useAuth] onAuthStateChange:', event, '| session:', !!session, '| initialCheckDone:', initialCheckDone);
-      // CRITICAL: Keep loading=true during auth state changes until fully resolved
-      // Only the initial getSession or this handler will set loading=false
+      console.log('[useAuth] onAuthStateChange:', event, '| session:', !!session, '| initialCheckDone:', initialCheckDone);
+      
+      // CRITICAL: Ignore redundant events for same session state
+      // This prevents loops from TOKEN_REFRESHED or other events
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -216,21 +243,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If initial check already ran, handle subsequent auth changes
       if (initialCheckDone) {
         if (session?.user) {
-          // Check if this is a different user than before
+          // Check if this is a DIFFERENT user than before
           const isNewUser = previousUserIdRef.current !== null && 
                            previousUserIdRef.current !== session.user.id;
           
+          // ANTI-LOOP: If same user, skip fetching again
+          if (!isNewUser && previousUserIdRef.current === session.user.id) {
+            console.log('[useAuth] Same user, skipping re-fetch');
+            setLoading(false);
+            return;
+          }
+          
           if (isNewUser) {
-            console.log('[DEBUG useAuth] New user detected, resetting store');
-            // BLINDAGEM: Se há treinos do banco carregados, preservar
-            // Reset seletivo apenas de preferências do usuário
-            if (baseWorkouts.length > 0) {
-              console.log('[DEBUG useAuth] baseWorkouts exist, using selective reset');
-              resetUserPreferencesOnly();
-            } else {
-              console.log('[DEBUG useAuth] No baseWorkouts, full reset');
-              resetToDefaults();
-            }
+            console.log('[useAuth] New user detected, resetting store');
+            // Reset profile fetch tracker for new user
+            profileFetchedForUserRef.current = null;
+            resetToDefaults();
           }
           
           previousUserIdRef.current = session.user.id;
@@ -247,21 +275,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 fetchProfile(session.user.id),
               ]);
             } finally {
-              console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false after roles/profile');
+              console.log('[useAuth] onAuthStateChange - setting loading=false after roles/profile');
               setLoading(false);
             }
           }, 0);
         } else {
           // User signed out - reset store completamente
-          // Logout SEMPRE faz reset completo (não há mais sessão)
-          console.log('[DEBUG useAuth] User signed out, full reset');
+          console.log('[useAuth] User signed out, full reset');
           resetToDefaults();
           previousUserIdRef.current = null;
+          profileFetchedForUserRef.current = null;
 
           setRole("user");
           setProfile(null);
           setProfileStatus('idle');
-          console.log('[DEBUG useAuth] onAuthStateChange - setting loading=false (signed out)');
+          console.log('[useAuth] onAuthStateChange - setting loading=false (signed out)');
           setLoading(false);
         }
       }
@@ -270,11 +298,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session (runs once on mount)
     const initSession = async () => {
-      console.log('[DEBUG useAuth] initSession START - loading is true');
+      console.log('[useAuth] initSession START - loading is true');
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        console.log('[DEBUG useAuth] getSession result:', !!session, '| user:', session?.user?.email);
+        console.log('[useAuth] getSession result:', !!session, '| user:', session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -283,38 +311,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Check if this is a different user than what was previously stored
           const storedUserId = previousUserIdRef.current;
           if (storedUserId !== null && storedUserId !== session.user.id) {
-            console.log('[DEBUG useAuth] initSession - Different user detected');
-            // BLINDAGEM: Mesmo na inicialização, preservar treinos se existirem
-            if (baseWorkouts.length > 0) {
-              console.log('[DEBUG useAuth] initSession - baseWorkouts exist, selective reset');
-              resetUserPreferencesOnly();
-            } else {
-              console.log('[DEBUG useAuth] initSession - No baseWorkouts, full reset');
-              resetToDefaults();
-            }
+            console.log('[useAuth] initSession - Different user detected');
+            profileFetchedForUserRef.current = null;
+            resetToDefaults();
           }
           
           previousUserIdRef.current = session.user.id;
           
           // loading is already true from initial state
           const email = session.user.email || "";
-          console.log('[DEBUG useAuth] initSession - syncing roles for:', email);
+          console.log('[useAuth] initSession - syncing roles for:', email);
           await syncRolesOnBootstrap(session.user.id, email);
           await Promise.all([
             checkUserRole(session.user.id),
             fetchProfile(session.user.id),
           ]);
-          console.log('[DEBUG useAuth] initSession - roles/profile DONE');
+          console.log('[useAuth] initSession - roles/profile DONE');
         } else {
           previousUserIdRef.current = null;
+          profileFetchedForUserRef.current = null;
           setProfileStatus('idle');
         }
       } catch (err) {
-        console.error("Error initializing session:", err);
+        // CRITICAL: Session init error does NOT cause logout
+        console.error("[useAuth] Error initializing session (NOT logging out):", err);
       } finally {
         // Mark initial check as done BEFORE setting loading=false
         initialCheckDone = true;
-        console.log('[DEBUG useAuth] initSession FINALLY - setting loading=false');
+        console.log('[useAuth] initSession FINALLY - setting loading=false');
         setLoading(false);
       }
     };
@@ -322,7 +346,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap, resetToDefaults, resetUserPreferencesOnly, baseWorkouts]);
+  // ANTI-LOOP: Removed baseWorkouts from deps - it was causing re-runs
+  }, [checkUserRole, fetchProfile, syncRolesOnBootstrap, resetToDefaults]);
 
   // Check session expiration periodically
   useEffect(() => {
@@ -388,6 +413,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole("user");
     setSessionExpired(false);
     setLoading(false);
+    
+    // Reset profile fetch tracker
+    profileFetchedForUserRef.current = null;
 
     return { error: null };
   }, []);
