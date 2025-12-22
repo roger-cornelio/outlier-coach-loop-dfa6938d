@@ -16,7 +16,7 @@ export interface DebugState {
   userId: string | null;
   profileLoaded: boolean;
   profileCoachStyle: string | null;
-  firstSetupCompleted: boolean | null;
+  firstSetupCompleted: boolean | null | undefined;
   isSetupComplete?: boolean;
   localCoachStyle: string | null;
   shouldShowOnboarding: boolean;
