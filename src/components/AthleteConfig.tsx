@@ -51,8 +51,9 @@ export function AthleteConfig() {
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
   const { saveProfileConfig, updateName, isSaving: isSavingProfile } = useAthleteProfile();
   
-  // Detectar se é primeiro setup (onboarding) - agora baseado em coach_style
-  const isFirstSetup = !profile?.coach_style;
+  // REGRA MESTRA: Detectar primeiro setup APENAS via first_setup_completed
+  // NÃO usar inferência de coach_style ou outros campos
+  const isFirstSetup = profile?.first_setup_completed !== true;
   const [isSaving, setIsSaving] = useState(false);
   
   // Nome do atleta

@@ -85,6 +85,7 @@ export function useAthleteProfile() {
   }, [user?.id, isLoaded, setAthleteConfig, setCoachStyle, athleteConfig, coachStyle]);
 
   // Salvar configurações no perfil
+  // CRÍTICO: Sempre seta first_setup_completed = true ao salvar config
   const saveProfileConfig = useCallback(async (
     config: AthleteConfig,
     name?: string
@@ -103,6 +104,8 @@ export function useAthleteProfile() {
         unavailable_equipment: config.unavailableEquipment ?? [],
         equipment_notes: config.equipmentNotes ?? null,
         coach_style: config.coachStyle,
+        // REGRA MESTRA: Marcar setup como concluído ao salvar configuração
+        first_setup_completed: true,
       };
 
       // Atualizar nome se fornecido

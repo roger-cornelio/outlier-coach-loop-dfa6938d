@@ -210,12 +210,18 @@ const Index = () => {
   }
 
   const renderView = () => {
+    // REGRA ABSOLUTA: Se first_setup_completed === true, NUNCA renderizar telas de setup
+    const setupComplete = onboardingDecision.isSetupComplete;
+    
     switch (currentView) {
       case "welcome":
-        return <WelcomeScreen />;
+        // Se setup completo, ir para treino do dia, não welcome
+        return setupComplete ? <PreWorkoutScreen /> : <WelcomeScreen />;
       case "athleteWelcome":
-        return <AthleteWelcomeScreen />;
+        // Se setup completo, ir para treino do dia, não athleteWelcome
+        return setupComplete ? <PreWorkoutScreen /> : <AthleteWelcomeScreen />;
       case "config":
+        // Config pode ser acessada sempre (via Ajustes), mas layout muda
         return <AthleteConfig />;
       case "preWorkout":
         return <PreWorkoutScreen />;
@@ -236,7 +242,8 @@ const Index = () => {
       case "coachApplication":
         return <CoachApplicationPage />;
       default:
-        return <WelcomeScreen />;
+        // Se setup completo, default = treino; senão = welcome
+        return setupComplete ? <PreWorkoutScreen /> : <WelcomeScreen />;
     }
   };
 
