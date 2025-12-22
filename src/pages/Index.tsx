@@ -134,36 +134,39 @@ const Index = () => {
       return;
     }
 
-    // ===== PRIORIDADE 2: PROTEÇÃO DE RELOAD (F5) - VIEW RESTAURADA =====
-    // Se currentView foi restaurado do localStorage, respeitar contexto
-    if (viewRestoredFromStorage) {
+    // ===== PRIORIDADE 2: SETUP INCOMPLETO → SEMPRE ONBOARDING =====
+    // REGRA MESTRA: Se first_setup_completed !== true, NUNCA ir para preWorkout/dashboard
+    // Ignorar lastRoute, viewRestoredFromStorage, etc.
+    // Nota: Este bloco foi removido. Agora o fluxo cai direto na PRIORIDADE 3.
+
+    // ===== PRIORIDADE 3: SETUP INCOMPLETO → ONBOARDING =====
+    // Apenas mostrar telas de setup se first_setup_completed !== true
+    if (onboardingDecision.shouldShowOnboarding) {
+      // Sincronizar coach_style se existir no profile
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
         if (coachStyle !== normalized) {
           setCoachStyle(normalized);
         }
       }
-      console.log(`[NAV][Index] currentView=${currentView} first_setup_completed=${onboardingDecision.firstSetupCompleted} reason=view_restored_but_setup_incomplete ts=${new Date().toISOString()}`);
-      initialCheckDone.current = true;
-      return;
-    }
-
-    // ===== PRIORIDADE 3: SETUP INCOMPLETO → ONBOARDING =====
-    // Apenas mostrar telas de setup se first_setup_completed !== true
-    if (onboardingDecision.shouldShowOnboarding) {
+      
       // Determinar qual tela de setup mostrar
       const hasCoachStyle = coachStyleFromProfile && ['IRON', 'PULSE', 'SPARK'].includes(coachStyleFromProfile);
       
+      // REGRA: Usuário com coach_style mas sem setup completo
+      // Fluxo: welcome → athleteWelcome → config → save → preWorkout
       if (!hasCoachStyle) {
-        // Sem coach_style → começar do início (welcome)
+        // Sem coach_style → começar do início (welcome = seleção de coach)
         if (currentView !== 'welcome') {
           console.log(`[NAV][Index] from_view=${currentView} to_view=welcome first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=onboarding_no_coach_style ts=${new Date().toISOString()}`);
           setCurrentView('welcome');
         }
       } else {
-        // Tem coach_style mas first_setup_completed !== true → ir para config
+        // Tem coach_style mas first_setup_completed !== true
+        // Se já está em athleteWelcome ou config, manter (fluxo correto)
+        // Senão, ir para athleteWelcome (tela "Você está prestes a se tornar Outlier")
         if (currentView !== 'config' && currentView !== 'athleteWelcome') {
-          console.log(`[NAV][Index] from_view=${currentView} to_view=athleteWelcome first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=onboarding_has_coach_needs_config ts=${new Date().toISOString()}`);
+          console.log(`[NAV][Index] from_view=${currentView} to_view=athleteWelcome first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=onboarding_has_coach_needs_welcome_then_config ts=${new Date().toISOString()}`);
           setCurrentView('athleteWelcome');
         }
       }
@@ -243,15 +246,26 @@ const Index = () => {
 
   const renderView = () => {
     // REGRA ABSOLUTA: Se first_setup_completed === true, NUNCA renderizar telas de setup
+    // REGRA INVERSA: Se first_setup_completed !== true, NUNCA renderizar preWorkout/dashboard
     const setupComplete = onboardingDecision.isSetupComplete;
     
-    // Resolver view efetiva (proteger setup screens se configurado)
+    // Resolver view efetiva
     let effectiveView = currentView;
     
     if (setupComplete) {
       // Se setup completo, redirecionar telas de setup para preWorkout
       if (currentView === 'welcome' || currentView === 'athleteWelcome') {
         effectiveView = 'preWorkout';
+      }
+    } else {
+      // BLOQUEIO CRÍTICO: Se setup NÃO completo, PROIBIR preWorkout/dashboard/workout/etc
+      // Estas views são EXCLUSIVAS de usuários configurados
+      const protectedViews = ['preWorkout', 'dashboard', 'workout', 'result', 'feedback', 'benchmarks'];
+      if (protectedViews.includes(currentView)) {
+        // Redirecionar para athleteWelcome ou welcome conforme coach_style
+        const hasCoachStyle = profile?.coach_style && ['IRON', 'PULSE', 'SPARK'].includes(profile.coach_style);
+        effectiveView = hasCoachStyle ? 'athleteWelcome' : 'welcome';
+        console.log(`[RENDER] BLOCKED view=${currentView} → effectiveView=${effectiveView} reason=setup_not_complete`);
       }
     }
     
