@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { buildWorkoutByTime, validateAdaptation, calculateWodTime } from '@/utils/workoutAdaptationEngine';
 import type { DayWorkout, AthleteConfig, TrainingLevel } from '@/types/outlier';
-import { toast } from 'sonner';
 
 // ============================================
 // HOOK PARA PIPELINE DE ADAPTAÇÃO POR TEMPO REAL v2
@@ -141,17 +140,22 @@ export function useAdaptationPipeline() {
 
   /**
    * Verifica se precisa readaptar e executa se necessário
+   * NOTA: NÃO dispara toast - chamador decide se quer notificar
    */
   const ensureAdapted = useCallback(() => {
-    if (adaptationPending && baseWorkouts.length > 0 && athleteConfig) {
+    // Guard: sem base, retorna silenciosamente
+    if (baseWorkouts.length === 0) {
+      console.log('[AdaptationPipeline] No base workouts, skipping');
+      return null;
+    }
+    
+    if (adaptationPending && athleteConfig) {
       const result = generateAdaptedWorkouts();
-      if (result.success) {
-        toast.success('Treino adaptado ao seu perfil');
-      }
+      // Toast removido - chamador controla notificação
       return result;
     }
     return null;
-  }, [adaptationPending, baseWorkouts, athleteConfig, generateAdaptedWorkouts]);
+  }, [adaptationPending, baseWorkouts.length, athleteConfig, generateAdaptedWorkouts]);
 
   /**
    * Força readaptação (usado quando config muda)
