@@ -161,11 +161,6 @@ export function useAthletePlan(): UseAthletePlanReturn {
 
     setSelectedWeekStart(prevSelected => {
       if (!allowed.has(prevSelected)) {
-        console.log('ATHLETE_WEEK_SYNC', {
-          reason: 'selectedWeekStart fora da janela',
-          old: prevSelected,
-          new: curr,
-        });
         return curr;
       }
       return prevSelected;
@@ -181,18 +176,6 @@ export function useAthletePlan(): UseAthletePlanReturn {
     }
     saveWeekAnchor(selectedWeekStart);
   }, [selectedWeekStart]);
-
-  // LOG: ATHLETE_WEEK_RESOLVE ao inicializar/navegar
-  useEffect(() => {
-    console.log('ATHLETE_WEEK_RESOLVE', {
-      now: nowRef.current.toISOString(),
-      dayOfWeek: nowRef.current.getDay(),
-      currentWeekStart: allowedWeeks.curr,
-      selectedWeekStart,
-      minWeekStart: allowedWeeks.prev,
-      maxWeekStart: allowedWeeks.next,
-    });
-  }, [allowedWeeks, selectedWeekStart]);
 
   // Calcular informações da semana selecionada
   const currentWeek = useMemo((): WeekInfo => {
@@ -290,12 +273,6 @@ export function useAthletePlan(): UseAthletePlanReturn {
     setError(null);
 
     try {
-      // LOG: antes do fetch
-      console.log('ATHLETE_PLAN_FETCH', {
-        selectedWeekStart,
-        userId,
-      });
-
       // FONTE ÚNICA: Buscar por week_start
       const { data, error: fetchError } = await supabase
         .from('athlete_plans')
@@ -309,13 +286,6 @@ export function useAthletePlan(): UseAthletePlanReturn {
         console.error('[useAthletePlan] Fetch error:', fetchError);
         setError(fetchError.message || 'Erro ao carregar treinos');
         setPlans([]);
-        
-        // LOG: fetch falhou
-        console.log('ATHLETE_PLAN_FETCH', {
-          selectedWeekStart,
-          found: false,
-          error: fetchError.message,
-        });
         return;
       }
 
@@ -333,17 +303,8 @@ export function useAthletePlan(): UseAthletePlanReturn {
           };
         });
 
-        console.log('ATHLETE_PLAN_FETCH', {
-          selectedWeekStart,
-          found: true,
-          planCount: parsedPlans.length,
-        });
         setPlans(parsedPlans);
       } else {
-        console.log('ATHLETE_PLAN_FETCH', {
-          selectedWeekStart,
-          found: false,
-        });
         setPlans([]);
       }
     } catch (err: any) {

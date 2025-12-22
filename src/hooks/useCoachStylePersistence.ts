@@ -56,7 +56,6 @@ export function useCoachStylePersistence() {
         return { success: false, error: error.message };
       }
 
-      console.log('[useCoachStylePersistence] Coach style saved:', style, '+ first_setup_completed = true');
       return { success: true };
     } catch (err) {
       console.error('[useCoachStylePersistence] Unexpected error:', err);
@@ -91,7 +90,6 @@ export function useCoachStylePersistence() {
         return { success: false, error: error.message };
       }
 
-      console.log('[useCoachStylePersistence] Setup marked as completed');
       return { success: true };
     } catch (err) {
       console.error('[useCoachStylePersistence] Unexpected error:', err);
@@ -115,7 +113,6 @@ export function useCoachStylePersistence() {
       // Só atualiza se diferente do atual (evita loops)
       if (coachStyle !== savedStyle) {
         setCoachStyle(savedStyle);
-        console.log('[useCoachStylePersistence] Coach style loaded from profile:', savedStyle);
       }
       return true;
     }

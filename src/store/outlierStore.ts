@@ -207,12 +207,10 @@ export const useOutlierStore = create<OutlierState>()(
             if (migrated) {
               state.baseWorkouts = migrated;
               state.weeklyWorkouts = migrated;
-              console.log('[outlierStore] Benchmarks migrated');
             }
           }
           // Marcar como hidratado via action
           state.setHasHydrated?.(true);
-          console.log('[outlierStore] Hydration complete');
         }
       },
     }

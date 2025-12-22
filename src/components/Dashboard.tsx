@@ -180,7 +180,6 @@ export function Dashboard() {
   useEffect(() => {
     // Guard fundamental: sem base, sem adaptação
     if (baseWorkouts.length === 0) {
-      console.log('[Dashboard] No base workouts, skipping adaptation');
       return;
     }
     
