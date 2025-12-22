@@ -38,24 +38,23 @@ export async function fetchProfileWithRetry(
 
       if (error) {
         lastError = error.message;
-        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1} failed:`, error.message);
       } else if (profile) {
         return { data: profile, error: null };
       } else {
-        lastError = 'Profile not found';
-        console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1}: profile not found yet`);
+        // Perfil não encontrado (não é erro): pode ser usuário novo.
+        // Mantemos retry/backoff por algumas tentativas, mas nunca retornamos como erro.
+        lastError = null;
       }
     } catch (err) {
       lastError = err instanceof Error ? err.message : 'Unknown error';
-      console.warn(`[fetchProfileWithRetry] Attempt ${attempt + 1} exception:`, lastError);
     }
 
     // If we have more retries, wait before next attempt
     if (attempt < RETRY_DELAYS.length) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[attempt]));
     }
   }
 
   // All retries exhausted
-  return { data: null, error: lastError || 'Perfil não encontrado após múltiplas tentativas' };
+  return { data: null, error: lastError };
 }
