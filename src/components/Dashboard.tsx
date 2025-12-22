@@ -120,37 +120,38 @@ export function Dashboard() {
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
   // Guard: aguardar hydration do Zustand para evitar loops
-  // Dep única: selectedWeekStart (hasPlan calculado localmente)
+  // CRÍTICO: Pular primeiro render para respeitar semana restaurada do localStorage
   // ============================================
   
   const selectedWeekStart = debugInfo?.selectedWeekStart;
+  const isFirstRenderDashboardRef = useRef(true);
   
   useEffect(() => {
     // Guard: aguardar hydration do store
     if (!hasHydrated) {
-      console.log('[Dashboard] Waiting for hydration...');
       return;
     }
     // Guard: aguardar carregamento do plano
     if (loadingPlan) {
-      console.log('[Dashboard] Waiting for plan load...');
+      return;
+    }
+    // Guard: pular primeiro render para não sobrescrever semana restaurada
+    if (isFirstRenderDashboardRef.current) {
+      isFirstRenderDashboardRef.current = false;
+      // No primeiro render, aplicar treinos da semana restaurada
+      const hasPlanForWeek = planWorkouts.length > 0;
+      if (hasPlanForWeek) {
+        setBaseWorkouts(planWorkouts);
+      }
       return;
     }
     
     // Calcular localmente se há plano para evitar dep instável
     const hasPlanForWeek = planWorkouts.length > 0;
     
-    console.log('[Dashboard] Week sync:', { 
-      selectedWeekStart, 
-      hasPlanForWeek, 
-      workoutsCount: planWorkouts.length 
-    });
-    
     if (hasPlanForWeek) {
-      console.log('[Dashboard] Applying workouts for week:', selectedWeekStart);
       setBaseWorkouts(planWorkouts);
     } else {
-      console.log('[Dashboard] Clearing workouts - no plan for week:', selectedWeekStart);
       clearBaseWorkouts();
     }
   }, [hasHydrated, selectedWeekStart, loadingPlan]); // Deps mínimas - planWorkouts lido dentro do effect
