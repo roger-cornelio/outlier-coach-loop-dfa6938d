@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { ChevronUp, ChevronDown, Bug, X, AlertTriangle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useDebugAllowed } from '@/hooks/useDebugAllowed';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthSafe } from '@/hooks/useAuth';
 import { useLinkDebug } from '@/hooks/useLinkDebug';
 
 export function GlobalDebugBar() {
@@ -28,16 +28,19 @@ export function GlobalDebugBar() {
     userEmail,
     userId 
   } = useDebugAllowed();
-  const { user, profile, loading } = useAuth();
+  const auth = useAuthSafe();
   const linkDebug = useLinkDebug();
 
   // Desativar completamente em /app (dashboard do atleta) para evitar re-renders
   const isAthleteRoute = location.pathname === '/app' || location.pathname.startsWith('/app/');
   
   // Only show for allowed users with debug flag, and NOT on athlete routes
-  if (!isAllowed || isAthleteRoute) {
+  // Also hide if auth context is not available yet
+  if (!auth || !isAllowed || isAthleteRoute) {
     return null;
   }
+
+  const { user, profile, loading } = auth;
 
   // Get user role - simplified detection
   const getUserRole = () => {
