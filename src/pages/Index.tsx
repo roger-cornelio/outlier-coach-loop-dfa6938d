@@ -222,42 +222,75 @@ const Index = () => {
     );
   }
 
+  // ============================================================
+  // MAP EXPLÍCITO DE VIEWS - REGRA 1: Evitar undefined/crash
+  // ============================================================
+  const VIEW_COMPONENTS = {
+    welcome: WelcomeScreen,
+    athleteWelcome: AthleteWelcomeScreen,
+    config: AthleteConfig,
+    preWorkout: PreWorkoutScreen,
+    dashboard: Dashboard,
+    workout: WorkoutExecution,
+    result: ResultRecording,
+    feedback: PerformanceFeedback,
+    admin: AdminSpreadsheet,
+    benchmarks: BenchmarksScreen,
+    coachPerformance: CoachPerformance,
+    coachApplication: CoachApplicationPage,
+  } as const;
+
   const renderView = () => {
     // REGRA ABSOLUTA: Se first_setup_completed === true, NUNCA renderizar telas de setup
     const setupComplete = onboardingDecision.isSetupComplete;
     
-    switch (currentView) {
-      case "welcome":
-        // Se setup completo, ir para treino do dia, não welcome
-        return setupComplete ? <PreWorkoutScreen /> : <WelcomeScreen />;
-      case "athleteWelcome":
-        // Se setup completo, ir para treino do dia, não athleteWelcome
-        return setupComplete ? <PreWorkoutScreen /> : <AthleteWelcomeScreen />;
-      case "config":
-        // Config pode ser acessada sempre (via Ajustes), mas layout muda
-        return <AthleteConfig />;
-      case "preWorkout":
-        return <PreWorkoutScreen />;
-      case "dashboard":
-        return <Dashboard />;
-      case "workout":
-        return <WorkoutExecution />;
-      case "result":
-        return <ResultRecording />;
-      case "feedback":
-        return <PerformanceFeedback />;
-      case "admin":
-        return canManageWorkouts ? <AdminSpreadsheet /> : <Dashboard />;
-      case "benchmarks":
-        return <BenchmarksScreen />;
-      case "coachPerformance":
-        return isCoach ? <CoachPerformance /> : <Dashboard />;
-      case "coachApplication":
-        return <CoachApplicationPage />;
-      default:
-        // Se setup completo, default = treino; senão = welcome
-        return setupComplete ? <PreWorkoutScreen /> : <WelcomeScreen />;
+    // Resolver view efetiva (proteger setup screens se configurado)
+    let effectiveView = currentView;
+    
+    if (setupComplete) {
+      // Se setup completo, redirecionar telas de setup para preWorkout
+      if (currentView === 'welcome' || currentView === 'athleteWelcome') {
+        effectiveView = 'preWorkout';
+      }
     }
+    
+    // Proteção de views de admin/coach
+    if (effectiveView === 'admin' && !canManageWorkouts) {
+      effectiveView = 'dashboard';
+    }
+    if (effectiveView === 'coachPerformance' && !isCoach) {
+      effectiveView = 'dashboard';
+    }
+
+    // Resolver componente do map
+    const Screen = VIEW_COMPONENTS[effectiveView as keyof typeof VIEW_COMPONENTS];
+    
+    // FALLBACK SEGURO: Se view inválida ou componente undefined
+    if (!Screen || typeof Screen !== 'function') {
+      console.error('[VIEW] invalid currentView or undefined Screen', { 
+        currentView, 
+        effectiveView,
+        screenType: typeof Screen,
+        availableViews: Object.keys(VIEW_COMPONENTS)
+      });
+      // Renderizar fallback sem framer-motion para evitar crash
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center p-8">
+            <p className="text-destructive mb-4">View inválida: {currentView}</p>
+            <button 
+              onClick={() => setCurrentView('preWorkout')}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+            >
+              Voltar ao início
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Renderizar componente válido
+    return <Screen />;
   };
 
   return (
