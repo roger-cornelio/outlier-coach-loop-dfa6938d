@@ -196,6 +196,8 @@ export const useOutlierStore = create<OutlierState>()(
         athleteConfig: state.athleteConfig,
         workoutResults: state.workoutResults,
         baseWorkouts: state.baseWorkouts,
+        // CRÍTICO: Persistir currentView para manter contexto após reload (F5)
+        currentView: state.currentView,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (!error && state) {
