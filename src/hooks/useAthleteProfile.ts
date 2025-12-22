@@ -73,7 +73,6 @@ export function useAthleteProfile() {
           };
 
           setAthleteConfig(loadedConfig);
-          console.log('[useAthleteProfile] Loaded config from DB:', loadedConfig);
         }
       }
       
@@ -121,7 +120,6 @@ export function useAthleteProfile() {
         return false;
       }
 
-      console.log('[useAthleteProfile] Config saved to DB');
       return true;
     } catch (err) {
       console.error('[useAthleteProfile] Exception saving:', err);
@@ -148,7 +146,6 @@ export function useAthleteProfile() {
         return false;
       }
 
-      console.log('[useAthleteProfile] Name updated to:', newName.trim());
       return true;
     } catch (err) {
       console.error('[useAthleteProfile] Exception updating name:', err);

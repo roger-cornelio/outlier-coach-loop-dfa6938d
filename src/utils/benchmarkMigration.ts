@@ -80,7 +80,6 @@ export function migrateWorkouts(workouts: DayWorkout[]): DayWorkout[] | null {
   
   if (hasChanges) {
     markMigrationComplete();
-    console.log('[benchmarkMigration] Migration complete');
     return workouts;
   }
   
@@ -108,7 +107,6 @@ export function forceMigrateWorkouts(workouts: DayWorkout[]): DayWorkout[] {
 export function resetMigrationFlag(): void {
   try {
     localStorage.removeItem(MIGRATION_FLAG_KEY);
-    console.log('[benchmarkMigration] Migration flag reset');
   } catch {
     // Ignore
   }

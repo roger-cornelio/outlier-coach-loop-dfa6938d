@@ -58,7 +58,6 @@ export function useOnboardingDecision(): OnboardingDecision {
     const setupNotCompleted = profile?.first_setup_completed !== true;
     
     if (hasCoachStyle && setupNotCompleted) {
-      console.log('[useOnboardingDecision] AUTO-MIGRATION: coach_style exists but first_setup_completed is not true. Fixing...');
       autoMigrationDone.current = true;
       
       // Optimistic update
@@ -72,8 +71,6 @@ export function useOnboardingDecision(): OnboardingDecision {
         .then(({ error }) => {
           if (error) {
             console.error('[useOnboardingDecision] Auto-migration failed:', error);
-          } else {
-            console.log('[useOnboardingDecision] Auto-migration completed successfully');
           }
         });
     }
@@ -93,23 +90,10 @@ export function useOnboardingDecision(): OnboardingDecision {
     // Validate coach_style
     const hasValidCoachStyle = profileCoachStyle && ['IRON', 'PULSE', 'SPARK'].includes(profileCoachStyle);
 
-    // Log for debugging
-    console.log('[useOnboardingDecision] Computing decision:', {
-      authStatus,
-      userId: userId?.slice(0, 8),
-      profileLoaded,
-      hasValidCoachStyle,
-      profileCoachStyle,
-      firstSetupCompleted,
-      localCoachStyle,
-      currentView,
-    });
-
     // ===== DECISION LOGIC =====
 
     // Rule 1: Still loading - don't redirect
     if (authStatus === 'loading' || !profileLoaded) {
-      console.log('[useOnboardingDecision] → WAITING_FOR_DATA');
       return {
         shouldShowOnboarding: false,
         canRedirect: false,
@@ -126,7 +110,6 @@ export function useOnboardingDecision(): OnboardingDecision {
 
     // Rule 4: Not logged in
     if (authStatus === 'unauthenticated') {
-      console.log('[useOnboardingDecision] → NOT_LOGGED_IN');
       return {
         shouldShowOnboarding: false,
         canRedirect: false,
@@ -143,7 +126,6 @@ export function useOnboardingDecision(): OnboardingDecision {
 
     // REGRA-MÃE: Se coach_style existe → NÃO mostrar onboarding
     if (hasValidCoachStyle) {
-      console.log('[useOnboardingDecision] → COACH_STYLE_PRESENT');
       return {
         shouldShowOnboarding: false,
         canRedirect: true,
@@ -159,7 +141,6 @@ export function useOnboardingDecision(): OnboardingDecision {
     }
 
     // Rule 3: coach_style ausente → mostrar onboarding
-    console.log('[useOnboardingDecision] → COACH_STYLE_MISSING');
     return {
       shouldShowOnboarding: true,
       canRedirect: true,

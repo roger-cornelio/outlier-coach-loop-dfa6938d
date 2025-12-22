@@ -49,13 +49,9 @@ export default function CoachAuth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Debug log
-  console.log('[CoachAuth] State:', { userId: user?.id, isCoach, authLoading });
-
   // ===== REDIRECT IF ALREADY COACH =====
   useEffect(() => {
     if (!authLoading && user && isCoach) {
-      console.log('[CoachAuth] REDIRECT → /coach/dashboard (already coach)');
       navigate('/coach/dashboard', { replace: true });
     }
   }, [user, isCoach, authLoading, navigate]);
@@ -63,7 +59,6 @@ export default function CoachAuth() {
   // ===== RPC: FONTE DA VERDADE =====
   const getCoachApprovalByEmail = async (emailToCheck: string): Promise<ApprovalResult> => {
     const normalizedEmail = emailToCheck.toLowerCase().trim();
-    console.log('[CoachAuth] RPC get_coach_approval_by_email:', normalizedEmail);
     
     const { data, error } = await supabase
       .rpc('get_coach_approval_by_email', { _email: normalizedEmail });
@@ -74,7 +69,6 @@ export default function CoachAuth() {
     }
 
     const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
-    console.log('[CoachAuth] RPC result:', row);
     
     if (!row) {
       return { app_exists: false, approved: false, has_password: false, status: 'none', application_id: null };

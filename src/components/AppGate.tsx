@@ -41,8 +41,6 @@ export function AppGate({ children }: AppGateProps) {
   const { state, loading, profileLoading } = useAppState();
   const pathname = location.pathname;
 
-  console.log('[AppGate] state:', state, '| pathname:', pathname);
-
   // ===== REGRA 0: ROTAS PÚBLICAS - SEMPRE PERMITIR =====
   // Processado ANTES de loading/state para evitar flicker
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);

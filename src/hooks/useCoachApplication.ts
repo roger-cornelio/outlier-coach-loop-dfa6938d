@@ -52,14 +52,12 @@ export function useCoachApplication() {
   const fetchApplication = useCallback(async () => {
     // Use auth.uid() directly - no dependency on profile
     if (!user?.id) {
-      console.log('[fetchApplication] No user.id yet, skipping');
       setFetchState('idle');
       return;
     }
 
     try {
       setFetchState('loading');
-      console.log('[fetchApplication] Fetching for auth_user_id:', user.id);
       
       // Get most recent application for this user using auth_user_id
       const { data, error: fetchError } = await supabase
@@ -74,7 +72,6 @@ export function useCoachApplication() {
         console.error('[fetchApplication] Error:', fetchError);
         setError('Erro ao carregar solicitação');
       } else {
-        console.log('[fetchApplication] Result:', data?.status || 'none');
         setApplication(data as CoachApplication | null);
       }
     } catch (err) {
@@ -104,15 +101,8 @@ export function useCoachApplication() {
   const submitApplication = async (
     formData: CoachApplicationFormData
   ): Promise<boolean> => {
-    console.log('[submitApplication] Starting with:', {
-      authUserId: user?.id,
-      profileId: profile?.id,
-      email: formData.email,
-    });
-
     if (!user?.id) {
       setError('Usuário não autenticado');
-      console.error('[submitApplication] No user.id available');
       return false;
     }
 
@@ -136,8 +126,6 @@ export function useCoachApplication() {
         rejection_reason: null,
       };
 
-      console.log('[submitApplication] Upserting:', applicationData);
-
       // Upsert using auth_user_id as the conflict key
       const { data, error: upsertError } = await supabase
         .from('coach_applications')
@@ -150,11 +138,9 @@ export function useCoachApplication() {
         
         // If duplicate error, fetch existing application instead of showing error
         if (upsertError.code === '23505' || upsertError.message.includes('duplicate')) {
-          console.log('[submitApplication] Duplicate detected, fetching existing...');
           await fetchApplication();
           // Check if we got a pending application
           if (application?.status === 'pending') {
-            console.log('[submitApplication] Already pending, treating as success');
             return true;
           }
         }
@@ -164,8 +150,6 @@ export function useCoachApplication() {
         return false;
       }
 
-      console.log('[submitApplication] Success:', data);
-      
       // Immediately set application as pending (optimistic update)
       setApplication(data as CoachApplication);
       
@@ -250,7 +234,6 @@ export function useCoachApplicationsAdmin() {
       }
 
       // Call edge function to create user + grant role
-      console.log('[approveApplication] Calling create-coach-user for:', app.email);
       const { data: createData, error: createError } = await supabase.functions.invoke(
         'create-coach-user',
         {
@@ -263,12 +246,10 @@ export function useCoachApplicationsAdmin() {
       );
 
       if (createError || !createData?.success) {
-        console.error('Error creating coach user:', createError || createData?.error);
+        console.error('[approveApplication] Error creating coach user:', createError || createData?.error);
         setError('Erro ao criar usuário coach');
         return false;
       }
-
-      console.log('[approveApplication] Coach user created successfully:', createData.user_id);
 
       // Track event
       trackEvent('coach_application_approved', {

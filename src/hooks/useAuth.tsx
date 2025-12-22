@@ -225,14 +225,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Track if initial session check is done
     let initialCheckDone = false;
 
-    console.log('[useAuth] useEffect mount - setting up auth listener');
-
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[useAuth] onAuthStateChange:', event, '| session:', !!session, '| initialCheckDone:', initialCheckDone);
-      
       // CRITICAL: Ignore redundant events for same session state
       // This prevents loops from TOKEN_REFRESHED or other events
       
@@ -249,13 +245,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // ANTI-LOOP: If same user, skip fetching again
           if (!isNewUser && previousUserIdRef.current === session.user.id) {
-            console.log('[useAuth] Same user, skipping re-fetch');
             setLoading(false);
             return;
           }
           
           if (isNewUser) {
-            console.log('[useAuth] New user detected, resetting store');
             // Reset profile fetch tracker for new user
             profileFetchedForUserRef.current = null;
             resetToDefaults();
@@ -275,13 +269,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 fetchProfile(session.user.id),
               ]);
             } finally {
-              console.log('[useAuth] onAuthStateChange - setting loading=false after roles/profile');
               setLoading(false);
             }
           }, 0);
         } else {
           // User signed out - reset store completamente
-          console.log('[useAuth] User signed out, full reset');
           resetToDefaults();
           previousUserIdRef.current = null;
           profileFetchedForUserRef.current = null;
@@ -289,7 +281,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRole("user");
           setProfile(null);
           setProfileStatus('idle');
-          console.log('[useAuth] onAuthStateChange - setting loading=false (signed out)');
           setLoading(false);
         }
       }
@@ -298,11 +289,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session (runs once on mount)
     const initSession = async () => {
-      console.log('[useAuth] initSession START - loading is true');
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        console.log('[useAuth] getSession result:', !!session, '| user:', session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -311,7 +299,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Check if this is a different user than what was previously stored
           const storedUserId = previousUserIdRef.current;
           if (storedUserId !== null && storedUserId !== session.user.id) {
-            console.log('[useAuth] initSession - Different user detected');
             profileFetchedForUserRef.current = null;
             resetToDefaults();
           }
@@ -320,13 +307,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // loading is already true from initial state
           const email = session.user.email || "";
-          console.log('[useAuth] initSession - syncing roles for:', email);
           await syncRolesOnBootstrap(session.user.id, email);
           await Promise.all([
             checkUserRole(session.user.id),
             fetchProfile(session.user.id),
           ]);
-          console.log('[useAuth] initSession - roles/profile DONE');
         } else {
           previousUserIdRef.current = null;
           profileFetchedForUserRef.current = null;
@@ -334,11 +319,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         // CRITICAL: Session init error does NOT cause logout
-        console.error("[useAuth] Error initializing session (NOT logging out):", err);
+        console.error("[useAuth] Error initializing session:", err);
       } finally {
         // Mark initial check as done BEFORE setting loading=false
         initialCheckDone = true;
-        console.log('[useAuth] initSession FINALLY - setting loading=false');
         setLoading(false);
       }
     };
