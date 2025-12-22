@@ -149,11 +149,31 @@ export function useAthletePlan(): UseAthletePlanReturn {
     return getAthleteAllowedWeeks(now);
   }, []); // Deps vazias - calculado apenas no mount
   
+  // ============================================
+  // BOOT: Restauração da semana do localStorage
+  // REGRA: Ler ANTES de qualquer useState para garantir ordem
+  // ============================================
+  const bootAnchorRef = useRef<string | null>(null);
+  const isFirstRenderRef = useRef(true);
+  
   // Estado: qual das 3 semanas está selecionada
   // CRÍTICO: Inicializar com âncora persistida ou semana atual
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => {
+    const storedAnchor = loadWeekAnchor();
     const allowed = getAthleteAllowedWeeks(new Date());
-    return getInitialWeekStart(allowed);
+    const defaultWeek = allowed.curr;
+    
+    console.log('[BOOT] localStorage anchor =', storedAnchor);
+    console.log('[BOOT] defaultWeek =', defaultWeek);
+    console.log('[BOOT] allowedWeeks =', allowed);
+    
+    // Guardar para debug
+    bootAnchorRef.current = storedAnchor;
+    
+    const restoredWeek = getInitialWeekStart(allowed);
+    console.log('[BOOT] restoredWeek =', restoredWeek);
+    
+    return restoredWeek;
   });
 
   // Sincronizar selectedWeekStart se estiver fora da janela permitida
@@ -164,10 +184,10 @@ export function useAthletePlan(): UseAthletePlanReturn {
     
     setSelectedWeekStart(prevSelected => {
       if (!allowed.has(prevSelected)) {
-        console.log('ATHLETE_WEEK_SYNC', { 
-          reason: 'selectedWeekStart fora da janela',
+        console.log('[BOOT] SYNC OVERRIDE - week out of window', { 
           old: prevSelected,
-          new: curr 
+          new: curr,
+          bootAnchor: bootAnchorRef.current
         });
         // Persistir a nova semana
         saveWeekAnchor(curr);
@@ -177,8 +197,15 @@ export function useAthletePlan(): UseAthletePlanReturn {
     });
   }, [allowedWeeks]);
 
-  // Persistir semana selecionada sempre que mudar
+  // Persistir semana selecionada APENAS após o primeiro render
+  // CRÍTICO: Não sobrescrever localStorage no boot antes da restauração
   useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      console.log('[BOOT] Skipping first save to prevent overwrite. Current:', selectedWeekStart);
+      return;
+    }
+    console.log('[WEEK_SAVE] Persisting week:', selectedWeekStart);
     saveWeekAnchor(selectedWeekStart);
   }, [selectedWeekStart]);
 
