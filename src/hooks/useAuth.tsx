@@ -88,88 +88,106 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Se session existe mas profile não, usuário continua logado
   // ============================================
   
-  // BACKFILL: Silently set first_setup_completed = true for users
-  // who have config data but missing the flag
-  const backfillFirstSetupCompleted = useCallback(async (
-    userId: string,
-    profileData: { training_level: string | null; session_duration: string | null; first_setup_completed: boolean | null }
-  ) => {
-    // Só executar backfill se:
-    // 1. first_setup_completed é null/undefined/false
-    // 2. E existe training_level OU session_duration (dados de config)
-    const needsBackfill = 
-      !profileData.first_setup_completed && 
-      (profileData.training_level || profileData.session_duration);
-    
-    if (!needsBackfill) return;
-    
-    console.log('[useAuth] Backfill: Setting first_setup_completed=true for user with existing config data');
-    
-    try {
-      await supabase
-        .from('profiles')
-        .update({ first_setup_completed: true })
-        .eq('user_id', userId);
-    } catch (err) {
-      console.error('[useAuth] Backfill error (non-blocking):', err);
-    }
-  }, []);
-  
-  const fetchProfile = useCallback(async (userId: string) => {
-    // ANTI-LOOP: Se já buscamos para este usuário, não buscar novamente
-    if (profileFetchedForUserRef.current === userId) {
-      console.log('[useAuth] Profile already fetched for this user, skipping');
-      return;
-    }
-    
-    setProfileStatus('loading');
-    try {
-      const { data, error } = await fetchProfileWithRetry(userId);
-
-      if (error) {
-        // CRÍTICO: Error fetching profile NÃO causa logout
-        // Apenas marca como missing para trigger de onboarding
-        console.warn("[useAuth] Profile fetch error (NOT logging out):", error);
-        setProfile(null);
-        setProfileStatus('missing');
-      } else if (data) {
-        const profileData = data as UserProfile & { training_level?: string | null; session_duration?: string | null };
-        
-        // === BACKFILL para usuários antigos ===
-        // Executa em background, não bloqueia o fluxo
-        backfillFirstSetupCompleted(userId, {
-          training_level: profileData.training_level ?? null,
-          session_duration: profileData.session_duration ?? null,
-          first_setup_completed: profileData.first_setup_completed,
-        });
-        
-        // REGRA: first_setup_completed nunca pode ser null no estado local
-        // Força boolean para garantir decisões corretas
-        const normalizedProfile: UserProfile = {
-          ...profileData,
-          first_setup_completed: !!profileData.first_setup_completed,
-        };
-        
-        setProfile(normalizedProfile);
-        setProfileStatus('loaded');
-      } else {
-        // Profile não existe = usuário novo, precisa onboarding
-        // CRÍTICO: NÃO fazer logout, apenas marcar status
-        console.log("[useAuth] Profile not found - user needs onboarding (NOT logging out)");
-        setProfile(null);
-        setProfileStatus('missing');
+  // ============================================
+  // BACKFILL/RESOLUÇÃO: first_setup_completed tri-state
+  // - undefined/null => desconhecido: resolver AQUI (antes do gate)
+  // - false/true     => já determinístico
+  // ============================================
+  const resolveFirstSetupCompleted = useCallback(
+    async (
+      userId: string,
+      profileData: {
+        first_setup_completed?: boolean | null;
+        training_level?: string | null;
+        session_duration?: string | null;
       }
-      
-      // Mark as fetched for this user
-      profileFetchedForUserRef.current = userId;
-    } catch (err) {
-      // CRÍTICO: Exceção NÃO causa logout
-      console.error("[useAuth] Exception in fetchProfile (NOT logging out):", err);
-      setProfile(null);
-      setProfileStatus('missing');
-      profileFetchedForUserRef.current = userId;
-    }
-  }, [backfillFirstSetupCompleted]);
+    ): Promise<boolean> => {
+      const raw = profileData.first_setup_completed;
+
+      if (raw === true) return true;
+      if (raw === false) return false;
+
+      const hasConfig = Boolean(profileData.training_level || profileData.session_duration);
+      const resolved = hasConfig ? true : false;
+
+      console.log('[useAuth] Backfill: first_setup_completed missing ->', {
+        resolved,
+        hasConfig,
+      });
+
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ first_setup_completed: resolved })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } catch (err) {
+        // Non-blocking: se falhar, ainda retornamos uma decisão local determinística
+        console.error('[useAuth] Backfill error (non-blocking):', err);
+      }
+
+      return resolved;
+    },
+    []
+  );
+
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      // ANTI-LOOP: Se já buscamos para este usuário, não buscar novamente
+      if (profileFetchedForUserRef.current === userId) {
+        console.log('[useAuth] Profile already fetched for this user, skipping');
+        return;
+      }
+
+      setProfileStatus('loading');
+      try {
+        const { data, error } = await fetchProfileWithRetry(userId);
+
+        if (error) {
+          // CRÍTICO: Error fetching profile NÃO causa logout
+          // Apenas marca como missing para trigger de onboarding
+          console.warn('[useAuth] Profile fetch error (NOT logging out):', error);
+          setProfile(null);
+          setProfileStatus('missing');
+        } else if (data) {
+          const profileData = data as UserProfile & {
+            training_level?: string | null;
+            session_duration?: string | null;
+            first_setup_completed?: boolean | null;
+          };
+
+          // Resolver/backfill ANTES de liberar o gate
+          const resolvedFirstSetupCompleted = await resolveFirstSetupCompleted(userId, profileData);
+
+          const normalizedProfile: UserProfile = {
+            ...profileData,
+            // Normalização FINAL (após backfill): boolean estável
+            first_setup_completed: resolvedFirstSetupCompleted,
+          };
+
+          setProfile(normalizedProfile);
+          setProfileStatus('loaded');
+        } else {
+          // Profile não existe = usuário novo, precisa onboarding
+          // CRÍTICO: NÃO fazer logout, apenas marcar status
+          console.log('[useAuth] Profile not found - user needs onboarding (NOT logging out)');
+          setProfile(null);
+          setProfileStatus('missing');
+        }
+
+        // Mark as fetched for this user
+        profileFetchedForUserRef.current = userId;
+      } catch (err) {
+        // CRÍTICO: Exceção NÃO causa logout
+        console.error('[useAuth] Exception in fetchProfile (NOT logging out):', err);
+        setProfile(null);
+        setProfileStatus('missing');
+        profileFetchedForUserRef.current = userId;
+      }
+    },
+    [resolveFirstSetupCompleted]
+  );
 
   const syncRolesOnBootstrap = useCallback(async (userId: string, email: string) => {
     try {

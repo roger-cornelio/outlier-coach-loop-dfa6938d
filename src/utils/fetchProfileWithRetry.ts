@@ -9,6 +9,10 @@ interface ProfileResult {
   coach_style: string | null;
   last_active_at: string | null;
   created_at: string;
+  // Tri-state no bootstrap (pode vir null/undefined em usuários antigos)
+  first_setup_completed?: boolean | null;
+  training_level?: string | null;
+  session_duration?: string | null;
 }
 
 const RETRY_DELAYS = [300, 800, 1500]; // ms
@@ -26,7 +30,9 @@ export async function fetchProfileWithRetry(
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_id, email, name, coach_id, coach_style, last_active_at, created_at')
+        .select(
+          'id, user_id, email, name, coach_id, coach_style, last_active_at, created_at, first_setup_completed, training_level, session_duration'
+        )
         .eq('user_id', userId)
         .maybeSingle();
 
