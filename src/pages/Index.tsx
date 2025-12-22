@@ -46,6 +46,12 @@ const Index = () => {
 
   // Track if we've already done the initial navigation check
   const initialCheckDone = useRef(false);
+  
+  // CRÍTICO: Detectar se currentView foi restaurado do localStorage (não é 'welcome' default)
+  // Se sim, NÃO sobrescrever com lógica de onboarding
+  const viewRestoredFromStorage = useRef(
+    currentView !== 'welcome' && currentView !== 'athleteWelcome'
+  );
 
   // Initialize event tracking (tracks app_opened automatically)
   useEvents();
@@ -60,17 +66,30 @@ const Index = () => {
   useEffect(() => {
     // PROTECTED: Only proceed when we have data and can redirect
     if (!onboardingDecision.canRedirect || initialCheckDone.current) {
-      console.log('[Index] Redirect blocked:', onboardingDecision.lastRedirectReason);
       return;
     }
 
     const coachStyleFromProfile = profile?.coach_style;
 
+    // ===== PROTEÇÃO DE RELOAD (F5) =====
+    // Se currentView foi restaurado do localStorage (ex: 'dashboard', 'preWorkout'),
+    // NÃO sobrescrever com lógica de onboarding - respeitar contexto do usuário
+    if (viewRestoredFromStorage.current) {
+      // Apenas sincronizar coach_style se necessário
+      if (coachStyleFromProfile) {
+        const normalized = coachStyleFromProfile as CoachStyle;
+        if (coachStyle !== normalized) {
+          setCoachStyle(normalized);
+        }
+      }
+      initialCheckDone.current = true;
+      return;
+    }
+
     // ===== CONDIÇÃO EXATA DE ONBOARDING =====
-    // Using centralized decision
+    // Using centralized decision - APENAS para primeiro acesso real
     if (onboardingDecision.shouldShowOnboarding) {
       if (currentView !== 'welcome' && currentView !== 'athleteWelcome' && currentView !== 'config') {
-        console.log('[Index] Showing onboarding - reason:', onboardingDecision.lastRedirectReason);
         setCurrentView('welcome');
       }
       initialCheckDone.current = true;
@@ -85,14 +104,14 @@ const Index = () => {
       }
     }
 
-    // Login subsequente: vai direto para preWorkout ou dashboard
+    // Login subsequente (currentView ainda é 'welcome' porque não foi persistido antes):
+    // Vai direto para preWorkout ou dashboard
     if (currentView === 'welcome') {
       if (athleteConfig) {
         setCurrentView('preWorkout');
       } else {
         setCurrentView('dashboard');
       }
-      console.log('[Index] Skipped welcome - reason:', onboardingDecision.lastRedirectReason);
     }
 
     initialCheckDone.current = true;
