@@ -56,7 +56,9 @@ export function useOnboardingDecision(): OnboardingDecision {
 
     const userId = user?.id || null;
     const profileCoachStyle = profile?.coach_style || null;
-    const firstSetupCompleted = profile?.first_setup_completed ?? null;
+    // REGRA: first_setup_completed NUNCA pode ser null na decisão
+    // Forçar boolean para garantir decisões determinísticas
+    const firstSetupCompleted = !!profile?.first_setup_completed;
     const localCoachStyle = coachStyle || null;
     
     // REGRA MESTRA: Usar APENAS first_setup_completed === true

@@ -7,7 +7,7 @@
  * NUNCA deve aparecer para usuários com setup completo.
  * Auto-avança para config após 10s (apenas no primeiro setup).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +21,7 @@ const coachIcons: Record<CoachStyle, React.ReactNode> = {
   SPARK: <Zap className="w-6 h-6" />,
 };
 
-export function AthleteWelcomeScreen() {
+export const AthleteWelcomeScreen = forwardRef<HTMLDivElement>(function AthleteWelcomeScreen(_props, ref) {
   const { coachStyle, setCurrentView } = useOutlierStore();
   const { user, profile, loading: authLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
@@ -60,7 +60,7 @@ export function AthleteWelcomeScreen() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div ref={ref} className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -168,4 +168,6 @@ export function AthleteWelcomeScreen() {
       </motion.div>
     </div>
   );
-}
+});
+
+AthleteWelcomeScreen.displayName = 'AthleteWelcomeScreen';

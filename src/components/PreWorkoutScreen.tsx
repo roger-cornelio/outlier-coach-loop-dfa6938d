@@ -10,7 +10,7 @@
  * - Mensagem coerente com o treino do dia
  * - NÃO genérica, NÃO inventa estímulos inexistentes
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -104,7 +104,7 @@ interface PreWorkoutScreenProps {
   onContinue?: () => void;
 }
 
-export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
+export const PreWorkoutScreen = forwardRef<HTMLDivElement, PreWorkoutScreenProps>(function PreWorkoutScreen({ onContinue }, ref) {
   const { setCurrentView, coachStyle, athleteConfig, baseWorkouts, setBaseWorkouts } = useOutlierStore();
   const { profile } = useAuth();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
@@ -208,7 +208,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div ref={ref} className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -301,4 +301,6 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
       </motion.div>
     </div>
   );
-}
+});
+
+PreWorkoutScreen.displayName = 'PreWorkoutScreen';

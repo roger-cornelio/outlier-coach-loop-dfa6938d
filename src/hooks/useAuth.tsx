@@ -87,6 +87,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // REGRA FUNDAMENTAL: Profile not found NÃO é erro de auth
   // Se session existe mas profile não, usuário continua logado
   // ============================================
+  
+  // BACKFILL: Silently set first_setup_completed = true for users
+  // who have config data but missing the flag
+  const backfillFirstSetupCompleted = useCallback(async (
+    userId: string,
+    profileData: { training_level: string | null; session_duration: string | null; first_setup_completed: boolean | null }
+  ) => {
+    // Só executar backfill se:
+    // 1. first_setup_completed é null/undefined/false
+    // 2. E existe training_level OU session_duration (dados de config)
+    const needsBackfill = 
+      !profileData.first_setup_completed && 
+      (profileData.training_level || profileData.session_duration);
+    
+    if (!needsBackfill) return;
+    
+    console.log('[useAuth] Backfill: Setting first_setup_completed=true for user with existing config data');
+    
+    try {
+      await supabase
+        .from('profiles')
+        .update({ first_setup_completed: true })
+        .eq('user_id', userId);
+    } catch (err) {
+      console.error('[useAuth] Backfill error (non-blocking):', err);
+    }
+  }, []);
+  
   const fetchProfile = useCallback(async (userId: string) => {
     // ANTI-LOOP: Se já buscamos para este usuário, não buscar novamente
     if (profileFetchedForUserRef.current === userId) {
@@ -105,7 +133,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setProfileStatus('missing');
       } else if (data) {
-        setProfile(data as UserProfile);
+        const profileData = data as UserProfile & { training_level?: string | null; session_duration?: string | null };
+        
+        // === BACKFILL para usuários antigos ===
+        // Executa em background, não bloqueia o fluxo
+        backfillFirstSetupCompleted(userId, {
+          training_level: profileData.training_level ?? null,
+          session_duration: profileData.session_duration ?? null,
+          first_setup_completed: profileData.first_setup_completed,
+        });
+        
+        // REGRA: first_setup_completed nunca pode ser null no estado local
+        // Força boolean para garantir decisões corretas
+        const normalizedProfile: UserProfile = {
+          ...profileData,
+          first_setup_completed: !!profileData.first_setup_completed,
+        };
+        
+        setProfile(normalizedProfile);
         setProfileStatus('loaded');
       } else {
         // Profile não existe = usuário novo, precisa onboarding
@@ -124,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfileStatus('missing');
       profileFetchedForUserRef.current = userId;
     }
-  }, []);
+  }, [backfillFirstSetupCompleted]);
 
   const syncRolesOnBootstrap = useCallback(async (userId: string, email: string) => {
     try {

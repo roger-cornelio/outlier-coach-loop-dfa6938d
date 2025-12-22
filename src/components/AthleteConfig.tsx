@@ -127,17 +127,18 @@ export function AthleteConfig() {
     setAthleteConfig(newConfig);
 
     // Persistir no banco de dados
+    // CRÍTICO: saveProfileConfig seta first_setup_completed = true
     const nameToSave = displayName !== profile?.name ? displayName.trim() : undefined;
     const saved = await saveProfileConfig(newConfig, nameToSave);
     
     if (saved) {
       toast.success('Configurações salvas!');
-      // Atualizar profile no contexto de auth
-      if (nameToSave) {
-        refreshProfile?.();
-      }
+      // IMPORTANTE: Atualizar profile no contexto de auth para refletir first_setup_completed
+      await refreshProfile?.();
     } else {
       toast.error('Erro ao salvar configurações');
+      setIsSaving(false);
+      return; // Não prosseguir se falhou ao salvar
     }
 
     // Gerar treino adaptado se houver planilha base
@@ -150,14 +151,10 @@ export function AthleteConfig() {
 
     setIsSaving(false);
     
-    // Se é primeiro setup, vai para preWorkout; senão, vai para dashboard
-    if (isFirstSetup) {
-      console.log(`[NAV][AthleteConfig] from_view=config to_view=preWorkout first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=first_setup_complete_go_to_preworkout ts=${new Date().toISOString()}`);
-      setCurrentView('preWorkout');
-    } else {
-      console.log(`[NAV][AthleteConfig] from_view=config to_view=dashboard first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=config_saved_back_to_dashboard ts=${new Date().toISOString()}`);
-      setCurrentView('dashboard');
-    }
+    // SEMPRE ir para preWorkout após salvar configuração
+    // (tanto no primeiro setup quanto em edições posteriores, o preWorkout é o ritual de entrada)
+    console.log(`[NAV][AthleteConfig] from_view=config to_view=preWorkout first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=config_saved_go_to_preworkout ts=${new Date().toISOString()}`);
+    setCurrentView('preWorkout');
   };
 
   return (
