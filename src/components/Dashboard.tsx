@@ -172,14 +172,27 @@ export function Dashboard() {
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
 
-  // Auto-adaptar ao montar se necessário
+  // ============================================
+  // REGRA: Auto-adaptar APENAS se existir plano base
+  // Guard: baseWorkouts.length > 0 é verificação REAL (não prop derivada)
+  // ============================================
   useEffect(() => {
-    if (adaptationPending && hasBaseWorkouts && hasAthleteConfig) {
-      setIsGeneratingAdaptation(true);
-      const result = ensureAdapted();
-      setIsGeneratingAdaptation(false);
+    // Guard fundamental: sem base, sem adaptação
+    if (baseWorkouts.length === 0) {
+      console.log('[Dashboard] No base workouts, skipping adaptation');
+      return;
     }
-  }, [adaptationPending, hasBaseWorkouts, hasAthleteConfig, ensureAdapted]);
+    
+    // Guard: precisa ter config e estar pendente
+    if (!adaptationPending || !hasAthleteConfig) {
+      return;
+    }
+    
+    console.log('[Dashboard] Auto-adapting workouts...');
+    setIsGeneratingAdaptation(true);
+    const result = ensureAdapted();
+    setIsGeneratingAdaptation(false);
+  }, [adaptationPending, baseWorkouts.length, hasAthleteConfig, ensureAdapted]);
 
   const handleAdminAccess = () => {
     if (!user) {
