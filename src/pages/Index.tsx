@@ -72,11 +72,13 @@ const Index = () => {
 
   // FLUXO PRINCIPAL DE NAVEGAÇÃO
   // 
-  // REGRAS UX DEFINITIVAS:
-  // 1. Setup completo → direto para treino do dia (preWorkout/dashboard)
-  // 2. Setup incompleto → mostrar telas de onboarding
-  // 3. F5/reload → manter tela atual (via outlier_last_route)
-  // 4. Login NÃO é configuração - nunca reexibir setup para usuário configurado
+  // REGRA MESTRA: Usar APENAS first_setup_completed === true
+  // 
+  // REGRAS:
+  // 1. first_setup_completed === true → direto para preWorkout/dashboard
+  // 2. first_setup_completed !== true → mostrar telas de onboarding
+  // 3. F5/reload com setup completo → manter tela atual
+  // 4. A tela de Configuração só abre por ação explícita do usuário
   //
   useEffect(() => {
     // PROTECTED: Only proceed when we have data and can redirect
@@ -88,9 +90,8 @@ const Index = () => {
     const lastRoute = loadLastRoute();
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
 
-    // ===== PRIORIDADE 1: SETUP COMPLETO + ÚLTIMA ROTA (F5) =====
-    // Se setup já foi concluído e existe última rota válida, restaurar e encerrar
-    if (onboardingDecision.isSetupComplete && lastRoute) {
+    // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
+    if (onboardingDecision.isSetupComplete) {
       // Sincronizar coach_style se necessário
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
@@ -99,39 +100,31 @@ const Index = () => {
         }
       }
       
-      if (lastRoute !== currentPath) {
+      // Se tem última rota válida (F5/reload), restaurar
+      if (lastRoute && lastRoute !== currentPath) {
         navigate(lastRoute, { replace: true });
-      }
-      initialCheckDone.current = true;
-      return;
-    }
-
-    // ===== PRIORIDADE 2: SETUP COMPLETO → DIRETO PARA TREINO =====
-    // Usuário configurado deve ir direto para preWorkout/dashboard, NUNCA para telas de setup
-    if (onboardingDecision.isSetupComplete) {
-      // Sincronizar coach_style
-      if (coachStyleFromProfile) {
-        const normalized = coachStyleFromProfile as CoachStyle;
-        if (coachStyle !== normalized) {
-          setCoachStyle(normalized);
-        }
+        initialCheckDone.current = true;
+        return;
       }
       
-      // Ir direto para treino (preWorkout) ou dashboard
-      // NUNCA ir para welcome, athleteWelcome ou config
+      // Se view foi restaurada do localStorage, respeitar
+      if (viewRestoredFromStorage) {
+        initialCheckDone.current = true;
+        return;
+      }
+      
+      // REGRA: Atleta configurado vai direto para preWorkout/dashboard
+      // NUNCA ir para welcome, athleteWelcome ou config automaticamente
       if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config') {
-        if (athleteConfig) {
-          setCurrentView('preWorkout');
-        } else {
-          setCurrentView('dashboard');
-        }
+        // Ir para preWorkout (treino do dia)
+        setCurrentView('preWorkout');
       }
       
       initialCheckDone.current = true;
       return;
     }
 
-    // ===== PRIORIDADE 3: PROTEÇÃO DE RELOAD (F5) - VIEW RESTAURADA =====
+    // ===== PRIORIDADE 2: PROTEÇÃO DE RELOAD (F5) - VIEW RESTAURADA =====
     // Se currentView foi restaurado do localStorage, respeitar contexto
     if (viewRestoredFromStorage) {
       if (coachStyleFromProfile) {
@@ -144,8 +137,8 @@ const Index = () => {
       return;
     }
 
-    // ===== PRIORIDADE 4: SETUP INCOMPLETO → ONBOARDING =====
-    // Apenas mostrar telas de setup se realmente necessário
+    // ===== PRIORIDADE 3: SETUP INCOMPLETO → ONBOARDING =====
+    // Apenas mostrar telas de setup se first_setup_completed !== true
     if (onboardingDecision.shouldShowOnboarding) {
       // Determinar qual tela de setup mostrar
       const hasCoachStyle = coachStyleFromProfile && ['IRON', 'PULSE', 'SPARK'].includes(coachStyleFromProfile);
@@ -156,9 +149,9 @@ const Index = () => {
           setCurrentView('welcome');
         }
       } else {
-        // Tem coach_style mas falta parâmetros → ir para config
-        if (currentView !== 'config') {
-          setCurrentView('config');
+        // Tem coach_style mas first_setup_completed !== true → ir para config
+        if (currentView !== 'config' && currentView !== 'athleteWelcome') {
+          setCurrentView('athleteWelcome');
         }
       }
       
@@ -175,7 +168,6 @@ const Index = () => {
     profile?.coach_style,
     coachStyle,
     currentView,
-    athleteConfig,
     setCoachStyle,
     setCurrentView,
     viewRestoredFromStorage,

@@ -5,8 +5,11 @@
  * 1. Fonte única: week_start (não scheduled_date)
  * 2. Navegação travada em 3 semanas: -1, 0, +1
  * 3. Virada no domingo: se hoje é domingo, "ATUAL" = próxima semana
- * 4. Logs padronizados: ATHLETE_WEEK_RESOLVE, ATHLETE_PLAN_FETCH
- * 5. Persistência: semana selecionada é salva em localStorage e restaurada no reload
+ * 
+ * REGRA DE BOOT (PRIMEIRO MOUNT):
+ * - SEMPRE forçar semana atual no primeiro mount após login
+ * - IGNORAR qualquer semana persistida no localStorage durante boot
+ * - Só persistir semana após navegação MANUAL do usuário
  */
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -23,6 +26,7 @@ import {
 
 const EMPTY_WORKOUTS: DayWorkout[] = [];
 const WEEK_ANCHOR_KEY = 'outlier_week_anchor';
+const WEEK_USER_NAVIGATED_KEY = 'outlier_week_user_navigated';
 
 // ============================================
 // PERSISTÊNCIA DE SEMANA
@@ -30,13 +34,46 @@ const WEEK_ANCHOR_KEY = 'outlier_week_anchor';
 
 /**
  * Salva a âncora da semana no localStorage
+ * SOMENTE chamado após navegação manual do usuário
  */
 function saveWeekAnchor(weekStart: string): void {
   try {
     localStorage.setItem(WEEK_ANCHOR_KEY, weekStart);
   } catch (e) {
-    // Falha silenciosa (ex: storage bloqueado)
     console.warn('[WeekAnchor] Failed to save:', e);
+  }
+}
+
+/**
+ * Marca que o usuário navegou manualmente
+ */
+function markUserNavigated(): void {
+  try {
+    localStorage.setItem(WEEK_USER_NAVIGATED_KEY, 'true');
+  } catch (e) {
+    // Falha silenciosa
+  }
+}
+
+/**
+ * Verifica se o usuário já navegou manualmente nesta sessão
+ */
+function hasUserNavigated(): boolean {
+  try {
+    return localStorage.getItem(WEEK_USER_NAVIGATED_KEY) === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Limpa flag de navegação (chamado no logout ou novo login)
+ */
+function clearUserNavigatedFlag(): void {
+  try {
+    localStorage.removeItem(WEEK_USER_NAVIGATED_KEY);
+  } catch (e) {
+    // Falha silenciosa
   }
 }
 
@@ -48,23 +85,25 @@ function loadWeekAnchor(): string | null {
   try {
     const stored = localStorage.getItem(WEEK_ANCHOR_KEY);
     if (!stored) return null;
-
-    // Validar formato YYYY-MM-DD
     if (!/^\d{4}-\d{2}-\d{2}$/.test(stored)) return null;
-
     return stored;
   } catch (e) {
-    console.warn('[WeekAnchor] Failed to load:', e);
     return null;
   }
 }
 
 /**
- * Determina a semana inicial considerando:
- * 1. Âncora persistida no localStorage (se válida e dentro da janela)
- * 2. Semana atual como fallback (e salva como default)
+ * Determina a semana inicial:
+ * - Se usuário navegou manualmente E âncora está dentro da janela → usar âncora
+ * - Caso contrário → SEMPRE semana atual (REGRA DE BOOT)
  */
 function getInitialWeekStart(allowedWeeks: { prev: string; curr: string; next: string }): string {
+  // REGRA DE BOOT: Se não houve navegação manual, forçar semana atual
+  if (!hasUserNavigated()) {
+    return allowedWeeks.curr;
+  }
+  
+  // Se usuário navegou manualmente, tentar restaurar âncora
   const storedAnchor = loadWeekAnchor();
   const allowed = new Set([allowedWeeks.prev, allowedWeeks.curr, allowedWeeks.next]);
 
@@ -72,8 +111,7 @@ function getInitialWeekStart(allowedWeeks: { prev: string; curr: string; next: s
     return storedAnchor;
   }
 
-  // Fallback: usar semana atual e salvar
-  saveWeekAnchor(allowedWeeks.curr);
+  // Fallback: semana atual
   return allowedWeeks.curr;
 }
 
@@ -167,13 +205,15 @@ export function useAthletePlan(): UseAthletePlanReturn {
     });
   }, [allowedWeeks]);
 
-  // Persistir semana selecionada SOMENTE após o primeiro render
-  // (evita sobrescrever a âncora restaurada no boot)
+  // Persistir semana selecionada SOMENTE após navegação manual
+  // (não persistir durante boot)
   useEffect(() => {
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
       return;
     }
+    // Marcar que usuário navegou manualmente e salvar âncora
+    markUserNavigated();
     saveWeekAnchor(selectedWeekStart);
   }, [selectedWeekStart]);
 
@@ -253,6 +293,8 @@ export function useAthletePlan(): UseAthletePlanReturn {
   }, [allowedWeeks]);
 
   const resetToCurrentWeek = useCallback(() => {
+    // Limpar flag de navegação para forçar boot limpo
+    clearUserNavigatedFlag();
     nowRef.current = new Date();
     setSelectedWeekStart(getAthleteCurrentWeekStart(nowRef.current));
   }, []);
