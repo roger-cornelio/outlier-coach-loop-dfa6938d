@@ -5,6 +5,7 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LogOut, Settings, UserCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { UserAvatar } from './UserAvatar';
+import { AthleteStatusBadge } from './AthleteStatusAvatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,9 +104,7 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
                 <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                   {roleLabel}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                  {levelLabel}
-                </span>
+                <AthleteStatusBadge status={athleteStatus} size="sm" />
               </div>
             </div>
           </DropdownMenuLabel>
