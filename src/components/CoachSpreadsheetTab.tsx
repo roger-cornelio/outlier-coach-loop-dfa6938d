@@ -1,5 +1,5 @@
 /**
- * CoachSpreadsheetTab - Aba IMPORTAR do Coach
+ * CoachSpreadsheetTab - Aba IMPORTAR/CRIAR do Coach
  * 
  * REGRAS ANTI-BUG:
  * 1. Preview = estado local (parsedWorkouts)
@@ -7,6 +7,7 @@
  * 3. "Publicar para Atletas" usa preview local como fonte
  * 4. OBRIGATÓRIO: semana de referência antes de salvar/publicar
  * 5. WOD Principal: máximo 1 por dia, diferente de Benchmark
+ * 6. MODO ESTRUTURADO: bloqueia salvar/publicar se bloco inválido
  * 
  * CONCEITOS:
  * - WOD Principal ≠ Benchmark (conceitos independentes)
@@ -18,11 +19,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star, AlertTriangle
+  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star, AlertTriangle, PenTool
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
 import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
+import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
@@ -32,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getBenchmarkCopy, getMainBlockCopy, getUIConceptsCopy } from '@/config/workoutConceptsCopy';
 
@@ -324,23 +327,75 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     }
   };
 
+  // Handler para o editor estruturado
+  const handleStructuredSave = async (
+    workouts: DayWorkout[], 
+    title: string, 
+    status: 'draft' | 'published', 
+    weekStart: string | null
+  ): Promise<boolean> => {
+    try {
+      const workoutId = await saveToDb(title, workouts, status, 0, weekStart);
+      return !!workoutId;
+    } catch (err) {
+      console.error('[CoachSpreadsheetTab] Error saving structured:', err);
+      return false;
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Info Card */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-primary mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-foreground mb-1">Como usar</p>
-              <p className="text-muted-foreground">
-                Cole sua planilha semanal abaixo. O sistema identifica automaticamente os dias (Segunda, Terça...) 
-                e blocos (Aquecimento, Conditioning, Força, Core, etc.).
-              </p>
+    <Tabs defaultValue="structured" className="space-y-6">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="structured" className="flex items-center gap-2">
+          <PenTool className="w-4 h-4" />
+          Criar Estruturado
+        </TabsTrigger>
+        <TabsTrigger value="import" className="flex items-center gap-2">
+          <Upload className="w-4 h-4" />
+          Importar Planilha
+        </TabsTrigger>
+      </TabsList>
+
+      {/* ABA ESTRUTURADA - MODELO ANTI-BURRO */}
+      <TabsContent value="structured" className="space-y-6">
+        <Card className="bg-green-500/5 border-green-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-foreground mb-1">Modo Estruturado (Recomendado)</p>
+                <p className="text-muted-foreground">
+                  Crie treinos com campos obrigatórios validados. Impossível salvar com erros.
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <StructuredWorkoutEditor
+          onSave={handleStructuredSave}
+          isSaving={isSavingToDb}
+          linkedAthletesCount={linkedAthletes.length}
+        />
+      </TabsContent>
+
+      {/* ABA IMPORTAR - MODO LEGADO */}
+      <TabsContent value="import" className="space-y-6">
+        {/* Info Card */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-primary mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-foreground mb-1">Importar Planilha</p>
+                <p className="text-muted-foreground">
+                  Cole sua planilha semanal abaixo. O sistema identifica automaticamente os dias (Segunda, Terça...) 
+                  e blocos (Aquecimento, Conditioning, Força, Core, etc.).
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
       {/* Errors/Success */}
       <AnimatePresence>
@@ -737,6 +792,7 @@ Terça-feira 📅
         loadingAthletes={loadingAthletes}
         weekStart={selectedWeek?.startDate || null}
       />
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
