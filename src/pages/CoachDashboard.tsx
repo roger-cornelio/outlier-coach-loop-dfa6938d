@@ -33,6 +33,7 @@ import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
+import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
 import { useToast } from '@/hooks/use-toast';
 import { AthleteStatus, LEVEL_NAMES } from '@/types/outlier';
 import { calculateAthleteStatus, type AthleteGender } from '@/utils/athleteStatusSystem';
@@ -45,6 +46,8 @@ interface LinkedAthlete {
   // Status REAL do atleta (calculado de benchmarks via calculateAthleteStatus)
   athleteStatus?: AthleteStatus | null;
   sexo?: string | null;
+  // Account status (active/suspended)
+  accountStatus: 'active' | 'suspended';
 }
 
 interface DiagnosticCounts {
@@ -120,7 +123,7 @@ export default function CoachDashboard() {
       const athleteIds = links.map(l => l.athlete_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, name, email, sexo')
+        .select('id, user_id, name, email, sexo, status')
         .in('user_id', athleteIds);
 
       if (profilesError) {
@@ -198,6 +201,7 @@ export default function CoachDashboard() {
           email: p.email,
           athleteStatus,
           sexo: p.sexo,
+          accountStatus: (p.status as 'active' | 'suspended') || 'active',
         };
       });
 
@@ -533,6 +537,13 @@ export default function CoachDashboard() {
                             >
                               <UserMinus className="w-4 h-4" />
                             </Button>
+                            <CoachSuspensionActions
+                              userId={athlete.user_id}
+                              userName={athlete.name}
+                              userEmail={athlete.email}
+                              userStatus={athlete.accountStatus}
+                              onActionComplete={fetchAthletes}
+                            />
                           </div>
                         </div>
                       );
