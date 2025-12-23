@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils';
 import type { AthleteStatus, TrainingLevel } from '@/types/outlier';
 
 // ============================================
-// AVATAR AUTOMÁTICO BASEADO EM SEXO E NÍVEL
+// AVATAR COM STATUS VISUAL DO ATLETA
+// Cor, borda, glow e animação baseados no nível
 // ============================================
 
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -18,66 +19,65 @@ interface UserAvatarProps {
   showGlow?: boolean;
 }
 
-// Mapeamento de cores por nível de treino
-const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; glow: string }> = {
-  // Training Levels (do config)
-  base: {
-    bg: 'bg-blue-600',
-    border: 'border-blue-400',
-    text: 'text-blue-100',
-    glow: 'shadow-blue-500/40',
-  },
-  progressivo: {
-    bg: 'bg-emerald-600',
-    border: 'border-emerald-400',
-    text: 'text-emerald-100',
-    glow: 'shadow-emerald-500/40',
-  },
-  performance: {
-    bg: 'bg-orange-600',
-    border: 'border-orange-400',
-    text: 'text-orange-100',
-    glow: 'shadow-orange-500/40',
-  },
-  // Athlete Status (níveis calculados)
+// Configuração visual por STATUS do atleta (fonte de verdade)
+const STATUS_VISUAL: Record<AthleteStatus, {
+  gradient: string;
+  border: string;
+  glow: string;
+  glowIntensity: string;
+  text: string;
+  animate: boolean;
+}> = {
   iniciante: {
-    bg: 'bg-slate-600',
-    border: 'border-slate-400',
-    text: 'text-slate-100',
-    glow: 'shadow-slate-500/40',
+    gradient: 'from-slate-500 to-slate-600',
+    border: 'border-slate-400/60',
+    glow: 'rgba(100, 116, 139, 0.3)',
+    glowIntensity: '0 0 12px',
+    text: 'text-slate-200',
+    animate: false,
   },
   intermediario: {
-    bg: 'bg-emerald-600',
-    border: 'border-emerald-400',
+    gradient: 'from-emerald-500 to-green-600',
+    border: 'border-emerald-400/70',
+    glow: 'rgba(16, 185, 129, 0.4)',
+    glowIntensity: '0 0 16px',
     text: 'text-emerald-100',
-    glow: 'shadow-emerald-500/40',
+    animate: false,
   },
   avancado: {
-    bg: 'bg-purple-600',
-    border: 'border-purple-400',
-    text: 'text-purple-100',
-    glow: 'shadow-purple-500/40',
+    gradient: 'from-orange-500 to-red-600',
+    border: 'border-orange-400/80',
+    glow: 'rgba(249, 115, 22, 0.5)',
+    glowIntensity: '0 0 20px',
+    text: 'text-orange-100',
+    animate: false,
   },
   hyrox_open: {
-    bg: 'bg-amber-600',
-    border: 'border-amber-400',
-    text: 'text-amber-100',
-    glow: 'shadow-amber-500/40',
+    gradient: 'from-purple-500 to-pink-600',
+    border: 'border-purple-400/80',
+    glow: 'rgba(168, 85, 247, 0.5)',
+    glowIntensity: '0 0 24px',
+    text: 'text-purple-100',
+    animate: true,
   },
   hyrox_pro: {
-    bg: 'bg-gradient-to-br from-yellow-500 to-amber-600',
-    border: 'border-yellow-400',
-    text: 'text-yellow-100',
-    glow: 'shadow-yellow-500/50',
+    gradient: 'from-amber-400 via-yellow-500 to-amber-600',
+    border: 'border-amber-400',
+    glow: 'rgba(251, 191, 36, 0.6)',
+    glowIntensity: '0 0 28px, 0 0 40px',
+    text: 'text-amber-100',
+    animate: true,
   },
 };
 
-// Cores padrão (fallback)
-const DEFAULT_COLORS = {
-  bg: 'bg-muted',
+// Cores padrão (fallback - sem status definido)
+const DEFAULT_VISUAL = {
+  gradient: 'from-muted to-muted',
   border: 'border-border',
+  glow: 'transparent',
+  glowIntensity: 'none',
   text: 'text-muted-foreground',
-  glow: '',
+  animate: false,
 };
 
 // Tamanhos do avatar
@@ -101,8 +101,8 @@ function getInitials(name?: string | null): string {
 }
 
 /**
- * Componente de avatar automático baseado em sexo e nível de treino.
- * Não usa upload de imagem - apenas ícones vetoriais e cores.
+ * Componente de avatar com status visual do atleta.
+ * Exibe cor, gradiente, glow e animação baseados no nível.
  */
 export function UserAvatar({
   name,
@@ -111,27 +111,24 @@ export function UserAvatar({
   athleteStatus,
   size = 'md',
   className,
-  showGlow = false,
+  showGlow = true,
 }: UserAvatarProps) {
-  // Prioridade: trainingLevel > athleteStatus
-  const levelKey = trainingLevel || athleteStatus || null;
-  const colors = levelKey ? (LEVEL_COLORS[levelKey] || DEFAULT_COLORS) : DEFAULT_COLORS;
+  // Prioridade: athleteStatus (calculado) > trainingLevel (config)
+  const statusKey = athleteStatus || null;
+  const visual = statusKey ? STATUS_VISUAL[statusKey] : DEFAULT_VISUAL;
   const sizeConfig = SIZE_CONFIG[size];
 
   // Determinar conteúdo: ícone de gênero ou iniciais
   const renderContent = () => {
-    const iconClasses = cn(sizeConfig.icon, colors.text);
+    const iconClasses = cn(sizeConfig.icon, visual.text);
     
     if (gender === 'feminino') {
-      // Ícone feminino (UserRound com estilo suave)
       return <UserRound className={iconClasses} strokeWidth={2.5} />;
     } else if (gender === 'masculino') {
-      // Ícone masculino (User padrão)
       return <User className={iconClasses} strokeWidth={2.5} />;
     } else {
-      // Fallback: iniciais do nome
       return (
-        <span className={cn(sizeConfig.text, colors.text)}>
+        <span className={cn(sizeConfig.text, visual.text)}>
           {getInitials(name)}
         </span>
       );
@@ -142,20 +139,41 @@ export function UserAvatar({
     <div
       className={cn(
         // Base
-        'rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all duration-200',
+        'relative rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all duration-300',
         // Tamanho
         sizeConfig.container,
-        // Cores baseadas no nível
-        colors.bg,
-        colors.border,
-        // Glow opcional
-        showGlow && colors.glow && `shadow-lg ${colors.glow}`,
+        // Gradiente de fundo
+        `bg-gradient-to-br ${visual.gradient}`,
+        // Borda
+        visual.border,
+        // Animação para níveis altos
+        visual.animate && 'animate-pulse-slow',
         // Classes customizadas
         className
       )}
-      title={`${name || 'Usuário'} • ${levelKey || 'Nível não definido'}`}
+      style={{
+        // Glow externo baseado no status
+        boxShadow: showGlow && statusKey ? `${visual.glowIntensity} ${visual.glow}` : 'none',
+      }}
+      title={`${name || 'Usuário'} • ${statusKey ? statusKey.replace('_', ' ').toUpperCase() : 'Nível não definido'}`}
     >
-      {renderContent()}
+      {/* Anel interno de brilho */}
+      {showGlow && statusKey && (
+        <div 
+          className={cn(
+            'absolute inset-0 rounded-full opacity-30',
+            `bg-gradient-to-br ${visual.gradient}`
+          )}
+          style={{
+            filter: 'blur(2px)',
+          }}
+        />
+      )}
+      
+      {/* Conteúdo do avatar */}
+      <div className="relative z-10">
+        {renderContent()}
+      </div>
     </div>
   );
 }

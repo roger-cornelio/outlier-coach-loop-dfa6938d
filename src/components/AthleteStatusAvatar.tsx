@@ -2,13 +2,13 @@ import { User, UserRound, Crown, Star, Flame, Zap, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import type { AthleteStatus } from '@/types/outlier';
-import { LEVEL_NAMES } from '@/types/outlier';
 
 /**
  * AthleteStatusAvatar - Avatar Central de Status
  * 
  * Componente principal de identidade do atleta.
  * Exibe avatar grande com nível/status de forma proeminente.
+ * Usa mesma fonte de verdade visual que UserAvatar.
  */
 
 interface AthleteStatusAvatarProps {
@@ -20,60 +20,72 @@ interface AthleteStatusAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 }
 
-// Configuração visual por nível
+// Configuração visual por nível (fonte de verdade única)
 const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
   icon: typeof Crown;
   gradient: string;
   glow: string;
+  glowIntensity: string;
   border: string;
   text: string;
   badge: string;
+  animate: boolean;
 }> = {
   iniciante: {
     label: 'INICIANTE',
     icon: Target,
     gradient: 'from-slate-500 to-slate-600',
-    glow: 'shadow-slate-500/40',
-    border: 'border-slate-400',
+    glow: 'rgba(100, 116, 139, 0.4)',
+    glowIntensity: '0 0 20px',
+    border: 'border-slate-400/60',
     text: 'text-slate-300',
     badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    animate: false,
   },
   intermediario: {
     label: 'INTERMEDIÁRIO',
     icon: Zap,
     gradient: 'from-emerald-500 to-green-600',
-    glow: 'shadow-emerald-500/50',
-    border: 'border-emerald-400',
+    glow: 'rgba(16, 185, 129, 0.5)',
+    glowIntensity: '0 0 30px',
+    border: 'border-emerald-400/70',
     text: 'text-emerald-400',
     badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    animate: false,
   },
   avancado: {
     label: 'AVANÇADO',
     icon: Flame,
     gradient: 'from-orange-500 to-red-600',
-    glow: 'shadow-orange-500/50',
-    border: 'border-orange-400',
+    glow: 'rgba(249, 115, 22, 0.5)',
+    glowIntensity: '0 0 40px',
+    border: 'border-orange-400/80',
     text: 'text-orange-400',
     badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    animate: false,
   },
   hyrox_open: {
     label: 'HYROX OPEN',
     icon: Star,
     gradient: 'from-purple-500 to-pink-600',
-    glow: 'shadow-purple-500/50',
-    border: 'border-purple-400',
+    glow: 'rgba(168, 85, 247, 0.6)',
+    glowIntensity: '0 0 50px',
+    border: 'border-purple-400/80',
     text: 'text-purple-400',
     badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    animate: true,
   },
   hyrox_pro: {
     label: 'HYROX PRO',
     icon: Crown,
-    gradient: 'from-amber-400 to-yellow-500',
-    glow: 'shadow-amber-500/60',
+    gradient: 'from-amber-400 via-yellow-500 to-amber-600',
+    glow: 'rgba(251, 191, 36, 0.7)',
+    glowIntensity: '0 0 60px, 0 0 100px',
     border: 'border-amber-400',
     text: 'text-amber-400',
     badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    animate: true,
   },
 };
 
@@ -130,9 +142,12 @@ export function AthleteStatusAvatar({
             'border-4 transition-all duration-300',
             `bg-gradient-to-br ${config.gradient}`,
             config.border,
-            `shadow-2xl ${config.glow}`,
+            config.animate && 'animate-pulse-slow',
             sizeConfig.container
           )}
+          style={{
+            boxShadow: `${config.glowIntensity} ${config.glow}`,
+          }}
         >
           {renderUserIcon()}
           
