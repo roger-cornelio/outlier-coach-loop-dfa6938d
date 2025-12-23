@@ -9,14 +9,16 @@
  * - Notas do coach (campo separado, opcional)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp, Clipboard, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { WorkoutBlock } from '@/types/outlier';
 
 // ============================================
@@ -53,6 +55,26 @@ export const UNITS = [
   { value: 'sec', label: 'sec' },
   { value: 'rounds', label: 'rounds' },
 ] as const;
+
+// Presets rápidos para adicionar itens
+export const QUICK_PRESETS = [
+  { label: 'Reps', unit: 'reps', defaultQty: 10, icon: '🔄' },
+  { label: 'Metros', unit: 'm', defaultQty: 100, icon: '📏' },
+  { label: 'Calorias', unit: 'cal', defaultQty: 15, icon: '🔥' },
+  { label: 'Tempo', unit: 'min', defaultQty: 1, icon: '⏱️' },
+  { label: 'Rounds', unit: 'rounds', defaultQty: 3, icon: '🔁' },
+] as const;
+
+// Movimentos comuns para autocomplete (base inicial)
+const COMMON_MOVEMENTS = [
+  'Pull-ups', 'Push-ups', 'Air Squats', 'Burpees', 'Box Jumps',
+  'Kettlebell Swings', 'Deadlifts', 'Cleans', 'Snatches', 'Thrusters',
+  'Wall Balls', 'Double Unders', 'Toes to Bar', 'Muscle-ups', 'Handstand Push-ups',
+  'Rowing', 'Assault Bike', 'Running', 'Ski Erg', 'Sled Push', 'Sled Pull',
+  'Lunges', 'Step-ups', 'Farmers Carry', 'Sandbag Carry',
+  'Burpee Broad Jump', 'Box Jump Over', 'Devil Press', 'Dumbbell Snatch',
+  'Rope Climbs', 'Pistols', 'GHD Sit-ups', 'Back Extensions',
+];
 
 export interface WorkoutItem {
   id: string;
@@ -239,6 +261,7 @@ interface StructuredBlockEditorProps {
   showValidation?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  movementHistory?: string[]; // Histórico de movimentos do coach
 }
 
 export function StructuredBlockEditor({
@@ -248,9 +271,30 @@ export function StructuredBlockEditor({
   showValidation = false,
   isExpanded = true,
   onToggleExpand,
+  movementHistory = [],
 }: StructuredBlockEditorProps) {
+  const [showPasteInput, setShowPasteInput] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [activeMovementField, setActiveMovementField] = useState<string | null>(null);
+  const [movementSearch, setMovementSearch] = useState('');
+  
   const errors = showValidation ? validateBlock(block) : [];
   const hasError = (field: string) => errors.some(e => e.field === field);
+
+  // Combinar movimentos comuns com histórico do coach
+  const allMovements = useMemo(() => {
+    const combined = [...new Set([...movementHistory, ...COMMON_MOVEMENTS])];
+    return combined.sort();
+  }, [movementHistory]);
+
+  // Filtrar sugestões de movimento
+  const movementSuggestions = useMemo(() => {
+    if (!movementSearch.trim()) return allMovements.slice(0, 10);
+    const search = movementSearch.toLowerCase();
+    return allMovements
+      .filter(m => m.toLowerCase().includes(search))
+      .slice(0, 10);
+  }, [movementSearch, allMovements]);
 
   const updateBlock = useCallback((updates: Partial<StructuredBlock>) => {
     onChange({ ...block, ...updates });
@@ -261,6 +305,111 @@ export function StructuredBlockEditor({
       items: [...block.items, createEmptyItem()],
     });
   }, [block.items, updateBlock]);
+
+  // Adicionar item com preset
+  const addItemWithPreset = useCallback((unit: string, defaultQty: number) => {
+    const newItem: WorkoutItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      quantity: defaultQty,
+      unit,
+      movement: '',
+    };
+    updateBlock({
+      items: [...block.items, newItem],
+    });
+  }, [block.items, updateBlock]);
+
+  // Parser de texto colado
+  const parseAndAddItems = useCallback(() => {
+    if (!pasteText.trim()) {
+      setShowPasteInput(false);
+      return;
+    }
+
+    const lines = pasteText.split('\n').filter(l => l.trim());
+    const parsedItems: WorkoutItem[] = [];
+    const unparsedLines: string[] = [];
+
+    for (const line of lines) {
+      // Padrões comuns: "10 Pull-ups", "100m Run", "15 cal Row", "3 rounds", "1:30 min rest"
+      const patterns = [
+        // "10 reps Pull-ups" ou "10 Pull-ups"
+        /^(\d+(?:[.,]\d+)?)\s*(reps?|rep)?\s+(.+?)(?:\s*\((.+)\))?$/i,
+        // "100m Run" ou "100 m Run"
+        /^(\d+(?:[.,]\d+)?)\s*(m|km|meters?|metros?)\s+(.+?)(?:\s*\((.+)\))?$/i,
+        // "15 cal Row"
+        /^(\d+(?:[.,]\d+)?)\s*(cal|cals?|calorias?)\s+(.+?)(?:\s*\((.+)\))?$/i,
+        // "3 rounds of..."
+        /^(\d+(?:[.,]\d+)?)\s*(rounds?|rodadas?)\s+(?:of\s+)?(.+?)(?:\s*\((.+)\))?$/i,
+        // "1 min rest" ou "30 sec hold"
+        /^(\d+(?:[.,]\d+)?)\s*(min|sec|minutos?|segundos?)\s+(.+?)(?:\s*\((.+)\))?$/i,
+        // Formato genérico: número + qualquer coisa
+        /^(\d+(?:[.,]\d+)?)\s*[x×]\s*(.+?)(?:\s*\((.+)\))?$/i,
+      ];
+
+      let matched = false;
+      
+      for (const pattern of patterns) {
+        const match = line.trim().match(pattern);
+        if (match) {
+          const qty = parseFloat(match[1].replace(',', '.'));
+          let unit = 'reps';
+          let movement = '';
+          let notes = '';
+
+          // Detectar unidade
+          const unitMatch = match[2]?.toLowerCase() || '';
+          if (unitMatch.startsWith('m') && !unitMatch.includes('min')) unit = 'm';
+          else if (unitMatch.includes('km')) unit = 'km';
+          else if (unitMatch.startsWith('cal')) unit = 'cal';
+          else if (unitMatch.startsWith('round') || unitMatch.startsWith('rodada')) unit = 'rounds';
+          else if (unitMatch.startsWith('min')) unit = 'min';
+          else if (unitMatch.startsWith('sec') || unitMatch.startsWith('seg')) unit = 'sec';
+
+          movement = match[3]?.trim() || match[2]?.trim() || '';
+          notes = match[4]?.trim() || '';
+
+          if (movement) {
+            parsedItems.push({
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${parsedItems.length}`,
+              quantity: qty,
+              unit,
+              movement,
+              notes: notes || undefined,
+            });
+            matched = true;
+            break;
+          }
+        }
+      }
+
+      if (!matched && line.trim()) {
+        unparsedLines.push(line.trim());
+      }
+    }
+
+    // Atualizar bloco
+    if (parsedItems.length > 0) {
+      // Remover itens vazios e adicionar os parseados
+      const existingValidItems = block.items.filter(
+        item => item.quantity !== '' && item.movement.trim()
+      );
+      updateBlock({
+        items: [...existingValidItems, ...parsedItems],
+        coachNotes: unparsedLines.length > 0 
+          ? (block.coachNotes ? block.coachNotes + '\n' : '') + unparsedLines.join('\n')
+          : block.coachNotes,
+      });
+    } else if (unparsedLines.length > 0) {
+      // Tudo foi para notas
+      updateBlock({
+        coachNotes: (block.coachNotes ? block.coachNotes + '\n' : '') + unparsedLines.join('\n'),
+      });
+    }
+
+    setPasteText('');
+    setShowPasteInput(false);
+  }, [pasteText, block.items, block.coachNotes, updateBlock]);
 
   const removeItem = useCallback((itemId: string) => {
     updateBlock({
@@ -386,22 +535,121 @@ export function StructuredBlockEditor({
               </div>
 
               {/* Items do treino */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <Label>
                     Itens do Treino <span className="text-destructive">*</span>
                   </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addItem}
-                    className="h-7 text-xs"
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Adicionar
-                  </Button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Botão colar texto */}
+                    <Button
+                      type="button"
+                      variant={showPasteInput ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowPasteInput(!showPasteInput)}
+                      className="h-7 text-xs"
+                    >
+                      <Clipboard className="w-3 h-3 mr-1" />
+                      Colar
+                    </Button>
+                    
+                    {/* Presets rápidos */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
+                          <Zap className="w-3 h-3 mr-1" />
+                          Rápido
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-48 p-2 bg-popover border border-border" align="end">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground mb-2">Adicionar item:</p>
+                          {QUICK_PRESETS.map((preset) => (
+                            <Button
+                              key={preset.unit}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => addItemWithPreset(preset.unit, preset.defaultQty)}
+                              className="w-full justify-start h-8 text-xs"
+                            >
+                              <span className="mr-2">{preset.icon}</span>
+                              {preset.label} ({preset.defaultQty} {preset.unit})
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addItem}
+                      className="h-7 text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Item
+                    </Button>
+                  </div>
                 </div>
+
+                {/* Campo de colar texto */}
+                <AnimatePresence>
+                  {showPasteInput && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-3 rounded-lg border border-dashed border-primary/50 bg-primary/5 space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Cole o texto do treino. Linhas como "10 Pull-ups" serão convertidas automaticamente.
+                        </p>
+                        <Textarea
+                          value={pasteText}
+                          onChange={(e) => setPasteText(e.target.value)}
+                          placeholder="Ex:
+10 Pull-ups
+100m Run
+15 cal Assault Bike
+3 rounds Burpees"
+                          rows={4}
+                          className="text-sm"
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPasteText('');
+                              setShowPasteInput(false);
+                            }}
+                            className="h-7 text-xs"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={parseAndAddItems}
+                            className="h-7 text-xs"
+                          >
+                            Processar
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {hasError('items') && (
                   <p className="text-xs text-destructive">
@@ -443,13 +691,61 @@ export function StructuredBlockEditor({
                         </SelectContent>
                       </Select>
 
-                      {/* Movimento */}
-                      <Input
-                        value={item.movement}
-                        onChange={(e) => updateItem(item.id, { movement: e.target.value })}
-                        placeholder="Movimento (ex: Pull-ups)"
-                        className="flex-1"
-                      />
+                      {/* Movimento com autocomplete */}
+                      <Popover 
+                        open={activeMovementField === item.id} 
+                        onOpenChange={(open) => {
+                          setActiveMovementField(open ? item.id : null);
+                          if (open) setMovementSearch(item.movement);
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Input
+                            value={item.movement}
+                            onChange={(e) => {
+                              updateItem(item.id, { movement: e.target.value });
+                              setMovementSearch(e.target.value);
+                              if (!activeMovementField) setActiveMovementField(item.id);
+                            }}
+                            onFocus={() => {
+                              setActiveMovementField(item.id);
+                              setMovementSearch(item.movement);
+                            }}
+                            placeholder="Movimento"
+                            className="flex-1"
+                          />
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="w-64 p-0 bg-popover border border-border" 
+                          align="start"
+                          onOpenAutoFocus={(e) => e.preventDefault()}
+                        >
+                          <Command>
+                            <CommandInput 
+                              placeholder="Buscar movimento..." 
+                              value={movementSearch}
+                              onValueChange={setMovementSearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>Nenhum resultado</CommandEmpty>
+                              <CommandGroup>
+                                {movementSuggestions.map((movement) => (
+                                  <CommandItem
+                                    key={movement}
+                                    value={movement}
+                                    onSelect={() => {
+                                      updateItem(item.id, { movement });
+                                      setActiveMovementField(null);
+                                    }}
+                                  >
+                                    {movement}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
 
                       {/* Observação */}
                       <Input
