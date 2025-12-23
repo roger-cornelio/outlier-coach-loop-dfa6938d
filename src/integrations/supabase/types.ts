@@ -289,6 +289,9 @@ export type Database = {
           peso: number | null
           session_duration: string | null
           sexo: string | null
+          status: string
+          suspended_at: string | null
+          suspended_by: string | null
           training_level: string | null
           unavailable_equipment: Json | null
           user_id: string
@@ -308,6 +311,9 @@ export type Database = {
           peso?: number | null
           session_duration?: string | null
           sexo?: string | null
+          status?: string
+          suspended_at?: string | null
+          suspended_by?: string | null
           training_level?: string | null
           unavailable_equipment?: Json | null
           user_id: string
@@ -327,6 +333,9 @@ export type Database = {
           peso?: number | null
           session_duration?: string | null
           sexo?: string | null
+          status?: string
+          suspended_at?: string | null
+          suspended_by?: string | null
           training_level?: string | null
           unavailable_equipment?: Json | null
           user_id?: string

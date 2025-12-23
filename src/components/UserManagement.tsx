@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Shield, ShieldCheck, ShieldAlert, Loader2, UserPlus, 
 import { toast } from 'sonner';
 import { AdminAllowlistManager } from './AdminAllowlistManager';
 import { UserIdentity, UserIdentityCompact, getDisplayName, type UserIdentityData } from './UserIdentity';
+import { UserSuspensionActions } from './UserSuspensionActions';
 
 interface UserWithRole {
   id: string;
@@ -14,6 +15,7 @@ interface UserWithRole {
   email: string;
   created_at: string;
   role: 'superadmin' | 'admin' | 'coach' | 'user';
+  status: 'active' | 'suspended';
   hasPendingCoachApplication: boolean;
 }
 
@@ -44,10 +46,10 @@ export function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch all profiles including name
+      // Fetch all profiles including name and status
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email, name, created_at')
+        .select('user_id, email, name, created_at, status')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -92,6 +94,7 @@ export function UserManagement() {
         email: p.email || 'Email não disponível',
         created_at: p.created_at,
         role: userRoleMap.get(p.user_id) || 'user',
+        status: (p.status as 'active' | 'suspended') || 'active',
         hasPendingCoachApplication: pendingCoachUserIds.has(p.user_id),
       }));
 
@@ -426,18 +429,29 @@ export function UserManagement() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {coach.id !== user?.id && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCoachRole(coach.id, 'coach');
-                            }}
-                            disabled={updating === coach.id}
-                            className="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                          >
-                            {updating === coach.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Remover coach'}
-                          </button>
+                          <>
+                            <UserSuspensionActions
+                              userId={coach.id}
+                              userName={coach.name}
+                              userEmail={coach.email}
+                              userStatus={coach.status}
+                              isAdmin={isAdmin}
+                              isCoach={false}
+                              onActionComplete={() => {
+                                fetchUsers();
+                                fetchCoachAthletes();
+                              }}
+                            />
+                            <button
+                              onClick={() => toggleCoachRole(coach.id, 'coach')}
+                              disabled={updating === coach.id}
+                              className="px-3 py-1.5 rounded-lg text-xs bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                            >
+                              {updating === coach.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Remover coach'}
+                            </button>
+                          </>
                         )}
                         {isExpanded ? (
                           <ChevronUp className="w-5 h-5 text-muted-foreground" />
@@ -569,26 +583,44 @@ export function UserManagement() {
                     </div>
                   </div>
 
-                  {u.id === user?.id ? (
-                    <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
-                      Você
-                    </span>
-                  ) : u.hasPendingCoachApplication ? (
-                    <button
-                      onClick={() => toggleCoachRole(u.id, u.role)}
-                      disabled={updating === u.id}
-                      className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors bg-green-500/10 text-green-500 hover:bg-green-500/20"
-                    >
-                      {updating === u.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4" />
-                          Autorizar coach
-                        </>
-                      )}
-                    </button>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {u.id === user?.id ? (
+                      <span className="text-xs text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
+                        Você
+                      </span>
+                    ) : (
+                      <>
+                        <UserSuspensionActions
+                          userId={u.id}
+                          userName={u.name}
+                          userEmail={u.email}
+                          userStatus={u.status}
+                          isAdmin={isAdmin}
+                          isCoach={false}
+                          onActionComplete={() => {
+                            fetchUsers();
+                            fetchCoachAthletes();
+                          }}
+                        />
+                        {u.hasPendingCoachApplication && (
+                          <button
+                            onClick={() => toggleCoachRole(u.id, u.role)}
+                            disabled={updating === u.id}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                          >
+                            {updating === u.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                <UserPlus className="w-3 h-3" />
+                                Autorizar coach
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>
