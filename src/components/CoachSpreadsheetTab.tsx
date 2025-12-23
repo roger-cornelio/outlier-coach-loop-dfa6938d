@@ -26,6 +26,7 @@ import { PublishToAthletesModal } from './PublishToAthletesModal';
 import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
+import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -351,8 +352,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
           Criar Estruturado
         </TabsTrigger>
         <TabsTrigger value="import" className="flex items-center gap-2">
-          <Upload className="w-4 h-4" />
-          Importar Planilha
+          <FileText className="w-4 h-4" />
+          Texto Modelo
         </TabsTrigger>
       </TabsList>
 
@@ -379,23 +380,15 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
         />
       </TabsContent>
 
-      {/* ABA IMPORTAR - MODO LEGADO */}
+      {/* ABA TEXTO MODELO */}
       <TabsContent value="import" className="space-y-6">
-        {/* Info Card */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-primary mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground mb-1">Importar Planilha</p>
-                <p className="text-muted-foreground">
-                  Cole sua planilha semanal abaixo. O sistema identifica automaticamente os dias (Segunda, Terça...) 
-                  e blocos (Aquecimento, Conditioning, Força, Core, etc.).
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TextModelImporter
+          onImport={(workouts) => {
+            setParsedWorkouts(workouts);
+            setExpandedDays(new Set(workouts.map(w => w.day)));
+            setSuccess(`${workouts.length} dia(s) importados. Revise abaixo e salve.`);
+          }}
+        />
 
       {/* Errors/Success */}
       <AnimatePresence>
@@ -427,66 +420,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Input Area */}
-      {!parsedWorkouts && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="w-5 h-5 text-primary" />
-              Importar Planilha
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              value={spreadsheetText}
-              onChange={(e) => setSpreadsheetText(e.target.value)}
-              placeholder={`Segunda-feira 📅
-🔥 AQUECIMENTO
-3 rounds:
-- 200m Run
-- 10 Air Squats
-
-⚡ CONDITIONING
-AMRAP 20min:
-5 Pull-ups
-10 Push-ups
-15 Air Squats
-
-Terça-feira 📅
-...`}
-              className="min-h-[250px] font-mono text-sm"
-            />
-            
-            <div className="flex gap-3">
-              <Button
-                onClick={processSpreadsheet}
-                disabled={isProcessing || !spreadsheetText.trim()}
-                className="flex-1"
-              >
-                {isProcessing ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Processar Planilha
-                  </>
-                )}
-              </Button>
-              
-              {(parsedWorkouts || spreadsheetText.trim()) && (
-                <Button variant="outline" onClick={handleClearWorkouts}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Limpar
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Preview dos treinos parseados - FONTE LOCAL */}
       {parsedWorkouts && (
