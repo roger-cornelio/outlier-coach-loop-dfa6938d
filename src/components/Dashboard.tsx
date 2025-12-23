@@ -20,6 +20,9 @@ import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { getCoachCopy } from '@/config/coachCopy';
 import { WeekNavigator } from './WeekNavigator';
 import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
+import { AthleteStatusAvatar } from './AthleteStatusAvatar';
+import { LevelUpModal } from './LevelUpModal';
+import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -106,6 +109,9 @@ export function Dashboard() {
   
   // Carregar configurações do atleta do banco (persistência)
   useAthleteProfile();
+  
+  // Detectar subida de nível para exibir modal
+  const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
   
   const navigate = useNavigate();
   
@@ -437,6 +443,22 @@ export function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* ============================================
+          AVATAR CENTRAL DE STATUS
+          Elemento visual mais chamativo da home
+          ============================================ */}
+      <section className="py-8 px-6 border-b border-border/50 bg-gradient-to-b from-background to-secondary/20">
+        <div className="max-w-6xl mx-auto flex flex-col items-center">
+          <AthleteStatusAvatar
+            name={user?.email?.split('@')[0]}
+            gender={athleteConfig?.sexo}
+            status={status}
+            size="hero"
+            showLabel={true}
+          />
+        </div>
+      </section>
 
       {/* Adaptation Status Banner - Texto fixo sem métricas */}
       {hasBaseWorkouts && isShowingAdapted && (
@@ -917,6 +939,15 @@ export function Dashboard() {
         canGoToPrev={canNavigateToPast}
         canGoToNext={canNavigateToFuture}
       />
+
+      {/* Level Up Modal - Exibido quando atleta sobe de nível */}
+      {newLevel && (
+        <LevelUpModal
+          isOpen={showLevelUpModal}
+          newStatus={newLevel}
+          onContinue={acknowledgeLevel}
+        />
+      )}
     </div>
   );
 }
