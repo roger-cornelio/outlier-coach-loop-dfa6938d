@@ -13,18 +13,27 @@ import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants
 
 // ============================================
 // MULTIPLICADORES DE INTENSIDADE POR MODO
+// Aplicar apenas em blocos metabolicamente dominantes
 // ============================================
 
 const INTENSITY_MULTIPLIERS: Record<TrainingLevel, number> = {
-  base: 0.90,        // Treino mais leve, menos calorias
-  progressivo: 1.00, // Intensidade padrão
-  performance: 1.10, // Treino mais intenso, mais calorias
+  base: 1.00,        // Sem redução no modo base
+  progressivo: 1.05, // +5% para progressivo
+  performance: 1.12, // +12% para performance
 };
+
+// Blocos que recebem multiplicador de intensidade
+const METABOLIC_BLOCK_TYPES = ['conditioning', 'especifico', 'corrida', 'hyrox'];
 
 /**
  * Retorna o multiplicador de intensidade baseado no modo de treino
+ * Aplica apenas em blocos metabolicamente dominantes
  */
-export function getModeIntensityMultiplier(trainingLevel: TrainingLevel | undefined): number {
+export function getModeIntensityMultiplier(trainingLevel: TrainingLevel | undefined, blockType?: string): number {
+  // Se não for bloco metabólico, não aplica multiplicador
+  if (blockType && !METABOLIC_BLOCK_TYPES.includes(blockType)) {
+    return 1.0;
+  }
   return INTENSITY_MULTIPLIERS[trainingLevel || 'progressivo'] || 1.0;
 }
 // ============================================
@@ -64,34 +73,46 @@ export interface WorkoutEstimation {
 // MAPEAMENTO MET POR TIPO DE EXERCÍCIO
 // ============================================
 
+// ============================================
+// MAPEAMENTO MET CORRIGIDO - Valores mais realistas
+// Baseado em literatura científica + contexto CrossFit/HYROX
+// ============================================
+
 const MET_VALUES = {
-  // Aeróbio/erg
-  run: 9.8,       // Corrida moderada
-  row: 8.5,       // Remo moderado
-  ski: 9.0,       // SkiErg moderado
-  bike: 8.5,      // Assault Bike
+  // Aeróbio/erg (valores corrigidos para WOD intensity)
+  run: 10.0,       // Corrida em WOD (ritmo forte)
+  row: 10.0,       // Remo em WOD (intenso)
+  ski: 10.0,       // SkiErg em WOD
+  bike: 10.0,      // Assault Bike (intervalado/forte)
   
-  // Movimentos funcionais
-  burpee: 8.0,
-  thruster: 8.0,
-  wallball: 8.0,
-  kettlebell: 8.0,
-  boxjump: 8.0,
+  // Movimentos funcionais (corrigidos para contexto conditioning)
+  burpee: 10.0,           // Burpee comum em WOD
+  burpee_broad_jump: 11.0, // Burpee Broad Jump (mais intenso)
+  thruster: 10.5,
+  wallball: 9.5,
+  kettlebell: 9.5,
+  boxjump: 10.0,
   
-  // Carry/Sled
-  farmer: 9.5,
-  sled: 9.5,
-  sandbag: 9.5,
-  lunge: 8.5,
+  // Carry/Sled (mantidos, já estavam bons)
+  farmer: 10.0,
+  sled: 11.0,
+  sandbag: 10.0,
+  lunge: 9.5,
   
-  // Força
-  strength: 6.0,
-  deadlift: 6.0,
-  squat: 6.0,
-  press: 5.5,
+  // Força (levemente ajustados)
+  strength: 6.5,
+  deadlift: 6.5,
+  squat: 6.5,
+  press: 6.0,
+  
+  // Tipos de bloco
+  conditioning: 10.5,  // Conditioning geral (era 8.0)
+  especifico: 12.0,    // HYROX específico (era 9.0)
+  aquecimento: 5.0,    // Mantido
+  core: 5.0,           // Mantido
   
   // Default
-  default: 7.0,
+  default: 8.0,
 };
 
 // ============================================
@@ -140,36 +161,49 @@ function calculateKcalFromMET(met: number, weightKg: number, minutes: number): n
 
 /**
  * Detecta o MET predominante do conteúdo do bloco
+ * CORRIGIDO: Prioriza padrões específicos e usa valores atualizados
  */
 function detectMETFromContent(content: string, blockType: string): number {
   const lower = content.toLowerCase();
   
-  // Verifica padrões específicos
+  // PRIORIDADE 1: Burpee Broad Jump (deve vir ANTES de burpee comum)
+  if (
+    lower.includes('burpee broad jump') || 
+    lower.includes('burpee broad-jump') || 
+    lower.includes('broad jump burpee') ||
+    lower.includes('bbj') ||
+    lower.includes('burpee + broad jump')
+  ) {
+    return MET_VALUES.burpee_broad_jump; // 11.0
+  }
+  
+  // PRIORIDADE 2: Padrões específicos de exercício
   if (lower.includes('run') || lower.includes('corr')) return MET_VALUES.run;
   if (lower.includes('row') || lower.includes('remo')) return MET_VALUES.row;
   if (lower.includes('ski')) return MET_VALUES.ski;
   if (lower.includes('bike') || lower.includes('assault')) return MET_VALUES.bike;
-  if (lower.includes('burpee')) return MET_VALUES.burpee;
+  if (lower.includes('burpee')) return MET_VALUES.burpee; // Burpee comum
   if (lower.includes('thruster')) return MET_VALUES.thruster;
   if (lower.includes('wall ball') || lower.includes('wallball')) return MET_VALUES.wallball;
   if (lower.includes('kettlebell') || lower.includes('kb ') || lower.includes('swing')) return MET_VALUES.kettlebell;
   if (lower.includes('box jump')) return MET_VALUES.boxjump;
   if (lower.includes('farmer') || lower.includes('carry')) return MET_VALUES.farmer;
   if (lower.includes('sled') || lower.includes('push') || lower.includes('pull')) return MET_VALUES.sled;
-  if (lower.includes('sandbag') || lower.includes('lunge')) return MET_VALUES.sandbag;
+  if (lower.includes('sandbag')) return MET_VALUES.sandbag;
+  if (lower.includes('lunge') || lower.includes('afundo')) return MET_VALUES.lunge;
   if (lower.includes('deadlift') || lower.includes('levantamento')) return MET_VALUES.deadlift;
   if (lower.includes('squat') || lower.includes('agachamento')) return MET_VALUES.squat;
   if (lower.includes('press') || lower.includes('supino')) return MET_VALUES.press;
   
-  // Por tipo de bloco
-  if (blockType === 'corrida') return MET_VALUES.run;
-  if (blockType === 'forca') return MET_VALUES.strength;
-  if (blockType === 'conditioning') return 8.0;
-  if (blockType === 'especifico') return 9.0;
-  if (blockType === 'aquecimento') return 5.0;
-  if (blockType === 'core') return 5.0;
+  // PRIORIDADE 3: Por tipo de bloco (valores corrigidos)
+  if (blockType === 'corrida') return MET_VALUES.run;           // 10.0
+  if (blockType === 'forca') return MET_VALUES.strength;        // 6.5
+  if (blockType === 'conditioning') return MET_VALUES.conditioning; // 10.5
+  if (blockType === 'especifico') return MET_VALUES.especifico; // 12.0
+  if (blockType === 'aquecimento') return MET_VALUES.aquecimento; // 5.0
+  if (blockType === 'core') return MET_VALUES.core;             // 5.0
   
-  return MET_VALUES.default;
+  return MET_VALUES.default; // 8.0
 }
 
 /**

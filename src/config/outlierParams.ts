@@ -249,23 +249,24 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     maxEstimateSeconds: 7200, // 120 min
   },
 
-  // C) EXERCISE METS / ENERGY
+  // C) EXERCISE METS / ENERGY - CORRIGIDO para valores mais realistas
   exerciseMets: {
     metBaseByModality: {
-      aquecimento: { baseKcalPerMin: 6.0, description: '~360 kcal/h' },
-      conditioning: { baseKcalPerMin: 12.0, description: '~720 kcal/h' },
-      forca: { baseKcalPerMin: 8.0, description: '~480 kcal/h' },
-      especifico: { baseKcalPerMin: 14.0, description: '~840 kcal/h (HYROX specific)' },
-      core: { baseKcalPerMin: 5.0, description: '~300 kcal/h' },
-      corrida: { baseKcalPerMin: 10.0, description: '~600 kcal/h (fallback)' },
+      // Fallback baseKcalPerMin alinhado com MET (para consistência)
+      aquecimento: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
+      conditioning: { baseKcalPerMin: 13.0, description: '~780 kcal/h (MET ~10.5)' },
+      forca: { baseKcalPerMin: 9.0, description: '~540 kcal/h (MET ~6.5)' },
+      especifico: { baseKcalPerMin: 15.0, description: '~900 kcal/h (MET ~12.0 HYROX)' },
+      core: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
+      corrida: { baseKcalPerMin: 12.0, description: '~720 kcal/h (MET ~10.0)' },
       notas: { baseKcalPerMin: 0, description: 'Sem gasto calórico' },
       // Modalidades específicas (para análise de conteúdo)
-      running: { baseKcalPerMin: 10.0, description: 'Corrida' },
-      rowing: { baseKcalPerMin: 12.0, description: 'Remo' },
-      bike: { baseKcalPerMin: 11.0, description: 'Assault Bike' },
-      skierg: { baseKcalPerMin: 10.0, description: 'SkiErg' },
-      weightlifting: { baseKcalPerMin: 8.0, description: 'Levantamento' },
-      gymnastics: { baseKcalPerMin: 9.0, description: 'Ginástica' },
+      running: { baseKcalPerMin: 12.0, description: 'Corrida em WOD' },
+      rowing: { baseKcalPerMin: 12.0, description: 'Remo em WOD' },
+      bike: { baseKcalPerMin: 12.0, description: 'Assault Bike' },
+      skierg: { baseKcalPerMin: 12.0, description: 'SkiErg' },
+      weightlifting: { baseKcalPerMin: 9.0, description: 'Levantamento' },
+      gymnastics: { baseKcalPerMin: 10.0, description: 'Ginástica' },
       sled: { baseKcalPerMin: 14.0, description: 'Sled Push/Pull' },
     },
     intensityMultipliers: {
@@ -302,7 +303,7 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       hyrox_open: 13.0,     // 4:37/km
       hyrox_pro: 14.0,      // 4:17/km
     },
-    fallbackKcalPerMin: 8.0,
+    fallbackKcalPerMin: 10.0, // Ajustado de 8.0 para 10.0
   },
 
   // D) ADAPTATION
