@@ -29,7 +29,16 @@ export function EquipmentAdaptModal({
   useEffect(() => {
     if (isOpen) {
       setSelectedEquipment(initialSelection);
+      // Bloquear scroll do body quando modal está aberto
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restaurar scroll quando modal fecha
+      document.body.style.overflow = '';
     }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen, initialSelection]);
 
   const toggleEquipment = (id: string) => {
@@ -47,24 +56,29 @@ export function EquipmentAdaptModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - escurece o fundo */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/70 z-[100]"
+            aria-hidden="true"
           />
 
-          {/* Bottom Sheet Modal */}
+          {/* Modal Centralizado */}
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] overflow-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-md sm:w-[calc(100%-2rem)]"
+            className="fixed inset-0 z-[101] flex items-center justify-center p-4"
+            onClick={(e) => {
+              // Fechar ao clicar fora do modal
+              if (e.target === e.currentTarget) onClose();
+            }}
           >
-            <div className="bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden">
               {/* Handle bar for mobile */}
               <div className="flex justify-center pt-3 sm:hidden">
                 <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
