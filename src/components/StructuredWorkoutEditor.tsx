@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trophy, Trash2 } from 'lucide-react';
+import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trophy, Trash2, HelpCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   StructuredBlockEditor, 
   StructuredBlock, 
@@ -346,6 +347,50 @@ export function StructuredWorkoutEditor({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Copy educativa colapsável */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center gap-2 p-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors text-left">
+            <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
+            <span className="text-sm font-medium text-foreground">Como organizar o treino por dia da semana</span>
+            <HelpCircle className="w-4 h-4 text-muted-foreground ml-auto" />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30 space-y-4 text-sm text-muted-foreground">
+            <p className="text-foreground font-medium">
+              No OUTLIER, todo treino precisa estar vinculado a um dia da semana.
+            </p>
+            
+            <div>
+              <p className="font-medium text-foreground mb-1">Por quê?</p>
+              <p>
+                O app ajusta carga, volume e frequência com base na distribuição real dos treinos ao longo da semana.
+              </p>
+              <p>
+                Sem o dia correto, o ajuste do atleta perde precisão.
+              </p>
+            </div>
+            
+            <div>
+              <p className="font-medium text-foreground mb-1">Como estruturar corretamente:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Primeiro escolha o dia da semana (Seg–Dom)</li>
+                <li>Depois adicione os blocos daquele dia</li>
+                <li>Cada bloco sempre pertence a um único dia</li>
+              </ul>
+            </div>
+            
+            <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+              <p className="font-medium text-amber-600 mb-1">Importante:</p>
+              <p className="text-amber-600/90">
+                Blocos criados fora de um dia não são considerados no ajuste do treino e impedem salvar ou publicar a programação.
+              </p>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Adicionar dia */}
       <Card>
