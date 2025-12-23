@@ -488,4 +488,20 @@
     0% { transform: translateY(0) scale(1); opacity: 1; }
     100% { transform: translateY(-100px) scale(0); opacity: 0; }
   }
+
+  /* Avatar pulse slow for high-level athletes */
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.92;
+      transform: scale(1.03);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
 }
