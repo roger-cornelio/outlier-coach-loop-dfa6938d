@@ -43,11 +43,8 @@ interface DayValidation {
   hasMainWod: boolean;
   allBlocksValid: boolean;
   errorCount: number;
+  multipleMainBlocks: boolean;
 }
-
-// ============================================
-// CONSTANTES
-// ============================================
 
 const DAYS: { value: DayOfWeek; label: string }[] = [
   { value: 'seg', label: 'Segunda' },
@@ -94,9 +91,10 @@ export function StructuredWorkoutEditor({
   // ============================================
 
   const validation = useMemo(() => {
-    const dayValidations: Record<DayOfWeek, DayValidation> = {} as any;
+    const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean }> = {} as any;
     let totalErrors = 0;
     let daysWithoutMain = 0;
+    let daysWithMultipleMain = 0;
 
     for (const day of days) {
       // Validar todos os blocos
@@ -106,8 +104,14 @@ export function StructuredWorkoutEditor({
       // Verificar WOD Principal
       const workoutBlocks = day.blocks.map(structuredToWorkoutBlock);
       const mainBlock = identifyMainBlock(workoutBlocks);
-      const hasManualMain = day.blocks.some(b => b.isMainWod === true);
+      const manualMainCount = day.blocks.filter(b => b.isMainWod === true).length;
+      const hasManualMain = manualMainCount > 0;
       const hasMain = hasManualMain || mainBlock.blockIndex !== -1;
+      const multipleMainBlocks = manualMainCount > 1;
+
+      if (multipleMainBlocks) {
+        daysWithMultipleMain++;
+      }
 
       if (!hasMain && day.blocks.length > 0) {
         daysWithoutMain++;
@@ -117,6 +121,7 @@ export function StructuredWorkoutEditor({
         hasMainWod: hasMain,
         allBlocksValid: blockValidation.isValid,
         errorCount: blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0),
+        multipleMainBlocks,
       };
     }
 
@@ -124,6 +129,7 @@ export function StructuredWorkoutEditor({
       dayValidations,
       totalErrors,
       daysWithoutMain,
+      daysWithMultipleMain,
       hasAnyDay: days.length > 0,
       hasWeek: selectedWeek !== null,
       canSave: days.length > 0 && 
@@ -321,6 +327,24 @@ export function StructuredWorkoutEditor({
             </div>
           </motion.div>
         )}
+
+        {/* Alerta de múltiplos WOD Principal no mesmo dia */}
+        {validation.daysWithMultipleMain > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+              <p className="text-sm text-amber-600">
+                Atenção: {validation.daysWithMultipleMain} dia(s) com múltiplos blocos marcados como "Principal". 
+                Recomendamos apenas um bloco principal por dia.
+              </p>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Adicionar dia */}
@@ -364,6 +388,12 @@ export function StructuredWorkoutEditor({
                         <span className="text-sm text-muted-foreground">
                           {day.blocks.length} bloco(s)
                         </span>
+                        {dayValidation && dayValidation.multipleMainBlocks && (
+                          <span className="text-xs text-amber-500 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            Múltiplos WOD Principal
+                          </span>
+                        )}
                         {dayValidation && !dayValidation.hasMainWod && day.blocks.length > 0 && (
                           <span className="text-xs text-amber-500 flex items-center gap-1">
                             <Star className="w-3 h-3" />
