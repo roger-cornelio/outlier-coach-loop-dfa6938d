@@ -67,7 +67,7 @@ serve(async (req) => {
 
     console.log(`[delete-user] Target: ${target_user_id}`);
 
-    // ONLY ADMINS CAN DELETE USERS
+    // ONLY SUPERADMINS CAN DELETE USERS (NOT regular admins)
     const { data: callerRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -82,12 +82,14 @@ serve(async (req) => {
     }
 
     const roles = callerRoles?.map(r => r.role) || [];
-    const isAdmin = roles.includes('admin') || roles.includes('superadmin');
+    const isSuperadmin = roles.includes('superadmin');
 
-    if (!isAdmin) {
-      console.error('[delete-user] Caller is not admin. Roles:', roles);
+    console.log(`[delete-user] Caller roles: ${roles.join(', ')} | isSuperadmin: ${isSuperadmin}`);
+
+    if (!isSuperadmin) {
+      console.error('[delete-user] Caller is not superadmin. Roles:', roles);
       return new Response(
-        JSON.stringify({ error: 'Forbidden', message: 'Only administrators can delete users' }),
+        JSON.stringify({ error: 'Forbidden', message: 'Only superadmins can delete users. Regular admins cannot perform this action.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
