@@ -226,6 +226,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             <FileText className="w-5 h-5 text-primary" />
             Cole seu treino aqui
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Escreva o treino do seu jeito. O OUTLIER organiza tudo pra você antes de salvar.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
@@ -235,13 +238,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
               setParseResult(null);
               setShowPreview(false);
             }}
-            placeholder={`Cole o treino como você escreveria no WhatsApp ou PDF.
-O OUTLIER organiza tudo pra você antes de salvar.`}
+            placeholder="Cole o treino do jeito que você quiser..."
             className="min-h-[180px] text-sm"
           />
           
           <p className="text-xs text-muted-foreground">
-            Use títulos em MAIÚSCULO para separar blocos. O WOD principal pode ser marcado depois.
+            Dica: DIA e blocos em MAIÚSCULO • Exercícios começam com números • Se faltar algo, a gente pergunta 😉
           </p>
 
           <div className="flex gap-2 flex-wrap">
@@ -361,7 +363,7 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                 {parseResult.needsDaySelection && (
                   <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-3">
                     <p className="text-sm text-amber-600">
-                      Não identifiquei o dia da semana nesse treino. Escolha o dia abaixo para continuar.
+                      Não identifiquei o dia da semana nesse treino. Escolha o dia para continuar.
                     </p>
                     <Select 
                       value={selectedDay || ''} 
