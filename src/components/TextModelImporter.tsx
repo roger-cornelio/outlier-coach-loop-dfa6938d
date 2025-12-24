@@ -1,17 +1,22 @@
 /**
- * TextModelImporter - Importador de treino via texto modelo estruturado
+ * TextModelImporter - Importador de treino via texto livre + arquivo
+ * 
+ * UX:
+ * - Área 1: Texto livre (principal) - funciona sempre
+ * - Área 2: Upload de arquivo (PDF/imagem) - fallback para texto se não funcionar
  * 
  * REGRAS:
- * - Texto deve seguir modelo fixo
+ * - Parsing determinístico automático
  * - Preview obrigatório antes de importar
- * - Bloqueia se faltarem campos obrigatórios
+ * - Alertas leves não bloqueiam
+ * - Apenas erros críticos bloqueiam
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FileText, AlertCircle, CheckCircle, ChevronDown, ChevronUp, 
-  Zap, Copy, HelpCircle, AlertTriangle, Eye, Trash2
+  FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
+  AlertTriangle, Star, ChevronDown, ChevronUp, FileImage
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +29,6 @@ import {
   getDayName,
   getTypeLabel,
   getFormatLabel,
-  TEMPLATE_EXAMPLE,
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import type { DayWorkout } from '@/types/outlier';
@@ -36,8 +40,10 @@ interface TextModelImporterProps {
 export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [text, setText] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = () => {
     if (!text.trim()) return;
@@ -56,88 +62,88 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setShowPreview(false);
   };
 
-  const handleCopyTemplate = () => {
-    navigator.clipboard.writeText(TEMPLATE_EXAMPLE);
-  };
-
   const handleClear = () => {
     setText('');
     setParseResult(null);
     setShowPreview(false);
+    setFileError(null);
   };
+
+  // Toggle WOD principal no preview
+  const toggleMainWod = (dayIndex: number, blockIndex: number) => {
+    if (!parseResult) return;
+    
+    const updated = { ...parseResult };
+    const day = updated.days[dayIndex];
+    const clickedBlock = day.blocks[blockIndex];
+    
+    if (clickedBlock.isMainWod) {
+      clickedBlock.isMainWod = false;
+    } else {
+      // Remove de todos os outros do dia
+      day.blocks.forEach((block, idx) => {
+        block.isMainWod = idx === blockIndex;
+      });
+    }
+    
+    // Atualiza alerta de WOD principal
+    const hasMainWod = updated.days.some(d => d.blocks.some(b => b.isMainWod));
+    updated.alerts = updated.alerts.filter(a => !a.includes('WOD principal'));
+    if (!hasMainWod) {
+      updated.alerts.push('Nenhum WOD principal definido');
+    }
+    
+    setParseResult(updated);
+  };
+
+  // Handler para upload de arquivo
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setFileError(null);
+    
+    // Por enquanto, apenas arquivos .txt são suportados no MVP
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (content) {
+          setText(content);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      // PDF e imagens - fallback para texto
+      setFileError('Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
+    }
+    
+    // Limpa o input para permitir re-upload do mesmo arquivo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Contagem de WODs principais definidos
+  const mainWodCount = parseResult?.days.reduce(
+    (count, day) => count + day.blocks.filter(b => b.isMainWod).length, 
+    0
+  ) || 0;
+
+  // Verifica se pode publicar (tem pelo menos 1 WOD principal)
+  const canPublish = parseResult?.success && mainWodCount > 0;
 
   return (
     <div className="space-y-4">
-      {/* Info e ajuda */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <FileText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-medium text-foreground mb-1">Importar via Texto Modelo</p>
-              <p className="text-sm text-muted-foreground mb-3">
-                Cole o treino seguindo o modelo estruturado. Textos de WhatsApp, PDF convertido ou digitados manualmente 
-                são aceitos, desde que sigam o padrão.
-              </p>
-              
-              <Collapsible open={showHelp} onOpenChange={setShowHelp}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 text-xs">
-                    <HelpCircle className="w-3 h-3 mr-1" />
-                    {showHelp ? 'Ocultar modelo' : 'Ver modelo obrigatório'}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-foreground">MODELO OBRIGATÓRIO</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-xs"
-                        onClick={handleCopyTemplate}
-                      >
-                        <Copy className="w-3 h-3 mr-1" />
-                        Copiar
-                      </Button>
-                    </div>
-                    <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
-{`DIA: <Segunda | Terça | ... | Domingo>
-BLOCO: <Título do bloco>
-TIPO: <Aquecimento | Força | Conditioning | Específico | Core | Corrida | Bike | Remo>
-FORMATO: <For Time | AMRAP | EMOM | Rounds | Intervalos | Técnica>
-PRINCIPAL: <true | false>
-BENCHMARK: <true | false>
-- <quantidade> <unidade> <movimento>
-- <quantidade> <unidade> <movimento>
-
-(repetir BLOCO se necessário)
-(repetir DIA se necessário)`}
-                    </pre>
-                    
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <span className="text-xs font-medium text-foreground">EXEMPLO:</span>
-                      <pre className="mt-2 text-xs font-mono text-muted-foreground whitespace-pre-wrap">
-{TEMPLATE_EXAMPLE}
-                      </pre>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Área de input */}
+      {/* ÁREA 1 - TEXTO (PRINCIPAL) */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="w-5 h-5 text-primary" />
-            Colar Texto do Treino
+            Cole seu treino aqui
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <Textarea
             value={text}
             onChange={(e) => {
@@ -145,19 +151,14 @@ BENCHMARK: <true | false>
               setParseResult(null);
               setShowPreview(false);
             }}
-            placeholder={`Cole aqui o texto do treino seguindo o modelo:
-
-DIA: Segunda
-BLOCO: AMRAP 20min
-TIPO: Conditioning
-FORMATO: AMRAP
-PRINCIPAL: true
-BENCHMARK: false
-- 5 reps Pull-ups
-- 10 reps Push-ups
-- 15 reps Air Squats`}
-            className="min-h-[200px] font-mono text-sm"
+            placeholder={`Cole o treino como você escreveria no WhatsApp ou PDF.
+O OUTLIER organiza tudo pra você antes de salvar.`}
+            className="min-h-[180px] text-sm"
           />
+          
+          <p className="text-xs text-muted-foreground">
+            Use títulos em MAIÚSCULO para separar blocos. O WOD principal pode ser marcado depois.
+          </p>
 
           <div className="flex gap-2 flex-wrap">
             <Button
@@ -179,7 +180,52 @@ BENCHMARK: false
         </CardContent>
       </Card>
 
-      {/* Resultado do parse */}
+      {/* ÁREA 2 - UPLOAD DE ARQUIVO (SECUNDÁRIA) */}
+      <Card className="border-dashed">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <FileImage className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <p className="font-medium text-sm text-foreground">
+                Importar treino por arquivo (PDF ou imagem)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Envie um PDF ou imagem do treino.
+                Se for possível extrair o texto, o OUTLIER organiza pra você.
+              </p>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.pdf,image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+              />
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-2"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Escolher arquivo
+              </Button>
+              
+              {fileError && (
+                <div className="mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-xs text-amber-600 whitespace-pre-line">
+                    {fileError}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* RESULTADO DO PARSE - PREVIEW */}
       <AnimatePresence>
         {parseResult && showPreview && (
           <motion.div
@@ -189,26 +235,23 @@ BENCHMARK: false
           >
             <Card className={parseResult.success ? 'border-green-500/30' : 'border-destructive/30'}>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {parseResult.success ? (
                       <CheckCircle className="w-5 h-5 text-green-500" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-destructive" />
                     )}
-                    {parseResult.success 
-                      ? `Preview: ${parseResult.days.length} dia(s) encontrados`
-                      : 'Erros encontrados'
-                    }
+                    Foi isso que o OUTLIER entendeu do seu treino:
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Erros */}
+                {/* Erros críticos */}
                 {parseResult.errors.length > 0 && (
                   <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-1">
                     <p className="text-sm font-medium text-destructive mb-2">
-                      Corrija os erros para poder importar:
+                      Problemas encontrados:
                     </p>
                     {parseResult.errors.map((error, idx) => (
                       <p key={idx} className="text-xs text-destructive flex items-start gap-1">
@@ -219,21 +262,26 @@ BENCHMARK: false
                   </div>
                 )}
 
-                {/* Warnings */}
-                {parseResult.warnings.length > 0 && (
-                  <Collapsible>
+                {/* Alertas leves (não bloqueiam) */}
+                {parseResult.alerts.length > 0 && (
+                  <Collapsible open={showAlerts} onOpenChange={setShowAlerts}>
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-7 text-xs text-amber-600">
                         <AlertTriangle className="w-3 h-3 mr-1" />
-                        {parseResult.warnings.length} aviso(s)
-                        <ChevronDown className="w-3 h-3 ml-1" />
+                        {parseResult.alerts.length} alerta(s) leve(s)
+                        {showAlerts ? (
+                          <ChevronUp className="w-3 h-3 ml-1" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        )}
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
-                        {parseResult.warnings.map((warning, idx) => (
-                          <p key={idx} className="text-xs text-amber-600">
-                            {warning}
+                        {parseResult.alerts.map((alert, idx) => (
+                          <p key={idx} className="text-xs text-amber-600 flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            {alert}
                           </p>
                         ))}
                       </div>
@@ -244,7 +292,7 @@ BENCHMARK: false
                 {/* Preview dos dias */}
                 {parseResult.success && parseResult.days.length > 0 && (
                   <div className="space-y-3">
-                    {parseResult.days.map((day) => (
+                    {parseResult.days.map((day, dayIndex) => (
                       <div key={day.day} className="border border-border rounded-lg overflow-hidden">
                         <div className="p-2 bg-secondary/30 flex items-center gap-2">
                           <Badge variant="outline">{getDayName(day.day)}</Badge>
@@ -253,33 +301,57 @@ BENCHMARK: false
                           </span>
                         </div>
                         <div className="p-3 space-y-2">
-                          {day.blocks.map((block, idx) => (
-                            <div key={idx} className="p-2 rounded bg-muted/30 space-y-1">
+                          {day.blocks.map((block, blockIndex) => (
+                            <div 
+                              key={blockIndex} 
+                              className={`p-2 rounded space-y-1 ${
+                                block.isMainWod 
+                                  ? 'bg-primary/10 border border-primary/30' 
+                                  : 'bg-muted/30'
+                              }`}
+                            >
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-medium text-sm">{block.title}</span>
                                 <Badge variant="secondary" className="text-xs">
                                   {getTypeLabel(block.type)}
                                 </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {getFormatLabel(block.format)}
-                                </Badge>
-                                {block.isMainWod && (
-                                  <Badge className="text-xs bg-primary">Principal</Badge>
+                                {block.format !== 'outro' && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {getFormatLabel(block.format)}
+                                  </Badge>
                                 )}
-                                {block.isBenchmark && (
-                                  <Badge className="text-xs bg-amber-500">Benchmark</Badge>
-                                )}
+                                
+                                {/* Botão para marcar WOD principal */}
+                                <Button
+                                  variant={block.isMainWod ? "default" : "ghost"}
+                                  size="sm"
+                                  className="h-6 text-xs ml-auto"
+                                  onClick={() => toggleMainWod(dayIndex, blockIndex)}
+                                >
+                                  <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                  {block.isMainWod ? 'Principal' : 'Marcar como principal'}
+                                </Button>
                               </div>
+                              
+                              {block.instruction && (
+                                <p className="text-xs text-muted-foreground italic">
+                                  {block.instruction}
+                                </p>
+                              )}
+                              
                               <div className="text-xs text-muted-foreground">
-                                {block.items.length} item(s):
+                                {block.items.length} exercício(s):
                                 <span className="ml-1">
-                                  {block.items.slice(0, 3).map(i => `${i.quantity} ${i.unit} ${i.movement}`).join(', ')}
+                                  {block.items.slice(0, 3).map(i => 
+                                    `${i.quantity} ${i.unit} ${i.movement}`
+                                  ).join(', ')}
                                   {block.items.length > 3 && '...'}
                                 </span>
                               </div>
+                              
                               {block.coachNotes.length > 0 && (
                                 <div className="text-xs text-amber-600">
-                                  📝 {block.coachNotes.length} nota(s) do coach
+                                  📝 {block.coachNotes.length} nota(s)
                                 </div>
                               )}
                             </div>
@@ -288,13 +360,22 @@ BENCHMARK: false
                       </div>
                     ))}
 
+                    {/* Mensagem de validação para publicar */}
+                    {parseResult.success && !canPublish && (
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-sm text-amber-600">
+                          Para publicar, marque qual é o WOD principal.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Botão importar */}
                     <Button 
                       onClick={handleImport} 
                       className="w-full"
                       size="lg"
                     >
-                      <Zap className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-4 h-4 mr-2" />
                       Importar {parseResult.days.length} dia(s)
                     </Button>
                   </div>
