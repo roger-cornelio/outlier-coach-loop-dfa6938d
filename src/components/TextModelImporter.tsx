@@ -124,32 +124,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       });
     }
     
-    // Atualiza alerta de WOD principal (considerando dias de descanso e blocos opcionais)
-    const hasMainWodIssue = updated.days.some((d, idx) => {
-      if (restDays[idx]) return false; // Dias de descanso não precisam de WOD
-      // Se todos os blocos são opcionais, não precisa de WOD
-      if (d.blocks.every(b => b.optional)) return false;
-      return !d.blocks.some(b => b.isMainWod);
-    });
-    
-    // Atualiza alertas no nível do dia
-    updated.days.forEach((d, idx) => {
-      if (restDays[idx] || d.blocks.every(b => b.optional)) {
-        d.alerts = d.alerts.filter(a => !a.includes('WOD principal'));
-      } else if (!d.blocks.some(b => b.isMainWod)) {
-        if (!d.alerts.some(a => a.includes('WOD principal'))) {
-          d.alerts.push('Nenhum WOD principal definido');
-        }
-      } else {
-        d.alerts = d.alerts.filter(a => !a.includes('WOD principal'));
-      }
-    });
-    
-    updated.alerts = updated.alerts.filter(a => !a.includes('WOD principal'));
-    if (hasMainWodIssue) {
-      updated.alerts.push('Nenhum WOD principal definido');
-    }
-    
+    // ALERTAS REATIVOS: Não precisa atualizar manualmente
+    // O estado é derivado em tempo real no render
     setParseResult(updated);
   };
 
@@ -444,16 +420,34 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                           const isRestDay = restDays[dayIndex] || false;
                           
                           // Verificar se todos blocos são opcionais
-                          const allBlocksOptional = day.blocks.every(b => b.optional);
+                          const allBlocksOptional = day.blocks.length > 0 && day.blocks.every(b => b.optional);
                           
-                          // Filtrar alertas - dias de descanso e dias só com opcionais não mostram alertas de WOD
-                          const dayAlerts = (day.alerts || []).filter(alert => {
-                            if (isRestDay && alert.includes('WOD principal')) return false;
-                            if (allBlocksOptional && alert.includes('WOD principal')) return false;
-                            return true;
-                          });
-                          const alertCount = dayAlerts.length;
-                          const hasAlerts = alertCount > 0 && !isRestDay;
+                          // ========================================
+                          // ALERTAS REATIVOS - Derivados em tempo real
+                          // ========================================
+                          // Função determinística que calcula issues do dia
+                          const getDayIssues = (): string[] => {
+                            const issues: string[] = [];
+                            
+                            // Dias de descanso não têm issues
+                            if (isRestDay) return issues;
+                            
+                            // Dias só com blocos opcionais não precisam de WOD
+                            if (allBlocksOptional) return issues;
+                            
+                            // Verifica se tem WOD principal (REATIVO - usa estado atual do bloco)
+                            const hasMainWod = day.blocks.some(b => b.isMainWod);
+                            if (!hasMainWod && day.blocks.length > 0) {
+                              issues.push('wod_principal');
+                            }
+                            
+                            return issues;
+                          };
+                          
+                          // Issues derivados - recalculados a cada render
+                          const dayIssues = getDayIssues();
+                          const issuesCount = dayIssues.length;
+                          const hasIssues = issuesCount > 0;
                           
                           return (
                             <AccordionItem 
@@ -484,11 +478,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                   {/* Spacer para empurrar toggle e alerta para direita */}
                                   <div className="flex-1" />
                                   
-                                  {/* ALERTA FORTE - ícone grande + número */}
-                                  {hasAlerts && (
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/15 border border-destructive/30">
-                                      <AlertCircle className="w-5 h-5 text-destructive" />
-                                      <span className="font-bold text-sm text-destructive">{alertCount}</span>
+                                  {/* ALERTA LARANJA - triângulo + número (REATIVO) */}
+                                  {hasIssues && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/40">
+                                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                      <span className="font-bold text-sm text-amber-600">{issuesCount}</span>
                                     </div>
                                   )}
                                   
@@ -516,25 +510,21 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-5 pb-5">
-                                {/* Alertas do dia - CAIXA EXPANDIDA com lista objetiva */}
-                                {hasAlerts && (
-                                  <div className="mb-4 p-4 rounded-xl bg-destructive/10 border-2 border-destructive/30">
+                                {/* Alertas do dia - CAIXA LARANJA (REATIVO) */}
+                                {hasIssues && (
+                                  <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40">
                                     <div className="flex items-center gap-2 mb-3">
-                                      <AlertCircle className="w-5 h-5 text-destructive" />
-                                      <span className="font-semibold text-sm text-destructive">
-                                        Ajustes obrigatórios pendentes neste dia
+                                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                      <span className="font-semibold text-sm text-amber-600">
+                                        Ajustes pendentes neste dia:
                                       </span>
                                     </div>
                                     <ul className="space-y-1.5 ml-7">
-                                      {dayAlerts.map((alert, alertIdx) => (
-                                        <li key={alertIdx} className="text-sm text-destructive/90 flex items-start gap-2">
-                                          <span className="text-destructive/60">•</span>
-                                          {alert.includes('WOD principal') 
-                                            ? 'Marcar o WOD principal'
-                                            : alert.includes('dia') 
-                                              ? 'Definir o dia da semana'
-                                              : alert
-                                          }
+                                      {dayIssues.map((issue, issueIdx) => (
+                                        <li key={issueIdx} className="text-sm text-amber-700 flex items-start gap-2">
+                                          <span className="text-amber-500">•</span>
+                                          {issue === 'wod_principal' && 'Marcar o WOD principal'}
+                                          {issue === 'dia_semana' && 'Selecionar o dia da semana'}
                                         </li>
                                       ))}
                                     </ul>
