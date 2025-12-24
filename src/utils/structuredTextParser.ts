@@ -1,19 +1,11 @@
 /**
- * structuredTextParser.ts - Parser de texto modelo estruturado
+ * structuredTextParser.ts - Parser de texto livre de treino
  * 
- * MODELO OBRIGATÓRIO:
- * 
- * DIA: <SEGUNDA | TERÇA | QUARTA | QUINTA | SEXTA | SÁBADO | DOMINGO>
- * BLOCO: <Título do bloco>
- * TIPO: <Aquecimento | Força | Conditioning | Específico | Core | Corrida | Bike | Remo>
- * FORMATO: <For Time | AMRAP | EMOM | Rounds | Intervalos | Técnica>
- * PRINCIPAL: <true | false>
- * BENCHMARK: <true | false>
- * - <quantidade> <unidade> <movimento>
- * 
- * REGRAS:
- * - Texto fora do padrão NÃO pode ser salvo
- * - Linhas não parseadas vão para "Notas do coach"
+ * REGRAS DE PARSING (DETERMINÍSTICO):
+ * - Linhas MAIÚSCULAS → dias ou títulos de blocos
+ * - Linhas iniciadas por número → exercícios
+ * - Texto solto → instruction/notas
+ * - Pesos: % → relativo, PSE/RPE → esforço, 32/24kg → referência RX, kg isolado → carga fixa (gerar alerta)
  */
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
@@ -27,6 +19,8 @@ export interface ParsedItem {
   unit: string;
   movement: string;
   notes?: string;
+  weight?: string;
+  isWeightAlert?: boolean; // Alerta quando kg isolado
 }
 
 export interface ParsedBlock {
@@ -37,6 +31,7 @@ export interface ParsedBlock {
   isBenchmark: boolean;
   items: ParsedItem[];
   coachNotes: string[];
+  instruction?: string;
 }
 
 export interface ParsedDay {
@@ -49,6 +44,7 @@ export interface ParseResult {
   days: ParsedDay[];
   errors: string[];
   warnings: string[];
+  alerts: string[]; // Alertas leves (não bloqueiam)
 }
 
 // ============================================
@@ -59,55 +55,58 @@ const DAY_MAP: Record<string, DayOfWeek> = {
   'segunda': 'seg',
   'segunda-feira': 'seg',
   'seg': 'seg',
+  'monday': 'seg',
+  'mon': 'seg',
   'terça': 'ter',
   'terca': 'ter',
   'terça-feira': 'ter',
   'ter': 'ter',
+  'tuesday': 'ter',
+  'tue': 'ter',
   'quarta': 'qua',
   'quarta-feira': 'qua',
   'qua': 'qua',
+  'wednesday': 'qua',
+  'wed': 'qua',
   'quinta': 'qui',
   'quinta-feira': 'qui',
   'qui': 'qui',
+  'thursday': 'qui',
+  'thu': 'qui',
   'sexta': 'sex',
   'sexta-feira': 'sex',
   'sex': 'sex',
+  'friday': 'sex',
+  'fri': 'sex',
   'sábado': 'sab',
   'sabado': 'sab',
   'sab': 'sab',
+  'saturday': 'sab',
+  'sat': 'sab',
   'domingo': 'dom',
   'dom': 'dom',
+  'sunday': 'dom',
+  'sun': 'dom',
 };
 
-const TYPE_MAP: Record<string, WorkoutBlock['type']> = {
-  'aquecimento': 'aquecimento',
-  'força': 'forca',
-  'forca': 'forca',
-  'conditioning': 'conditioning',
-  'condicionamento': 'conditioning',
-  'específico': 'especifico',
-  'especifico': 'especifico',
-  'hyrox': 'especifico',
-  'core': 'core',
-  'corrida': 'corrida',
-  'run': 'corrida',
-  'bike': 'conditioning', // bike mapeia para conditioning
-  'remo': 'conditioning', // remo mapeia para conditioning
-  'row': 'conditioning',
-};
+const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
+  { pattern: /aquecimento|warm[- ]?up|🔥/i, type: 'aquecimento' },
+  { pattern: /conditioning|condicionamento|metcon|⚡/i, type: 'conditioning' },
+  { pattern: /for[cç]a|strength|💪/i, type: 'forca' },
+  { pattern: /espec[ií]fico|specific|hyrox|🛷/i, type: 'especifico' },
+  { pattern: /core|abdominal|🎯/i, type: 'core' },
+  { pattern: /corrida|running|run\b|🏃/i, type: 'corrida' },
+];
 
-const FORMAT_MAP: Record<string, string> = {
-  'for time': 'for_time',
-  'fortime': 'for_time',
-  'amrap': 'amrap',
-  'emom': 'emom',
-  'rounds': 'rounds',
-  'intervalos': 'intervalos',
-  'intervalo': 'intervalos',
-  'técnica': 'tecnica',
-  'tecnica': 'tecnica',
-  'outro': 'outro',
-};
+const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
+  { pattern: /for\s*time|fortime/i, format: 'for_time' },
+  { pattern: /amrap/i, format: 'amrap' },
+  { pattern: /emom/i, format: 'emom' },
+  { pattern: /rounds?(\s|$)/i, format: 'rounds' },
+  { pattern: /intervalos?/i, format: 'intervalos' },
+  { pattern: /t[eé]cnica/i, format: 'tecnica' },
+  { pattern: /tabata/i, format: 'tabata' },
+];
 
 const UNIT_MAP: Record<string, string> = {
   'reps': 'reps',
@@ -133,10 +132,12 @@ const UNIT_MAP: Record<string, string> = {
   'rodadas': 'rounds',
   'rodada': 'rounds',
   'x': 'reps',
+  "'": 'min',
+  '"': 'sec',
 };
 
 // ============================================
-// PARSER PRINCIPAL
+// PARSER PRINCIPAL - TEXTO LIVRE
 // ============================================
 
 export function parseStructuredText(text: string): ParseResult {
@@ -146,6 +147,7 @@ export function parseStructuredText(text: string): ParseResult {
     days: [],
     errors: [],
     warnings: [],
+    alerts: [],
   };
 
   let currentDay: DayOfWeek | null = null;
@@ -154,12 +156,154 @@ export function parseStructuredText(text: string): ParseResult {
 
   const saveCurrentBlock = () => {
     if (currentBlock && currentDay) {
-      const dayEntry = result.days.find(d => d.day === currentDay);
-      if (dayEntry) {
-        dayEntry.blocks.push(currentBlock);
+      // Só salva se tiver pelo menos 1 item OU notas
+      if (currentBlock.items.length > 0 || currentBlock.coachNotes.length > 0 || currentBlock.instruction) {
+        const dayEntry = result.days.find(d => d.day === currentDay);
+        if (dayEntry) {
+          dayEntry.blocks.push(currentBlock);
+        }
       }
     }
     currentBlock = null;
+  };
+
+  const detectDay = (line: string): DayOfWeek | null => {
+    // Limpa a linha
+    const cleanLine = line.toLowerCase().replace(/[^a-záéíóúàâêôãõç\s-]/g, '').trim();
+    
+    // Verifica cada padrão de dia
+    for (const [key, day] of Object.entries(DAY_MAP)) {
+      if (cleanLine === key || cleanLine.startsWith(key + ' ') || cleanLine.endsWith(' ' + key)) {
+        return day;
+      }
+    }
+    
+    // Segunda tentativa: verificar se a linha contém dia da semana em contexto
+    for (const [key, day] of Object.entries(DAY_MAP)) {
+      const regex = new RegExp(`\\b${key}\\b`, 'i');
+      if (regex.test(line) && line.length < 50) {
+        return day;
+      }
+    }
+    
+    return null;
+  };
+
+  const detectBlockType = (line: string): WorkoutBlock['type'] => {
+    for (const { pattern, type } of TYPE_PATTERNS) {
+      if (pattern.test(line)) {
+        return type;
+      }
+    }
+    return 'conditioning'; // default
+  };
+
+  const detectFormat = (line: string): string => {
+    for (const { pattern, format } of FORMAT_PATTERNS) {
+      if (pattern.test(line)) {
+        return format;
+      }
+    }
+    return 'outro';
+  };
+
+  const isUpperCaseLine = (line: string): boolean => {
+    // Remove números e caracteres especiais para verificar se é maiúsculo
+    const letters = line.replace(/[^a-záéíóúàâêôãõçA-ZÁÉÍÓÚÀÂÊÔÃÕÇ]/g, '');
+    if (letters.length < 3) return false;
+    return letters === letters.toUpperCase() && letters.length > 0;
+  };
+
+  const parseExerciseLine = (line: string): ParsedItem | null => {
+    // Padrões comuns de exercício:
+    // "10 reps Pull-ups"
+    // "10 Pull-ups"
+    // "- 5 x Push-ups"
+    // "400m Run"
+    // "30 cal Row"
+    // "3 rounds of..."
+    
+    const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
+    
+    // Padrão: número + unidade opcional + movimento
+    const match = cleanLine.match(/^(\d+(?:[.,]\d+)?)\s*(['"])?(\w+)?\s+(.+?)(?:\s*[\(@](.+)[\)@])?$/);
+    
+    if (match) {
+      const quantity = parseFloat(match[1].replace(',', '.'));
+      let rawUnit = match[3]?.toLowerCase() || match[2] || '';
+      let movement = match[4].trim();
+      const notes = match[5]?.trim();
+      
+      // Se unidade não reconhecida, assume reps e movimento inclui a "unidade"
+      let unit = UNIT_MAP[rawUnit];
+      if (!unit && rawUnit) {
+        // Pode ser que a "unidade" seja parte do movimento
+        movement = `${rawUnit} ${movement}`;
+        unit = 'reps';
+      } else if (!unit) {
+        unit = 'reps';
+      }
+      
+      // Detectar peso na linha
+      const weightInfo = detectWeight(cleanLine);
+      
+      return {
+        quantity,
+        unit,
+        movement,
+        notes,
+        weight: weightInfo.weight,
+        isWeightAlert: weightInfo.isAlert,
+      };
+    }
+    
+    // Padrão simplificado: "número movimento"
+    const simpleMatch = cleanLine.match(/^(\d+)\s+(.+)$/);
+    if (simpleMatch) {
+      const weightInfo = detectWeight(cleanLine);
+      return {
+        quantity: parseInt(simpleMatch[1]),
+        unit: 'reps',
+        movement: simpleMatch[2].trim(),
+        weight: weightInfo.weight,
+        isWeightAlert: weightInfo.isAlert,
+      };
+    }
+    
+    return null;
+  };
+
+  const detectWeight = (line: string): { weight?: string; isAlert: boolean } => {
+    // % → peso relativo (ok)
+    const percentMatch = line.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    if (percentMatch) {
+      return { weight: `${percentMatch[1]}%`, isAlert: false };
+    }
+    
+    // PSE/RPE → esforço (ok)
+    const rpeMatch = line.match(/(pse|rpe)\s*[:=]?\s*(\d+)/i);
+    if (rpeMatch) {
+      return { weight: `${rpeMatch[1].toUpperCase()} ${rpeMatch[2]}`, isAlert: false };
+    }
+    
+    // Formato RX: 32/24kg ou 20/15 → referência (ok)
+    const rxMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*(?:kg)?/);
+    if (rxMatch) {
+      return { weight: `${rxMatch[1]}/${rxMatch[2]}kg`, isAlert: false };
+    }
+    
+    // kg isolado → carga fixa (gerar alerta)
+    const kgMatch = line.match(/(\d+(?:[.,]\d+)?)\s*kg\b/i);
+    if (kgMatch) {
+      return { weight: `${kgMatch[1]}kg`, isAlert: true };
+    }
+    
+    // leve/moderada/pesada → autorregulado
+    if (/\b(leve|moderada?|pesada?|heavy|light|moderate)\b/i.test(line)) {
+      return { weight: 'autorregulado', isAlert: false };
+    }
+    
+    return { isAlert: false };
   };
 
   for (const rawLine of lines) {
@@ -169,41 +313,37 @@ export function parseStructuredText(text: string): ParseResult {
     // Linha vazia
     if (!line) continue;
 
-    // PADRÃO: DIA: <valor>
-    const dayMatch = line.match(/^DIA:\s*(.+)$/i);
-    if (dayMatch) {
+    // Detectar dia da semana
+    const detectedDay = detectDay(line);
+    if (detectedDay && isUpperCaseLine(line)) {
       saveCurrentBlock();
-      const dayValue = dayMatch[1].trim().toLowerCase();
-      const mappedDay = DAY_MAP[dayValue];
       
-      if (mappedDay) {
-        // Verificar se dia já existe
-        if (result.days.some(d => d.day === mappedDay)) {
-          result.warnings.push(`Linha ${lineNumber}: Dia "${dayValue}" já definido anteriormente`);
-        } else {
-          result.days.push({ day: mappedDay, blocks: [] });
-        }
-        currentDay = mappedDay;
-      } else {
-        result.errors.push(`Linha ${lineNumber}: Dia inválido "${dayValue}". Use: Segunda, Terça, Quarta, Quinta, Sexta, Sábado ou Domingo`);
+      // Verificar se dia já existe
+      if (!result.days.some(d => d.day === detectedDay)) {
+        result.days.push({ day: detectedDay, blocks: [] });
       }
+      currentDay = detectedDay;
+      currentBlock = null;
       continue;
     }
 
-    // PADRÃO: BLOCO: <título>
-    const blockMatch = line.match(/^BLOCO:\s*(.+)$/i);
-    if (blockMatch) {
+    // Detectar título de bloco (linha em maiúsculas que não é dia)
+    if (isUpperCaseLine(line) && line.length > 3) {
       saveCurrentBlock();
       
       if (!currentDay) {
-        result.errors.push(`Linha ${lineNumber}: BLOCO definido antes de DIA`);
-        continue;
+        // Sem dia definido ainda - criar bloco "avulso" no primeiro dia disponível ou criar seg
+        if (result.days.length === 0) {
+          result.days.push({ day: 'seg', blocks: [] });
+          result.alerts.push('Treino sem dia definido - assumindo Segunda-feira');
+        }
+        currentDay = result.days[0].day;
       }
-
+      
       currentBlock = {
-        title: blockMatch[1].trim(),
-        type: 'conditioning', // default
-        format: 'outro', // default
+        title: line,
+        type: detectBlockType(line),
+        format: detectFormat(line),
         isMainWod: false,
         isBenchmark: false,
         items: [],
@@ -212,100 +352,67 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
-    // PADRÃO: TIPO: <valor>
-    const typeMatch = line.match(/^TIPO:\s*(.+)$/i);
-    if (typeMatch) {
-      if (!currentBlock) {
-        result.errors.push(`Linha ${lineNumber}: TIPO definido antes de BLOCO`);
+    // Detectar linha de exercício (começa com número ou marcador)
+    if (/^[-•*]?\s*\d/.test(line)) {
+      const item = parseExerciseLine(line);
+      
+      if (item) {
+        // Se não há bloco, criar um genérico
+        if (!currentBlock) {
+          if (!currentDay && result.days.length === 0) {
+            result.days.push({ day: 'seg', blocks: [] });
+            result.alerts.push('Treino sem dia definido - assumindo Segunda-feira');
+            currentDay = 'seg';
+          } else if (!currentDay) {
+            currentDay = result.days[0]?.day || 'seg';
+          }
+          
+          currentBlock = {
+            title: 'TREINO',
+            type: 'conditioning',
+            format: 'outro',
+            isMainWod: false,
+            isBenchmark: false,
+            items: [],
+            coachNotes: [],
+          };
+        }
+        
+        currentBlock.items.push(item);
+        
+        // Alertar sobre kg isolado
+        if (item.isWeightAlert) {
+          result.alerts.push(`Carga "${item.weight}" detectada - será autorregulada pelo sistema`);
+        }
+        
         continue;
       }
-      
-      const typeValue = typeMatch[1].trim().toLowerCase();
-      const mappedType = TYPE_MAP[typeValue];
-      
-      if (mappedType) {
-        currentBlock.type = mappedType;
-      } else {
-        result.errors.push(`Linha ${lineNumber}: TIPO inválido "${typeValue}". Use: Aquecimento, Força, Conditioning, Específico, Core, Corrida, Bike ou Remo`);
-      }
-      continue;
     }
 
-    // PADRÃO: FORMATO: <valor>
-    const formatMatch = line.match(/^FORMATO:\s*(.+)$/i);
-    if (formatMatch) {
-      if (!currentBlock) {
-        result.errors.push(`Linha ${lineNumber}: FORMATO definido antes de BLOCO`);
-        continue;
-      }
-      
-      const formatValue = formatMatch[1].trim().toLowerCase();
-      const mappedFormat = FORMAT_MAP[formatValue];
-      
-      if (mappedFormat) {
-        currentBlock.format = mappedFormat;
-      } else {
-        result.errors.push(`Linha ${lineNumber}: FORMATO inválido "${formatValue}". Use: For Time, AMRAP, EMOM, Rounds, Intervalos ou Técnica`);
-      }
-      continue;
-    }
-
-    // PADRÃO: PRINCIPAL: <true|false>
-    const principalMatch = line.match(/^PRINCIPAL:\s*(true|false|sim|não|nao|yes|no)$/i);
-    if (principalMatch) {
-      if (!currentBlock) {
-        result.errors.push(`Linha ${lineNumber}: PRINCIPAL definido antes de BLOCO`);
-        continue;
-      }
-      
-      const value = principalMatch[1].toLowerCase();
-      currentBlock.isMainWod = ['true', 'sim', 'yes'].includes(value);
-      continue;
-    }
-
-    // PADRÃO: BENCHMARK: <true|false>
-    const benchmarkMatch = line.match(/^BENCHMARK:\s*(true|false|sim|não|nao|yes|no)$/i);
-    if (benchmarkMatch) {
-      if (!currentBlock) {
-        result.errors.push(`Linha ${lineNumber}: BENCHMARK definido antes de BLOCO`);
-        continue;
-      }
-      
-      const value = benchmarkMatch[1].toLowerCase();
-      currentBlock.isBenchmark = ['true', 'sim', 'yes'].includes(value);
-      continue;
-    }
-
-    // PADRÃO: - <quantidade> <unidade> <movimento>
-    const itemMatch = line.match(/^[-•*]\s*(\d+(?:[.,]\d+)?)\s*(\w+)\s+(.+?)(?:\s*\((.+)\))?$/);
-    if (itemMatch) {
-      if (!currentBlock) {
-        result.warnings.push(`Linha ${lineNumber}: Item ignorado (fora de um BLOCO)`);
-        continue;
-      }
-
-      const quantity = parseFloat(itemMatch[1].replace(',', '.'));
-      const rawUnit = itemMatch[2].toLowerCase();
-      const movement = itemMatch[3].trim();
-      const notes = itemMatch[4]?.trim();
-
-      const unit = UNIT_MAP[rawUnit] || 'reps';
-
-      currentBlock.items.push({
-        quantity,
-        unit,
-        movement,
-        notes,
-      });
-      continue;
-    }
-
-    // Linha não reconhecida - vai para notas do coach
+    // Linha de texto solto → instruction ou nota
     if (currentBlock) {
-      currentBlock.coachNotes.push(line);
-      result.warnings.push(`Linha ${lineNumber}: Movida para notas do coach: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}"`);
+      // Se parece instrução (curta, sem números)
+      if (line.length < 100 && !/\d/.test(line)) {
+        if (!currentBlock.instruction) {
+          currentBlock.instruction = line;
+        } else {
+          currentBlock.coachNotes.push(line);
+        }
+      } else {
+        currentBlock.coachNotes.push(line);
+      }
     } else if (currentDay) {
-      result.warnings.push(`Linha ${lineNumber}: Ignorada (fora de um BLOCO): "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}"`);
+      // Texto antes de qualquer bloco - criar bloco com essa instrução
+      currentBlock = {
+        title: 'TREINO',
+        type: 'conditioning',
+        format: 'outro',
+        isMainWod: false,
+        isBenchmark: false,
+        items: [],
+        coachNotes: [],
+        instruction: line,
+      };
     }
   }
 
@@ -314,28 +421,25 @@ export function parseStructuredText(text: string): ParseResult {
 
   // Validações finais
   if (result.days.length === 0) {
-    result.errors.push('Nenhum DIA encontrado. Use o formato: DIA: Segunda');
+    result.errors.push('Nenhum treino válido encontrado');
   }
 
+  let totalBlocks = 0;
   for (const day of result.days) {
+    totalBlocks += day.blocks.length;
     if (day.blocks.length === 0) {
-      result.errors.push(`Dia ${getDayName(day.day)} não tem blocos definidos`);
+      result.warnings.push(`${getDayName(day.day)} sem blocos de treino`);
     }
+  }
 
-    for (const block of day.blocks) {
-      if (!block.title.trim()) {
-        result.errors.push(`Bloco sem título no dia ${getDayName(day.day)}`);
-      }
-      if (block.items.length === 0) {
-        result.errors.push(`Bloco "${block.title}" no dia ${getDayName(day.day)} não tem itens válidos`);
-      }
-    }
+  if (totalBlocks === 0) {
+    result.errors.push('Nenhum bloco de treino identificado');
+  }
 
-    // Verificar múltiplos principais
-    const mainCount = day.blocks.filter(b => b.isMainWod).length;
-    if (mainCount > 1) {
-      result.warnings.push(`Dia ${getDayName(day.day)} tem ${mainCount} blocos marcados como Principal. Recomendamos apenas 1.`);
-    }
+  // Alertar se nenhum WOD principal definido
+  const hasMainWod = result.days.some(d => d.blocks.some(b => b.isMainWod));
+  if (!hasMainWod && totalBlocks > 0) {
+    result.alerts.push('Nenhum WOD principal definido');
   }
 
   result.success = result.errors.length === 0;
@@ -363,18 +467,36 @@ export function parsedToDayWorkouts(parsed: ParseResult): DayWorkout[] {
 }
 
 function formatBlockContent(block: ParsedBlock): string {
+  const parts: string[] = [];
+  
+  // Instrução primeiro
+  if (block.instruction) {
+    parts.push(block.instruction);
+    parts.push('');
+  }
+  
+  // Items
   const itemsText = block.items
     .map(item => {
-      const base = `${item.quantity} ${item.unit} ${item.movement}`;
+      let base = `${item.quantity} ${item.unit} ${item.movement}`;
+      if (item.weight) {
+        base += ` @ ${item.weight}`;
+      }
       return item.notes ? `${base} (${item.notes})` : base;
     })
     .join('\n');
-
-  if (block.coachNotes.length > 0) {
-    return `${itemsText}\n\n📝 ${block.coachNotes.join('\n')}`;
+  
+  if (itemsText) {
+    parts.push(itemsText);
   }
 
-  return itemsText;
+  // Notas do coach
+  if (block.coachNotes.length > 0) {
+    parts.push('');
+    parts.push(`📝 ${block.coachNotes.join('\n')}`);
+  }
+
+  return parts.join('\n').trim();
 }
 
 // ============================================
@@ -402,6 +524,7 @@ export function getFormatLabel(format: string): string {
     rounds: 'Rounds',
     intervalos: 'Intervalos',
     tecnica: 'Técnica',
+    tabata: 'Tabata',
     outro: 'Outro',
   };
   return labels[format] || format;
@@ -415,39 +538,36 @@ export function getTypeLabel(type: string): string {
     especifico: 'Específico',
     core: 'Core',
     corrida: 'Corrida',
+    notas: 'Notas',
   };
   return labels[type] || type;
 }
 
 // ============================================
-// TEMPLATE DE EXEMPLO
+// TEMPLATE DE EXEMPLO (para referência interna)
 // ============================================
 
-export const TEMPLATE_EXAMPLE = `DIA: Segunda
-BLOCO: AMRAP 20min
-TIPO: Conditioning
-FORMATO: AMRAP
-PRINCIPAL: true
-BENCHMARK: false
-- 5 reps Pull-ups
-- 10 reps Push-ups
-- 15 reps Air Squats
+export const TEMPLATE_EXAMPLE = `SEGUNDA
 
-BLOCO: Aquecimento
-TIPO: Aquecimento
-FORMATO: Rounds
-PRINCIPAL: false
-BENCHMARK: false
-- 400 m Run
-- 10 reps Air Squats
-- 10 reps Arm Circles
+AQUECIMENTO
+3 rounds
+400m Run
+10 Air Squats
+10 Arm Circles
 
-DIA: Terça
-BLOCO: Força - Back Squat
-TIPO: Força
-FORMATO: Técnica
-PRINCIPAL: true
-BENCHMARK: false
-- 5 reps Back Squat (70%)
-- 5 reps Back Squat (75%)
-- 5 reps Back Squat (80%)`;
+AMRAP 20 MIN
+5 Pull-ups
+10 Push-ups
+15 Air Squats
+
+TERÇA
+
+FORÇA - BACK SQUAT
+5 reps @ 70%
+5 reps @ 75%
+5 reps @ 80%
+
+FOR TIME
+21-15-9
+Thrusters 43/30kg
+Pull-ups`;

@@ -353,7 +353,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
         </TabsTrigger>
         <TabsTrigger value="import" className="flex items-center gap-2">
           <FileText className="w-4 h-4" />
-          Texto Modelo
+          Colar Treino
         </TabsTrigger>
       </TabsList>
 
