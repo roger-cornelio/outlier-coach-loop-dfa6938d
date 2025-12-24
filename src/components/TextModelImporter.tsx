@@ -618,12 +618,31 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       {/* Exercícios */}
                                       {block.items.length > 0 && (
                                         <div className="text-sm text-foreground mt-2 space-y-1 pl-2 border-l-2 border-border">
-                                          {block.items.map((item, itemIdx) => (
-                                            <p key={itemIdx}>
-                                              <span className="font-medium">{item.quantity}</span> {item.unit} {item.movement}
-                                              {item.weight && <span className="text-muted-foreground"> @ {item.weight}</span>}
-                                            </p>
-                                          ))}
+                                          {block.items.map((item, itemIdx) => {
+                                            // Formatar peso para exibição humana (sem @ ou marcadores técnicos)
+                                            const formatWeight = (w: string | undefined): string | null => {
+                                              if (!w) return null;
+                                              // Remove @ do início se existir
+                                              let cleaned = w.replace(/^@\s*/, '').trim();
+                                              // Converte marcadores técnicos
+                                              if (cleaned === 'autorregulado') return '(autorregulado)';
+                                              if (/^\d+\/\d+\s*kg$/i.test(cleaned)) return `(${cleaned})`;
+                                              if (/^(?:pse|rpe)\s*\d+$/i.test(cleaned)) return `(${cleaned.toUpperCase()})`;
+                                              if (/^\d+%$/.test(cleaned)) return `(${cleaned})`;
+                                              if (/^\d+(?:[.,]\d+)?\s*kg$/i.test(cleaned)) return `(${cleaned})`;
+                                              // Qualquer outro caso, envolve em parênteses
+                                              return `(${cleaned})`;
+                                            };
+                                            
+                                            const displayWeight = formatWeight(item.weight);
+                                            
+                                            return (
+                                              <p key={itemIdx}>
+                                                <span className="font-medium">{item.quantity}</span> {item.unit} {item.movement}
+                                                {displayWeight && <span className="text-muted-foreground"> {displayWeight}</span>}
+                                              </p>
+                                            );
+                                          })}
                                         </div>
                                       )}
                                     </div>
