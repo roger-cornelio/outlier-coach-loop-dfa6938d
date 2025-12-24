@@ -224,13 +224,23 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="w-5 h-5 text-primary" />
-            Cole seu treino aqui
+            Cole seu treino aqui seguindo essa estrutura
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Escreva o treino do seu jeito. O OUTLIER organiza tudo pra você antes de salvar.
+            O OUTLIER ajusta tudo pra você.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+            <p className="font-medium text-foreground">Dica de escrita:</p>
+            <div className="grid gap-1.5">
+              <p><span className="font-medium">DIA DA SEMANA</span> — Ex: SEGUNDA</p>
+              <p><span className="font-medium">BLOCOS</span> — Ex: AQUECIMENTO, FORÇA, WOD</p>
+              <p><span className="font-medium">EXERCÍCIOS</span> — Ex: 10 Pull-ups, 20m Sled Push</p>
+              <p><span className="font-medium">COMENTÁRIOS</span> — Pode escrever normalmente 🙂</p>
+            </div>
+          </div>
+
           <Textarea
             value={text}
             onChange={(e) => {
@@ -238,13 +248,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
               setParseResult(null);
               setShowPreview(false);
             }}
-            placeholder="Cole o treino do jeito que você quiser..."
+            placeholder="Cole o treino aqui (texto, WhatsApp ou PDF)…"
             className="min-h-[180px] text-sm"
           />
-          
-          <p className="text-xs text-muted-foreground">
-            Dica: DIA e blocos em MAIÚSCULO • Exercícios começam com números • Se faltar algo, a gente pergunta 😉
-          </p>
 
           <div className="flex gap-2 flex-wrap">
             <Button
