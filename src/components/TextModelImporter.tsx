@@ -579,11 +579,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       }`}
                                     >
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        {/* Título do bloco - EDITÁVEL se for genérico */}
-                                        {block.title === 'Bloco Principal' || block.title === 'Opcional (se precisar se movimentar)' ? (
+                                        {/* Título do bloco - EDITÁVEL se for fallback genérico (Bloco X, Opcional) */}
+                                        {block.title.match(/^Bloco \d+$/) || block.title === 'Opcional' || block.title === '__FALLBACK_BLOCK__' ? (
                                           <input
                                             type="text"
-                                            value={block.title}
+                                            value={block.title === '__FALLBACK_BLOCK__' ? `Bloco ${blockIndex + 1}` : block.title}
                                             onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
                                             className="font-semibold text-base bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none px-1 min-w-[120px] max-w-[200px]"
                                             placeholder="Nome do bloco"
