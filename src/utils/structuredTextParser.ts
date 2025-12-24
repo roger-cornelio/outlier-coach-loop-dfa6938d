@@ -1,6 +1,16 @@
 /**
  * structuredTextParser.ts - Parser de texto livre de treino
  * 
+ * ============================================================
+ * PRINCÍPIO FUNDAMENTAL: ATLETA > COACH
+ * ============================================================
+ * Em qualquer situação de ambiguidade, dúvida ou incerteza:
+ * - A experiência do atleta tem prioridade absoluta
+ * - Preferir BLOQUEAR o coach a gerar resultado incorreto para o atleta
+ * - O sistema NUNCA tenta adivinhar intenção do coach
+ * - Se não há 100% de certeza, o sistema NÃO executa
+ * ============================================================
+ * 
  * REGRAS DE PARSING (DETERMINÍSTICO):
  * - Linhas MAIÚSCULAS → dias ou títulos de blocos
  * - Linhas iniciadas por número → exercícios
@@ -10,6 +20,11 @@
  *   - Novo DIA
  *   - Separador ⸻
  * - Pesos: % → relativo, PSE/RPE → esforço, 32/24kg → referência RX, kg isolado → carga fixa (gerar alerta)
+ * 
+ * VALIDAÇÕES BLOQUEANTES (fail-safe):
+ * - Título de bloco obrigatório (não pode começar com exercício)
+ * - WOD principal só via ação explícita do coach
+ * - Nenhuma inferência que gere ambiguidade para o atleta
  */
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';

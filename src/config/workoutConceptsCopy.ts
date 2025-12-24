@@ -1,6 +1,15 @@
 /**
  * workoutConceptsCopy.ts - Copy para conceitos de treino
  * 
+ * ============================================================
+ * PRINCÍPIO FUNDAMENTAL: ATLETA > COACH
+ * ============================================================
+ * Em qualquer ambiguidade:
+ * - Bloquear coach > Gerar resultado incorreto para atleta
+ * - Exigir ação explícita > Inferir automaticamente
+ * - Falhar cedo e claramente > Falhar silenciosamente
+ * ============================================================
+ * 
  * DISTINÇÃO CRÍTICA:
  * - WOD Principal ≠ Benchmark
  * - São conceitos INDEPENDENTES que não devem ser confundidos

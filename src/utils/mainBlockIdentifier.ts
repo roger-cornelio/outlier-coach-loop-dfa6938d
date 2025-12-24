@@ -1,10 +1,17 @@
 /**
  * MAIN BLOCK IDENTIFIER - Identificação do bloco principal
  * 
- * REGRAS DE IDENTIFICAÇÃO (SIMPLIFICADAS):
- * 1. ÚNICA REGRA: Se isMainWod === true (definido manualmente pelo coach), esse é o principal
- * 2. NÃO há detecção automática - nenhum bloco nasce como principal
- * 3. O coach DEVE marcar explicitamente qual é o WOD principal
+ * ============================================================
+ * PRINCÍPIO FUNDAMENTAL: ATLETA > COACH
+ * ============================================================
+ * - Nenhum bloco nasce como principal (zero inferência)
+ * - O coach DEVE marcar explicitamente qual é o WOD principal
+ * - Se não marcado, o sistema BLOQUEIA publicação (protege atleta)
+ * ============================================================
+ * 
+ * REGRAS DE IDENTIFICAÇÃO (ÚNICA):
+ * 1. Se isMainWod === true (definido manualmente pelo coach), esse é o principal
+ * 2. Caso contrário, retorna null (exige ação do coach)
  * 
  * GARANTIAS:
  * - Máximo 1 bloco principal por treino
