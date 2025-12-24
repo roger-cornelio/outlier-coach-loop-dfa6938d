@@ -307,28 +307,37 @@ export function getDerivedTitle(block: ParsedBlock): string {
 //   - derivedTitle (ou block.title) contiver sinais claros de prescrição
 
 // Verifica se a linha parece prescrição/exercício (inválida para título)
+// REGRA CORRIGIDA: Só rejeita se a linha CLARAMENTE for uma prescrição de exercício
+// Títulos humanos livres como "Grip & Strength", "Conditioning — For Time" são VÁLIDOS
 export function looksLikePrescription(line: string): boolean {
   if (!line || line.trim().length === 0) return false;
   
   const trimmed = line.trim();
   
-  // 1. Contém dígitos 0–9
-  if (/\d/.test(trimmed)) return true;
+  // 1. Começa com marcador de lista: -, •, 1), 1.
+  // EXCEÇÃO: "— " (travessão) é separador válido em títulos como "Conditioning — For Time"
+  if (/^[-•]\s/.test(trimmed)) return true; // Hífen seguido de espaço = lista
+  if (/^\d+[).]\s/.test(trimmed)) return true; // "1) " ou "1. " = lista
   
-  // 2. Contém unidades: kg, lb, km, m, cal, %, ", '
-  if (/\b(kg|lb|km|cal)\b/i.test(trimmed)) return true;
-  // Cuidado: "m" sozinho pode pegar muita coisa, só match palavra completa isolada
-  if (/\b(\d+m)\b/i.test(trimmed)) return true;
-  if (/[%"']/.test(trimmed)) return true;
+  // 2. Linha que COMEÇA com número seguido de unidade/exercício = prescrição clara
+  // Ex: "10km", "5 Rounds", "30' EMOM", "3x10 Pull-ups"
+  if (/^\d+/.test(trimmed)) return true;
   
-  // 3. Padrões de prescrição: EMOM, AMRAP, RFT, For Time, Min, Rounds, Sets, Reps
-  if (/\b(emom|amrap|rft|for\s*time|minutos?|rounds?|sets?|reps?)\b/i.test(trimmed)) return true;
-  // Nota: "min" isolado pode conflitar com títulos válidos, removi
+  // 3. Padrões de prescrição ISOLADOS (quando são a parte principal da linha)
+  // Ex: "EMOM 30'" ou "AMRAP 15" são inválidos
+  // Mas "Conditioning — For Time" ou "Specific — AMRAP" são VÁLIDOS (contêm mais contexto)
+  const prescriptionPatterns = /^(emom|amrap|rft|for\s*time|tabata)\b/i;
+  if (prescriptionPatterns.test(trimmed)) return true;
   
-  // 4. Começa com marcador de lista: -, •, 1), 1.
-  if (/^[-•]/.test(trimmed)) return true;
-  if (/^\d+[).]/.test(trimmed)) return true;
+  // 4. Contém unidades de medida que indicam prescrição clara
+  // kg, lb, cal com números próximos
+  if (/\d+\s*(kg|lb|cal)\b/i.test(trimmed)) return true;
   
+  // 5. Padrão "Min X:" que indica EMOM
+  if (/^min\s*\d+\s*:/i.test(trimmed)) return true;
+  
+  // TUDO MAIS É VÁLIDO como título humano
+  // Ex: "Grip & Strength", "Força Específica", "Conditioning — For Time"
   return false;
 }
 
