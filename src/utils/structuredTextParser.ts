@@ -35,7 +35,7 @@ export interface ParsedBlock {
 }
 
 export interface ParsedDay {
-  day: DayOfWeek;
+  day: DayOfWeek | null; // Pode ser null se não identificado
   blocks: ParsedBlock[];
 }
 
@@ -45,6 +45,7 @@ export interface ParseResult {
   errors: string[];
   warnings: string[];
   alerts: string[]; // Alertas leves (não bloqueiam)
+  needsDaySelection?: boolean; // Indica se precisa selecionar dia manualmente
 }
 
 // ============================================
@@ -148,20 +149,25 @@ export function parseStructuredText(text: string): ParseResult {
     errors: [],
     warnings: [],
     alerts: [],
+    needsDaySelection: false,
   };
 
   let currentDay: DayOfWeek | null = null;
   let currentBlock: ParsedBlock | null = null;
   let lineNumber = 0;
+  let hasExplicitDay = false; // Track if any day was explicitly found
 
   const saveCurrentBlock = () => {
-    if (currentBlock && currentDay) {
+    if (currentBlock) {
       // Só salva se tiver pelo menos 1 item OU notas
       if (currentBlock.items.length > 0 || currentBlock.coachNotes.length > 0 || currentBlock.instruction) {
-        const dayEntry = result.days.find(d => d.day === currentDay);
-        if (dayEntry) {
-          dayEntry.blocks.push(currentBlock);
+        // Find or create day entry (allow null day)
+        let dayEntry = result.days.find(d => d.day === currentDay);
+        if (!dayEntry) {
+          dayEntry = { day: currentDay, blocks: [] };
+          result.days.push(dayEntry);
         }
+        dayEntry.blocks.push(currentBlock);
       }
     }
     currentBlock = null;
@@ -318,6 +324,7 @@ export function parseStructuredText(text: string): ParseResult {
     if (detectedDay && isUpperCaseLine(line)) {
       saveCurrentBlock();
       
+      hasExplicitDay = true;
       // Verificar se dia já existe
       if (!result.days.some(d => d.day === detectedDay)) {
         result.days.push({ day: detectedDay, blocks: [] });
@@ -331,15 +338,7 @@ export function parseStructuredText(text: string): ParseResult {
     if (isUpperCaseLine(line) && line.length > 3) {
       saveCurrentBlock();
       
-      if (!currentDay) {
-        // Sem dia definido ainda - criar bloco "avulso" no primeiro dia disponível ou criar seg
-        if (result.days.length === 0) {
-          result.days.push({ day: 'seg', blocks: [] });
-          result.alerts.push('Treino sem dia definido - assumindo Segunda-feira');
-        }
-        currentDay = result.days[0].day;
-      }
-      
+      // Permite dia null - não força mais Segunda-feira
       currentBlock = {
         title: line,
         type: detectBlockType(line),
@@ -357,16 +356,8 @@ export function parseStructuredText(text: string): ParseResult {
       const item = parseExerciseLine(line);
       
       if (item) {
-        // Se não há bloco, criar um genérico
+        // Se não há bloco, criar um genérico (permite dia null)
         if (!currentBlock) {
-          if (!currentDay && result.days.length === 0) {
-            result.days.push({ day: 'seg', blocks: [] });
-            result.alerts.push('Treino sem dia definido - assumindo Segunda-feira');
-            currentDay = 'seg';
-          } else if (!currentDay) {
-            currentDay = result.days[0]?.day || 'seg';
-          }
-          
           currentBlock = {
             title: 'TREINO',
             type: 'conditioning',
@@ -419,21 +410,31 @@ export function parseStructuredText(text: string): ParseResult {
   // Salvar último bloco
   saveCurrentBlock();
 
-  // Validações finais
+  // Validações finais - PERMITIR treino sem dia
   if (result.days.length === 0) {
     result.errors.push('Nenhum treino válido encontrado');
   }
 
   let totalBlocks = 0;
+  let hasDayNull = false;
   for (const day of result.days) {
     totalBlocks += day.blocks.length;
-    if (day.blocks.length === 0) {
-      result.warnings.push(`${getDayName(day.day)} sem blocos de treino`);
+    if (day.day === null) {
+      hasDayNull = true;
+    }
+    if (day.blocks.length === 0 && day.day !== null) {
+      result.warnings.push(`${getDayName(day.day as DayOfWeek)} sem blocos de treino`);
     }
   }
 
   if (totalBlocks === 0) {
     result.errors.push('Nenhum bloco de treino identificado');
+  }
+
+  // Marcar se precisa selecionar dia (treino sem dia explícito)
+  if (hasDayNull || !hasExplicitDay) {
+    result.needsDaySelection = true;
+    result.alerts.push('Não identifiquei o dia da semana nesse treino. Escolha o dia abaixo para continuar.');
   }
 
   // Alertar se nenhum WOD principal definido
@@ -450,13 +451,14 @@ export function parseStructuredText(text: string): ParseResult {
 // CONVERSÃO PARA DayWorkout[]
 // ============================================
 
-export function parsedToDayWorkouts(parsed: ParseResult): DayWorkout[] {
+export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek): DayWorkout[] {
   return parsed.days.map(day => ({
-    day: day.day,
+    // Use selected day if the parsed day is null
+    day: (day.day || selectedDay || 'seg') as DayOfWeek,
     stimulus: '',
     estimatedTime: 60,
     blocks: day.blocks.map((block, idx) => ({
-      id: `${day.day}-${idx}-${Date.now()}`,
+      id: `${day.day || selectedDay || 'new'}-${idx}-${Date.now()}`,
       type: block.type,
       title: block.title,
       content: formatBlockContent(block),

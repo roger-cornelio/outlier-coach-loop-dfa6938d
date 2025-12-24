@@ -3,11 +3,12 @@
  * 
  * UX:
  * - Área 1: Texto livre (principal) - funciona sempre
- * - Área 2: Upload de arquivo (PDF/imagem) - fallback para texto se não funcionar
+ * - Área 2: Upload de arquivo (PDF/múltiplas imagens) - OCR via edge function
  * 
  * REGRAS:
  * - Parsing determinístico automático
  * - Preview obrigatório antes de importar
+ * - Se dia não identificado, perguntar no preview
  * - Alertas leves não bloqueiam
  * - Apenas erros críticos bloqueiam
  */
@@ -16,13 +17,15 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, ChevronDown, ChevronUp, FileImage
+  AlertTriangle, Star, ChevronDown, ChevronUp, FileImage, Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   parseStructuredText, 
   parsedToDayWorkouts,
@@ -31,11 +34,21 @@ import {
   getFormatLabel,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import type { DayWorkout } from '@/types/outlier';
+import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 
 interface TextModelImporterProps {
   onImport: (workouts: DayWorkout[]) => void;
 }
+
+const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
+  { value: 'seg', label: 'Segunda' },
+  { value: 'ter', label: 'Terça' },
+  { value: 'qua', label: 'Quarta' },
+  { value: 'qui', label: 'Quinta' },
+  { value: 'sex', label: 'Sexta' },
+  { value: 'sab', label: 'Sábado' },
+  { value: 'dom', label: 'Domingo' },
+];
 
 export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [text, setText] = useState('');
@@ -43,6 +56,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = () => {
@@ -50,16 +65,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const result = parseStructuredText(text);
     setParseResult(result);
     setShowPreview(true);
+    // Reset day selection when parsing new text
+    setSelectedDay(null);
   };
 
   const handleImport = () => {
     if (!parseResult?.success) return;
-    const workouts = parsedToDayWorkouts(parseResult);
+    
+    // Check if day is required and selected
+    if (parseResult.needsDaySelection && !selectedDay) {
+      return; // Block import without day selection
+    }
+    
+    const workouts = parsedToDayWorkouts(parseResult, selectedDay || undefined);
     onImport(workouts);
     // Limpar após importar
     setText('');
     setParseResult(null);
     setShowPreview(false);
+    setSelectedDay(null);
   };
 
   const handleClear = () => {
@@ -67,6 +91,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(null);
     setShowPreview(false);
     setFileError(null);
+    setSelectedDay(null);
   };
 
   // Toggle WOD principal no preview
@@ -96,31 +121,84 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(updated);
   };
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Handler para upload de arquivo
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
     
     setFileError(null);
+    setIsProcessingFile(true);
     
-    // Por enquanto, apenas arquivos .txt são suportados no MVP
-    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (content) {
-          setText(content);
-        }
-      };
-      reader.readAsText(file);
-    } else {
-      // PDF e imagens - fallback para texto
+    try {
+      // Check file types
+      const fileArray = Array.from(files);
+      const textFiles = fileArray.filter(f => f.type === 'text/plain' || f.name.endsWith('.txt'));
+      const imageFiles = fileArray.filter(f => f.type.startsWith('image/'));
+      const pdfFiles = fileArray.filter(f => f.type === 'application/pdf');
+      
+      // Handle text files directly
+      if (textFiles.length > 0 && imageFiles.length === 0 && pdfFiles.length === 0) {
+        const content = await textFiles[0].text();
+        setText(content);
+        setIsProcessingFile(false);
+        return;
+      }
+      
+      // Handle images and PDFs via OCR
+      const filesToProcess = [...imageFiles, ...pdfFiles];
+      
+      if (filesToProcess.length === 0) {
+        setFileError('Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
+        setIsProcessingFile(false);
+        return;
+      }
+      
+      // Convert files to base64
+      const base64Images: string[] = [];
+      for (const file of filesToProcess) {
+        const base64 = await fileToBase64(file);
+        base64Images.push(base64);
+      }
+      
+      // Call OCR edge function
+      const { data, error } = await supabase.functions.invoke('extract-workout-text', {
+        body: { images: base64Images }
+      });
+      
+      if (error) {
+        console.error('OCR error:', error);
+        setFileError('Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
+        setIsProcessingFile(false);
+        return;
+      }
+      
+      if (data?.success && data?.text) {
+        setText(data.text);
+      } else {
+        setFileError(data?.error || 'Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
+      }
+    } catch (err) {
+      console.error('File processing error:', err);
       setFileError('Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
-    }
-    
-    // Limpa o input para permitir re-upload do mesmo arquivo
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    } finally {
+      setIsProcessingFile(false);
+      // Limpa o input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -130,8 +208,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     0
   ) || 0;
 
-  // Verifica se pode publicar (tem pelo menos 1 WOD principal)
-  const canPublish = parseResult?.success && mainWodCount > 0;
+  // Verifica se pode publicar (tem pelo menos 1 WOD principal e dia definido se necessário)
+  const canPublish = parseResult?.success && 
+    mainWodCount > 0 && 
+    (!parseResult.needsDaySelection || selectedDay !== null);
+
+  // Verifica se pode importar (rascunho - apenas precisa de treino válido)
+  const canImport = parseResult?.success && 
+    (!parseResult.needsDaySelection || selectedDay !== null);
 
   return (
     <div className="space-y-4">
@@ -197,7 +281,8 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.pdf,image/*"
+                accept=".txt,application/pdf,image/*"
+                multiple
                 onChange={handleFileUpload}
                 className="hidden"
                 id="file-upload"
@@ -208,9 +293,19 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 className="mt-2"
+                disabled={isProcessingFile}
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Escolher arquivo
+                {isProcessingFile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Escolher arquivo(s)
+                  </>
+                )}
               </Button>
               
               {fileError && (
@@ -262,13 +357,37 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                   </div>
                 )}
 
+                {/* Seletor de dia - quando necessário */}
+                {parseResult.needsDaySelection && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-3">
+                    <p className="text-sm text-amber-600">
+                      Não identifiquei o dia da semana nesse treino. Escolha o dia abaixo para continuar.
+                    </p>
+                    <Select 
+                      value={selectedDay || ''} 
+                      onValueChange={(val) => setSelectedDay(val as DayOfWeek)}
+                    >
+                      <SelectTrigger className="w-full max-w-xs">
+                        <SelectValue placeholder="Selecione o dia..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAY_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Alertas leves (não bloqueiam) */}
-                {parseResult.alerts.length > 0 && (
+                {parseResult.alerts.filter(a => !a.includes('dia da semana')).length > 0 && (
                   <Collapsible open={showAlerts} onOpenChange={setShowAlerts}>
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-7 text-xs text-amber-600">
                         <AlertTriangle className="w-3 h-3 mr-1" />
-                        {parseResult.alerts.length} alerta(s) leve(s)
+                        {parseResult.alerts.filter(a => !a.includes('dia da semana')).length} alerta(s) leve(s)
                         {showAlerts ? (
                           <ChevronUp className="w-3 h-3 ml-1" />
                         ) : (
@@ -278,7 +397,7 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
-                        {parseResult.alerts.map((alert, idx) => (
+                        {parseResult.alerts.filter(a => !a.includes('dia da semana')).map((alert, idx) => (
                           <p key={idx} className="text-xs text-amber-600 flex items-start gap-1">
                             <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                             {alert}
@@ -293,9 +412,11 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                 {parseResult.success && parseResult.days.length > 0 && (
                   <div className="space-y-3">
                     {parseResult.days.map((day, dayIndex) => (
-                      <div key={day.day} className="border border-border rounded-lg overflow-hidden">
+                      <div key={day.day || `day-${dayIndex}`} className="border border-border rounded-lg overflow-hidden">
                         <div className="p-2 bg-secondary/30 flex items-center gap-2">
-                          <Badge variant="outline">{getDayName(day.day)}</Badge>
+                          <Badge variant="outline">
+                            {day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido')}
+                          </Badge>
                           <span className="text-xs text-muted-foreground">
                             {day.blocks.length} bloco(s)
                           </span>
@@ -364,7 +485,9 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                     {parseResult.success && !canPublish && (
                       <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                         <p className="text-sm text-amber-600">
-                          Para publicar, marque qual é o WOD principal.
+                          {parseResult.needsDaySelection && !selectedDay 
+                            ? 'Para publicar, selecione o dia do treino.'
+                            : 'Para publicar, marque qual é o WOD principal.'}
                         </p>
                       </div>
                     )}
@@ -374,6 +497,7 @@ O OUTLIER organiza tudo pra você antes de salvar.`}
                       onClick={handleImport} 
                       className="w-full"
                       size="lg"
+                      disabled={!canImport}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Importar {parseResult.days.length} dia(s)
