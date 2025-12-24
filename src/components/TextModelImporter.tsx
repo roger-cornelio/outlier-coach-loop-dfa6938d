@@ -52,6 +52,16 @@ const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
   { value: 'dom', label: 'Domingo' },
 ];
 
+// Opções de tipo de bloco para dropdown
+const BLOCK_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'aquecimento', label: 'Aquecimento' },
+  { value: 'forca', label: 'Força' },
+  { value: 'conditioning', label: 'Conditioning' },
+  { value: 'especifico', label: 'Específico' },
+  { value: 'core', label: 'Core' },
+  { value: 'corrida', label: 'Corrida' },
+];
+
 export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [text, setText] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -124,8 +134,24 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       });
     }
     
-    // ALERTAS REATIVOS: Não precisa atualizar manualmente
-    // O estado é derivado em tempo real no render
+    setParseResult(updated);
+  };
+
+  // Alterar tipo do bloco
+  const changeBlockType = (dayIndex: number, blockIndex: number, newType: string) => {
+    if (!parseResult) return;
+    
+    const updated = { ...parseResult };
+    updated.days[dayIndex].blocks[blockIndex].type = newType as any;
+    setParseResult(updated);
+  };
+
+  // Alterar título do bloco
+  const changeBlockTitle = (dayIndex: number, blockIndex: number, newTitle: string) => {
+    if (!parseResult) return;
+    
+    const updated = { ...parseResult };
+    updated.days[dayIndex].blocks[blockIndex].title = newTitle;
     setParseResult(updated);
   };
 
@@ -552,14 +578,44 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           : 'bg-muted/50 border border-border/60'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-3 flex-wrap">
-                                        {/* Título do bloco - SEM "TREINO", apenas o nome */}
-                                        <span className="font-semibold text-base">{block.title}</span>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {/* Título do bloco - EDITÁVEL se for genérico */}
+                                        {block.title === 'Bloco Principal' || block.title === 'Opcional (se precisar se movimentar)' ? (
+                                          <input
+                                            type="text"
+                                            value={block.title}
+                                            onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
+                                            className="font-semibold text-base bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none px-1 min-w-[120px] max-w-[200px]"
+                                            placeholder="Nome do bloco"
+                                          />
+                                        ) : (
+                                          <span className="font-semibold text-base">{block.title}</span>
+                                        )}
                                         
-                                        {/* Chip do tipo - secundário */}
-                                        <Badge variant="secondary" className="text-xs px-2">
-                                          {getTypeLabel(block.type)}
-                                        </Badge>
+                                        {/* Badge Principal - fixo quando marcado */}
+                                        {block.isMainWod && (
+                                          <Badge className="bg-primary text-primary-foreground text-xs px-2">
+                                            <Star className="w-3 h-3 mr-1 fill-current" />
+                                            Principal
+                                          </Badge>
+                                        )}
+                                        
+                                        {/* Dropdown do tipo - AJUSTE FINO */}
+                                        <Select
+                                          value={block.type}
+                                          onValueChange={(val) => changeBlockType(dayIndex, blockIndex, val)}
+                                        >
+                                          <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs border-dashed">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {BLOCK_TYPE_OPTIONS.map(opt => (
+                                              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                                {opt.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
                                         
                                         {/* Chip de formato - se aplicável */}
                                         {block.format !== 'outro' && (
@@ -575,16 +631,19 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           </Badge>
                                         )}
                                         
+                                        {/* Spacer */}
+                                        <div className="flex-1" />
+                                        
                                         {/* Botão para marcar WOD principal */}
-                                        {!isRestDay && (
+                                        {!isRestDay && !block.optional && (
                                           <Button
-                                            variant={block.isMainWod ? "default" : "ghost"}
+                                            variant={block.isMainWod ? "secondary" : "ghost"}
                                             size="sm"
-                                            className="h-8 text-xs ml-auto"
+                                            className="h-7 text-xs"
                                             onClick={() => toggleMainWod(dayIndex, blockIndex)}
                                           >
-                                            <Star className={`w-3.5 h-3.5 mr-1.5 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                            {block.isMainWod ? 'Principal' : 'Marcar como principal'}
+                                            <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                            {block.isMainWod ? 'Desmarcar' : 'Marcar principal'}
                                           </Button>
                                         )}
                                       </div>
