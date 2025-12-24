@@ -702,19 +702,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
         </Card>
       )}
 
-      {/* Estado vazio - sem preview processado */}
-      {!parsedWorkouts && !spreadsheetText.trim() && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Upload className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <p className="text-foreground font-medium">Nenhuma planilha importada</p>
-            <p className="text-muted-foreground text-sm mt-1">
-              Cole sua planilha semanal acima e clique em "Processar Planilha".
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Modal de publicar para atletas - usa preview local */}
       <PublishToAthletesModal
         open={showPublishModal}
