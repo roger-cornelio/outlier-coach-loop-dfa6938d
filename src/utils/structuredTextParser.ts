@@ -266,44 +266,121 @@ function cleanBlockTitle(title: string, blockIndex?: number): string {
 }
 
 // ============================================
-// VALIDAÇÃO DE TÍTULO — REGRA ANTI-BURRO
+// DERIVAR TÍTULO DO BLOCO (OPÇÃO A)
 // ============================================
-// A primeira linha do bloco é SEMPRE o título.
-// O título NÃO pode conter números, unidades, padrões de prescrição ou marcadores.
-// Retorna true se o título é INVÁLIDO (contém elementos proibidos).
-export function isInvalidBlockTitle(title: string): boolean {
-  if (!title || title.trim().length === 0) return true;
+// derivedTitle = primeira linha não vazia do conteúdo textual do bloco
+// NÃO criar campo novo - calculado em runtime para exibição e validação
+
+export function getDerivedTitle(block: ParsedBlock): string {
+  // 1. Se block.title existe e está preenchido (não é fallback), usar
+  if (block.title && 
+      block.title.trim().length > 0 && 
+      block.title !== '__FALLBACK_BLOCK__' && 
+      !block.title.match(/^Bloco \d+$/)) {
+    return block.title.trim();
+  }
   
-  const trimmed = title.trim();
+  // 2. Senão, derivar da primeira linha não vazia do conteúdo
+  // Prioridade: instruction > instructions[0] > items[0].movement
+  if (block.instruction && block.instruction.trim().length > 0) {
+    return block.instruction.trim();
+  }
   
-  // 1. Números (0–9)
+  if (block.instructions && block.instructions.length > 0) {
+    const firstInstruction = block.instructions[0]?.trim();
+    if (firstInstruction && firstInstruction.length > 0) {
+      return firstInstruction;
+    }
+  }
+  
+  // 3. Se ainda não tem, está vazio
+  return '';
+}
+
+// ============================================
+// VALIDAÇÃO DE TÍTULO — REGRA ANTI-BURRO (CORRIGIDA)
+// ============================================
+// Um bloco só é "sem título" se:
+//   - não existir block.title E derivedTitle estiver vazio
+//
+// Um bloco tem "título inválido por parecer exercício" se:
+//   - derivedTitle (ou block.title) contiver sinais claros de prescrição
+
+// Verifica se a linha parece prescrição/exercício (inválida para título)
+export function looksLikePrescription(line: string): boolean {
+  if (!line || line.trim().length === 0) return false;
+  
+  const trimmed = line.trim();
+  
+  // 1. Contém dígitos 0–9
   if (/\d/.test(trimmed)) return true;
   
-  // 2. Unidades: kg, lb, m, km, cal, %, ", '
-  if (/\b(kg|lb|m|km|cal)\b/i.test(trimmed)) return true;
+  // 2. Contém unidades: kg, lb, km, m, cal, %, ", '
+  if (/\b(kg|lb|km|cal)\b/i.test(trimmed)) return true;
+  // Cuidado: "m" sozinho pode pegar muita coisa, só match palavra completa isolada
+  if (/\b(\d+m)\b/i.test(trimmed)) return true;
   if (/[%"']/.test(trimmed)) return true;
   
   // 3. Padrões de prescrição: EMOM, AMRAP, RFT, For Time, Min, Rounds, Sets, Reps
-  if (/\b(emom|amrap|rft|for\s*time|min|minutos?|rounds?|sets?|reps?)\b/i.test(trimmed)) return true;
+  if (/\b(emom|amrap|rft|for\s*time|minutos?|rounds?|sets?|reps?)\b/i.test(trimmed)) return true;
+  // Nota: "min" isolado pode conflitar com títulos válidos, removi
   
-  // 4. Marcadores de lista: -, •, 1), 1.
+  // 4. Começa com marcador de lista: -, •, 1), 1.
   if (/^[-•]/.test(trimmed)) return true;
   if (/^\d+[).]/.test(trimmed)) return true;
   
   return false;
 }
 
+// Retorna true se o bloco tem problema de título
+// - Sem título: derivedTitle vazio
+// - Título inválido: derivedTitle parece prescrição
+export function isInvalidBlockTitle(title: string, block?: ParsedBlock): boolean {
+  // Se recebeu o bloco, usar derivedTitle
+  if (block) {
+    const derived = getDerivedTitle(block);
+    
+    // Sem título = derivedTitle vazio
+    if (!derived || derived.length === 0) return true;
+    
+    // Título inválido = parece prescrição
+    return looksLikePrescription(derived);
+  }
+  
+  // Fallback: validar o título diretamente (para compatibilidade)
+  if (!title || title.trim().length === 0) return true;
+  if (title === '__FALLBACK_BLOCK__') return true;
+  if (title.match(/^Bloco \d+$/)) return true;
+  
+  return looksLikePrescription(title);
+}
+
 // Retorna a razão legível do erro (para exibição)
-export function getBlockTitleError(title: string): string | null {
-  if (!title || title.trim().length === 0) {
+export function getBlockTitleError(title: string, block?: ParsedBlock): string | null {
+  // Se recebeu o bloco, usar derivedTitle
+  const derived = block ? getDerivedTitle(block) : title?.trim();
+  
+  // Sem título
+  if (!derived || derived.length === 0) {
     return 'O bloco precisa começar com o tipo de treino.\nEx: Aquecimento, Força, Condicionamento.';
   }
   
-  if (isInvalidBlockTitle(title)) {
-    return 'O bloco precisa começar com o tipo de treino.\nEx: Aquecimento, Força, Condicionamento.';
+  // Título inválido (parece prescrição)
+  if (looksLikePrescription(derived)) {
+    return 'Ajuste o título do bloco (parece exercício).\nEx: Aquecimento, Força, Condicionamento.';
   }
   
   return null;
+}
+
+// Retorna o título para exibição (display)
+export function getDisplayTitle(block: ParsedBlock, blockIndex: number): string {
+  const derived = getDerivedTitle(block);
+  if (derived && derived.length > 0) {
+    return derived;
+  }
+  // Fallback neutro sequencial
+  return `Bloco ${blockIndex + 1}`;
 }
 
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
