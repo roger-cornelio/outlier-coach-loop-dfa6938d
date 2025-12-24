@@ -4,7 +4,11 @@
  * REGRAS DE PARSING (DETERMINÍSTICO):
  * - Linhas MAIÚSCULAS → dias ou títulos de blocos
  * - Linhas iniciadas por número → exercícios
- * - Texto solto → instruction/notas
+ * - Separador ⸻ → fim explícito do bloco
+ * - REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO até:
+ *   - Novo BLOCO (linha maiúscula)
+ *   - Novo DIA
+ *   - Separador ⸻
  * - Pesos: % → relativo, PSE/RPE → esforço, 32/24kg → referência RX, kg isolado → carga fixa (gerar alerta)
  */
 
@@ -32,11 +36,13 @@ export interface ParsedBlock {
   items: ParsedItem[];
   coachNotes: string[];
   instruction?: string;
+  instructions: string[]; // Lista de instruções do bloco
 }
 
 export interface ParsedDay {
   day: DayOfWeek | null; // Pode ser null se não identificado
   blocks: ParsedBlock[];
+  alerts: string[]; // Alertas no nível do dia
 }
 
 export interface ParseResult {
@@ -44,7 +50,7 @@ export interface ParseResult {
   days: ParsedDay[];
   errors: string[];
   warnings: string[];
-  alerts: string[]; // Alertas leves (não bloqueiam)
+  alerts: string[]; // Alertas globais
   needsDaySelection?: boolean; // Indica se precisa selecionar dia manualmente
 }
 
@@ -137,9 +143,27 @@ const UNIT_MAP: Record<string, string> = {
   '"': 'sec',
 };
 
+// Padrões de instrução (não são notas)
+const INSTRUCTION_PATTERNS = [
+  /descanso/i,
+  /rest/i,
+  /registrar/i,
+  /objetivo/i,
+  /zona\s*\d/i,
+  /fc\s*[:=]?\s*\d/i,
+  /pse\s*[:=]?\s*\d/i,
+  /rounds?/i,
+  /emom/i,
+  /for\s*time/i,
+  /amrap/i,
+];
+
 // ============================================
 // PARSER PRINCIPAL - TEXTO LIVRE
 // ============================================
+
+// Separador de bloco explícito
+const BLOCK_SEPARATOR = '⸻';
 
 export function parseStructuredText(text: string): ParseResult {
   const lines = text.split('\n');
@@ -153,38 +177,46 @@ export function parseStructuredText(text: string): ParseResult {
   };
 
   let currentDay: DayOfWeek | null = null;
+  let currentDayEntry: ParsedDay | null = null;
   let currentBlock: ParsedBlock | null = null;
   let lineNumber = 0;
-  let hasExplicitDay = false; // Track if any day was explicitly found
+  let hasExplicitDay = false;
+
+  const createNewBlock = (title: string): ParsedBlock => ({
+    title,
+    type: detectBlockType(title),
+    format: detectFormat(title),
+    isMainWod: false,
+    isBenchmark: false,
+    items: [],
+    coachNotes: [],
+    instructions: [],
+  });
 
   const saveCurrentBlock = () => {
     if (currentBlock) {
-      // Só salva se tiver pelo menos 1 item OU notas
-      if (currentBlock.items.length > 0 || currentBlock.coachNotes.length > 0 || currentBlock.instruction) {
+      // Só salva se tiver pelo menos 1 item OU instruções
+      if (currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction) {
         // Find or create day entry (allow null day)
-        let dayEntry = result.days.find(d => d.day === currentDay);
-        if (!dayEntry) {
-          dayEntry = { day: currentDay, blocks: [] };
-          result.days.push(dayEntry);
+        if (!currentDayEntry) {
+          currentDayEntry = { day: currentDay, blocks: [], alerts: [] };
+          result.days.push(currentDayEntry);
         }
-        dayEntry.blocks.push(currentBlock);
+        currentDayEntry.blocks.push(currentBlock);
       }
     }
     currentBlock = null;
   };
 
   const detectDay = (line: string): DayOfWeek | null => {
-    // Limpa a linha
     const cleanLine = line.toLowerCase().replace(/[^a-záéíóúàâêôãõç\s-]/g, '').trim();
     
-    // Verifica cada padrão de dia
     for (const [key, day] of Object.entries(DAY_MAP)) {
       if (cleanLine === key || cleanLine.startsWith(key + ' ') || cleanLine.endsWith(' ' + key)) {
         return day;
       }
     }
     
-    // Segunda tentativa: verificar se a linha contém dia da semana em contexto
     for (const [key, day] of Object.entries(DAY_MAP)) {
       const regex = new RegExp(`\\b${key}\\b`, 'i');
       if (regex.test(line) && line.length < 50) {
@@ -201,7 +233,7 @@ export function parseStructuredText(text: string): ParseResult {
         return type;
       }
     }
-    return 'conditioning'; // default
+    return 'conditioning';
   };
 
   const detectFormat = (line: string): string => {
@@ -214,21 +246,16 @@ export function parseStructuredText(text: string): ParseResult {
   };
 
   const isUpperCaseLine = (line: string): boolean => {
-    // Remove números e caracteres especiais para verificar se é maiúsculo
     const letters = line.replace(/[^a-záéíóúàâêôãõçA-ZÁÉÍÓÚÀÂÊÔÃÕÇ]/g, '');
     if (letters.length < 3) return false;
     return letters === letters.toUpperCase() && letters.length > 0;
   };
 
+  const isInstructionLine = (line: string): boolean => {
+    return INSTRUCTION_PATTERNS.some(pattern => pattern.test(line));
+  };
+
   const parseExerciseLine = (line: string): ParsedItem | null => {
-    // Padrões comuns de exercício:
-    // "10 reps Pull-ups"
-    // "10 Pull-ups"
-    // "- 5 x Push-ups"
-    // "400m Run"
-    // "30 cal Row"
-    // "3 rounds of..."
-    
     const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
     
     // Padrão: número + unidade opcional + movimento
@@ -240,17 +267,14 @@ export function parseStructuredText(text: string): ParseResult {
       let movement = match[4].trim();
       const notes = match[5]?.trim();
       
-      // Se unidade não reconhecida, assume reps e movimento inclui a "unidade"
       let unit = UNIT_MAP[rawUnit];
       if (!unit && rawUnit) {
-        // Pode ser que a "unidade" seja parte do movimento
         movement = `${rawUnit} ${movement}`;
         unit = 'reps';
       } else if (!unit) {
         unit = 'reps';
       }
       
-      // Detectar peso na linha
       const weightInfo = detectWeight(cleanLine);
       
       return {
@@ -280,31 +304,26 @@ export function parseStructuredText(text: string): ParseResult {
   };
 
   const detectWeight = (line: string): { weight?: string; isAlert: boolean } => {
-    // % → peso relativo (ok)
     const percentMatch = line.match(/(\d+(?:[.,]\d+)?)\s*%/);
     if (percentMatch) {
       return { weight: `${percentMatch[1]}%`, isAlert: false };
     }
     
-    // PSE/RPE → esforço (ok)
     const rpeMatch = line.match(/(pse|rpe)\s*[:=]?\s*(\d+)/i);
     if (rpeMatch) {
       return { weight: `${rpeMatch[1].toUpperCase()} ${rpeMatch[2]}`, isAlert: false };
     }
     
-    // Formato RX: 32/24kg ou 20/15 → referência (ok)
     const rxMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*(?:kg)?/);
     if (rxMatch) {
       return { weight: `${rxMatch[1]}/${rxMatch[2]}kg`, isAlert: false };
     }
     
-    // kg isolado → carga fixa (gerar alerta)
     const kgMatch = line.match(/(\d+(?:[.,]\d+)?)\s*kg\b/i);
     if (kgMatch) {
       return { weight: `${kgMatch[1]}kg`, isAlert: true };
     }
     
-    // leve/moderada/pesada → autorregulado
     if (/\b(leve|moderada?|pesada?|heavy|light|moderate)\b/i.test(line)) {
       return { weight: 'autorregulado', isAlert: false };
     }
@@ -316,8 +335,14 @@ export function parseStructuredText(text: string): ParseResult {
     lineNumber++;
     const line = rawLine.trim();
     
-    // Linha vazia
+    // Linha vazia - continua no bloco atual
     if (!line) continue;
+
+    // Separador explícito ⸻ → fim do bloco atual
+    if (line.includes(BLOCK_SEPARATOR)) {
+      saveCurrentBlock();
+      continue;
+    }
 
     // Detectar dia da semana
     const detectedDay = detectDay(line);
@@ -325,11 +350,14 @@ export function parseStructuredText(text: string): ParseResult {
       saveCurrentBlock();
       
       hasExplicitDay = true;
-      // Verificar se dia já existe
-      if (!result.days.some(d => d.day === detectedDay)) {
-        result.days.push({ day: detectedDay, blocks: [] });
-      }
       currentDay = detectedDay;
+      
+      // Criar nova entrada de dia
+      currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
+      if (!currentDayEntry) {
+        currentDayEntry = { day: detectedDay, blocks: [], alerts: [] };
+        result.days.push(currentDayEntry);
+      }
       currentBlock = null;
       continue;
     }
@@ -337,17 +365,7 @@ export function parseStructuredText(text: string): ParseResult {
     // Detectar título de bloco (linha em maiúsculas que não é dia)
     if (isUpperCaseLine(line) && line.length > 3) {
       saveCurrentBlock();
-      
-      // Permite dia null - não força mais Segunda-feira
-      currentBlock = {
-        title: line,
-        type: detectBlockType(line),
-        format: detectFormat(line),
-        isMainWod: false,
-        isBenchmark: false,
-        items: [],
-        coachNotes: [],
-      };
+      currentBlock = createNewBlock(line);
       continue;
     }
 
@@ -356,23 +374,20 @@ export function parseStructuredText(text: string): ParseResult {
       const item = parseExerciseLine(line);
       
       if (item) {
-        // Se não há bloco, criar um genérico (permite dia null)
+        // Se não há bloco, criar um genérico
         if (!currentBlock) {
-          currentBlock = {
-            title: 'TREINO',
-            type: 'conditioning',
-            format: 'outro',
-            isMainWod: false,
-            isBenchmark: false,
-            items: [],
-            coachNotes: [],
-          };
+          currentBlock = createNewBlock('TREINO');
         }
         
         currentBlock.items.push(item);
         
-        // Alertar sobre kg isolado
-        if (item.isWeightAlert) {
+        // Adicionar alerta ao dia atual sobre kg isolado
+        if (item.isWeightAlert && currentDayEntry) {
+          const alertMsg = `Carga "${item.weight}" detectada - será autorregulada pelo sistema`;
+          if (!currentDayEntry.alerts.includes(alertMsg)) {
+            currentDayEntry.alerts.push(alertMsg);
+          }
+        } else if (item.isWeightAlert) {
           result.alerts.push(`Carga "${item.weight}" detectada - será autorregulada pelo sistema`);
         }
         
@@ -380,37 +395,34 @@ export function parseStructuredText(text: string): ParseResult {
       }
     }
 
-    // Linha de texto solto → instruction ou nota
+    // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
     if (currentBlock) {
-      // Se parece instrução (curta, sem números)
-      if (line.length < 100 && !/\d/.test(line)) {
-        if (!currentBlock.instruction) {
-          currentBlock.instruction = line;
-        } else {
-          currentBlock.coachNotes.push(line);
-        }
+      // Classificar tipo de linha dentro do bloco
+      if (isInstructionLine(line)) {
+        // Linha de instrução (Rounds, EMOM, descanso, etc)
+        currentBlock.instructions.push(line);
+      } else if (!currentBlock.instruction && line.length < 80 && !/\d/.test(line)) {
+        // Primeira linha curta sem números → instruction principal
+        currentBlock.instruction = line;
       } else {
-        currentBlock.coachNotes.push(line);
+        // Resto vai para instructions, NÃO para notas soltas
+        currentBlock.instructions.push(line);
       }
-    } else if (currentDay) {
-      // Texto antes de qualquer bloco - criar bloco com essa instrução
-      currentBlock = {
-        title: 'TREINO',
-        type: 'conditioning',
-        format: 'outro',
-        isMainWod: false,
-        isBenchmark: false,
-        items: [],
-        coachNotes: [],
-        instruction: line,
-      };
+    } else {
+      // Texto antes de qualquer bloco - criar bloco genérico
+      currentBlock = createNewBlock('TREINO');
+      if (isInstructionLine(line)) {
+        currentBlock.instructions.push(line);
+      } else {
+        currentBlock.instruction = line;
+      }
     }
   }
 
   // Salvar último bloco
   saveCurrentBlock();
 
-  // Validações finais - PERMITIR treino sem dia
+  // Validações finais
   if (result.days.length === 0) {
     result.errors.push('Nenhum treino válido encontrado');
   }
@@ -425,22 +437,21 @@ export function parseStructuredText(text: string): ParseResult {
     if (day.blocks.length === 0 && day.day !== null) {
       result.warnings.push(`${getDayName(day.day as DayOfWeek)} sem blocos de treino`);
     }
+    
+    // Verificar se tem WOD principal definido - alerta no nível do dia
+    const hasMainWodInDay = day.blocks.some(b => b.isMainWod);
+    if (!hasMainWodInDay && day.blocks.length > 0) {
+      day.alerts.push('Nenhum WOD principal definido');
+    }
   }
 
   if (totalBlocks === 0) {
     result.errors.push('Nenhum bloco de treino identificado');
   }
 
-  // Marcar se precisa selecionar dia (treino sem dia explícito)
+  // Marcar se precisa selecionar dia
   if (hasDayNull || !hasExplicitDay) {
     result.needsDaySelection = true;
-    result.alerts.push('Não identifiquei o dia da semana nesse treino. Escolha o dia abaixo para continuar.');
-  }
-
-  // Alertar se nenhum WOD principal definido
-  const hasMainWod = result.days.some(d => d.blocks.some(b => b.isMainWod));
-  if (!hasMainWod && totalBlocks > 0) {
-    result.alerts.push('Nenhum WOD principal definido');
   }
 
   result.success = result.errors.length === 0;
@@ -471,13 +482,19 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
 function formatBlockContent(block: ParsedBlock): string {
   const parts: string[] = [];
   
-  // Instrução primeiro
+  // Instrução principal primeiro
   if (block.instruction) {
     parts.push(block.instruction);
     parts.push('');
   }
   
-  // Items
+  // Instruções adicionais
+  if (block.instructions && block.instructions.length > 0) {
+    parts.push(block.instructions.join('\n'));
+    parts.push('');
+  }
+  
+  // Items (exercícios)
   const itemsText = block.items
     .map(item => {
       let base = `${item.quantity} ${item.unit} ${item.movement}`;
@@ -492,8 +509,8 @@ function formatBlockContent(block: ParsedBlock): string {
     parts.push(itemsText);
   }
 
-  // Notas do coach
-  if (block.coachNotes.length > 0) {
+  // Notas do coach (apenas se existirem)
+  if (block.coachNotes && block.coachNotes.length > 0) {
     parts.push('');
     parts.push(`📝 ${block.coachNotes.join('\n')}`);
   }
