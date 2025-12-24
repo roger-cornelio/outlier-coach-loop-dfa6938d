@@ -124,10 +124,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       });
     }
     
-    // Atualiza alerta de WOD principal (considerando dias de descanso)
+    // Atualiza alerta de WOD principal (considerando dias de descanso e blocos opcionais)
     const hasMainWodIssue = updated.days.some((d, idx) => {
       if (restDays[idx]) return false; // Dias de descanso não precisam de WOD
+      // Se todos os blocos são opcionais, não precisa de WOD
+      if (d.blocks.every(b => b.optional)) return false;
       return !d.blocks.some(b => b.isMainWod);
+    });
+    
+    // Atualiza alertas no nível do dia
+    updated.days.forEach((d, idx) => {
+      if (restDays[idx] || d.blocks.every(b => b.optional)) {
+        d.alerts = d.alerts.filter(a => !a.includes('WOD principal'));
+      } else if (!d.blocks.some(b => b.isMainWod)) {
+        if (!d.alerts.some(a => a.includes('WOD principal'))) {
+          d.alerts.push('Nenhum WOD principal definido');
+        }
+      } else {
+        d.alerts = d.alerts.filter(a => !a.includes('WOD principal'));
+      }
     });
     
     updated.alerts = updated.alerts.filter(a => !a.includes('WOD principal'));
@@ -232,8 +247,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const daysNeedingWod = parseResult?.days.filter((_, idx) => !restDays[idx]).length || 0;
 
   // Verifica se pode publicar (tem WOD principal em cada dia de treino e dia definido se necessário)
+  // Dias com todos blocos opcionais não precisam de WOD principal
   const allTrainingDaysHaveWod = parseResult?.days.every((day, idx) => {
     if (restDays[idx]) return true; // Dias de descanso não precisam de WOD
+    if (day.blocks.every(b => b.optional)) return true; // Dias só com opcionais não precisam de WOD
     return day.blocks.some(b => b.isMainWod);
   }) ?? false;
 
@@ -426,9 +443,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                           const dayName = day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido');
                           const isRestDay = restDays[dayIndex] || false;
                           
-                          // Filtrar alertas - dias de descanso não mostram alertas de WOD
+                          // Verificar se todos blocos são opcionais
+                          const allBlocksOptional = day.blocks.every(b => b.optional);
+                          
+                          // Filtrar alertas - dias de descanso e dias só com opcionais não mostram alertas de WOD
                           const dayAlerts = (day.alerts || []).filter(alert => {
                             if (isRestDay && alert.includes('WOD principal')) return false;
+                            if (allBlocksOptional && alert.includes('WOD principal')) return false;
                             return true;
                           });
                           const alertCount = dayAlerts.length;
@@ -554,6 +575,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         {block.format !== 'outro' && (
                                           <Badge variant="outline" className="text-xs px-2">
                                             {getFormatLabel(block.format)}
+                                          </Badge>
+                                        )}
+                                        
+                                        {/* Badge opcional */}
+                                        {block.optional && (
+                                          <Badge variant="outline" className="text-xs px-2 bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                            Opcional
                                           </Badge>
                                         )}
                                         
