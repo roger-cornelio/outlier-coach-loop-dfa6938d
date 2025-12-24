@@ -1,56 +1,29 @@
 /**
- * MAIN BLOCK IDENTIFIER - Identificação automática do bloco principal
+ * MAIN BLOCK IDENTIFIER - Identificação do bloco principal
  * 
- * REGRAS DE IDENTIFICAÇÃO (em ordem de prioridade):
- * 1. Override manual: se isMainWod === true (definido pelo coach), usa esse
- * 2. Tipo "conditioning" ou block.type === "main" → candidato principal
- * 3. Bloco com maior impacto fisiológico (maior duração)
- * 4. Fallback por palavras-chave no título
+ * REGRAS DE IDENTIFICAÇÃO (SIMPLIFICADAS):
+ * 1. ÚNICA REGRA: Se isMainWod === true (definido manualmente pelo coach), esse é o principal
+ * 2. NÃO há detecção automática - nenhum bloco nasce como principal
+ * 3. O coach DEVE marcar explicitamente qual é o WOD principal
  * 
  * GARANTIAS:
  * - Máximo 1 bloco principal por treino
- * - Se múltiplos candidatos, escolhe o de maior duração
+ * - Bloco principal só existe se marcado manualmente
+ * - Tipo do bloco (força, conditioning, etc.) NÃO define hierarquia
  */
 
 import type { WorkoutBlock, DayWorkout } from '@/types/outlier';
 
-// Palavras-chave que indicam bloco principal
-const MAIN_BLOCK_KEYWORDS = [
-  'wod',
-  'workout',
-  'principal',
-  'amrap',
-  'for time',
-  'fortime',
-  'emom',
-  'metcon',
-  'conditioning',
-  'circuito',
-  'hyrox',
-  'race',
-  'corrida contínua',
-  'corrida continua',
-];
-
-// Tipos de bloco com alta prioridade para ser principal
-const HIGH_PRIORITY_TYPES: WorkoutBlock['type'][] = ['conditioning', 'corrida', 'especifico'];
-
-// Tipos de bloco que NUNCA devem ser principais
+// Tipos de bloco que NUNCA devem ser principais (para validação)
 const NEVER_MAIN_TYPES: WorkoutBlock['type'][] = ['aquecimento', 'notas'];
 
 export interface MainBlockResult {
   block: WorkoutBlock | null;
   blockIndex: number;
-  reason: 'manual' | 'type' | 'duration' | 'keyword' | 'fallback' | 'single_block' | 'none';
+  reason: 'manual' | 'none';
 }
 
-/**
- * Verifica se o título contém palavras-chave de bloco principal
- */
-function hasMainKeyword(title: string): boolean {
-  const normalizedTitle = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return MAIN_BLOCK_KEYWORDS.some(keyword => normalizedTitle.includes(keyword));
-}
+// Função removida - não há mais detecção por palavras-chave
 
 /**
  * Estima a duração de um bloco em minutos
@@ -110,13 +83,15 @@ export function estimateBlockDuration(block: WorkoutBlock): number {
 
 /**
  * Identifica o bloco principal de um treino
+ * REGRA ÚNICA: Só retorna bloco se isMainWod === true (marcado pelo coach)
+ * NÃO há detecção automática!
  */
 export function identifyMainBlock(blocks: WorkoutBlock[]): MainBlockResult {
   if (!blocks || blocks.length === 0) {
     return { block: null, blockIndex: -1, reason: 'none' };
   }
   
-  // 1. PRIORIDADE MÁXIMA: Override manual (isMainWod === true)
+  // ÚNICA REGRA: Override manual (isMainWod === true)
   const manualMainIndex = blocks.findIndex(b => b.isMainWod === true);
   if (manualMainIndex >= 0) {
     return {
@@ -126,84 +101,9 @@ export function identifyMainBlock(blocks: WorkoutBlock[]): MainBlockResult {
     };
   }
   
-  // Filtrar blocos que NUNCA podem ser principais
-  const eligibleBlocks = blocks
-    .map((block, index) => ({ block, index }))
-    .filter(({ block }) => !NEVER_MAIN_TYPES.includes(block.type));
-  
-  if (eligibleBlocks.length === 0) {
-    return { block: null, blockIndex: -1, reason: 'none' };
-  }
-  
-  // 2. BLOCO ÚNICO: Se há apenas 1 bloco elegível, ele é o principal automaticamente
-  if (eligibleBlocks.length === 1) {
-    return {
-      block: eligibleBlocks[0].block,
-      blockIndex: eligibleBlocks[0].index,
-      reason: 'single_block',
-    };
-  }
-  
-  // 2. Blocos com tipo de alta prioridade
-  const highPriorityBlocks = eligibleBlocks.filter(
-    ({ block }) => HIGH_PRIORITY_TYPES.includes(block.type)
-  );
-  
-  if (highPriorityBlocks.length === 1) {
-    return {
-      block: highPriorityBlocks[0].block,
-      blockIndex: highPriorityBlocks[0].index,
-      reason: 'type',
-    };
-  }
-  
-  if (highPriorityBlocks.length > 1) {
-    // Múltiplos candidatos: escolher o de maior duração
-    const sorted = highPriorityBlocks.sort(
-      (a, b) => estimateBlockDuration(b.block) - estimateBlockDuration(a.block)
-    );
-    return {
-      block: sorted[0].block,
-      blockIndex: sorted[0].index,
-      reason: 'duration',
-    };
-  }
-  
-  // 3. Buscar por palavras-chave no título
-  const keywordBlocks = eligibleBlocks.filter(
-    ({ block }) => hasMainKeyword(block.title)
-  );
-  
-  if (keywordBlocks.length === 1) {
-    return {
-      block: keywordBlocks[0].block,
-      blockIndex: keywordBlocks[0].index,
-      reason: 'keyword',
-    };
-  }
-  
-  if (keywordBlocks.length > 1) {
-    // Múltiplos candidatos: escolher o de maior duração
-    const sorted = keywordBlocks.sort(
-      (a, b) => estimateBlockDuration(b.block) - estimateBlockDuration(a.block)
-    );
-    return {
-      block: sorted[0].block,
-      blockIndex: sorted[0].index,
-      reason: 'duration',
-    };
-  }
-  
-  // 4. Fallback: bloco de maior duração entre os elegíveis
-  const sorted = eligibleBlocks.sort(
-    (a, b) => estimateBlockDuration(b.block) - estimateBlockDuration(a.block)
-  );
-  
-  return {
-    block: sorted[0].block,
-    blockIndex: sorted[0].index,
-    reason: 'fallback',
-  };
+  // Nenhum bloco marcado como principal - retorna null
+  // O coach DEVE marcar explicitamente
+  return { block: null, blockIndex: -1, reason: 'none' };
 }
 
 /**

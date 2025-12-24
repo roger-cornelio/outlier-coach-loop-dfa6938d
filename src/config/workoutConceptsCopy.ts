@@ -21,14 +21,13 @@ export const WORKOUT_CONCEPTS = {
     
     // Estados
     manualLabel: 'Principal',
-    autoLabel: 'Auto',
     
     // Instruções
     setManualHint: 'Clique para definir este bloco como WOD principal do dia',
-    removeManualHint: 'Remover marcação manual (voltar para detecção automática)',
+    removeManualHint: 'Remover marcação de bloco principal',
     
-    // Feedback
-    autoDetectedMessage: 'Bloco principal identificado automaticamente com base no tipo e duração.',
+    // Feedback (não há mais detecção automática)
+    noMainBlockWarning: 'Nenhum WOD principal definido. Marque o bloco central do treino.',
     
     // COPY OFICIAL PARA CALLOUT (NÃO ALTERAR)
     calloutText: 'O WOD principal é o parâmetro de ajuste do treino.\nÉ a partir dele que o app calibra intensidade, volume e frequência para o atleta.\n\nSem ele, o ajuste do treino do atleta fica menos preciso.',

@@ -504,15 +504,10 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                           {workout.blocks.map((block, blockIndex) => {
                             const benchmarkCopy = getBenchmarkCopy();
                             const mainBlockCopy = getMainBlockCopy();
-                            // Determinar se este bloco é o principal (manual ou auto)
+                            // Determinar se este bloco é o principal (APENAS manual agora)
                             const mainBlockResult = identifyMainBlock(workout.blocks);
                             const isMainBlock = mainBlockResult.blockIndex === blockIndex;
                             const isManualMain = block.isMainWod === true;
-                            const isAutoMain = isMainBlock && !isManualMain && mainBlockResult.reason !== 'manual';
-                            const isSingleBlock = mainBlockResult.reason === 'single_block';
-                            
-                            // Determinar label: Manual > Único > Auto
-                            const autoLabel = isSingleBlock ? 'Único' : mainBlockCopy.autoLabel;
                             
                             return (
                             <div key={block.id} className={`p-3 rounded-lg border ${
@@ -524,14 +519,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm font-medium">{block.title}</span>
                                   {isMainBlock && (
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                                      isManualMain 
-                                        ? 'bg-primary/20 text-primary' 
-                                        : isSingleBlock
-                                          ? 'bg-green-500/20 text-green-500'
-                                          : 'bg-muted text-muted-foreground'
-                                    }`}>
-                                      {mainBlockCopy.icon} {isManualMain ? mainBlockCopy.manualLabel : autoLabel}
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+                                      {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
                                     </span>
                                   )}
                                   {block.isBenchmark && (

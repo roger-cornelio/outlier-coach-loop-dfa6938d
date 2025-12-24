@@ -504,11 +504,10 @@ Pull-ups
                     >
                       <div className="p-4 space-y-3">
                         {day.blocks.map((block, blockIndex) => {
-                          // Identificar bloco principal (manual ou automático)
+                          // Identificar bloco principal (APENAS manual agora)
                           const mainBlockResult = identifyMainBlock(day.blocks);
                           const isMainBlock = mainBlockResult.blockIndex === blockIndex;
                           const isManualMain = block.isMainWod === true;
-                          const isAutoMain = isMainBlock && !isManualMain;
                           
                           const mainBlockCopy = getMainBlockCopy();
                           const benchmarkCopy = getBenchmarkCopy();
@@ -535,11 +534,6 @@ Pull-ups
                                     {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
                                   </span>
                                 )}
-                                {isAutoMain && (
-                                  <span className="text-xs bg-primary/10 text-primary/70 px-2 py-0.5 rounded-full">
-                                    {mainBlockCopy.icon} {mainBlockCopy.autoLabel}
-                                  </span>
-                                )}
                                 {block.isBenchmark && (
                                   <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-medium">
                                     {benchmarkCopy.icon} {benchmarkCopy.shortLabel}
@@ -555,9 +549,7 @@ Pull-ups
                                         className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
                                           isManualMain 
                                             ? 'bg-primary/20 text-primary' 
-                                            : isAutoMain
-                                              ? 'bg-primary/10 text-primary/70'
-                                              : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                                            : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
                                         }`}
                                       >
                                         <Dumbbell className="w-3 h-3" />

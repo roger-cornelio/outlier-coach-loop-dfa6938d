@@ -233,17 +233,19 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
 
 // Função para limpar título removendo prefixos técnicos
 // REGRA: Nunca substituir nome do coach por rótulos sistêmicos
-function cleanBlockTitle(title: string): string {
+// REGRA: Fallback neutro e sequencial ("Bloco 1", "Bloco 2", etc.) - sem semântica de treino
+function cleanBlockTitle(title: string, blockIndex?: number): string {
   // Remove prefixo "TREINO" ou "TREINO -"
   let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
   // Remove "WOD" ou "METCON" se seguido de outro texto (mantém se for o único)
   if (/^(WOD|METCON)\s*[-–—:]?\s*.{3,}/i.test(cleaned)) {
     cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
   }
-  // REGRA CRÍTICA: Se o título original tem nome válido, NUNCA retornar "Bloco Principal"
-  // Só usa "Bloco Principal" se realmente ficou vazio
+  // REGRA CRÍTICA: Se o título original tem nome válido, retorna ele
+  // Fallback neutro: "Bloco X" (sem semântica de "principal")
   if (!cleaned || cleaned.length < 2) {
-    return 'Bloco Principal';
+    // Usa índice se disponível, senão retorna string genérica para ser substituída depois
+    return blockIndex !== undefined ? `Bloco ${blockIndex + 1}` : '__FALLBACK_BLOCK__';
   }
   return cleaned;
 }
@@ -325,14 +327,18 @@ export function parseStructuredText(text: string): ParseResult {
   let lineNumber = 0;
   let hasExplicitDay = false;
 
+  // Contador de blocos para fallback de título
+  let blockCounter = 0;
+  
   const createNewBlock = (rawTitle: string): ParsedBlock => {
-    const title = cleanBlockTitle(rawTitle);
+    blockCounter++;
+    const title = cleanBlockTitle(rawTitle, blockCounter - 1);
     const isOptional = /\bopcional\b/i.test(rawTitle);
     return {
       title,
       type: detectBlockType(rawTitle), // Usa título original para detectar tipo
       format: detectFormat(rawTitle),
-      isMainWod: false,
+      isMainWod: false, // REGRA CRÍTICA: Nenhum bloco nasce como principal - só via ação manual do coach
       isBenchmark: false,
       optional: isOptional,
       items: [],
@@ -563,9 +569,9 @@ export function parseStructuredText(text: string): ParseResult {
       const item = parseExerciseLine(line);
       
       if (item) {
-        // Se não há bloco, criar um genérico
+        // Se não há bloco, criar um genérico (com fallback neutro "Bloco X")
         if (!currentBlock) {
-          currentBlock = createNewBlock('Bloco Principal');
+          currentBlock = createNewBlock('');
         }
         
         currentBlock.items.push(item);
@@ -615,14 +621,14 @@ export function parseStructuredText(text: string): ParseResult {
         const isOptional = /\bopcional\b/i.test(line);
         const inferredType = inferPrescriptionType(line);
         
-        // Criar bloco com título apropriado
-        const blockTitle = isOptional ? 'Opcional (se precisar se movimentar)' : 'Bloco Principal';
+        // Criar bloco com título apropriado - fallback neutro para blocos genéricos
+        const blockTitle = isOptional ? 'Opcional' : '';
         currentBlock = createNewBlock(blockTitle);
         currentBlock.type = inferredType;
         currentBlock.instructions.push(line);
         currentBlock.optional = isOptional;
       } else {
-        currentBlock = createNewBlock('Bloco Principal');
+        currentBlock = createNewBlock('');
         if (isInstructionLine(line)) {
           currentBlock.instructions.push(line);
         } else {
