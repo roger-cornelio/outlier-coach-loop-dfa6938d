@@ -33,6 +33,7 @@ export interface ParsedBlock {
   format: string;
   isMainWod: boolean;
   isBenchmark: boolean;
+  optional: boolean; // Treino opcional (não exige WOD principal)
   items: ParsedItem[];
   coachNotes: string[];
   instruction?: string;
@@ -96,6 +97,41 @@ const DAY_MAP: Record<string, DayOfWeek> = {
   'sun': 'dom',
 };
 
+// ============================================
+// REGRA MESTRA: isTrainingStimulus — ESTÍMULO = TREINO
+// ============================================
+// Se existe estímulo mensurável, é TREINO. PONTO FINAL.
+// Retorna true se a linha contiver padrão de estímulo físico
+
+function isTrainingStimulus(line: string): boolean {
+  const lowLine = line.toLowerCase();
+  
+  // ⏱️ TEMPO: min, minutes, ', minutos, até X minutos
+  if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) return true;
+  if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) return true;
+  
+  // 📏 DISTÂNCIA: m, km, metros
+  if (/\d+\s*(?:m|km|metros?)\b/i.test(line)) return true;
+  
+  // 🔁 REPETIÇÃO / VOLUME: reps, rounds, EMOM, AMRAP, For Time
+  if (/\d+\s*(?:reps?|rounds?|rodadas?)\b/i.test(line)) return true;
+  if (/\b(?:emom|amrap|for\s*time|tabata)\b/i.test(line)) return true;
+  
+  // ❤️ ZONA / ESFORÇO: Zona, FC, PSE, RPE
+  if (/\b(?:zona|zone)\s*\d/i.test(line)) return true;
+  if (/\b(?:fc|hr)\s*[:=]?\s*\d/i.test(line)) return true;
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
+  
+  // Faixa de valores (30-40, 30–40)
+  if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) return true;
+  
+  return false;
+}
+
+// ============================================
+// INFERÊNCIA DE TIPO — TÍTULO PRIMEIRO, DEPOIS CONTEÚDO
+// ============================================
+
 // Mapeamento determinístico de tipo pelo TÍTULO (case-insensitive, match simples)
 const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /aquecimento|warm[- ]?up|🔥/i, type: 'aquecimento' },
@@ -104,10 +140,20 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /core|abdominal|🎯/i, type: 'core' },
   { pattern: /grip/i, type: 'forca' }, // Grip → Força
   { pattern: /corrida|running|run\b|🏃/i, type: 'corrida' },
-  { pattern: /bike|ciclismo|cycling/i, type: 'corrida' }, // Bike → Corrida (cardio)
-  { pattern: /remo|row|rowing/i, type: 'corrida' }, // Remo → Corrida (cardio)
+  { pattern: /bike|airbike|assault|ciclismo|cycling/i, type: 'corrida' }, // Bike → Corrida (cardio)
+  { pattern: /remo|row|rowing|ski/i, type: 'corrida' }, // Remo/Ski → Corrida (cardio)
   { pattern: /descanso|rest|recovery/i, type: 'aquecimento' }, // Descanso técnico
   { pattern: /conditioning|condicionamento|metcon|wod|amrap|for\s*time|emom|⚡/i, type: 'conditioning' },
+];
+
+// Mapeamento de tipo por CONTEÚDO (usado se título não definir tipo)
+const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
+  { pattern: /\b(?:corrida|run|running|km|pace)\b/i, type: 'corrida' },
+  { pattern: /\b(?:bike|airbike|assault)\b/i, type: 'corrida' },
+  { pattern: /\b(?:remo|row|rowing|ski|erg)\b/i, type: 'corrida' },
+  { pattern: /\b(?:sled|sandbag|wall\s*ball|farmer|carry|lunges?)\b/i, type: 'especifico' },
+  { pattern: /\b(?:core|plank|toes?\s*to\s*bar|sit[- ]?up|hollow)\b/i, type: 'core' },
+  { pattern: /\b(?:squat|deadlift|press|clean|snatch|jerk)\b/i, type: 'forca' },
 ];
 
 // Função para limpar título removendo "TREINO" e prefixos técnicos
@@ -116,8 +162,11 @@ function cleanBlockTitle(title: string): string {
   let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
   // Remove prefixos técnicos comuns
   cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
-  // Se ficou vazio, usa título original sem TREINO
-  return cleaned || title.replace(/^TREINO\s*/i, '').trim() || title;
+  // Se ficou vazio, retorna algo genérico baseado no conteúdo que virá
+  if (!cleaned || cleaned.length < 2) {
+    return 'Bloco Principal';
+  }
+  return cleaned;
 }
 
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
@@ -199,12 +248,14 @@ export function parseStructuredText(text: string): ParseResult {
 
   const createNewBlock = (rawTitle: string): ParsedBlock => {
     const title = cleanBlockTitle(rawTitle);
+    const isOptional = /\bopcional\b/i.test(rawTitle);
     return {
       title,
       type: detectBlockType(rawTitle), // Usa título original para detectar tipo
       format: detectFormat(rawTitle),
       isMainWod: false,
       isBenchmark: false,
+      optional: isOptional,
       items: [],
       coachNotes: [],
       instructions: [],
@@ -213,8 +264,25 @@ export function parseStructuredText(text: string): ParseResult {
 
   const saveCurrentBlock = () => {
     if (currentBlock) {
-      // Só salva se tiver pelo menos 1 item OU instruções
-      if (currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction) {
+      // Só salva se tiver pelo menos 1 item OU instruções OU for estímulo de treino
+      const allContent = [
+        currentBlock.instruction || '',
+        ...currentBlock.instructions,
+        ...currentBlock.items.map(i => `${i.quantity} ${i.unit} ${i.movement}`)
+      ].join(' ');
+      
+      const hasTrainingStimulus = isTrainingStimulus(allContent);
+      const hasContent = currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction;
+      
+      if (hasContent || hasTrainingStimulus) {
+        // Refinar tipo por conteúdo se ainda é conditioning genérico
+        currentBlock.type = detectTypeByContent(currentBlock);
+        
+        // Detectar se é opcional pelo conteúdo
+        if (/\bopcional\b/i.test(allContent)) {
+          currentBlock.optional = true;
+        }
+        
         // Find or create day entry (allow null day)
         if (!currentDayEntry) {
           currentDayEntry = { day: currentDay, blocks: [], alerts: [] };
@@ -245,12 +313,36 @@ export function parseStructuredText(text: string): ParseResult {
     return null;
   };
 
+  // Detecta tipo pelo TÍTULO primeiro
   const detectBlockType = (line: string): WorkoutBlock['type'] => {
     for (const { pattern, type } of TYPE_PATTERNS) {
       if (pattern.test(line)) {
         return type;
       }
     }
+    // Se título não definiu, retorna null para tentar por conteúdo depois
+    return 'conditioning'; // Fallback inicial, será refinado por conteúdo
+  };
+
+  // Detecta tipo pelo CONTEÚDO (chamado após bloco completo)
+  const detectTypeByContent = (block: ParsedBlock): WorkoutBlock['type'] => {
+    // Se já tem tipo definido pelo título (não é conditioning genérico), mantém
+    if (block.type !== 'conditioning') return block.type;
+    
+    // Verifica conteúdo das instruções
+    const allContent = [
+      block.instruction || '',
+      ...block.instructions,
+      ...block.items.map(i => i.movement)
+    ].join(' ');
+    
+    for (const { pattern, type } of CONTENT_TYPE_PATTERNS) {
+      if (pattern.test(allContent)) {
+        return type;
+      }
+    }
+    
+    // Fallback final: Conditioning
     return 'conditioning';
   };
 
@@ -394,7 +486,7 @@ export function parseStructuredText(text: string): ParseResult {
       if (item) {
         // Se não há bloco, criar um genérico
         if (!currentBlock) {
-          currentBlock = createNewBlock('TREINO');
+          currentBlock = createNewBlock('Bloco Principal');
         }
         
         currentBlock.items.push(item);
@@ -414,9 +506,16 @@ export function parseStructuredText(text: string): ParseResult {
     }
 
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
+    // REGRA MESTRA: Se tem estímulo de treino, NUNCA vira comentário
     if (currentBlock) {
-      // Classificar tipo de linha dentro do bloco
-      if (isInstructionLine(line)) {
+      // ANTI-BURRO: Se a linha tem estímulo, é instrução de treino, NUNCA comentário
+      if (isTrainingStimulus(line)) {
+        currentBlock.instructions.push(line);
+        // Detectar se é opcional
+        if (/\bopcional\b/i.test(line)) {
+          currentBlock.optional = true;
+        }
+      } else if (isInstructionLine(line)) {
         // Linha de instrução (Rounds, EMOM, descanso, etc)
         currentBlock.instructions.push(line);
       } else if (!currentBlock.instruction && line.length < 80 && !/\d/.test(line)) {
@@ -427,12 +526,21 @@ export function parseStructuredText(text: string): ParseResult {
         currentBlock.instructions.push(line);
       }
     } else {
-      // Texto antes de qualquer bloco - criar bloco genérico
-      currentBlock = createNewBlock('TREINO');
-      if (isInstructionLine(line)) {
+      // Texto antes de qualquer bloco
+      // ANTI-BURRO: Se tem estímulo, criar bloco de treino
+      if (isTrainingStimulus(line)) {
+        currentBlock = createNewBlock('Bloco Principal');
         currentBlock.instructions.push(line);
+        if (/\bopcional\b/i.test(line)) {
+          currentBlock.optional = true;
+        }
       } else {
-        currentBlock.instruction = line;
+        currentBlock = createNewBlock('Bloco Principal');
+        if (isInstructionLine(line)) {
+          currentBlock.instructions.push(line);
+        } else {
+          currentBlock.instruction = line;
+        }
       }
     }
   }
@@ -457,8 +565,11 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // Verificar se tem WOD principal definido - alerta no nível do dia
+    // REGRA: Se TODOS os blocos são opcionais, não exige WOD principal
+    const allBlocksOptional = day.blocks.every(b => b.optional);
     const hasMainWodInDay = day.blocks.some(b => b.isMainWod);
-    if (!hasMainWodInDay && day.blocks.length > 0) {
+    
+    if (!hasMainWodInDay && day.blocks.length > 0 && !allBlocksOptional) {
       day.alerts.push('Nenhum WOD principal definido');
     }
   }
