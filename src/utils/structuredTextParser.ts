@@ -104,8 +104,6 @@ const DAY_MAP: Record<string, DayOfWeek> = {
 // Retorna true se a linha contiver padrão de estímulo físico
 
 function isTrainingStimulus(line: string): boolean {
-  const lowLine = line.toLowerCase();
-  
   // ⏱️ TEMPO: min, minutes, ', minutos, até X minutos
   if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) return true;
   if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) return true;
@@ -126,6 +124,52 @@ function isTrainingStimulus(line: string): boolean {
   if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) return true;
   
   return false;
+}
+
+// ============================================
+// HEURÍSTICA: isPrescriptionLine — PRESCRIÇÃO MENSURÁVEL
+// ============================================
+// Para dias de descanso: detecta se a linha é prescrição de treino
+// Retorna true se:
+// a) Tiver medida mensurável (tempo 10-300 min, distância m/km)
+// b) E contiver intenção de treino (atividade ou zona/esforço ou intensidade)
+
+function isPrescriptionLine(line: string): boolean {
+  const lowLine = line.toLowerCase();
+  
+  // a) Verificar medida mensurável
+  const hasMeasurableTime = /(?:^|[^\d])(\d{1,3})\s*(?:min|minutos?|'|h|hora|horas)\b/i.test(line) ||
+                            /até\s*\d+\s*(?:min|minutos?)/i.test(line) ||
+                            /\d+\+?\s*(?:min|minutos)/i.test(line);
+  const hasMeasurableDistance = /\d+\s*(?:m|km)\b/i.test(line);
+  
+  const hasMeasurable = hasMeasurableTime || hasMeasurableDistance;
+  if (!hasMeasurable) return false;
+  
+  // b) Verificar intenção de treino/prescrição
+  // Atividades físicas
+  const hasActivity = /\b(?:corrida|trote|run|running|bike|remo|row|ski|caminhada|walk|swimming|natação)\b/i.test(line);
+  // Zona/Esforço
+  const hasZoneEffort = /\b(?:zona|zone|ritmo|pace|fc|hr|max|pse|rpe)\b/i.test(line);
+  // Intensidade/Qualificador
+  const hasIntensity = /\b(?:leve|moderado|forte|confortável|até|por|bem|recuperação|ativo)\b/i.test(line);
+  
+  return hasActivity || hasZoneEffort || hasIntensity;
+}
+
+// ============================================
+// INFERIR TIPO DE PRESCRIÇÃO
+// ============================================
+function inferPrescriptionType(line: string): WorkoutBlock['type'] {
+  const lowLine = line.toLowerCase();
+  
+  if (/\b(?:corrida|trote|run|running|km|pace)\b/i.test(line)) return 'corrida';
+  if (/\b(?:bike|airbike|assault|ciclismo)\b/i.test(line)) return 'corrida';
+  if (/\b(?:remo|row|rowing|ski|erg)\b/i.test(line)) return 'corrida';
+  if (/\b(?:caminhada|walk)\b/i.test(line)) return 'corrida';
+  if (/\b(?:swimming|natação)\b/i.test(line)) return 'corrida';
+  
+  return 'conditioning';
 }
 
 // ============================================
@@ -508,12 +552,16 @@ export function parseStructuredText(text: string): ParseResult {
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
     // REGRA MESTRA: Se tem estímulo de treino, NUNCA vira comentário
     if (currentBlock) {
-      // ANTI-BURRO: Se a linha tem estímulo, é instrução de treino, NUNCA comentário
-      if (isTrainingStimulus(line)) {
+      // ANTI-BURRO: Se a linha tem estímulo ou prescrição, é instrução de treino, NUNCA comentário
+      if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
         currentBlock.instructions.push(line);
         // Detectar se é opcional
         if (/\bopcional\b/i.test(line)) {
           currentBlock.optional = true;
+        }
+        // Atualizar tipo se ainda é genérico/conditioning e temos prescrição
+        if (currentBlock.type === 'conditioning' && isPrescriptionLine(line)) {
+          currentBlock.type = inferPrescriptionType(line);
         }
       } else if (isInstructionLine(line)) {
         // Linha de instrução (Rounds, EMOM, descanso, etc)
@@ -527,13 +575,17 @@ export function parseStructuredText(text: string): ParseResult {
       }
     } else {
       // Texto antes de qualquer bloco
-      // ANTI-BURRO: Se tem estímulo, criar bloco de treino
-      if (isTrainingStimulus(line)) {
-        currentBlock = createNewBlock('Bloco Principal');
+      // ANTI-BURRO: Se tem estímulo ou prescrição, criar bloco de treino
+      if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
+        const isOptional = /\bopcional\b/i.test(line);
+        const inferredType = inferPrescriptionType(line);
+        
+        // Criar bloco com título apropriado
+        const blockTitle = isOptional ? 'Opcional (se precisar se movimentar)' : 'Bloco Principal';
+        currentBlock = createNewBlock(blockTitle);
+        currentBlock.type = inferredType;
         currentBlock.instructions.push(line);
-        if (/\bopcional\b/i.test(line)) {
-          currentBlock.optional = true;
-        }
+        currentBlock.optional = isOptional;
       } else {
         currentBlock = createNewBlock('Bloco Principal');
         if (isInstructionLine(line)) {
