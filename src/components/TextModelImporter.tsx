@@ -17,7 +17,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, ChevronDown, FileImage, Loader2
+  AlertTriangle, Star, FileImage, Loader2, Moon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   parseStructuredText, 
@@ -57,6 +59,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [fileError, setFileError] = useState<string | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
+  const [restDays, setRestDays] = useState<Record<number, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = () => {
@@ -64,8 +67,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const result = parseStructuredText(text);
     setParseResult(result);
     setShowPreview(true);
-    // Reset day selection when parsing new text
+    // Reset selections when parsing new text
     setSelectedDay(null);
+    setRestDays({});
   };
 
   const handleImport = () => {
@@ -83,6 +87,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(null);
     setShowPreview(false);
     setSelectedDay(null);
+    setRestDays({});
   };
 
   const handleClear = () => {
@@ -91,6 +96,15 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setShowPreview(false);
     setFileError(null);
     setSelectedDay(null);
+    setRestDays({});
+  };
+
+  // Toggle Rest Day
+  const toggleRestDay = (dayIndex: number) => {
+    setRestDays(prev => ({
+      ...prev,
+      [dayIndex]: !prev[dayIndex]
+    }));
   };
 
   // Toggle WOD principal no preview
@@ -110,10 +124,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       });
     }
     
-    // Atualiza alerta de WOD principal
-    const hasMainWod = updated.days.some(d => d.blocks.some(b => b.isMainWod));
+    // Atualiza alerta de WOD principal (considerando dias de descanso)
+    const hasMainWodIssue = updated.days.some((d, idx) => {
+      if (restDays[idx]) return false; // Dias de descanso não precisam de WOD
+      return !d.blocks.some(b => b.isMainWod);
+    });
+    
     updated.alerts = updated.alerts.filter(a => !a.includes('WOD principal'));
-    if (!hasMainWod) {
+    if (hasMainWodIssue) {
       updated.alerts.push('Nenhum WOD principal definido');
     }
     
@@ -201,15 +219,26 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     }
   };
 
-  // Contagem de WODs principais definidos
+  // Contagem de WODs principais definidos (excluindo dias de descanso)
   const mainWodCount = parseResult?.days.reduce(
-    (count, day) => count + day.blocks.filter(b => b.isMainWod).length, 
+    (count, day, dayIndex) => {
+      if (restDays[dayIndex]) return count; // Dias de descanso não precisam de WOD
+      return count + (day.blocks.some(b => b.isMainWod) ? 1 : 0);
+    }, 
     0
   ) || 0;
 
-  // Verifica se pode publicar (tem pelo menos 1 WOD principal e dia definido se necessário)
+  // Contagem de dias que precisam de WOD (não são descanso)
+  const daysNeedingWod = parseResult?.days.filter((_, idx) => !restDays[idx]).length || 0;
+
+  // Verifica se pode publicar (tem WOD principal em cada dia de treino e dia definido se necessário)
+  const allTrainingDaysHaveWod = parseResult?.days.every((day, idx) => {
+    if (restDays[idx]) return true; // Dias de descanso não precisam de WOD
+    return day.blocks.some(b => b.isMainWod);
+  }) ?? false;
+
   const canPublish = parseResult?.success && 
-    mainWodCount > 0 && 
+    allTrainingDaysHaveWod && 
     (!parseResult.needsDaySelection || selectedDay !== null);
 
   // Verifica se pode importar (rascunho - apenas precisa de treino válido)
@@ -390,139 +419,201 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
 
                 {/* Preview dos dias - ACCORDION */}
                 {parseResult.success && parseResult.days.length > 0 && (
-                  <div className="space-y-3">
-                    <Accordion type="single" collapsible className="space-y-2">
-                      {parseResult.days.map((day, dayIndex) => {
-                        const dayName = day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido');
-                        const dayAlerts = day.alerts || [];
-                        const hasAlerts = dayAlerts.length > 0;
-                        
-                        return (
-                          <AccordionItem 
-                            key={day.day || `day-${dayIndex}`} 
-                            value={`day-${dayIndex}`}
-                            className="border border-border rounded-lg overflow-hidden"
-                          >
-                            <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-secondary/30">
-                              <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                <Badge variant="outline" className="font-medium">
-                                  {dayName}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  ({day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''})
-                                </span>
-                                {hasAlerts && (
-                                  <span className="flex items-center gap-1 text-xs text-amber-600 ml-auto mr-2">
-                                    <AlertTriangle className="w-3 h-3" />
-                                    {dayAlerts.length} alerta{dayAlerts.length !== 1 ? 's' : ''}
+                  <TooltipProvider>
+                    <div className="space-y-4">
+                      <Accordion type="single" collapsible className="space-y-3">
+                        {parseResult.days.map((day, dayIndex) => {
+                          const dayName = day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido');
+                          const isRestDay = restDays[dayIndex] || false;
+                          const dayAlerts = (day.alerts || []).filter(alert => {
+                            // Se é dia de descanso, não mostrar alerta de WOD
+                            if (isRestDay && alert.includes('WOD principal')) return false;
+                            return true;
+                          });
+                          const hasAlerts = dayAlerts.length > 0 && !isRestDay;
+                          
+                          return (
+                            <AccordionItem 
+                              key={day.day || `day-${dayIndex}`} 
+                              value={`day-${dayIndex}`}
+                              className="border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-card"
+                            >
+                              <AccordionTrigger className="px-4 py-4 min-h-[60px] hover:no-underline hover:bg-secondary/20 transition-colors">
+                                <div className="flex items-center gap-3 flex-wrap flex-1 text-left">
+                                  {/* Nome do dia em destaque */}
+                                  <span className="font-semibold text-base uppercase tracking-wide text-foreground">
+                                    {dayName}
                                   </span>
-                                )}
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-3 pb-3">
-                              {/* Alertas do dia - no topo do conteúdo expandido */}
-                              {hasAlerts && (
-                                <div className="mb-3 p-2 rounded bg-amber-500/10 border border-amber-500/20">
-                                  {dayAlerts.map((alert, alertIdx) => (
-                                    <p key={alertIdx} className="text-xs text-amber-600 flex items-start gap-1">
-                                      <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                      {alert}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Blocos do dia */}
-                              <div className="space-y-2">
-                                {day.blocks.map((block, blockIndex) => (
+                                  
+                                  {/* Contagem de blocos - secundário */}
+                                  <span className="text-xs text-muted-foreground">
+                                    {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
+                                  </span>
+                                  
+                                  {/* Badge de descanso */}
+                                  {isRestDay && (
+                                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                      <Moon className="w-3 h-3 mr-1" />
+                                      DESCANSO
+                                    </Badge>
+                                  )}
+                                  
+                                  {/* Alerta no canto direito - discreto */}
+                                  {hasAlerts && !isRestDay && (
+                                    <span className="flex items-center gap-1 text-xs text-amber-500/80 ml-auto mr-2">
+                                      <AlertTriangle className="w-3.5 h-3.5" />
+                                      {dayAlerts.length}
+                                    </span>
+                                  )}
+                                  
+                                  {/* Toggle descanso no header */}
                                   <div 
-                                    key={blockIndex} 
-                                    className={`p-2 rounded space-y-1 ${
-                                      block.isMainWod 
-                                        ? 'bg-primary/10 border border-primary/30' 
-                                        : 'bg-muted/30'
-                                    }`}
+                                    className="flex items-center gap-2 ml-auto mr-2"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium text-sm">{block.title}</span>
-                                      <Badge variant="secondary" className="text-xs">
-                                        {getTypeLabel(block.type)}
-                                      </Badge>
-                                      {block.format !== 'outro' && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {getFormatLabel(block.format)}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-muted-foreground">Descanso</span>
+                                          <Switch
+                                            checked={isRestDay}
+                                            onCheckedChange={() => toggleRestDay(dayIndex)}
+                                            className="data-[state=checked]:bg-blue-500"
+                                          />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="bg-popover text-popover-foreground">
+                                        <p className="text-xs">Dia de descanso não exige WOD principal.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                {/* Alertas do dia - no topo do conteúdo expandido */}
+                                {hasAlerts && (
+                                  <div className="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                    {dayAlerts.map((alert, alertIdx) => (
+                                      <p key={alertIdx} className="text-xs text-amber-600 flex items-start gap-1.5">
+                                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                        {alert}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Mensagem de dia de descanso */}
+                                {isRestDay && (
+                                  <div className="mb-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
+                                    <p className="text-sm text-blue-600 flex items-center justify-center gap-2">
+                                      <Moon className="w-4 h-4" />
+                                      Dia marcado como descanso
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* Blocos do dia */}
+                                <div className="space-y-3">
+                                  {day.blocks.map((block, blockIndex) => (
+                                    <div 
+                                      key={blockIndex} 
+                                      className={`p-3 rounded-lg space-y-2 transition-colors ${
+                                        block.isMainWod 
+                                          ? 'bg-primary/10 border border-primary/30' 
+                                          : 'bg-muted/40 border border-border/50'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-medium text-sm">{block.title}</span>
+                                        <Badge variant="secondary" className="text-xs">
+                                          {getTypeLabel(block.type)}
                                         </Badge>
+                                        {block.format !== 'outro' && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {getFormatLabel(block.format)}
+                                          </Badge>
+                                        )}
+                                        
+                                        {/* Botão para marcar WOD principal */}
+                                        {!isRestDay && (
+                                          <Button
+                                            variant={block.isMainWod ? "default" : "ghost"}
+                                            size="sm"
+                                            className="h-7 text-xs ml-auto"
+                                            onClick={() => toggleMainWod(dayIndex, blockIndex)}
+                                          >
+                                            <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                            {block.isMainWod ? 'Principal' : 'Marcar como principal'}
+                                          </Button>
+                                        )}
+                                      </div>
+                                      
+                                      {block.instruction && (
+                                        <p className="text-xs text-muted-foreground italic">
+                                          {block.instruction}
+                                        </p>
                                       )}
                                       
-                                      {/* Botão para marcar WOD principal */}
-                                      <Button
-                                        variant={block.isMainWod ? "default" : "ghost"}
-                                        size="sm"
-                                        className="h-6 text-xs ml-auto"
-                                        onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                      >
-                                        <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                        {block.isMainWod ? 'Principal' : 'Marcar como principal'}
-                                      </Button>
+                                      {/* Instruções do bloco */}
+                                      {block.instructions && block.instructions.length > 0 && (
+                                        <div className="text-xs text-muted-foreground">
+                                          {block.instructions.map((instr, instrIdx) => (
+                                            <p key={instrIdx}>{instr}</p>
+                                          ))}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Exercícios */}
+                                      {block.items.length > 0 && (
+                                        <div className="text-xs text-foreground mt-1 space-y-0.5">
+                                          {block.items.map((item, itemIdx) => (
+                                            <p key={itemIdx}>
+                                              {item.quantity} {item.unit} {item.movement}
+                                              {item.weight && <span className="text-muted-foreground"> @ {item.weight}</span>}
+                                            </p>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                    
-                                    {block.instruction && (
-                                      <p className="text-xs text-muted-foreground italic">
-                                        {block.instruction}
-                                      </p>
-                                    )}
-                                    
-                                    {/* Instruções do bloco */}
-                                    {block.instructions && block.instructions.length > 0 && (
-                                      <div className="text-xs text-muted-foreground">
-                                        {block.instructions.map((instr, instrIdx) => (
-                                          <p key={instrIdx}>{instr}</p>
-                                        ))}
-                                      </div>
-                                    )}
-                                    
-                                    {/* Exercícios */}
-                                    {block.items.length > 0 && (
-                                      <div className="text-xs text-foreground mt-1 space-y-0.5">
-                                        {block.items.map((item, itemIdx) => (
-                                          <p key={itemIdx}>
-                                            {item.quantity} {item.unit} {item.movement}
-                                            {item.weight && <span className="text-muted-foreground"> @ {item.weight}</span>}
-                                          </p>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        );
-                      })}
-                    </Accordion>
+                                  ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
 
-                    {/* Mensagem de validação para publicar */}
-                    {parseResult.success && !canPublish && (
-                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-sm text-amber-600">
-                          {parseResult.needsDaySelection && !selectedDay 
-                            ? 'Para publicar, selecione o dia do treino.'
-                            : 'Para publicar, marque qual é o WOD principal.'}
-                        </p>
-                      </div>
-                    )}
+                      {/* Mensagem de validação para publicar */}
+                      {parseResult.success && !canPublish && (
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <p className="text-sm text-amber-600">
+                            {parseResult.needsDaySelection && !selectedDay 
+                              ? 'Para publicar, selecione o dia do treino.'
+                              : 'Antes de publicar, marque o WOD principal dos dias de treino.'}
+                          </p>
+                        </div>
+                      )}
 
-                    {/* Botão importar */}
-                    <Button 
-                      onClick={handleImport} 
-                      className="w-full"
-                      size="lg"
-                      disabled={!canImport}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Importar {parseResult.days.length} dia(s)
-                    </Button>
-                  </div>
+                      {/* Info de quantidade de dias */}
+                      <p className="text-xs text-muted-foreground text-center">
+                        Você importou {parseResult.days.length} dia(s)
+                        {Object.values(restDays).filter(Boolean).length > 0 && 
+                          ` (${Object.values(restDays).filter(Boolean).length} de descanso)`
+                        }
+                      </p>
+
+                      {/* Botão importar */}
+                      <Button 
+                        onClick={handleImport} 
+                        className="w-full"
+                        size="lg"
+                        disabled={!canImport}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Importar treino
+                      </Button>
+                    </div>
+                  </TooltipProvider>
                 )}
               </CardContent>
             </Card>
