@@ -130,45 +130,36 @@ function isTrainingStimulus(line: string): boolean {
 // HEURÍSTICA: isPrescriptionLine — PRESCRIÇÃO MENSURÁVEL
 // ============================================
 // Para dias de descanso: detecta se a linha é prescrição de treino
-// Retorna true se:
-// a) Tiver medida mensurável (tempo 10-300 min, distância m/km)
-// b) E contiver intenção de treino (atividade ou zona/esforço ou intensidade)
+// REGRA: Tempo ou distância SOZINHOS já caracterizam treino!
+// "45 min" ou "10km" são VÁLIDOS mesmo sem atividade explícita
 
 function isPrescriptionLine(line: string): boolean {
-  const lowLine = line.toLowerCase();
-  
-  // a) Verificar medida mensurável
+  // a) Verificar medida mensurável (SUFICIENTE POR SI SÓ)
   const hasMeasurableTime = /(?:^|[^\d])(\d{1,3})\s*(?:min|minutos?|'|h|hora|horas)\b/i.test(line) ||
                             /até\s*\d+\s*(?:min|minutos?)/i.test(line) ||
                             /\d+\+?\s*(?:min|minutos)/i.test(line);
   const hasMeasurableDistance = /\d+\s*(?:m|km)\b/i.test(line);
   
-  const hasMeasurable = hasMeasurableTime || hasMeasurableDistance;
-  if (!hasMeasurable) return false;
+  // REGRA CRÍTICA: Tempo ou distância SOZINHOS já caracterizam treino
+  // "45 min" = treino válido, "10km" = treino válido
+  if (hasMeasurableTime || hasMeasurableDistance) {
+    return true;
+  }
   
-  // b) Verificar intenção de treino/prescrição
-  // Atividades físicas
-  const hasActivity = /\b(?:corrida|trote|run|running|bike|remo|row|ski|caminhada|walk|swimming|natação)\b/i.test(line);
-  // Zona/Esforço
-  const hasZoneEffort = /\b(?:zona|zone|ritmo|pace|fc|hr|max|pse|rpe)\b/i.test(line);
-  // Intensidade/Qualificador
-  const hasIntensity = /\b(?:leve|moderado|forte|confortável|até|por|bem|recuperação|ativo)\b/i.test(line);
-  
-  return hasActivity || hasZoneEffort || hasIntensity;
+  return false;
 }
 
 // ============================================
-// INFERIR TIPO DE PRESCRIÇÃO
+// INFERIR TIPO DE PRESCRIÇÃO POR LINHA
 // ============================================
 function inferPrescriptionType(line: string): WorkoutBlock['type'] {
-  const lowLine = line.toLowerCase();
-  
   if (/\b(?:corrida|trote|run|running|km|pace)\b/i.test(line)) return 'corrida';
-  if (/\b(?:bike|airbike|assault|ciclismo)\b/i.test(line)) return 'corrida';
+  if (/\b(?:bike|airbike|assault|ciclismo|cycling)\b/i.test(line)) return 'corrida';
   if (/\b(?:remo|row|rowing|ski|erg)\b/i.test(line)) return 'corrida';
   if (/\b(?:caminhada|walk)\b/i.test(line)) return 'corrida';
-  if (/\b(?:swimming|natação)\b/i.test(line)) return 'corrida';
+  if (/\b(?:swimming|natação|swim)\b/i.test(line)) return 'corrida';
   
+  // Se tem tempo/distância mas sem atividade explícita, assume cardio/conditioning
   return 'conditioning';
 }
 
@@ -177,17 +168,57 @@ function inferPrescriptionType(line: string): WorkoutBlock['type'] {
 // ============================================
 
 // Mapeamento determinístico de tipo pelo TÍTULO (case-insensitive, match simples)
+// ORDEM IMPORTA: padrões mais específicos primeiro
 const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
-  { pattern: /aquecimento|warm[- ]?up|🔥/i, type: 'aquecimento' },
-  { pattern: /for[cç]a|strength|💪/i, type: 'forca' },
-  { pattern: /espec[ií]fico|specific|hyrox|🛷/i, type: 'especifico' },
-  { pattern: /core|abdominal|🎯/i, type: 'core' },
-  { pattern: /grip/i, type: 'forca' }, // Grip → Força
-  { pattern: /corrida|running|run\b|🏃/i, type: 'corrida' },
-  { pattern: /bike|airbike|assault|ciclismo|cycling/i, type: 'corrida' }, // Bike → Corrida (cardio)
-  { pattern: /remo|row|rowing|ski/i, type: 'corrida' }, // Remo/Ski → Corrida (cardio)
-  { pattern: /descanso|rest|recovery/i, type: 'aquecimento' }, // Descanso técnico
-  { pattern: /conditioning|condicionamento|metcon|wod|amrap|for\s*time|emom|⚡/i, type: 'conditioning' },
+  // Aquecimento
+  { pattern: /aquec/i, type: 'aquecimento' },
+  { pattern: /warm[- ]?up/i, type: 'aquecimento' },
+  { pattern: /🔥/i, type: 'aquecimento' },
+  
+  // Força (inclui Grip)
+  { pattern: /for[cç]a/i, type: 'forca' },
+  { pattern: /strength/i, type: 'forca' },
+  { pattern: /grip/i, type: 'forca' },
+  { pattern: /💪/i, type: 'forca' },
+  
+  // Específico (Hyrox, etc)
+  { pattern: /espec[ií]fico/i, type: 'especifico' },
+  { pattern: /specific/i, type: 'especifico' },
+  { pattern: /hyrox/i, type: 'especifico' },
+  { pattern: /🛷/i, type: 'especifico' },
+  
+  // Core
+  { pattern: /core/i, type: 'core' },
+  { pattern: /abdominal/i, type: 'core' },
+  { pattern: /🎯/i, type: 'core' },
+  
+  // Corrida/Cardio
+  { pattern: /corrida/i, type: 'corrida' },
+  { pattern: /running/i, type: 'corrida' },
+  { pattern: /\brun\b/i, type: 'corrida' },
+  { pattern: /bike/i, type: 'corrida' },
+  { pattern: /airbike/i, type: 'corrida' },
+  { pattern: /ciclismo/i, type: 'corrida' },
+  { pattern: /cycling/i, type: 'corrida' },
+  { pattern: /remo/i, type: 'corrida' },
+  { pattern: /row/i, type: 'corrida' },
+  { pattern: /ski/i, type: 'corrida' },
+  { pattern: /🏃/i, type: 'corrida' },
+  
+  // Descanso técnico → Aquecimento
+  { pattern: /descanso/i, type: 'aquecimento' },
+  { pattern: /\brest\b/i, type: 'aquecimento' },
+  { pattern: /recovery/i, type: 'aquecimento' },
+  
+  // Conditioning (WOD, AMRAP, etc) - por último como fallback
+  { pattern: /conditioning/i, type: 'conditioning' },
+  { pattern: /condicionamento/i, type: 'conditioning' },
+  { pattern: /metcon/i, type: 'conditioning' },
+  { pattern: /\bwod\b/i, type: 'conditioning' },
+  { pattern: /amrap/i, type: 'conditioning' },
+  { pattern: /for\s*time/i, type: 'conditioning' },
+  { pattern: /emom/i, type: 'conditioning' },
+  { pattern: /⚡/i, type: 'conditioning' },
 ];
 
 // Mapeamento de tipo por CONTEÚDO (usado se título não definir tipo)
@@ -200,13 +231,17 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
   { pattern: /\b(?:squat|deadlift|press|clean|snatch|jerk)\b/i, type: 'forca' },
 ];
 
-// Função para limpar título removendo "TREINO" e prefixos técnicos
+// Função para limpar título removendo prefixos técnicos
+// REGRA: Nunca substituir nome do coach por rótulos sistêmicos
 function cleanBlockTitle(title: string): string {
   // Remove prefixo "TREINO" ou "TREINO -"
   let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
-  // Remove prefixos técnicos comuns
-  cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
-  // Se ficou vazio, retorna algo genérico baseado no conteúdo que virá
+  // Remove "WOD" ou "METCON" se seguido de outro texto (mantém se for o único)
+  if (/^(WOD|METCON)\s*[-–—:]?\s*.{3,}/i.test(cleaned)) {
+    cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
+  }
+  // REGRA CRÍTICA: Se o título original tem nome válido, NUNCA retornar "Bloco Principal"
+  // Só usa "Bloco Principal" se realmente ficou vazio
   if (!cleaned || cleaned.length < 2) {
     return 'Bloco Principal';
   }
