@@ -421,54 +421,59 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                 {parseResult.success && parseResult.days.length > 0 && (
                   <TooltipProvider>
                     <div className="space-y-4">
-                      <Accordion type="single" collapsible className="space-y-3">
+                      <Accordion type="single" collapsible className="space-y-4">
                         {parseResult.days.map((day, dayIndex) => {
                           const dayName = day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido');
                           const isRestDay = restDays[dayIndex] || false;
+                          
+                          // Filtrar alertas - dias de descanso não mostram alertas de WOD
                           const dayAlerts = (day.alerts || []).filter(alert => {
-                            // Se é dia de descanso, não mostrar alerta de WOD
                             if (isRestDay && alert.includes('WOD principal')) return false;
                             return true;
                           });
-                          const hasAlerts = dayAlerts.length > 0 && !isRestDay;
+                          const alertCount = dayAlerts.length;
+                          const hasAlerts = alertCount > 0 && !isRestDay;
                           
                           return (
                             <AccordionItem 
                               key={day.day || `day-${dayIndex}`} 
                               value={`day-${dayIndex}`}
-                              className="border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-card"
+                              className="border-2 border-border rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 bg-card"
                             >
-                              <AccordionTrigger className="px-4 py-4 min-h-[60px] hover:no-underline hover:bg-secondary/20 transition-colors">
-                                <div className="flex items-center gap-3 flex-wrap flex-1 text-left">
-                                  {/* Nome do dia em destaque */}
-                                  <span className="font-semibold text-base uppercase tracking-wide text-foreground">
+                              <AccordionTrigger className="px-5 py-5 min-h-[72px] hover:no-underline hover:bg-secondary/30 transition-colors group">
+                                <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
+                                  {/* Nome do dia em DESTAQUE */}
+                                  <span className="font-bold text-lg uppercase tracking-wide text-foreground">
                                     {dayName}
                                   </span>
                                   
                                   {/* Contagem de blocos - secundário */}
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-sm text-muted-foreground">
                                     {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
                                   </span>
                                   
-                                  {/* Badge de descanso */}
+                                  {/* Badge de descanso - bem visível */}
                                   {isRestDay && (
-                                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
-                                      <Moon className="w-3 h-3 mr-1" />
+                                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 border-2 border-blue-500/30 px-3 py-1">
+                                      <Moon className="w-4 h-4 mr-1.5" />
                                       DESCANSO
                                     </Badge>
                                   )}
                                   
-                                  {/* Alerta no canto direito - discreto */}
-                                  {hasAlerts && !isRestDay && (
-                                    <span className="flex items-center gap-1 text-xs text-amber-500/80 ml-auto mr-2">
-                                      <AlertTriangle className="w-3.5 h-3.5" />
-                                      {dayAlerts.length}
-                                    </span>
+                                  {/* Spacer para empurrar toggle e alerta para direita */}
+                                  <div className="flex-1" />
+                                  
+                                  {/* ALERTA FORTE - ícone grande + número */}
+                                  {hasAlerts && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/15 border border-destructive/30">
+                                      <AlertCircle className="w-5 h-5 text-destructive" />
+                                      <span className="font-bold text-sm text-destructive">{alertCount}</span>
+                                    </div>
                                   )}
                                   
                                   {/* Toggle descanso no header */}
                                   <div 
-                                    className="flex items-center gap-2 ml-auto mr-2"
+                                    className="flex items-center gap-2"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Tooltip>
@@ -482,54 +487,72 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           />
                                         </div>
                                       </TooltipTrigger>
-                                      <TooltipContent side="top" className="bg-popover text-popover-foreground">
+                                      <TooltipContent side="top" className="bg-popover text-popover-foreground z-50">
                                         <p className="text-xs">Dia de descanso não exige WOD principal.</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
                                 </div>
                               </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4">
-                                {/* Alertas do dia - no topo do conteúdo expandido */}
+                              <AccordionContent className="px-5 pb-5">
+                                {/* Alertas do dia - CAIXA EXPANDIDA com lista objetiva */}
                                 {hasAlerts && (
-                                  <div className="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                    {dayAlerts.map((alert, alertIdx) => (
-                                      <p key={alertIdx} className="text-xs text-amber-600 flex items-start gap-1.5">
-                                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                                        {alert}
-                                      </p>
-                                    ))}
+                                  <div className="mb-4 p-4 rounded-xl bg-destructive/10 border-2 border-destructive/30">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <AlertCircle className="w-5 h-5 text-destructive" />
+                                      <span className="font-semibold text-sm text-destructive">
+                                        Ajustes obrigatórios pendentes neste dia
+                                      </span>
+                                    </div>
+                                    <ul className="space-y-1.5 ml-7">
+                                      {dayAlerts.map((alert, alertIdx) => (
+                                        <li key={alertIdx} className="text-sm text-destructive/90 flex items-start gap-2">
+                                          <span className="text-destructive/60">•</span>
+                                          {alert.includes('WOD principal') 
+                                            ? 'Marcar o WOD principal'
+                                            : alert.includes('dia') 
+                                              ? 'Definir o dia da semana'
+                                              : alert
+                                          }
+                                        </li>
+                                      ))}
+                                    </ul>
                                   </div>
                                 )}
                                 
                                 {/* Mensagem de dia de descanso */}
                                 {isRestDay && (
-                                  <div className="mb-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                                    <p className="text-sm text-blue-600 flex items-center justify-center gap-2">
-                                      <Moon className="w-4 h-4" />
+                                  <div className="mb-4 p-4 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 text-center">
+                                    <p className="text-sm text-blue-600 flex items-center justify-center gap-2 font-medium">
+                                      <Moon className="w-5 h-5" />
                                       Dia marcado como descanso
                                     </p>
                                   </div>
                                 )}
                                 
                                 {/* Blocos do dia */}
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                   {day.blocks.map((block, blockIndex) => (
                                     <div 
                                       key={blockIndex} 
-                                      className={`p-3 rounded-lg space-y-2 transition-colors ${
+                                      className={`p-4 rounded-xl space-y-3 transition-all duration-200 ${
                                         block.isMainWod 
-                                          ? 'bg-primary/10 border border-primary/30' 
-                                          : 'bg-muted/40 border border-border/50'
+                                          ? 'bg-primary/10 border-2 border-primary/40 shadow-sm' 
+                                          : 'bg-muted/50 border border-border/60'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-medium text-sm">{block.title}</span>
-                                        <Badge variant="secondary" className="text-xs">
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        {/* Título do bloco - SEM "TREINO", apenas o nome */}
+                                        <span className="font-semibold text-base">{block.title}</span>
+                                        
+                                        {/* Chip do tipo - secundário */}
+                                        <Badge variant="secondary" className="text-xs px-2">
                                           {getTypeLabel(block.type)}
                                         </Badge>
+                                        
+                                        {/* Chip de formato - se aplicável */}
                                         {block.format !== 'outro' && (
-                                          <Badge variant="outline" className="text-xs">
+                                          <Badge variant="outline" className="text-xs px-2">
                                             {getFormatLabel(block.format)}
                                           </Badge>
                                         )}
@@ -539,24 +562,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           <Button
                                             variant={block.isMainWod ? "default" : "ghost"}
                                             size="sm"
-                                            className="h-7 text-xs ml-auto"
+                                            className="h-8 text-xs ml-auto"
                                             onClick={() => toggleMainWod(dayIndex, blockIndex)}
                                           >
-                                            <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                            <Star className={`w-3.5 h-3.5 mr-1.5 ${block.isMainWod ? 'fill-current' : ''}`} />
                                             {block.isMainWod ? 'Principal' : 'Marcar como principal'}
                                           </Button>
                                         )}
                                       </div>
                                       
+                                      {/* Instrução principal */}
                                       {block.instruction && (
-                                        <p className="text-xs text-muted-foreground italic">
+                                        <p className="text-sm text-muted-foreground italic">
                                           {block.instruction}
                                         </p>
                                       )}
                                       
                                       {/* Instruções do bloco */}
                                       {block.instructions && block.instructions.length > 0 && (
-                                        <div className="text-xs text-muted-foreground">
+                                        <div className="text-sm text-muted-foreground space-y-0.5">
                                           {block.instructions.map((instr, instrIdx) => (
                                             <p key={instrIdx}>{instr}</p>
                                           ))}
@@ -565,10 +589,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       
                                       {/* Exercícios */}
                                       {block.items.length > 0 && (
-                                        <div className="text-xs text-foreground mt-1 space-y-0.5">
+                                        <div className="text-sm text-foreground mt-2 space-y-1 pl-2 border-l-2 border-border">
                                           {block.items.map((item, itemIdx) => (
                                             <p key={itemIdx}>
-                                              {item.quantity} {item.unit} {item.movement}
+                                              <span className="font-medium">{item.quantity}</span> {item.unit} {item.movement}
                                               {item.weight && <span className="text-muted-foreground"> @ {item.weight}</span>}
                                             </p>
                                           ))}
@@ -585,8 +609,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
 
                       {/* Mensagem de validação para publicar */}
                       {parseResult.success && !canPublish && (
-                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                          <p className="text-sm text-amber-600">
+                        <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/30">
+                          <p className="text-sm text-amber-600 font-medium flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" />
                             {parseResult.needsDaySelection && !selectedDay 
                               ? 'Para publicar, selecione o dia do treino.'
                               : 'Antes de publicar, marque o WOD principal dos dias de treino.'}
@@ -595,7 +620,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                       )}
 
                       {/* Info de quantidade de dias */}
-                      <p className="text-xs text-muted-foreground text-center">
+                      <p className="text-sm text-muted-foreground text-center">
                         Você importou {parseResult.days.length} dia(s)
                         {Object.values(restDays).filter(Boolean).length > 0 && 
                           ` (${Object.values(restDays).filter(Boolean).length} de descanso)`
