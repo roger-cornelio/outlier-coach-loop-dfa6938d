@@ -96,14 +96,29 @@ const DAY_MAP: Record<string, DayOfWeek> = {
   'sun': 'dom',
 };
 
+// Mapeamento determinístico de tipo pelo TÍTULO (case-insensitive, match simples)
 const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /aquecimento|warm[- ]?up|🔥/i, type: 'aquecimento' },
-  { pattern: /conditioning|condicionamento|metcon|⚡/i, type: 'conditioning' },
   { pattern: /for[cç]a|strength|💪/i, type: 'forca' },
   { pattern: /espec[ií]fico|specific|hyrox|🛷/i, type: 'especifico' },
   { pattern: /core|abdominal|🎯/i, type: 'core' },
+  { pattern: /grip/i, type: 'forca' }, // Grip → Força
   { pattern: /corrida|running|run\b|🏃/i, type: 'corrida' },
+  { pattern: /bike|ciclismo|cycling/i, type: 'corrida' }, // Bike → Corrida (cardio)
+  { pattern: /remo|row|rowing/i, type: 'corrida' }, // Remo → Corrida (cardio)
+  { pattern: /descanso|rest|recovery/i, type: 'aquecimento' }, // Descanso técnico
+  { pattern: /conditioning|condicionamento|metcon|wod|amrap|for\s*time|emom|⚡/i, type: 'conditioning' },
 ];
+
+// Função para limpar título removendo "TREINO" e prefixos técnicos
+function cleanBlockTitle(title: string): string {
+  // Remove prefixo "TREINO" ou "TREINO -"
+  let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
+  // Remove prefixos técnicos comuns
+  cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
+  // Se ficou vazio, usa título original sem TREINO
+  return cleaned || title.replace(/^TREINO\s*/i, '').trim() || title;
+}
 
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
   { pattern: /for\s*time|fortime/i, format: 'for_time' },
@@ -182,16 +197,19 @@ export function parseStructuredText(text: string): ParseResult {
   let lineNumber = 0;
   let hasExplicitDay = false;
 
-  const createNewBlock = (title: string): ParsedBlock => ({
-    title,
-    type: detectBlockType(title),
-    format: detectFormat(title),
-    isMainWod: false,
-    isBenchmark: false,
-    items: [],
-    coachNotes: [],
-    instructions: [],
-  });
+  const createNewBlock = (rawTitle: string): ParsedBlock => {
+    const title = cleanBlockTitle(rawTitle);
+    return {
+      title,
+      type: detectBlockType(rawTitle), // Usa título original para detectar tipo
+      format: detectFormat(rawTitle),
+      isMainWod: false,
+      isBenchmark: false,
+      items: [],
+      coachNotes: [],
+      instructions: [],
+    };
+  };
 
   const saveCurrentBlock = () => {
     if (currentBlock) {
