@@ -34,6 +34,8 @@ import {
   getDayName,
   getTypeLabel,
   getFormatLabel,
+  isInvalidBlockTitle,
+  getBlockTitleError,
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
@@ -250,6 +252,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
 
   // Verifica se pode publicar (tem WOD principal em cada dia de treino e dia definido se necessário)
   // Dias com todos blocos opcionais não precisam de WOD principal
+  // REGRA ANTI-BURRO: Bloqueado se qualquer bloco tiver título inválido
+  const hasInvalidTitles = parseResult?.days.some((day, idx) => {
+    if (restDays[idx]) return false; // Dias de descanso ignorados
+    return day.blocks.some(b => isInvalidBlockTitle(b.title));
+  }) ?? false;
+
   const allTrainingDaysHaveWod = parseResult?.days.every((day, idx) => {
     if (restDays[idx]) return true; // Dias de descanso não precisam de WOD
     if (day.blocks.every(b => b.optional)) return true; // Dias só com opcionais não precisam de WOD
@@ -258,10 +266,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
 
   const canPublish = parseResult?.success && 
     allTrainingDaysHaveWod && 
+    !hasInvalidTitles &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
-  // Verifica se pode importar (rascunho - apenas precisa de treino válido)
+  // Verifica se pode importar (rascunho - apenas precisa de treino válido e títulos corretos)
   const canImport = parseResult?.success && 
+    !hasInvalidTitles &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
   return (
@@ -279,12 +289,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-            <p className="font-medium text-foreground">Dica de escrita:</p>
-            <div className="grid gap-1.5">
+            <p className="font-medium text-foreground">Organize cada bloco pelo tipo de treino.</p>
+            <p className="text-foreground">Ex: Aquecimento, Força, Condicionamento.</p>
+            <div className="grid gap-1.5 mt-2">
               <p><span className="font-medium">DIA DA SEMANA</span> — Ex: SEGUNDA</p>
               <p><span className="font-medium">BLOCOS</span> — Ex: AQUECIMENTO, FORÇA, WOD</p>
               <p><span className="font-medium">EXERCÍCIOS</span> — Ex: 10 Pull-ups, 20m Sled Push</p>
-              <p><span className="font-medium">COMENTÁRIOS</span> — Pode escrever normalmente 🙂</p>
             </div>
           </div>
 
@@ -452,11 +462,18 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                           // ALERTAS REATIVOS - Derivados em tempo real
                           // ========================================
                           // Função determinística que calcula issues do dia
-                          const getDayIssues = (): string[] => {
-                            const issues: string[] = [];
+                          const getDayIssues = (): { type: string; blockIndex?: number }[] => {
+                            const issues: { type: string; blockIndex?: number }[] = [];
                             
                             // Dias de descanso não têm issues
                             if (isRestDay) return issues;
+                            
+                            // Verificar títulos inválidos em cada bloco
+                            day.blocks.forEach((block, blockIdx) => {
+                              if (isInvalidBlockTitle(block.title)) {
+                                issues.push({ type: 'titulo_invalido', blockIndex: blockIdx });
+                              }
+                            });
                             
                             // Dias só com blocos opcionais não precisam de WOD
                             if (allBlocksOptional) return issues;
@@ -464,7 +481,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                             // Verifica se tem WOD principal (REATIVO - usa estado atual do bloco)
                             const hasMainWod = day.blocks.some(b => b.isMainWod);
                             if (!hasMainWod && day.blocks.length > 0) {
-                              issues.push('wod_principal');
+                              issues.push({ type: 'wod_principal' });
                             }
                             
                             return issues;
@@ -549,8 +566,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       {dayIssues.map((issue, issueIdx) => (
                                         <li key={issueIdx} className="text-sm text-amber-700 flex items-start gap-2">
                                           <span className="text-amber-500">•</span>
-                                          {issue === 'wod_principal' && 'Marcar o WOD principal'}
-                                          {issue === 'dia_semana' && 'Selecionar o dia da semana'}
+                                          {issue.type === 'wod_principal' && 'Marcar o WOD principal'}
+                                          {issue.type === 'titulo_invalido' && `Bloco ${(issue.blockIndex ?? 0) + 1}: Adicionar título do bloco (Ex: Aquecimento, Força)`}
+                                          {issue.type === 'dia_semana' && 'Selecionar o dia da semana'}
                                         </li>
                                       ))}
                                     </ul>
@@ -569,28 +587,47 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 
                                 {/* Blocos do dia */}
                                 <div className="space-y-4">
-                                  {day.blocks.map((block, blockIndex) => (
-                                    <div 
-                                      key={blockIndex} 
-                                      className={`p-4 rounded-xl space-y-3 transition-all duration-200 ${
-                                        block.isMainWod 
-                                          ? 'bg-primary/10 border-2 border-primary/40 shadow-sm' 
-                                          : 'bg-muted/50 border border-border/60'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        {/* Título do bloco - EDITÁVEL se for fallback genérico (Bloco X, Opcional) */}
-                                        {block.title.match(/^Bloco \d+$/) || block.title === 'Opcional' || block.title === '__FALLBACK_BLOCK__' ? (
-                                          <input
-                                            type="text"
-                                            value={block.title === '__FALLBACK_BLOCK__' ? `Bloco ${blockIndex + 1}` : block.title}
-                                            onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
-                                            className="font-semibold text-base bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none px-1 min-w-[120px] max-w-[200px]"
-                                            placeholder="Nome do bloco"
-                                          />
-                                        ) : (
-                                          <span className="font-semibold text-base">{block.title}</span>
+                                  {day.blocks.map((block, blockIndex) => {
+                                    const hasTitleError = isInvalidBlockTitle(block.title);
+                                    const titleError = getBlockTitleError(block.title);
+                                    
+                                    return (
+                                      <div 
+                                        key={blockIndex} 
+                                        className={`p-4 rounded-xl space-y-3 transition-all duration-200 ${
+                                          hasTitleError
+                                            ? 'bg-amber-500/10 border-2 border-amber-500/50 shadow-md'
+                                            : block.isMainWod 
+                                              ? 'bg-primary/10 border-2 border-primary/40 shadow-sm' 
+                                              : 'bg-muted/50 border border-border/60'
+                                        }`}
+                                      >
+                                        {/* Erro de título - mensagem no topo do bloco */}
+                                        {hasTitleError && titleError && (
+                                          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30 mb-2">
+                                            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-amber-700 whitespace-pre-line">{titleError}</span>
+                                          </div>
                                         )}
+                                        
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {/* Título do bloco - SEMPRE EDITÁVEL se inválido ou fallback */}
+                                          {hasTitleError || block.title.match(/^Bloco \d+$/) || block.title === 'Opcional' || block.title === '__FALLBACK_BLOCK__' ? (
+                                            <input
+                                              type="text"
+                                              value={block.title === '__FALLBACK_BLOCK__' ? '' : block.title}
+                                              onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
+                                              className={`font-semibold text-base bg-transparent border-b-2 focus:outline-none px-1 min-w-[150px] max-w-[220px] ${
+                                                hasTitleError 
+                                                  ? 'border-amber-500 text-amber-700 placeholder:text-amber-500/60' 
+                                                  : 'border-dashed border-muted-foreground/30 focus:border-primary'
+                                              }`}
+                                              placeholder="Digite: Aquecimento, Força, etc."
+                                              autoFocus={hasTitleError}
+                                            />
+                                          ) : (
+                                            <span className="font-semibold text-base">{block.title}</span>
+                                          )}
                                         
                                         {/* Badge Principal - fixo quando marcado */}
                                         {block.isMainWod && (
@@ -695,7 +732,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         </div>
                                       )}
                                     </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </AccordionContent>
                             </AccordionItem>
@@ -708,9 +746,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                         <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/30">
                           <p className="text-sm text-amber-600 font-medium flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4" />
-                            {parseResult.needsDaySelection && !selectedDay 
-                              ? 'Para publicar, selecione o dia do treino.'
-                              : 'Antes de publicar, marque o WOD principal dos dias de treino.'}
+                            {hasInvalidTitles
+                              ? 'O bloco precisa começar com o tipo de treino. Ex: Aquecimento, Força, Condicionamento.'
+                              : parseResult.needsDaySelection && !selectedDay 
+                                ? 'Para publicar, selecione o dia do treino.'
+                                : 'Antes de publicar, marque o WOD principal dos dias de treino.'}
                           </p>
                         </div>
                       )}

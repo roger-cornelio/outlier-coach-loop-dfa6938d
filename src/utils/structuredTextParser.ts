@@ -250,6 +250,47 @@ function cleanBlockTitle(title: string, blockIndex?: number): string {
   return cleaned;
 }
 
+// ============================================
+// VALIDAÇÃO DE TÍTULO — REGRA ANTI-BURRO
+// ============================================
+// A primeira linha do bloco é SEMPRE o título.
+// O título NÃO pode conter números, unidades, padrões de prescrição ou marcadores.
+// Retorna true se o título é INVÁLIDO (contém elementos proibidos).
+export function isInvalidBlockTitle(title: string): boolean {
+  if (!title || title.trim().length === 0) return true;
+  
+  const trimmed = title.trim();
+  
+  // 1. Números (0–9)
+  if (/\d/.test(trimmed)) return true;
+  
+  // 2. Unidades: kg, lb, m, km, cal, %, ", '
+  if (/\b(kg|lb|m|km|cal)\b/i.test(trimmed)) return true;
+  if (/[%"']/.test(trimmed)) return true;
+  
+  // 3. Padrões de prescrição: EMOM, AMRAP, RFT, For Time, Min, Rounds, Sets, Reps
+  if (/\b(emom|amrap|rft|for\s*time|min|minutos?|rounds?|sets?|reps?)\b/i.test(trimmed)) return true;
+  
+  // 4. Marcadores de lista: -, •, 1), 1.
+  if (/^[-•]/.test(trimmed)) return true;
+  if (/^\d+[).]/.test(trimmed)) return true;
+  
+  return false;
+}
+
+// Retorna a razão legível do erro (para exibição)
+export function getBlockTitleError(title: string): string | null {
+  if (!title || title.trim().length === 0) {
+    return 'O bloco precisa começar com o tipo de treino.\nEx: Aquecimento, Força, Condicionamento.';
+  }
+  
+  if (isInvalidBlockTitle(title)) {
+    return 'O bloco precisa começar com o tipo de treino.\nEx: Aquecimento, Força, Condicionamento.';
+  }
+  
+  return null;
+}
+
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
   { pattern: /for\s*time|fortime/i, format: 'for_time' },
   { pattern: /amrap/i, format: 'amrap' },
