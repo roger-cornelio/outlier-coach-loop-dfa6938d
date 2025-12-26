@@ -55,6 +55,7 @@ import {
   getBlockTitleError,
   getDerivedTitle,
   getDisplayTitle,
+  normalizeText,
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
@@ -835,15 +836,31 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         </div>
                                       )}
                                       
-                                      {/* Comentários - usando block.lines */}
-                                      {block.lines && block.lines.filter(l => l.type === 'comment').length > 0 && (
-                                        <div className="text-xs text-muted-foreground mt-3 p-2 rounded bg-muted/30 border border-border/40 space-y-1">
-                                          <span className="text-xs font-medium text-muted-foreground/70">💬 Comentários:</span>
-                                          {block.lines.filter(l => l.type === 'comment').map((line) => (
-                                            <p key={line.id} className="italic">{line.text}</p>
-                                          ))}
-                                        </div>
-                                      )}
+                                      {/* Comentários - usando block.lines com fail-safe de dedup */}
+                                      {(() => {
+                                        const normalizedTitle = normalizeText(block.title);
+                                        const normalizedFormat = block.formatDisplay ? normalizeText(block.formatDisplay) : '';
+                                        
+                                        // Fail-safe: filtrar comentários que sejam iguais ao título ou formato
+                                        const filteredComments = (block.lines || []).filter(l => {
+                                          if (l.type !== 'comment') return false;
+                                          const normalized = normalizeText(l.text);
+                                          if (normalized === normalizedTitle) return false;
+                                          if (normalizedFormat && normalized === normalizedFormat) return false;
+                                          return true;
+                                        });
+                                        
+                                        if (filteredComments.length === 0) return null;
+                                        
+                                        return (
+                                          <div className="text-xs text-muted-foreground mt-3 p-2 rounded bg-muted/30 border border-border/40 space-y-1">
+                                            <span className="text-xs font-medium text-muted-foreground/70">💬 Comentários:</span>
+                                            {filteredComments.map((line) => (
+                                              <p key={line.id} className="italic">{line.text}</p>
+                                            ))}
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                     );
                                   })}
