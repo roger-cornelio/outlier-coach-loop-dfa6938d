@@ -522,6 +522,28 @@ export function classifyLine(line: string): LineType {
   return 'comment';
 }
 
+// ============================================
+// NORMALIZAÇÃO DE TEXTO (para dedup e comparação)
+// ============================================
+// Normaliza texto para comparação: lowercase, trim, remove acentos, remove pontuação leve
+export function normalizeText(s: string): string {
+  if (!s) return '';
+  
+  return s
+    .toLowerCase()
+    .trim()
+    // Normaliza Unicode e remove diacríticos (acentos)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    // Remove pontuação leve e caracteres especiais
+    .replace(/[:;,.\-—_*"'""\(\)\[\]]/g, '')
+    // Substitui & por e
+    .replace(/&/g, 'e')
+    // Múltiplos espaços para 1
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Gera ID único para linha
 let lineIdCounter = 0;
 export function generateLineId(): string {
@@ -532,30 +554,60 @@ export function generateLineId(): string {
 // Classifica todas as linhas de um bloco
 export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   const lines: ParsedLine[] = [];
+  const normalizedTitle = normalizeText(block.title);
+  const normalizedFormat = block.formatDisplay ? normalizeText(block.formatDisplay) : '';
+  
+  // Helper para verificar se linha deve ser descartada (duplicata do título/formato)
+  const shouldDiscard = (text: string, index: number, prevNormalized: string): boolean => {
+    const normalized = normalizeText(text);
+    
+    // Linha vazia
+    if (!normalized) return true;
+    
+    // Igual ao título do bloco
+    if (normalized === normalizedTitle) return true;
+    
+    // Igual ao formato do bloco
+    if (normalizedFormat && normalized === normalizedFormat) return true;
+    
+    // Nas primeiras 3 linhas: descartar se igual à linha anterior
+    if (index < 3 && normalized === prevNormalized) return true;
+    
+    return false;
+  };
+  
+  let prevNormalized = '';
+  let lineIndex = 0;
   
   // Adicionar instruction principal
   if (block.instruction && block.instruction.trim()) {
-    lines.push({
-      id: generateLineId(),
-      text: block.instruction.trim(),
-      type: classifyLine(block.instruction),
-    });
+    if (!shouldDiscard(block.instruction, lineIndex, prevNormalized)) {
+      lines.push({
+        id: generateLineId(),
+        text: block.instruction.trim(),
+        type: classifyLine(block.instruction),
+      });
+      prevNormalized = normalizeText(block.instruction);
+    }
+    lineIndex++;
   }
   
   // Adicionar instructions
   if (block.instructions) {
     for (const instr of block.instructions) {
-      if (instr.trim()) {
+      if (instr.trim() && !shouldDiscard(instr, lineIndex, prevNormalized)) {
         lines.push({
           id: generateLineId(),
           text: instr.trim(),
           type: classifyLine(instr),
         });
+        prevNormalized = normalizeText(instr);
       }
+      lineIndex++;
     }
   }
   
-  // Adicionar items formatados
+  // Adicionar items formatados (exercícios nunca descartados por dedup de título)
   for (const item of block.items) {
     let text = `${item.quantity} ${item.unit} ${item.movement}`;
     if (item.weight) {
@@ -574,13 +626,15 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   // Adicionar coachNotes
   if (block.coachNotes) {
     for (const note of block.coachNotes) {
-      if (note.trim()) {
+      if (note.trim() && !shouldDiscard(note, lineIndex, prevNormalized)) {
         lines.push({
           id: generateLineId(),
           text: note.trim(),
           type: 'comment',
         });
+        prevNormalized = normalizeText(note);
       }
+      lineIndex++;
     }
   }
   
