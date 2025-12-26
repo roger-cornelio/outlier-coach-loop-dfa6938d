@@ -17,8 +17,9 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil
+  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2
 } from 'lucide-react';
+import { BlockEditorModal } from './BlockEditorModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -92,7 +93,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [restDays, setRestDays] = useState<Record<number, boolean>>({});
   const [editingBlockTitle, setEditingBlockTitle] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
+  const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Salvar linhas editadas de um bloco
+  const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
+    if (!parseResult) return;
+    const updated = { ...parseResult };
+    updated.days[dayIndex].blocks[blockIndex].lines = newLines;
+    setParseResult(updated);
+  };
 
   const handleParse = () => {
     if (!text.trim()) return;
@@ -783,14 +793,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                               Editar título
                                             </DropdownMenuItem>
                                             <DropdownMenuItem 
-                                              onClick={() => {
-                                                if (block.isMainWod) {
-                                                  // Não permitir - exibe mensagem no dialog
-                                                  setDeleteConfirm({ dayIndex, blockIndex });
-                                                } else {
-                                                  setDeleteConfirm({ dayIndex, blockIndex });
-                                                }
-                                              }}
+                                              onClick={() => setEditingBlock({ dayIndex, blockIndex })}
+                                              className="text-sm"
+                                            >
+                                              <Settings2 className="w-4 h-4 mr-2" />
+                                              Editar bloco
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem 
+                                              onClick={() => setDeleteConfirm({ dayIndex, blockIndex })}
                                               className="text-sm text-destructive focus:text-destructive"
                                             >
                                               <Trash2 className="w-4 h-4 mr-2" />
@@ -922,6 +932,17 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de edição de linhas do bloco */}
+      {editingBlock && parseResult && (
+        <BlockEditorModal
+          open={true}
+          onOpenChange={(open) => !open && setEditingBlock(null)}
+          blockTitle={getDisplayTitle(parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex], editingBlock.blockIndex)}
+          lines={parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].lines || []}
+          onSave={(newLines) => saveBlockLines(editingBlock.dayIndex, editingBlock.blockIndex, newLines)}
+        />
+      )}
     </div>
   );
 }
