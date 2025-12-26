@@ -120,14 +120,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   };
   
   // Executar parse com dia selecionado
+  // CONTRATO: Parser recebe SOMENTE o texto do textarea (sem inserir dia)
+  // O dia é aplicado como metadado DEPOIS do parsing
   const executeParseWithDay = (day: DayOfWeek) => {
     if (!text.trim()) return;
     
-    // MVP0: Inserir dia como cabeçalho do texto antes de parsear
-    const dayLabel = DAY_OPTIONS.find(d => d.value === day)?.label?.toUpperCase() || day.toUpperCase();
-    const textWithDayHeader = `${dayLabel}\n\n${text}`;
-    
-    const result = parseStructuredText(textWithDayHeader);
+    // Parser canônico: recebe APENAS o texto original do textarea
+    const result = parseStructuredText(text);
     
     // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
     if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
@@ -156,7 +155,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
     }
     
-    // Forçar o dia selecionado em todos os blocos (override de qualquer inferência)
+    // Aplicar dia selecionado como METADADO (não altera texto)
     result.days.forEach(d => {
       d.day = day;
     });
