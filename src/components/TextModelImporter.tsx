@@ -811,23 +811,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         </DropdownMenu>
                                       </div>
                                       
-                                      {/* Instrução principal */}
-                                      {block.instruction && (
-                                        <p className="text-sm text-muted-foreground italic">
-                                          {block.instruction}
-                                        </p>
-                                      )}
-                                      
-                                      {/* Instruções do bloco */}
-                                      {block.instructions && block.instructions.length > 0 && (
-                                        <div className="text-sm text-muted-foreground space-y-0.5">
-                                          {block.instructions.map((instr, instrIdx) => (
-                                            <p key={instrIdx}>{instr}</p>
-                                          ))}
-                                        </div>
-                                      )}
-                                      
-                                      {/* Exercícios - usando block.lines */}
+                                      {/* Exercícios - FONTE ÚNICA: block.lines (type==='exercise') */}
                                       {block.lines && block.lines.filter(l => l.type === 'exercise').length > 0 && (
                                         <div className="text-sm text-foreground mt-2 space-y-1 pl-2 border-l-2 border-primary/40">
                                           {block.lines.filter(l => l.type === 'exercise').map((line) => (
