@@ -46,6 +46,7 @@ export interface ParsedBlock {
   title: string;
   type: WorkoutBlock['type'];
   format: string;
+  formatDisplay?: string; // Formato extraído para exibição (ex: "EMOM 30'")
   isMainWod: boolean;
   isBenchmark: boolean;
   optional: boolean; // Treino opcional (não exige WOD principal)
@@ -53,6 +54,7 @@ export interface ParsedBlock {
   coachNotes: string[];
   instruction?: string;
   instructions: string[]; // Lista de instruções do bloco
+  isAutoGenTitle?: boolean; // True se título foi gerado automaticamente como "BLOCO X"
 }
 
 export interface ParsedDay {
@@ -323,11 +325,10 @@ export function looksLikePrescription(line: string): boolean {
   // Ex: "10km", "5 Rounds", "30' EMOM", "3x10 Pull-ups"
   if (/^\d+/.test(trimmed)) return true;
   
-  // 3. Padrões de prescrição ISOLADOS (quando são a parte principal da linha)
-  // Ex: "EMOM 30'" ou "AMRAP 15" são inválidos
-  // Mas "Conditioning — For Time" ou "Specific — AMRAP" são VÁLIDOS (contêm mais contexto)
-  const prescriptionPatterns = /^(emom|amrap|rft|for\s*time|tabata)\b/i;
-  if (prescriptionPatterns.test(trimmed)) return true;
+  // 3. Padrões de FORMAT LINE - são CONTEÚDO de bloco, não títulos
+  // Ex: "EMOM 30'", "AMRAP 15", "For Time", "E2MOM 12", "Every 2 min"
+  // Mas "Conditioning — For Time" ou "Specific — AMRAP" são VÁLIDOS (contêm mais contexto antes)
+  if (isFormatLine(trimmed)) return true;
   
   // 4. Contém unidades de medida que indicam prescrição clara
   // kg, lb, cal com números próximos
@@ -339,6 +340,38 @@ export function looksLikePrescription(line: string): boolean {
   // TUDO MAIS É VÁLIDO como título humano
   // Ex: "Grip & Strength", "Força Específica", "Conditioning — For Time"
   return false;
+}
+
+// ============================================
+// FORMAT LINE - Linhas de formato (EMOM, AMRAP, etc.)
+// ============================================
+// Essas linhas NUNCA abrem um novo bloco - são CONTEÚDO do bloco
+// Se aparecerem como primeira linha, o bloco recebe título genérico "BLOCO {n}"
+
+export function isFormatLine(line: string): boolean {
+  if (!line || line.trim().length === 0) return false;
+  
+  const trimmed = line.trim();
+  
+  // Padrões de formato que NÃO são títulos de bloco:
+  // EMOM, E2MOM, E3MOM (E\d+MOM), AMRAP, For Time, Tabata, Every X min
+  const formatPatterns = [
+    /^emom\b/i,                      // EMOM, EMOM 30'
+    /^e\d+mom\b/i,                   // E2MOM, E3MOM, etc.
+    /^amrap\b/i,                     // AMRAP, AMRAP 15
+    /^for\s*time\b/i,                // For Time
+    /^tabata\b/i,                    // Tabata
+    /^every\s+\d+/i,                 // Every 2 min, Every 90 sec
+    /^rft\b/i,                       // RFT (Rounds For Time)
+  ];
+  
+  return formatPatterns.some(pattern => pattern.test(trimmed));
+}
+
+// Extrai o formato limpo de uma linha de formato
+export function extractFormatFromLine(line: string): string {
+  if (!line) return '';
+  return line.trim();
 }
 
 // Retorna true se o bloco tem problema de título
@@ -472,20 +505,22 @@ export function parseStructuredText(text: string): ParseResult {
   // Contador de blocos para fallback de título
   let blockCounter = 0;
   
-  const createNewBlock = (rawTitle: string): ParsedBlock => {
+  const createNewBlock = (rawTitle: string, isAutoGen: boolean = false): ParsedBlock => {
     blockCounter++;
-    const title = cleanBlockTitle(rawTitle, blockCounter - 1);
+    const title = isAutoGen ? `BLOCO ${blockCounter}` : cleanBlockTitle(rawTitle, blockCounter - 1);
     const isOptional = /\bopcional\b/i.test(rawTitle);
     return {
       title,
       type: detectBlockType(rawTitle), // Usa título original para detectar tipo
       format: detectFormat(rawTitle),
+      formatDisplay: undefined, // Será preenchido se primeira linha for format_line
       isMainWod: false, // REGRA CRÍTICA: Nenhum bloco nasce como principal - só via ação manual do coach
       isBenchmark: false,
       optional: isOptional,
       items: [],
       coachNotes: [],
       instructions: [],
+      isAutoGenTitle: isAutoGen,
     };
   };
 
@@ -699,8 +734,23 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
-    // Detectar título de bloco (linha em maiúsculas que não é dia)
-    if (isUpperCaseLine(line) && line.length > 3) {
+    // REGRA: FORMAT LINES (EMOM, AMRAP, etc.) NUNCA abrem novo bloco
+    // Se não há bloco atual, criar "BLOCO {n}" com formatDisplay
+    if (isFormatLine(line)) {
+      if (!currentBlock) {
+        // Criar bloco genérico com título "BLOCO X"
+        currentBlock = createNewBlock('', true);
+        currentBlock.formatDisplay = extractFormatFromLine(line);
+        currentBlock.type = 'conditioning'; // Tipo padrão para blocos com formato
+        currentBlock.format = detectFormat(line);
+      }
+      // Adicionar como instrução do bloco
+      currentBlock.instructions.push(line);
+      continue;
+    }
+
+    // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line)
+    if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line)) {
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
       continue;
@@ -713,7 +763,7 @@ export function parseStructuredText(text: string): ParseResult {
       if (item) {
         // Se não há bloco, criar um genérico (com fallback neutro "Bloco X")
         if (!currentBlock) {
-          currentBlock = createNewBlock('');
+          currentBlock = createNewBlock('', true);
         }
         
         currentBlock.items.push(item);
