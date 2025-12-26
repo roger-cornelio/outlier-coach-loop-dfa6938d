@@ -844,17 +844,26 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                         })}
                       </Accordion>
 
-                      {/* Mensagem de validação para publicar */}
+                      {/* BANNER DE VALIDAÇÃO - STICKY E ANTI-BURRO */}
                       {parseResult.success && !canPublish && (
-                        <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/30">
-                          <p className="text-sm text-amber-600 font-medium flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4" />
-                            {hasInvalidTitles
-                              ? 'Corrija os blocos com problemas de título antes de continuar.'
-                              : parseResult.needsDaySelection && !selectedDay 
-                                ? 'Para publicar, selecione o dia do treino.'
-                                : 'Antes de publicar, marque o WOD principal dos dias de treino.'}
-                          </p>
+                        <div className="sticky top-0 z-10 -mx-5 px-5 py-4 bg-amber-500/95 border-y-2 border-amber-600 shadow-lg">
+                          <div className="space-y-1">
+                            <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
+                              ⚠️ REVISE O TREINO ANTES DE PUBLICAR
+                            </h3>
+                            <p className="text-sm text-amber-900 font-medium">
+                              {hasInvalidTitles
+                                ? 'Corrija os blocos com problemas de título antes de continuar.'
+                                : parseResult.needsDaySelection && !selectedDay 
+                                  ? 'Selecione o dia da semana para este treino.'
+                                  : 'Antes de publicar: revise os blocos e marque o WOD principal de cada dia.'}
+                            </p>
+                            {!hasInvalidTitles && !parseResult.needsDaySelection && (
+                              <p className="text-xs text-amber-800/90">
+                                Sem WOD principal, o atleta pode receber o treino errado.
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
 
