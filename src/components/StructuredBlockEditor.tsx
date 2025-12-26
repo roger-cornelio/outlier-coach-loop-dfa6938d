@@ -25,47 +25,26 @@ import type { WorkoutBlock } from '@/types/outlier';
 // TIPOS E CONSTANTES
 // ============================================
 
-// LISTA FINAL DE CATEGORIAS (MVP0) - Importada de categoryValidation
+// FONTE ÚNICA: Todas as listas vêm de categoryValidation.ts
 import { 
   BLOCK_CATEGORIES, 
+  BLOCK_FORMATS,
+  WORKOUT_UNITS,
+  QUICK_PRESETS,
   validateBlockByCategory, 
   canBlockBeMain,
   getCategoryEmoji,
   VALIDATION_MESSAGES,
   type CategoryValidationResult,
+  type BlockCategory,
+  type BlockFormat,
+  type WorkoutUnit,
 } from '@/utils/categoryValidation';
 
-// Re-exportar para compatibilidade
+// Re-exportar para compatibilidade com código existente
 export const BLOCK_TYPES = BLOCK_CATEGORIES;
-
-export const BLOCK_FORMATS = [
-  { value: 'for_time', label: 'For Time' },
-  { value: 'amrap', label: 'AMRAP' },
-  { value: 'emom', label: 'EMOM' },
-  { value: 'rounds', label: 'Rounds' },
-  { value: 'intervalos', label: 'Intervalos' },
-  { value: 'tecnica', label: 'Técnica' },
-  { value: 'outro', label: 'Outro' },
-] as const;
-
-export const UNITS = [
-  { value: 'reps', label: 'reps' },
-  { value: 'm', label: 'm' },
-  { value: 'km', label: 'km' },
-  { value: 'cal', label: 'cal' },
-  { value: 'min', label: 'min' },
-  { value: 'sec', label: 'sec' },
-  { value: 'rounds', label: 'rounds' },
-] as const;
-
-// Presets rápidos para adicionar itens
-export const QUICK_PRESETS = [
-  { label: 'Reps', unit: 'reps', defaultQty: 10, icon: '🔄' },
-  { label: 'Metros', unit: 'm', defaultQty: 100, icon: '📏' },
-  { label: 'Calorias', unit: 'cal', defaultQty: 15, icon: '🔥' },
-  { label: 'Tempo', unit: 'min', defaultQty: 1, icon: '⏱️' },
-  { label: 'Rounds', unit: 'rounds', defaultQty: 3, icon: '🔁' },
-] as const;
+export const UNITS = WORKOUT_UNITS;
+export { BLOCK_FORMATS, QUICK_PRESETS };
 
 // Movimentos comuns para autocomplete (base inicial)
 const COMMON_MOVEMENTS = [
