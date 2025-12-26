@@ -17,10 +17,26 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, FileImage, Loader2, Moon
+  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,6 +90,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
   const [restDays, setRestDays] = useState<Record<number, boolean>>({});
+  const [editingBlockTitle, setEditingBlockTitle] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = () => {
@@ -156,7 +174,38 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     const updated = { ...parseResult };
     updated.days[dayIndex].blocks[blockIndex].title = newTitle;
+    // Marcar que não é mais auto-gerado se editou manualmente
+    updated.days[dayIndex].blocks[blockIndex].isAutoGenTitle = false;
     setParseResult(updated);
+  };
+
+  // Excluir bloco do preview
+  const deleteBlock = (dayIndex: number, blockIndex: number) => {
+    if (!parseResult) return;
+    
+    const updated = { ...parseResult };
+    const day = updated.days[dayIndex];
+    const blockToDelete = day.blocks[blockIndex];
+    
+    // Impedir exclusão de bloco principal
+    if (blockToDelete.isMainWod) {
+      return; // Não exclui - a UI deve mostrar mensagem
+    }
+    
+    // Remove o bloco
+    day.blocks.splice(blockIndex, 1);
+    
+    // Reindexar títulos auto-gerados ("BLOCO X") para manter ordem visual correta
+    let autoGenCounter = 0;
+    day.blocks.forEach((block) => {
+      if (block.isAutoGenTitle && block.title.match(/^BLOCO \d+$/)) {
+        autoGenCounter++;
+        block.title = `BLOCO ${autoGenCounter}`;
+      }
+    });
+    
+    setParseResult(updated);
+    setDeleteConfirm(null);
   };
 
   // Convert file to base64
@@ -635,14 +684,22 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       <div className="flex items-center gap-2 flex-wrap">
                                           {/* Título do bloco - SEMPRE EDITÁVEL se inválido ou sem título */}
                                           {/* Usa derivedTitle para determinar se precisa edição */}
-                                          {hasTitleError ? (
+                                          {hasTitleError || editingBlockTitle?.dayIndex === dayIndex && editingBlockTitle?.blockIndex === blockIndex ? (
                                             <input
                                               type="text"
                                               value={block.title || ''}
                                               onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
-                                              className="font-semibold text-base bg-transparent border-b-2 focus:outline-none px-1 min-w-[150px] max-w-[220px] border-amber-500 text-amber-700 placeholder:text-amber-500/60"
+                                              onBlur={() => setEditingBlockTitle(null)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') setEditingBlockTitle(null);
+                                              }}
+                                              className={`font-semibold text-base bg-transparent border-b-2 focus:outline-none px-1 min-w-[150px] max-w-[220px] ${
+                                                hasTitleError 
+                                                  ? 'border-amber-500 text-amber-700 placeholder:text-amber-500/60'
+                                                  : 'border-primary text-foreground placeholder:text-muted-foreground'
+                                              }`}
                                               placeholder="Digite: Aquecimento, Força, etc."
-                                              autoFocus={hasTitleError}
+                                              autoFocus
                                             />
                                           ) : (
                                             <span className="font-semibold text-base">{displayTitle}</span>
@@ -653,6 +710,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           <Badge className="bg-primary text-primary-foreground text-xs px-2">
                                             <Star className="w-3 h-3 mr-1 fill-current" />
                                             Principal
+                                          </Badge>
+                                        )}
+                                        
+                                        {/* Chip formatDisplay - exibe "EMOM 30'" se presente */}
+                                        {block.formatDisplay && (
+                                          <Badge variant="secondary" className="text-xs px-2 bg-muted text-muted-foreground">
+                                            {block.formatDisplay}
                                           </Badge>
                                         )}
                                         
@@ -673,8 +737,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           </SelectContent>
                                         </Select>
                                         
-                                        {/* Chip de formato - se aplicável */}
-                                        {block.format !== 'outro' && (
+                                        {/* Chip de formato - se aplicável e não tiver formatDisplay */}
+                                        {!block.formatDisplay && block.format !== 'outro' && (
                                           <Badge variant="outline" className="text-xs px-2">
                                             {getFormatLabel(block.format)}
                                           </Badge>
@@ -702,6 +766,38 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                             {block.isMainWod ? 'Desmarcar' : 'Marcar principal'}
                                           </Button>
                                         )}
+                                        
+                                        {/* Menu de ações do bloco */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                              <MoreVertical className="w-4 h-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem 
+                                              onClick={() => setEditingBlockTitle({ dayIndex, blockIndex })}
+                                              className="text-sm"
+                                            >
+                                              <Pencil className="w-4 h-4 mr-2" />
+                                              Editar título
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem 
+                                              onClick={() => {
+                                                if (block.isMainWod) {
+                                                  // Não permitir - exibe mensagem no dialog
+                                                  setDeleteConfirm({ dayIndex, blockIndex });
+                                                } else {
+                                                  setDeleteConfirm({ dayIndex, blockIndex });
+                                                }
+                                              }}
+                                              className="text-sm text-destructive focus:text-destructive"
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-2" />
+                                              Excluir bloco
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                       
                                       {/* Instrução principal */}
@@ -800,6 +896,35 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirm && parseResult?.days[deleteConfirm.dayIndex]?.blocks[deleteConfirm.blockIndex]?.isMainWod
+                ? 'Não é possível excluir'
+                : 'Excluir bloco?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm && parseResult?.days[deleteConfirm.dayIndex]?.blocks[deleteConfirm.blockIndex]?.isMainWod
+                ? 'Este bloco está marcado como WOD principal. Desmarque-o primeiro antes de excluir.'
+                : 'Esta ação não pode ser desfeita. O bloco será removido do treino.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            {deleteConfirm && !parseResult?.days[deleteConfirm.dayIndex]?.blocks[deleteConfirm.blockIndex]?.isMainWod && (
+              <AlertDialogAction 
+                onClick={() => deleteBlock(deleteConfirm.dayIndex, deleteConfirm.blockIndex)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
