@@ -1,16 +1,15 @@
 /**
  * TextModelImporter - Importador de treino via texto livre + arquivo
  * 
+ * MVP0 Anti-Burro:
+ * - Modal OBRIGATÓRIO de seleção de dia ANTES de qualquer importação
+ * - O sistema NUNCA tenta inferir dia da semana
+ * - O sistema NUNCA salva conteúdo sem dia definido
+ * - Todo conteúdo importado deve estar vinculado a um dia ANTES do upload
+ * 
  * UX:
  * - Área 1: Texto livre (principal) - funciona sempre
  * - Área 2: Upload de arquivo (PDF/múltiplas imagens) - OCR via edge function
- * 
- * REGRAS:
- * - Parsing determinístico automático
- * - Preview obrigatório antes de importar
- * - Se dia não identificado, perguntar no preview
- * - Alertas leves não bloqueiam
- * - Apenas erros críticos bloqueiam
  */
 
 import { useState, useRef } from 'react';
@@ -20,6 +19,7 @@ import {
   AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
+import { DaySelectionModal } from './DaySelectionModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,6 +59,7 @@ import {
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
+import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 
 interface TextModelImporterProps {
   onImport: (workouts: DayWorkout[]) => void;
@@ -74,15 +75,11 @@ const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
   { value: 'dom', label: 'Domingo' },
 ];
 
-// Opções de tipo de bloco para dropdown
-const BLOCK_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'aquecimento', label: 'Aquecimento' },
-  { value: 'forca', label: 'Força' },
-  { value: 'conditioning', label: 'Conditioning' },
-  { value: 'especifico', label: 'Específico' },
-  { value: 'core', label: 'Core' },
-  { value: 'corrida', label: 'Corrida' },
-];
+// Opções de tipo de bloco - Usar fonte única de categoryValidation
+const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
+  value: cat.value,
+  label: cat.label,
+}));
 
 export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [text, setText] = useState('');
@@ -96,6 +93,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // MVP0: Modal de seleção de dia obrigatório
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'text' | 'file' | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
 
   // Salvar linhas editadas de um bloco
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
@@ -105,14 +107,63 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(updated);
   };
 
+  // MVP0: Validar e parsear texto COM dia obrigatório selecionado
   const handleParse = () => {
     if (!text.trim()) return;
+    
+    // Se não tem dia selecionado, mostrar modal primeiro
+    if (!selectedDay) {
+      setPendingAction('text');
+      setShowDayModal(true);
+      return;
+    }
+    
+    // Parsear com dia já definido
+    executeParseWithDay(selectedDay);
+  };
+  
+  // Executar parse com dia selecionado
+  const executeParseWithDay = (day: DayOfWeek) => {
+    if (!text.trim()) return;
+    
     const result = parseStructuredText(text);
+    
+    // Forçar o dia selecionado em todos os blocos (override de qualquer inferência)
+    result.days.forEach(d => {
+      d.day = day;
+    });
+    
+    // Marcar que NÃO precisa de seleção de dia (já foi selecionado)
+    result.needsDaySelection = false;
+    
     setParseResult(result);
     setShowPreview(true);
-    // Reset selections when parsing new text
-    setSelectedDay(null);
     setRestDays({});
+  };
+  
+  // Handler quando usuário confirma dia no modal
+  const handleDayConfirmed = (day: DayOfWeek) => {
+    setSelectedDay(day);
+    setShowDayModal(false);
+    
+    if (pendingAction === 'text') {
+      // Executar parse com o dia selecionado
+      executeParseWithDay(day);
+    } else if (pendingAction === 'file' && pendingFiles) {
+      // Processar arquivos com o dia selecionado
+      processFilesWithDay(pendingFiles, day);
+    }
+    
+    // Limpar pending state
+    setPendingAction(null);
+    setPendingFiles(null);
+  };
+  
+  // Fechar modal sem confirmar
+  const handleDayModalClose = () => {
+    setShowDayModal(false);
+    setPendingAction(null);
+    setPendingFiles(null);
   };
 
   const handleImport = () => {
@@ -232,11 +283,29 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     });
   };
 
-  // Handler para upload de arquivo
+  // MVP0: Handler para upload de arquivo - EXIGE dia selecionado ANTES
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
+    // Se não tem dia selecionado, mostrar modal primeiro
+    if (!selectedDay) {
+      setPendingAction('file');
+      setPendingFiles(files);
+      setShowDayModal(true);
+      // Limpa o input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+    
+    // Processar arquivos com dia já selecionado
+    await processFilesWithDay(files, selectedDay);
+  };
+  
+  // Processar arquivos COM dia obrigatório
+  const processFilesWithDay = async (files: FileList, day: DayOfWeek) => {
     setFileError(null);
     setIsProcessingFile(true);
     
@@ -251,6 +320,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       if (textFiles.length > 0 && imageFiles.length === 0 && pdfFiles.length === 0) {
         const content = await textFiles[0].text();
         setText(content);
+        // Auto-parsear com o dia selecionado
+        const result = parseStructuredText(content);
+        result.days.forEach(d => { d.day = day; });
+        result.needsDaySelection = false;
+        setParseResult(result);
+        setShowPreview(true);
+        setRestDays({});
         setIsProcessingFile(false);
         return;
       }
@@ -285,6 +361,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       
       if (data?.success && data?.text) {
         setText(data.text);
+        // Auto-parsear com o dia selecionado
+        const result = parseStructuredText(data.text);
+        result.days.forEach(d => { d.day = day; });
+        result.needsDaySelection = false;
+        setParseResult(result);
+        setShowPreview(true);
+        setRestDays({});
       } else {
         setFileError(data?.error || 'Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
       }
@@ -485,27 +568,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                   </div>
                 )}
 
-                {/* Seletor de dia - quando necessário */}
-                {parseResult.needsDaySelection && (
-                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-3">
-                    <p className="text-sm text-amber-600">
-                      Não identifiquei o dia da semana nesse treino. Escolha o dia para continuar.
-                    </p>
-                    <Select 
-                      value={selectedDay || ''} 
-                      onValueChange={(val) => setSelectedDay(val as DayOfWeek)}
-                    >
-                      <SelectTrigger className="w-full max-w-xs">
-                        <SelectValue placeholder="Selecione o dia..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DAY_OPTIONS.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* MVP0: Dia já foi selecionado no modal obrigatório - mostrar badge informativo */}
+                {selectedDay && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-foreground">
+                      Dia selecionado: <span className="font-semibold">{DAY_OPTIONS.find(d => d.value === selectedDay)?.label}</span>
+                    </span>
                   </div>
                 )}
 
@@ -974,6 +1043,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           onSave={(newLines) => saveBlockLines(editingBlock.dayIndex, editingBlock.blockIndex, newLines)}
         />
       )}
+
+      {/* MVP0: Modal obrigatório de seleção de dia */}
+      <DaySelectionModal
+        open={showDayModal}
+        onClose={handleDayModalClose}
+        onConfirm={handleDayConfirmed}
+      />
     </div>
   );
 }
