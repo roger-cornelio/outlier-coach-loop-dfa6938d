@@ -94,8 +94,30 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // MVP0: Modal de seleção de dia - abre APENAS ao clicar "Validar e Visualizar"
+  // MVP0: Modal de seleção de dia - abre APENAS quando necessário
   const [showDayModal, setShowDayModal] = useState(false);
+
+  // Detectar dias distintos no texto (determinístico, sem IA)
+  const detectDaysInText = (textContent: string): number => {
+    const normalized = textContent.toLowerCase();
+    const dayPatterns = [
+      /\b(segunda|seg)\b/,
+      /\b(terça|terca|ter)\b/,
+      /\b(quarta|qua)\b/,
+      /\b(quinta|qui)\b/,
+      /\b(sexta|sex)\b/,
+      /\b(sábado|sabado|sab)\b/,
+      /\b(domingo|dom)\b/,
+    ];
+    
+    let count = 0;
+    for (const pattern of dayPatterns) {
+      if (pattern.test(normalized)) {
+        count++;
+      }
+    }
+    return count;
+  };
 
   // Salvar linhas editadas de um bloco
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
@@ -109,7 +131,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const handleParse = () => {
     if (!text.trim()) return;
     
-    // Se não tem dia selecionado, mostrar modal primeiro
+    // Detectar dias no texto ANTES de decidir sobre modal
+    const daysDetected = detectDaysInText(text);
+    
+    // Se 2+ dias detectados, ir direto para preview (texto multi-dia)
+    if (daysDetected >= 2) {
+      executeParseMultiDay();
+      return;
+    }
+    
+    // Se 0 ou 1 dia e não tem dia selecionado, mostrar modal
     if (!selectedDay) {
       setShowDayModal(true);
       return;
@@ -117,6 +148,21 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     // Parsear com dia já definido
     executeParseWithDay(selectedDay);
+  };
+  
+  // Executar parse para texto com múltiplos dias (sem modal)
+  const executeParseMultiDay = () => {
+    if (!text.trim()) return;
+    
+    // Parser canônico: recebe APENAS o texto original do textarea
+    const result = parseStructuredText(text);
+    
+    // Texto multi-dia não precisa de seleção de dia
+    result.needsDaySelection = false;
+    
+    setParseResult(result);
+    setShowPreview(true);
+    setRestDays({});
   };
   
   // Executar parse com dia selecionado
