@@ -29,6 +29,7 @@ import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
 import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
+import { normalizeText } from '@/utils/structuredTextParser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -573,11 +574,51 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                   </TooltipProvider>
                                 </div>
                               </div>
-                              <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
-                                {block.content}
-                              </pre>
+
+                              {/* Preview do bloco - FONTE ÚNICA: block.lines */}
+                              {(() => {
+                                const lines = (block as any).lines as
+                                  | { id: string; text: string; type: string }[]
+                                  | undefined;
+
+                                if (!lines || lines.length === 0) return null;
+
+                                const normalizedTitle = normalizeText(block.title ?? '');
+                                const normalizedCategory = normalizeText(block.type ?? '');
+
+                                const exerciseLines = lines.filter((l) => l.type === 'exercise');
+                                const commentLines = lines.filter((l) => {
+                                  if (l.type !== 'comment') return false;
+                                  const normalized = normalizeText(l.text);
+                                  if (normalizedTitle && normalized === normalizedTitle) return false;
+                                  if (normalizedCategory && normalized === normalizedCategory) return false;
+                                  return true;
+                                });
+
+                                return (
+                                  <div className="mt-2 space-y-3">
+                                    {exerciseLines.length > 0 && (
+                                      <div className="text-sm text-foreground space-y-1 pl-2 border-l-2 border-primary/40">
+                                        {exerciseLines.map((line) => (
+                                          <p key={line.id}>{line.text}</p>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {commentLines.length > 0 && (
+                                      <div className="text-xs text-muted-foreground p-2 rounded bg-muted/30 border border-border/40 space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground/70">💬 Comentários:</span>
+                                        {commentLines.map((line) => (
+                                          <p key={line.id} className="italic">{line.text}</p>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
-                          );})}
+                          );
+                            })}
                         </div>
                       </motion.div>
                     )}
