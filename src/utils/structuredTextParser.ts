@@ -42,6 +42,17 @@ export interface ParsedItem {
   isWeightAlert?: boolean; // Alerta quando kg isolado
 }
 
+// ============================================
+// LINHA CLASSIFICADA (EXERCISE ou COMMENT)
+// ============================================
+export type LineType = 'exercise' | 'comment';
+
+export interface ParsedLine {
+  id: string; // ID único para reordenação
+  text: string;
+  type: LineType;
+}
+
 export interface ParsedBlock {
   title: string;
   type: WorkoutBlock['type'];
@@ -51,6 +62,7 @@ export interface ParsedBlock {
   isBenchmark: boolean;
   optional: boolean; // Treino opcional (não exige WOD principal)
   items: ParsedItem[];
+  lines: ParsedLine[]; // Linhas classificadas (exercício ou comentário)
   coachNotes: string[];
   instruction?: string;
   instructions: string[]; // Lista de instruções do bloco
@@ -425,6 +437,156 @@ export function getDisplayTitle(block: ParsedBlock, blockIndex: number): string 
   return `Bloco ${blockIndex + 1}`;
 }
 
+// ============================================
+// CLASSIFICAÇÃO DE LINHAS: EXERCISE vs COMMENT
+// ============================================
+// Lista de movimentos conhecidos para classificação
+const KNOWN_MOVEMENTS = [
+  'squat', 'lunge', 'burpee', 'pull-up', 'pullup', 'push-up', 'pushup',
+  'row', 'bike', 'ski', 'wall ball', 'wallball', 'deadlift', 'clean',
+  'snatch', 'jerk', 'press', 'thruster', 'box jump', 'jump', 'run',
+  'sprint', 'sled', 'sandbag', 'farmer', 'carry', 'swing', 'kettlebell',
+  'dumbbell', 'barbell', 'toes to bar', 'ttb', 'sit-up', 'situp',
+  'plank', 'hollow', 'superman', 'pistol', 'step-up', 'stepup',
+  'double under', 'du', 'single under', 'rope', 'muscle-up', 'muscleup',
+  'handstand', 'hspu', 'dip', 'ring', 'rig', 'v-up', 'airbike',
+  'assault', 'echo', 'concept', 'skierg', 'rower', 'cal row', 'cal bike'
+];
+
+// Padrões de início de comentário
+const COMMENT_STARTERS = [
+  /^descansar?\b/i,
+  /^observa[çc][ãa]o\b/i,
+  /^nota\b/i,
+  /^cuidado\b/i,
+  /^foco\b/i,
+  /^objetivo\b/i,
+  /^aten[çc][ãa]o\b/i,
+  /^dica\b/i,
+  /^lembre/i,
+  /^📝/,
+  /^💡/,
+  /^⚠️/,
+];
+
+// Classifica uma linha como exercise ou comment
+export function classifyLine(line: string): LineType {
+  if (!line || line.trim().length === 0) return 'comment';
+  
+  const trimmed = line.trim();
+  
+  // 1. Verificar padrões de comentário primeiro
+  if (COMMENT_STARTERS.some(pattern => pattern.test(trimmed))) {
+    return 'comment';
+  }
+  
+  // 2. Começa com número (incluindo intervalos 8-10, 8–10)
+  if (/^\d+/.test(trimmed) || /^\d+\s*[-–]\s*\d+/.test(trimmed)) {
+    return 'exercise';
+  }
+  
+  // 3. Contém unidades/padrões de exercício
+  const exercisePatterns = [
+    /\breps?\b/i,
+    /\bm\b/i, // metros
+    /\bkm\b/i,
+    /\bcal\b/i,
+    /\bkg\b/i,
+    /\blb\b/i,
+    /\bmin\b/i,
+    /\bsec\b/i,
+    /\bseg\b/i,
+    /[''"]/, // aspas de tempo
+    /^min\s*\d+\s*:/i, // Min 1:, Min 2:
+    /\brounds?\b/i,
+    /\bsets?\b/i,
+    /\bemom\b/i,
+    /\be\d+mom\b/i,
+    /\bamrap\b/i,
+    /\bfor\s*time\b/i,
+    /\btabata\b/i,
+    /\brft\b/i,
+  ];
+  
+  if (exercisePatterns.some(pattern => pattern.test(trimmed))) {
+    return 'exercise';
+  }
+  
+  // 4. Contém nome de movimento conhecido
+  const lowerLine = trimmed.toLowerCase();
+  if (KNOWN_MOVEMENTS.some(movement => lowerLine.includes(movement))) {
+    return 'exercise';
+  }
+  
+  // 5. Se não caiu em nenhuma regra acima, é comentário
+  return 'comment';
+}
+
+// Gera ID único para linha
+let lineIdCounter = 0;
+export function generateLineId(): string {
+  lineIdCounter++;
+  return `line-${Date.now()}-${lineIdCounter}`;
+}
+
+// Classifica todas as linhas de um bloco
+export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
+  const lines: ParsedLine[] = [];
+  
+  // Adicionar instruction principal
+  if (block.instruction && block.instruction.trim()) {
+    lines.push({
+      id: generateLineId(),
+      text: block.instruction.trim(),
+      type: classifyLine(block.instruction),
+    });
+  }
+  
+  // Adicionar instructions
+  if (block.instructions) {
+    for (const instr of block.instructions) {
+      if (instr.trim()) {
+        lines.push({
+          id: generateLineId(),
+          text: instr.trim(),
+          type: classifyLine(instr),
+        });
+      }
+    }
+  }
+  
+  // Adicionar items formatados
+  for (const item of block.items) {
+    let text = `${item.quantity} ${item.unit} ${item.movement}`;
+    if (item.weight) {
+      text += ` @ ${item.weight}`;
+    }
+    if (item.notes) {
+      text += ` (${item.notes})`;
+    }
+    lines.push({
+      id: generateLineId(),
+      text: text.trim(),
+      type: 'exercise', // Items são sempre exercícios
+    });
+  }
+  
+  // Adicionar coachNotes
+  if (block.coachNotes) {
+    for (const note of block.coachNotes) {
+      if (note.trim()) {
+        lines.push({
+          id: generateLineId(),
+          text: note.trim(),
+          type: 'comment',
+        });
+      }
+    }
+  }
+  
+  return lines;
+}
+
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
   { pattern: /for\s*time|fortime/i, format: 'for_time' },
   { pattern: /amrap/i, format: 'amrap' },
@@ -518,6 +680,7 @@ export function parseStructuredText(text: string): ParseResult {
       isBenchmark: false,
       optional: isOptional,
       items: [],
+      lines: [], // Linhas classificadas
       coachNotes: [],
       instructions: [],
       isAutoGenTitle: isAutoGen,
@@ -544,6 +707,9 @@ export function parseStructuredText(text: string): ParseResult {
         if (/\bopcional\b/i.test(allContent)) {
           currentBlock.optional = true;
         }
+        
+        // Classificar linhas do bloco (exercise vs comment)
+        currentBlock.lines = classifyBlockLines(currentBlock);
         
         // Find or create day entry (allow null day)
         if (!currentDayEntry) {
