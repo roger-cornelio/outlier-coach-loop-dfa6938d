@@ -6,11 +6,11 @@
  * 2. Nunca depende do banco para renderizar preview
  * 3. "Publicar para Atletas" usa preview local como fonte
  * 4. OBRIGATÓRIO: semana de referência antes de salvar/publicar
- * 5. WOD Principal: máximo 1 por dia, diferente de Benchmark
+ * 5. WOD Principal: máximo 1 por dia
  * 6. MODO ESTRUTURADO: bloqueia salvar/publicar se bloco inválido
  * 
- * CONCEITOS:
- * - WOD Principal ≠ Benchmark (conceitos independentes)
+ * REGRA MVP0: Benchmark só pode ser definido por ADMIN.
+ * Coach não vê, não marca, não salva isBenchmark.
  */
 
 import { useState, useMemo } from 'react';
@@ -19,13 +19,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { 
   FileText, Sparkles, AlertCircle, Trash2, CheckCircle, ChevronDown, ChevronUp, 
-  Save, Zap, Dumbbell, Info, Trophy, Send, Upload, Star, AlertTriangle, PenTool
+  Save, Zap, Dumbbell, Info, Send, Upload, Star, AlertTriangle, PenTool
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
 import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
-import { generateBenchmarkTimeRanges } from '@/utils/benchmarkTimeGenerator';
 import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
@@ -38,7 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getBenchmarkCopy, getMainBlockCopy, getUIConceptsCopy } from '@/config/workoutConceptsCopy';
+import { getMainBlockCopy, getUIConceptsCopy } from '@/config/workoutConceptsCopy';
 
 const DAY_PATTERNS: { pattern: RegExp; day: DayOfWeek }[] = [
   { pattern: /segunda|seg\b|monday|mon\b/i, day: 'seg' },
@@ -271,29 +270,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     });
   };
 
-  const toggleBlockBenchmark = (dayIndex: number, blockIndex: number) => {
-    if (!parsedWorkouts) return;
-    
-    const updated = [...parsedWorkouts];
-    const block = updated[dayIndex].blocks[blockIndex];
-    block.isBenchmark = !block.isBenchmark;
-    
-    if (block.isBenchmark) {
-      const suggestedRanges = generateBenchmarkTimeRanges(block);
-      block.levelTargetRanges = suggestedRanges;
-      if (!block.paramsVersionUsed) {
-        block.paramsVersionUsed = getActiveParams().version;
-        block.createdAt = new Date().toISOString();
-      }
-      block.updatedAt = new Date().toISOString();
-    } else {
-      block.targetSeconds = undefined;
-      block.targetRange = undefined;
-      block.levelTargetRanges = undefined;
-    }
-    
-    setParsedWorkouts(updated);
-  };
+  // REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir
+  // toggleBlockBenchmark foi removido intencionalmente
 
   const saveWorkouts = async () => {
     if (!parsedWorkouts) return;
@@ -503,7 +481,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                           </div>
                           
                           {workout.blocks.map((block, blockIndex) => {
-                            const benchmarkCopy = getBenchmarkCopy();
                             const mainBlockCopy = getMainBlockCopy();
                             // Determinar se este bloco é o principal (APENAS manual agora)
                             const mainBlockResult = identifyMainBlock(workout.blocks);
@@ -524,11 +501,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                       {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
                                     </span>
                                   )}
-                                  {block.isBenchmark && (
-                                    <span className="text-xs bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
-                                      {benchmarkCopy.icon} {benchmarkCopy.shortLabel}
-                                    </span>
-                                  )}
+                                  {/* REGRA MVP0: Benchmark badge removido do Coach - apenas Admin pode ver/editar */}
                                 </div>
                                 <div className="flex gap-2">
                                   {/* Botão WOD Principal */}
@@ -552,26 +525,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                     </Tooltip>
                                   </TooltipProvider>
                                   
-                                  {/* Botão Benchmark */}
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant={block.isBenchmark ? "default" : "outline"}
-                                          size="sm"
-                                          onClick={() => toggleBlockBenchmark(dayIndex, blockIndex)}
-                                          className={`h-7 text-xs ${block.isBenchmark ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
-                                        >
-                                          <Trophy className="w-3 h-3 mr-1" />
-                                          Benchmark
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs">
-                                        <p className="font-medium mb-1">{benchmarkCopy.label}</p>
-                                        <p className="text-xs text-muted-foreground">{benchmarkCopy.tooltip}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                  {/* REGRA MVP0: Botão Benchmark removido do Coach - apenas Admin pode definir */}
                                 </div>
                               </div>
 

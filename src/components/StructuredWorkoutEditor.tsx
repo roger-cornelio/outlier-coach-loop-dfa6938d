@@ -4,12 +4,15 @@
  * MODELO ANTI-BURRO:
  * - Cada bloco deve ter campos obrigatórios preenchidos
  * - Validação bloqueia SALVAR e PUBLICAR se inválido
- * - Mantém compatibilidade com WOD Principal e Benchmark
+ * - Mantém compatibilidade com WOD Principal
+ * 
+ * REGRA MVP0: Benchmark só pode ser definido por ADMIN.
+ * Coach não vê, não marca, não salva isBenchmark.
  */
 
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trophy, Trash2, HelpCircle, Calendar } from 'lucide-react';
+import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trash2, HelpCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -211,17 +214,8 @@ export function StructuredWorkoutEditor({
     }));
   }, []);
 
-  const toggleBenchmark = useCallback((dayValue: DayOfWeek, blockId: string) => {
-    setDays(prev => prev.map(day => {
-      if (day.day !== dayValue) return day;
-      return {
-        ...day,
-        blocks: day.blocks.map(block => 
-          block.id === blockId ? { ...block, isBenchmark: !block.isBenchmark } : block
-        ),
-      };
-    }));
-  }, []);
+  // REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir
+  // toggleBenchmark foi removido intencionalmente
 
   const toggleBlockExpand = useCallback((blockId: string) => {
     setExpandedBlocks(prev => {
@@ -497,24 +491,7 @@ export function StructuredWorkoutEditor({
                               </Tooltip>
                             </TooltipProvider>
 
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant={block.isBenchmark ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleBenchmark(day.day, block.id)}
-                                    className={`h-7 text-xs ${block.isBenchmark ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
-                                  >
-                                    <Trophy className="w-3 h-3 mr-1" />
-                                    Benchmark
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Marcar para acompanhar evolução do atleta</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
                           </div>
 
                           <StructuredBlockEditor

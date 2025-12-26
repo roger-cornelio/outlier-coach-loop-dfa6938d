@@ -4,12 +4,15 @@
  * REGRAS DE VISIBILIDADE:
  * - Coach vê todos os seus treinos (qualquer status)
  * - Atleta vê APENAS treinos com status='published' AND price=0
+ * 
+ * REGRA MVP0: Benchmark só pode ser definido por ADMIN.
+ * Coach não pode salvar isBenchmark - campo é automaticamente removido.
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { DayWorkout } from '@/types/outlier';
+import type { DayWorkout, WorkoutBlock } from '@/types/outlier';
 
 export type WorkoutStatus = 'draft' | 'published' | 'archived';
 
@@ -50,6 +53,30 @@ interface UseCoachWorkoutsReturn {
   
   // Refresh
   refetch: () => Promise<void>;
+}
+
+/**
+ * REGRA MVP0: Remove isBenchmark de todos os blocos se não for admin
+ * Protege contra manipulação via payload do cliente
+ */
+function stripBenchmarkIfNotAdmin(
+  workoutData: DayWorkout[],
+  isAdmin: boolean
+): DayWorkout[] {
+  if (isAdmin) {
+    // Admin pode definir benchmark - não modifica nada
+    return workoutData;
+  }
+
+  // Coach: remover isBenchmark de todos os blocos
+  return workoutData.map(day => ({
+    ...day,
+    blocks: day.blocks.map(block => {
+      // Remover isBenchmark do bloco
+      const { isBenchmark, ...cleanBlock } = block as WorkoutBlock & { isBenchmark?: boolean };
+      return cleanBlock;
+    }),
+  }));
 }
 
 export function useCoachWorkouts(): UseCoachWorkoutsReturn {
@@ -120,11 +147,14 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     setError(null);
 
     try {
+      // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
+      const sanitizedWorkouts = stripBenchmarkIfNotAdmin(workoutData, isAdmin || isSuperAdmin);
+      
       // Cast workout_json to any to bypass strict JSON type checking
       const insertPayload: Record<string, unknown> = {
         coach_id: profile.id,
         title,
-        workout_json: JSON.parse(JSON.stringify(workoutData)),
+        workout_json: JSON.parse(JSON.stringify(sanitizedWorkouts)),
         status,
         price,
       };
@@ -170,7 +200,9 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       if (updates.status !== undefined) updatePayload.status = updates.status;
       if (updates.price !== undefined) updatePayload.price = updates.price;
       if (updates.workout_json !== undefined) {
-        updatePayload.workout_json = updates.workout_json as unknown as Record<string, unknown>;
+        // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
+        const sanitizedWorkouts = stripBenchmarkIfNotAdmin(updates.workout_json, isAdmin || isSuperAdmin);
+        updatePayload.workout_json = sanitizedWorkouts as unknown as Record<string, unknown>;
       }
 
       const { error: updateError } = await supabase
