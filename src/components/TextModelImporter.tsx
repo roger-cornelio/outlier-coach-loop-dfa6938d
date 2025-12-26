@@ -94,10 +94,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // MVP0: Modal de seleção de dia obrigatório
+  // MVP0: Modal de seleção de dia - abre APENAS ao clicar "Validar e Visualizar"
   const [showDayModal, setShowDayModal] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'text' | 'file' | null>(null);
-  const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
 
   // Salvar linhas editadas de um bloco
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
@@ -107,13 +105,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(updated);
   };
 
-  // MVP0: Validar e parsear texto COM dia obrigatório selecionado
+  // MVP0: "Validar e Visualizar" - ÚNICO ponto de entrada para parsing
   const handleParse = () => {
     if (!text.trim()) return;
     
     // Se não tem dia selecionado, mostrar modal primeiro
     if (!selectedDay) {
-      setPendingAction('text');
       setShowDayModal(true);
       return;
     }
@@ -126,7 +123,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const executeParseWithDay = (day: DayOfWeek) => {
     if (!text.trim()) return;
     
-    const result = parseStructuredText(text);
+    // MVP0: Inserir dia como cabeçalho do texto antes de parsear
+    const dayLabel = DAY_OPTIONS.find(d => d.value === day)?.label?.toUpperCase() || day.toUpperCase();
+    const textWithDayHeader = `${dayLabel}\n\n${text}`;
+    
+    const result = parseStructuredText(textWithDayHeader);
     
     // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
     if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
@@ -172,25 +173,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const handleDayConfirmed = (day: DayOfWeek) => {
     setSelectedDay(day);
     setShowDayModal(false);
-    
-    if (pendingAction === 'text') {
-      // Executar parse com o dia selecionado
-      executeParseWithDay(day);
-    } else if (pendingAction === 'file' && pendingFiles) {
-      // Processar arquivos com o dia selecionado
-      processFilesWithDay(pendingFiles, day);
-    }
-    
-    // Limpar pending state
-    setPendingAction(null);
-    setPendingFiles(null);
+    // Executar parse imediatamente após selecionar o dia
+    executeParseWithDay(day);
   };
   
   // Fechar modal sem confirmar
   const handleDayModalClose = () => {
     setShowDayModal(false);
-    setPendingAction(null);
-    setPendingFiles(null);
   };
 
   const handleImport = () => {
@@ -310,31 +299,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     });
   };
 
-  // MVP0: Handler para upload de arquivo - EXIGE dia selecionado ANTES
+  // MVP0: Handler para upload de arquivo - OCR apenas preenche textarea
+  // NÃO dispara parsing nem preview automaticamente
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
-    // Se não tem dia selecionado, mostrar modal primeiro
-    if (!selectedDay) {
-      setPendingAction('file');
-      setPendingFiles(files);
-      setShowDayModal(true);
-      // Limpa o input para permitir re-upload do mesmo arquivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      return;
-    }
-    
-    // Processar arquivos com dia já selecionado
-    await processFilesWithDay(files, selectedDay);
+    // Processar arquivos imediatamente (sem exigir dia antes)
+    await processFilesToTextarea(files);
   };
   
-  // Processar arquivos COM dia obrigatório
-  const processFilesWithDay = async (files: FileList, day: DayOfWeek) => {
+  // MVP0: Processar arquivos e APENAS preencher o textarea
+  // O dia será selecionado ao clicar "Validar e Visualizar"
+  const processFilesToTextarea = async (files: FileList) => {
     setFileError(null);
     setIsProcessingFile(true);
+    // Limpar preview anterior ao iniciar novo processamento
+    setParseResult(null);
+    setShowPreview(false);
+    setSelectedDay(null);
     
     try {
       // Check file types
@@ -343,46 +326,15 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       const imageFiles = fileArray.filter(f => f.type.startsWith('image/'));
       const pdfFiles = fileArray.filter(f => f.type === 'application/pdf');
       
-      // Handle text files directly
+      // Handle text files directly - apenas preenche textarea
       if (textFiles.length > 0 && imageFiles.length === 0 && pdfFiles.length === 0) {
         const content = await textFiles[0].text();
         setText(content);
-        // MVP0: Parsear com mesmo parser do "Colar treino"
-        const result = parseStructuredText(content);
-        
-        // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
-        if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
-          result.days = [{
-            day: day,
-            blocks: [{
-              title: 'Treino',
-              type: '' as any,
-              format: '',
-              isMainWod: false,
-              isBenchmark: false,
-              optional: false,
-              items: [],
-              lines: content.split('\n').filter(line => line.trim()).map((line, idx) => ({
-                id: `fallback-${idx}`,
-                text: line.trim(),
-                type: 'comment' as const,
-              })),
-              coachNotes: [],
-              instructions: [],
-              isAutoGenTitle: true,
-            }],
-            alerts: ['Estrutura não detectada automaticamente. Revise o bloco e defina a categoria.'],
-          }];
-          result.success = true;
-          result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
-        }
-        
-        result.days.forEach(d => { d.day = day; });
-        result.needsDaySelection = false;
-        setParseResult(result);
-        setShowPreview(true);
-        setRestDays({});
         setIsProcessingFile(false);
+        // Limpa o input para permitir re-upload do mesmo arquivo
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         return;
       }
       
@@ -415,44 +367,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       }
       
       if (data?.success && data?.text) {
+        // MVP0: Apenas preenche o textarea - SEM parsing automático
+        // O coach deve clicar "Validar e Visualizar" para parsear
         setText(data.text);
-        // MVP0: Parsear com mesmo parser do "Colar treino"
-        // O rawText é tratado como texto único, independente de quantas imagens/páginas
-        const result = parseStructuredText(data.text);
-        
-        // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
-        if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
-          result.days = [{
-            day: day,
-            blocks: [{
-              title: 'Treino',
-              type: '' as any, // Categoria obrigatória - coach deve selecionar
-              format: '',
-              isMainWod: false,
-              isBenchmark: false,
-              optional: false,
-              items: [],
-              lines: data.text.split('\n').filter((line: string) => line.trim()).map((line: string, idx: number) => ({
-                id: `fallback-${idx}`,
-                text: line.trim(),
-                type: 'comment' as const,
-              })),
-              coachNotes: [],
-              instructions: [],
-              isAutoGenTitle: true,
-            }],
-            alerts: ['Estrutura não detectada automaticamente. Revise o bloco e defina a categoria.'],
-          }];
-          result.success = true;
-          result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
-        }
-        
-        // Forçar dia selecionado em todos os blocos
-        result.days.forEach(d => { d.day = day; });
-        result.needsDaySelection = false;
-        setParseResult(result);
-        setShowPreview(true);
-        setRestDays({});
+        // NÃO chama parseStructuredText aqui
+        // NÃO seta parseResult aqui
+        // NÃO seta showPreview aqui
       } else {
         setFileError(data?.error || 'Não consegui ler esse arquivo com segurança.\nCole o texto do treino acima para continuar.');
       }
