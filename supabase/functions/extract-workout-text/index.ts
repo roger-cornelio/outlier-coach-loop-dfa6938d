@@ -43,15 +43,27 @@ serve(async (req) => {
           {
             role: "system",
             content: `You are an expert at reading workout programs from images (screenshots, PDFs, handwritten notes).
-Your task is to extract the workout text exactly as written, preserving:
-- Day labels (Segunda, Terça, Monday, etc)
-- Block titles (AQUECIMENTO, FORÇA, AMRAP, FOR TIME, etc)
-- Exercise descriptions with reps, sets, distances, times
-- Any notes or instructions
 
-Return the extracted text in plain format, maintaining the original structure.
-If there are multiple images, they are pages of the same workout - concatenate them in order with clear page separators.
-Do NOT interpret or reorganize - just transcribe what you see.`
+YOUR TASK: Extract the raw text exactly as written. DO NOT create blocks based on pages/images.
+
+RULES:
+1. Preserve the original structure: day labels, block titles, exercises, reps, sets, distances, times, notes
+2. If there are multiple images/pages, they are parts of the SAME workout for the SAME day
+3. Concatenate text from all images in order, using "---" as separator between pages
+4. DO NOT interpret, reorganize, or infer structure
+5. DO NOT create separate blocks per image - just transcribe the visible text
+6. Keep day labels (Segunda, Terça, Monday, etc) if visible
+7. Keep block titles (AQUECIMENTO, FORÇA, AMRAP, FOR TIME, WOD, etc) if visible
+
+OUTPUT FORMAT:
+Return plain text with:
+- Original text from image 1
+- ---
+- Original text from image 2
+- ---
+- (etc)
+
+The parser downstream will detect blocks from text patterns, NOT from page breaks.`
           },
           {
             role: "user",
@@ -59,8 +71,8 @@ Do NOT interpret or reorganize - just transcribe what you see.`
               {
                 type: "text",
                 text: images.length > 1 
-                  ? `Extract the workout text from these ${images.length} images. They are sequential pages of the same workout. Preserve the order and structure.`
-                  : "Extract the workout text from this image. Preserve the structure exactly as shown."
+                  ? `Extract the workout text from these ${images.length} images. They are sequential parts of the SAME workout. Transcribe exactly what you see, separating pages with "---". Do NOT create blocks per page.`
+                  : "Extract the workout text from this image exactly as shown. Preserve structure."
               },
               ...imageContent
             ]
