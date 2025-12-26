@@ -670,7 +670,21 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     }
   }
   
-  return lines;
+  // ============================================
+  // DEDUP FINAL: remover linhas duplicadas por type + normalizedText
+  // ============================================
+  const seen = new Set<string>();
+  const dedupedLines: ParsedLine[] = [];
+  
+  for (const line of lines) {
+    const key = `${line.type}|${normalizeText(line.text)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      dedupedLines.push(line);
+    }
+  }
+  
+  return dedupedLines;
 }
 
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
