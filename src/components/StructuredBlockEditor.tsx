@@ -25,16 +25,18 @@ import type { WorkoutBlock } from '@/types/outlier';
 // TIPOS E CONSTANTES
 // ============================================
 
-export const BLOCK_TYPES = [
-  { value: 'aquecimento', label: 'Aquecimento', emoji: '🔥' },
-  { value: 'forca', label: 'Força', emoji: '💪' },
-  { value: 'conditioning', label: 'Conditioning', emoji: '⚡' },
-  { value: 'especifico', label: 'Específico (HYROX)', emoji: '🛷' },
-  { value: 'core', label: 'Core', emoji: '🎯' },
-  { value: 'corrida', label: 'Corrida', emoji: '🏃' },
-  { value: 'bike', label: 'Bike', emoji: '🚴' },
-  { value: 'remo', label: 'Remo', emoji: '🚣' },
-] as const;
+// LISTA FINAL DE CATEGORIAS (MVP0) - Importada de categoryValidation
+import { 
+  BLOCK_CATEGORIES, 
+  validateBlockByCategory, 
+  canBlockBeMain,
+  getCategoryEmoji,
+  VALIDATION_MESSAGES,
+  type CategoryValidationResult,
+} from '@/utils/categoryValidation';
+
+// Re-exportar para compatibilidade
+export const BLOCK_TYPES = BLOCK_CATEGORIES;
 
 export const BLOCK_FORMATS = [
   { value: 'for_time', label: 'For Time' },
