@@ -128,6 +128,33 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     const result = parseStructuredText(text);
     
+    // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
+    if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
+      result.days = [{
+        day: day,
+        blocks: [{
+          title: 'Treino',
+          type: '' as any, // Categoria obrigatória - coach deve selecionar
+          format: '',
+          isMainWod: false,
+          isBenchmark: false,
+          optional: false,
+          items: [],
+          lines: text.split('\n').filter(line => line.trim()).map((line, idx) => ({
+            id: `fallback-${idx}`,
+            text: line.trim(),
+            type: 'comment' as const,
+          })),
+          coachNotes: [],
+          instructions: [],
+          isAutoGenTitle: true,
+        }],
+        alerts: ['Estrutura não detectada automaticamente. Revise o bloco e defina a categoria.'],
+      }];
+      result.success = true;
+      result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
+    }
+    
     // Forçar o dia selecionado em todos os blocos (override de qualquer inferência)
     result.days.forEach(d => {
       d.day = day;
@@ -320,8 +347,36 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       if (textFiles.length > 0 && imageFiles.length === 0 && pdfFiles.length === 0) {
         const content = await textFiles[0].text();
         setText(content);
-        // Auto-parsear com o dia selecionado
+        // MVP0: Parsear com mesmo parser do "Colar treino"
         const result = parseStructuredText(content);
+        
+        // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
+        if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
+          result.days = [{
+            day: day,
+            blocks: [{
+              title: 'Treino',
+              type: '' as any,
+              format: '',
+              isMainWod: false,
+              isBenchmark: false,
+              optional: false,
+              items: [],
+              lines: content.split('\n').filter(line => line.trim()).map((line, idx) => ({
+                id: `fallback-${idx}`,
+                text: line.trim(),
+                type: 'comment' as const,
+              })),
+              coachNotes: [],
+              instructions: [],
+              isAutoGenTitle: true,
+            }],
+            alerts: ['Estrutura não detectada automaticamente. Revise o bloco e defina a categoria.'],
+          }];
+          result.success = true;
+          result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
+        }
+        
         result.days.forEach(d => { d.day = day; });
         result.needsDaySelection = false;
         setParseResult(result);
@@ -361,8 +416,38 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       
       if (data?.success && data?.text) {
         setText(data.text);
-        // Auto-parsear com o dia selecionado
+        // MVP0: Parsear com mesmo parser do "Colar treino"
+        // O rawText é tratado como texto único, independente de quantas imagens/páginas
         const result = parseStructuredText(data.text);
+        
+        // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
+        if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
+          result.days = [{
+            day: day,
+            blocks: [{
+              title: 'Treino',
+              type: '' as any, // Categoria obrigatória - coach deve selecionar
+              format: '',
+              isMainWod: false,
+              isBenchmark: false,
+              optional: false,
+              items: [],
+              lines: data.text.split('\n').filter((line: string) => line.trim()).map((line: string, idx: number) => ({
+                id: `fallback-${idx}`,
+                text: line.trim(),
+                type: 'comment' as const,
+              })),
+              coachNotes: [],
+              instructions: [],
+              isAutoGenTitle: true,
+            }],
+            alerts: ['Estrutura não detectada automaticamente. Revise o bloco e defina a categoria.'],
+          }];
+          result.success = true;
+          result.warnings.push('O parser não detectou blocos estruturados. Foi criado um bloco único "Treino" para revisão.');
+        }
+        
+        // Forçar dia selecionado em todos os blocos
         result.days.forEach(d => { d.day = day; });
         result.needsDaySelection = false;
         setParseResult(result);
