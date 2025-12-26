@@ -469,23 +469,53 @@ const COMMENT_STARTERS = [
   /^⚠️/,
 ];
 
+// Modalidades conhecidas para classificação de linha com duração
+const MODALITY_KEYWORDS = [
+  'corrida', 'bike', 'remo', 'ski', 'caminhada', 'cardio', 'erg',
+  'run', 'running', 'row', 'rowing', 'walk', 'cycling', 'airbike',
+  'assault', 'echo', 'concept', 'skierg', 'trote', 'swimming', 'natação'
+];
+
+// Categorias que indicam cardio/endurance (bloco pertence a essas = linha com duração é exercício)
+const CARDIO_CATEGORIES = ['corrida', 'cardio', 'endurance', 'conditioning'];
+
 // Classifica uma linha como exercise ou comment
-export function classifyLine(line: string): LineType {
+// Opcionalmente recebe a categoria do bloco para regra de duração + categoria
+export function classifyLine(line: string, blockCategory?: string): LineType {
   if (!line || line.trim().length === 0) return 'comment';
   
   const trimmed = line.trim();
+  const lowerLine = trimmed.toLowerCase();
   
   // 1. Verificar padrões de comentário primeiro
   if (COMMENT_STARTERS.some(pattern => pattern.test(trimmed))) {
     return 'comment';
   }
   
-  // 2. Começa com número (incluindo intervalos 8-10, 8–10)
+  // 2. REGRA NOVA: Duração + (Modalidade OU Categoria Cardio) = EXERCÍCIO
+  // Ex: "Corrida leve até 45 minutos" deve ser exercício
+  const hasDuration = /\d+\s*(?:min|minutos?|minutes?|'|'')\b/i.test(trimmed) ||
+                      /até\s*\d+\s*(?:min|minutos?)/i.test(trimmed);
+  
+  if (hasDuration) {
+    // Verificar se tem modalidade na linha
+    const hasModality = MODALITY_KEYWORDS.some(mod => lowerLine.includes(mod));
+    
+    // Verificar se o bloco é de categoria cardio/endurance
+    const blockIsCardio = blockCategory && 
+      CARDIO_CATEGORIES.some(cat => blockCategory.toLowerCase().includes(cat));
+    
+    if (hasModality || blockIsCardio) {
+      return 'exercise';
+    }
+  }
+  
+  // 3. Começa com número (incluindo intervalos 8-10, 8–10)
   if (/^\d+/.test(trimmed) || /^\d+\s*[-–]\s*\d+/.test(trimmed)) {
     return 'exercise';
   }
   
-  // 3. Contém unidades/padrões de exercício
+  // 4. Contém unidades/padrões de exercício
   const exercisePatterns = [
     /\breps?\b/i,
     /\bm\b/i, // metros
@@ -512,13 +542,12 @@ export function classifyLine(line: string): LineType {
     return 'exercise';
   }
   
-  // 4. Contém nome de movimento conhecido
-  const lowerLine = trimmed.toLowerCase();
+  // 5. Contém nome de movimento conhecido
   if (KNOWN_MOVEMENTS.some(movement => lowerLine.includes(movement))) {
     return 'exercise';
   }
   
-  // 5. Se não caiu em nenhuma regra acima, é comentário
+  // 6. Se não caiu em nenhuma regra acima, é comentário
   return 'comment';
 }
 
@@ -576,6 +605,9 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     return false;
   };
   
+  // Determinar a categoria do bloco para passar ao classifyLine
+  const blockCategory = block.type || block.title || '';
+  
   let prevNormalized = '';
   let lineIndex = 0;
   
@@ -585,7 +617,7 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
       lines.push({
         id: generateLineId(),
         text: block.instruction.trim(),
-        type: classifyLine(block.instruction),
+        type: classifyLine(block.instruction, blockCategory),
       });
       prevNormalized = normalizeText(block.instruction);
     }
@@ -599,7 +631,7 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
         lines.push({
           id: generateLineId(),
           text: instr.trim(),
-          type: classifyLine(instr),
+          type: classifyLine(instr, blockCategory),
         });
         prevNormalized = normalizeText(instr);
       }
