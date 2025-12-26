@@ -811,6 +811,30 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         </DropdownMenu>
                                       </div>
                                       
+                                      {/* ================================================
+                                         LEGACY GUARD RAIL:
+                                         block.instruction / block.instructions are DEPRECATED.
+                                         Source of truth is block.lines.
+                                         Do NOT render/use instruction(s) anywhere.
+                                         ================================================ */}
+                                      
+                                      {/* DEV GUARD: Log legacy fields if present (dev only) */}
+                                      {(() => {
+                                        if (process.env.NODE_ENV === 'development') {
+                                          const legacyInstruction = (block as any).instruction;
+                                          const legacyInstructions = (block as any).instructions;
+                                          if (legacyInstruction || (legacyInstructions && legacyInstructions.length > 0)) {
+                                            console.debug('[LEGACY] instruction(s) present but ignored', { 
+                                              blockIndex, 
+                                              title: block.title,
+                                              hasInstruction: !!legacyInstruction,
+                                              hasInstructions: !!(legacyInstructions && legacyInstructions.length > 0)
+                                            });
+                                          }
+                                        }
+                                        return null;
+                                      })()}
+                                      
                                       {/* Exercícios - FONTE ÚNICA: block.lines (type==='exercise') */}
                                       {block.lines && block.lines.filter(l => l.type === 'exercise').length > 0 && (
                                         <div className="text-sm text-foreground mt-2 space-y-1 pl-2 border-l-2 border-primary/40">
@@ -820,20 +844,26 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         </div>
                                       )}
                                       
-                                      {/* Comentários - usando block.lines com fail-safe de dedup */}
+                                      {/* Comentários - FONTE ÚNICA: block.lines (type==='comment') com fail-safe anti-duplicação */}
                                       {(() => {
                                         const normalizedTitle = normalizeText(block.title);
                                         const normalizedFormat = block.formatDisplay ? normalizeText(block.formatDisplay) : '';
+                                        const normalizedType = block.type ? normalizeText(block.type) : '';
                                         
-                                        // Fail-safe: filtrar comentários que sejam iguais ao título ou formato
+                                        // Fail-safe: filtrar comentários que sejam iguais ao título, formato ou tipo
+                                        // Também remove linhas vazias/whitespace
                                         const filteredComments = (block.lines || []).filter(l => {
                                           if (l.type !== 'comment') return false;
+                                          const trimmed = l.text?.trim();
+                                          if (!trimmed) return false; // Remove linhas vazias
                                           const normalized = normalizeText(l.text);
                                           if (normalized === normalizedTitle) return false;
                                           if (normalizedFormat && normalized === normalizedFormat) return false;
+                                          if (normalizedType && normalized === normalizedType) return false;
                                           return true;
                                         });
                                         
+                                        // Se não houver comentários após filtro, não renderizar a caixa
                                         if (filteredComments.length === 0) return null;
                                         
                                         return (
