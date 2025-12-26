@@ -6,6 +6,13 @@
  * 2. Validações determinísticas por categoria
  * 3. Mensagens claras user-friendly
  * 4. Flags internas para dificuldade (has_integrated_run, has_hyrox_station)
+ * 
+ * FONTE ÚNICA: Este arquivo define as listas oficiais de:
+ * - BLOCK_CATEGORIES (categoria do bloco)
+ * - BLOCK_FORMATS (formato do bloco)
+ * - WORKOUT_UNITS (unidades dos itens)
+ * 
+ * Todos os componentes DEVEM importar daqui. NÃO duplicar arrays.
  */
 
 // ============================================
@@ -22,6 +29,53 @@ export const BLOCK_CATEGORIES = [
 ] as const;
 
 export type BlockCategory = typeof BLOCK_CATEGORIES[number]['value'];
+
+// ============================================
+// LISTA FINAL DE FORMATOS (MVP0)
+// ============================================
+
+/**
+ * Formato define a ESTRUTURA do treino.
+ * "Técnica" NÃO é formato - deve ser colocado no título ou texto.
+ */
+export const BLOCK_FORMATS = [
+  { value: 'for_time', label: 'For Time' },
+  { value: 'amrap', label: 'AMRAP' },
+  { value: 'emom', label: 'EMOM' },
+  { value: 'rounds', label: 'Rounds' },
+  { value: 'intervalos', label: 'Intervalos' },
+  { value: 'outro', label: 'Outro' },
+] as const;
+
+export type BlockFormat = typeof BLOCK_FORMATS[number]['value'];
+
+// ============================================
+// LISTA FINAL DE UNIDADES (MVP0)
+// ============================================
+
+export const WORKOUT_UNITS = [
+  { value: 'reps', label: 'reps' },
+  { value: 'm', label: 'm' },
+  { value: 'km', label: 'km' },
+  { value: 'cal', label: 'cal' },
+  { value: 'min', label: 'min' },
+  { value: 'sec', label: 'sec' },
+  { value: 'rounds', label: 'rounds' },
+] as const;
+
+export type WorkoutUnit = typeof WORKOUT_UNITS[number]['value'];
+
+// ============================================
+// PRESETS RÁPIDOS (AÇÕES RÁPIDAS)
+// ============================================
+
+export const QUICK_PRESETS = [
+  { label: 'Reps', unit: 'reps' as WorkoutUnit, defaultQty: 10, icon: '🔄' },
+  { label: 'Metros', unit: 'm' as WorkoutUnit, defaultQty: 100, icon: '📏' },
+  { label: 'Calorias', unit: 'cal' as WorkoutUnit, defaultQty: 15, icon: '🔥' },
+  { label: 'Tempo', unit: 'min' as WorkoutUnit, defaultQty: 1, icon: '⏱️' },
+  { label: 'Rounds', unit: 'rounds' as WorkoutUnit, defaultQty: 3, icon: '🔁' },
+] as const;
 
 // ============================================
 // INTERFACE DE RESULTADO DE VALIDAÇÃO
