@@ -48,7 +48,7 @@ export const VALIDATION_MESSAGES = {
   // Categoria não selecionada
   CATEGORY_REQUIRED: {
     code: 'CATEGORY_REQUIRED',
-    message: '❗ Selecione a categoria do bloco\nO sistema precisa saber se este treino é Força, Metcon, Corrida ou Específico (HYROX).',
+    message: '❗ Selecione a categoria do bloco\nO sistema precisa saber como interpretar o treino.',
   },
   // Bloco sem conteúdo
   EMPTY_BLOCK: {
@@ -58,22 +58,22 @@ export const VALIDATION_MESSAGES = {
   // Força incompleta
   FORCA_INCOMPLETE: {
     code: 'FORCA_INCOMPLETE',
-    message: '❗ Bloco de Força incompleto\nInclua séries/reps, carga (%/kg) ou PSE/RPE.',
+    message: '❗ Bloco de Força incompleto\nInclua reps/sets, carga ou PSE/RPE.',
   },
   // Metcon incompleto
   METCON_INCOMPLETE: {
     code: 'METCON_INCOMPLETE',
-    message: '❗ Bloco de Metcon incompleto\nInclua AMRAP, EMOM, For Time, Rounds ou exercícios com repetições.',
+    message: '❗ Bloco de Metcon incompleto\nInclua AMRAP, EMOM, For Time, Rounds ou exercícios.',
   },
   // Específico inválido
   ESPECIFICO_INVALID: {
     code: 'ESPECIFICO_INVALID',
-    message: '❗ Bloco Específico (HYROX) inválido\nUse esta categoria apenas para treinos com estações como sled, wall ball, lunge ou carry.',
+    message: '❗ Use Específico (HYROX) apenas para treinos com sled, wall ball, lunge ou carry.',
   },
   // Corrida incompleta
   CORRIDA_INCOMPLETE: {
     code: 'CORRIDA_INCOMPLETE',
-    message: '❗ Bloco de Corrida incompleto\nInforme distância (km/m) ou intensidade (Zona, pace ou %FC).',
+    message: '❗ Informe distância ou intensidade (Zona, %FC ou pace).',
   },
   // Principal inválido
   MAIN_WOD_INVALID: {
@@ -91,21 +91,42 @@ export const VALIDATION_MESSAGES = {
 // PADRÕES DE VALIDAÇÃO (REGEX)
 // ============================================
 
+/**
+ * REGRAS DE INTENSIDADE MVP0:
+ * 
+ * FORÇA aceita:
+ * - reps / sets / rounds (ex: 5x5, 3 sets de 8, 6 reps)
+ * - PSE / RPE
+ * - % de carga / kg
+ * 
+ * FORÇA **NÃO** aceita (ignorar silenciosamente):
+ * - %FCmáx / Zona cardíaca (são de Corrida)
+ * 
+ * CORRIDA aceita:
+ * - km / m / metros
+ * - Zona / %FC / pace / frequência
+ */
+
 const PATTERNS = {
-  // Força: séries/reps ou carga
-  SERIES_REPS: /(\d+)\s*[xX×]\s*(\d+)|(\d+)\s*sets?|(\d+)\s*reps?|(\d+)\s*séries?/i,
-  LOAD_INTENSITY: /(\d+)\s*kg|(\d+)\s*%|[Pp][Ss][Ee]|[Rr][Pp][Ee]|carga|peso/i,
+  // Força: séries/reps (ex: 5x5, 3 sets de 8, 6 reps, 4 séries)
+  SERIES_REPS: /(\d+)\s*[xX×]\s*(\d+)|(\d+)\s*sets?|(\d+)\s*reps?|(\d+)\s*séries?|(\d+)\s*rounds?/i,
+  
+  // Força: carga/intensidade (EXCLUINDO zona/fc que são de Corrida)
+  // Aceita: kg, % (de carga), PSE, RPE, carga, peso
+  LOAD_INTENSITY: /(\d+)\s*kg|(\d+)\s*%(?!\s*fc)|[Pp][Ss][Ee]|[Rr][Pp][Ee]|carga|peso/i,
   
   // Metcon: estrutura
-  METCON_STRUCTURE: /amrap|emom|for\s*time|rounds?|chipper|time\s*cap|tabata|\d+\s*min/i,
+  METCON_STRUCTURE: /amrap|emom|for\s*time|rounds?|chipper|time\s*cap|tabata|interval|\d+\s*min/i,
   METCON_EXERCISES: /(\d+)\s*(reps?|cal|m\b|km|unidades)/i,
   
   // Específico (HYROX): estações
   HYROX_STATIONS: /sled|wall\s*ball|lunge|carry|sandbag|farmer/i,
   
-  // Corrida: distância ou intensidade
+  // Corrida: distância
   RUN_DISTANCE: /(\d+)\s*(km|m\b|metros?|quilômetros?)/i,
-  RUN_INTENSITY: /zona\s*\d|z\d|pace|%\s*fc|frequência|bpm|\d+['′:]?\d*/i,
+  
+  // Corrida: intensidade cardíaca (exclusivo para Corrida, NÃO para Força)
+  RUN_INTENSITY: /zona\s*\d|z\d|pace|%\s*fc|%\s*fcmax|frequência|bpm/i,
   
   // Flags: corrida integrada
   INTEGRATED_RUN: /run|corrida|trote|\d+\s*m\s*run|\d+\s*km/i,
