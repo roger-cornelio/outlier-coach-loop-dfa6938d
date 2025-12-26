@@ -575,6 +575,30 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                 </div>
                               </div>
 
+                              {/* ================================================
+                                  LEGACY GUARD RAIL:
+                                  block.instruction / block.instructions are DEPRECATED.
+                                  Source of truth is block.lines.
+                                  Do NOT render/use instruction(s) anywhere.
+                                  ================================================ */}
+
+                              {/* DEV GUARD: Log legacy fields if present (dev only) */}
+                              {(() => {
+                                if (process.env.NODE_ENV === 'development') {
+                                  const legacyInstruction = (block as any).instruction;
+                                  const legacyInstructions = (block as any).instructions;
+                                  if (legacyInstruction || (legacyInstructions && legacyInstructions.length > 0)) {
+                                    console.debug('[LEGACY] instruction(s) present but ignored', { 
+                                      blockIndex, 
+                                      title: block.title,
+                                      hasInstruction: !!legacyInstruction,
+                                      hasInstructions: !!(legacyInstructions && legacyInstructions.length > 0)
+                                    });
+                                  }
+                                }
+                                return null;
+                              })()}
+
                               {/* Preview do bloco - FONTE ÚNICA: block.lines */}
                               {(() => {
                                 const lines = (block as any).lines as
@@ -589,6 +613,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                 const exerciseLines = lines.filter((l) => l.type === 'exercise');
                                 const commentLines = lines.filter((l) => {
                                   if (l.type !== 'comment') return false;
+                                  const trimmed = l.text?.trim();
+                                  if (!trimmed) return false; // Remove linhas vazias
                                   const normalized = normalizeText(l.text);
                                   if (normalizedTitle && normalized === normalizedTitle) return false;
                                   if (normalizedCategory && normalized === normalizedCategory) return false;
