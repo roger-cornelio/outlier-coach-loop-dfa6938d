@@ -1869,7 +1869,16 @@ export function parseStructuredText(text: string): ParseResult {
     
     // Primeiro: verificar se é descanso técnico (dentro de bloco) - tratar como conteúdo normal
     if (isRestWithinBlock(line)) {
-      console.log('[PARSER] Descanso técnico (dentro de bloco):', line);
+      // ════════════════════════════════════════════════════════════════════════════
+      // MVP0 AUDIT: DESCANSO INTRA-BLOCO DETECTADO
+      // ════════════════════════════════════════════════════════════════════════════
+      console.log('[REST_IN_BLOCK] "' + line + '" affectState=false');
+      console.log('[REST_IN_BLOCK]   CONTEXT = "inside_block"');
+      console.log('[REST_IN_BLOCK]   EFFECT = "badge_or_note_only"');
+      console.log('[REST_IN_BLOCK]   day.isRestDay stays = false');
+      console.log('[REST_IN_BLOCK]   block.type unchanged = ' + (currentBlock?.type || '(novo bloco)'));
+      console.log('[REST_IN_BLOCK]   didRestLineAffectHeadingDetection = false');
+      
       // Tratar como linha normal de bloco
       if (currentBlock) {
         currentBlock.instructions.push(line);
@@ -1909,13 +1918,21 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ════════════════════════════════════════════════════════════════════════════
-    // MVP0 PATCH: DESCANSO INTRA-BLOCO — TRATAMENTO PASSIVO
+    // MVP0 PATCH: DESCANSO INTRA-BLOCO — TRATAMENTO PASSIVO (segunda verificação)
     // ════════════════════════════════════════════════════════════════════════════
     // Linhas como "Descanso 2'", "Descanso 90''", "Descansar o necessário"
     // são APENAS notas/instruções — NÃO afetam estado do parser
     // ════════════════════════════════════════════════════════════════════════════
     if (isRestWithinBlock(line)) {
-      console.log('[REST_IN_BLOCK] "' + line + '" affectState=false');
+      // ════════════════════════════════════════════════════════════════════════════
+      // MVP0 AUDIT: SEGUNDA VERIFICAÇÃO - DESCANSO INTRA-BLOCO
+      // ════════════════════════════════════════════════════════════════════════════
+      console.log('[REST_IN_BLOCK] "' + line + '" affectState=false (segunda verificação)');
+      console.log('[REST_IN_BLOCK]   CONTEXT = "inside_block"');
+      console.log('[REST_IN_BLOCK]   EFFECT = "badge_or_note_only"');
+      console.log('[REST_IN_BLOCK]   day.isRestDay stays = false');
+      console.log('[REST_IN_BLOCK]   block.type unchanged = ' + (currentBlock?.type || '(novo bloco)'));
+      
       // Adicionar como instrução ao bloco atual (conteúdo passivo)
       if (currentBlock) {
         currentBlock.instructions.push(line);
@@ -2051,6 +2068,13 @@ export function parseStructuredText(text: string): ParseResult {
   let hasDayNull = false;
   const headingsList: string[] = [];
   
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 AUDITORIA: LOGS DETALHADOS DE DESCANSO
+  // ════════════════════════════════════════════════════════════════════════════
+  console.log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
+  console.log('[AUDIT] AUDITORIA DE DESCANSO — INÍCIO');
+  console.log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
+  
   for (const day of result.days) {
     totalBlocks += day.blocks.length;
     // Coletar títulos dos headings para log
@@ -2061,14 +2085,66 @@ export function parseStructuredText(text: string): ParseResult {
       hasDayNull = true;
     }
     
-    // MVP0 PATCH: Log do contador final por dia
-    console.log('[PARSER] day=' + day.day + ' blocksCount=' + day.blocks.length + ' headingsList=' + JSON.stringify(day.blocks.map(b => b.title)));
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 AUDITORIA: Log detalhado por DIA
+    // ════════════════════════════════════════════════════════════════════════════
+    const dayLabel = day.day || 'DIA_DESCONHECIDO';
+    console.log('[AUDIT] ─────────────────────────────────────────────────────────────');
+    console.log('[AUDIT] DIA:', dayLabel.toUpperCase());
+    console.log('[AUDIT]   • day.isRestDay =', day.isRestDay ?? false);
+    console.log('[AUDIT]   • day.restSuggestion =', day.restSuggestion ?? false);
+    console.log('[AUDIT]   • day.restSuggestionReason =', day.restSuggestionReason ?? '(nenhum)');
+    console.log('[AUDIT]   • blocksCount =', day.blocks.length);
+    console.log('[AUDIT]   • blockTitles =', JSON.stringify(day.blocks.map(b => b.title || '(sem título)')));
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 AUDITORIA: Log detalhado por BLOCO
+    // ════════════════════════════════════════════════════════════════════════════
+    for (let blockIdx = 0; blockIdx < day.blocks.length; blockIdx++) {
+      const block = day.blocks[blockIdx];
+      
+      // Detectar linhas de descanso dentro do bloco
+      const restLinesInBlock: string[] = [];
+      const allBlockContent = [
+        block.instruction || '',
+        ...block.instructions,
+        ...block.coachNotes,
+        ...block.items.map(i => `${i.quantity} ${i.unit} ${i.movement}`)
+      ];
+      
+      for (const contentLine of allBlockContent) {
+        const lower = contentLine.toLowerCase().trim();
+        // Padrões de descanso dentro de bloco
+        if (/descanso\s+\d+/i.test(lower) || 
+            /descansar/i.test(lower) ||
+            /^rest\s+\d+/i.test(lower) ||
+            /descanso\s*['"'']+/i.test(lower)) {
+          restLinesInBlock.push(contentLine);
+        }
+      }
+      
+      console.log('[AUDIT]   └─ BLOCO', blockIdx + 1, ':');
+      console.log('[AUDIT]       • blockTitle =', block.title || '(sem título)');
+      console.log('[AUDIT]       • blockType =', block.type || '(sem tipo)');
+      console.log('[AUDIT]       • restLinesDetected =', JSON.stringify(restLinesInBlock));
+      console.log('[AUDIT]       • restLinesDestination =', restLinesInBlock.length > 0 ? 'instructions (nota/metadado)' : '(nenhuma)');
+      console.log('[AUDIT]       • didRestLineAffectHeadingDetection = false');
+      
+      // ASSERT: Se encontrou linhas de descanso intra-bloco, logar EFFECT
+      for (const restLine of restLinesInBlock) {
+        console.log('[AUDIT]       ▶ REST_LINE_FOUND:', JSON.stringify(restLine));
+        console.log('[AUDIT]         CONTEXT = "inside_block"');
+        console.log('[AUDIT]         EFFECT = "badge_or_note_only"');
+        console.log('[AUDIT]         day.isRestDay stays =', day.isRestDay ?? false, '(blocos existem)');
+        console.log('[AUDIT]         block.type unchanged =', block.type || '(sem tipo)');
+      }
+    }
     
     // ════════════════════════════════════════════════════════════════════════════
     // MVP0: REGRA SOBERANA — Dias de descanso NÃO geram warnings/erros
     // ════════════════════════════════════════════════════════════════════════════
     if (day.isRestDay) {
-      console.log('[PARSER] Dia', day.day, 'é DESCANSO - ignorando validações de WOD/categoria');
+      console.log('[AUDIT]   ✓ Dia é DESCANSO - ignorando validações de WOD/categoria');
       // Dia de descanso válido, sem exigências
       continue;
     }
@@ -2086,6 +2162,10 @@ export function parseStructuredText(text: string): ParseResult {
       day.alerts.push('Nenhum WOD principal definido');
     }
   }
+  
+  console.log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
+  console.log('[AUDIT] AUDITORIA DE DESCANSO — FIM');
+  console.log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
 
   if (totalBlocks === 0) {
     result.errors.push('Nenhum bloco de treino identificado');
