@@ -445,11 +445,26 @@ export function getBlockTitleError(title: string, block?: ParsedBlock): string |
 }
 
 // Retorna o título para exibição (display)
+// MVP0: Usa derivedTitle se válido, senão fallback "Bloco X"
 export function getDisplayTitle(block: ParsedBlock, blockIndex: number): string {
   const derived = getDerivedTitle(block);
+  
+  // Se tem título derivado válido (não auto-gerado), usar
   if (derived && derived.length > 0) {
-    return derived;
+    // Verificar se não é auto-gerado
+    const isAutoGen = /^Bloco \d+$/i.test(derived) || 
+                      /^BLOCO \d+$/i.test(derived) ||
+                      derived.toLowerCase() === 'treino' ||
+                      derived.toLowerCase() === 'novo bloco';
+    
+    if (!isAutoGen) {
+      return derived;
+    }
   }
+  
+  // Se block.title existe mas é auto-gerado, ainda assim verificar outros campos
+  // (para compatibilidade futura com block.name, block.headerTitle, etc.)
+  
   // Fallback neutro sequencial
   return `Bloco ${blockIndex + 1}`;
 }
