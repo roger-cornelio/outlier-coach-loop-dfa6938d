@@ -488,29 +488,43 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   // Contagem de dias que precisam de WOD (não são descanso)
   const daysNeedingWod = parseResult?.days.filter((_, idx) => !restDays[idx]).length || 0;
 
-  // Verifica se pode publicar (tem WOD principal em cada dia de treino e dia definido se necessário)
-  // Dias com todos blocos opcionais não precisam de WOD principal
-  // REGRA ANTI-BURRO: Bloqueado se qualquer bloco tiver título inválido
-  // Usa derivedTitle para validação correta (Opção A)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VALIDAÇÕES ANTI-BURRO — MVP0
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // REGRA MVP0: Bloquear se qualquer bloco tiver título inválido
   const hasInvalidTitles = parseResult?.days.some((day, idx) => {
-    if (restDays[idx]) return false; // Dias de descanso ignorados
+    if (restDays[idx]) return false;
     return day.blocks.some(b => isInvalidBlockTitle(getDerivedTitle(b), b));
   }) ?? false;
 
+  // REGRA MVP0: Bloquear se qualquer bloco não tiver categoria definida
+  // Categoria é OBRIGATÓRIA e NUNCA inferida automaticamente
+  const blocksWithoutCategory = parseResult?.days.reduce((acc, day, dayIdx) => {
+    if (restDays[dayIdx]) return acc;
+    const missing = day.blocks.filter(b => !b.type);
+    return acc + missing.length;
+  }, 0) ?? 0;
+  
+  const hasMissingCategory = blocksWithoutCategory > 0;
+
   const allTrainingDaysHaveWod = parseResult?.days.every((day, idx) => {
-    if (restDays[idx]) return true; // Dias de descanso não precisam de WOD
-    if (day.blocks.every(b => b.optional)) return true; // Dias só com opcionais não precisam de WOD
+    if (restDays[idx]) return true;
+    if (day.blocks.every(b => b.optional)) return true;
     return day.blocks.some(b => b.isMainWod);
   }) ?? false;
 
+  // Pode publicar: todos os requisitos atendidos
   const canPublish = parseResult?.success && 
     allTrainingDaysHaveWod && 
     !hasInvalidTitles &&
+    !hasMissingCategory &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
-  // Verifica se pode importar (rascunho - apenas precisa de treino válido e títulos corretos)
+  // Pode importar (rascunho): precisa de treino válido, títulos e categorias corretos
   const canImport = parseResult?.success && 
     !hasInvalidTitles &&
+    !hasMissingCategory &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
   return (
@@ -700,6 +714,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                               }
                             });
                             
+                            // MVP0: Verificar blocos sem categoria definida
+                            day.blocks.forEach((block, blockIdx) => {
+                              if (!block.type) {
+                                issues.push({ type: 'categoria_faltando', blockIndex: blockIdx });
+                              }
+                            });
+                            
                             // Dias só com blocos opcionais não precisam de WOD
                             if (allBlocksOptional) return issues;
                             
@@ -789,15 +810,18 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                     </div>
                                     <ul className="space-y-1.5 ml-7">
                                       {dayIssues.map((issue, issueIdx) => {
-                                        // Para titulo_invalido, determinar se é "sem título" ou "parece exercício"
                                         let issueMessage = '';
+                                        
                                         if (issue.type === 'wod_principal') {
                                           issueMessage = 'Marcar o WOD principal';
+                                        } else if (issue.type === 'categoria_faltando' && issue.blockIndex !== undefined) {
+                                          // MVP0: Categoria obrigatória
+                                          issueMessage = `Bloco ${issue.blockIndex + 1}: Selecione a categoria`;
                                         } else if (issue.type === 'titulo_invalido' && issue.blockIndex !== undefined) {
                                           const blockWithIssue = day.blocks[issue.blockIndex];
                                           const derived = getDerivedTitle(blockWithIssue);
                                           if (!derived || derived.length === 0) {
-                                            issueMessage = `Bloco ${issue.blockIndex + 1}: Adicionar título do bloco (Ex: Aquecimento, Força)`;
+                                            issueMessage = `Bloco ${issue.blockIndex + 1}: Adicionar título do bloco`;
                                           } else {
                                             issueMessage = `Bloco ${issue.blockIndex + 1}: Ajustar título (parece exercício)`;
                                           }
@@ -893,15 +917,21 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           </Badge>
                                         )}
                                         
-                                        {/* Dropdown do tipo - AJUSTE FINO */}
+                                        {/* Dropdown categoria - OBRIGATÓRIO (MVP0: sem valor default) */}
                                         <Select
-                                          value={block.type}
+                                          value={block.type || ''}
                                           onValueChange={(val) => changeBlockType(dayIndex, blockIndex, val)}
                                         >
-                                          <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs border-dashed">
-                                            <SelectValue />
+                                          <SelectTrigger 
+                                            className={`h-7 w-auto min-w-[140px] text-xs ${
+                                              !block.type 
+                                                ? 'border-amber-500 bg-amber-500/10 text-amber-700 border-2' 
+                                                : 'border-dashed'
+                                            }`}
+                                          >
+                                            <SelectValue placeholder="Selecione a categoria" />
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent className="bg-popover z-50">
                                             {BLOCK_TYPE_OPTIONS.map(opt => (
                                               <SelectItem key={opt.value} value={opt.value} className="text-xs">
                                                 {opt.label}
@@ -1048,24 +1078,55 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                       </Accordion>
 
                       {/* BANNER DE VALIDAÇÃO - STICKY E ANTI-BURRO */}
-                      {parseResult.success && !canPublish && (
+                      {parseResult.success && !canImport && (
                         <div className="sticky top-0 z-10 -mx-5 px-5 py-4 bg-amber-500/95 border-y-2 border-amber-600 shadow-lg">
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
-                              ⚠️ REVISE O TREINO ANTES DE PUBLICAR
+                              ⚠️ TREINO NÃO SALVO
                             </h3>
-                            <p className="text-sm text-amber-900 font-medium">
-                              {hasInvalidTitles
-                                ? 'Corrija os blocos com problemas de título antes de continuar.'
-                                : parseResult.needsDaySelection && !selectedDay 
-                                  ? 'Selecione o dia da semana para este treino.'
-                                  : 'Antes de publicar: revise os blocos e marque o WOD principal de cada dia.'}
-                            </p>
-                            {!hasInvalidTitles && !parseResult.needsDaySelection && (
-                              <p className="text-xs text-amber-800/90">
-                                Sem WOD principal, o atleta pode receber o treino errado.
+                            
+                            {/* Mensagem prioritária: categoria faltando */}
+                            {hasMissingCategory && (
+                              <div className="space-y-1">
+                                <p className="text-sm text-amber-900 font-medium">
+                                  Falta definir a categoria de {blocksWithoutCategory} bloco{blocksWithoutCategory > 1 ? 's' : ''}.
+                                </p>
+                                <p className="text-xs text-amber-800/90">
+                                  O OUTLIER não adivinha a categoria para não ajustar o treino errado para o atleta.
+                                </p>
+                                <p className="text-xs text-amber-800/90 font-medium">
+                                  Selecione a categoria em cada bloco para continuar.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Título inválido */}
+                            {!hasMissingCategory && hasInvalidTitles && (
+                              <p className="text-sm text-amber-900 font-medium">
+                                Corrija os blocos com problemas de título antes de continuar.
                               </p>
                             )}
+                            
+                            {/* Dia da semana faltando */}
+                            {!hasMissingCategory && !hasInvalidTitles && parseResult.needsDaySelection && !selectedDay && (
+                              <p className="text-sm text-amber-900 font-medium">
+                                Selecione o dia da semana para este treino.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* BANNER SECUNDÁRIO: WOD principal faltando (só aparece se canImport mas não canPublish) */}
+                      {parseResult.success && canImport && !canPublish && (
+                        <div className="sticky top-0 z-10 -mx-5 px-5 py-4 bg-blue-500/20 border-y border-blue-500/40">
+                          <div className="space-y-1">
+                            <h3 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                              💡 Dica: Marque o WOD principal
+                            </h3>
+                            <p className="text-xs text-blue-600">
+                              Sem WOD principal definido, o treino será salvo como rascunho.
+                            </p>
                           </div>
                         </div>
                       )}

@@ -783,20 +783,25 @@ export function parseStructuredText(text: string): ParseResult {
   // Contador de blocos para fallback de título
   let blockCounter = 0;
   
+  /**
+   * REGRA MVP0: Categoria NUNCA é inferida automaticamente.
+   * O coach DEVE selecionar manualmente via UI.
+   * type = '' (vazio) até o coach definir.
+   */
   const createNewBlock = (rawTitle: string, isAutoGen: boolean = false): ParsedBlock => {
     blockCounter++;
     const title = isAutoGen ? `BLOCO ${blockCounter}` : cleanBlockTitle(rawTitle, blockCounter - 1);
     const isOptional = /\bopcional\b/i.test(rawTitle);
     return {
       title,
-      type: detectBlockType(rawTitle), // Usa título original para detectar tipo
+      type: '' as any, // MVP0: Categoria OBRIGATÓRIA - coach deve selecionar (NÃO INFERIR)
       format: detectFormat(rawTitle),
-      formatDisplay: undefined, // Será preenchido se primeira linha for format_line
-      isMainWod: false, // REGRA CRÍTICA: Nenhum bloco nasce como principal - só via ação manual do coach
+      formatDisplay: undefined,
+      isMainWod: false,
       isBenchmark: false,
       optional: isOptional,
       items: [],
-      lines: [], // Linhas classificadas
+      lines: [],
       coachNotes: [],
       instructions: [],
       isAutoGenTitle: isAutoGen,
@@ -816,8 +821,8 @@ export function parseStructuredText(text: string): ParseResult {
       const hasContent = currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction;
       
       if (hasContent || hasTrainingStimulus) {
-        // Refinar tipo por conteúdo se ainda é conditioning genérico
-        currentBlock.type = detectTypeByContent(currentBlock);
+        // MVP0: NÃO refinar tipo automaticamente - coach deve selecionar
+        // REMOVIDO: currentBlock.type = detectTypeByContent(currentBlock);
         
         // Detectar se é opcional pelo conteúdo
         if (/\bopcional\b/i.test(allContent)) {
