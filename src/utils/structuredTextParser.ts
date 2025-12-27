@@ -1764,19 +1764,39 @@ export function parseStructuredText(text: string): ParseResult {
   // ════════════════════════════════════════════════════════════════════════════
   
   /**
-   * Detecta se a linha é "Descanso dentro de bloco" (intervalo/descanso técnico)
-   * Linhas como: "Descanso 2'", "Descanso 90''", "Descansar o necessário"
-   * NUNCA devem sugerir dia de descanso
+   * MVP0 PATCH: Detecta se a linha é "Descanso dentro de bloco" (intervalo/descanso técnico)
+   * ════════════════════════════════════════════════════════════════════════════
+   * REGRA ABSOLUTA: Descanso intra-bloco NÃO tem poder estrutural
+   * É apenas nota/instrução — NÃO pode:
+   * - Virar heading/título de bloco
+   * - Fechar bloco atual
+   * - Criar novo bloco
+   * - Alterar estado do dia
+   * ════════════════════════════════════════════════════════════════════════════
    */
   const isRestWithinBlock = (line: string): boolean => {
     const trimmed = line.trim().toLowerCase();
-    // "Descanso" seguido de tempo: 2', 90'', 2 min, etc.
-    if (/^descanso\s+\d+\s*['"'']+/i.test(trimmed)) return true;
-    if (/^descanso\s+\d+\s*(min|seg|s|segundos?)/i.test(trimmed)) return true;
-    // "Descansar o necessário", "Descansar entre séries"
+    
+    // A) "Descanso" seguido de tempo: 2', 90'', 2 min, 1:30, etc.
+    if (/^descanso\s+\d+/i.test(trimmed)) return true;
+    if (/descanso\s+\d+\s*['"'']+/i.test(trimmed)) return true;
+    if (/descanso\s+\d+\s*(min|seg|s|segundos?)/i.test(trimmed)) return true;
+    if (/descanso\s+\d+:\d+/i.test(trimmed)) return true; // "Descanso 1:30"
+    
+    // B) "Descansar" (sempre é instrução, não estrutural)
     if (/^descansar\b/i.test(trimmed)) return true;
-    // "Descanso:" seguido de instruções
+    
+    // C) "Descanso:" seguido de instruções
     if (/^descanso\s*:/i.test(trimmed)) return true;
+    
+    // D) Frases típicas de descanso intra-bloco
+    if (/descanso\s+entre\s+(rounds?|s[ée]ries?|sets?)/i.test(trimmed)) return true;
+    if (/descanso\s+(necess[aá]rio|livre|ativo|passivo)/i.test(trimmed)) return true;
+    
+    // E) Variantes: "Rest 2'", "Rest between sets"
+    if (/^rest\s+\d+/i.test(trimmed)) return true;
+    if (/rest\s+between/i.test(trimmed)) return true;
+    
     return false;
   };
   
@@ -1889,6 +1909,26 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: DESCANSO INTRA-BLOCO — TRATAMENTO PASSIVO
+    // ════════════════════════════════════════════════════════════════════════════
+    // Linhas como "Descanso 2'", "Descanso 90''", "Descansar o necessário"
+    // são APENAS notas/instruções — NÃO afetam estado do parser
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestWithinBlock(line)) {
+      console.log('[REST_IN_BLOCK] "' + line + '" affectState=false');
+      // Adicionar como instrução ao bloco atual (conteúdo passivo)
+      if (currentBlock) {
+        currentBlock.instructions.push(line);
+      } else {
+        // Se não há bloco, criar um temporário (raro, mas seguro)
+        currentBlock = createNewBlock('', true);
+        currentBlock.instructions.push(line);
+      }
+      // NÃO fechar bloco, NÃO criar novo bloco, NÃO alterar estado
+      continue;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
     // MVP0 PATCH: "Opcional:" como MARCADOR (não conteúdo) — FORA DO MODO REST
     // ════════════════════════════════════════════════════════════════════════════
     const isOptionalMarker = /^opcional\s*[:()]?\s*$/i.test(line) || 
@@ -1923,7 +1963,7 @@ export function parseStructuredText(text: string): ParseResult {
     });
     
     if (isHeading) {
-      console.log('[PARSER] Heading detectado:', line);
+      console.log('[HEADING] "' + line + '" createdBlock=true');
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
       continue;
@@ -2009,11 +2049,20 @@ export function parseStructuredText(text: string): ParseResult {
 
   let totalBlocks = 0;
   let hasDayNull = false;
+  const headingsList: string[] = [];
+  
   for (const day of result.days) {
     totalBlocks += day.blocks.length;
+    // Coletar títulos dos headings para log
+    day.blocks.forEach(b => {
+      if (b.title) headingsList.push(b.title);
+    });
     if (day.day === null) {
       hasDayNull = true;
     }
+    
+    // MVP0 PATCH: Log do contador final por dia
+    console.log('[PARSER] day=' + day.day + ' blocksCount=' + day.blocks.length + ' headingsList=' + JSON.stringify(day.blocks.map(b => b.title)));
     
     // ════════════════════════════════════════════════════════════════════════════
     // MVP0: REGRA SOBERANA — Dias de descanso NÃO geram warnings/erros
