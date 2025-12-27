@@ -220,14 +220,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
-    const initialRestDays: Record<number, boolean> = {};
-    result.days.forEach((day, idx) => {
-      if (day.isRestDay) {
-        initialRestDays[idx] = true;
-      }
-    });
-    setRestDays(initialRestDays);
+    // MVP0 PATCH: NÃO inicializar restDays automaticamente
+    // Descanso só é marcado via toggle do coach
+    setRestDays({});
   };
   
   /**
@@ -281,14 +276,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
-    const initialRestDays: Record<number, boolean> = {};
-    result.days.forEach((day, idx) => {
-      if (day.isRestDay) {
-        initialRestDays[idx] = true;
-      }
-    });
-    setRestDays(initialRestDays);
+    // MVP0 PATCH: NÃO inicializar restDays automaticamente
+    // Descanso só é marcado via toggle do coach
+    setRestDays({});
   };
   
   /**
@@ -345,14 +335,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
-    const initialRestDays: Record<number, boolean> = {};
-    result.days.forEach((d, idx) => {
-      if (d.isRestDay) {
-        initialRestDays[idx] = true;
-      }
-    });
-    setRestDays(initialRestDays);
+    // MVP0 PATCH: NÃO inicializar restDays automaticamente
+    // Descanso só é marcado via toggle do coach
+    setRestDays({});
   };
   
   // MVP0: IMPORTAR SEMANA — Handlers de modal de dia DESATIVADOS
@@ -402,12 +387,17 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setDayValidationError(null);
   };
 
-  // Toggle Rest Day
-  const toggleRestDay = (dayIndex: number) => {
+  // Toggle Rest Day - ÚNICA forma de marcar descanso
+  const toggleRestDay = (dayIndex: number, dayName?: string) => {
+    const newValue = !restDays[dayIndex];
     setRestDays(prev => ({
       ...prev,
-      [dayIndex]: !prev[dayIndex]
+      [dayIndex]: newValue
     }));
+    // MVP0 PATCH: Log quando coach confirma descanso
+    if (newValue) {
+      console.log(`[REST_CONFIRMED_BY_COACH] day=${dayName || 'UNKNOWN'}`);
+    }
   };
 
   // Toggle WOD principal no preview
@@ -942,7 +932,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           <span className="text-xs text-muted-foreground">Descanso</span>
                                           <Switch
                                             checked={isRestDay}
-                                            onCheckedChange={() => toggleRestDay(dayIndex)}
+                                            onCheckedChange={() => toggleRestDay(dayIndex, dayName)}
                                             className="data-[state=checked]:bg-blue-500"
                                           />
                                         </div>
@@ -955,6 +945,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-5 pb-5">
+                                {/* MVP0 PATCH: Sugestão discreta de descanso (não bloqueante) */}
+                                {day.restSuggestion && !isRestDay && (
+                                  <div className="mb-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 flex items-center gap-2">
+                                    <Moon className="w-4 h-4 text-blue-400" />
+                                    <span className="text-xs text-blue-500">
+                                      Sugestão: parece dia de descanso. Confirme no toggle se for o caso.
+                                    </span>
+                                  </div>
+                                )}
+                                
                                 {/* Alertas do dia - CAIXA LARANJA (REATIVO) */}
                                 {hasIssues && (
                                   <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40">
