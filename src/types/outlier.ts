@@ -115,6 +115,7 @@ export interface DayWorkout {
   stimulus: string;
   estimatedTime: number;
   blocks: WorkoutBlock[];
+  isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal
 }
 
 export interface WorkoutResult {

@@ -89,6 +89,7 @@ export interface ParsedDay {
   day: DayOfWeek | null; // Pode ser null se não identificado
   blocks: ParsedBlock[];
   alerts: string[]; // Alertas no nível do dia
+  isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal
 }
 
 export interface ParseResult {
@@ -1177,6 +1178,7 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
       isMainWod: block.isMainWod || undefined,
       isBenchmark: block.isBenchmark || undefined,
     })),
+    isRestDay: day.isRestDay || false, // MVP0: Preservar flag de descanso
   }));
 }
 

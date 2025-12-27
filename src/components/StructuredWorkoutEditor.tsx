@@ -12,7 +12,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trash2, HelpCircle, Calendar } from 'lucide-react';
+import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trash2, HelpCircle, Calendar, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Switch } from '@/components/ui/switch';
 import { 
   StructuredBlockEditor, 
   StructuredBlock, 
@@ -41,6 +42,7 @@ import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 interface StructuredDay {
   day: DayOfWeek;
   blocks: StructuredBlock[];
+  isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal
 }
 
 interface DayValidation {
@@ -95,17 +97,20 @@ export function StructuredWorkoutEditor({
   // ============================================
 
   const validation = useMemo(() => {
-    const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean }> = {} as any;
+    const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean; isRestDay: boolean }> = {} as any;
     let totalErrors = 0;
     let daysWithoutMain = 0;
     let daysWithMultipleMain = 0;
 
     for (const day of days) {
+      // MVP0: Dias de descanso NÃO exigem WOD Principal e NÃO contam erros de validação de WOD
+      const isRestDay = day.isRestDay === true;
+      
       // Validar todos os blocos
       const blockValidation = validateAllBlocks(day.blocks);
       totalErrors += blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0);
 
-      // Verificar WOD Principal
+      // Verificar WOD Principal - APENAS para dias de treino (não descanso)
       const workoutBlocks = day.blocks.map(structuredToWorkoutBlock);
       const mainBlock = identifyMainBlock(workoutBlocks);
       const manualMainCount = day.blocks.filter(b => b.isMainWod === true).length;
@@ -113,19 +118,23 @@ export function StructuredWorkoutEditor({
       const hasMain = hasManualMain || mainBlock.blockIndex !== -1;
       const multipleMainBlocks = manualMainCount > 1;
 
-      if (multipleMainBlocks) {
-        daysWithMultipleMain++;
-      }
+      // MVP0: Só contar problemas de WOD para dias que NÃO são descanso
+      if (!isRestDay) {
+        if (multipleMainBlocks) {
+          daysWithMultipleMain++;
+        }
 
-      if (!hasMain && day.blocks.length > 0) {
-        daysWithoutMain++;
+        if (!hasMain && day.blocks.length > 0) {
+          daysWithoutMain++;
+        }
       }
 
       dayValidations[day.day] = {
-        hasMainWod: hasMain,
+        hasMainWod: isRestDay ? true : hasMain, // Descanso sempre "tem" WOD (não precisa)
         allBlocksValid: blockValidation.isValid,
         errorCount: blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0),
-        multipleMainBlocks,
+        multipleMainBlocks: isRestDay ? false : multipleMainBlocks,
+        isRestDay,
       };
     }
 
@@ -204,12 +213,30 @@ export function StructuredWorkoutEditor({
   const toggleMainWod = useCallback((dayValue: DayOfWeek, blockId: string) => {
     setDays(prev => prev.map(day => {
       if (day.day !== dayValue) return day;
+      // MVP0: Não permitir marcar Principal em dia de descanso
+      if (day.isRestDay) return day;
       return {
         ...day,
         blocks: day.blocks.map(block => ({
           ...block,
           isMainWod: block.id === blockId ? !block.isMainWod : false,
         })),
+      };
+    }));
+  }, []);
+  
+  // MVP0: Toggle dia de descanso
+  const toggleRestDay = useCallback((dayValue: DayOfWeek) => {
+    setDays(prev => prev.map(day => {
+      if (day.day !== dayValue) return day;
+      const newIsRestDay = !day.isRestDay;
+      return {
+        ...day,
+        isRestDay: newIsRestDay,
+        // MVP0: Se marcar como descanso, limpar isMainWod de todos os blocos
+        blocks: newIsRestDay 
+          ? day.blocks.map(block => ({ ...block, isMainWod: false }))
+          : day.blocks,
       };
     }));
   }, []);
@@ -239,6 +266,7 @@ export function StructuredWorkoutEditor({
       stimulus: '',
       estimatedTime: 60,
       blocks: day.blocks.map(structuredToWorkoutBlock),
+      isRestDay: day.isRestDay || false, // MVP0: Preservar flag de descanso
     }));
   }, [days]);
 
@@ -421,19 +449,29 @@ export function StructuredWorkoutEditor({
                 return (
                   <div key={day.day} className="border border-border rounded-lg overflow-hidden">
                     {/* Header do dia */}
-                    <div className="p-3 bg-secondary/30 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="p-3 bg-secondary/30 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline">{dayLabel}</Badge>
                         <span className="text-sm text-muted-foreground">
                           {day.blocks.length} bloco(s)
                         </span>
-                        {dayValidation && dayValidation.multipleMainBlocks && (
+                        
+                        {/* MVP0: Badge de descanso */}
+                        {day.isRestDay && (
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 border border-blue-500/30">
+                            <Moon className="w-3 h-3 mr-1" />
+                            DESCANSO
+                          </Badge>
+                        )}
+                        
+                        {/* Alertas - NÃO mostrar para dias de descanso */}
+                        {!day.isRestDay && dayValidation && dayValidation.multipleMainBlocks && (
                           <span className="text-xs text-amber-500 flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" />
                             Múltiplos WOD Principal
                           </span>
                         )}
-                        {dayValidation && !dayValidation.hasMainWod && day.blocks.length > 0 && (
+                        {!day.isRestDay && dayValidation && !dayValidation.hasMainWod && day.blocks.length > 0 && (
                           <span className="text-xs text-amber-500 flex items-center gap-1">
                             <Star className="w-3 h-3" />
                             Falta WOD Principal
@@ -446,6 +484,25 @@ export function StructuredWorkoutEditor({
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* MVP0: Toggle descanso */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">Descanso</span>
+                                <Switch
+                                  checked={day.isRestDay || false}
+                                  onCheckedChange={() => toggleRestDay(day.day)}
+                                  className="data-[state=checked]:bg-blue-500"
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Dias de descanso não possuem WOD principal.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
                         <Button
                           variant="outline"
                           size="sm"
@@ -468,31 +525,47 @@ export function StructuredWorkoutEditor({
 
                     {/* Blocos do dia */}
                     <div className="p-3 space-y-3 bg-background">
+                      {/* MVP0: Mensagem para dia de descanso */}
+                      {day.isRestDay && (
+                        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center">
+                          <p className="text-sm text-blue-600 flex items-center justify-center gap-2 font-medium">
+                            <Moon className="w-4 h-4" />
+                            Dia marcado como descanso
+                          </p>
+                          <p className="text-xs text-blue-500/80 mt-1">
+                            Os blocos serão preservados mas não exigem WOD principal.
+                          </p>
+                        </div>
+                      )}
+                      
                       {day.blocks.map((block) => (
                         <div key={block.id} className="space-y-2">
                           {/* Botões Principal/Benchmark acima do editor */}
-                          <div className="flex items-center gap-2 justify-end">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant={block.isMainWod ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleMainWod(day.day, block.id)}
-                                    className={`h-7 text-xs ${block.isMainWod ? 'bg-primary' : ''}`}
-                                  >
-                                    <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                    Principal
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Marcar como WOD Principal do dia</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                          {/* MVP0: Ocultar botão Principal para dias de descanso */}
+                          {!day.isRestDay && (
+                            <div className="flex items-center gap-2 justify-end">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant={block.isMainWod ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleMainWod(day.day, block.id)}
+                                      className={`h-7 text-xs ${block.isMainWod ? 'bg-primary' : ''}`}
+                                    >
+                                      <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                      Principal
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Marcar como WOD Principal do dia</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
 
-                            {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
-                          </div>
+                              {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
+                            </div>
+                          )}
 
                           <StructuredBlockEditor
                             block={block}
