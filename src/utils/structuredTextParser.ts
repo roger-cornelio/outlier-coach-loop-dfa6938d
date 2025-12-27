@@ -1110,14 +1110,91 @@ const INSTRUCTION_PATTERNS = [
 // PARSER PRINCIPAL - TEXTO LIVRE
 // ============================================
 
-// Separador de bloco explícito
-const BLOCK_SEPARATOR = '⸻';
+// Separadores de bloco explícitos (⸻ e variações de traços)
+// MVP0: Suportar formato real do coach
+const BLOCK_SEPARATOR_PATTERNS = [
+  /⸻/,           // Traço longo Unicode
+  /—{2,}/,        // 2+ em-dashes
+  /–{3,}/,        // 3+ en-dashes
+  /-{3,}/,        // 3+ hifens
+];
+
+// Verifica se linha é um separador de bloco
+function isBlockSeparator(line: string): boolean {
+  const trimmed = line.trim();
+  // Linha que é APENAS separadores (sem texto)
+  if (BLOCK_SEPARATOR_PATTERNS.some(p => p.test(trimmed))) {
+    // Verificar se é majoritariamente separadores (>50%)
+    const cleanedLength = trimmed.replace(/[⸻—–\-\s]/g, '').length;
+    return cleanedLength < trimmed.length * 0.3; // Menos de 30% é texto = é separador
+  }
+  return false;
+}
+
+// MVP0: Títulos soltos de bloco (headings sem prefixo ##)
+// Detecta linhas curtas que são títulos de bloco
+const HEADING_PATTERNS = [
+  /^aquecimento$/i,
+  /^força\s+espec[ií]fica$/i,
+  /^espec[ií]fico$/i,
+  /^grip\s*[&e]\s*strength$/i,
+  /^corrida\s*[—–-]\s*.+$/i,  // "Corrida — Outro Período"
+  /^for[çc]a$/i,
+  /^metcon$/i,
+  /^wod$/i,
+  /^core$/i,
+  /^acess[óo]rio$/i,
+  /^mobilidade$/i,
+  /^t[ée]cnica$/i,
+  /^conditioning$/i,
+  /^condicionamento$/i,
+];
+
+// Verifica se linha é um heading/título de bloco (não precisa ser MAIÚSCULA)
+function isHeadingLine(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Heading patterns conhecidos (case-insensitive)
+  if (HEADING_PATTERNS.some(p => p.test(trimmed))) {
+    return true;
+  }
+  
+  // Linha curta (<=60 chars) + NÃO começa com número + contém palavra-chave de bloco
+  if (trimmed.length <= 60 && !/^\d/.test(trimmed)) {
+    const blockKeywords = [
+      /aquecimento/i, /for[çc]a/i, /metcon/i, /espec[ií]fico/i,
+      /corrida/i, /core/i, /grip/i, /acess[óo]rio/i, /mobilidade/i,
+      /t[ée]cnica/i, /conditioning/i, /condicionamento/i, /observa[çc][ãa]o/i
+    ];
+    const hasKeyword = blockKeywords.some(p => p.test(trimmed));
+    // Se contém keyword E é curta E não parece exercício, é heading
+    if (hasKeyword && !isExercisePatternLine(trimmed)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Verifica se linha parece ser exercício (para evitar falsos positivos de heading)
+function isExercisePatternLine(line: string): boolean {
+  // Começa com número
+  if (/^\d+/.test(line)) return true;
+  // Tem padrão de exercício
+  if (/\d+\s*(x|reps?|min|m|km|rounds?|cal)/i.test(line)) return true;
+  return false;
+}
 
 export function parseStructuredText(text: string): ParseResult {
+  console.log('[PARSER] === parseStructuredText INICIADO ===');
+  console.log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
+  
   const lines = text.split('\n');
+  console.log('[PARSER] Total de linhas:', lines.length);
   
   // MVP0: Validar âncoras de dia antes de parsear
   const dayValidation = validateDayAnchors(text);
+  console.log('[PARSER] Dias detectados:', dayValidation.daysFound);
   
   const result: ParseResult = {
     success: false,
@@ -1354,8 +1431,9 @@ export function parseStructuredText(text: string): ParseResult {
     // Linha vazia - continua no bloco atual
     if (!line) continue;
 
-    // Separador explícito ⸻ → fim do bloco atual
-    if (line.includes(BLOCK_SEPARATOR)) {
+    // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
+    if (isBlockSeparator(line)) {
+      console.log('[PARSER] Separador de bloco detectado:', line);
       saveCurrentBlock();
       continue;
     }
@@ -1393,8 +1471,18 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
+    // MVP0: Detectar heading/título solto (não precisa ser MAIÚSCULA)
+    // Ex: "Força Específica", "Grip & Strength", "Corrida — Outro Período"
+    if (isHeadingLine(line)) {
+      console.log('[PARSER] Heading detectado:', line);
+      saveCurrentBlock();
+      currentBlock = createNewBlock(line);
+      continue;
+    }
+
     // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line)
     if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line)) {
+      console.log('[PARSER] Título MAIÚSCULO detectado:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
       continue;
@@ -1513,6 +1601,28 @@ export function parseStructuredText(text: string): ParseResult {
   }
 
   result.success = result.errors.length === 0;
+  
+  // MVP0: Log final para debug do pipeline
+  console.log('[PARSER] === parseStructuredText FINALIZADO ===');
+  console.log('[PARSER] Resultado:', {
+    success: result.success,
+    totalDays: result.days.length,
+    days: result.days.map(d => ({
+      day: d.day,
+      blocksCount: d.blocks.length,
+      blocks: d.blocks.map((b, i) => ({
+        index: i,
+        title: b.title || `(vazio → fallback UI "Bloco ${i+1}")`,
+        type: b.type || '(categoria não definida)',
+        isMainWod: b.isMainWod,
+        linesCount: b.lines?.length || 0,
+        itemsCount: b.items?.length || 0,
+      })),
+    })),
+    errors: result.errors,
+    warnings: result.warnings,
+  });
+  
   return result;
 }
 

@@ -641,7 +641,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         </CardContent>
       </Card>
 
-      {/* ÁREA 2 - UPLOAD DE ARQUIVO (SECUNDÁRIA) */}
+      {/* ÁREA 2 - UPLOAD DE ARQUIVO - DESABILITADO NO MVP0 */}
+      {/* MVP0: Ocultar upload de arquivo - apenas MANUAL e TEXTO funcionam */}
+      {/* Backend de OCR permanece, apenas UI oculta */}
+      {false && (
       <Card className="border-dashed">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
@@ -696,6 +699,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* RESULTADO DO PARSE - PREVIEW */}
       <AnimatePresence>
@@ -928,6 +932,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                     const derivedTitle = getDerivedTitle(block);
                                     const hasTitleError = isInvalidBlockTitle(derivedTitle, block);
                                     const titleError = getBlockTitleError(derivedTitle, block);
+                                    
+                                    // MVP0: Debug log para rastrear títulos
+                                    console.log(`[PREVIEW] Bloco ${blockIndex}:`, {
+                                      'block.title': block.title,
+                                      derivedTitle,
+                                      headerTitle,
+                                      headerMeta,
+                                      hasTitleError,
+                                      type: block.type,
+                                    });
                                     
                                     return (
                                       <div 
