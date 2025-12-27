@@ -71,7 +71,6 @@ import {
   getFormatLabel,
   isInvalidBlockTitle,
   getBlockTitleError,
-  getDerivedTitle,
   normalizeText,
   validateDayAnchors,
   type ParseResult 
@@ -535,10 +534,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   // VALIDAÇÕES ANTI-BURRO — MVP0
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // REGRA MVP0: Bloquear se qualquer bloco tiver título inválido
+  // REGRA MVP0: Bloquear se qualquer bloco não tiver título válido
+  // MVP0 FIX: Usar apenas block.title como fonte de verdade (não derivedTitle)
   const hasInvalidTitles = parseResult?.days.some((day, idx) => {
     if (restDays[idx]) return false;
-    return day.blocks.some(b => isInvalidBlockTitle(getDerivedTitle(b), b));
+    return day.blocks.some(b => {
+      const title = b.title?.trim() || '';
+      return title === '' || isInvalidBlockTitle(title, b);
+    });
   }) ?? false;
 
   // REGRA MVP0: Bloquear se qualquer bloco não tiver categoria definida
@@ -796,9 +799,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                             // Dias de descanso não têm issues
                             if (isRestDay) return issues;
                             
-                            // Verificar títulos inválidos em cada bloco (usando derivedTitle)
+                            // MVP0 FIX: Verificar títulos inválidos usando apenas block.title
                             day.blocks.forEach((block, blockIdx) => {
-                              if (isInvalidBlockTitle(getDerivedTitle(block), block)) {
+                              const title = block.title?.trim() || '';
+                              if (title === '' || isInvalidBlockTitle(title, block)) {
                                 issues.push({ type: 'titulo_invalido', blockIndex: blockIdx });
                               }
                             });
@@ -908,8 +912,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                           issueMessage = `Bloco ${issue.blockIndex + 1}: Selecione a categoria`;
                                         } else if (issue.type === 'titulo_invalido' && issue.blockIndex !== undefined) {
                                           const blockWithIssue = day.blocks[issue.blockIndex];
-                                          const derived = getDerivedTitle(blockWithIssue);
-                                          if (!derived || derived.length === 0) {
+                                          const title = blockWithIssue.title?.trim() || '';
+                                          if (!title) {
                                             issueMessage = `Bloco ${issue.blockIndex + 1}: Adicionar título do bloco`;
                                           } else {
                                             issueMessage = `Bloco ${issue.blockIndex + 1}: Ajustar título (parece exercício)`;
@@ -942,18 +946,19 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 {/* Blocos do dia */}
                                 <div className="space-y-4">
                                 {day.blocks.map((block, blockIndex) => {
-                                    // Usar getBlockHeader para título + categoria consistentes
-                                    const { headerTitle, headerMeta } = getBlockHeader(block, blockIndex);
-                                    const derivedTitle = getDerivedTitle(block);
-                                    const hasTitleError = isInvalidBlockTitle(derivedTitle, block);
-                                    const titleError = getBlockTitleError(derivedTitle, block);
+                                    // MVP0 FIX: Usar apenas block.title como fonte de verdade
+                                    // Fallback para "Bloco X" apenas se título vazio
+                                    const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
+                                    const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
+                                    const titleError = hasTitleError ? getBlockTitleError(block.title || '', block) : null;
+                                    
+                                    // Categoria do bloco
+                                    const { headerMeta } = getBlockHeader(block, blockIndex);
                                     
                                     // MVP0: Debug log para rastrear títulos
                                     console.log(`[PREVIEW] Bloco ${blockIndex}:`, {
                                       'block.title': block.title,
-                                      derivedTitle,
-                                      headerTitle,
-                                      headerMeta,
+                                      displayTitle,
                                       hasTitleError,
                                       type: block.type,
                                     });
@@ -999,7 +1004,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                             />
                                           ) : (
                                             <span className="font-semibold text-base">
-                                              {headerTitle}
+                                              {displayTitle}
                                               {headerMeta && (
                                                 <span className="text-muted-foreground font-normal ml-2">• {headerMeta}</span>
                                               )}
