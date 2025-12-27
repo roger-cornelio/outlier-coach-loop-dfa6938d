@@ -1172,9 +1172,82 @@ const HEADING_PATTERNS = [
   /^condicionamento$/i,
 ];
 
+// ============================================
+// MVP0: LISTAS BRANCA E NEGRA PARA TÍTULOS (DEFINIÇÃO GLOBAL)
+// ============================================
+// Essas listas são usadas tanto em isHeadingLine quanto em extractHeadingFromLines
+
+const GLOBAL_TITLE_WHITELIST = [
+  /^aquecimento$/i,
+  /^for[çc]a$/i,
+  /^for[çc]a\s+espec[ií]fica$/i,
+  /^espec[ií]fico$/i,
+  /^conditioning$/i,
+  /^condicionamento$/i,
+  /^grip$/i,
+  /^grip\s*[&e]\s*strength$/i,
+  /^core$/i,
+  /^mobilidade$/i,
+  /^corrida$/i,
+  /^corrida\s*[—–-]\s*.+$/i,  // "Corrida — Outro Período", "Corrida — Longão"
+  /^fortalecimento$/i,
+  /^metcon$/i,
+  /^wod$/i,
+  /^t[ée]cnica$/i,
+  /^acess[óo]rio$/i,
+  /^warm[- ]?up$/i,
+  /^strength$/i,
+];
+
+const GLOBAL_TITLE_BLACKLIST = [
+  /descanso/i,
+  /descansar/i,
+  /necess[aá]rio/i,
+  /vai\s+aproveitar/i,
+  /objetivo/i,
+  /registre/i,
+  /priorizando/i,
+  /opcional/i,
+  /se\s+quiser/i,
+  /se\s+precisar/i,
+  /se\s+estiver/i,
+  /caso\s+queira/i,
+  /lembre/i,
+  /aten[çc][ãa]o/i,
+  /obs(?:erva[çc][ãa]o)?:/i,
+  /nota:/i,
+  /dica:/i,
+  /zona\s*\d/i,  // "Zona 2" não é título
+  /^\d/,  // Linhas que começam com número
+  /^#/,   // Linhas que começam com #
+];
+
+// Verifica se linha está na BLACKLIST (nunca pode virar título)
+function isBlacklistLine(line: string): boolean {
+  const trimmed = line.trim();
+  return GLOBAL_TITLE_BLACKLIST.some(p => p.test(trimmed));
+}
+
+// Verifica se linha está na WHITELIST (sempre é título)
+function isWhitelistLine(line: string): boolean {
+  const trimmed = line.trim();
+  return GLOBAL_TITLE_WHITELIST.some(p => p.test(trimmed));
+}
+
 // Verifica se linha é um heading/título de bloco (não precisa ser MAIÚSCULA)
+// MVP0 FIX: Usa WHITELIST e verifica BLACKLIST
 function isHeadingLine(line: string): boolean {
   const trimmed = line.trim();
+  
+  // BLACKLIST: NUNCA é heading
+  if (isBlacklistLine(trimmed)) {
+    return false;
+  }
+  
+  // WHITELIST: SEMPRE é heading
+  if (isWhitelistLine(trimmed)) {
+    return true;
+  }
   
   // Heading patterns conhecidos (case-insensitive)
   if (HEADING_PATTERNS.some(p => p.test(trimmed))) {
@@ -1186,7 +1259,7 @@ function isHeadingLine(line: string): boolean {
     const blockKeywords = [
       /aquecimento/i, /for[çc]a/i, /metcon/i, /espec[ií]fico/i,
       /corrida/i, /core/i, /grip/i, /acess[óo]rio/i, /mobilidade/i,
-      /t[ée]cnica/i, /conditioning/i, /condicionamento/i, /observa[çc][ãa]o/i
+      /t[ée]cnica/i, /conditioning/i, /condicionamento/i, /fortalecimento/i
     ];
     const hasKeyword = blockKeywords.some(p => p.test(trimmed));
     // Se contém keyword E é curta E não parece exercício, é heading
@@ -1265,67 +1338,8 @@ export function parseStructuredText(text: string): ParseResult {
   };
 
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: LISTA BRANCA — Palavras que SEMPRE indicam título de bloco
+  // MVP0: Usa funções globais isWhitelistLine e isBlacklistLine
   // ════════════════════════════════════════════════════════════════════════════
-  const TITLE_WHITELIST = [
-    /^aquecimento$/i,
-    /^for[çc]a$/i,
-    /^for[çc]a\s+espec[ií]fica$/i,
-    /^espec[ií]fico$/i,
-    /^conditioning$/i,
-    /^condicionamento$/i,
-    /^grip$/i,
-    /^grip\s*[&e]\s*strength$/i,
-    /^core$/i,
-    /^mobilidade$/i,
-    /^corrida$/i,
-    /^corrida\s*[—–-]\s*.+$/i,  // "Corrida — Outro Período"
-    /^fortalecimento$/i,
-    /^metcon$/i,
-    /^wod$/i,
-    /^t[ée]cnica$/i,
-    /^acess[óo]rio$/i,
-    /^warm[- ]?up$/i,
-  ];
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: LISTA NEGRA — Palavras que NUNCA podem virar título (são comentários)
-  // ════════════════════════════════════════════════════════════════════════════
-  const TITLE_BLACKLIST = [
-    /descanso/i,
-    /descansar/i,
-    /necess[aá]rio/i,
-    /vai\s+aproveitar/i,
-    /objetivo/i,
-    /registre/i,
-    /priorizando/i,
-    /opcional/i,
-    /se\s+quiser/i,
-    /se\s+precisar/i,
-    /se\s+estiver/i,
-    /caso\s+queira/i,
-    /lembre/i,
-    /aten[çc][ãa]o/i,
-    /obs(?:erva[çc][ãa]o)?:/i,
-    /nota:/i,
-    /dica:/i,
-  ];
-  
-  /**
-   * MVP0: Verifica se linha é título (lista branca)
-   */
-  const isWhitelistTitle = (line: string): boolean => {
-    const trimmed = line.trim();
-    return TITLE_WHITELIST.some(p => p.test(trimmed));
-  };
-  
-  /**
-   * MVP0: Verifica se linha é comentário (lista negra)
-   */
-  const isBlacklistComment = (line: string): boolean => {
-    const trimmed = line.trim();
-    return TITLE_BLACKLIST.some(p => p.test(trimmed));
-  };
 
   /**
    * MVP0: Extrai heading das primeiras 5 linhas do bloco
@@ -1341,10 +1355,10 @@ export function parseStructuredText(text: string): ParseResult {
       const line = nonEmptyLines[i].trim();
       
       // Se está na lista negra, pular
-      if (isBlacklistComment(line)) continue;
+      if (isBlacklistLine(line)) continue;
       
       // Se está na lista branca, É título!
-      if (isWhitelistTitle(line)) {
+      if (isWhitelistLine(line)) {
         console.log('[PARSER] Título WHITELIST encontrado na linha', i + 1, ':', line);
         const remaining = [...nonEmptyLines];
         remaining.splice(i, 1);
@@ -1357,7 +1371,7 @@ export function parseStructuredText(text: string): ParseResult {
       const line = nonEmptyLines[i].trim();
       
       // Se está na lista negra, pular
-      if (isBlacklistComment(line)) continue;
+      if (isBlacklistLine(line)) continue;
       
       // Heading válido = linha curta (<=60), NÃO inicia com número
       if (line.length <= 60 && !/^\d/.test(line)) {
