@@ -115,7 +115,9 @@ export interface ParsedDay {
   day: DayOfWeek | null; // Pode ser null se não identificado
   blocks: ParsedBlock[];
   alerts: string[]; // Alertas no nível do dia
-  isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal
+  isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal (APENAS via toggle do coach)
+  restSuggestion?: boolean; // MVP0: Sugestão de descanso (não aplicada automaticamente)
+  restSuggestionReason?: string; // MVP0: Motivo da sugestão
 }
 
 export interface ParseResult {
@@ -1754,31 +1756,55 @@ export function parseStructuredText(text: string): ParseResult {
   };
 
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: REGRA SOBERANA DE DESCANSO — PRÉ-PROCESSAMENTO POR DIA
+  // MVP0 PATCH: DESCANSO SÓ COM CONFIRMAÇÃO DO COACH
   // ════════════════════════════════════════════════════════════════════════════
-  // Detecta se o dia é de descanso ANTES de processar blocos
-  // Padrões: "descanso", "day off", "rest day", "\bdescanso\b"
+  // PROIBIÇÃO ABSOLUTA: O sistema NUNCA pode setar isRestDay = true automaticamente
+  // A detecção vira apenas "SUGESTÃO" (restSuggestion) sem efeito lógico
+  // O toggle só muda por ação explícita do coach (clique)
   // ════════════════════════════════════════════════════════════════════════════
   
-  const isRestDayLine = (line: string): boolean => {
+  /**
+   * Detecta se a linha é "Descanso dentro de bloco" (intervalo/descanso técnico)
+   * Linhas como: "Descanso 2'", "Descanso 90''", "Descansar o necessário"
+   * NUNCA devem sugerir dia de descanso
+   */
+  const isRestWithinBlock = (line: string): boolean => {
     const trimmed = line.trim().toLowerCase();
-    // Linha exata ou começa com "descanso"
-    if (trimmed === 'descanso') return true;
-    if (trimmed.startsWith('descanso')) return true;
-    // Palavra isolada \bdescanso\b
-    if (/\bdescanso\b/i.test(trimmed)) return true;
-    // Variantes em inglês
-    if (/\bday\s*off\b/i.test(trimmed)) return true;
-    if (/\brest\s*day\b/i.test(trimmed)) return true;
-    if (/\bfolga\b/i.test(trimmed)) return true;
-    if (/\brecovery\b/i.test(trimmed) && trimmed.length < 20) return true;
+    // "Descanso" seguido de tempo: 2', 90'', 2 min, etc.
+    if (/^descanso\s+\d+\s*['"'']+/i.test(trimmed)) return true;
+    if (/^descanso\s+\d+\s*(min|seg|s|segundos?)/i.test(trimmed)) return true;
+    // "Descansar o necessário", "Descansar entre séries"
+    if (/^descansar\b/i.test(trimmed)) return true;
+    // "Descanso:" seguido de instruções
+    if (/^descanso\s*:/i.test(trimmed)) return true;
     return false;
   };
   
-  // Estado para modo REST do dia atual
-  let currentRestMode = false;
-  let restOptionalNotes: string[] = [];
-  let restOptionalMode = false;
+  /**
+   * Detecta se a linha SUGERE dia de descanso (não aplica automaticamente!)
+   * Só retorna true se for "Descanso" no início do dia, ANTES de qualquer bloco
+   * E NÃO for descanso técnico (dentro de bloco)
+   */
+  const isRestDaySuggestionLine = (line: string): boolean => {
+    const trimmed = line.trim().toLowerCase();
+    
+    // PRIMEIRO: Excluir descanso técnico (dentro de bloco)
+    if (isRestWithinBlock(line)) return false;
+    
+    // Linha exata "descanso"
+    if (trimmed === 'descanso') return true;
+    // Variantes em inglês/português (isoladas)
+    if (/^day\s*off$/i.test(trimmed)) return true;
+    if (/^rest\s*day$/i.test(trimmed)) return true;
+    if (/^folga$/i.test(trimmed)) return true;
+    // "Descanso" sozinho no início da linha (sem tempo/instrução)
+    if (/^descanso$/i.test(trimmed)) return true;
+    
+    return false;
+  };
+  
+  // MVP0 PATCH: Removido currentRestMode - descanso agora é apenas sugestão
+  // O toggle do coach é a única forma de marcar dia como descanso
 
   for (const rawLine of lines) {
     lineNumber++;
@@ -1790,53 +1816,19 @@ export function parseStructuredText(text: string): ParseResult {
     // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
     if (isBlockSeparator(line)) {
       console.log('[PARSER] Separador de bloco detectado:', line);
-      if (!currentRestMode) {
-        saveCurrentBlock();
-      }
+      saveCurrentBlock();
       continue;
     }
 
     // Detectar dia da semana
     const detectedDay = detectDay(line);
     if (detectedDay && isUpperCaseLine(line)) {
-      // Antes de trocar de dia, finalizar dia REST anterior se existir
-      if (currentRestMode && currentDayEntry) {
-        currentDayEntry.isRestDay = true;
-        // Adicionar notas opcionais ao dia (sem criar blocos)
-        if (restOptionalNotes.length > 0) {
-          // Criar um único bloco "opcional" para preservar as notas
-          const optionalBlock: ParsedBlock = {
-            title: 'Opcional',
-            type: 'aquecimento' as any,
-            format: 'outro',
-            isMainWod: false,
-            isBenchmark: false,
-            optional: true,
-            items: [],
-            lines: restOptionalNotes.map((note, idx) => ({
-              id: `rest-note-${idx}`,
-              text: note,
-              type: 'exercise' as LineType,
-              kind: 'EXERCISE' as ItemKind,
-              confidence: 'MEDIUM' as ItemConfidence,
-              flags: { optional: true },
-            })),
-            coachNotes: [],
-            instructions: restOptionalNotes,
-          };
-          currentDayEntry.blocks.push(optionalBlock);
-          console.log('[PARSER] Dia REST com notas opcionais:', restOptionalNotes);
-        }
-      } else {
-        saveCurrentBlock();
-      }
+      // Salvar bloco atual antes de trocar de dia
+      saveCurrentBlock();
       
       hasExplicitDay = true;
       currentDay = detectedDay;
       currentOptional = false;
-      currentRestMode = false;
-      restOptionalNotes = [];
-      restOptionalMode = false;
       
       // Criar nova entrada de dia
       currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
@@ -1849,58 +1841,50 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ════════════════════════════════════════════════════════════════════════════
-    // MVP0: DETECÇÃO DE DESCANSO (PRECEDÊNCIA ABSOLUTA)
+    // MVP0 PATCH: DESCANSO APENAS COMO SUGESTÃO (NUNCA AUTOMÁTICO)
     // ════════════════════════════════════════════════════════════════════════════
-    // Se a linha indica descanso, entrar em modo REST para o dia atual
-    // CURTO-CIRCUITO: Nenhum bloco será criado após isso
+    // PROIBIÇÃO: O sistema NUNCA pode setar isRestDay = true automaticamente
+    // Apenas cria restSuggestion = true para o coach confirmar via toggle
     // ════════════════════════════════════════════════════════════════════════════
-    if (isRestDayLine(line)) {
-      console.log('[PARSER] >>> REGRA SOBERANA: DESCANSO detectado:', line);
-      console.log('[PARSER] >>> Entrando em modo REST - 0 blocos serão criados');
-      
-      // Salvar qualquer bloco pendente antes de entrar em modo REST
-      saveCurrentBlock();
-      currentBlock = null;
-      
-      // Ativar modo REST
-      currentRestMode = true;
-      restOptionalNotes = [];
-      restOptionalMode = false;
-      
-      // Garantir que temos entrada de dia
-      if (!currentDayEntry && currentDay) {
-        currentDayEntry = { day: currentDay, blocks: [], alerts: [], isRestDay: true };
-        result.days.push(currentDayEntry);
-      } else if (currentDayEntry) {
-        currentDayEntry.isRestDay = true;
+    
+    // Primeiro: verificar se é descanso técnico (dentro de bloco) - tratar como conteúdo normal
+    if (isRestWithinBlock(line)) {
+      console.log('[PARSER] Descanso técnico (dentro de bloco):', line);
+      // Tratar como linha normal de bloco
+      if (currentBlock) {
+        currentBlock.instructions.push(line);
+      } else {
+        // Criar bloco se necessário
+        currentBlock = createNewBlock('', true);
+        currentBlock.instructions.push(line);
       }
-      
-      // NÃO adicionar "Descanso" como bloco, apenas marcar o dia
       continue;
     }
     
-    // ════════════════════════════════════════════════════════════════════════════
-    // MVP0: MODO REST ATIVO — CURTO-CIRCUITO
-    // ════════════════════════════════════════════════════════════════════════════
-    // Se estamos em modo REST, todas as linhas seguintes viram notas opcionais
-    // 🚫 NÃO criar blocos
-    // 🚫 NÃO chamar isHeadingLine
-    // 🚫 NÃO exigir categoria
-    // ════════════════════════════════════════════════════════════════════════════
-    if (currentRestMode) {
-      // Detectar marcador "Opcional:"
-      const isOptionalMarkerInRest = /^opcional\s*[:()]?\s*$/i.test(line) || 
-                                      /^\(?\s*opcional\s*\)?:?\s*$/i.test(line);
-      if (isOptionalMarkerInRest) {
-        console.log('[PARSER] [REST MODE] Marcador OPCIONAL detectado:', line);
-        restOptionalMode = true;
-        restOptionalNotes.push(line); // Preservar para exibição
-        continue;
+    // Verificar se sugere dia de descanso (MAS NÃO APLICAR!)
+    if (isRestDaySuggestionLine(line) && !currentBlock) {
+      // SÓ sugere se estiver NO INÍCIO do dia (sem bloco ainda)
+      console.log('[REST_SUGGESTION] day=' + (currentDay || 'UNKNOWN') + ' reason="Descanso no início do dia" autoApplied=false');
+      
+      // Garantir que temos entrada de dia
+      if (!currentDayEntry && currentDay) {
+        currentDayEntry = { day: currentDay, blocks: [], alerts: [] };
+        result.days.push(currentDayEntry);
       }
       
-      // Qualquer outra linha em modo REST → nota opcional
-      console.log('[PARSER] [REST MODE] Linha tratada como nota opcional:', line);
-      restOptionalNotes.push(line);
+      // Marcar SUGESTÃO (não isRestDay!)
+      if (currentDayEntry) {
+        currentDayEntry.restSuggestion = true;
+        currentDayEntry.restSuggestionReason = 'Encontrado "Descanso" no início do dia';
+      }
+      
+      // IMPORTANTE: Continuar processando normalmente - NÃO entrar em modo REST
+      // A linha "Descanso" vira uma nota/instrução que será exibida
+      if (!currentBlock) {
+        currentBlock = createNewBlock('Descanso', true);
+        currentBlock.type = 'aquecimento' as any;
+        currentBlock.optional = true;
+      }
       continue;
     }
     
@@ -1935,7 +1919,6 @@ export function parseStructuredText(text: string): ParseResult {
       isExerciseLine: isExercise,
       isHeadingLine: isHeading,
       currentOptional,
-      currentRestMode,
       blockTitleAtual: currentBlock?.title || '(sem bloco)',
     });
     
@@ -2016,35 +1999,8 @@ export function parseStructuredText(text: string): ParseResult {
     }
   }
 
-  // Finalizar dia REST se ainda estiver ativo
-  if (currentRestMode && currentDayEntry) {
-    currentDayEntry.isRestDay = true;
-    if (restOptionalNotes.length > 0) {
-      const optionalBlock: ParsedBlock = {
-        title: 'Opcional',
-        type: 'aquecimento' as any,
-        format: 'outro',
-        isMainWod: false,
-        isBenchmark: false,
-        optional: true,
-        items: [],
-        lines: restOptionalNotes.map((note, idx) => ({
-          id: `rest-note-${idx}`,
-          text: note,
-          type: 'exercise' as LineType,
-          kind: 'EXERCISE' as ItemKind,
-          confidence: 'MEDIUM' as ItemConfidence,
-          flags: { optional: true },
-        })),
-        coachNotes: [],
-        instructions: restOptionalNotes,
-      };
-      currentDayEntry.blocks.push(optionalBlock);
-    }
-  } else {
-    // Salvar último bloco (caso não seja modo REST)
-    saveCurrentBlock();
-  }
+  // Salvar último bloco pendente
+  saveCurrentBlock();
 
   // Validações finais
   if (result.days.length === 0) {
