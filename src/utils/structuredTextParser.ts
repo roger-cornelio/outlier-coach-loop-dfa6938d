@@ -99,6 +99,60 @@ export interface ParseResult {
   warnings: string[];
   alerts: string[]; // Alertas globais
   needsDaySelection?: boolean; // Indica se precisa selecionar dia manualmente
+  hasDayAnchors?: boolean; // MVP0: Indica se o texto tem âncoras de dia (SEGUNDA, TERÇA, etc.)
+}
+
+// ============================================
+// VALIDAÇÃO DE DIAS DA SEMANA — MVP0
+// ============================================
+// O PACER só pode rodar se o texto tiver dias da semana explícitos
+// OU se o dia veio via UI (importação por dia)
+
+const DAY_ANCHOR_PATTERNS = [
+  /\bsegunda(?:-feira)?\b/i,
+  /\bter[çc]a(?:-feira)?\b/i,
+  /\bquarta(?:-feira)?\b/i,
+  /\bquinta(?:-feira)?\b/i,
+  /\bsexta(?:-feira)?\b/i,
+  /\bs[aá]bado\b/i,
+  /\bdomingo\b/i,
+  /\b(?:###?\s*)?seg\b/i,
+  /\b(?:###?\s*)?ter\b/i,
+  /\b(?:###?\s*)?qua\b/i,
+  /\b(?:###?\s*)?qui\b/i,
+  /\b(?:###?\s*)?sex\b/i,
+  /\b(?:###?\s*)?sab\b/i,
+  /\b(?:###?\s*)?dom\b/i,
+];
+
+/**
+ * MVP0: Valida se o texto tem âncoras de dia da semana
+ * REGRA: O PACER nunca pode rodar em texto sem dias explícitos
+ * 
+ * @returns { hasDays: boolean, daysFound: string[] }
+ */
+export function validateDayAnchors(text: string): { hasDays: boolean; daysFound: string[] } {
+  const daysFound: string[] = [];
+  const normalizedText = text.toLowerCase();
+  
+  const dayNames = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
+  
+  for (let i = 0; i < DAY_ANCHOR_PATTERNS.length; i++) {
+    const pattern = DAY_ANCHOR_PATTERNS[i];
+    if (pattern.test(normalizedText)) {
+      // Mapear para nome legível
+      const dayIndex = i % 7;
+      const dayName = dayNames[dayIndex];
+      if (!daysFound.includes(dayName)) {
+        daysFound.push(dayName);
+      }
+    }
+  }
+  
+  return {
+    hasDays: daysFound.length > 0,
+    daysFound,
+  };
 }
 
 // ============================================
@@ -848,6 +902,10 @@ const BLOCK_SEPARATOR = '⸻';
 
 export function parseStructuredText(text: string): ParseResult {
   const lines = text.split('\n');
+  
+  // MVP0: Validar âncoras de dia antes de parsear
+  const dayValidation = validateDayAnchors(text);
+  
   const result: ParseResult = {
     success: false,
     days: [],
@@ -855,6 +913,7 @@ export function parseStructuredText(text: string): ParseResult {
     warnings: [],
     alerts: [],
     needsDaySelection: false,
+    hasDayAnchors: dayValidation.hasDays,
   };
 
   let currentDay: DayOfWeek | null = null;

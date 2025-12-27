@@ -72,6 +72,7 @@ import {
   getBlockTitleError,
   getDerivedTitle,
   normalizeText,
+  validateDayAnchors,
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import { getBlockHeader } from '@/utils/blockDisplayUtils';
@@ -113,6 +114,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   
   // MVP0: Modal de seleção de dia - abre APENAS quando necessário
   const [showDayModal, setShowDayModal] = useState(false);
+  
+  // MVP0: Erro de validação de dias - bloqueia preview se texto não tiver dias
+  const [dayValidationError, setDayValidationError] = useState<string | null>(null);
 
   // Detectar dias distintos no texto (determinístico, sem IA)
   const detectDaysInText = (textContent: string): number => {
@@ -162,6 +166,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const textareaValue = text.trim();
     if (!textareaValue) return;
     
+    // Limpar erro de validação anterior
+    setDayValidationError(null);
+    
     // MVP0 FIX: Se já existe parseResult e preview está oculto, apenas reexibir
     // (usuário clicou "Voltar" e quer ver o preview novamente)
     if (parseResult && !showPreview) {
@@ -169,8 +176,15 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       return;
     }
     
-    // ORDEM: primeiro analisar texto, depois decidir sobre modal
-    const daysDetected = detectDaysInText(textareaValue);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MVP0: VALIDAÇÃO OBRIGATÓRIA DE DIAS DA SEMANA
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REGRA: O PACER nunca pode rodar em texto sem dias da semana explícitos
+    // EXCEÇÃO: Se o dia já foi selecionado via UI (modal ou importação por dia)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const dayValidation = validateDayAnchors(textareaValue);
+    const daysDetected = dayValidation.daysFound.length;
     
     // Se 2+ dias detectados no texto → ir direto para preview (multi-dia)
     if (daysDetected >= 2) {
@@ -178,14 +192,21 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       return;
     }
     
-    // Se 0 ou 1 dia e não tem dia selecionado → mostrar modal
-    if (!selectedDay) {
+    // Se 0 dias detectados no texto E nenhum dia selecionado → mostrar modal para escolher
+    // O modal permite que o coach informe qual dia é o treino
+    if (daysDetected === 0 && !selectedDay) {
       setShowDayModal(true);
       return;
     }
     
-    // Parsear com dia já definido
-    executeParseWithDay(selectedDay);
+    // Se 1 dia detectado e não tem dia selecionado → mostrar modal
+    if (daysDetected === 1 && !selectedDay) {
+      setShowDayModal(true);
+      return;
+    }
+    
+    // Parsear com dia já definido (via modal ou seleção anterior)
+    executeParseWithDay(selectedDay!);
   };
   
   /**
@@ -311,6 +332,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setFileError(null);
     setSelectedDay(null);
     setRestDays({});
+    setDayValidationError(null);
   };
 
   // Toggle Rest Day
@@ -575,10 +597,29 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
               // Apenas ocultar o preview - o draft é preservado
               // O usuário pode clicar "Validar e Visualizar" novamente
               setShowPreview(false);
+              // Limpar erro de validação ao editar texto
+              setDayValidationError(null);
             }}
             placeholder="Cole o treino aqui (texto, WhatsApp ou PDF)…"
             className="min-h-[180px] text-sm"
           />
+
+          {/* MVP0: Erro de validação de dias */}
+          {dayValidationError && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive">
+                    {dayValidationError}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Use cabeçalhos como: SEGUNDA, TERÇA, QUARTA, etc.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 flex-wrap">
             <Button
