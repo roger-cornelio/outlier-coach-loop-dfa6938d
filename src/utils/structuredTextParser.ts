@@ -364,17 +364,23 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
 // - Formato (AMRAP, EMOM, For Time, Rounds, Intervalos)
 // - Começa com número/unidade (5 Rounds, 10km, 500m, Min 1:)
 
-const CATEGORY_ONLY_PATTERNS = [
-  /^aquecimento$/i,
-  /^for[çc]a$/i,
-  /^metcon$/i,
-  /^espec[ií]fico$/i,
-  /^corrida$/i,
-  /^acess[óo]rio$/i,
-  /^condicionamento$/i,
-  /^core$/i,
-  /^mobilidade$/i,
-  /^wod$/i,
+// MVP0 FIX: CATEGORY_ONLY_PATTERNS NÃO deve incluir headings válidos!
+// "Aquecimento", "Força", etc. SÃO títulos válidos, não "categoria isolada".
+// Esta lista é para detectar quando o coach digitou APENAS a categoria sem título real.
+// Exemplo: título "EMOM" sozinho não é título válido, mas "Aquecimento" É título válido.
+const CATEGORY_ONLY_PATTERNS: RegExp[] = [
+  // REMOVIDO: Headings válidos que são títulos legítimos
+  // /^aquecimento$/i,  // ← REMOVIDO - é título válido
+  // /^for[çc]a$/i,     // ← REMOVIDO - é título válido
+  // /^metcon$/i,       // ← REMOVIDO - é título válido
+  // /^espec[ií]fico$/i,// ← REMOVIDO - é título válido
+  // /^corrida$/i,      // ← REMOVIDO - é título válido
+  // /^acess[óo]rio$/i, // ← REMOVIDO - é título válido
+  // /^condicionamento$/i, // ← REMOVIDO - é título válido
+  // /^core$/i,         // ← REMOVIDO - é título válido
+  // /^mobilidade$/i,   // ← REMOVIDO - é título válido
+  // /^wod$/i,          // ← REMOVIDO - é título válido
+  // Lista vazia - nenhum heading deve ser tratado como "categoria isolada"
 ];
 
 const FORMAT_ONLY_PATTERNS = [
