@@ -7,6 +7,13 @@
 // 3. O atleta DEVE informar: nível, gênero, tempo, equipamentos
 // 4. Ordem de cálculo: tipo → nível → gênero → tempo → equipamentos
 // ============================================
+// MVP0 PATCH: CONFIANÇA DE UNIDADES
+// - O motor só ajusta automaticamente linhas de ALTA CONFIANÇA
+// - Linhas de MÉDIA/BAIXA confiança são mantidas intactas
+// - Nenhum exercício é bloqueado, apenas ajuste automático é limitado
+// ============================================
+
+import { detectUnits, canAutoAdjust, type UnitConfidence } from './unitDetection';
 
 // ============================================
 // TIPOS DO MOTOR
@@ -140,9 +147,19 @@ function roundToMultiple(n: number, multiple: number): number {
 /**
  * Escala números de volume (reps, metros, calorias, rounds)
  * NUNCA escala a intenção, apenas o volume
+ * 
+ * MVP0 PATCH: Respeita confiança de unidades
+ * - Só escala linhas de ALTA CONFIANÇA automaticamente
+ * - Linhas de MÉDIA/BAIXA confiança são mantidas intactas
  */
-function scaleVolumeNumbers(line: string, multiplier: number): string {
+function scaleVolumeNumbers(line: string, multiplier: number, respectConfidence: boolean = true): string {
   if (multiplier === 1.0) return line;
+  
+  // MVP0: Se respectConfidence está ativo, verificar se a linha pode ser ajustada
+  if (respectConfidence && !canAutoAdjust(line)) {
+    // Linha de MÉDIA/BAIXA confiança: manter intacta
+    return line;
+  }
   
   return line.replace(/\b(\d{1,4})\s*(m|cal|reps?|rounds?|x)?\b/gi, (match, numStr, unit) => {
     const num = parseInt(numStr, 10);
@@ -175,9 +192,15 @@ function scaleVolumeNumbers(line: string, multiplier: number): string {
 
 /**
  * Escala distâncias (usado para corrida/monoestrutural)
+ * MVP0 PATCH: Respeita confiança de unidades
  */
-function scaleDistance(line: string, multiplier: number): string {
+function scaleDistance(line: string, multiplier: number, respectConfidence: boolean = true): string {
   if (multiplier === 1.0) return line;
+  
+  // MVP0: Se respectConfidence está ativo, verificar se a linha pode ser ajustada
+  if (respectConfidence && !canAutoAdjust(line)) {
+    return line;
+  }
   
   return line.replace(/\b(\d{1,5})\s*(m|km|metros?|quilômetros?)\b/gi, (match, numStr, unit) => {
     const num = parseInt(numStr, 10);
@@ -201,9 +224,15 @@ function scaleDistance(line: string, multiplier: number): string {
 /**
  * Escala séries para blocos de força
  * Reps permanecem iguais, séries ajustam por gênero
+ * MVP0 PATCH: Respeita confiança de unidades
  */
-function scaleStrengthSets(line: string, genderMultiplier: number): string {
+function scaleStrengthSets(line: string, genderMultiplier: number, respectConfidence: boolean = true): string {
   if (genderMultiplier === 1.0) return line;
+  
+  // MVP0: Se respectConfidence está ativo, verificar se a linha pode ser ajustada
+  if (respectConfidence && !canAutoAdjust(line)) {
+    return line;
+  }
   
   // Pattern: 5x5, 4x8, 3x10 etc.
   return line.replace(/(\d+)\s*x\s*(\d+)/gi, (match, sets, reps) => {
