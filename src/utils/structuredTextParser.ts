@@ -59,14 +59,39 @@ export interface ParsedItem {
 }
 
 // ============================================
-// LINHA CLASSIFICADA (EXERCISE ou COMMENT)
+// MVP0: CLASSIFICAÇÃO DE ITENS — EXERCISE / REST / NOTE
 // ============================================
+// Cada linha é classificada com:
+// - kind: EXERCISE | REST | NOTE
+// - confidence: HIGH | MEDIUM | LOW
+// - flags: OPTIONAL (exercício trackável mas não obrigatório)
+
+export type ItemKind = 'EXERCISE' | 'REST' | 'NOTE';
+export type ItemConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+
+// Flags especiais para itens
+export interface ItemFlags {
+  optional?: boolean; // Exercício opcional trackável (aparece pro atleta, só computa se feito)
+}
+
+// Resultado de classificação de uma linha
+export interface ClassifiedItem {
+  kind: ItemKind;
+  confidence: ItemConfidence;
+  flags?: ItemFlags;
+}
+
+// Legacy type alias para compatibilidade
 export type LineType = 'exercise' | 'comment';
 
 export interface ParsedLine {
   id: string; // ID único para reordenação
   text: string;
   type: LineType;
+  // MVP0: Novos campos de classificação
+  kind?: ItemKind;
+  confidence?: ItemConfidence;
+  flags?: ItemFlags;
 }
 
 export interface ParsedBlock {
@@ -705,6 +730,180 @@ export function classifyLine(line: string, blockCategory?: string): LineType {
 }
 
 // ============================================
+// MVP0: CLASSIFICAÇÃO DETERMINÍSTICA DE ITENS
+// ============================================
+// Classifica linha como EXERCISE / REST / NOTE com confidence
+// Regras determinísticas sem IA
+
+// Padrões de descanso/off
+const REST_PATTERNS = [
+  /\bdescanso\b/i,
+  /\boff\b/i,
+  /\brecovery\b/i,
+  /\bfolga\b/i,
+  /\bdia\s*(de\s*)?(descanso|livre|off)\b/i,
+  /\bhoje\s+(é\s+)?descanso\b/i,
+  /\brest\s*day\b/i,
+];
+
+// Padrões de exercício opcional
+const OPTIONAL_PATTERNS = [
+  /\bse\s+quiser\b/i,
+  /\bcaso\s+queira\b/i,
+  /\bopcional\b/i,
+  /\bse\s+estiver\s+bem\b/i,
+  /\bse\s+tiver\s+tempo\b/i,
+  /\bse\s+conseguir\b/i,
+  /\bapenas\s+se\b/i,
+];
+
+// Padrões HIGH confidence de exercício
+const HIGH_CONFIDENCE_EXERCISE_PATTERNS = [
+  // Tempo: 45 min, 30min, 10', mm:ss
+  /\d+\s*(?:min|minutos?|minutes?|')\b/i,
+  // Distância: 5km, 400m, 10 km
+  /\d+\s*(?:km|m)\b/i,
+  // Séries: 5x5, 4 rounds, 3 sets
+  /\d+\s*x\s*\d+/i,
+  /\d+\s*(?:rounds?|rodadas?|sets?)\b/i,
+  // Formatos conhecidos
+  /\b(?:emom|amrap|for\s*time|tabata|rft)\b/i,
+  // Começa com número + movimento
+  /^\d+\s+(?:burpees?|squats?|lunges?|pull-?ups?|push-?ups?|deadlifts?|cleans?|snatches?|jerks?)/i,
+  // Tempo explícito mm:ss
+  /\d{1,2}:\d{2}/,
+];
+
+// Padrões MEDIUM confidence de exercício
+const MEDIUM_CONFIDENCE_EXERCISE_PATTERNS = [
+  // Movimento + esforço: corrida PSE 6, bike RPE 7
+  /\b(?:pse|rpe)\s*[:=]?\s*\d/i,
+  // Zona de esforço
+  /\b(?:zona|zone)\s*\d/i,
+  // Frequência cardíaca
+  /\b(?:fc|hr)\s*[:=]?\s*\d/i,
+  // Palavras de exercício sem medida
+  /\b(?:corrida|bike|remo|ski|caminhada|trote|run|row|swim)\b/i,
+];
+
+// Padrões de NOTE (comentário/observação)
+const NOTE_PATTERNS = [
+  /^descansar\s+o\s+necess[aá]rio\b/i,
+  /\bobs(?:erva[çc][ãa]o)?\b/i,
+  /\bnota\b/i,
+  /\bcoment[aá]rio\b/i,
+  /\bdica\b/i,
+  /\baten[çc][ãa]o\b/i,
+  /\bcuidado\b/i,
+  /\bfoco\b/i,
+  /\bobjetivo\b/i,
+  /\blembre\b/i,
+  /^📝/,
+  /^💡/,
+  /^⚠️/,
+  /^ℹ️/,
+];
+
+/**
+ * MVP0: Classifica uma linha com kind + confidence + flags
+ * REGRAS DETERMINÍSTICAS (sem IA)
+ * 
+ * Prioridade:
+ * 1) REST + OPTIONAL + exercício detectável → REST + EXERCISE OPTIONAL
+ * 2) REST puro
+ * 3) EXERCISE (com confidence)
+ * 4) NOTE (fallback)
+ */
+export function classifyItemDeterministic(line: string): ClassifiedItem {
+  if (!line || line.trim().length === 0) {
+    return { kind: 'NOTE', confidence: 'LOW' };
+  }
+  
+  const trimmed = line.trim();
+  const lowerLine = trimmed.toLowerCase();
+  
+  // 1. Verificar se é REST (descanso/off/recovery/folga)
+  const isRest = REST_PATTERNS.some(p => p.test(lowerLine));
+  
+  // 2. Verificar se tem padrão opcional
+  const isOptional = OPTIONAL_PATTERNS.some(p => p.test(lowerLine));
+  
+  // 3. Verificar se tem padrão de exercício (HIGH ou MEDIUM)
+  const isHighExercise = HIGH_CONFIDENCE_EXERCISE_PATTERNS.some(p => p.test(trimmed));
+  const isMediumExercise = MEDIUM_CONFIDENCE_EXERCISE_PATTERNS.some(p => p.test(trimmed));
+  
+  // 4. Verificar se é NOTE explícita
+  const isNote = NOTE_PATTERNS.some(p => p.test(trimmed));
+  
+  // ========================================
+  // REGRAS DE CLASSIFICAÇÃO
+  // ========================================
+  
+  // A) REST com exercício opcional detectável
+  // Ex: "Descanso. Se quiser, corrida leve 30min"
+  if (isRest && isOptional && (isHighExercise || isMediumExercise)) {
+    // Retornar como EXERCISE OPTIONAL (o REST está implícito no dia)
+    return {
+      kind: 'EXERCISE',
+      confidence: isHighExercise ? 'HIGH' : 'MEDIUM',
+      flags: { optional: true },
+    };
+  }
+  
+  // B) REST puro
+  if (isRest && !isOptional) {
+    return { kind: 'REST', confidence: 'HIGH' };
+  }
+  
+  // C) EXERCISE OPTIONAL (sem REST mas marcado como opcional)
+  if (isOptional && (isHighExercise || isMediumExercise)) {
+    return {
+      kind: 'EXERCISE',
+      confidence: isHighExercise ? 'HIGH' : 'MEDIUM',
+      flags: { optional: true },
+    };
+  }
+  
+  // D) EXERCISE HIGH confidence
+  if (isHighExercise) {
+    return { kind: 'EXERCISE', confidence: 'HIGH' };
+  }
+  
+  // E) EXERCISE MEDIUM confidence
+  if (isMediumExercise) {
+    return { kind: 'EXERCISE', confidence: 'MEDIUM' };
+  }
+  
+  // F) NOTE explícita
+  if (isNote) {
+    return { kind: 'NOTE', confidence: 'HIGH' };
+  }
+  
+  // G) Começa com número (provável exercício) → LOW confidence
+  if (/^\d+/.test(trimmed)) {
+    return { kind: 'EXERCISE', confidence: 'LOW' };
+  }
+  
+  // H) Contém movimento conhecido → LOW confidence
+  const hasMovement = KNOWN_MOVEMENTS.some(m => lowerLine.includes(m));
+  if (hasMovement) {
+    return { kind: 'EXERCISE', confidence: 'LOW' };
+  }
+  
+  // I) Fallback: NOTE com LOW confidence
+  return { kind: 'NOTE', confidence: 'LOW' };
+}
+
+/**
+ * Converte ClassifiedItem para LineType legado
+ * Para manter compatibilidade com código existente
+ */
+export function itemKindToLineType(kind: ItemKind): LineType {
+  if (kind === 'EXERCISE') return 'exercise';
+  return 'comment';
+}
+
+// ============================================
 // NORMALIZAÇÃO DE TEXTO (para dedup e comparação)
 // ============================================
 // Normaliza texto para comparação: lowercase, trim, remove acentos, remove pontuação leve
@@ -734,6 +933,7 @@ export function generateLineId(): string {
 }
 
 // Classifica todas as linhas de um bloco
+// MVP0: Usa classifyItemDeterministic para kind/confidence/flags
 export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   const lines: ParsedLine[] = [];
   const normalizedTitle = normalizeText(block.title);
@@ -758,8 +958,18 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     return false;
   };
   
-  // Determinar a categoria do bloco para passar ao classifyLine
-  const blockCategory = block.type || block.title || '';
+  // Helper para criar ParsedLine com classificação completa
+  const createLine = (text: string): ParsedLine => {
+    const classified = classifyItemDeterministic(text);
+    return {
+      id: generateLineId(),
+      text: text.trim(),
+      type: itemKindToLineType(classified.kind),
+      kind: classified.kind,
+      confidence: classified.confidence,
+      flags: classified.flags,
+    };
+  };
   
   let prevNormalized = '';
   let lineIndex = 0;
@@ -767,11 +977,7 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   // Adicionar instruction principal
   if (block.instruction && block.instruction.trim()) {
     if (!shouldDiscard(block.instruction, lineIndex, prevNormalized)) {
-      lines.push({
-        id: generateLineId(),
-        text: block.instruction.trim(),
-        type: classifyLine(block.instruction, blockCategory),
-      });
+      lines.push(createLine(block.instruction));
       prevNormalized = normalizeText(block.instruction);
     }
     lineIndex++;
@@ -781,18 +987,14 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   if (block.instructions) {
     for (const instr of block.instructions) {
       if (instr.trim() && !shouldDiscard(instr, lineIndex, prevNormalized)) {
-        lines.push({
-          id: generateLineId(),
-          text: instr.trim(),
-          type: classifyLine(instr, blockCategory),
-        });
+        lines.push(createLine(instr));
         prevNormalized = normalizeText(instr);
       }
       lineIndex++;
     }
   }
   
-  // Adicionar items formatados (exercícios nunca descartados por dedup de título)
+  // Adicionar items formatados (exercícios sempre HIGH confidence)
   for (const item of block.items) {
     let text = `${item.quantity} ${item.unit} ${item.movement}`;
     if (item.weight) {
@@ -804,7 +1006,9 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     lines.push({
       id: generateLineId(),
       text: text.trim(),
-      type: 'exercise', // Items são sempre exercícios
+      type: 'exercise',
+      kind: 'EXERCISE',
+      confidence: 'HIGH',
     });
   }
   
@@ -812,10 +1016,19 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   if (block.coachNotes) {
     for (const note of block.coachNotes) {
       if (note.trim() && !shouldDiscard(note, lineIndex, prevNormalized)) {
+        // Notes do coach: usar classificação mas priorizar NOTE
+        const classified = classifyItemDeterministic(note);
+        // Se o coach colocou como nota, respeitar como NOTE a menos que seja exercício óbvio
+        const finalKind = classified.kind === 'EXERCISE' && classified.confidence === 'HIGH' 
+          ? 'EXERCISE' 
+          : 'NOTE';
         lines.push({
           id: generateLineId(),
           text: note.trim(),
-          type: 'comment',
+          type: finalKind === 'EXERCISE' ? 'exercise' : 'comment',
+          kind: finalKind,
+          confidence: classified.confidence,
+          flags: classified.flags,
         });
         prevNormalized = normalizeText(note);
       }

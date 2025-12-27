@@ -1102,46 +1102,109 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                         return null;
                                       })()}
                                       
-                                      {/* Exercícios - FONTE ÚNICA: block.lines (type==='exercise') */}
-                                      {block.lines && block.lines.filter(l => l.type === 'exercise').length > 0 && (
-                                        <div className="text-sm text-foreground mt-2 space-y-1 pl-2 border-l-2 border-primary/40">
-                                          {block.lines.filter(l => l.type === 'exercise').map((line) => (
-                                            <p key={line.id}>{line.text}</p>
-                                          ))}
+                                      {/* MVP0: ITENS COM TAGS VISUAIS (EXERCISE/REST/NOTE/OPTIONAL) */}
+                                      {block.lines && block.lines.length > 0 && (
+                                        <div className="text-sm mt-2 space-y-2">
+                                          {/* Exercícios */}
+                                          {block.lines.filter(l => l.kind === 'EXERCISE' || l.type === 'exercise').length > 0 && (
+                                            <div className="space-y-1.5 pl-2 border-l-2 border-primary/40">
+                                              {block.lines
+                                                .filter(l => l.kind === 'EXERCISE' || l.type === 'exercise')
+                                                .map((line) => (
+                                                  <div key={line.id} className="flex items-start gap-2 flex-wrap">
+                                                    <p className={`text-foreground ${line.flags?.optional ? 'italic text-muted-foreground' : ''}`}>
+                                                      {line.text}
+                                                    </p>
+                                                    {/* Tags de classificação */}
+                                                    <div className="flex gap-1 flex-shrink-0">
+                                                      {line.flags?.optional && (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                                          OPCIONAL
+                                                        </Badge>
+                                                      )}
+                                                      {line.confidence && line.confidence !== 'HIGH' && (
+                                                        <Badge 
+                                                          variant="outline" 
+                                                          className={`text-[10px] px-1.5 py-0 h-4 ${
+                                                            line.confidence === 'MEDIUM' 
+                                                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
+                                                              : 'bg-gray-500/10 text-gray-500 border-gray-500/30'
+                                                          }`}
+                                                        >
+                                                          {line.confidence === 'MEDIUM' ? '~MÉDIO' : '?BAIXO'}
+                                                        </Badge>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                            </div>
+                                          )}
+                                          
+                                          {/* Descanso (REST) */}
+                                          {block.lines.filter(l => l.kind === 'REST').length > 0 && (
+                                            <div className="space-y-1 pl-2 border-l-2 border-blue-400/40">
+                                              {block.lines
+                                                .filter(l => l.kind === 'REST')
+                                                .map((line) => (
+                                                  <div key={line.id} className="flex items-center gap-2">
+                                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/20 text-blue-600 border-blue-500/30">
+                                                      DESCANSO
+                                                    </Badge>
+                                                    <p className="text-blue-600">{line.text}</p>
+                                                  </div>
+                                                ))}
+                                            </div>
+                                          )}
+                                          
+                                          {/* Notas/Comentários (NOTE) */}
+                                          {(() => {
+                                            const normalizedTitle = normalizeText(block.title);
+                                            const normalizedFormat = block.formatDisplay ? normalizeText(block.formatDisplay) : '';
+                                            const normalizedType = block.type ? normalizeText(block.type) : '';
+                                            
+                                            // Filtrar comentários e notas
+                                            const noteLines = (block.lines || []).filter(l => {
+                                              // Só NOTE ou comment (legado)
+                                              if (l.kind !== 'NOTE' && l.type !== 'comment') return false;
+                                              // Não mostrar REST aqui (já mostrado acima)
+                                              if (l.kind === 'REST') return false;
+                                              // Não mostrar exercícios
+                                              if (l.kind === 'EXERCISE' || l.type === 'exercise') return false;
+                                              
+                                              const trimmed = l.text?.trim();
+                                              if (!trimmed) return false;
+                                              const normalized = normalizeText(l.text);
+                                              if (normalized === normalizedTitle) return false;
+                                              if (normalizedFormat && normalized === normalizedFormat) return false;
+                                              if (normalizedType && normalized === normalizedType) return false;
+                                              return true;
+                                            });
+                                            
+                                            if (noteLines.length === 0) return null;
+                                            
+                                            return (
+                                              <div className="text-xs text-muted-foreground p-2 rounded bg-muted/30 border border-border/40 space-y-1">
+                                                <span className="text-xs font-medium text-muted-foreground/70 flex items-center gap-1">
+                                                  💬 Notas:
+                                                </span>
+                                                {noteLines.map((line) => (
+                                                  <div key={line.id} className="flex items-start gap-2">
+                                                    <p className="italic">{line.text}</p>
+                                                    {line.confidence === 'LOW' && (
+                                                      <Badge 
+                                                        variant="outline" 
+                                                        className="text-[10px] px-1 py-0 h-4 bg-gray-500/10 text-gray-500 border-gray-500/30 flex-shrink-0"
+                                                      >
+                                                        ?
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       )}
-                                      
-                                      {/* Comentários - FONTE ÚNICA: block.lines (type==='comment') com fail-safe anti-duplicação */}
-                                      {(() => {
-                                        const normalizedTitle = normalizeText(block.title);
-                                        const normalizedFormat = block.formatDisplay ? normalizeText(block.formatDisplay) : '';
-                                        const normalizedType = block.type ? normalizeText(block.type) : '';
-                                        
-                                        // Fail-safe: filtrar comentários que sejam iguais ao título, formato ou tipo
-                                        // Também remove linhas vazias/whitespace
-                                        const filteredComments = (block.lines || []).filter(l => {
-                                          if (l.type !== 'comment') return false;
-                                          const trimmed = l.text?.trim();
-                                          if (!trimmed) return false; // Remove linhas vazias
-                                          const normalized = normalizeText(l.text);
-                                          if (normalized === normalizedTitle) return false;
-                                          if (normalizedFormat && normalized === normalizedFormat) return false;
-                                          if (normalizedType && normalized === normalizedType) return false;
-                                          return true;
-                                        });
-                                        
-                                        // Se não houver comentários após filtro, não renderizar a caixa
-                                        if (filteredComments.length === 0) return null;
-                                        
-                                        return (
-                                          <div className="text-xs text-muted-foreground mt-3 p-2 rounded bg-muted/30 border border-border/40 space-y-1">
-                                            <span className="text-xs font-medium text-muted-foreground/70">💬 Comentários:</span>
-                                            {filteredComments.map((line) => (
-                                              <p key={line.id} className="italic">{line.text}</p>
-                                            ))}
-                                          </div>
-                                        );
-                                      })()}
                                     </div>
                                     );
                                   })}
