@@ -33,7 +33,8 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2, ArrowLeft
+  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2, ArrowLeft,
+  Puzzle, Copy, X
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { DaySelectionModal } from './DaySelectionModal';
@@ -117,6 +118,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   
   // MVP0: Erro de validação de dias - bloqueia preview se texto não tiver dias
   const [dayValidationError, setDayValidationError] = useState<string | null>(null);
+  
+  // Modal de modelo/template
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateCopied, setTemplateCopied] = useState(false);
 
   // Detectar dias distintos no texto (determinístico, sem IA)
   const detectDaysInText = (textContent: string): number => {
@@ -603,6 +608,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             placeholder="Cole aqui o treino da semana inteira (SEGUNDA a DOMINGO)…"
             className="min-h-[180px] text-sm"
           />
+          
+          {/* Link para modal de template */}
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 mt-1"
+          >
+            <Puzzle className="w-3.5 h-3.5" />
+            Usar modelo para facilitar sua vida
+          </button>
 
           {/* MVP0: Erro de validação de dias */}
           {dayValidationError && (
@@ -1356,6 +1371,180 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         onClose={handleDayModalClose}
         onConfirm={handleDayConfirmed}
       />
+
+      {/* Modal de template */}
+      <AlertDialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+        <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Puzzle className="w-5 h-5 text-primary" />
+              Use o modelo para facilitar sua vida
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Copie o modelo abaixo e edite com seus treinos. O OUTLIER vai organizar tudo automaticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="bg-muted/50 rounded-lg p-4 text-xs font-mono whitespace-pre-wrap border border-border overflow-x-auto">
+{`SEGUNDA-FEIRA
+
+Aquecimento
+- 500m trote leve
+- 3 Rounds
+  15 Bom Dia
+  20 Avanços
+  45'' Prancha
+
+# Comentário
+Ativar bem posterior e core antes da força.
+
+⸻
+
+Força Específica
+- 5 Rounds
+  6 Front Squat — PSE 8
+  10m Broad Jump
+  15 Wall Balls 30/20 lb (Unbroken)
+
+# Comentário
+Descansar o necessário entre rounds.
+
+⸻
+
+Específico
+- 4 Rounds
+  12 Reverse Back Rack Lunge — PSE 8
+  20m Sled Push Sprint (leve a moderado)
+
+⸻
+
+Grip & Strength
+- EMOM 30'
+  Min 1: 10 Dumbbell Burpee
+  Min 2: 30m Farmer Carry 32/24kg
+  Min 3: Max Strict Pull-Up
+
+⸻
+
+Corrida — Outro Período
+- 10km Zona 2
+
+⸻
+
+TERÇA-FEIRA
+
+Aquecimento
+- 400m Run
+- 2 Rounds
+  10 Inchworm
+  10 Sit-up
+
+# Comentário
+Foco na mobilidade.
+
+⸻
+
+WOD
+- For Time:
+  21-15-9
+  Thrusters 43/30kg
+  Pull-ups
+
+# Comentário
+Objetivo: sub-10 min.`}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const template = `SEGUNDA-FEIRA
+
+Aquecimento
+- 500m trote leve
+- 3 Rounds
+  15 Bom Dia
+  20 Avanços
+  45'' Prancha
+
+# Comentário
+Ativar bem posterior e core antes da força.
+
+⸻
+
+Força Específica
+- 5 Rounds
+  6 Front Squat — PSE 8
+  10m Broad Jump
+  15 Wall Balls 30/20 lb (Unbroken)
+
+# Comentário
+Descansar o necessário entre rounds.
+
+⸻
+
+Específico
+- 4 Rounds
+  12 Reverse Back Rack Lunge — PSE 8
+  20m Sled Push Sprint (leve a moderado)
+
+⸻
+
+Grip & Strength
+- EMOM 30'
+  Min 1: 10 Dumbbell Burpee
+  Min 2: 30m Farmer Carry 32/24kg
+  Min 3: Max Strict Pull-Up
+
+⸻
+
+Corrida — Outro Período
+- 10km Zona 2
+
+⸻
+
+TERÇA-FEIRA
+
+Aquecimento
+- 400m Run
+- 2 Rounds
+  10 Inchworm
+  10 Sit-up
+
+# Comentário
+Foco na mobilidade.
+
+⸻
+
+WOD
+- For Time:
+  21-15-9
+  Thrusters 43/30kg
+  Pull-ups
+
+# Comentário
+Objetivo: sub-10 min.`;
+                navigator.clipboard.writeText(template);
+                setTemplateCopied(true);
+                setTimeout(() => setTemplateCopied(false), 2000);
+              }}
+              className="gap-2"
+            >
+              {templateCopied ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copiar modelo
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

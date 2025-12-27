@@ -822,6 +822,12 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   const trimmed = line.trim();
   const lowerLine = trimmed.toLowerCase();
   
+  // REGRA #: Linhas iniciadas com "#" são SEMPRE classificadas como NOTE
+  if (trimmed.startsWith('#')) {
+    console.log('[CLASSIFY] NOTE (# prefix):', trimmed);
+    return { kind: 'NOTE', confidence: 'HIGH' };
+  }
+  
   // 1. Verificar se é REST (descanso/off/recovery/folga)
   const isRest = REST_PATTERNS.some(p => p.test(lowerLine));
   
