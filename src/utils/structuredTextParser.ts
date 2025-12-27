@@ -44,6 +44,7 @@
  */
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+import { detectUnits, hasRecognizedUnit, type UnitConfidence } from './unitDetection';
 
 // ============================================
 // TIPOS
@@ -814,11 +815,22 @@ const NOTE_PATTERNS = [
  * MVP0: Classifica uma linha com kind + confidence + flags
  * REGRAS DETERMINÍSTICAS (sem IA)
  * 
+ * ═══════════════════════════════════════════════════════════════
+ * PATCH MVP0: VALIDAÇÃO DE UNIDADES PROVÁVEIS
+ * ═══════════════════════════════════════════════════════════════
+ * PRINCÍPIO MESTRE:
+ * - Toda linha com unidade reconhecida é EXERCISE válido
+ * - Unidade NÃO define importância do exercício
+ * - Unidade define apenas se o MOTOR pode inferir automaticamente
+ * - Execução, histórico e visualização NUNCA são bloqueados
+ * ═══════════════════════════════════════════════════════════════
+ * 
  * Prioridade:
- * 1) REST + OPTIONAL + exercício detectável → REST + EXERCISE OPTIONAL
- * 2) REST puro
- * 3) EXERCISE (com confidence)
- * 4) NOTE (fallback)
+ * 1) UNIDADE RECONHECIDA → EXERCISE (SEMPRE, nunca NOTE)
+ * 2) REST + OPTIONAL + exercício → EXERCISE OPTIONAL
+ * 3) REST puro
+ * 4) EXERCISE (com confidence)
+ * 5) NOTE (fallback)
  */
 export function classifyItemDeterministic(line: string): ClassifiedItem {
   if (!line || line.trim().length === 0) {
@@ -834,13 +846,39 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
     return { kind: 'NOTE', confidence: 'HIGH' };
   }
   
+  // ═══════════════════════════════════════════════════════════════
+  // MVP0 PATCH: VERIFICAR UNIDADE RECONHECIDA PRIMEIRO
+  // ═══════════════════════════════════════════════════════════════
+  // Se a linha tem QUALQUER unidade reconhecida, é EXERCISE válido
+  // Confiança vem do detector de unidades
+  // ═══════════════════════════════════════════════════════════════
+  const unitResult = detectUnits(trimmed);
+  
+  // Se tem unidade reconhecida → SEMPRE EXERCISE (nunca NOTE)
+  if (unitResult.hasRecognizedUnit) {
+    // Verificar se é opcional
+    const isOptional = OPTIONAL_PATTERNS.some(p => p.test(lowerLine));
+    
+    console.log('[CLASSIFY] EXERCISE (unit detected):', trimmed, '| confidence:', unitResult.confidence, '| units:', unitResult.rawMatches);
+    
+    return {
+      kind: 'EXERCISE',
+      confidence: unitResult.confidence,
+      flags: isOptional ? { optional: true } : undefined,
+    };
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // REGRAS ORIGINAIS (fallback quando não há unidade reconhecida)
+  // ═══════════════════════════════════════════════════════════════
+  
   // 1. Verificar se é REST (descanso/off/recovery/folga)
   const isRest = REST_PATTERNS.some(p => p.test(lowerLine));
   
   // 2. Verificar se tem padrão opcional
   const isOptional = OPTIONAL_PATTERNS.some(p => p.test(lowerLine));
   
-  // 3. Verificar se tem padrão de exercício (HIGH ou MEDIUM)
+  // 3. Verificar se tem padrão de exercício (HIGH ou MEDIUM) - patterns originais
   const isHighExercise = HIGH_CONFIDENCE_EXERCISE_PATTERNS.some(p => p.test(trimmed));
   const isMediumExercise = MEDIUM_CONFIDENCE_EXERCISE_PATTERNS.some(p => p.test(trimmed));
   
@@ -892,33 +930,33 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
     };
   }
   
-  // D) EXERCISE HIGH confidence
+  // E) EXERCISE HIGH confidence
   if (isHighExercise) {
     return { kind: 'EXERCISE', confidence: 'HIGH' };
   }
   
-  // E) EXERCISE MEDIUM confidence
+  // F) EXERCISE MEDIUM confidence
   if (isMediumExercise) {
     return { kind: 'EXERCISE', confidence: 'MEDIUM' };
   }
   
-  // F) NOTE explícita
+  // G) NOTE explícita
   if (isNote) {
     return { kind: 'NOTE', confidence: 'HIGH' };
   }
   
-  // G) Começa com número (provável exercício) → LOW confidence
+  // H) Começa com número (provável exercício) → LOW confidence
   if (/^\d+/.test(trimmed)) {
     return { kind: 'EXERCISE', confidence: 'LOW' };
   }
   
-  // H) Contém movimento conhecido → LOW confidence
+  // I) Contém movimento conhecido → LOW confidence
   const hasMovement = KNOWN_MOVEMENTS.some(m => lowerLine.includes(m));
   if (hasMovement) {
     return { kind: 'EXERCISE', confidence: 'LOW' };
   }
   
-  // I) Fallback: NOTE com LOW confidence
+  // J) Fallback: NOTE com LOW confidence
   return { kind: 'NOTE', confidence: 'LOW' };
 }
 

@@ -75,6 +75,7 @@ import {
   validateDayAnchors,
   type ParseResult 
 } from '@/utils/structuredTextParser';
+import { CONFIDENCE_LABELS, CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
 import { getBlockHeader } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -1198,16 +1199,24 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                                         </Badge>
                                                       )}
                                                       {line.confidence && line.confidence !== 'HIGH' && (
-                                                        <Badge 
-                                                          variant="outline" 
-                                                          className={`text-[10px] px-1.5 py-0 h-4 ${
-                                                            line.confidence === 'MEDIUM' 
-                                                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
-                                                              : 'bg-gray-500/10 text-gray-500 border-gray-500/30'
-                                                          }`}
-                                                        >
-                                                          {line.confidence === 'MEDIUM' ? '~MÉDIO' : '?BAIXO'}
-                                                        </Badge>
+                                                        <Tooltip>
+                                                          <TooltipTrigger asChild>
+                                                            <Badge 
+                                                              variant="outline" 
+                                                              className={`text-[10px] px-1.5 py-0 h-4 cursor-help ${
+                                                                line.confidence === 'MEDIUM' 
+                                                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
+                                                                  : 'bg-gray-500/10 text-gray-500 border-gray-500/30'
+                                                              }`}
+                                                            >
+                                                              {line.confidence === 'MEDIUM' ? 'Confiança média' : 'Baixa confiança'}
+                                                            </Badge>
+                                                          </TooltipTrigger>
+                                                          <TooltipContent side="top" className="max-w-xs text-xs">
+                                                            {CONFIDENCE_TOOLTIPS[line.confidence as keyof typeof CONFIDENCE_TOOLTIPS] || 
+                                                              'Este exercício foi entendido corretamente, mas o OUTLIER não usará este dado como base principal de ajuste automático.'}
+                                                          </TooltipContent>
+                                                        </Tooltip>
                                                       )}
                                                     </div>
                                                   </div>
