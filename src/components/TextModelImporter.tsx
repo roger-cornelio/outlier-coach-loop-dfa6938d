@@ -567,25 +567,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
 
   return (
     <div className="space-y-4">
-      {/* ÁREA 1 - TEXTO (PRINCIPAL) */}
+      {/* ÁREA PRINCIPAL - IMPORTAR SEMANA */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="w-5 h-5 text-primary" />
-            Cole seu treino aqui seguindo essa estrutura
+            Importar Semana
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            O OUTLIER ajusta tudo pra você.
+            Cole o <span className="font-semibold">TREINO DA SEMANA</span> (SEG–DOM). O OUTLIER separa por dia automaticamente.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-            <p className="font-medium text-foreground">Organize cada bloco pelo tipo de treino.</p>
-            <p className="text-foreground">Ex: Aquecimento, Força, Condicionamento.</p>
+            <p className="font-medium text-foreground">Estrutura esperada:</p>
             <div className="grid gap-1.5 mt-2">
-              <p><span className="font-medium">DIA DA SEMANA</span> — Ex: SEGUNDA</p>
-              <p><span className="font-medium">BLOCOS</span> — Ex: AQUECIMENTO, FORÇA, WOD</p>
-              <p><span className="font-medium">EXERCÍCIOS</span> — Ex: 10 Pull-ups, 20m Sled Push</p>
+              <p><span className="font-medium">SEGUNDA</span> — início do dia</p>
+              <p><span className="font-medium">Aquecimento / Força / WOD</span> — nome do bloco</p>
+              <p><span className="font-medium">⸻</span> — separador entre blocos (opcional)</p>
+              <p><span className="font-medium">TERÇA</span> — próximo dia</p>
             </div>
           </div>
 
@@ -600,7 +600,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
               // Limpar erro de validação ao editar texto
               setDayValidationError(null);
             }}
-            placeholder="Cole o treino aqui (texto, WhatsApp ou PDF)…"
+            placeholder="Cole aqui o treino da semana inteira (SEGUNDA a DOMINGO)…"
             className="min-h-[180px] text-sm"
           />
 

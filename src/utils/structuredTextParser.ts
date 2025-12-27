@@ -1242,8 +1242,81 @@ export function parseStructuredText(text: string): ParseResult {
     };
   };
 
+  /**
+   * MVP0: Extrai heading das primeiras 5 linhas do bloco
+   * Retorna { heading, remainingLines } ou null se não encontrar
+   */
+  const extractHeadingFromLines = (lines: string[]): { heading: string; remainingLines: string[] } | null => {
+    // Filtrar linhas não vazias
+    const nonEmptyLines = lines.filter(l => l.trim().length > 0);
+    
+    // Procurar heading nas primeiras 5 linhas
+    for (let i = 0; i < Math.min(5, nonEmptyLines.length); i++) {
+      const line = nonEmptyLines[i].trim();
+      
+      // Heading válido = linha curta (<=60), NÃO inicia com número,
+      // NÃO bate padrões de exercício
+      if (line.length <= 60 && !/^\d/.test(line)) {
+        // Verificar se NÃO é padrão de exercício
+        const isExercisePattern = 
+          /^emom\b/i.test(line) ||
+          /^amrap\b/i.test(line) ||
+          /^for\s*time\b/i.test(line) ||
+          /^\d+\s*rounds?\b/i.test(line) ||
+          /^min\s*\d+/i.test(line) ||
+          /^\d+\s*x\s*\d+/i.test(line) ||
+          /^\d+['']\s*/i.test(line) ||  // 45'' prancha
+          /^\d+:\d+/i.test(line) ||     // mm:ss
+          /^\d+\s*(m|km|cal)\b/i.test(line);
+        
+        if (!isExercisePattern) {
+          // Verificar se tem keyword de bloco OU é linha curta sem números
+          const hasBlockKeyword = [
+            /aquecimento/i, /for[çc]a/i, /metcon/i, /espec[ií]fico/i,
+            /corrida/i, /core/i, /grip/i, /acess[óo]rio/i, /mobilidade/i,
+            /t[ée]cnica/i, /conditioning/i, /condicionamento/i, /strength/i,
+            /warm[- ]?up/i, /wod/i
+          ].some(p => p.test(line));
+          
+          // Linha curta sem números também pode ser heading
+          const isShortNoNumbers = line.length <= 40 && !/\d/.test(line);
+          
+          if (hasBlockKeyword || isShortNoNumbers) {
+            console.log('[PARSER] Heading extraído da linha', i + 1, ':', line);
+            // Remover essa linha do conteúdo
+            const remaining = [...nonEmptyLines];
+            remaining.splice(i, 1);
+            return { heading: line, remainingLines: remaining };
+          }
+        }
+      }
+    }
+    
+    return null;
+  };
+
   const saveCurrentBlock = () => {
     if (currentBlock) {
+      // MVP0: Antes de salvar, tentar extrair heading das instructions se título vazio
+      if (!currentBlock.title || currentBlock.title.trim() === '') {
+        const allLines = [
+          currentBlock.instruction || '',
+          ...currentBlock.instructions,
+        ].filter(l => l.trim());
+        
+        const extracted = extractHeadingFromLines(allLines);
+        if (extracted) {
+          currentBlock.title = cleanBlockTitle(extracted.heading);
+          currentBlock.isAutoGenTitle = currentBlock.title === '';
+          // Atualizar instructions removendo o heading
+          currentBlock.instructions = extracted.remainingLines.filter(l => l !== currentBlock!.instruction);
+          if (currentBlock.instruction === extracted.heading) {
+            currentBlock.instruction = undefined;
+          }
+          console.log('[PARSER] Título extraído do conteúdo:', currentBlock.title);
+        }
+      }
+      
       // Só salva se tiver pelo menos 1 item OU instruções OU for estímulo de treino
       const allContent = [
         currentBlock.instruction || '',
