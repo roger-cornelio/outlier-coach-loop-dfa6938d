@@ -52,6 +52,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
+import { getBlockHeader } from '@/utils/blockDisplayUtils';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
 import {
   Tooltip,
@@ -197,14 +198,22 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                         className="overflow-hidden"
                       >
                         <div className="p-3 space-y-3 bg-background">
-                          {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => (
+                          {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
+                            const { headerTitle, headerMeta } = getBlockHeader(block, idx);
+                            return (
                             <div key={block.id || idx} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
-                              <span className="text-sm font-medium">{block.title || block.type}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">{headerTitle}</span>
+                                {headerMeta && (
+                                  <span className="text-xs text-muted-foreground">• {headerMeta}</span>
+                                )}
+                              </div>
                               <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
                                 {block.content}
                               </pre>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </motion.div>
                     )}

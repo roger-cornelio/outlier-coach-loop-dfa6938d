@@ -71,10 +71,10 @@ import {
   isInvalidBlockTitle,
   getBlockTitleError,
   getDerivedTitle,
-  getDisplayTitle,
   normalizeText,
   type ParseResult 
 } from '@/utils/structuredTextParser';
+import { getBlockHeader } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 
@@ -862,9 +862,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 {/* Blocos do dia */}
                                 <div className="space-y-4">
                                 {day.blocks.map((block, blockIndex) => {
-                                    // Usar derivedTitle para validação correta
+                                    // Usar getBlockHeader para título + categoria consistentes
+                                    const { headerTitle, headerMeta } = getBlockHeader(block, blockIndex);
                                     const derivedTitle = getDerivedTitle(block);
-                                    const displayTitle = getDisplayTitle(block, blockIndex);
                                     const hasTitleError = isInvalidBlockTitle(derivedTitle, block);
                                     const titleError = getBlockTitleError(derivedTitle, block);
                                     
@@ -908,7 +908,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                               autoFocus
                                             />
                                           ) : (
-                                            <span className="font-semibold text-base">{displayTitle}</span>
+                                            <span className="font-semibold text-base">
+                                              {headerTitle}
+                                              {headerMeta && (
+                                                <span className="text-muted-foreground font-normal ml-2">• {headerMeta}</span>
+                                              )}
+                                            </span>
                                           )}
                                         
                                         {/* Badge Principal - fixo quando marcado */}
@@ -1201,7 +1206,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         <BlockEditorModal
           open={true}
           onOpenChange={(open) => !open && setEditingBlock(null)}
-          blockTitle={getDisplayTitle(parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex], editingBlock.blockIndex)}
+          blockTitle={getBlockHeader(parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex], editingBlock.blockIndex).headerTitle}
           lines={parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].lines || []}
           onSave={(newLines) => saveBlockLines(editingBlock.dayIndex, editingBlock.blockIndex, newLines)}
         />
