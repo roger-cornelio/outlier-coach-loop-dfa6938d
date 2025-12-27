@@ -23,6 +23,7 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 import { AthleteStatusAvatar } from './AthleteStatusAvatar';
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
+import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -775,7 +776,13 @@ export function Dashboard() {
                       `}
                     >
                       <div className="flex items-start justify-between gap-4 mb-3">
-                        <h3 className="font-display text-xl">{block.title}</h3>
+                        <div>
+                          <h3 className="font-display text-xl">{getBlockDisplayTitle(block, index)}</h3>
+                          {/* MVP0: Exibir categoria como subtítulo */}
+                          <span className="text-xs text-muted-foreground">
+                            • {getBlockCategoryLabel(block)}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           {block.isMainWod && (
                             <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">

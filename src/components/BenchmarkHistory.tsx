@@ -7,6 +7,7 @@ import type { WorkoutBlock, WorkoutResult, PerformanceBucket, BenchmarkDirection
 import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetricInfo } from '@/utils/benchmarkVariants';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
 
 interface BenchmarkData {
   block: WorkoutBlock;
@@ -328,7 +329,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
             </div>
           )}
 
-          {benchmarkData.map((data) => {
+          {benchmarkData.map((data, dataIndex) => {
             const isExpanded = expandedBenchmark === data.block.id;
             const direction = data.block.benchmarkDirection || 'lower_is_better';
             const metricInfo = getBenchmarkMetricInfo(data.block.benchmarkMetric || 'time_seconds');
@@ -356,8 +357,10 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
                       <Trophy className="w-5 h-5 text-status-excellent" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-display text-sm">{data.block.title}</h4>
+                      <h4 className="font-display text-sm">{getBlockDisplayTitle(data.block, dataIndex)}</h4>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>• {getBlockCategoryLabel(data.block)}</span>
+                        <span>•</span>
                         <span>{data.results.length} registro(s)</span>
                         {data.bestValue && (
                           <>

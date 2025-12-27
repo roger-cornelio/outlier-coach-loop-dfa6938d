@@ -28,6 +28,7 @@ import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
+import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
 import { normalizeText } from '@/utils/structuredTextParser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -495,7 +496,11 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                             }`}>
                               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium">{block.title}</span>
+                                  <span className="text-sm font-medium">{getBlockDisplayTitle(block, blockIndex)}</span>
+                                  {/* MVP0: Exibir categoria */}
+                                  <span className="text-xs text-muted-foreground">
+                                    • {getBlockCategoryLabel(block)}
+                                  </span>
                                   {isMainBlock && (
                                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
                                       {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
