@@ -33,7 +33,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
-  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2
+  AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2, ArrowLeft
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { DaySelectionModal } from './DaySelectionModal';
@@ -161,6 +161,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     // Source of truth: valor atual do textarea
     const textareaValue = text.trim();
     if (!textareaValue) return;
+    
+    // MVP0 FIX: Se já existe parseResult e preview está oculto, apenas reexibir
+    // (usuário clicou "Voltar" e quer ver o preview novamente)
+    if (parseResult && !showPreview) {
+      setShowPreview(true);
+      return;
+    }
     
     // ORDEM: primeiro analisar texto, depois decidir sobre modal
     const daysDetected = detectDaysInText(textareaValue);
@@ -564,7 +571,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             value={text}
             onChange={(e) => {
               setText(e.target.value);
-              setParseResult(null);
+              // MVP0 FIX: NÃO limpar parseResult ao editar texto
+              // Apenas ocultar o preview - o draft é preservado
+              // O usuário pode clicar "Validar e Visualizar" novamente
               setShowPreview(false);
             }}
             placeholder="Cole o treino aqui (texto, WhatsApp ou PDF)…"
@@ -658,14 +667,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             <Card className={parseResult.success ? 'border-green-500/30' : 'border-destructive/30'}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    {parseResult.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-destructive" />
-                    )}
-                    Foi isso que o OUTLIER entendeu do seu treino:
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {/* Botão Voltar - NÃO limpa o draft, apenas oculta o preview */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPreview(false)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      {parseResult.success ? (
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-destructive" />
+                      )}
+                      Foi isso que o OUTLIER entendeu do seu treino:
+                    </CardTitle>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
