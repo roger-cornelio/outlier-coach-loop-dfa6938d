@@ -181,36 +181,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // MVP0: VALIDAÇÃO OBRIGATÓRIA DE DIAS DA SEMANA
+    // MVP0: FLUXO "IMPORTAR SEMANA" — NUNCA ABRIR MODAL DE DIA
     // ═══════════════════════════════════════════════════════════════════════════
-    // REGRA: O PACER nunca pode rodar em texto sem dias da semana explícitos
-    // EXCEÇÃO: Se o dia já foi selecionado via UI (modal ou importação por dia)
+    // REGRA: No módulo "Importar Semana", o texto é sempre tratado como semana.
+    // Se não encontrar dias, assume SEGUNDA e mostra alerta.
+    // NUNCA perguntar "qual dia é esse treino?"
     // ═══════════════════════════════════════════════════════════════════════════
     
     const dayValidation = validateDayAnchors(textareaValue);
     const daysDetected = dayValidation.daysFound.length;
     
-    // Se 2+ dias detectados no texto → ir direto para preview (multi-dia)
-    if (daysDetected >= 2) {
+    // Se 1+ dias detectados no texto → ir para preview normalmente
+    if (daysDetected >= 1) {
       executeParseMultiDay();
       return;
     }
     
-    // Se 0 dias detectados no texto E nenhum dia selecionado → mostrar modal para escolher
-    // O modal permite que o coach informe qual dia é o treino
-    if (daysDetected === 0 && !selectedDay) {
-      setShowDayModal(true);
-      return;
-    }
-    
-    // Se 1 dia detectado e não tem dia selecionado → mostrar modal
-    if (daysDetected === 1 && !selectedDay) {
-      setShowDayModal(true);
-      return;
-    }
-    
-    // Parsear com dia já definido (via modal ou seleção anterior)
-    executeParseWithDay(selectedDay!);
+    // Se 0 dias detectados → NÃO abrir modal, assumir SEGUNDA com alerta
+    // MVP0 FIX: Fluxo "Importar Semana" nunca pergunta dia
+    executeParseWithFallbackDay();
   };
   
   /**
@@ -225,6 +214,60 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const result = parseStructuredText(textareaValue);
     
     // Texto multi-dia não precisa de seleção de dia
+    result.needsDaySelection = false;
+    
+    setParseResult(result);
+    setShowPreview(true);
+    setRestDays({});
+  };
+  
+  /**
+   * MVP0: Parse com fallback para SEGUNDA quando nenhum dia detectado
+   * NUNCA abre modal - assume SEGUNDA e mostra alerta
+   */
+  const executeParseWithFallbackDay = () => {
+    const textareaValue = text.trim();
+    if (!textareaValue) return;
+    
+    // ═══ PARSER CANÔNICO ═══
+    const result = parseStructuredText(textareaValue);
+    
+    // Se parser não encontrou dias, criar entrada para SEGUNDA
+    if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
+      result.days = [{
+        day: 'seg' as DayOfWeek,
+        blocks: [{
+          title: 'Treino',
+          type: '' as any,
+          format: '',
+          isMainWod: false,
+          isBenchmark: false,
+          optional: false,
+          items: [],
+          lines: text.split('\n').filter(line => line.trim()).map((line, idx) => ({
+            id: `fallback-${idx}`,
+            text: line.trim(),
+            type: 'comment' as const,
+          })),
+          coachNotes: [],
+          instructions: [],
+          isAutoGenTitle: true,
+        }],
+        alerts: [],
+      }];
+      result.success = true;
+    }
+    
+    // Aplicar SEGUNDA como fallback para todos os dias sem dia definido
+    result.days.forEach(d => {
+      if (!d.day) {
+        d.day = 'seg' as DayOfWeek;
+      }
+    });
+    
+    // Adicionar alerta sobre dias não encontrados
+    result.warnings.push('Não encontramos os dias (SEGUNDA, TERÇA…). Você pode adicionar no texto ou ajustar no preview.');
+    
     result.needsDaySelection = false;
     
     setParseResult(result);
