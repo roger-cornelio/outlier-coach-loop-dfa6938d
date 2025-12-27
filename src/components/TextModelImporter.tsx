@@ -278,7 +278,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       return; // Block import without day selection
     }
     
-    const workouts = parsedToDayWorkouts(parseResult, selectedDay || undefined);
+    // MVP0: Aplicar restDays no parseResult antes de converter
+    const resultWithRestDays = {
+      ...parseResult,
+      days: parseResult.days.map((day, idx) => ({
+        ...day,
+        isRestDay: restDays[idx] || false,
+      })),
+    };
+    
+    const workouts = parsedToDayWorkouts(resultWithRestDays, selectedDay || undefined);
     onImport(workouts);
     // Limpar após importar
     setText('');
