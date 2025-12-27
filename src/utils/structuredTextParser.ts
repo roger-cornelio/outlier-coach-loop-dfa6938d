@@ -279,19 +279,18 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
 
 // Função para limpar título removendo prefixos técnicos
 // REGRA: Nunca substituir nome do coach por rótulos sistêmicos
-// REGRA: Fallback neutro e sequencial ("Bloco 1", "Bloco 2", etc.) - sem semântica de treino
-function cleanBlockTitle(title: string, blockIndex?: number): string {
+// REGRA MVP0: Retornar string VAZIA se não houver título real (fallback só na UI)
+function cleanBlockTitle(title: string): string {
   // Remove prefixo "TREINO" ou "TREINO -"
   let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
   // Remove "WOD" ou "METCON" se seguido de outro texto (mantém se for o único)
   if (/^(WOD|METCON)\s*[-–—:]?\s*.{3,}/i.test(cleaned)) {
     cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
   }
-  // REGRA CRÍTICA: Se o título original tem nome válido, retorna ele
-  // Fallback neutro: "Bloco X" (sem semântica de "principal")
+  // REGRA MVP0: Se não há título válido, retorna VAZIO (fallback só na UI)
+  // NUNCA retornar "Bloco X" aqui - isso é dado, não display
   if (!cleaned || cleaned.length < 2) {
-    // Usa índice se disponível, senão retorna string genérica para ser substituída depois
-    return blockIndex !== undefined ? `Bloco ${blockIndex + 1}` : '__FALLBACK_BLOCK__';
+    return '';
   }
   return cleaned;
 }
@@ -304,10 +303,11 @@ function cleanBlockTitle(title: string, blockIndex?: number): string {
 
 export function getDerivedTitle(block: ParsedBlock): string {
   // 1. Se block.title existe e está preenchido (não é fallback), usar
+  // MVP0: Ignorar títulos auto-gerados "Bloco X" / "BLOCO X" no dado
   if (block.title && 
       block.title.trim().length > 0 && 
-      block.title !== '__FALLBACK_BLOCK__' && 
-      !block.title.match(/^Bloco \d+$/)) {
+      !/^Bloco \d+$/i.test(block.title) &&
+      !/^BLOCO \d+$/i.test(block.title)) {
     return block.title.trim();
   }
   
@@ -420,8 +420,8 @@ export function isInvalidBlockTitle(title: string, block?: ParsedBlock): boolean
   
   // Fallback: validar o título diretamente (para compatibilidade)
   if (!title || title.trim().length === 0) return true;
-  if (title === '__FALLBACK_BLOCK__') return true;
-  if (title.match(/^Bloco \d+$/)) return true;
+  // MVP0: "Bloco X" no dado é inválido (deve estar vazio, não preenchido com fallback)
+  if (/^Bloco \d+$/i.test(title) || /^BLOCO \d+$/i.test(title)) return true;
   
   return looksLikePrescription(title);
 }
@@ -806,7 +806,9 @@ export function parseStructuredText(text: string): ParseResult {
    */
   const createNewBlock = (rawTitle: string, isAutoGen: boolean = false): ParsedBlock => {
     blockCounter++;
-    const title = isAutoGen ? `BLOCO ${blockCounter}` : cleanBlockTitle(rawTitle, blockCounter - 1);
+    // MVP0 FIX: Se isAutoGen, título fica VAZIO (fallback só na UI)
+    // NUNCA persistir "BLOCO X" como título real
+    const title = isAutoGen ? '' : cleanBlockTitle(rawTitle);
     const isOptional = /\bopcional\b/i.test(rawTitle);
     return {
       title,
@@ -820,7 +822,7 @@ export function parseStructuredText(text: string): ParseResult {
       lines: [],
       coachNotes: [],
       instructions: [],
-      isAutoGenTitle: isAutoGen,
+      isAutoGenTitle: isAutoGen || title === '', // Marcar como auto-gen se título ficou vazio
     };
   };
 
