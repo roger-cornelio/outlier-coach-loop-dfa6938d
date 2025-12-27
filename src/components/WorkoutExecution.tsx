@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
+import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
 
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -309,9 +310,15 @@ export function WorkoutExecution() {
 
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-4 mb-3">
-                      <h3 className={`font-display text-xl ${isComplete ? 'line-through' : ''}`}>
-                        {block.title}
-                      </h3>
+                      <div>
+                        <h3 className={`font-display text-xl ${isComplete ? 'line-through' : ''}`}>
+                          {getBlockDisplayTitle(block, index)}
+                        </h3>
+                        {/* MVP0: Exibir categoria como subtítulo */}
+                        <span className={`text-xs text-muted-foreground ${isComplete ? 'line-through' : ''}`}>
+                          • {getBlockCategoryLabel(block)}
+                        </span>
+                      </div>
                       {block.isMainWod && (
                         <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">
                           WOD PRINCIPAL
