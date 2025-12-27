@@ -1119,6 +1119,28 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   return dedupedLines;
 }
 
+// ============================================
+// MVP0 PATCH: Classificação de linhas com flag OPTIONAL
+// ============================================
+// Esta função é igual à classifyBlockLines, mas aplica flag OPTIONAL
+// a todas as linhas EXERCISE quando forceOptional=true
+// ============================================
+export function classifyBlockLinesWithOptional(block: ParsedBlock, forceOptional: boolean): ParsedLine[] {
+  // Primeiro, usar classificação padrão
+  const lines = classifyBlockLines(block);
+  
+  // Se forceOptional está ativo, aplicar flag OPTIONAL a todos os EXERCISE
+  if (forceOptional) {
+    for (const line of lines) {
+      if (line.kind === 'EXERCISE') {
+        line.flags = { ...line.flags, optional: true };
+      }
+    }
+  }
+  
+  return lines;
+}
+
 const FORMAT_PATTERNS: { pattern: RegExp; format: string }[] = [
   { pattern: /for\s*time|fortime/i, format: 'for_time' },
   { pattern: /amrap/i, format: 'amrap' },
@@ -1323,12 +1345,56 @@ function isHeadingLine(line: string): boolean {
   return false;
 }
 
-// Verifica se linha parece ser exercício (para evitar falsos positivos de heading)
+// ============================================
+// MVP0 PATCH: Verifica se linha parece ser exercício
+// REGRA: Se parece exercício, NÃO pode ser heading/título
+// ============================================
 function isExercisePatternLine(line: string): boolean {
-  // Começa com número
-  if (/^\d+/.test(line)) return true;
-  // Tem padrão de exercício
-  if (/\d+\s*(x|reps?|min|m|km|rounds?|cal)/i.test(line)) return true;
+  const trimmed = line.trim();
+  
+  // Debug para rastrear
+  console.log('[isExercisePatternLine] Verificando:', JSON.stringify(trimmed));
+  
+  // A) Começa com número → é exercício
+  if (/^\d+/.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Começa com número, retorna true');
+    return true;
+  }
+  
+  // B) Contém número + unidade de TEMPO → é exercício (PATCH MVP0)
+  // Padrões: "45 min", "até 45 minutos", "30'", "45''", "1h", "2 horas"
+  if (/\d+\s*(?:min(?:uto)?s?|minutes?|'(?!')|''|"|h(?:ora)?s?|seg(?:undo)?s?|sec(?:ond)?s?)\b/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Tem número + unidade de tempo, retorna true');
+    return true;
+  }
+  
+  // C) Contém "até X minutos/min" → é exercício
+  if (/\baté\s+\d+\s*(?:min(?:uto)?s?|h(?:ora)?s?)/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Padrão "até X minutos", retorna true');
+    return true;
+  }
+  
+  // D) Contém número + unidade de DISTÂNCIA → é exercício
+  if (/\d+\s*(?:m|km|metros?|quilômetros?)\b/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Tem número + distância, retorna true');
+    return true;
+  }
+  
+  // E) Contém formatos de exercício (5x5, EMOM, AMRAP, For Time, Rounds, Sets, Reps)
+  if (/\d+\s*x\s*\d+/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Padrão sets x reps, retorna true');
+    return true;
+  }
+  if (/\b(?:emom|amrap|for\s*time|rft|tabata)\b/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Formato de treino, retorna true');
+    return true;
+  }
+  if (/\d+\s*(?:rounds?|rodadas?|sets?|séries?|reps?|repeti[çc][õo]es?|cal)\b/i.test(trimmed)) {
+    console.log('[isExercisePatternLine] → Rounds/sets/reps/cal, retorna true');
+    return true;
+  }
+  
+  console.log('[isExercisePatternLine] → Nenhum padrão de exercício, retorna false');
   return false;
 }
 
@@ -1358,6 +1424,11 @@ export function parseStructuredText(text: string): ParseResult {
   let currentBlock: ParsedBlock | null = null;
   let lineNumber = 0;
   let hasExplicitDay = false;
+  
+  // MVP0 PATCH: Flag para marcar linhas seguintes como OPCIONAL
+  // "Opcional:" seta esta flag = true, e todas as linhas EXERCISE seguintes
+  // recebem a flag OPTIONAL até mudar de bloco/dia
+  let currentOptional = false;
 
   // Contador de blocos para fallback de título
   let blockCounter = 0;
@@ -1505,8 +1576,15 @@ export function parseStructuredText(text: string): ParseResult {
           currentBlock.optional = true;
         }
         
+        // MVP0 PATCH: Passar currentOptional para classificação de linhas
+        // Se currentOptional está ativo, marcar o bloco como opcional
+        if (currentOptional) {
+          currentBlock.optional = true;
+        }
+        
         // Classificar linhas do bloco (exercise vs comment)
-        currentBlock.lines = classifyBlockLines(currentBlock);
+        // MVP0 PATCH: Passar flag currentOptional para classificação
+        currentBlock.lines = classifyBlockLinesWithOptional(currentBlock, currentOptional);
         
         // Find or create day entry (allow null day)
         if (!currentDayEntry) {
@@ -1517,6 +1595,9 @@ export function parseStructuredText(text: string): ParseResult {
       }
     }
     currentBlock = null;
+    // MVP0 PATCH: Resetar flag opcional ao trocar de bloco
+    // NOTA: NÃO resetamos aqui para permitir que "Opcional:" afete múltiplas linhas
+    // O reset só acontece ao mudar de dia
   };
 
   const detectDay = (line: string): DayOfWeek | null => {
@@ -1659,8 +1740,14 @@ export function parseStructuredText(text: string): ParseResult {
       return { weight: `${kgMatch[1]}kg`, isAlert: true };
     }
     
+    // MVP0 PATCH: REMOVIDO "@autorregulado" fantasma
+    // Palavras como "leve", "moderada", "pesada" NÃO geram peso inferido
+    // Isso violava "não adivinhar" e poluía o entendimento do atleta
+    // Se o coach quiser indicar intensidade, deve fazer explicitamente
     if (/\b(leve|moderada?|pesada?|heavy|light|moderate)\b/i.test(line)) {
-      return { weight: 'autorregulado', isAlert: false };
+      // REMOVIDO: return { weight: 'autorregulado', isAlert: false };
+      // Agora retorna sem peso - intensidade fica como texto original
+      return { isAlert: false };
     }
     
     return { isAlert: false };
@@ -1687,6 +1774,7 @@ export function parseStructuredText(text: string): ParseResult {
       
       hasExplicitDay = true;
       currentDay = detectedDay;
+      currentOptional = false; // MVP0 PATCH: Reset flag ao mudar de dia
       
       // Criar nova entrada de dia
       currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
@@ -1695,6 +1783,23 @@ export function parseStructuredText(text: string): ParseResult {
         result.days.push(currentDayEntry);
       }
       currentBlock = null;
+      continue;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: "Opcional:" como MARCADOR (não conteúdo)
+    // ════════════════════════════════════════════════════════════════════════════
+    // Se a linha for "Opcional:" ou começar com "Opcional" (case-insensitive):
+    // - Setar currentOptional=true para as próximas linhas
+    // - NÃO criar item NOTE dessa linha
+    // - NÃO usar como título
+    // ════════════════════════════════════════════════════════════════════════════
+    const isOptionalMarker = /^opcional\s*[:()]?\s*$/i.test(line) || 
+                              /^\(?\s*opcional\s*\)?:?\s*$/i.test(line);
+    if (isOptionalMarker) {
+      console.log('[PARSER] Marcador OPCIONAL detectado:', line, '→ currentOptional=true');
+      currentOptional = true;
+      // NÃO adicionar como item, NÃO criar bloco, apenas marcar flag
       continue;
     }
 
@@ -1715,7 +1820,19 @@ export function parseStructuredText(text: string): ParseResult {
 
     // MVP0: Detectar heading/título solto (não precisa ser MAIÚSCULA)
     // Ex: "Força Específica", "Grip & Strength", "Corrida — Outro Período"
-    if (isHeadingLine(line)) {
+    
+    // MVP0 PATCH D: Debug para confirmar regras
+    const isExercise = isExercisePatternLine(line);
+    const isHeading = isHeadingLine(line);
+    console.log('[PARSER DEBUG]', {
+      linhaOriginal: line,
+      isExerciseLine: isExercise,
+      isHeadingLine: isHeading,
+      currentOptional,
+      blockTitleAtual: currentBlock?.title || '(sem bloco)',
+    });
+    
+    if (isHeading) {
       console.log('[PARSER] Heading detectado:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
