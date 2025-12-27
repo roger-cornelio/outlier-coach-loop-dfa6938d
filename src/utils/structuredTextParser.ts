@@ -277,16 +277,83 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
   { pattern: /\b(?:squat|deadlift|press|clean|snatch|jerk)\b/i, type: 'forca' },
 ];
 
+// ============================================
+// VALIDAÇÃO DE TÍTULO MVP0
+// ============================================
+// A 1ª linha do bloco vira title APENAS SE não for:
+// - Categoria isolada (Aquecimento, Força, Metcon, etc.)
+// - Formato (AMRAP, EMOM, For Time, Rounds, Intervalos)
+// - Começa com número/unidade (5 Rounds, 10km, 500m, Min 1:)
+
+const CATEGORY_ONLY_PATTERNS = [
+  /^aquecimento$/i,
+  /^for[çc]a$/i,
+  /^metcon$/i,
+  /^espec[ií]fico$/i,
+  /^corrida$/i,
+  /^acess[óo]rio$/i,
+  /^condicionamento$/i,
+  /^core$/i,
+  /^mobilidade$/i,
+  /^wod$/i,
+];
+
+const FORMAT_ONLY_PATTERNS = [
+  /^amrap$/i,
+  /^emom$/i,
+  /^for\s+time$/i,
+  /^rounds?$/i,
+  /^intervalos?$/i,
+  /^tabata$/i,
+  /^e\d+m(om)?$/i,  // E2MOM, E3M, etc.
+];
+
+const STARTS_WITH_NUMBER_UNIT = /^\d+\s*(rounds?|km|m|min|x|reps?|cal|calorias?)\b/i;
+const MIN_PATTERN = /^min\s*\d+/i;  // Min 1:, Min 2:, etc.
+
+function isLineACategoryOrFormat(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Verifica se é categoria isolada
+  for (const pattern of CATEGORY_ONLY_PATTERNS) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  // Verifica se é formato isolado
+  for (const pattern of FORMAT_ONLY_PATTERNS) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  // Verifica se começa com número + unidade
+  if (STARTS_WITH_NUMBER_UNIT.test(trimmed)) return true;
+  
+  // Verifica padrão "Min X:"
+  if (MIN_PATTERN.test(trimmed)) return true;
+  
+  return false;
+}
+
 // Função para limpar título removendo prefixos técnicos
 // REGRA: Nunca substituir nome do coach por rótulos sistêmicos
 // REGRA MVP0: Retornar string VAZIA se não houver título real (fallback só na UI)
 function cleanBlockTitle(title: string): string {
+  // Se for categoria/formato isolado, NÃO é título → retorna vazio
+  if (isLineACategoryOrFormat(title)) {
+    return '';
+  }
+  
   // Remove prefixo "TREINO" ou "TREINO -"
   let cleaned = title.replace(/^TREINO\s*[-–—:]?\s*/i, '').trim();
   // Remove "WOD" ou "METCON" se seguido de outro texto (mantém se for o único)
   if (/^(WOD|METCON)\s*[-–—:]?\s*.{3,}/i.test(cleaned)) {
     cleaned = cleaned.replace(/^(WOD|METCON)\s*[-–—:]?\s*/i, '').trim();
   }
+  
+  // Após limpeza, verificar novamente se virou categoria/formato
+  if (isLineACategoryOrFormat(cleaned)) {
+    return '';
+  }
+  
   // REGRA MVP0: Se não há título válido, retorna VAZIO (fallback só na UI)
   // NUNCA retornar "Bloco X" aqui - isso é dado, não display
   if (!cleaned || cleaned.length < 2) {
