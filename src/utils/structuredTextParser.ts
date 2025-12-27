@@ -1753,6 +1753,33 @@ export function parseStructuredText(text: string): ParseResult {
     return { isAlert: false };
   };
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: REGRA SOBERANA DE DESCANSO — PRÉ-PROCESSAMENTO POR DIA
+  // ════════════════════════════════════════════════════════════════════════════
+  // Detecta se o dia é de descanso ANTES de processar blocos
+  // Padrões: "descanso", "day off", "rest day", "\bdescanso\b"
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  const isRestDayLine = (line: string): boolean => {
+    const trimmed = line.trim().toLowerCase();
+    // Linha exata ou começa com "descanso"
+    if (trimmed === 'descanso') return true;
+    if (trimmed.startsWith('descanso')) return true;
+    // Palavra isolada \bdescanso\b
+    if (/\bdescanso\b/i.test(trimmed)) return true;
+    // Variantes em inglês
+    if (/\bday\s*off\b/i.test(trimmed)) return true;
+    if (/\brest\s*day\b/i.test(trimmed)) return true;
+    if (/\bfolga\b/i.test(trimmed)) return true;
+    if (/\brecovery\b/i.test(trimmed) && trimmed.length < 20) return true;
+    return false;
+  };
+  
+  // Estado para modo REST do dia atual
+  let currentRestMode = false;
+  let restOptionalNotes: string[] = [];
+  let restOptionalMode = false;
+
   for (const rawLine of lines) {
     lineNumber++;
     const line = rawLine.trim();
@@ -1763,18 +1790,53 @@ export function parseStructuredText(text: string): ParseResult {
     // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
     if (isBlockSeparator(line)) {
       console.log('[PARSER] Separador de bloco detectado:', line);
-      saveCurrentBlock();
+      if (!currentRestMode) {
+        saveCurrentBlock();
+      }
       continue;
     }
 
     // Detectar dia da semana
     const detectedDay = detectDay(line);
     if (detectedDay && isUpperCaseLine(line)) {
-      saveCurrentBlock();
+      // Antes de trocar de dia, finalizar dia REST anterior se existir
+      if (currentRestMode && currentDayEntry) {
+        currentDayEntry.isRestDay = true;
+        // Adicionar notas opcionais ao dia (sem criar blocos)
+        if (restOptionalNotes.length > 0) {
+          // Criar um único bloco "opcional" para preservar as notas
+          const optionalBlock: ParsedBlock = {
+            title: 'Opcional',
+            type: 'aquecimento' as any,
+            format: 'outro',
+            isMainWod: false,
+            isBenchmark: false,
+            optional: true,
+            items: [],
+            lines: restOptionalNotes.map((note, idx) => ({
+              id: `rest-note-${idx}`,
+              text: note,
+              type: 'exercise' as LineType,
+              kind: 'EXERCISE' as ItemKind,
+              confidence: 'MEDIUM' as ItemConfidence,
+              flags: { optional: true },
+            })),
+            coachNotes: [],
+            instructions: restOptionalNotes,
+          };
+          currentDayEntry.blocks.push(optionalBlock);
+          console.log('[PARSER] Dia REST com notas opcionais:', restOptionalNotes);
+        }
+      } else {
+        saveCurrentBlock();
+      }
       
       hasExplicitDay = true;
       currentDay = detectedDay;
-      currentOptional = false; // MVP0 PATCH: Reset flag ao mudar de dia
+      currentOptional = false;
+      currentRestMode = false;
+      restOptionalNotes = [];
+      restOptionalMode = false;
       
       // Criar nova entrada de dia
       currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
@@ -1787,40 +1849,84 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ════════════════════════════════════════════════════════════════════════════
-    // MVP0 PATCH: "Opcional:" como MARCADOR (não conteúdo)
+    // MVP0: DETECÇÃO DE DESCANSO (PRECEDÊNCIA ABSOLUTA)
     // ════════════════════════════════════════════════════════════════════════════
-    // Se a linha for "Opcional:" ou começar com "Opcional" (case-insensitive):
-    // - Setar currentOptional=true para as próximas linhas
-    // - NÃO criar item NOTE dessa linha
-    // - NÃO usar como título
+    // Se a linha indica descanso, entrar em modo REST para o dia atual
+    // CURTO-CIRCUITO: Nenhum bloco será criado após isso
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestDayLine(line)) {
+      console.log('[PARSER] >>> REGRA SOBERANA: DESCANSO detectado:', line);
+      console.log('[PARSER] >>> Entrando em modo REST - 0 blocos serão criados');
+      
+      // Salvar qualquer bloco pendente antes de entrar em modo REST
+      saveCurrentBlock();
+      currentBlock = null;
+      
+      // Ativar modo REST
+      currentRestMode = true;
+      restOptionalNotes = [];
+      restOptionalMode = false;
+      
+      // Garantir que temos entrada de dia
+      if (!currentDayEntry && currentDay) {
+        currentDayEntry = { day: currentDay, blocks: [], alerts: [], isRestDay: true };
+        result.days.push(currentDayEntry);
+      } else if (currentDayEntry) {
+        currentDayEntry.isRestDay = true;
+      }
+      
+      // NÃO adicionar "Descanso" como bloco, apenas marcar o dia
+      continue;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0: MODO REST ATIVO — CURTO-CIRCUITO
+    // ════════════════════════════════════════════════════════════════════════════
+    // Se estamos em modo REST, todas as linhas seguintes viram notas opcionais
+    // 🚫 NÃO criar blocos
+    // 🚫 NÃO chamar isHeadingLine
+    // 🚫 NÃO exigir categoria
+    // ════════════════════════════════════════════════════════════════════════════
+    if (currentRestMode) {
+      // Detectar marcador "Opcional:"
+      const isOptionalMarkerInRest = /^opcional\s*[:()]?\s*$/i.test(line) || 
+                                      /^\(?\s*opcional\s*\)?:?\s*$/i.test(line);
+      if (isOptionalMarkerInRest) {
+        console.log('[PARSER] [REST MODE] Marcador OPCIONAL detectado:', line);
+        restOptionalMode = true;
+        restOptionalNotes.push(line); // Preservar para exibição
+        continue;
+      }
+      
+      // Qualquer outra linha em modo REST → nota opcional
+      console.log('[PARSER] [REST MODE] Linha tratada como nota opcional:', line);
+      restOptionalNotes.push(line);
+      continue;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: "Opcional:" como MARCADOR (não conteúdo) — FORA DO MODO REST
     // ════════════════════════════════════════════════════════════════════════════
     const isOptionalMarker = /^opcional\s*[:()]?\s*$/i.test(line) || 
                               /^\(?\s*opcional\s*\)?:?\s*$/i.test(line);
     if (isOptionalMarker) {
       console.log('[PARSER] Marcador OPCIONAL detectado:', line, '→ currentOptional=true');
       currentOptional = true;
-      // NÃO adicionar como item, NÃO criar bloco, apenas marcar flag
       continue;
     }
 
     // REGRA: FORMAT LINES (EMOM, AMRAP, etc.) NUNCA abrem novo bloco
-    // Se não há bloco atual, criar "BLOCO {n}" com formatDisplay
     if (isFormatLine(line)) {
       if (!currentBlock) {
-        // Criar bloco genérico com título "BLOCO X"
         currentBlock = createNewBlock('', true);
         currentBlock.formatDisplay = extractFormatFromLine(line);
-        currentBlock.type = 'conditioning'; // Tipo padrão para blocos com formato
+        currentBlock.type = 'conditioning';
         currentBlock.format = detectFormat(line);
       }
-      // Adicionar como instrução do bloco
       currentBlock.instructions.push(line);
       continue;
     }
 
-    // MVP0: Detectar heading/título solto (não precisa ser MAIÚSCULA)
-    // Ex: "Força Específica", "Grip & Strength", "Corrida — Outro Período"
-    
     // MVP0 PATCH D: Debug para confirmar regras
     const isExercise = isExercisePatternLine(line);
     const isHeading = isHeadingLine(line);
@@ -1829,6 +1935,7 @@ export function parseStructuredText(text: string): ParseResult {
       isExerciseLine: isExercise,
       isHeadingLine: isHeading,
       currentOptional,
+      currentRestMode,
       blockTitleAtual: currentBlock?.title || '(sem bloco)',
     });
     
@@ -1852,14 +1959,12 @@ export function parseStructuredText(text: string): ParseResult {
       const item = parseExerciseLine(line);
       
       if (item) {
-        // Se não há bloco, criar um genérico (com fallback neutro "Bloco X")
         if (!currentBlock) {
           currentBlock = createNewBlock('', true);
         }
         
         currentBlock.items.push(item);
         
-        // Adicionar alerta ao dia atual sobre kg isolado
         if (item.isWeightAlert && currentDayEntry) {
           const alertMsg = `Carga "${item.weight}" detectada - será autorregulada pelo sistema`;
           if (!currentDayEntry.alerts.includes(alertMsg)) {
@@ -1874,37 +1979,27 @@ export function parseStructuredText(text: string): ParseResult {
     }
 
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
-    // REGRA MESTRA: Se tem estímulo de treino, NUNCA vira comentário
     if (currentBlock) {
-      // ANTI-BURRO: Se a linha tem estímulo ou prescrição, é instrução de treino, NUNCA comentário
       if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
         currentBlock.instructions.push(line);
-        // Detectar se é opcional
         if (/\bopcional\b/i.test(line)) {
           currentBlock.optional = true;
         }
-        // Atualizar tipo se ainda é genérico/conditioning e temos prescrição
         if (currentBlock.type === 'conditioning' && isPrescriptionLine(line)) {
           currentBlock.type = inferPrescriptionType(line);
         }
       } else if (isInstructionLine(line)) {
-        // Linha de instrução (Rounds, EMOM, descanso, etc)
         currentBlock.instructions.push(line);
       } else if (!currentBlock.instruction && line.length < 80 && !/\d/.test(line)) {
-        // Primeira linha curta sem números → instruction principal
         currentBlock.instruction = line;
       } else {
-        // Resto vai para instructions, NÃO para notas soltas
         currentBlock.instructions.push(line);
       }
     } else {
-      // Texto antes de qualquer bloco
-      // ANTI-BURRO: Se tem estímulo ou prescrição, criar bloco de treino
       if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
         const isOptional = /\bopcional\b/i.test(line);
         const inferredType = inferPrescriptionType(line);
         
-        // Criar bloco com título apropriado - fallback neutro para blocos genéricos
         const blockTitle = isOptional ? 'Opcional' : '';
         currentBlock = createNewBlock(blockTitle);
         currentBlock.type = inferredType;
@@ -1921,8 +2016,35 @@ export function parseStructuredText(text: string): ParseResult {
     }
   }
 
-  // Salvar último bloco
-  saveCurrentBlock();
+  // Finalizar dia REST se ainda estiver ativo
+  if (currentRestMode && currentDayEntry) {
+    currentDayEntry.isRestDay = true;
+    if (restOptionalNotes.length > 0) {
+      const optionalBlock: ParsedBlock = {
+        title: 'Opcional',
+        type: 'aquecimento' as any,
+        format: 'outro',
+        isMainWod: false,
+        isBenchmark: false,
+        optional: true,
+        items: [],
+        lines: restOptionalNotes.map((note, idx) => ({
+          id: `rest-note-${idx}`,
+          text: note,
+          type: 'exercise' as LineType,
+          kind: 'EXERCISE' as ItemKind,
+          confidence: 'MEDIUM' as ItemConfidence,
+          flags: { optional: true },
+        })),
+        coachNotes: [],
+        instructions: restOptionalNotes,
+      };
+      currentDayEntry.blocks.push(optionalBlock);
+    }
+  } else {
+    // Salvar último bloco (caso não seja modo REST)
+    saveCurrentBlock();
+  }
 
   // Validações finais
   if (result.days.length === 0) {
@@ -1936,6 +2058,16 @@ export function parseStructuredText(text: string): ParseResult {
     if (day.day === null) {
       hasDayNull = true;
     }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0: REGRA SOBERANA — Dias de descanso NÃO geram warnings/erros
+    // ════════════════════════════════════════════════════════════════════════════
+    if (day.isRestDay) {
+      console.log('[PARSER] Dia', day.day, 'é DESCANSO - ignorando validações de WOD/categoria');
+      // Dia de descanso válido, sem exigências
+      continue;
+    }
+    
     if (day.blocks.length === 0 && day.day !== null) {
       result.warnings.push(`${getDayName(day.day as DayOfWeek)} sem blocos de treino`);
     }

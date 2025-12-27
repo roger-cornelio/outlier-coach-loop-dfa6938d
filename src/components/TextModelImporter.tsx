@@ -220,7 +220,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    setRestDays({});
+    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
+    const initialRestDays: Record<number, boolean> = {};
+    result.days.forEach((day, idx) => {
+      if (day.isRestDay) {
+        initialRestDays[idx] = true;
+      }
+    });
+    setRestDays(initialRestDays);
   };
   
   /**
@@ -274,7 +281,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    setRestDays({});
+    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
+    const initialRestDays: Record<number, boolean> = {};
+    result.days.forEach((day, idx) => {
+      if (day.isRestDay) {
+        initialRestDays[idx] = true;
+      }
+    });
+    setRestDays(initialRestDays);
   };
   
   /**
@@ -331,7 +345,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     setParseResult(result);
     setShowPreview(true);
-    setRestDays({});
+    // MVP0: Inicializar restDays com base no isRestDay detectado pelo parser
+    const initialRestDays: Record<number, boolean> = {};
+    result.days.forEach((d, idx) => {
+      if (d.isRestDay) {
+        initialRestDays[idx] = true;
+      }
+    });
+    setRestDays(initialRestDays);
   };
   
   // MVP0: IMPORTAR SEMANA — Handlers de modal de dia DESATIVADOS
@@ -975,17 +996,29 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                   </div>
                                 )}
                                 
-                                {/* Mensagem de dia de descanso */}
+                                {/* Mensagem de dia de descanso + notas opcionais */}
                                 {isRestDay && (
-                                  <div className="mb-4 p-4 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 text-center">
+                                  <div className="mb-4 p-4 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 space-y-3">
                                     <p className="text-sm text-blue-600 flex items-center justify-center gap-2 font-medium">
                                       <Moon className="w-5 h-5" />
-                                      Dia marcado como descanso
+                                      Dia de descanso
                                     </p>
+                                    {/* MVP0: Mostrar notas opcionais do dia de descanso */}
+                                    {day.blocks.length > 0 && day.blocks[0]?.optional && (
+                                      <div className="mt-3 pt-3 border-t border-blue-500/20">
+                                        <p className="text-xs text-blue-500 mb-2 font-medium">Opcional:</p>
+                                        {day.blocks[0].instructions?.map((note, noteIdx) => (
+                                          <p key={noteIdx} className="text-sm text-foreground/80 ml-2">
+                                            {note}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 
-                                {/* Blocos do dia */}
+                                {/* Blocos do dia - NÃO mostrar em dias de descanso (já mostrado acima) */}
+                                {!isRestDay && (
                                 <div className="space-y-4">
                                 {day.blocks.map((block, blockIndex) => {
                                     // MVP0 FIX: Usar apenas block.title como fonte de verdade
@@ -1293,6 +1326,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                     );
                                   })}
                                 </div>
+                                )}
                               </AccordionContent>
                             </AccordionItem>
                           );
