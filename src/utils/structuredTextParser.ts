@@ -839,27 +839,43 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   // REGRAS DE CLASSIFICAÇÃO
   // ========================================
   
-  // A) REST com exercício opcional detectável
-  // Ex: "Descanso. Se quiser, corrida leve 30min"
-  if (isRest && isOptional && (isHighExercise || isMediumExercise)) {
-    // Retornar como EXERCISE OPTIONAL (o REST está implícito no dia)
+  // MVP0 FIX: Se tem "corrida/bike/etc" + tempo/distância, é HIGH mesmo com opcional
+  const hasCardioActivity = /\b(?:corrida|bike|remo|ski|caminhada|trote|run|row|swim|airbike)\b/i.test(lowerLine);
+  const hasTimeOrDistance = /\d+\s*(?:min|minutos?|'|km|m)\b/i.test(trimmed);
+  const isCardioWithMeasure = hasCardioActivity && hasTimeOrDistance;
+  
+  // A) EXERCISE OPTIONAL com medida (prioridade máxima para rastreamento)
+  // Ex: "corrida opcional 45 min", "se quiser, bike 30min"
+  if (isOptional && (isHighExercise || isCardioWithMeasure)) {
+    console.log('[CLASSIFY] EXERCISE OPTIONAL HIGH:', trimmed);
     return {
       kind: 'EXERCISE',
-      confidence: isHighExercise ? 'HIGH' : 'MEDIUM',
+      confidence: 'HIGH',
       flags: { optional: true },
     };
   }
   
-  // B) REST puro
-  if (isRest && !isOptional) {
+  // B) REST com exercício opcional detectável
+  // Ex: "Descanso. Se quiser, corrida leve 30min"
+  if (isRest && isOptional && (isHighExercise || isMediumExercise || isCardioWithMeasure)) {
+    console.log('[CLASSIFY] REST + EXERCISE OPTIONAL:', trimmed);
+    return {
+      kind: 'EXERCISE',
+      confidence: isHighExercise || isCardioWithMeasure ? 'HIGH' : 'MEDIUM',
+      flags: { optional: true },
+    };
+  }
+  
+  // C) REST puro
+  if (isRest && !isOptional && !isCardioWithMeasure) {
     return { kind: 'REST', confidence: 'HIGH' };
   }
   
-  // C) EXERCISE OPTIONAL (sem REST mas marcado como opcional)
-  if (isOptional && (isHighExercise || isMediumExercise)) {
+  // D) EXERCISE OPTIONAL (sem REST mas marcado como opcional)
+  if (isOptional && isMediumExercise) {
     return {
       kind: 'EXERCISE',
-      confidence: isHighExercise ? 'HIGH' : 'MEDIUM',
+      confidence: 'MEDIUM',
       flags: { optional: true },
     };
   }
@@ -1242,20 +1258,102 @@ export function parseStructuredText(text: string): ParseResult {
     };
   };
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: LISTA BRANCA — Palavras que SEMPRE indicam título de bloco
+  // ════════════════════════════════════════════════════════════════════════════
+  const TITLE_WHITELIST = [
+    /^aquecimento$/i,
+    /^for[çc]a$/i,
+    /^for[çc]a\s+espec[ií]fica$/i,
+    /^espec[ií]fico$/i,
+    /^conditioning$/i,
+    /^condicionamento$/i,
+    /^grip$/i,
+    /^grip\s*[&e]\s*strength$/i,
+    /^core$/i,
+    /^mobilidade$/i,
+    /^corrida$/i,
+    /^corrida\s*[—–-]\s*.+$/i,  // "Corrida — Outro Período"
+    /^fortalecimento$/i,
+    /^metcon$/i,
+    /^wod$/i,
+    /^t[ée]cnica$/i,
+    /^acess[óo]rio$/i,
+    /^warm[- ]?up$/i,
+  ];
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: LISTA NEGRA — Palavras que NUNCA podem virar título (são comentários)
+  // ════════════════════════════════════════════════════════════════════════════
+  const TITLE_BLACKLIST = [
+    /descanso/i,
+    /descansar/i,
+    /necess[aá]rio/i,
+    /vai\s+aproveitar/i,
+    /objetivo/i,
+    /registre/i,
+    /priorizando/i,
+    /opcional/i,
+    /se\s+quiser/i,
+    /se\s+precisar/i,
+    /se\s+estiver/i,
+    /caso\s+queira/i,
+    /lembre/i,
+    /aten[çc][ãa]o/i,
+    /obs(?:erva[çc][ãa]o)?:/i,
+    /nota:/i,
+    /dica:/i,
+  ];
+  
+  /**
+   * MVP0: Verifica se linha é título (lista branca)
+   */
+  const isWhitelistTitle = (line: string): boolean => {
+    const trimmed = line.trim();
+    return TITLE_WHITELIST.some(p => p.test(trimmed));
+  };
+  
+  /**
+   * MVP0: Verifica se linha é comentário (lista negra)
+   */
+  const isBlacklistComment = (line: string): boolean => {
+    const trimmed = line.trim();
+    return TITLE_BLACKLIST.some(p => p.test(trimmed));
+  };
+
   /**
    * MVP0: Extrai heading das primeiras 5 linhas do bloco
-   * Retorna { heading, remainingLines } ou null se não encontrar
+   * ORDEM: 1) Lista branca → 2) Heurística (curto sem número)
+   * BLOQUEIO: Lista negra nunca vira título
    */
   const extractHeadingFromLines = (lines: string[]): { heading: string; remainingLines: string[] } | null => {
     // Filtrar linhas não vazias
     const nonEmptyLines = lines.filter(l => l.trim().length > 0);
     
-    // Procurar heading nas primeiras 5 linhas
+    // PASSO 1: Procurar título na LISTA BRANCA (prioridade máxima)
     for (let i = 0; i < Math.min(5, nonEmptyLines.length); i++) {
       const line = nonEmptyLines[i].trim();
       
-      // Heading válido = linha curta (<=60), NÃO inicia com número,
-      // NÃO bate padrões de exercício
+      // Se está na lista negra, pular
+      if (isBlacklistComment(line)) continue;
+      
+      // Se está na lista branca, É título!
+      if (isWhitelistTitle(line)) {
+        console.log('[PARSER] Título WHITELIST encontrado na linha', i + 1, ':', line);
+        const remaining = [...nonEmptyLines];
+        remaining.splice(i, 1);
+        return { heading: line, remainingLines: remaining };
+      }
+    }
+    
+    // PASSO 2: Heurística - linha curta, sem número, sem lista negra
+    for (let i = 0; i < Math.min(5, nonEmptyLines.length); i++) {
+      const line = nonEmptyLines[i].trim();
+      
+      // Se está na lista negra, pular
+      if (isBlacklistComment(line)) continue;
+      
+      // Heading válido = linha curta (<=60), NÃO inicia com número
       if (line.length <= 60 && !/^\d/.test(line)) {
         // Verificar se NÃO é padrão de exercício
         const isExercisePattern = 
@@ -1270,20 +1368,19 @@ export function parseStructuredText(text: string): ParseResult {
           /^\d+\s*(m|km|cal)\b/i.test(line);
         
         if (!isExercisePattern) {
-          // Verificar se tem keyword de bloco OU é linha curta sem números
+          // Verificar se tem keyword de bloco
           const hasBlockKeyword = [
             /aquecimento/i, /for[çc]a/i, /metcon/i, /espec[ií]fico/i,
             /corrida/i, /core/i, /grip/i, /acess[óo]rio/i, /mobilidade/i,
             /t[ée]cnica/i, /conditioning/i, /condicionamento/i, /strength/i,
-            /warm[- ]?up/i, /wod/i
+            /warm[- ]?up/i, /wod/i, /fortalecimento/i
           ].some(p => p.test(line));
           
           // Linha curta sem números também pode ser heading
           const isShortNoNumbers = line.length <= 40 && !/\d/.test(line);
           
           if (hasBlockKeyword || isShortNoNumbers) {
-            console.log('[PARSER] Heading extraído da linha', i + 1, ':', line);
-            // Remover essa linha do conteúdo
+            console.log('[PARSER] Heading heurístico na linha', i + 1, ':', line);
             const remaining = [...nonEmptyLines];
             remaining.splice(i, 1);
             return { heading: line, remainingLines: remaining };
