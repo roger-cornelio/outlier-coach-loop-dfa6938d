@@ -112,8 +112,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // MVP0: Modal de seleção de dia - abre APENAS quando necessário
-  const [showDayModal, setShowDayModal] = useState(false);
+  // MVP0: IMPORTAR SEMANA — Modal de dia DESATIVADO (nunca abre)
+  // Mantido apenas para compatibilidade, sempre false
+  const showDayModal = false;
   
   // MVP0: Erro de validação de dias - bloqueia preview se texto não tiver dias
   const [dayValidationError, setDayValidationError] = useState<string | null>(null);
@@ -332,17 +333,14 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setRestDays({});
   };
   
-  // Handler quando usuário confirma dia no modal
-  const handleDayConfirmed = (day: DayOfWeek) => {
-    setSelectedDay(day);
-    setShowDayModal(false);
-    // Executar parse imediatamente após selecionar o dia
-    executeParseWithDay(day);
+  // MVP0: IMPORTAR SEMANA — Handlers de modal de dia DESATIVADOS
+  // Mantidos como no-op para compatibilidade
+  const handleDayConfirmed = (_day: DayOfWeek) => {
+    // No-op: modal de dia nunca abre no fluxo IMPORTAR SEMANA
   };
   
-  // Fechar modal sem confirmar
   const handleDayModalClose = () => {
-    setShowDayModal(false);
+    // No-op: modal de dia nunca abre no fluxo IMPORTAR SEMANA
   };
 
   const handleImport = () => {
@@ -1413,12 +1411,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
         />
       )}
 
-      {/* MVP0: Modal obrigatório de seleção de dia */}
-      <DaySelectionModal
-        open={showDayModal}
-        onClose={handleDayModalClose}
-        onConfirm={handleDayConfirmed}
-      />
+      {/* MVP0: IMPORTAR SEMANA — Modal de dia REMOVIDO
+          O fluxo "Importar Semana" NUNCA pergunta dia.
+          Se não encontrar dias, assume SEGUNDA com alerta.
+      */}
 
       {/* Modal de template */}
       <AlertDialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
