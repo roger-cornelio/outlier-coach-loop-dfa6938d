@@ -1239,18 +1239,24 @@ function isWhitelistLine(line: string): boolean {
 function isHeadingLine(line: string): boolean {
   const trimmed = line.trim();
   
+  // Debug log para rastrear
+  console.log('[isHeadingLine] Verificando:', JSON.stringify(trimmed), 'len=', trimmed.length);
+  
   // BLACKLIST: NUNCA é heading
   if (isBlacklistLine(trimmed)) {
+    console.log('[isHeadingLine] → BLACKLIST, retorna false');
     return false;
   }
   
-  // WHITELIST: SEMPRE é heading
+  // WHITELIST: SEMPRE é heading (match exato)
   if (isWhitelistLine(trimmed)) {
+    console.log('[isHeadingLine] → WHITELIST match exato, retorna true');
     return true;
   }
   
   // Heading patterns conhecidos (case-insensitive)
   if (HEADING_PATTERNS.some(p => p.test(trimmed))) {
+    console.log('[isHeadingLine] → HEADING_PATTERNS, retorna true');
     return true;
   }
   
@@ -1264,10 +1270,12 @@ function isHeadingLine(line: string): boolean {
     const hasKeyword = blockKeywords.some(p => p.test(trimmed));
     // Se contém keyword E é curta E não parece exercício, é heading
     if (hasKeyword && !isExercisePatternLine(trimmed)) {
+      console.log('[isHeadingLine] → Keyword match + curta, retorna true');
       return true;
     }
   }
   
+  console.log('[isHeadingLine] → Nenhum match, retorna false');
   return false;
 }
 
