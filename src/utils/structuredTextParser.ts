@@ -1,15 +1,31 @@
 /**
  * structuredTextParser.ts - Parser de texto livre de treino
  * 
- * ============================================================
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * CANÔNICO — NÃO CRIAR VARIAÇÕES — MVP0
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Este é o ÚNICO parser de texto de treino da aplicação.
+ * 
+ * CONTRATO:
+ * - Entrada: string (texto do textarea, sem modificações)
+ * - Saída: ParseResult (estrutura de dias/blocos/exercícios)
+ * 
+ * PROIBIDO:
+ * - Criar parsers paralelos
+ * - Modificar o texto antes de chamar este parser
+ * - Inserir cabeçalhos de dia no texto
+ * - Parsing "por página" ou "por print"
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  * PRINCÍPIO FUNDAMENTAL: ATLETA > COACH
- * ============================================================
+ * ═══════════════════════════════════════════════════════════════════════════════
  * Em qualquer situação de ambiguidade, dúvida ou incerteza:
  * - A experiência do atleta tem prioridade absoluta
  * - Preferir BLOQUEAR o coach a gerar resultado incorreto para o atleta
  * - O sistema NUNCA tenta adivinhar intenção do coach
  * - Se não há 100% de certeza, o sistema NÃO executa
- * ============================================================
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * REGRAS DE PARSING (DETERMINÍSTICO):
  * - Linhas MAIÚSCULAS → dias ou títulos de blocos

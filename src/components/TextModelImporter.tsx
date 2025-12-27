@@ -1,15 +1,32 @@
 /**
  * TextModelImporter - Importador de treino via texto livre + arquivo
  * 
- * MVP0 Anti-Burro:
- * - Modal OBRIGATÓRIO de seleção de dia ANTES de qualquer importação
- * - O sistema NUNCA tenta inferir dia da semana
- * - O sistema NUNCA salva conteúdo sem dia definido
- * - Todo conteúdo importado deve estar vinculado a um dia ANTES do upload
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FLUXO CANÔNICO DE INTERPRETAÇÃO — MVP0 — NÃO CRIAR VARIAÇÕES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * SOURCE OF TRUTH ÚNICO:
+ * - O ÚNICO input para parsing é o valor do textarea (string)
+ * - "Validar e Visualizar" SEMPRE chama: parseStructuredText(textareaValue)
+ * - PROIBIDO: parsing por página, bloco por print, caminhos alternativos
+ * 
+ * MODAL DE DIA:
+ * - Modal só abre APÓS analisar o texto do textarea
+ * - Se 2+ dias detectados no texto → NÃO abre modal, vai direto pro preview
+ * - Se 0 ou 1 dia → abre modal para coach escolher
+ * - Dia selecionado = METADADO (nunca inserir no texto)
+ * 
+ * PRÉ-PROCESSAMENTO:
+ * - Apenas normalização leve de quebras de linha
+ * - NÃO apagar linhas, NÃO reformatar, NÃO inserir cabeçalhos
+ * 
+ * CRITÉRIO DE ACEITE:
+ * - Copiar texto do textarea e colar de novo → preview idêntico (1:1)
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * UX:
  * - Área 1: Texto livre (principal) - funciona sempre
- * - Área 2: Upload de arquivo (PDF/múltiplas imagens) - OCR via edge function
+ * - Área 2: Upload de arquivo (PDF/múltiplas imagens) - OCR preenche textarea
  */
 
 import { useState, useRef } from 'react';
@@ -127,20 +144,34 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setParseResult(updated);
   };
 
-  // MVP0: "Validar e Visualizar" - ÚNICO ponto de entrada para parsing
+  /**
+   * ═══════════════════════════════════════════════════════════════════════════
+   * CANÔNICO — "Validar e Visualizar" — ÚNICO PONTO DE ENTRADA PARA PARSING
+   * ═══════════════════════════════════════════════════════════════════════════
+   * 
+   * 1. Pega o valor ATUAL do textarea (source of truth)
+   * 2. Detecta dias no texto (sem IA, determinístico)
+   * 3. Se 2+ dias → preview direto | Se 0-1 dia → modal de seleção
+   * 4. Chama parseStructuredText(textareaValue) — NUNCA outro parser
+   * 
+   * NÃO CRIAR VARIAÇÕES DESTE FLUXO
+   * ═══════════════════════════════════════════════════════════════════════════
+   */
   const handleParse = () => {
-    if (!text.trim()) return;
+    // Source of truth: valor atual do textarea
+    const textareaValue = text.trim();
+    if (!textareaValue) return;
     
-    // Detectar dias no texto ANTES de decidir sobre modal
-    const daysDetected = detectDaysInText(text);
+    // ORDEM: primeiro analisar texto, depois decidir sobre modal
+    const daysDetected = detectDaysInText(textareaValue);
     
-    // Se 2+ dias detectados, ir direto para preview (texto multi-dia)
+    // Se 2+ dias detectados no texto → ir direto para preview (multi-dia)
     if (daysDetected >= 2) {
       executeParseMultiDay();
       return;
     }
     
-    // Se 0 ou 1 dia e não tem dia selecionado, mostrar modal
+    // Se 0 ou 1 dia e não tem dia selecionado → mostrar modal
     if (!selectedDay) {
       setShowDayModal(true);
       return;
@@ -150,12 +181,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     executeParseWithDay(selectedDay);
   };
   
-  // Executar parse para texto com múltiplos dias (sem modal)
+  /**
+   * CANÔNICO — Parse para texto multi-dia (2+ dias detectados)
+   * NÃO CRIAR VARIAÇÕES
+   */
   const executeParseMultiDay = () => {
-    if (!text.trim()) return;
+    const textareaValue = text.trim();
+    if (!textareaValue) return;
     
-    // Parser canônico: recebe APENAS o texto original do textarea
-    const result = parseStructuredText(text);
+    // ═══ PARSER CANÔNICO: recebe APENAS o texto do textarea ═══
+    const result = parseStructuredText(textareaValue);
     
     // Texto multi-dia não precisa de seleção de dia
     result.needsDaySelection = false;
@@ -165,14 +200,22 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setRestDays({});
   };
   
-  // Executar parse com dia selecionado
-  // CONTRATO: Parser recebe SOMENTE o texto do textarea (sem inserir dia)
-  // O dia é aplicado como metadado DEPOIS do parsing
+  /**
+   * CANÔNICO — Parse com dia selecionado (0-1 dias detectados)
+   * 
+   * CONTRATO FIXO:
+   * - Parser recebe SOMENTE o texto do textarea (sem inserir dia)
+   * - O dia é aplicado como METADADO depois do parsing
+   * - NUNCA inserir cabeçalho de dia no texto
+   * 
+   * NÃO CRIAR VARIAÇÕES
+   */
   const executeParseWithDay = (day: DayOfWeek) => {
-    if (!text.trim()) return;
+    const textareaValue = text.trim();
+    if (!textareaValue) return;
     
-    // Parser canônico: recebe APENAS o texto original do textarea
-    const result = parseStructuredText(text);
+    // ═══ PARSER CANÔNICO: recebe APENAS o texto do textarea ═══
+    const result = parseStructuredText(textareaValue);
     
     // MVP0 Fallback: Se parser não detectou blocos, criar bloco "Treino" padrão
     if (result.days.length === 0 || result.days.every(d => d.blocks.length === 0)) {
