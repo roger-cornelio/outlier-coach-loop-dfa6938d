@@ -360,11 +360,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   const structureErrorCount = parseResult?.structureIssues?.filter(i => i.severity === 'ERROR').length ?? 0;
   const hasStructureErrors = structureErrorCount > 0;
 
-  const canSaveAndGoToPreview = parseResult?.success && 
-    !hasInvalidTitles &&
-    !hasMissingCategory &&
-    !hasStructureErrors &&
-    weekId !== null;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MVP0: VALIDAÇÃO DE DRAFT vs PUBLICAÇÃO
+  // - Draft: NUNCA bloqueado por validação semântica (apenas warnings)
+  // - Publicação: validação dura acontece na aba Programações
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Warnings para exibir (não bloqueiam)
+  const structureWarningCount = parseResult?.structureIssues?.length ?? 0;
+  const hasStructureWarnings = structureWarningCount > 0;
+  
+  // Draft pode ser salvo mesmo com warnings semânticos
+  // Requisitos mínimos: texto parseado + semana selecionada
+  const canSaveAndGoToPreview = parseResult?.success && weekId !== null;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // NAVEGAÇÃO ENTRE TELAS
