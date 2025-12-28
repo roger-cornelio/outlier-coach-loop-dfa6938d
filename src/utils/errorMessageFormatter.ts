@@ -181,6 +181,10 @@ export function formatStructureIssue(issue: StructureIssue): FormattedError {
   const errorType = detectErrorType(issue);
   const copy = ERROR_COPIES[errorType];
   
+  // REGRA: O exemplo SEMPRE vem do template fixo (pedagógico)
+  // NUNCA usar sampleFix derivado do texto do coach
+  const exampleFix = copy.exampleFix;
+  
   return {
     dayName: getDayNameFromIndex(issue.dayIndex),
     blockTitle: getBlockTitle(issue),
@@ -188,7 +192,7 @@ export function formatStructureIssue(issue: StructureIssue): FormattedError {
     severity: issue.severity,
     whatHappened: copy.whatHappened,
     whatToDo: copy.whatToDo,
-    exampleFix: issue.sampleFix || copy.exampleFix,
+    exampleFix,
     lineText: issue.lineText,
     originalMessage: issue.message,
     dayIndex: issue.dayIndex,
