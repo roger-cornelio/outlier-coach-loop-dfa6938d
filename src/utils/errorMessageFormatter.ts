@@ -143,6 +143,7 @@ export function getDayNameFromIndex(dayIndex?: number): string {
 export interface FormattedError {
   // Header
   dayName: string;
+  blockTitle: string;
   lineNumber: number | null;
   severity: 'ERROR' | 'WARNING';
   
@@ -161,6 +162,19 @@ export interface FormattedError {
 }
 
 /**
+ * Gera o título do bloco baseado no blockTitle da issue ou fallback
+ */
+function getBlockTitle(issue: StructureIssue): string {
+  if (issue.blockTitle && issue.blockTitle.trim()) {
+    return issue.blockTitle.trim();
+  }
+  if (issue.blockIndex !== undefined) {
+    return `Bloco ${issue.blockIndex + 1}`;
+  }
+  return '';
+}
+
+/**
  * Converte uma StructureIssue em um FormattedError padronizado
  */
 export function formatStructureIssue(issue: StructureIssue): FormattedError {
@@ -169,6 +183,7 @@ export function formatStructureIssue(issue: StructureIssue): FormattedError {
   
   return {
     dayName: getDayNameFromIndex(issue.dayIndex),
+    blockTitle: getBlockTitle(issue),
     lineNumber: issue.lineNumber || null,
     severity: issue.severity,
     whatHappened: copy.whatHappened,

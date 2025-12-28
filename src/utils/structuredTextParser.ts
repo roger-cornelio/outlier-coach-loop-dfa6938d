@@ -126,6 +126,7 @@ export type IssueSeverity = 'ERROR' | 'WARNING';
 export interface StructureIssue {
   dayIndex?: number;
   blockIndex?: number;
+  blockTitle?: string; // Título do bloco (para exibição no erro)
   lineIndex?: number; // Índice da linha dentro do bloco (para highlight)
   lineNumber?: number; // Número da linha no texto original (para exibição)
   lineText?: string; // Texto da linha problemática (para exibição)

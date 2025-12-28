@@ -62,6 +62,7 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
         <div className="flex-1">
           <p className={`font-semibold text-sm ${isError ? 'text-destructive' : 'text-amber-700'}`}>
             {isError ? '🔴' : '🟡'} Erro de estrutura — {formatted.dayName}
+            {formatted.blockTitle && ` · Bloco: ${formatted.blockTitle}`}
           </p>
           {formatted.lineNumber && (
             <p className={`text-xs ${isError ? 'text-destructive/80' : 'text-amber-600/80'}`}>
