@@ -133,6 +133,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   // MVP0: Estado para highlight de bloco com erro (scroll + expand + highlight)
   const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
   const [expandedDayForScroll, setExpandedDayForScroll] = useState<string | null>(null);
+  
+  // MVP0: Estado do bloco "Modelo Recomendado" (colapsado por padrão)
+  const [modelExpanded, setModelExpanded] = useState(false);
 
   // Detectar dias distintos no texto (determinístico, sem IA)
   const detectDaysInText = (textContent: string): number => {
@@ -753,10 +756,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             </div>
           )}
 
-          {/* MVP0: Modelo Recomendado - aparece após "Validar e Visualizar" SOMENTE se houver ERROR */}
-          {hasStructureErrors && showPreview && parseResult?.structureIssues && (
-            <RecommendedModelBlock issues={parseResult.structureIssues} />
-          )}
+          {/* MVP0: Modelo Recomendado - SEMPRE visível (colapsado), expande com erros */}
+          <RecommendedModelBlock 
+            issues={hasStructureErrors && showPreview ? parseResult?.structureIssues : undefined}
+            isExpanded={modelExpanded || (hasStructureErrors && showPreview)}
+            onToggle={() => setModelExpanded(!modelExpanded)}
+          />
 
           <div className="flex gap-2 flex-wrap">
             <Button

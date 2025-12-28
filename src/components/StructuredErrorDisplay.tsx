@@ -152,17 +152,50 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
 
 /**
  * Bloco "Modelo Recomendado" - exportado separadamente para posicionamento flexível
+ * 
+ * Modos:
+ * - isExpanded=false (padrão): colapsado, mostra apenas header clicável
+ * - isExpanded=true: expandido, mostra template + unidades
+ * - isContextual=true: usa dia/bloco do primeiro erro
+ * - isContextual=false: usa placeholders genéricos
  */
-export function RecommendedModelBlock({ issues }: { issues: StructureIssue[] }) {
+interface RecommendedModelBlockProps {
+  issues?: StructureIssue[];
+  isExpanded?: boolean;
+  onToggle?: () => void;
+}
+
+export function RecommendedModelBlock({ 
+  issues, 
+  isExpanded = false,
+  onToggle 
+}: RecommendedModelBlockProps) {
   const [copied, setCopied] = useState(false);
   
-  // Pega o primeiro erro para interpolação de dia/bloco
-  const firstIssue = issues[0];
-  const dayName = getDayNameFromIndex(firstIssue?.dayIndex);
-  const blockTitle = firstIssue?.blockTitle?.trim() || 
-    (firstIssue?.blockIndex !== undefined ? `Bloco ${firstIssue.blockIndex + 1}` : 'NOME DO BLOCO');
+  // Modo contextual: se há issues, usar dados reais do primeiro erro
+  const isContextual = issues && issues.length > 0;
+  const firstIssue = issues?.[0];
   
-  const modelTemplate = `${dayName}
+  // Dados do modelo
+  const dayName = isContextual 
+    ? getDayNameFromIndex(firstIssue?.dayIndex)
+    : 'DIA_DA_SEMANA (ex: SEGUNDA)';
+  const blockTitle = isContextual
+    ? (firstIssue?.blockTitle?.trim() || 
+       (firstIssue?.blockIndex !== undefined ? `Bloco ${firstIssue.blockIndex + 1}` : 'NOME DO BLOCO'))
+    : 'NOME_DO_BLOCO (ex: Força / Condicionamento / Corrida)';
+  
+  // Template contextual vs genérico
+  const modelTemplate = isContextual
+    ? `${dayName}
+${blockTitle}
+
+[TREINO]
+45 min corrida PSE 5
+
+[COMENTÁRIO]
+bem confortável.`
+    : `${dayName}
 ${blockTitle}
 
 [TREINO]
@@ -171,62 +204,77 @@ ${blockTitle}
 [COMENTÁRIO]
 <PERCEPÇÃO / SENSAÇÃO / OBSERVAÇÃO>`;
 
-  const handleCopy = () => {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(modelTemplate);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Lightbulb className="w-5 h-5 text-primary" />
-        <span className="font-semibold text-sm text-primary">
-          🧩 Modelo recomendado (à prova de erro)
-        </span>
-      </div>
-      
-      {/* Template copiável */}
-      <div className="space-y-2">
-        <div className="p-3 rounded bg-muted/50 border border-border">
-          <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
-            {modelTemplate}
-          </pre>
+    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 overflow-hidden">
+      {/* Header clicável */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full p-3 flex items-center justify-between hover:bg-primary/10 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-5 h-5 text-primary" />
+          <span className="font-semibold text-sm text-primary">
+            🧩 Modelo recomendado (à prova de erro)
+          </span>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopy}
-          className="w-full gap-2"
-        >
-          {copied ? (
-            <>
-              <Check className="w-4 h-4" />
-              Copiado!
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              📋 COPIAR MODELO RECOMENDADO
-            </>
-          )}
-        </Button>
-      </div>
-      
-      {/* Unidades recomendadas */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-foreground/80">📏 Unidades recomendadas no OUTLIER</p>
-        <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
-          <p><span className="font-medium">Corrida / Cardio:</span> tempo (min), distância (m/km), intensidade (PSE, Zona, Pace)</p>
-          <p><span className="font-medium">Força:</span> séries x repetições, carga (% ou kg)</p>
-          <p><span className="font-medium">Metcon / Condicionamento:</span> tempo (AMRAP, EMOM), repetições, movimentos claros</p>
-          <p><span className="font-medium">Acessórios / Mobilidade:</span> tempo ou repetições</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="h-7 text-xs gap-1.5"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3" />
+                Copiado
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3" />
+                Copiar
+              </>
+            )}
+          </Button>
+          <span className={`text-xs text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+            ▼
+          </span>
         </div>
-        <p className="text-xs text-muted-foreground italic pt-1 border-t border-border/50">
-          Use unidades objetivas. Sensações ficam no comentário.
-        </p>
-      </div>
+      </button>
+      
+      {/* Conteúdo expandível */}
+      {isExpanded && (
+        <div className="p-4 pt-0 space-y-4">
+          {/* Template copiável */}
+          <div className="p-3 rounded bg-muted/50 border border-border">
+            <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
+              {modelTemplate}
+            </pre>
+          </div>
+          
+          {/* Unidades recomendadas */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-foreground/80">📏 Unidades recomendadas no OUTLIER</p>
+            <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
+              <p><span className="font-medium">Corrida / Cardio:</span> tempo (min), distância (m/km), intensidade (PSE, Zona, Pace)</p>
+              <p><span className="font-medium">Força:</span> séries x repetições, carga (% ou kg)</p>
+              <p><span className="font-medium">Metcon / Condicionamento:</span> tempo (AMRAP, EMOM), repetições, movimentos claros</p>
+              <p><span className="font-medium">Acessórios / Mobilidade:</span> tempo ou repetições</p>
+            </div>
+            <p className="text-xs text-muted-foreground italic pt-1 border-t border-border/50">
+              Use unidades objetivas. Sensações ficam no comentário.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
