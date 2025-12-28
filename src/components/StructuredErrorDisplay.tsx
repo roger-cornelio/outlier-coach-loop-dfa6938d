@@ -14,12 +14,13 @@
  * - 🎯 Próximo passo
  */
 
-import { AlertCircle, AlertTriangle, ArrowRight, Copy, Check } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { 
   formatStructureIssue, 
-  type FormattedError 
+  type FormattedError,
+  getDayNameFromIndex
 } from '@/utils/errorMessageFormatter';
 import type { StructureIssue } from '@/utils/structuredTextParser';
 
@@ -149,6 +150,84 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
   );
 }
 
+function RecommendedModelBlock({ issues }: { issues: StructureIssue[] }) {
+  const [copied, setCopied] = useState(false);
+  
+  // Pega o primeiro erro para interpolação de dia/bloco
+  const firstIssue = issues[0];
+  const dayName = getDayNameFromIndex(firstIssue?.dayIndex);
+  const blockTitle = firstIssue?.blockTitle?.trim() || 
+    (firstIssue?.blockIndex !== undefined ? `Bloco ${firstIssue.blockIndex + 1}` : 'NOME DO BLOCO');
+  
+  const modelTemplate = `${dayName}
+${blockTitle}
+
+[TREINO]
+<DURAÇÃO ou VOLUME> <MODALIDADE> <INTENSIDADE OBJETIVA>
+
+[COMENTÁRIO]
+<PERCEPÇÃO / SENSAÇÃO / OBSERVAÇÃO>`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(modelTemplate);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Lightbulb className="w-5 h-5 text-primary" />
+        <span className="font-semibold text-sm text-primary">
+          🧩 Modelo recomendado (à prova de erro)
+        </span>
+      </div>
+      
+      {/* Template copiável */}
+      <div className="space-y-2">
+        <div className="p-3 rounded bg-muted/50 border border-border">
+          <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
+            {modelTemplate}
+          </pre>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopy}
+          className="w-full gap-2"
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Copiado!
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              📋 COPIAR MODELO RECOMENDADO
+            </>
+          )}
+        </Button>
+      </div>
+      
+      {/* Unidades recomendadas */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-foreground/80">📏 Unidades recomendadas no OUTLIER</p>
+        <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
+          <p><span className="font-medium">Corrida / Cardio:</span> tempo (min), distância (m/km), intensidade (PSE, Zona, Pace)</p>
+          <p><span className="font-medium">Força:</span> séries x repetições, carga (% ou kg)</p>
+          <p><span className="font-medium">Metcon / Condicionamento:</span> tempo (AMRAP, EMOM), repetições, movimentos claros</p>
+          <p><span className="font-medium">Acessórios / Mobilidade:</span> tempo ou repetições</p>
+        </div>
+        <p className="text-xs text-muted-foreground italic pt-1 border-t border-border/50">
+          Use unidades objetivas. Sensações ficam no comentário.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredErrorDisplayProps) {
   const errorCount = issues.filter(i => i.severity === 'ERROR').length;
   const warningCount = issues.filter(i => i.severity === 'WARNING').length;
@@ -183,6 +262,9 @@ export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredEr
           />
         ))}
       </div>
+      
+      {/* Modelo Recomendado */}
+      <RecommendedModelBlock issues={issues} />
       
       {/* Footer bloqueante */}
       {hasErrors && (
