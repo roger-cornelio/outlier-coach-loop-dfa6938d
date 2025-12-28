@@ -95,12 +95,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     parseResult,
     restDays,
     programName,
-    workoutsToSave,
+    effectiveDays,
     canGoToPreview,
     canSave,
     setRawText,
     setWeekId,
     setParsedResult,
+    setEditedDays,
     updateParseResult,
     setRestDays,
     setProgramName,
@@ -182,13 +183,41 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     setRestDays(newRestDays);
   };
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // effectiveDays (fonte única pós-edição)
+  // - Se existir editedDays: usar editedDays
+  // - Senão: usar parsedDays (parse inicial)
+  // PROIBIDO: reconversão via parseResult fora da Tela 1
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const cloneDays = (days: DayWorkout[]): DayWorkout[] =>
+    days.map(d => ({
+      ...d,
+      blocks: (d.blocks || []).map(b => ({ ...b })),
+    }));
+
+  const linesToContent = (lines: any[]): string => {
+    return (lines || [])
+      .map(l => (typeof l?.text === 'string' ? l.text : ''))
+      .join('\n')
+      .trim();
+  };
+
+  const updateEdited = (updater: (days: DayWorkout[]) => void) => {
+    if (!effectiveDays) return;
+    const next = cloneDays(effectiveDays);
+    updater(next);
+    setEditedDays(next);
+  };
+
   const toggleMainWod = (dayIndex: number, blockIndex: number) => {
     if (!parseResult || mode !== 'edit') return;
-    
+
+    // Atualiza estrutura (Tela 1)
     const updated = { ...parseResult };
     const day = updated.days[dayIndex];
     const clickedBlock = day.blocks[blockIndex];
-    
+
     if (clickedBlock.isMainWod) {
       clickedBlock.isMainWod = false;
     } else {
@@ -196,39 +225,67 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         block.isMainWod = idx === blockIndex;
       });
     }
-    
+
     console.debug('[TextModelImporter] toggleMainWod', { dayIndex, blockIndex });
     updateParseResult(updated);
+
+    // Atualiza fonte efetiva para preview/salvar
+    updateEdited((days) => {
+      const d = days[dayIndex];
+      if (!d) return;
+      const clicked = d.blocks?.[blockIndex];
+      if (!clicked) return;
+
+      const willUnset = Boolean(clicked.isMainWod);
+      d.blocks = d.blocks.map((b, idx) => ({
+        ...b,
+        isMainWod: willUnset ? undefined : (idx === blockIndex ? true : undefined),
+      }));
+    });
   };
 
   const changeBlockType = (dayIndex: number, blockIndex: number, newType: string) => {
     if (!parseResult || mode !== 'edit') return;
-    
+
     const updated = { ...parseResult };
     updated.days[dayIndex].blocks[blockIndex].type = newType as any;
     updateParseResult(updated);
+
+    updateEdited((days) => {
+      const d = days[dayIndex];
+      const b = d?.blocks?.[blockIndex];
+      if (!b) return;
+      b.type = newType as any;
+    });
   };
 
   const changeBlockTitle = (dayIndex: number, blockIndex: number, newTitle: string) => {
     if (!parseResult || mode !== 'edit') return;
-    
+
     const updated = { ...parseResult };
     updated.days[dayIndex].blocks[blockIndex].title = newTitle;
     updated.days[dayIndex].blocks[blockIndex].isAutoGenTitle = false;
     updateParseResult(updated);
+
+    updateEdited((days) => {
+      const d = days[dayIndex];
+      const b = d?.blocks?.[blockIndex];
+      if (!b) return;
+      b.title = newTitle;
+    });
   };
 
   const deleteBlock = (dayIndex: number, blockIndex: number) => {
     if (!parseResult || mode !== 'edit') return;
-    
+
     const updated = { ...parseResult };
     const day = updated.days[dayIndex];
     const blockToDelete = day.blocks[blockIndex];
-    
+
     if (blockToDelete.isMainWod) return;
-    
+
     day.blocks.splice(blockIndex, 1);
-    
+
     let autoGenCounter = 0;
     day.blocks.forEach((block) => {
       if (block.isAutoGenTitle && block.title.match(/^BLOCO \d+$/)) {
@@ -236,16 +293,34 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         block.title = `BLOCO ${autoGenCounter}`;
       }
     });
-    
+
     updateParseResult(updated);
+
+    updateEdited((days) => {
+      const d = days[dayIndex];
+      if (!d?.blocks) return;
+      const b = d.blocks[blockIndex];
+      if (!b) return;
+      if (b.isMainWod) return;
+      d.blocks.splice(blockIndex, 1);
+    });
+
     setDeleteConfirm(null);
   };
 
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
     if (!parseResult || mode !== 'edit') return;
+
     const updated = { ...parseResult };
     updated.days[dayIndex].blocks[blockIndex].lines = newLines;
     updateParseResult(updated);
+
+    updateEdited((days) => {
+      const d = days[dayIndex];
+      const b = d?.blocks?.[blockIndex];
+      if (!b) return;
+      b.content = linesToContent(newLines);
+    });
   };
 
   const scrollToBlock = (dayIndex: number, blockIndex?: number) => {
@@ -315,19 +390,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleSaveAndGoToPrograms = async () => {
-    if (!workoutsToSave || !weekId) return;
-    
+    if (!effectiveDays || !weekId) return;
+
     const title = programName.trim() || 'Treino semanal';
     const weekStart = weekId.startDate || null;
-    
-    console.debug('[TextModelImporter] Salvando e indo para Programações', {
+
+    console.debug('[TextModelImporter] Salvando e indo para Programações (effectiveDays)', {
       title,
       weekStart,
-      daysCount: workoutsToSave.length,
+      daysCount: effectiveDays.length,
     });
-    
+
     if (onSaveAndGoToPrograms) {
-      const success = await onSaveAndGoToPrograms(workoutsToSave, title, weekStart);
+      const success = await onSaveAndGoToPrograms(effectiveDays, title, weekStart);
       if (success) {
         clearDraft();
       }
@@ -775,6 +850,9 @@ Descanso`}
   // ═══════════════════════════════════════════════════════════════════════════
   
   if (mode === 'preview') {
+    const days = effectiveDays || [];
+    const restCount = days.reduce((acc, d, idx) => acc + ((d.isRestDay || restDays[idx]) ? 1 : 0), 0);
+
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -815,13 +893,13 @@ Descanso`}
             </div>
           )}
 
-          {/* Lista de dias - SEM CONTROLES */}
-          {parseResult?.days.map((day, dayIndex) => {
-            const dayName = day.day ? getDayName(day.day) : 'Dia';
-            const isRestDay = restDays[dayIndex] || false;
-            
+          {/* Lista de dias - SOMENTE effectiveDays */}
+          {days.map((dayWorkout, dayIndex) => {
+            const dayName = getDayName(dayWorkout.day);
+            const isRestDay = Boolean(dayWorkout.isRestDay || restDays[dayIndex]);
+
             return (
-              <div key={dayIndex} className="border rounded-lg overflow-hidden">
+              <div key={`${dayWorkout.day}-${dayIndex}`} className="border rounded-lg overflow-hidden">
                 <div className="p-4 bg-secondary/30 flex items-center gap-3">
                   <span className="font-bold text-lg uppercase">{dayName}</span>
                   {isRestDay && (
@@ -831,14 +909,15 @@ Descanso`}
                     </Badge>
                   )}
                 </div>
+
                 {!isRestDay && (
                   <div className="p-4 space-y-3">
-                    {day.blocks.map((block, blockIndex) => (
-                      <div 
-                        key={blockIndex}
+                    {(dayWorkout.blocks || []).map((block, blockIndex) => (
+                      <div
+                        key={block.id || blockIndex}
                         className={`p-3 rounded-lg border ${block.isMainWod ? 'border-primary/50 bg-primary/5' : 'border-border'}`}
                       >
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="font-medium">{block.title}</span>
                           {block.isMainWod && (
                             <Badge variant="default" className="text-xs">
@@ -852,10 +931,11 @@ Descanso`}
                             </Badge>
                           )}
                         </div>
-                        {block.lines && block.lines.length > 0 && (
+
+                        {block.content && (
                           <div className="text-sm space-y-1 text-foreground/80">
-                            {block.lines.map((line) => (
-                              <p key={line.id}>{normalizeRestLineForDisplay(line.text)}</p>
+                            {block.content.split('\n').map((line, idx) => (
+                              <p key={`${block.id || blockIndex}-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
                             ))}
                           </div>
                         )}
@@ -869,7 +949,7 @@ Descanso`}
 
           {/* Resumo */}
           <p className="text-sm text-muted-foreground text-center">
-            {parseResult?.days.length || 0} dia(s) • {Object.values(restDays).filter(Boolean).length} de descanso
+            {days.length} dia(s) • {restCount} de descanso
           </p>
 
           {/* BOTÕES: VOLTAR E SALVAR */}
@@ -878,8 +958,8 @@ Descanso`}
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para edição
             </Button>
-            <Button 
-              onClick={handleSaveAndGoToPrograms} 
+            <Button
+              onClick={handleSaveAndGoToPrograms}
               className="flex-1"
               disabled={isSaving || !canSave}
             >
