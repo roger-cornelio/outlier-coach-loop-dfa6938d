@@ -46,18 +46,13 @@ const ERROR_COPIES: Record<ErrorType, {
   exampleFix: string;
 }> = {
   HYBRID_LINE: {
-    whatHappened: 'Foi detectada uma descrição subjetiva junto com a instrução do treino.',
-    whatToDo: 'Separe a instrução do treino do comentário.',
+    whatHappened: 'A instrução do treino contém termos subjetivos misturados com a execução (ex.: "leve", "confortável").',
+    whatToDo: 'Torne o treino objetivo e deixe a percepção no comentário.',
     exampleFix: `[TREINO]
-Corrida leve até 45 minutos
+45 min corrida PSE 5
 
 [COMENTÁRIO]
-Bem confortável
-
-OU
-
-Corrida leve até 45 minutos
-Zona 2`,
+Bem confortável`,
   },
   NO_STRUCTURE: {
     whatHappened: 'O sistema não conseguiu identificar claramente a estrutura do bloco.',
