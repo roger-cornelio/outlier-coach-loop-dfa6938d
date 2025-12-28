@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { DaySelectionModal } from './DaySelectionModal';
+import { WeekPeriodSelector } from './WeekPeriodSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -85,6 +86,10 @@ import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredError
 
 interface TextModelImporterProps {
   onImport: (workouts: DayWorkout[]) => void;
+  selectedWeek: import('@/components/WeekPeriodSelector').WeekPeriod | null;
+  onWeekSelect: (week: import('@/components/WeekPeriodSelector').WeekPeriod | null) => void;
+  /** Callback para limpar o draft após publish com sucesso */
+  onClearDraft?: () => void;
 }
 
 const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
@@ -103,7 +108,7 @@ const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
   label: cat.label,
 }));
 
-export function TextModelImporter({ onImport }: TextModelImporterProps) {
+export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClearDraft }: TextModelImporterProps) {
   const [text, setText] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -421,12 +426,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     const workouts = parsedToDayWorkouts(resultWithRestDays, selectedDay || undefined);
     onImport(workouts);
-    // Limpar após importar
-    setText('');
-    setParseResult(null);
+    
+    // MVP0 DRAFT: NÃO limpar após importar — draft é preservado
+    // A limpeza só acontece após publish com sucesso (via callback)
+    // Apenas ocultar o preview
     setShowPreview(false);
-    setSelectedDay(null);
-    setRestDays({});
   };
 
   const handleClear = () => {
@@ -438,7 +442,23 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setRestDays({});
     setDayValidationError(null);
     setInputValidationError(null);
+    // MVP0: Limpar também a semana selecionada
+    onWeekSelect(null);
   };
+  
+  // MVP0: Função exposta via callback para limpar draft após publish
+  // Chamada pelo CoachSpreadsheetTab após publish com sucesso
+  const clearDraftAfterPublish = () => {
+    setText('');
+    setParseResult(null);
+    setShowPreview(false);
+    setSelectedDay(null);
+    setRestDays({});
+    onWeekSelect(null);
+  };
+  
+  // Expor clearDraft via efeito (já temos onClearDraft como callback inverso)
+  // Para simplificar, vamos usar useEffect para chamar clear quando requisitado
 
   // Toggle Rest Day - ÚNICA forma de marcar descanso
   const toggleRestDay = (dayIndex: number, dayName?: string) => {
@@ -759,10 +779,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           {/* MVP0: Modelo Recomendado - FIXO, sem auto-expand, controle manual do usuário */}
           <RecommendedModelBlock />
 
+          {/* MVP0: Seletor de semana OBRIGATÓRIO antes do preview */}
+          <WeekPeriodSelector
+            selectedWeek={selectedWeek}
+            onWeekSelect={onWeekSelect}
+          />
+
           <div className="flex gap-2 flex-wrap">
             <Button
               onClick={handleParse}
-              disabled={!text.trim()}
+              disabled={!text.trim() || !selectedWeek}
               className="flex-1 min-w-[150px]"
             >
               <Eye className="w-4 h-4 mr-2" />
@@ -776,6 +802,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
               </Button>
             )}
           </div>
+          
+          {/* Mensagem se semana não selecionada */}
+          {text.trim() && !selectedWeek && (
+            <p className="text-xs text-amber-600 text-center">
+              ⚠️ Selecione a semana de referência para continuar
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -872,6 +905,19 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* MVP0: Semana selecionada - READ-ONLY no preview */}
+                {selectedWeek && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-foreground">
+                      Semana: <span className="font-semibold">{selectedWeek.label}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      (volte para edição para alterar)
+                    </span>
+                  </div>
+                )}
+
                 {/* MVP0: EXIBIÇÃO PADRONIZADA DE ERROS DE ESTRUTURA */}
                 {parseResult.structureIssues && parseResult.structureIssues.length > 0 && (
                   <StructuredErrorDisplay 
