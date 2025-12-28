@@ -1322,14 +1322,19 @@ function isWhitelistLine(line: string): boolean {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// MVP0 PATCH: isRestInstructionLineGlobal - VERSÃO CANÔNICA
+// MVP0 PATCH: isRestInstructionLineGlobal - VERSÃO CANÔNICA FINAL
 // ════════════════════════════════════════════════════════════════════════════
-// REGRA ABSOLUTA: Linhas de descanso intra-bloco NUNCA podem:
+// REGRA ABSOLUTA: Linhas de descanso intra-bloco (IN_BLOCK_REST_INSTRUCTION)
+// NUNCA podem:
 // - Virar heading/título
 // - Fechar bloco
 // - Criar novo bloco  
 // - Alterar day.isRestDay
 // - Mudar classificação do bloco/dia
+// - Impedir headings seguintes
+//
+// INVARIANTE: Se retorna TRUE, a linha é SEMPRE tratada como nota/metadado
+// do bloco atual, nunca como estrutura.
 // ════════════════════════════════════════════════════════════════════════════
 function isRestInstructionLineGlobal(line: string): boolean {
   // NORMALIZAR QUOTES PRIMEIRO (crítico para detecção correta)
@@ -1337,26 +1342,42 @@ function isRestInstructionLineGlobal(line: string): boolean {
   const lower = normalized.toLowerCase();
   
   // ════════════════════════════════════════════════════════════════════════════
-  // REGRA 1: REST_DAY_CANDIDATE = "descanso" SOZINHO (sem tempo/unidade)
+  // REGRA 1: REST_DAY_CANDIDATE = "descanso" SOZINHO (sem tempo/unidade/número)
   // Se for apenas "Descanso" ou "Descanso total", NÃO é instrução intra-bloco
   // ════════════════════════════════════════════════════════════════════════════
   
   // Verificar se é "descanso" puro (sem tempo/número) - isso é REST_DAY_CANDIDATE
-  if (/^descanso(\s+(total|completo|do\s+dia))?\s*$/i.test(lower)) {
+  // Padrões válidos para REST_DAY_CANDIDATE (retorna FALSE aqui):
+  // - "Descanso"
+  // - "Descanso total"
+  // - "Descanso completo"
+  // - "Descanso (com família)"
+  // - "Descanso do dia"
+  if (/^descanso(\s+(total|completo|do\s+dia|absoluto))?\s*(\(.*\))?\s*$/i.test(lower)) {
     // NÃO é instrução intra-bloco, é candidato a descanso de dia
     return false;
   }
   
   // ════════════════════════════════════════════════════════════════════════════
-  // REGRA 2: IN_BLOCK_REST_INSTRUCTION = "descanso" + tempo/unidade
-  // Padrões: Descanso 2', Descanso 90'', Descanso 1:30, Descansar o necessário
+  // REGRA 2: CONTÉM DÍGITO OU UNIDADE DE TEMPO? → É INSTRUÇÃO INTRA-BLOCO
+  // Se tem "descanso" + qualquer número, é SEMPRE instrução de intervalo
   // ════════════════════════════════════════════════════════════════════════════
   
-  // A) "Descanso" + dígito (com ou sem espaço)
+  // Verificação rápida: se a linha contém "descanso" E contém dígito → IN_BLOCK_REST
+  if (/\bdescanso\b/i.test(lower) && /\d/.test(lower)) {
+    console.log('[isRestInstructionLineGlobal] → TRUE (descanso + dígito):', line);
+    return true;
+  }
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // REGRA 3: IN_BLOCK_REST_INSTRUCTION - Padrões específicos
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  // A) "Descanso" + dígito (com ou sem espaço) - já coberto acima
   if (/^descanso\s*\d+/i.test(lower)) return true;
   
   // B) "Descanso X'" ou "Descanso X''" (tempo em minutos/segundos)
-  if (/^descanso\s+\d+\s*['"`]+/i.test(lower)) return true;
+  if (/^descanso\s+\d+\s*['"`'']+/i.test(lower)) return true;
   
   // C) "Descanso X min/seg/s"
   if (/^descanso\s+\d+\s*(min|seg|s|segundos?|minutos?)\b/i.test(lower)) return true;
@@ -1365,7 +1386,7 @@ function isRestInstructionLineGlobal(line: string): boolean {
   if (/^descanso\s+\d+:\d+/i.test(lower)) return true;
   
   // E) "Descanso X'Y''" (ex: "Descanso 1'30''")
-  if (/^descanso\s+\d+['"`]+\d*['"`]*/i.test(lower)) return true;
+  if (/^descanso\s+\d+['"`'']+\d*['"`''"]*/i.test(lower)) return true;
   
   // F) "Descansar" (sempre é instrução, nunca estrutura)
   if (/^descansar\b/i.test(lower)) return true;
@@ -1373,7 +1394,7 @@ function isRestInstructionLineGlobal(line: string): boolean {
   // G) "Descanso:" (seguido de instruções)
   if (/^descanso\s*:/i.test(lower)) return true;
   
-  // H) Frases de descanso intra-bloco
+  // H) Frases de descanso intra-bloco (contextual)
   if (/descanso\s+(entre|between)\s+(rounds?|s[ée]ries?|sets?|exerc[ií]cios?)/i.test(lower)) return true;
   if (/descanso\s+(necess[aá]rio|livre|ativo|passivo|conforme)/i.test(lower)) return true;
   if (/descanso\s+a\s+cada/i.test(lower)) return true;
@@ -1383,9 +1404,15 @@ function isRestInstructionLineGlobal(line: string): boolean {
   if (/^rest\s*\d+/i.test(lower)) return true;
   if (/rest\s+between/i.test(lower)) return true;
   if (/rest\s+as\s+needed/i.test(lower)) return true;
+  if (/^rest\s+\d+\s*['"`'']+/i.test(lower)) return true;
   
   // J) "Intervalo X'" (sinônimo de descanso intra-bloco)
-  if (/^intervalo\s+\d+/i.test(lower)) return true;
+  if (/^intervalo\s*\d+/i.test(lower)) return true;
+  if (/^intervalo\s+\d+\s*['"`'']+/i.test(lower)) return true;
+  
+  // K) Frases de pausa/recuperação
+  if (/^pausa\s*\d+/i.test(lower)) return true;
+  if (/recupera[çc][ãa]o\s+\d+/i.test(lower)) return true;
   
   return false;
 }
@@ -1411,32 +1438,73 @@ function isOptionalMarkerLine(line: string): boolean {
 // ════════════════════════════════════════════════════════════════════════════
 // MVP0 PATCH: isRestDayCandidateLine - Detecta candidatos a dia de descanso
 // ════════════════════════════════════════════════════════════════════════════
-// REGRA: Só é candidato se:
-// 1) Linha é "descanso" puro (sem tempo/unidade)
-// 2) NÃO contém dígitos
-// 3) NÃO é instrução intra-bloco
+// REGRA ABSOLUTA: Só é REST_DAY_CANDIDATE se:
+// 1) Linha começa com "descanso" (case-insensitive)
+// 2) NÃO contém dígitos (nenhum número)
+// 3) NÃO contém unidade de tempo (' '' min seg s)
+// 4) NÃO é instrução intra-bloco (isRestInstructionLineGlobal retorna false)
+//
+// RESULTADO: Quando detectado, APENAS seta day.restSuggestion = true
+// NUNCA seta day.isRestDay = true (toggle é MANUAL)
 // ════════════════════════════════════════════════════════════════════════════
 function isRestDayCandidateLine(line: string): boolean {
   const normalized = normalizeQuotes(line);
-  const lower = normalized.toLowerCase();
+  const lower = normalized.toLowerCase().trim();
   
-  // Se contém dígito → NÃO é candidato a descanso de dia
-  if (/\d/.test(normalized)) return false;
+  // REGRA 1: Se contém dígito → NÃO é candidato a descanso de dia
+  if (/\d/.test(normalized)) {
+    console.log('[isRestDayCandidateLine] → false (contém dígito):', line);
+    return false;
+  }
   
-  // Se contém aspas de tempo → NÃO é candidato
-  if (/['"`]/.test(normalized)) return false;
+  // REGRA 2: Se contém aspas de tempo → NÃO é candidato
+  if (/['"`''"]/.test(normalized)) {
+    console.log('[isRestDayCandidateLine] → false (contém aspas de tempo):', line);
+    return false;
+  }
   
-  // Se contém unidades de tempo → NÃO é candidato
-  if (/\b(min|seg|s|segundos?|minutos?)\b/i.test(lower)) return false;
+  // REGRA 3: Se contém unidades de tempo → NÃO é candidato
+  if (/\b(min|seg|s|segundos?|minutos?|sec|second)\b/i.test(lower)) {
+    console.log('[isRestDayCandidateLine] → false (contém unidade de tempo):', line);
+    return false;
+  }
   
-  // Padrões válidos de dia de descanso
-  if (/^descanso$/i.test(lower)) return true;
-  if (/^descanso\s+(total|completo)$/i.test(lower)) return true;
-  if (/^dia\s+(de\s+)?(descanso|livre|off)$/i.test(lower)) return true;
+  // ════════════════════════════════════════════════════════════════════════════
+  // PADRÕES VÁLIDOS DE DIA DE DESCANSO (sem números, sem tempo)
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  // "Descanso" sozinho ou com qualificadores
+  if (/^descanso$/i.test(lower)) {
+    console.log('[isRestDayCandidateLine] → true (descanso puro)');
+    return true;
+  }
+  if (/^descanso\s+(total|completo|absoluto)$/i.test(lower)) {
+    console.log('[isRestDayCandidateLine] → true (descanso + qualificador)');
+    return true;
+  }
+  
+  // "Descanso" com parênteses/contexto (ex: "Descanso (com família)")
+  if (/^descanso\s*\(.*\)\s*$/i.test(lower)) {
+    console.log('[isRestDayCandidateLine] → true (descanso + contexto)');
+    return true;
+  }
+  
+  // "Dia de descanso/livre/off"
+  if (/^dia\s+(de\s+)?(descanso|livre|off)$/i.test(lower)) {
+    console.log('[isRestDayCandidateLine] → true (dia de descanso)');
+    return true;
+  }
+  
+  // Variantes em inglês
   if (/^rest\s*day$/i.test(lower)) return true;
   if (/^day\s*off$/i.test(lower)) return true;
+  if (/^off\s*day$/i.test(lower)) return true;
+  if (/^rest$/i.test(lower)) return true;
+  
+  // "Folga"
   if (/^folga$/i.test(lower)) return true;
   
+  console.log('[isRestDayCandidateLine] → false (nenhum padrão bateu):', line);
   return false;
 }
 
@@ -2005,7 +2073,10 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ─────────────────────────────────────────────────────────────────────────────
-    // 5. IN_BLOCK_REST_INSTRUCTION: Descanso técnico (NUNCA afeta estrutura)
+    // PRIORIDADE 1: IN_BLOCK_REST_INSTRUCTION — Descanso técnico (NUNCA afeta estrutura)
+    // ─────────────────────────────────────────────────────────────────────────────
+    // REGRA ABSOLUTA: Se a linha contém "Descanso" + tempo/número, é SEMPRE
+    // instrução de intervalo, NUNCA afeta dia/bloco. Verificado PRIMEIRO!
     // ─────────────────────────────────────────────────────────────────────────────
     if (isRestInstructionLineGlobal(line)) {
       console.log('[IN_BLOCK_REST] "' + line + '" → nota/metadado do bloco');
@@ -2029,7 +2100,13 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ─────────────────────────────────────────────────────────────────────────────
-    // 2. REST_DAY_CANDIDATE: "Descanso" puro (só se hasSeenValidHeading === false)
+    // PRIORIDADE 2: REST_DAY_CANDIDATE — "Descanso" puro (só se nenhum bloco ainda)
+    // ─────────────────────────────────────────────────────────────────────────────
+    // REGRA: Só sugere descanso se:
+    // - Linha é "Descanso" puro (sem tempo/número)
+    // - hasSeenValidHeading === false
+    // - Nenhum bloco foi criado ainda
+    // RESULTADO: day.restSuggestion = true (NUNCA day.isRestDay = true)
     // ─────────────────────────────────────────────────────────────────────────────
     if (isRestDayCandidateLine(line) && !hasSeenValidHeading && !currentBlock) {
       console.log('[REST_DAY_CANDIDATE] "' + line + '" → sugestão apenas');
@@ -2054,7 +2131,10 @@ export function parseStructuredText(text: string): ParseResult {
     }
     
     // ─────────────────────────────────────────────────────────────────────────────
-    // 3. OPTIONAL_MARKER: "Opcional:" nunca vira bloco
+    // PRIORIDADE 3: OPTIONAL_MARKER — "Opcional:" nunca vira bloco
+    // ─────────────────────────────────────────────────────────────────────────────
+    // REGRA ABSOLUTA: "Opcional" é apenas marcador, NUNCA cria bloco
+    // As linhas seguintes serão marcadas com flag OPTIONAL
     // ─────────────────────────────────────────────────────────────────────────────
     if (isOptionalMarkerLine(line)) {
       console.log('[OPTIONAL_MARKER] "' + line + '" → currentOptional=true (nunca vira bloco)');
