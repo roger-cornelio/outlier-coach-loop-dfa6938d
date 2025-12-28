@@ -753,8 +753,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             </div>
           )}
 
-          {/* MVP0: Modelo Recomendado - aparece após "Validar e Visualizar" se houver erros */}
-          {parseResult?.structureIssues && parseResult.structureIssues.length > 0 && showPreview && (
+          {/* MVP0: Modelo Recomendado - aparece após "Validar e Visualizar" SOMENTE se houver ERROR */}
+          {hasStructureErrors && showPreview && parseResult?.structureIssues && (
             <RecommendedModelBlock issues={parseResult.structureIssues} />
           )}
 
