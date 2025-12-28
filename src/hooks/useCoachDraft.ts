@@ -160,20 +160,14 @@ export function useCoachDraft() {
   }, [draft, saveDraft]);
 
   // Atualizar parseResult (para toggles de isMainWod, etc)
-  // CRÍTICO: Também atualiza parsedDays para que workoutsToSave reflita as edições!
+  // IMPORTANTE: NÃO reconverter para DayWorkout[] aqui.
+  // Pós-edição, a fonte para preview/salvar deve ser editedDays (quando existir).
   const updateParseResult = useCallback((result: ParseResult) => {
-    // Importar a conversão dinamicamente para evitar dependência circular
-    import('@/utils/structuredTextParser').then(({ parsedToDayWorkouts }) => {
-      const updatedWorkouts = parsedToDayWorkouts(result);
-      console.debug('[useCoachDraft] updateParseResult → isDirty=true, parsedDays ATUALIZADO', {
-        daysCount: updatedWorkouts.length,
-      });
-      saveDraft({
-        ...draft,
-        parseResult: result,
-        parsedDays: updatedWorkouts, // ← CRÍTICO: Atualiza parsedDays com as edições!
-        isDirty: true,
-      });
+    console.debug('[useCoachDraft] updateParseResult → isDirty=true');
+    saveDraft({
+      ...draft,
+      parseResult: result,
+      isDirty: true,
     });
   }, [draft, saveDraft]);
 
@@ -235,10 +229,15 @@ export function useCoachDraft() {
     setDraft(getEmptyDraft());
   }, [coachId]);
 
-  // Dados finais para salvar: editedDays se existir, senão parsedDays
-  const workoutsToSave = useMemo(() => {
+  // effectiveDays = fonte única para preview/salvar após edição:
+  // - Se coach editou: editedDays
+  // - Caso contrário: parsedDays (resultado do parse inicial)
+  const effectiveDays = useMemo(() => {
     return draft.editedDays || draft.parsedDays;
   }, [draft.editedDays, draft.parsedDays]);
+
+  // Mantém alias para compatibilidade (uso legado no componente)
+  const workoutsToSave = effectiveDays;
 
   // Validação: pode ir para preview? (semana obrigatória + parseResult válido)
   const canGoToPreview = useMemo(() => {
@@ -250,19 +249,20 @@ export function useCoachDraft() {
 
   // Validação: pode salvar?
   const canSave = useMemo(() => {
-    return draft.weekId !== null && workoutsToSave !== null && workoutsToSave.length > 0;
-  }, [draft.weekId, workoutsToSave]);
+    return draft.weekId !== null && effectiveDays !== null && effectiveDays.length > 0;
+  }, [draft.weekId, effectiveDays]);
 
   return {
     // Estado
     draft,
     isHydrated,
-    
+
     // Dados derivados
-    workoutsToSave,
+    effectiveDays,
+    workoutsToSave, // alias
     canGoToPreview,
     canSave,
-    
+
     // Setters
     setRawText,
     setWeekId,
@@ -272,12 +272,12 @@ export function useCoachDraft() {
     setRestDays,
     setProgramName,
     setMode,
-    
+
     // Navegação entre telas
     goToPreview,
     goBackToEditing,
     clearDraft,
-    
+
     // Acesso direto aos campos
     rawText: draft.rawText,
     weekId: draft.weekId,
