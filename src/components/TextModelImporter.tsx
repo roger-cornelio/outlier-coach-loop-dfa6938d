@@ -695,7 +695,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             Usar modelo para facilitar sua vida
           </button>
 
-          {/* MVP0: Erro de validação de estrutura (mistura treino + comentário) */}
+          {/* MVP0: Erro de validação de estrutura (mistura treino + comentário narrativo) */}
           {inputValidationError && inputValidationError.length > 0 && (
             <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3">
               <div className="flex items-start gap-2">
@@ -705,7 +705,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                     ⚠️ Treino e comentário precisam estar separados
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Para proteger o ajuste do atleta, o OUTLIER exige que o estímulo executável fique separado do comentário.
+                    Detectamos linhas que misturam estímulo com explicação narrativa (ex: "foco em", "objetivo", "pra recuperar").
                   </p>
                   <div className="space-y-1 mt-2">
                     {inputValidationError.map((error, idx) => (
@@ -714,8 +714,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                       </p>
                     ))}
                   </div>
-                  <div className="mt-3 p-3 rounded bg-muted/50 border border-border">
-                    <p className="text-xs font-medium text-foreground mb-1">✅ Use as tags abaixo:</p>
+                  <div className="mt-3 p-3 rounded bg-muted/50 border border-border space-y-2">
+                    <p className="text-xs font-medium text-foreground">✅ Formato correto:</p>
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
 {`[TREINO]
 Corrida contínua
@@ -723,8 +723,11 @@ Corrida contínua
 Zona 2
 
 [COMENTÁRIO]
-Ritmo leve e confortável.`}
+Ritmo leve e confortável. Foco em recuperação.`}
                     </pre>
+                    <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
+                      💡 <strong>Adjetivos simples são OK:</strong> "500m trote leve", "Bike 30 min solto" passam sem problema.
+                    </p>
                   </div>
                   <Button
                     variant="outline"
