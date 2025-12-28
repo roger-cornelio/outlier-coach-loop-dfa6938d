@@ -2210,6 +2210,11 @@ export function parseStructuredText(text: string): ParseResult {
   
   // MVP0: Flag para rastrear se já vimos um heading válido no dia atual
   let hasSeenValidHeading = false;
+  
+  // MVP0: Flag para rastrear modo de tags [TREINO]/[COMENTÁRIO]
+  // Quando dentro de [COMENTÁRIO], linhas subjetivas são aceitas sem warning
+  let inCommentTagMode = false;
+  let inTrainingTagMode = false;
 
   for (const rawLine of lines) {
     lineNumber++;
@@ -2220,16 +2225,42 @@ export function parseStructuredText(text: string): ParseResult {
     if (!line) continue;
     
     // ════════════════════════════════════════════════════════════════════════════
+    // MVP0: DETECTAR TAGS [TREINO] E [COMENTÁRIO]
+    // ════════════════════════════════════════════════════════════════════════════
+    // Tags mudam o modo de interpretação das linhas seguintes.
+    // [TREINO] = linhas são tratadas como exercícios puros
+    // [COMENTÁRIO] = linhas são tratadas como notas (sem warning de mistura)
+    // ════════════════════════════════════════════════════════════════════════════
+    if (/^\[TREINO\]$/i.test(line.trim())) {
+      console.log('[TAG_MODE] → TREINO');
+      inTrainingTagMode = true;
+      inCommentTagMode = false;
+      continue;
+    }
+    
+    if (/^\[COMENT[AÁ]RIO\]/i.test(line.trim())) {
+      console.log('[TAG_MODE] → COMENTÁRIO');
+      inCommentTagMode = true;
+      inTrainingTagMode = false;
+      continue;
+    }
+    
+    // Reset de modo ao encontrar novo bloco ou dia
+    // (handled below when detecting day/heading)
+    
+    // ════════════════════════════════════════════════════════════════════════════
     // MVP0 PATCH: DETECTAR MISTURA TREINO + COMENTÁRIO (ESTRUTURA INVÁLIDA)
     // ════════════════════════════════════════════════════════════════════════════
     // REGRA ANTI-BURRO: Se a linha tem medida mensurável E texto subjetivo,
     // gerar aviso de estrutura inválida. O sistema NÃO tenta interpretar.
     // O coach DEVE separar em TREINO: + COMENTÁRIO:
+    // EXCEÇÃO: Se estamos dentro de modo [COMENTÁRIO], não gerar warning
     // ════════════════════════════════════════════════════════════════════════════
     const hasMeasure = hasMeasurableStimulus(line);
     const hasSubjective = isSubjectiveLine(line);
     
-    if (hasMeasure && hasSubjective) {
+    // Só gerar warning se NÃO estamos em modo de tags
+    if (hasMeasure && hasSubjective && !inCommentTagMode && !inTrainingTagMode) {
       const warningMsg = `Linha ${lineNumber}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}" - Mistura treino + comentário. Separe em TREINO: e COMENTÁRIO:`;
       console.log('[STRUCTURE_WARNING]', warningMsg);
       result.structureWarnings?.push(warningMsg);
@@ -2783,6 +2814,110 @@ export function getTypeLabel(type: string): string {
 }
 
 // ============================================
+// MVP0: VALIDAÇÃO DE INPUT DO COACH — TRAVA ANTI-BURRO
+// ============================================
+// Valida se o texto do coach está estruturado corretamente.
+// Bloqueia importação se detectar linhas híbridas ou contextos
+// que exigem tags [TREINO]/[COMENTÁRIO] mas não as usam.
+// ============================================
+
+export interface CoachInputValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  requiresTags: boolean; // Indica se o contexto exige tags [TREINO]/[COMENTÁRIO]
+}
+
+/**
+ * Detecta se uma linha contém tags [TREINO] ou [COMENTÁRIO]
+ */
+function hasTrainingTags(line: string): boolean {
+  return /\[TREINO\]|\[COMENTÁRIO\]|\[COMENTARIO\]/i.test(line);
+}
+
+/**
+ * Detecta se o texto completo usa formato de tags
+ */
+function textUsesTagFormat(text: string): boolean {
+  return /\[TREINO\]/i.test(text);
+}
+
+/**
+ * Detecta se o contexto exige tags obrigatórias:
+ * - Corrida/bike/remo por tempo ou distância
+ * - Dias com "Descanso", "Opcional", "Day off", "Rest day"
+ */
+function contextRequiresTags(text: string): boolean {
+  const lower = text.toLowerCase();
+  
+  // Corrida/bike/remo + tempo ou distância
+  const hasEnduranceWithMeasure = 
+    (/\b(?:corrida|bike|remo|row|run|ciclismo|swim|nata[çc][aã]o)\b/i.test(text)) &&
+    (/\d+\s*(?:km|m|min|minutos?|'|'')\b/i.test(text));
+  
+  // Descanso / Opcional / Day off / Rest day
+  const hasRestContext = /\b(?:descanso|opcional|day\s*off|rest\s*day|folga)\b/i.test(lower);
+  
+  return hasEnduranceWithMeasure || hasRestContext;
+}
+
+/**
+ * Valida o input do coach ANTES de fazer o parse.
+ * Bloqueia se detectar problemas estruturais.
+ */
+export function validateCoachInput(text: string): CoachInputValidation {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const lines = text.split('\n');
+  
+  const usesTagFormat = textUsesTagFormat(text);
+  const requiresTags = contextRequiresTags(text);
+  
+  let hybridLineCount = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    // Se já usa tags, não precisa validar híbridos
+    if (hasTrainingTags(line)) continue;
+    
+    // Detectar linha híbrida (mensurável + subjetivo)
+    const hasMeasure = hasMeasurableStimulus(line);
+    const hasSubjective = isSubjectiveLine(line);
+    
+    if (hasMeasure && hasSubjective) {
+      hybridLineCount++;
+      const truncated = line.length > 50 ? line.substring(0, 50) + '...' : line;
+      errors.push(`Linha ${i + 1}: "${truncated}" — Mistura treino + comentário.`);
+    }
+  }
+  
+  // Se contexto exige tags mas não usa formato correto
+  if (requiresTags && !usesTagFormat && errors.length === 0) {
+    // Verificar se há linhas híbridas implícitas
+    const hasImplicitHybrid = lines.some(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      return hasMeasurableStimulus(trimmed) && isSubjectiveLine(trimmed);
+    });
+    
+    if (hasImplicitHybrid) {
+      warnings.push('Este treino contém corrida/bike ou descanso. Considere usar as tags [TREINO] e [COMENTÁRIO] para separar estímulo de explicação.');
+    }
+  }
+  
+  const isValid = errors.length === 0;
+  
+  return {
+    isValid,
+    errors,
+    warnings,
+    requiresTags: requiresTags && !usesTagFormat,
+  };
+}
+
+// ============================================
 // TEMPLATE DE EXEMPLO (para referência interna)
 // ============================================
 
@@ -2810,3 +2945,15 @@ FOR TIME
 21-15-9
 Thrusters 43/30kg
 Pull-ups`;
+
+// ============================================
+// MVP0: MODELO RECOMENDADO COM TAGS
+// ============================================
+
+export const RECOMMENDED_TEMPLATE = `[TREINO]
+Modalidade:
+Tempo / Distância / Reps:
+Intensidade (PSE / Zona):
+
+[COMENTÁRIO] (opcional)
+Intenção do treino / observações / sensações:`;
