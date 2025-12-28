@@ -429,6 +429,100 @@ function isTrainingStimulus(line: string): boolean {
 }
 
 // ============================================
+// MVP0: DETECÇÃO DE INTENSIDADE NO TREINO
+// ============================================
+// REGRA CRÍTICA: Intensidade só é válida se estiver na linha de TREINO.
+// Intensidade em COMENTÁRIO é ignorada pelo motor.
+// ============================================
+
+/**
+ * Detecta se a linha contém parâmetro de intensidade objetivo
+ * (PSE/RPE, Zona, Pace, FC alvo)
+ * 
+ * IMPORTANTE: Esta função só deve ser usada em linhas de TREINO,
+ * nunca em linhas de COMENTÁRIO!
+ */
+export function hasIntensityParameter(line: string): boolean {
+  if (!line) return false;
+  const lower = line.toLowerCase();
+  
+  // PSE/RPE: "PSE 5", "RPE 7", "pse:6", "rpe = 8"
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(lower)) return true;
+  
+  // Zona: "Zona 2", "Z2", "zone 3", "z4"
+  if (/\b(?:zona|zone|z)\s*\d/i.test(lower)) return true;
+  
+  // FC alvo: "FC 150", "HR 140", "fc:160", "hr = 135"
+  if (/\b(?:fc|hr)\s*[:=]?\s*\d{2,3}/i.test(lower)) return true;
+  
+  // Pace: "5:00/km", "pace 5'30", "6min/km", "4:45 pace"
+  if (/\d+:\d{2}\s*\/?\s*km/i.test(lower)) return true;
+  if (/\bpace\s*\d/i.test(lower)) return true;
+  if (/\d+\s*['′]?\d*\s*\/\s*km/i.test(lower)) return true;
+  
+  // % do max (ex: "70% FCmax", "80% do máximo")
+  if (/\d+\s*%\s*(?:fc|hr|max|m[aá]x)/i.test(lower)) return true;
+  
+  return false;
+}
+
+/**
+ * Extrai a duração em minutos de uma linha de treino
+ * Retorna null se não conseguir extrair
+ */
+export function extractDurationMinutes(line: string): number | null {
+  if (!line) return null;
+  
+  // Padrão: "60 min", "90 minutos", "45'"
+  const minMatch = line.match(/(\d+)\s*(?:min|minutos?|minutes?|'(?!'))\b/i);
+  if (minMatch) {
+    return parseInt(minMatch[1], 10);
+  }
+  
+  // Padrão: "1h", "1h30", "1:30h", "2 horas"
+  const hourMatch = line.match(/(\d+)\s*(?:h|hora|horas|hours?)\s*(\d{1,2})?/i);
+  if (hourMatch) {
+    const hours = parseInt(hourMatch[1], 10);
+    const mins = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
+    return hours * 60 + mins;
+  }
+  
+  // Padrão: "1:30" (hora:minuto) - apenas se >= 1 hora
+  const timeMatch = line.match(/\b(\d+):(\d{2})\b/);
+  if (timeMatch) {
+    const first = parseInt(timeMatch[1], 10);
+    const second = parseInt(timeMatch[2], 10);
+    // Só interpreta como hora:minuto se o primeiro for <= 3 (1-3 horas)
+    if (first >= 1 && first <= 3 && second <= 59) {
+      return first * 60 + second;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Detecta se o bloco é de cardio/corrida (modalidade que requer intensidade)
+ */
+export function isCardioBlock(blockType: string, blockTitle: string, blockContent: string): boolean {
+  // Tipo explícito de corrida
+  if (blockType === 'corrida') return true;
+  
+  const combined = `${blockTitle} ${blockContent}`.toLowerCase();
+  
+  // Palavras-chave de cardio
+  const cardioKeywords = [
+    'corrida', 'run', 'running', 'trote', 'caminhada', 'walk',
+    'bike', 'airbike', 'assault', 'ciclismo', 'cycling', 'bicicleta',
+    'remo', 'row', 'rowing', 'ski', 'erg',
+    'swim', 'swimming', 'natação', 'nado',
+    'cardio', 'aeróbico', 'aerobico',
+  ];
+  
+  return cardioKeywords.some(kw => combined.includes(kw));
+}
+
+// ============================================
 // HEURÍSTICA: isPrescriptionLine — PRESCRIÇÃO MENSURÁVEL
 // ============================================
 // Para dias de descanso: detecta se a linha é prescrição de treino
@@ -2981,6 +3075,84 @@ export function validateCoachInput(text: string): CoachInputValidation {
     }
   }
   
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: VALIDAÇÃO DE INTENSIDADE EM CARDIO LONGO (>= 60 min)
+  // ════════════════════════════════════════════════════════════════════════════
+  // REGRA: Se modalidade é cardio/corrida e duração >= 60 min,
+  // intensidade DEVE estar no TREINO (não em comentário/notas).
+  // Se não tiver, gera WARNING (não bloqueia publicação).
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  let inTrainingSection = !usesTagFormat; // Se não usa tags, assume tudo é treino
+  let currentBlockTitle = '';
+  let currentBlockContent: string[] = [];
+  let currentBlockStartLine = 0;
+  let lastDayIndex = -1;
+  
+  // Detectar blocos de cardio sem intensidade
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    // Detectar mudança de dia
+    for (let d = 0; d < dayPatterns.length; d++) {
+      if (dayPatterns[d].test(line)) {
+        lastDayIndex = d;
+        break;
+      }
+    }
+    
+    // Detectar seção de treino/comentário
+    if (/^\[TREINO\]/i.test(line)) {
+      inTrainingSection = true;
+      continue;
+    }
+    if (/^\[COMENT[ÁA]RIO\]/i.test(line)) {
+      inTrainingSection = false;
+      continue;
+    }
+    
+    // Detectar início de bloco (linha maiúscula que parece título)
+    const isBlockTitle = line === line.toUpperCase() && 
+                         line.length > 2 && 
+                         /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/.test(line) &&
+                         !dayPatterns.some(p => p.test(line));
+    
+    if (isBlockTitle) {
+      // Analisar bloco anterior antes de resetar
+      if (currentBlockTitle && currentBlockContent.length > 0 && inTrainingSection) {
+        validateCardioBlockIntensity(
+          currentBlockTitle, 
+          currentBlockContent, 
+          currentBlockStartLine,
+          lastDayIndex,
+          warnings,
+          issues
+        );
+      }
+      
+      // Iniciar novo bloco
+      currentBlockTitle = line;
+      currentBlockContent = [];
+      currentBlockStartLine = i + 1;
+    } else if (inTrainingSection && currentBlockTitle) {
+      // Acumular conteúdo do bloco atual (apenas linhas de treino)
+      currentBlockContent.push(line);
+    }
+  }
+  
+  // Validar último bloco
+  if (currentBlockTitle && currentBlockContent.length > 0 && inTrainingSection) {
+    validateCardioBlockIntensity(
+      currentBlockTitle, 
+      currentBlockContent, 
+      currentBlockStartLine,
+      lastDayIndex,
+      warnings,
+      issues
+    );
+  }
+  
   // Contexto de descanso SEM estrutura clara
   const hasRestContext = /\b(?:descanso|opcional|day\s*off|rest\s*day|folga)\b/i.test(text.toLowerCase());
   const hasExecutableStimulus = lines.some(line => hasMeasurableStimulus(line.trim()));
@@ -3007,6 +3179,72 @@ export function validateCoachInput(text: string): CoachInputValidation {
     requiresTags: requiresTags && !usesTagFormat,
     issues,
   };
+}
+
+/**
+ * MVP0: Valida se um bloco de cardio longo tem intensidade no TREINO
+ * Gera WARNING se >= 60 min sem intensidade objetiva
+ */
+function validateCardioBlockIntensity(
+  blockTitle: string,
+  blockContent: string[],
+  blockStartLine: number,
+  dayIndex: number,
+  warnings: string[],
+  issues: StructureIssue[]
+): void {
+  const fullContent = blockContent.join(' ');
+  const fullText = `${blockTitle} ${fullContent}`;
+  
+  // Verificar se é bloco de cardio
+  if (!isCardioBlock('', blockTitle, fullContent)) {
+    return;
+  }
+  
+  // Calcular duração total do bloco
+  let totalMinutes = 0;
+  for (const line of blockContent) {
+    const mins = extractDurationMinutes(line);
+    if (mins !== null) {
+      totalMinutes += mins;
+    }
+  }
+  
+  // Se duração < 60 min, não precisa de intensidade obrigatória
+  if (totalMinutes < 60) {
+    return;
+  }
+  
+  // Verificar se tem intensidade nas linhas de TREINO
+  let hasIntensity = false;
+  for (const line of blockContent) {
+    if (hasIntensityParameter(line)) {
+      hasIntensity = true;
+      break;
+    }
+  }
+  
+  // Verificar também no título
+  if (hasIntensityParameter(blockTitle)) {
+    hasIntensity = true;
+  }
+  
+  // Se não tem intensidade, gerar WARNING
+  if (!hasIntensity) {
+    const dayNames = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO', 'DOMINGO'];
+    const dayName = dayIndex >= 0 ? dayNames[dayIndex] : undefined;
+    
+    const warningMsg = `Cardio longo (${totalMinutes} min) sem intensidade no TREINO${dayName ? ` — ${dayName}` : ''}: "${blockTitle}"`;
+    warnings.push(warningMsg);
+    
+    issues.push({
+      dayIndex: dayIndex >= 0 ? dayIndex : undefined,
+      blockTitle: blockTitle,
+      lineNumber: blockStartLine,
+      message: '⚠️ Intensidade não informada no TREINO',
+      severity: 'WARNING',
+    });
+  }
 }
 
 // ============================================
