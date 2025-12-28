@@ -363,19 +363,14 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
       {/* ABA TEXTO MODELO */}
       <TabsContent value="import" className="space-y-6">
         <TextModelImporter
-          onImport={(workouts) => {
-            setParsedWorkouts(workouts);
-            setExpandedDays(new Set(workouts.map(w => w.day)));
-            setSuccess(`${workouts.length} dia(s) importados. Revise abaixo e salve.`);
-          }}
-          selectedWeek={selectedWeek}
-          onWeekSelect={setSelectedWeek}
-          onClearDraft={() => {
-            // MVP0: Limpar draft após publish com sucesso
+          linkedAthletes={linkedAthletes}
+          onPublishSuccess={() => {
+            // MVP0: Limpar estado após publish com sucesso
             setParsedWorkouts(null);
             setSpreadsheetText('');
             setProgramName('');
             setSelectedWeek(null);
+            setSuccess('Treino publicado com sucesso!');
           }}
         />
 
