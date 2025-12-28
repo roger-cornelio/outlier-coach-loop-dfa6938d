@@ -160,12 +160,20 @@ export function useCoachDraft() {
   }, [draft, saveDraft]);
 
   // Atualizar parseResult (para toggles de isMainWod, etc)
+  // CRÍTICO: Também atualiza parsedDays para que workoutsToSave reflita as edições!
   const updateParseResult = useCallback((result: ParseResult) => {
-    console.debug('[useCoachDraft] updateParseResult → isDirty=true');
-    saveDraft({
-      ...draft,
-      parseResult: result,
-      isDirty: true,
+    // Importar a conversão dinamicamente para evitar dependência circular
+    import('@/utils/structuredTextParser').then(({ parsedToDayWorkouts }) => {
+      const updatedWorkouts = parsedToDayWorkouts(result);
+      console.debug('[useCoachDraft] updateParseResult → isDirty=true, parsedDays ATUALIZADO', {
+        daysCount: updatedWorkouts.length,
+      });
+      saveDraft({
+        ...draft,
+        parseResult: result,
+        parsedDays: updatedWorkouts, // ← CRÍTICO: Atualiza parsedDays com as edições!
+        isDirty: true,
+      });
     });
   }, [draft, saveDraft]);
 
