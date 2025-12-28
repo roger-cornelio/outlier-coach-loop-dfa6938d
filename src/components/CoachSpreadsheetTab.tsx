@@ -363,14 +363,28 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
       {/* ABA TEXTO MODELO */}
       <TabsContent value="import" className="space-y-6">
         <TextModelImporter
-          linkedAthletes={linkedAthletes}
-          onPublishSuccess={() => {
-            // MVP0: Limpar estado após publish com sucesso
-            setParsedWorkouts(null);
-            setSpreadsheetText('');
-            setProgramName('');
-            setSelectedWeek(null);
-            setSuccess('Treino publicado com sucesso!');
+          isSaving={isSavingToDb}
+          onSaveAndGoToPrograms={async (workouts, title, weekStart) => {
+            setIsSavingToDb(true);
+            try {
+              const workoutId = await saveToDb(title, workouts, 'draft', 0, weekStart);
+              if (workoutId) {
+                setSuccess('Treino salvo como rascunho! Veja na aba Programações.');
+                // Limpar estados locais
+                setParsedWorkouts(null);
+                setSpreadsheetText('');
+                setProgramName('');
+                setSelectedWeek(null);
+                return true;
+              }
+              return false;
+            } catch (err) {
+              console.error('[CoachSpreadsheetTab] Error saving:', err);
+              setError('Erro ao salvar treino');
+              return false;
+            } finally {
+              setIsSavingToDb(false);
+            }
           }}
         />
 

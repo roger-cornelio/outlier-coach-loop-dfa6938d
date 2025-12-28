@@ -2,36 +2,35 @@
  * TextModelImporter - Importador de treino via texto livre
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * FLUXO DE 3 TELAS MVP0 — EDIÇÃO → REVISÃO → PUBLICAÇÃO
+ * FLUXO DE 2 TELAS MVP0 — EDIÇÃO → PREVIEW → PROGRAMAÇÕES
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * TELA 1 - EDIÇÃO (mode='edit'):
  *   - Área de texto para colar treino
  *   - Seleção de semana OBRIGATÓRIA
  *   - Edição de blocos (categoria, título, WOD principal)
- *   - Botão único: "Salvar e ir para revisão"
+ *   - Botão único: "Salvar e ir para preview"
  * 
- * TELA 2 - REVISÃO (mode='review'):
+ * TELA 2 - PREVIEW (mode='preview'):
  *   - 100% READ-ONLY
  *   - Visualização exata do que atleta verá
- *   - Botões: "Voltar para edição" e "Avançar"
+ *   - Botões: "Voltar para edição" e "Salvar e ir para Programações"
  * 
- * TELA 3 - PUBLICAÇÃO (mode='publish'):
- *   - READ-ONLY + botão "Publicar para atletas"
- *   - Após sucesso: limpa draft e volta para Tela 1
+ * TELA 3 - PROGRAMAÇÕES:
+ *   - Aba separada (CoachProgramsTab)
+ *   - Publicar/Excluir/Arquivar workouts salvos
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
-  Puzzle, Copy, ArrowLeft, ArrowRight, Send
+  Puzzle, Copy, ArrowLeft, ArrowRight, Save
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
-import { PublishToAthletesModal } from './PublishToAthletesModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,29 +57,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   parseStructuredText, 
   parsedToDayWorkouts,
   getDayName,
-  getFormatLabel,
   isInvalidBlockTitle,
-  getBlockTitleError,
   normalizeText,
   validateDayAnchors,
   validateCoachInput,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import { CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
-import { getBlockHeader, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
+import { normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
 
 interface TextModelImporterProps {
-  linkedAthletes: { id: string; user_id: string; name: string | null; email: string }[];
-  onPublishSuccess?: () => void;
+  onSaveAndGoToPrograms?: (workouts: DayWorkout[], title: string, weekStart: string | null) => Promise<boolean>;
+  isSaving?: boolean;
 }
 
 const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
@@ -88,12 +83,11 @@ const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
   label: cat.label,
 }));
 
-export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextModelImporterProps) {
+export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: TextModelImporterProps) {
   // ═══════════════════════════════════════════════════════════════════════════
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
   const {
-    draft,
     isHydrated,
     mode,
     rawText,
@@ -101,19 +95,17 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
     parseResult,
     restDays,
     programName,
-    workoutsToPublish,
-    canGoToReview,
-    canPublish,
+    workoutsToSave,
+    canGoToPreview,
+    canSave,
     setRawText,
     setWeekId,
     setParsedResult,
     updateParseResult,
     setRestDays,
     setProgramName,
-    goToReview,
-    goToPublish,
+    goToPreview,
     goBackToEditing,
-    goBackToReview,
     clearDraft,
   } = useCoachDraft();
 
@@ -124,8 +116,6 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
   const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
-  const [showPublishModal, setShowPublishModal] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PARSING E VALIDAÇÃO
@@ -295,13 +285,7 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
   const structureErrorCount = parseResult?.structureIssues?.filter(i => i.severity === 'ERROR').length ?? 0;
   const hasStructureErrors = structureErrorCount > 0;
 
-  const allTrainingDaysHaveWod = parseResult?.days.every((day, idx) => {
-    if (restDays[idx]) return true;
-    if (day.blocks.every(b => b.optional)) return true;
-    return day.blocks.some(b => b.isMainWod);
-  }) ?? false;
-
-  const canSaveAndGoToReview = parseResult?.success && 
+  const canSaveAndGoToPreview = parseResult?.success && 
     !hasInvalidTitles &&
     !hasMissingCategory &&
     !hasStructureErrors &&
@@ -311,15 +295,10 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
   // NAVEGAÇÃO ENTRE TELAS
   // ═══════════════════════════════════════════════════════════════════════════
   
-  const handleGoToReview = () => {
-    if (!canSaveAndGoToReview) return;
-    console.debug('[TextModelImporter] Navegando para REVISÃO');
-    goToReview();
-  };
-
-  const handleGoToPublish = () => {
-    console.debug('[TextModelImporter] Navegando para PUBLICAÇÃO');
-    goToPublish();
+  const handleGoToPreview = () => {
+    if (!canSaveAndGoToPreview) return;
+    console.debug('[TextModelImporter] Navegando para PREVIEW');
+    goToPreview();
   };
 
   const handleBackToEdit = () => {
@@ -327,24 +306,32 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
     goBackToEditing();
   };
 
-  const handleBackToReview = () => {
-    console.debug('[TextModelImporter] Voltando para REVISÃO');
-    goBackToReview();
-  };
-
   const handleClear = () => {
     clearDraft();
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PUBLICAÇÃO
+  // SALVAR E IR PARA PROGRAMAÇÕES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const handlePublishComplete = () => {
-    console.debug('[TextModelImporter] Publicação concluída com sucesso');
-    setShowPublishModal(false);
-    clearDraft();
-    onPublishSuccess?.();
+  const handleSaveAndGoToPrograms = async () => {
+    if (!workoutsToSave || !weekId) return;
+    
+    const title = programName.trim() || 'Treino semanal';
+    const weekStart = weekId.startDate || null;
+    
+    console.debug('[TextModelImporter] Salvando e indo para Programações', {
+      title,
+      weekStart,
+      daysCount: workoutsToSave.length,
+    });
+    
+    if (onSaveAndGoToPrograms) {
+      const success = await onSaveAndGoToPrograms(workoutsToSave, title, weekStart);
+      if (success) {
+        clearDraft();
+      }
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -658,7 +645,7 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
               </TooltipProvider>
 
               {/* BANNER DE VALIDAÇÃO */}
-              {!canSaveAndGoToReview && (
+              {!canSaveAndGoToPreview && (
                 <div className="p-4 bg-amber-500/95 border-2 border-amber-600 rounded-lg">
                   <h3 className="text-base font-bold text-amber-950 flex items-center gap-2 mb-2">
                     ⚠️ Corrija antes de continuar
@@ -686,15 +673,15 @@ export function TextModelImporter({ linkedAthletes, onPublishSuccess }: TextMode
                 </div>
               )}
 
-              {/* BOTÃO ÚNICO: SALVAR E IR PARA REVISÃO */}
+              {/* BOTÃO ÚNICO: SALVAR E IR PARA PREVIEW */}
               <Button 
-                onClick={handleGoToReview} 
+                onClick={handleGoToPreview} 
                 className="w-full"
                 size="lg"
-                disabled={!canSaveAndGoToReview}
+                disabled={!canSaveAndGoToPreview}
               >
                 <ArrowRight className="w-4 h-4 mr-2" />
-                Salvar e ir para revisão
+                Salvar e ir para preview
               </Button>
             </CardContent>
           </Card>
@@ -784,10 +771,10 @@ Descanso`}
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TELA 2 - REVISÃO (100% READ-ONLY)
+  // TELA 2 - PREVIEW (100% READ-ONLY)
   // ═══════════════════════════════════════════════════════════════════════════
   
-  if (mode === 'review') {
+  if (mode === 'preview') {
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -798,7 +785,7 @@ Descanso`}
               </Button>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Eye className="w-5 h-5 text-primary" />
-                Revisão do Treino
+                Preview do Treino
               </CardTitle>
             </div>
             <Badge variant="secondary" className="text-xs">
@@ -885,102 +872,26 @@ Descanso`}
             {parseResult?.days.length || 0} dia(s) • {Object.values(restDays).filter(Boolean).length} de descanso
           </p>
 
-          {/* BOTÕES: VOLTAR E AVANÇAR */}
+          {/* BOTÕES: VOLTAR E SALVAR */}
           <div className="flex gap-3">
             <Button variant="outline" onClick={handleBackToEdit} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para edição
             </Button>
-            <Button onClick={handleGoToPublish} className="flex-1">
-              Avançar
-              <ArrowRight className="w-4 h-4 ml-2" />
+            <Button 
+              onClick={handleSaveAndGoToPrograms} 
+              className="flex-1"
+              disabled={isSaving || !canSave}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Salvar e ir para Programações
             </Button>
           </div>
         </CardContent>
-      </Card>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // TELA 3 - PUBLICAÇÃO (READ-ONLY + AÇÃO FINAL)
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  if (mode === 'publish') {
-    return (
-      <Card className="border-green-500/30">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={handleBackToReview} className="h-8 w-8 p-0">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Send className="w-5 h-5 text-green-500" />
-                Pronto para Publicar
-              </CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Resumo final */}
-          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 space-y-2">
-            <p className="text-sm font-medium text-green-700">
-              ✓ Treino validado e pronto
-            </p>
-            {weekId && (
-              <p className="text-sm text-foreground">
-                Semana: <span className="font-semibold">{weekId.label}</span>
-              </p>
-            )}
-            {programName && (
-              <p className="text-sm text-foreground">
-                Programação: <span className="font-semibold">{programName}</span>
-              </p>
-            )}
-            <p className="text-sm text-foreground">
-              {parseResult?.days.length || 0} dia(s) de treino
-            </p>
-            <p className="text-sm text-foreground">
-              {linkedAthletes.length} atleta(s) vinculado(s)
-            </p>
-          </div>
-
-          {/* Aviso se não tem atletas */}
-          {linkedAthletes.length === 0 && (
-            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-              <p className="text-sm text-amber-700">
-                ⚠️ Você não tem atletas vinculados. Vincule atletas primeiro na aba Atletas.
-              </p>
-            </div>
-          )}
-
-          {/* BOTÃO ÚNICO: PUBLICAR */}
-          <Button 
-            onClick={() => setShowPublishModal(true)}
-            className="w-full bg-green-600 hover:bg-green-700"
-            size="lg"
-            disabled={linkedAthletes.length === 0 || !weekId}
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Publicar para atletas
-          </Button>
-
-          <Button variant="outline" onClick={handleBackToReview} className="w-full">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar para revisão
-          </Button>
-        </CardContent>
-
-        {/* Modal de publicação */}
-        <PublishToAthletesModal
-          open={showPublishModal}
-          onOpenChange={setShowPublishModal}
-          workouts={workoutsToPublish || []}
-          weekStart={weekId?.startDate || null}
-          title={programName || 'Treino semanal'}
-          linkedAthletes={linkedAthletes}
-          onSuccess={handlePublishComplete}
-        />
       </Card>
     );
   }
