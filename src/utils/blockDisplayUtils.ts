@@ -148,13 +148,14 @@ export function hasCategory(block: BlockLike): boolean {
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * MVP0 PATCH: normalizeRestLineForDisplay
+ * MVP0 PATCH FINAL: normalizeRestLineForDisplay
  * ═══════════════════════════════════════════════════════════════════════════
  * 
  * Converte linhas de "Descanso X'" para "Intervalo X'" na exibição
  * para evitar confusão com "Descanso do dia".
  * 
- * REGRA: "Descanso" dentro de bloco = Intervalo técnico (não descanso do dia)
+ * REGRA ABSOLUTA: "Descanso" dentro de bloco = Intervalo técnico (não descanso do dia)
+ * BADGE VISUAL: Sempre "Intervalo", NUNCA "Descanso"
  * 
  * @param text - Texto original da linha
  * @returns Texto normalizado para exibição
@@ -165,8 +166,11 @@ export function normalizeRestLineForDisplay(text: string): string {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
   
-  // Padrões de descanso intra-bloco que devem virar "Intervalo"
-  // A) "Descanso X'" -> "Intervalo X'"
+  // ════════════════════════════════════════════════════════════════════════════
+  // REGRA: Se a linha contém "Descanso" + tempo/número, converter para "Intervalo"
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  // A) "Descanso X'" / "Descanso X min" -> "Intervalo X'" / "Intervalo X min"
   if (/^descanso\s+\d+/i.test(lower)) {
     return trimmed.replace(/^descanso/i, 'Intervalo');
   }
@@ -196,6 +200,48 @@ export function normalizeRestLineForDisplay(text: string): string {
     return trimmed.replace(/^descansar/i, 'Intervalo');
   }
   
+  // G) "Descanso a cada X" -> "Intervalo a cada X"
+  if (/^descanso\s+a\s+cada/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // H) "Rest X'" / "Rest X min" -> "Intervalo X'" / "Intervalo X min"
+  if (/^rest\s+\d+/i.test(lower)) {
+    return trimmed.replace(/^rest/i, 'Intervalo');
+  }
+  
+  // I) "Rest between" -> "Intervalo between"
+  if (/^rest\s+(between|as\s+needed)/i.test(lower)) {
+    return trimmed.replace(/^rest/i, 'Intervalo');
+  }
+  
   // Não é padrão de descanso intra-bloco, retornar original
   return text;
+}
+
+/**
+ * Verifica se uma linha é instrução de descanso intra-bloco
+ * Usado para aplicar badge "INTERVALO" em vez de "DESCANSO"
+ */
+export function isInBlockRestInstruction(text: string): boolean {
+  if (!text) return false;
+  
+  const lower = text.trim().toLowerCase();
+  
+  // Se contém "descanso" + dígito → é instrução intra-bloco
+  if (/\bdescanso\b/i.test(lower) && /\d/.test(lower)) return true;
+  
+  // "Descansar" sempre é instrução
+  if (/^descansar\b/i.test(lower)) return true;
+  
+  // "Descanso entre/de/a cada" são instruções
+  if (/^descanso\s+(entre|between|de|a\s+cada|necess[aá]rio)/i.test(lower)) return true;
+  
+  // "Rest X'" é instrução
+  if (/^rest\s+\d+/i.test(lower)) return true;
+  
+  // "Intervalo X'" já foi normalizado, também é instrução
+  if (/^intervalo\s+\d+/i.test(lower)) return true;
+  
+  return false;
 }
