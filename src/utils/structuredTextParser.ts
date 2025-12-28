@@ -128,6 +128,7 @@ export interface ParseResult {
   alerts: string[]; // Alertas globais
   needsDaySelection?: boolean; // Indica se precisa selecionar dia manualmente
   hasDayAnchors?: boolean; // MVP0: Indica se o texto tem âncoras de dia (SEGUNDA, TERÇA, etc.)
+  structureWarnings?: string[]; // MVP0: Avisos de estrutura inválida (mistura TREINO + COMENTÁRIO)
 }
 
 // ============================================
@@ -226,12 +227,166 @@ const DAY_MAP: Record<string, DayOfWeek> = {
 };
 
 // ============================================
+// MVP0 PATCH: ADJETIVOS SUBJETIVOS — LISTA EXAUSTIVA
+// ============================================
+// Linhas que contêm esses adjetivos/frases NÃO são EXERCISE
+// Devem ir para block.notes ou block.coachNotes
+// NUNCA influenciam carga, status, ajuste ou classificação do motor
+// ============================================
+
+const SUBJECTIVE_ADJECTIVES = [
+  // Intensidade subjetiva
+  /\bleve\b/i,
+  /\bleves\b/i,
+  /\bmoderada?\b/i,
+  /\bmoderadas?\b/i,
+  /\bpesada?\b/i,
+  /\bpesadas?\b/i,
+  /\bintensa?\b/i,
+  /\bintensas?\b/i,
+  /\btranquil[oa]?\b/i,
+  /\btranquilas?\b/i,
+  /\bsuave\b/i,
+  /\bsuaves\b/i,
+  /\bconfort[aá]vel\b/i,
+  /\bconfort[aá]veis\b/i,
+  /\bfácil\b/i,
+  /\bfáceis\b/i,
+  /\bdif[íi]cil\b/i,
+  /\bdif[íi]ceis\b/i,
+  /\bfirme\b/i,
+  /\bforte\b/i,
+  /\bfortes\b/i,
+  
+  // Intenção/recomendação
+  /\bsem\s+for[çc]ar\b/i,
+  /\bsem\s+pressa\b/i,
+  /\bno\s+ritmo\b/i,
+  /\bao\s+seu\s+ritmo\b/i,
+  /\bconvers[aá]vel\b/i,
+  /\bconfortável\s+de\s+falar\b/i,
+  /\bpara\s+soltar\b/i,
+  /\bapenas\s+para\b/i,
+  /\bsó\s+para\b/i,
+  /\bbem\s+leve\b/i,
+  /\bbem\s+tranquil[ao]\b/i,
+  /\bbem\s+confort[aá]vel\b/i,
+  /\bbem\s+suave\b/i,
+  
+  // Expressões narrativas
+  /\bprioriz(?:ar|ando)\b/i,
+  /\bmantenha\b/i,
+  /\bmanter\b/i,
+  /\bprocure\b/i,
+  /\btente\b/i,
+  /\bevite\b/i,
+  /\bfoco\s+em\b/i,
+  /\bobjetivo\s*[éeː:]\b/i,
+  /\ba\s+ideia\s+é\b/i,
+  /\bquer\s+dizer\b/i,
+  
+  // Qualificadores subjetivos em inglês
+  /\beasy\b/i,
+  /\blight\b/i,
+  /\bmoderate\b/i,
+  /\bheavy\b/i,
+  /\bhard\b/i,
+  /\bsteady\b/i,
+  /\bcomfortable\b/i,
+  /\brelaxed\b/i,
+];
+
+// ============================================
+// MVP0: isSubjectiveLine — LINHA CONTÉM TEXTO SUBJETIVO
+// ============================================
+// REGRA: Se a linha contém adjetivo/intenção/explicação,
+// NÃO pode ser classificada como EXERCISE puro.
+// Deve ser separada em TREINO + COMENTÁRIO ou ir para notas.
+// ============================================
+function isSubjectiveLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  
+  // Verificar se contém algum adjetivo subjetivo
+  for (const pattern of SUBJECTIVE_ADJECTIVES) {
+    if (pattern.test(lower)) {
+      console.log('[isSubjectiveLine] → TRUE (subjetivo detectado):', line);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// ============================================
+// MVP0: hasMeasurableStimulus — LINHA TEM ESTÍMULO MENSURÁVEL
+// ============================================
+// REGRA: Só retorna TRUE se a linha contém:
+// - Distância (km, m)
+// - Tempo (min, ', '')
+// - Reps/Rounds/Sets
+// SEM texto subjetivo misturado
+// ============================================
+function hasMeasurableStimulus(line: string): boolean {
+  // Tempo: min, ', ''
+  if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) return true;
+  
+  // Distância: km, m
+  if (/\d+\s*(?:km|m)\b/i.test(line)) return true;
+  
+  // Reps/Rounds/Sets
+  if (/\d+\s*(?:reps?|rounds?|rodadas?|sets?|séries?)\b/i.test(line)) return true;
+  
+  // Formatos conhecidos
+  if (/\b(?:emom|amrap|for\s*time|tabata|rft)\b/i.test(line)) return true;
+  
+  // Padrão sets x reps
+  if (/\d+\s*x\s*\d+/i.test(line)) return true;
+  
+  return false;
+}
+
+// ============================================
+// MVP0: isPureExerciseLine — LINHA É EXERCÍCIO PURO (SEM SUBJETIVO)
+// ============================================
+// REGRA ANTI-BURRO: Linha só é exercício puro se:
+// 1) Tem estímulo mensurável
+// 2) NÃO contém adjetivo subjetivo
+// Se tiver os dois misturados, exige separação!
+// ============================================
+function isPureExerciseLine(line: string): boolean {
+  const hasMeasurable = hasMeasurableStimulus(line);
+  const hasSubjective = isSubjectiveLine(line);
+  
+  // Se tem medida MAS também tem subjetivo → NÃO é exercício puro
+  // Isso vai forçar a separação TREINO + COMENTÁRIO
+  if (hasMeasurable && hasSubjective) {
+    console.log('[isPureExerciseLine] → FALSE (mistura medida + subjetivo):', line);
+    return false;
+  }
+  
+  // Se tem medida SEM subjetivo → é exercício puro
+  if (hasMeasurable && !hasSubjective) {
+    return true;
+  }
+  
+  return false;
+}
+
+// ============================================
 // REGRA MESTRA: isTrainingStimulus — ESTÍMULO = TREINO
 // ============================================
 // Se existe estímulo mensurável, é TREINO. PONTO FINAL.
-// Retorna true se a linha contiver padrão de estímulo físico
+// MVP0 PATCH: Agora também verifica se NÃO é linha subjetiva!
+// Retorna true se a linha contiver padrão de estímulo físico PURO
 
 function isTrainingStimulus(line: string): boolean {
+  // MVP0: Se tem texto subjetivo, NÃO é estímulo puro
+  // Deve ser separado em TREINO + COMENTÁRIO
+  if (isSubjectiveLine(line)) {
+    console.log('[isTrainingStimulus] → FALSE (linha subjetiva):', line);
+    return false;
+  }
+  
   // ⏱️ TEMPO: min, minutes, ', minutos, até X minutos
   if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) return true;
   if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) return true;
@@ -260,8 +415,15 @@ function isTrainingStimulus(line: string): boolean {
 // Para dias de descanso: detecta se a linha é prescrição de treino
 // REGRA: Tempo ou distância SOZINHOS já caracterizam treino!
 // "45 min" ou "10km" são VÁLIDOS mesmo sem atividade explícita
+// MVP0 PATCH: Agora também verifica se NÃO é linha subjetiva!
 
 function isPrescriptionLine(line: string): boolean {
+  // MVP0: Se tem texto subjetivo, NÃO é prescrição pura
+  if (isSubjectiveLine(line)) {
+    console.log('[isPrescriptionLine] → FALSE (linha subjetiva):', line);
+    return false;
+  }
+  
   // a) Verificar medida mensurável (SUFICIENTE POR SI SÓ)
   const hasMeasurableTime = /(?:^|[^\d])(\d{1,3})\s*(?:min|minutos?|'|h|hora|horas)\b/i.test(line) ||
                             /até\s*\d+\s*(?:min|minutos?)/i.test(line) ||
@@ -668,19 +830,32 @@ const CARDIO_CATEGORIES = ['corrida', 'cardio', 'endurance', 'conditioning'];
 
 // Classifica uma linha como exercise ou comment
 // Opcionalmente recebe a categoria do bloco para regra de duração + categoria
+// MVP0 PATCH: Linhas subjetivas são SEMPRE 'comment', NUNCA 'exercise'
 export function classifyLine(line: string, blockCategory?: string): LineType {
   if (!line || line.trim().length === 0) return 'comment';
   
   const trimmed = line.trim();
   const lowerLine = trimmed.toLowerCase();
   
-  // 1. Verificar padrões de comentário primeiro
+  // ═══════════════════════════════════════════════════════════════
+  // MVP0 PATCH: VERIFICAR LINHA SUBJETIVA PRIMEIRO (PRIORIDADE 1)
+  // ═══════════════════════════════════════════════════════════════
+  // REGRA ANTI-BURRO: Se a linha contém texto subjetivo (adjetivos,
+  // intenção, explicação), NÃO pode ser classificada como 'exercise'.
+  // Deve ir para notas e NUNCA influenciar o motor.
+  // ═══════════════════════════════════════════════════════════════
+  if (isSubjectiveLine(trimmed)) {
+    console.log('[classifyLine] → comment (linha subjetiva):', trimmed);
+    return 'comment';
+  }
+  
+  // 1. Verificar padrões de comentário explícito
   if (COMMENT_STARTERS.some(pattern => pattern.test(trimmed))) {
     return 'comment';
   }
   
-  // 2. REGRA NOVA: Duração + (Modalidade OU Categoria Cardio) = EXERCÍCIO
-  // Ex: "Corrida leve até 45 minutos" deve ser exercício
+  // 2. REGRA: Duração + (Modalidade OU Categoria Cardio) = EXERCÍCIO
+  // IMPORTANTE: Só chega aqui se NÃO for linha subjetiva!
   const hasDuration = /\d+\s*(?:min|minutos?|minutes?|'|'')\b/i.test(trimmed) ||
                       /até\s*\d+\s*(?:min|minutos?)/i.test(trimmed);
   
@@ -849,10 +1024,23 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   }
   
   // ═══════════════════════════════════════════════════════════════
+  // MVP0 PATCH: VERIFICAR LINHA SUBJETIVA PRIMEIRO
+  // ═══════════════════════════════════════════════════════════════
+  // REGRA ANTI-BURRO: Se a linha contém texto subjetivo (adjetivos,
+  // intenção, explicação), NÃO pode ser classificada como EXERCISE.
+  // Deve ir para block.notes e NUNCA influenciar o motor.
+  // ═══════════════════════════════════════════════════════════════
+  if (isSubjectiveLine(trimmed)) {
+    console.log('[CLASSIFY] NOTE (linha subjetiva):', trimmed);
+    return { kind: 'NOTE', confidence: 'HIGH' };
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
   // MVP0 PATCH: VERIFICAR UNIDADE RECONHECIDA PRIMEIRO
   // ═══════════════════════════════════════════════════════════════
   // Se a linha tem QUALQUER unidade reconhecida, é EXERCISE válido
   // Confiança vem do detector de unidades
+  // IMPORTANTE: Só chega aqui se NÃO for linha subjetiva!
   // ═══════════════════════════════════════════════════════════════
   const unitResult = detectUnits(trimmed);
   
@@ -1657,6 +1845,7 @@ export function parseStructuredText(text: string): ParseResult {
     alerts: [],
     needsDaySelection: false,
     hasDayAnchors: dayValidation.hasDays,
+    structureWarnings: [], // MVP0: Avisos de estrutura inválida
   };
 
   let currentDay: DayOfWeek | null = null;
@@ -2029,6 +2218,27 @@ export function parseStructuredText(text: string): ParseResult {
     
     // Linha vazia - continua no bloco atual
     if (!line) continue;
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: DETECTAR MISTURA TREINO + COMENTÁRIO (ESTRUTURA INVÁLIDA)
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ANTI-BURRO: Se a linha tem medida mensurável E texto subjetivo,
+    // gerar aviso de estrutura inválida. O sistema NÃO tenta interpretar.
+    // O coach DEVE separar em TREINO: + COMENTÁRIO:
+    // ════════════════════════════════════════════════════════════════════════════
+    const hasMeasure = hasMeasurableStimulus(line);
+    const hasSubjective = isSubjectiveLine(line);
+    
+    if (hasMeasure && hasSubjective) {
+      const warningMsg = `Linha ${lineNumber}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}" - Mistura treino + comentário. Separe em TREINO: e COMENTÁRIO:`;
+      console.log('[STRUCTURE_WARNING]', warningMsg);
+      result.structureWarnings?.push(warningMsg);
+      
+      // Adicionar ao alerta do dia atual também
+      if (currentDayEntry) {
+        currentDayEntry.alerts.push('Estrutura inválida: mistura de treino + comentário detectada');
+      }
+    }
 
     // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
     if (isBlockSeparator(line)) {
