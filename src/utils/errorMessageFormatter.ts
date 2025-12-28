@@ -27,6 +27,7 @@ export type ErrorType =
   | 'ISOLATED_COMMENT' 
   | 'AMBIGUOUS_CONTENT'
   | 'REST_WITH_STIMULUS'
+  | 'MISSING_INTENSITY'
   | 'GENERIC';
 
 // Mapeamento de dias
@@ -69,6 +70,10 @@ const ERROR_COPIES: Record<ErrorType, {
     whatHappened: 'Foi identificado contexto de descanso/opcional junto com estímulo executável.',
     whatToDo: 'Use as tags [TREINO] e [COMENTÁRIO] para separar claramente.',
   },
+  MISSING_INTENSITY: {
+    whatHappened: 'Você descreveu duração/modalidade, mas não informou intensidade no TREINO. Intensidade escrita em comentário/notas NÃO entra no cálculo do OUTLIER.',
+    whatToDo: 'Inclua no TREINO um parâmetro objetivo (PSE, Zona, Pace ou FC alvo). O motor considerará apenas volume (tempo) e marcará intensidade como "desconhecida".',
+  },
   GENERIC: {
     whatHappened: 'O sistema identificou um problema na estrutura do treino.',
     whatToDo: 'Revise o texto e corrija.',
@@ -83,6 +88,9 @@ export function detectErrorType(issue: StructureIssue): ErrorType {
   
   if (msg.includes('mistura') && (msg.includes('treino') || msg.includes('comentário'))) {
     return 'HYBRID_LINE';
+  }
+  if (msg.includes('intensidade') && (msg.includes('não informada') || msg.includes('não informado'))) {
+    return 'MISSING_INTENSITY';
   }
   if (msg.includes('estrutura') && msg.includes('não')) {
     return 'NO_STRUCTURE';

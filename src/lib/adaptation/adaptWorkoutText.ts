@@ -31,6 +31,15 @@ export function computeMultiplier(level: LevelKey, sex: SexKey) {
  *
  * Não altera estrutura, nomes de blocos, ordem, nem o tipo de movimento.
  * Regra: sempre floor e nunca > 100%.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * REGRA CRÍTICA MVP0: COMENTÁRIOS NÃO AFETAM O MOTOR
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * - Intensidade (PSE, Zona, Pace, FC) só é extraída de linhas de TREINO
+ * - Comentários/notas são IGNORADOS pelo motor de adaptação
+ * - Se intensidade estiver em [COMENTÁRIO], o motor considera "desconhecida"
+ * - Linhas em seção [COMENTÁRIO] NÃO são adaptadas
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 export function adaptWorkoutText(params: {
   text: string;
@@ -46,10 +55,30 @@ export function adaptWorkoutText(params: {
 
   const lines = text.split("\n");
   let currentBlock = ""; // infer by headings
+  let inCommentSection = false; // MVP0: Track comment sections to skip
   const out: string[] = [];
 
   for (const rawLine of lines) {
     const line = rawLine;
+    const trimmed = line.trim();
+    
+    // MVP0: Detect [TREINO] / [COMENTÁRIO] sections
+    if (/^\[TREINO\]/i.test(trimmed)) {
+      inCommentSection = false;
+      out.push(line);
+      continue;
+    }
+    if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
+      inCommentSection = true;
+      out.push(line);
+      continue;
+    }
+    
+    // MVP0: Skip comment sections entirely (don't adapt)
+    if (inCommentSection) {
+      out.push(line);
+      continue;
+    }
 
     // Detect section headings (very permissive)
     // examples: "🔥 Aquecimento", "AQUECIMENTO", "Conditioning — FOR TIME"
