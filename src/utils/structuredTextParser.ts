@@ -132,7 +132,7 @@ export interface StructureIssue {
   lineText?: string; // Texto da linha problemática (para exibição)
   message: string;
   severity: IssueSeverity;
-  sampleFix?: string; // Exemplo de como corrigir
+  // NOTA: sampleFix removido — ensino centralizado no "Modelo Recomendado"
 }
 
 export interface ParseResult {
@@ -2977,7 +2977,6 @@ export function validateCoachInput(text: string): CoachInputValidation {
         lineText: line,
         message: dayName ? `Mistura treino + comentário — ${dayName}` : 'Mistura treino + comentário',
         severity: 'ERROR',
-        sampleFix: `[TREINO]\n${cleanMeasure}\n\n[COMENTÁRIO]\n${commentPart}`,
       });
     }
   }
@@ -2994,7 +2993,6 @@ export function validateCoachInput(text: string): CoachInputValidation {
       issues.push({
         message: 'Contexto de descanso/opcional com estímulo sem separação clara',
         severity: 'WARNING',
-        sampleFix: `[TREINO]\nSeu estímulo aqui\n\n[COMENTÁRIO]\nOpcional / apenas para soltar`,
       });
     }
   }
