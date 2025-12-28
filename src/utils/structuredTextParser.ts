@@ -3065,12 +3065,13 @@ export function validateCoachInput(text: string): CoachInputValidation {
       const dayNames = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO', 'DOMINGO'];
       const dayName = currentDayIndex >= 0 ? dayNames[currentDayIndex] : undefined;
       
+      // MVP0: Issues semânticos são WARNINGS (não bloqueiam draft, só publicação)
       issues.push({
         dayIndex: currentDayIndex >= 0 ? currentDayIndex : undefined,
         lineNumber: i + 1,
         lineText: line,
         message: dayName ? `Mistura treino + comentário — ${dayName}` : 'Mistura treino + comentário',
-        severity: 'ERROR',
+        severity: 'WARNING', // Alterado de ERROR para WARNING - permite salvar draft
       });
     }
   }

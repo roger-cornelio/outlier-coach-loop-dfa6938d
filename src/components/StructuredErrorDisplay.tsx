@@ -258,10 +258,14 @@ export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredEr
         ))}
       </div>
       
-      {/* Footer bloqueante */}
-      {hasErrors && (
+      {/* Footer informativo */}
+      {hasErrors ? (
         <p className="text-xs text-destructive/80 font-medium pt-2 border-t border-destructive/20">
-          🚫 Corrija os erros acima para poder importar o treino.
+          🚫 Corrija os erros acima para poder publicar o treino.
+        </p>
+      ) : (
+        <p className="text-xs text-amber-600/80 font-medium pt-2 border-t border-amber-500/20">
+          ⚠️ Avisos não bloqueiam o salvamento. Você pode ajustar depois.
         </p>
       )}
     </div>
