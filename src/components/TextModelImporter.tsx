@@ -73,6 +73,8 @@ import {
   getBlockTitleError,
   normalizeText,
   validateDayAnchors,
+  validateCoachInput,
+  RECOMMENDED_TEMPLATE,
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import { CONFIDENCE_LABELS, CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
@@ -119,6 +121,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   
   // MVP0: Erro de validação de dias - bloqueia preview se texto não tiver dias
   const [dayValidationError, setDayValidationError] = useState<string | null>(null);
+  
+  // MVP0: Erro de validação de estrutura - bloqueia se mistura treino + comentário
+  const [inputValidationError, setInputValidationError] = useState<string[] | null>(null);
   
   // Modal de modelo/template
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -172,8 +177,22 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const textareaValue = text.trim();
     if (!textareaValue) return;
     
-    // Limpar erro de validação anterior
+    // Limpar erros de validação anteriores
     setDayValidationError(null);
+    setInputValidationError(null);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MVP0: TRAVA DE INPUT — VALIDAÇÃO ANTES DO PARSE
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REGRA: Bloquear se detectar linhas híbridas (treino + comentário misturados)
+    // O coach DEVE separar usando [TREINO] e [COMENTÁRIO]
+    // ═══════════════════════════════════════════════════════════════════════════
+    const inputValidation = validateCoachInput(textareaValue);
+    
+    if (!inputValidation.isValid) {
+      setInputValidationError(inputValidation.errors);
+      return; // BLOQUEIA - não avança para parse
+    }
     
     // MVP0 FIX: Se já existe parseResult e preview está oculto, apenas reexibir
     // (usuário clicou "Voltar" e quer ver o preview novamente)
@@ -385,6 +404,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setSelectedDay(null);
     setRestDays({});
     setDayValidationError(null);
+    setInputValidationError(null);
   };
 
   // Toggle Rest Day - ÚNICA forma de marcar descanso
@@ -674,6 +694,51 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             <Puzzle className="w-3.5 h-3.5" />
             Usar modelo para facilitar sua vida
           </button>
+
+          {/* MVP0: Erro de validação de estrutura (mistura treino + comentário) */}
+          {inputValidationError && inputValidationError.length > 0 && (
+            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm font-semibold text-destructive">
+                    ⚠️ Treino e comentário precisam estar separados
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Para proteger o ajuste do atleta, o OUTLIER exige que o estímulo executável fique separado do comentário.
+                  </p>
+                  <div className="space-y-1 mt-2">
+                    {inputValidationError.map((error, idx) => (
+                      <p key={idx} className="text-xs text-destructive/90 font-mono bg-destructive/5 px-2 py-1 rounded">
+                        {error}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-3 rounded bg-muted/50 border border-border">
+                    <p className="text-xs font-medium text-foreground mb-1">✅ Use as tags abaixo:</p>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+{`[TREINO]
+Corrida contínua
+45 minutos
+Zona 2
+
+[COMENTÁRIO]
+Ritmo leve e confortável.`}
+                    </pre>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 text-xs"
+                    onClick={() => setShowTemplateModal(true)}
+                  >
+                    <Puzzle className="w-3 h-3 mr-1.5" />
+                    📋 Modelo recomendado
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* MVP0: Erro de validação de dias */}
           {dayValidationError && (
@@ -1465,47 +1530,57 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Puzzle className="w-5 h-5 text-primary" />
-              Use o modelo para facilitar sua vida
+              📋 Modelo recomendado
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Copie o modelo abaixo e edite com seus treinos. O OUTLIER vai organizar tudo automaticamente.
+              Copie o modelo abaixo e edite com seus treinos. Use as tags [TREINO] e [COMENTÁRIO] para separar o estímulo da explicação.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {/* Modelo simples com tags */}
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+              <p className="text-xs font-medium text-primary mb-2">📌 Estrutura obrigatória para corridas/longões/descanso:</p>
+              <pre className="text-xs font-mono text-foreground whitespace-pre-wrap bg-muted/50 p-2 rounded">
+{`[TREINO]
+Corrida contínua
+45 minutos
+Zona 2
+
+[COMENTÁRIO]
+Ritmo leve e confortável. Apenas para soltar.`}
+              </pre>
+            </div>
+          </div>
           
           <div className="bg-muted/50 rounded-lg p-4 text-xs font-mono whitespace-pre-wrap border border-border overflow-x-auto">
 {`SEGUNDA-FEIRA
 
 Aquecimento
-- 500m trote leve
+- 500m Run
 - 3 Rounds
   15 Bom Dia
   20 Avanços
   45'' Prancha
 
-# Comentário
+[COMENTÁRIO]
 Ativar bem posterior e core antes da força.
 
 ⸻
 
 Força Específica
-- 5 Rounds
-  6 Front Squat — PSE 8
-  10m Broad Jump
-  15 Wall Balls 30/20 lb (Unbroken)
+[TREINO]
+5 Rounds
+6 Front Squat — PSE 8
+10m Broad Jump
+15 Wall Balls 30/20 lb
 
-# Comentário
+[COMENTÁRIO]
 Descansar o necessário entre rounds.
 
 ⸻
 
-Específico
-- 4 Rounds
-  12 Reverse Back Rack Lunge — PSE 8
-  20m Sled Push Sprint (leve a moderado)
-
-⸻
-
-Grip & Strength
+WOD
 - EMOM 30'
   Min 1: 10 Dumbbell Burpee
   Min 2: 30m Farmer Carry 32/24kg
@@ -1514,7 +1589,12 @@ Grip & Strength
 ⸻
 
 Corrida — Outro Período
-- 10km Zona 2
+[TREINO]
+10km
+Zona 2
+
+[COMENTÁRIO]
+Ritmo confortável, foco em base aeróbia.
 
 ⸻
 
@@ -1526,9 +1606,6 @@ Aquecimento
   10 Inchworm
   10 Sit-up
 
-# Comentário
-Foco na mobilidade.
-
 ⸻
 
 WOD
@@ -1537,8 +1614,17 @@ WOD
   Thrusters 43/30kg
   Pull-ups
 
-# Comentário
-Objetivo: sub-10 min.`}
+[COMENTÁRIO]
+Objetivo: sub-10 min.
+
+⸻
+
+QUINTA-FEIRA
+
+Descanso
+
+[COMENTÁRIO]
+Recuperação ativa opcional: caminhada ou mobilidade leve.`}
           </div>
 
           <AlertDialogFooter>
@@ -1548,36 +1634,30 @@ Objetivo: sub-10 min.`}
                 const template = `SEGUNDA-FEIRA
 
 Aquecimento
-- 500m trote leve
+- 500m Run
 - 3 Rounds
   15 Bom Dia
   20 Avanços
   45'' Prancha
 
-# Comentário
+[COMENTÁRIO]
 Ativar bem posterior e core antes da força.
 
 ⸻
 
 Força Específica
-- 5 Rounds
-  6 Front Squat — PSE 8
-  10m Broad Jump
-  15 Wall Balls 30/20 lb (Unbroken)
+[TREINO]
+5 Rounds
+6 Front Squat — PSE 8
+10m Broad Jump
+15 Wall Balls 30/20 lb
 
-# Comentário
+[COMENTÁRIO]
 Descansar o necessário entre rounds.
 
 ⸻
 
-Específico
-- 4 Rounds
-  12 Reverse Back Rack Lunge — PSE 8
-  20m Sled Push Sprint (leve a moderado)
-
-⸻
-
-Grip & Strength
+WOD
 - EMOM 30'
   Min 1: 10 Dumbbell Burpee
   Min 2: 30m Farmer Carry 32/24kg
@@ -1586,7 +1666,12 @@ Grip & Strength
 ⸻
 
 Corrida — Outro Período
-- 10km Zona 2
+[TREINO]
+10km
+Zona 2
+
+[COMENTÁRIO]
+Ritmo confortável, foco em base aeróbia.
 
 ⸻
 
@@ -1598,9 +1683,6 @@ Aquecimento
   10 Inchworm
   10 Sit-up
 
-# Comentário
-Foco na mobilidade.
-
 ⸻
 
 WOD
@@ -1609,8 +1691,17 @@ WOD
   Thrusters 43/30kg
   Pull-ups
 
-# Comentário
-Objetivo: sub-10 min.`;
+[COMENTÁRIO]
+Objetivo: sub-10 min.
+
+⸻
+
+QUINTA-FEIRA
+
+Descanso
+
+[COMENTÁRIO]
+Recuperação ativa opcional: caminhada ou mobilidade leve.`;
                 navigator.clipboard.writeText(template);
                 setTemplateCopied(true);
                 setTimeout(() => setTemplateCopied(false), 2000);
