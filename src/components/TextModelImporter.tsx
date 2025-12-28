@@ -81,7 +81,7 @@ import { CONFIDENCE_LABELS, CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
 import { getBlockHeader, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
-import { StructuredErrorDisplay } from './StructuredErrorDisplay';
+import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 
 interface TextModelImporterProps {
   onImport: (workouts: DayWorkout[]) => void;
@@ -751,6 +751,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* MVP0: Modelo Recomendado - aparece após "Validar e Visualizar" se houver erros */}
+          {parseResult?.structureIssues && parseResult.structureIssues.length > 0 && showPreview && (
+            <RecommendedModelBlock issues={parseResult.structureIssues} />
           )}
 
           <div className="flex gap-2 flex-wrap">

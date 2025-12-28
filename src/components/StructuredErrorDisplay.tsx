@@ -150,7 +150,10 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
   );
 }
 
-function RecommendedModelBlock({ issues }: { issues: StructureIssue[] }) {
+/**
+ * Bloco "Modelo Recomendado" - exportado separadamente para posicionamento flexível
+ */
+export function RecommendedModelBlock({ issues }: { issues: StructureIssue[] }) {
   const [copied, setCopied] = useState(false);
   
   // Pega o primeiro erro para interpolação de dia/bloco
@@ -262,9 +265,6 @@ export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredEr
           />
         ))}
       </div>
-      
-      {/* Modelo Recomendado */}
-      <RecommendedModelBlock issues={issues} />
       
       {/* Footer bloqueante */}
       {hasErrors && (
