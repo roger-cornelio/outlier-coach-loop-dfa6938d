@@ -10,8 +10,9 @@
  * - Linha {NÚMERO_DA_LINHA}
  * - 📌 O que aconteceu
  * - 🛠️ O que fazer agora
- * - ✅ Exemplo correto
  * - 🎯 Próximo passo
+ * 
+ * NOTA: "Exemplo correto" foi removido — o ensino acontece no "Modelo Recomendado" (input)
  */
 
 import { AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Lightbulb } from 'lucide-react';
@@ -35,15 +36,8 @@ interface SingleErrorProps {
 }
 
 function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
-  const [copied, setCopied] = useState(false);
   const formatted = formatStructureIssue(issue);
   const isError = formatted.severity === 'ERROR';
-  
-  const handleCopyExample = () => {
-    navigator.clipboard.writeText(formatted.exampleFix);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
   
   return (
     <div 
@@ -96,36 +90,6 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
         <p className="text-sm text-foreground/90">
           👉 {formatted.whatToDo}
         </p>
-      </div>
-      
-      {/* ✅ Exemplo correto */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-foreground/80">✅ Exemplo correto</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopyExample}
-            className="h-6 px-2 text-xs gap-1"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3 h-3" />
-                Copiado
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                Copiar
-              </>
-            )}
-          </Button>
-        </div>
-        <div className="p-3 rounded bg-muted/50 border border-border">
-          <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
-            {formatted.exampleFix}
-          </pre>
-        </div>
       </div>
       
       {/* 🎯 Próximo passo + Botão Ir para bloco */}
