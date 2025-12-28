@@ -2913,9 +2913,29 @@ export function validateCoachInput(text: string): CoachInputValidation {
   let hybridLineCount = 0;
   let inCommentSection = false;
   
+  // MVP0: Rastrear qual dia estamos para incluir dayIndex no issue
+  let currentDayIndex = -1;
+  const dayPatterns = [
+    /\bsegunda(?:-feira)?\b/i,
+    /\bter[çc]a(?:-feira)?\b/i,
+    /\bquarta(?:-feira)?\b/i,
+    /\bquinta(?:-feira)?\b/i,
+    /\bsexta(?:-feira)?\b/i,
+    /\bs[aá]bado\b/i,
+    /\bdomingo\b/i,
+  ];
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
+    
+    // MVP0: Detectar mudança de dia para rastrear dayIndex
+    for (let d = 0; d < dayPatterns.length; d++) {
+      if (dayPatterns[d].test(line)) {
+        currentDayIndex = d;
+        break;
+      }
+    }
     
     // Se está em seção de comentário [COMENTÁRIO], não valida
     if (/^\[COMENT[ÁA]RIO\]/i.test(line)) {
@@ -2942,14 +2962,19 @@ export function validateCoachInput(text: string): CoachInputValidation {
       errors.push(`Linha ${i + 1}: "${truncated}" — Mistura treino + comentário.`);
       
       // MVP0: Adicionar issue com severidade ERROR para bloquear importação
-      // Inclui lineText para exibição no botão "Ir para o bloco"
+      // Inclui dayIndex para navegação + lineText para exibição
       const cleanMeasure = line.split(',')[0]?.trim() || line;
       const commentPart = line.split(',').slice(1).join(',').trim() || 'Descreva a intenção aqui';
       
+      // MVP0: Mapear dayIndex para nome do dia
+      const dayNames = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO', 'DOMINGO'];
+      const dayName = currentDayIndex >= 0 ? dayNames[currentDayIndex] : undefined;
+      
       issues.push({
+        dayIndex: currentDayIndex >= 0 ? currentDayIndex : undefined,
         lineNumber: i + 1,
         lineText: line,
-        message: `Mistura treino + comentário`,
+        message: dayName ? `Mistura treino + comentário — ${dayName}` : 'Mistura treino + comentário',
         severity: 'ERROR',
         sampleFix: `[TREINO]\n${cleanMeasure}\n\n[COMENTÁRIO]\n${commentPart}`,
       });

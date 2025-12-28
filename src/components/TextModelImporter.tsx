@@ -81,6 +81,7 @@ import { CONFIDENCE_LABELS, CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
 import { getBlockHeader, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
+import { StructuredErrorDisplay } from './StructuredErrorDisplay';
 
 interface TextModelImporterProps {
   onImport: (workouts: DayWorkout[]) => void;
@@ -865,84 +866,12 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* MVP0: BANNER DE ISSUES DE ESTRUTURA — Mistura treino + comentário */}
+                {/* MVP0: EXIBIÇÃO PADRONIZADA DE ERROS DE ESTRUTURA */}
                 {parseResult.structureIssues && parseResult.structureIssues.length > 0 && (
-                  <div className={`p-4 rounded-xl border-2 space-y-3 ${
-                    hasStructureErrors 
-                      ? 'bg-destructive/10 border-destructive/40' 
-                      : 'bg-amber-500/10 border-amber-500/40'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className={`w-5 h-5 ${hasStructureErrors ? 'text-destructive' : 'text-amber-600'}`} />
-                      <span className={`font-semibold text-sm ${hasStructureErrors ? 'text-destructive' : 'text-amber-700'}`}>
-                        {structureErrorCount > 0 && `${structureErrorCount} erro${structureErrorCount > 1 ? 's' : ''}`}
-                        {structureErrorCount > 0 && structureWarningCount > 0 && ' / '}
-                        {structureWarningCount > 0 && `${structureWarningCount} aviso${structureWarningCount > 1 ? 's' : ''}`}
-                        {' de estrutura'}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {parseResult.structureIssues.map((issue, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`p-3 rounded-lg border ${
-                            issue.severity === 'ERROR' 
-                              ? 'bg-destructive/5 border-destructive/30' 
-                              : 'bg-amber-500/5 border-amber-500/30'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                              issue.severity === 'ERROR' ? 'text-destructive' : 'text-amber-600'
-                            }`} />
-                            <div className="space-y-2 flex-1">
-                              <p className={`text-sm font-medium ${
-                                issue.severity === 'ERROR' ? 'text-destructive' : 'text-amber-700'
-                              }`}>
-                                {issue.lineNumber && `Linha ${issue.lineNumber}: `}{issue.message}
-                              </p>
-                              
-                              {/* MVP0: Mostrar a linha problemática */}
-                              {issue.lineText && (
-                                <p className="text-xs text-muted-foreground italic bg-muted/30 px-2 py-1 rounded">
-                                  "{issue.lineText.length > 80 ? issue.lineText.substring(0, 80) + '...' : issue.lineText}"
-                                </p>
-                              )}
-                              
-                              {issue.sampleFix && (
-                                <div className="p-2 rounded bg-muted/50 border border-border">
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Como corrigir:</p>
-                                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">
-                                    {issue.sampleFix}
-                                  </pre>
-                                </div>
-                              )}
-                              
-                              {/* MVP0: Botão "Ir para o bloco" — scroll + expand + highlight */}
-                              {issue.dayIndex !== undefined && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => scrollToBlock(issue.dayIndex!, issue.blockIndex)}
-                                  className="h-7 text-xs gap-1.5"
-                                >
-                                  <ArrowRight className="w-3 h-3" />
-                                  Ir para o bloco
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {hasStructureErrors && (
-                      <p className="text-xs text-destructive/80 font-medium pt-2 border-t border-destructive/20">
-                        🚫 Corrija os erros acima para poder importar o treino.
-                      </p>
-                    )}
-                  </div>
+                  <StructuredErrorDisplay 
+                    issues={parseResult.structureIssues}
+                    onScrollToBlock={scrollToBlock}
+                  />
                 )}
 
                 {/* Erros críticos */}
