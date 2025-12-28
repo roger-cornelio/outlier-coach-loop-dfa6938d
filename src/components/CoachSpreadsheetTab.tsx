@@ -28,7 +28,7 @@ import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
-import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockCategoryLabel, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
 import { normalizeText } from '@/utils/structuredTextParser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -585,7 +585,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                     {exerciseLines.length > 0 && (
                                       <div className="text-sm text-foreground space-y-1 pl-2 border-l-2 border-primary/40">
                                         {exerciseLines.map((line) => (
-                                          <p key={line.id}>{line.text}</p>
+                                          <p key={line.id}>{normalizeRestLineForDisplay(line.text)}</p>
                                         ))}
                                       </div>
                                     )}
@@ -594,7 +594,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                       <div className="text-xs text-muted-foreground p-2 rounded bg-muted/30 border border-border/40 space-y-1">
                                         <span className="text-xs font-medium text-muted-foreground/70">💬 Comentários:</span>
                                         {commentLines.map((line) => (
-                                          <p key={line.id} className="italic">{line.text}</p>
+                                          <p key={line.id} className="italic">{normalizeRestLineForDisplay(line.text)}</p>
                                         ))}
                                       </div>
                                     )}

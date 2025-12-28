@@ -145,3 +145,57 @@ export function hasCategory(block: BlockLike): boolean {
   const category = firstNonEmpty(block.type, block.category);
   return category !== null;
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MVP0 PATCH: normalizeRestLineForDisplay
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Converte linhas de "Descanso X'" para "Intervalo X'" na exibição
+ * para evitar confusão com "Descanso do dia".
+ * 
+ * REGRA: "Descanso" dentro de bloco = Intervalo técnico (não descanso do dia)
+ * 
+ * @param text - Texto original da linha
+ * @returns Texto normalizado para exibição
+ */
+export function normalizeRestLineForDisplay(text: string): string {
+  if (!text) return text;
+  
+  const trimmed = text.trim();
+  const lower = trimmed.toLowerCase();
+  
+  // Padrões de descanso intra-bloco que devem virar "Intervalo"
+  // A) "Descanso X'" -> "Intervalo X'"
+  if (/^descanso\s+\d+/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // B) "Descanso:" -> "Intervalo:"
+  if (/^descanso\s*:/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // C) "Descanso entre rounds/séries" -> "Intervalo entre rounds/séries"
+  if (/^descanso\s+(entre|between)/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // D) "Descanso de X min" -> "Intervalo de X min"
+  if (/^descanso\s+de\s+\d+/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // E) "Descanso necessário/livre/ativo/passivo" -> "Intervalo necessário/..."
+  if (/^descanso\s+(necess[aá]rio|livre|ativo|passivo|conforme)/i.test(lower)) {
+    return trimmed.replace(/^descanso/i, 'Intervalo');
+  }
+  
+  // F) "Descansar" -> "Intervalo" (para frases como "Descansar o necessário")
+  if (/^descansar\b/i.test(lower)) {
+    return trimmed.replace(/^descansar/i, 'Intervalo');
+  }
+  
+  // Não é padrão de descanso intra-bloco, retornar original
+  return text;
+}
