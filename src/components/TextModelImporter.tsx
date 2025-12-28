@@ -270,6 +270,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
       result.structureIssues = structureIssues;
     }
     
+    console.debug('[TextModelImporter] onValidate → parsedDays=', result.days.length, 'dias');
     setParseResult(result);
     setShowPreview(true);
     // MVP0 PATCH: NÃO inicializar restDays automaticamente
@@ -425,6 +426,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
     };
     
     const workouts = parsedToDayWorkouts(resultWithRestDays, selectedDay || undefined);
+    console.debug('[TextModelImporter] onPublish → payloadSource=parsedDays, weekRange=', selectedWeek?.label || 'N/A', 'workouts=', workouts.length);
     onImport(workouts);
     
     // MVP0 DRAFT: NÃO limpar após importar — draft é preservado
@@ -490,6 +492,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
       });
     }
     
+    console.debug('[TextModelImporter] onManualEdit → toggleMainWod', { dayIndex, blockIndex });
     setParseResult(updated);
   };
 
@@ -499,6 +502,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
     
     const updated = { ...parseResult };
     updated.days[dayIndex].blocks[blockIndex].type = newType as any;
+    console.debug('[TextModelImporter] onManualEdit → changeBlockType', { dayIndex, blockIndex, newType });
     setParseResult(updated);
   };
 
@@ -510,6 +514,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
     updated.days[dayIndex].blocks[blockIndex].title = newTitle;
     // Marcar que não é mais auto-gerado se editou manualmente
     updated.days[dayIndex].blocks[blockIndex].isAutoGenTitle = false;
+    console.debug('[TextModelImporter] onManualEdit → changeBlockTitle', { dayIndex, blockIndex, newTitle });
     setParseResult(updated);
   };
 
@@ -782,7 +787,10 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
           {/* MVP0: Seletor de semana OBRIGATÓRIO antes do preview */}
           <WeekPeriodSelector
             selectedWeek={selectedWeek}
-            onWeekSelect={onWeekSelect}
+            onWeekSelect={(week) => {
+              console.debug('[TextModelImporter] onSelectWeek →', week?.label || 'null');
+              onWeekSelect(week);
+            }}
           />
 
           <div className="flex gap-2 flex-wrap">
@@ -907,14 +915,24 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
               <CardContent className="space-y-4">
                 {/* MVP0: Semana selecionada - READ-ONLY no preview */}
                 {selectedWeek && (
-                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-foreground">
-                      Semana: <span className="font-semibold">{selectedWeek.label}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      (volte para edição para alterar)
-                    </span>
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-foreground">
+                        Semana: <span className="font-semibold">{selectedWeek.label}</span>
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        console.debug('[TextModelImporter] onBackToEdit → voltando para alterar semana');
+                        setShowPreview(false);
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Alterar semana
+                    </Button>
                   </div>
                 )}
 
