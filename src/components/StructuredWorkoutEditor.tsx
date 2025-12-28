@@ -62,6 +62,17 @@ const DAYS: { value: DayOfWeek; label: string }[] = [
   { value: 'dom', label: 'Domingo' },
 ];
 
+// Day names map for display
+const DAY_NAMES: Record<DayOfWeek, string> = {
+  seg: 'Segunda',
+  ter: 'Terça',
+  qua: 'Quarta',
+  qui: 'Quinta',
+  sex: 'Sexta',
+  sab: 'Sábado',
+  dom: 'Domingo',
+};
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -525,15 +536,23 @@ export function StructuredWorkoutEditor({
 
                     {/* Blocos do dia */}
                     <div className="p-3 space-y-3 bg-background">
-                      {/* MVP0: Mensagem para dia de descanso */}
+                      {/* MVP0: Mensagem para dia de descanso — Copy padronizada Coach/Admin */}
                       {day.isRestDay && (
-                        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center">
-                          <p className="text-sm text-blue-600 flex items-center justify-center gap-2 font-medium">
-                            <Moon className="w-4 h-4" />
-                            Dia marcado como descanso
+                        <div className="p-5 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Moon className="w-6 h-6 text-blue-500" />
+                            <p className="text-sm text-blue-600 font-semibold">
+                              🌙 Dia de descanso — {DAY_NAMES[day.day].toUpperCase()}
+                            </p>
+                          </div>
+                          <p className="text-sm text-foreground/80">
+                            Este dia está marcado como descanso.
                           </p>
-                          <p className="text-xs text-blue-500/80 mt-1">
-                            Os blocos serão preservados mas não exigem WOD principal.
+                          <p className="text-sm text-muted-foreground">
+                            O treino não será considerado ativo, mas o atleta pode executar e registrar normalmente.
+                          </p>
+                          <p className="text-xs text-blue-500/80 pt-2 border-t border-blue-500/20">
+                            💡 Para tornar o treino obrigatório, desative o descanso deste dia.
                           </p>
                         </div>
                       )}

@@ -1072,13 +1072,25 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                   </div>
                                 )}
                                 
-                                {/* Mensagem de dia de descanso + notas opcionais */}
+                                {/* Mensagem de dia de descanso — Copy padronizada Coach/Admin */}
                                 {isRestDay && (
-                                  <div className="mb-4 p-4 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 space-y-3">
-                                    <p className="text-sm text-blue-600 flex items-center justify-center gap-2 font-medium">
-                                      <Moon className="w-5 h-5" />
-                                      Dia de descanso
+                                  <div className="mb-4 p-5 rounded-xl bg-blue-500/10 border-2 border-blue-500/30 space-y-3">
+                                    <div className="flex items-center gap-3">
+                                      <Moon className="w-6 h-6 text-blue-500" />
+                                      <p className="text-sm text-blue-600 font-semibold">
+                                        🌙 Dia de descanso — {dayName.toUpperCase()}
+                                      </p>
+                                    </div>
+                                    <p className="text-sm text-foreground/80">
+                                      Este dia está marcado como descanso.
                                     </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      O treino não será considerado ativo, mas o atleta pode executar e registrar normalmente.
+                                    </p>
+                                    <p className="text-xs text-blue-500/80 pt-2 border-t border-blue-500/20">
+                                      💡 Para tornar o treino obrigatório, desative o descanso deste dia.
+                                    </p>
+                                    
                                     {/* MVP0: Mostrar notas opcionais do dia de descanso */}
                                     {day.blocks.length > 0 && day.blocks[0]?.optional && (
                                       <div className="mt-3 pt-3 border-t border-blue-500/20">
