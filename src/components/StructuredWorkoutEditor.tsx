@@ -32,6 +32,7 @@ import {
   isBlockValid,
 } from './StructuredBlockEditor';
 import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
+import { StructuredEditorDebugBar } from './StructuredEditorDebugBar';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 
@@ -90,9 +91,30 @@ export function StructuredWorkoutEditor({
   isSaving = false,
   linkedAthletesCount = 0,
 }: StructuredWorkoutEditorProps) {
-  // Estado dos dias
-  const [days, setDays] = useState<StructuredDay[]>([]);
-  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
+  // ============================================
+  // ESTADO INICIAL: Criar Day 1 (Segunda) automaticamente
+  // FIX MVP0: Editor nunca pode iniciar vazio/sumido
+  // ============================================
+  
+  // Função para criar estado inicial (usada no useState e no reset)
+  const createFreshInitialState = () => {
+    const firstBlock = createEmptyStructuredBlock();
+    return {
+      days: [{
+        day: 'seg' as DayOfWeek,
+        blocks: [firstBlock],
+        isRestDay: false,
+      }] as StructuredDay[],
+      expandedBlockId: firstBlock.id,
+    };
+  };
+
+  // Criar estado inicial UMA VEZ (memo para evitar re-criação)
+  const [initialState] = useState(createFreshInitialState);
+
+  // Estado dos dias - inicializa com Day 1 para o editor nunca ficar vazio
+  const [days, setDays] = useState<StructuredDay[]>(initialState.days);
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set([initialState.expandedBlockId]));
   const [showValidation, setShowValidation] = useState(false);
   
   // Metadados
@@ -102,6 +124,9 @@ export function StructuredWorkoutEditor({
   // Mensagens
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Debug: ID do dia selecionado (para DebugBar)
+  const selectedDayId = days.length > 0 ? days[0].day : null;
 
   // ============================================
   // VALIDAÇÃO GLOBAL
@@ -306,8 +331,10 @@ export function StructuredWorkoutEditor({
     
     if (success) {
       setSuccess(`Treino salvo como ${status === 'published' ? 'publicado' : 'rascunho'}!`);
-      // Reset
-      setDays([]);
+      // Reset - reiniciar com Day 1 para o editor nunca ficar vazio
+      const freshState = createFreshInitialState();
+      setDays(freshState.days);
+      setExpandedBlocks(new Set([freshState.expandedBlockId]));
       setProgramName('');
       setSelectedWeek(null);
       setShowValidation(false);
@@ -330,8 +357,20 @@ export function StructuredWorkoutEditor({
 
   const availableDays = DAYS.filter(d => !days.some(day => day.day === d.value));
 
+  // Total de blocos para debug
+  const totalBlocks = days.reduce((acc, day) => acc + day.blocks.length, 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16"> {/* pb-16 para dar espaço à DebugBar */}
+      {/* DEBUG BAR TEMPORÁRIA */}
+      <StructuredEditorDebugBar
+        mode="edit"
+        isStructured={true}
+        daysCount={days.length}
+        selectedDayId={selectedDayId}
+        editorRendered={days.length > 0}
+        blocksCount={totalBlocks}
+      />
       {/* Mensagens */}
       <AnimatePresence>
         {error && (
