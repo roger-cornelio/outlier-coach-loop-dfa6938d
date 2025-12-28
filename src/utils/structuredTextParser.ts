@@ -1484,6 +1484,15 @@ export function parseStructuredText(text: string): ParseResult {
   // Contador de blocos para fallback de título
   let blockCounter = 0;
   
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 PATCH: FLAG ANTI-COLAPSO — BLOCO NÃO MORRE NO MEIO
+  // ════════════════════════════════════════════════════════════════════════════
+  // Quando true, TODAS as linhas subsequentes pertencem ao bloco atual
+  // EXCETO se um NOVO heading válido for detectado
+  // Nenhuma outra regra pode resetar esta flag ou encerrar o bloco
+  // ════════════════════════════════════════════════════════════════════════════
+  let isInsideBlock = false;
+  
   /**
    * REGRA MVP0: Categoria NUNCA é inferida automaticamente.
    * O coach DEVE selecionar manualmente via UI.
@@ -1588,6 +1597,11 @@ export function parseStructuredText(text: string): ParseResult {
 
   const saveCurrentBlock = () => {
     if (currentBlock) {
+      // ════════════════════════════════════════════════════════════════════════════
+      // MVP0 LOG: Bloco sendo finalizado
+      // ════════════════════════════════════════════════════════════════════════════
+      console.log('[BLOCK_END] Finalizando bloco:', currentBlock.title || '(sem título)', 'isInsideBlock was:', isInsideBlock);
+      
       // MVP0: Antes de salvar, tentar extrair heading das instructions se título vazio
       if (!currentBlock.title || currentBlock.title.trim() === '') {
         const allLines = [
@@ -1646,6 +1660,10 @@ export function parseStructuredText(text: string): ParseResult {
       }
     }
     currentBlock = null;
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: Resetar flag isInsideBlock ao encerrar bloco
+    // ════════════════════════════════════════════════════════════════════════════
+    isInsideBlock = false;
     // MVP0 PATCH: Resetar flag opcional ao trocar de bloco
     // NOTA: NÃO resetamos aqui para permitir que "Opcional:" afete múltiplas linhas
     // O reset só acontece ao mudar de dia
@@ -1928,6 +1946,7 @@ export function parseStructuredText(text: string): ParseResult {
       hasExplicitDay = true;
       currentDay = detectedDay;
       currentOptional = false;
+      isInsideBlock = false; // MVP0: Resetar flag anti-colapso ao mudar de dia
       
       // Criar nova entrada de dia
       currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
@@ -2055,24 +2074,88 @@ export function parseStructuredText(text: string): ParseResult {
       isExerciseLine: isExercise,
       isHeadingLine: isHeading,
       currentOptional,
+      isInsideBlock,
       blockTitleAtual: currentBlock?.title || '(sem bloco)',
     });
     
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 REGRA ABSOLUTA: HEADING É A ÚNICA TRANSIÇÃO DE BLOCO
+    // ════════════════════════════════════════════════════════════════════════════
+    // Somente isHeadingLine(line) === true pode:
+    // - finalizar o bloco anterior
+    // - iniciar um novo bloco
+    // Nenhuma outra regra pode resetar currentBlock ou mudar isInsideBlock
+    // ════════════════════════════════════════════════════════════════════════════
     if (isHeading) {
-      console.log('[HEADING] "' + line + '" createdBlock=true');
+      console.log('[HEADING] "' + line + '" createdBlock=true (transição válida)');
+      console.log('[BLOCK_START] Novo bloco iniciado por heading:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
+      isInsideBlock = true;
       continue;
     }
 
     // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line)
+    // MVP0: Também é uma transição válida de bloco
     if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line)) {
       console.log('[PARSER] Título MAIÚSCULO detectado:', line);
+      console.log('[BLOCK_START] Novo bloco iniciado por título maiúsculo:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
+      isInsideBlock = true;
       continue;
     }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PROTEÇÃO ANTI-COLAPSO: SE ESTAMOS DENTRO DE UM BLOCO, TUDO É CONTEÚDO
+    // ════════════════════════════════════════════════════════════════════════════
+    // Se isInsideBlock === true:
+    // - TODAS as linhas subsequentes pertencem ao bloco atual
+    // - NÃO criar novos blocos
+    // - NÃO resetar estado
+    // EXCETO se um NOVO heading válido for detectado (tratado acima)
+    // ════════════════════════════════════════════════════════════════════════════
+    
+    if (isInsideBlock && currentBlock) {
+      // Linha de exercício (começa com número ou marcador)
+      if (/^[-•*]?\s*\d/.test(line)) {
+        const item = parseExerciseLine(line);
+        if (item) {
+          currentBlock.items.push(item);
+          if (item.isWeightAlert && currentDayEntry) {
+            const alertMsg = `Carga "${item.weight}" detectada - será autorregulada pelo sistema`;
+            if (!currentDayEntry.alerts.includes(alertMsg)) {
+              currentDayEntry.alerts.push(alertMsg);
+            }
+          } else if (item.isWeightAlert) {
+            result.alerts.push(`Carga "${item.weight}" detectada - será autorregulada pelo sistema`);
+          }
+          continue;
+        }
+      }
+      
+      // Todo o resto é conteúdo do bloco
+      if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
+        currentBlock.instructions.push(line);
+        if (/\bopcional\b/i.test(line)) {
+          currentBlock.optional = true;
+        }
+        if (currentBlock.type === 'conditioning' && isPrescriptionLine(line)) {
+          currentBlock.type = inferPrescriptionType(line);
+        }
+      } else if (isInstructionLine(line)) {
+        currentBlock.instructions.push(line);
+      } else if (!currentBlock.instruction && line.length < 80 && !/\d/.test(line)) {
+        currentBlock.instruction = line;
+      } else {
+        currentBlock.instructions.push(line);
+      }
+      continue;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // FALLBACK: NÃO ESTAMOS DENTRO DE UM BLOCO — CRIAR NOVO BLOCO
+    // ════════════════════════════════════════════════════════════════════════════
     // Detectar linha de exercício (começa com número ou marcador)
     if (/^[-•*]?\s*\d/.test(line)) {
       const item = parseExerciseLine(line);
@@ -2080,6 +2163,8 @@ export function parseStructuredText(text: string): ParseResult {
       if (item) {
         if (!currentBlock) {
           currentBlock = createNewBlock('', true);
+          isInsideBlock = true;
+          console.log('[BLOCK_START] Novo bloco iniciado por exercício (sem heading)');
         }
         
         currentBlock.items.push(item);
@@ -2124,6 +2209,8 @@ export function parseStructuredText(text: string): ParseResult {
         currentBlock.type = inferredType;
         currentBlock.instructions.push(line);
         currentBlock.optional = isOptional;
+        isInsideBlock = true;
+        console.log('[BLOCK_START] Novo bloco iniciado por estímulo/prescrição');
       } else {
         currentBlock = createNewBlock('');
         if (isInstructionLine(line)) {
@@ -2131,6 +2218,8 @@ export function parseStructuredText(text: string): ParseResult {
         } else {
           currentBlock.instruction = line;
         }
+        isInsideBlock = true;
+        console.log('[BLOCK_START] Novo bloco iniciado por conteúdo genérico');
       }
     }
   }
