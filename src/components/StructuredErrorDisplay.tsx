@@ -115,52 +115,20 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
 }
 
 /**
- * Bloco "Modelo Recomendado" - exportado separadamente para posicionamento flexível
+ * Bloco "Modelo Recomendado" - CONSTANTE FIXA (MVP0)
  * 
- * Modos:
- * - isExpanded=false (padrão): colapsado, mostra apenas header clicável
- * - isExpanded=true: expandido, mostra template + unidades
- * - isContextual=true: usa dia/bloco do primeiro erro
- * - isContextual=false: usa placeholders genéricos
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * CONTRATO DE PRODUTO (INVIOLÁVEL):
+ * - Texto é FIXO e IMUTÁVEL em runtime
+ * - NÃO depende de props, estado, erros ou contexto
+ * - Card inicia SEMPRE FECHADO
+ * - Abertura APENAS por clique manual do usuário
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
-interface RecommendedModelBlockProps {
-  issues?: StructureIssue[];
-  isExpanded?: boolean;
-  onToggle?: () => void;
-}
 
-export function RecommendedModelBlock({ 
-  issues, 
-  isExpanded = false,
-  onToggle 
-}: RecommendedModelBlockProps) {
-  const [copied, setCopied] = useState(false);
-  
-  // Modo contextual: se há issues, usar dados reais do primeiro erro
-  const isContextual = issues && issues.length > 0;
-  const firstIssue = issues?.[0];
-  
-  // Dados do modelo
-  const dayName = isContextual 
-    ? getDayNameFromIndex(firstIssue?.dayIndex)
-    : 'DIA_DA_SEMANA (ex: SEGUNDA)';
-  const blockTitle = isContextual
-    ? (firstIssue?.blockTitle?.trim() || 
-       (firstIssue?.blockIndex !== undefined ? `Bloco ${firstIssue.blockIndex + 1}` : 'NOME DO BLOCO'))
-    : 'NOME_DO_BLOCO (ex: Força / Condicionamento / Corrida)';
-  
-  // Template contextual vs genérico
-  const modelTemplate = isContextual
-    ? `${dayName}
-${blockTitle}
-
-[TREINO]
-45 min corrida PSE 5
-
-[COMENTÁRIO]
-bem confortável.`
-    : `${dayName}
-${blockTitle}
+// CONSTANTE FIXA — Texto oficial aprovado (única versão permitida)
+const MODEL_RECOMMENDED_TEMPLATE = `DIA_DA_SEMANA (ex: SEGUNDA)
+NOME_DO_BLOCO (ex: Força / Condicionamento / Corrida)
 
 [TREINO]
 <DURAÇÃO ou VOLUME> <MODALIDADE> <INTENSIDADE OBJETIVA>
@@ -168,19 +136,31 @@ ${blockTitle}
 [COMENTÁRIO]
 <PERCEPÇÃO / SENSAÇÃO / OBSERVAÇÃO>`;
 
+interface RecommendedModelBlockProps {
+  // Props removidas intencionalmente — modelo é FIXO e não depende de contexto
+}
+
+export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  
+  const handleToggle = () => {
+    setIsExpanded(prev => !prev);
+  };
+
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(modelTemplate);
+    navigator.clipboard.writeText(MODEL_RECOMMENDED_TEMPLATE);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="rounded-lg border-2 border-primary/30 bg-primary/5 overflow-hidden">
-      {/* Header clicável */}
+      {/* Header clicável — ÚNICA forma de abrir o card */}
       <button
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
         className="w-full p-3 flex items-center justify-between hover:bg-primary/10 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -214,13 +194,13 @@ ${blockTitle}
         </div>
       </button>
       
-      {/* Conteúdo expandível */}
+      {/* Conteúdo expandível — texto FIXO, não muda */}
       {isExpanded && (
         <div className="p-4 pt-0 space-y-4">
-          {/* Template copiável */}
+          {/* Template FIXO copiável */}
           <div className="p-3 rounded bg-muted/50 border border-border">
             <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
-              {modelTemplate}
+              {MODEL_RECOMMENDED_TEMPLATE}
             </pre>
           </div>
           

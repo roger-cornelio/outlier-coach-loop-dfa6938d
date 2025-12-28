@@ -756,12 +756,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             </div>
           )}
 
-          {/* MVP0: Modelo Recomendado - SEMPRE visível (colapsado), expande com erros */}
-          <RecommendedModelBlock 
-            issues={hasStructureErrors && showPreview ? parseResult?.structureIssues : undefined}
-            isExpanded={modelExpanded || (hasStructureErrors && showPreview)}
-            onToggle={() => setModelExpanded(!modelExpanded)}
-          />
+          {/* MVP0: Modelo Recomendado - FIXO, sem auto-expand, controle manual do usuário */}
+          <RecommendedModelBlock />
 
           <div className="flex gap-2 flex-wrap">
             <Button
