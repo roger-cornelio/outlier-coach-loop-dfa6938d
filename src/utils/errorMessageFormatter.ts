@@ -12,8 +12,9 @@
  * - Linha {NÚMERO_DA_LINHA}
  * - 📌 O que aconteceu
  * - 🛠️ O que fazer agora
- * - ✅ Exemplo correto
  * - 🎯 Próximo passo
+ * 
+ * NOTA: "Exemplo correto" foi removido — o ensino acontece no "Modelo Recomendado"
  */
 
 import type { StructureIssue } from './structuredTextParser';
@@ -39,63 +40,38 @@ const DAY_NAMES: Record<number, string> = {
   6: 'DOMINGO',
 };
 
-// Copys padrão por tipo de erro
+// Copys padrão por tipo de erro (sem exampleFix — ensino centralizado no Modelo Recomendado)
 const ERROR_COPIES: Record<ErrorType, {
   whatHappened: string;
   whatToDo: string;
-  exampleFix: string;
 }> = {
   HYBRID_LINE: {
     whatHappened: 'A instrução do treino contém termos subjetivos misturados com a execução (ex.: "leve", "confortável").',
     whatToDo: 'Torne o treino objetivo e deixe a percepção no comentário.',
-    exampleFix: `[TREINO]
-45 min corrida PSE 5
-
-[COMENTÁRIO]
-Bem confortável`,
   },
   NO_STRUCTURE: {
     whatHappened: 'O sistema não conseguiu identificar claramente a estrutura do bloco.',
     whatToDo: 'Adicione um nome de bloco ou organize o conteúdo em linhas claras.',
-    exampleFix: `Força
-5x5 Back Squat`,
   },
   MISSING_DAY: {
     whatHappened: 'O treino não está associado a um dia válido da semana.',
     whatToDo: 'Inicie o treino com um dia válido (SEGUNDA a DOMINGO).',
-    exampleFix: `SEGUNDA
-Aquecimento
-10 min corrida leve`,
   },
   ISOLATED_COMMENT: {
     whatHappened: 'Foi identificado um comentário sem uma instrução de treino associada.',
     whatToDo: 'Adicione a instrução do treino ou remova o comentário.',
-    exampleFix: `[TREINO]
-Mobilidade leve 15 minutos`,
   },
   AMBIGUOUS_CONTENT: {
     whatHappened: 'O sistema encontrou um trecho que não conseguiu classificar como treino válido.',
     whatToDo: 'Torne a instrução mais objetiva ou reescreva o trecho.',
-    exampleFix: `Remo 2000m
-Ritmo constante`,
   },
   REST_WITH_STIMULUS: {
     whatHappened: 'Foi identificado contexto de descanso/opcional junto com estímulo executável.',
     whatToDo: 'Use as tags [TREINO] e [COMENTÁRIO] para separar claramente.',
-    exampleFix: `[TREINO]
-Corrida leve 30 minutos
-
-[COMENTÁRIO]
-Opcional — apenas para soltar`,
   },
   GENERIC: {
     whatHappened: 'O sistema identificou um problema na estrutura do treino.',
-    whatToDo: 'Revise o texto e corrija conforme o exemplo abaixo.',
-    exampleFix: `[TREINO]
-Seu estímulo aqui
-
-[COMENTÁRIO]
-Observações opcionais`,
+    whatToDo: 'Revise o texto e corrija.',
   },
 };
 
@@ -139,6 +115,7 @@ export function getDayNameFromIndex(dayIndex?: number): string {
 
 /**
  * Formata a mensagem de erro completa com estrutura padronizada
+ * NOTA: exampleFix removido — ensino centralizado no "Modelo Recomendado"
  */
 export interface FormattedError {
   // Header
@@ -150,7 +127,6 @@ export interface FormattedError {
   // Content
   whatHappened: string;
   whatToDo: string;
-  exampleFix: string;
   
   // Original data
   lineText?: string;
@@ -181,10 +157,6 @@ export function formatStructureIssue(issue: StructureIssue): FormattedError {
   const errorType = detectErrorType(issue);
   const copy = ERROR_COPIES[errorType];
   
-  // REGRA: O exemplo SEMPRE vem do template fixo (pedagógico)
-  // NUNCA usar sampleFix derivado do texto do coach
-  const exampleFix = copy.exampleFix;
-  
   return {
     dayName: getDayNameFromIndex(issue.dayIndex),
     blockTitle: getBlockTitle(issue),
@@ -192,7 +164,6 @@ export function formatStructureIssue(issue: StructureIssue): FormattedError {
     severity: issue.severity,
     whatHappened: copy.whatHappened,
     whatToDo: copy.whatToDo,
-    exampleFix,
     lineText: issue.lineText,
     originalMessage: issue.message,
     dayIndex: issue.dayIndex,
