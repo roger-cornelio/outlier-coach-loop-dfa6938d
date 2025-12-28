@@ -76,7 +76,7 @@ import {
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import { CONFIDENCE_LABELS, CONFIDENCE_TOOLTIPS } from '@/utils/unitDetection';
-import { getBlockHeader } from '@/utils/blockDisplayUtils';
+import { getBlockHeader, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 
@@ -1222,7 +1222,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                                 .map((line) => (
                                                   <div key={line.id} className="flex items-start gap-2 flex-wrap">
                                                     <p className={`text-foreground ${line.flags?.optional ? 'italic text-muted-foreground' : ''}`}>
-                                                      {line.text}
+                                                      {normalizeRestLineForDisplay(line.text)}
                                                     </p>
                                                     {/* Tags de classificação */}
                                                     <div className="flex gap-1 flex-shrink-0">
@@ -1265,9 +1265,9 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                                 .map((line) => (
                                                   <div key={line.id} className="flex items-center gap-2">
                                                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/20 text-blue-600 border-blue-500/30">
-                                                      DESCANSO
+                                                      INTERVALO
                                                     </Badge>
-                                                    <p className="text-blue-600">{line.text}</p>
+                                                    <p className="text-blue-600">{normalizeRestLineForDisplay(line.text)}</p>
                                                   </div>
                                                 ))}
                                             </div>
@@ -1305,8 +1305,8 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                                   💬 Notas:
                                                 </span>
                                                 {noteLines.map((line) => (
-                                                  <div key={line.id} className="flex items-start gap-2">
-                                                    <p className="italic">{line.text}</p>
+                                                    <div key={line.id} className="flex items-start gap-2">
+                                                    <p className="italic">{normalizeRestLineForDisplay(line.text)}</p>
                                                     {line.confidence === 'LOW' && (
                                                       <Badge 
                                                         variant="outline" 

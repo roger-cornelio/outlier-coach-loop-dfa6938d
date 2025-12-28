@@ -1302,13 +1302,62 @@ function isWhitelistLine(line: string): boolean {
   return GLOBAL_TITLE_WHITELIST.some(p => p.test(trimmed));
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// MVP0 PATCH: isRestInstructionLineGlobal - Versão global para uso antes do loop
+// REGRA: Linhas de descanso intra-bloco NUNCA podem ser heading
+// ════════════════════════════════════════════════════════════════════════════
+function isRestInstructionLineGlobal(line: string): boolean {
+  const trimmed = line.trim();
+  const lower = trimmed.toLowerCase();
+  
+  // A) "Descanso" seguido de tempo: 2', 90'', 2 min, 1:30, etc.
+  if (/^descanso\s*\d+/i.test(lower)) return true;
+  if (/^descanso\s+\d+\s*[''"'']+/i.test(lower)) return true;
+  if (/^descanso\s+\d+\s*(min|seg|s|segundos?|minutos?)/i.test(lower)) return true;
+  if (/^descanso\s+\d+:\d+/i.test(lower)) return true;
+  if (/^descanso\s+\d+[''"'']+\d*[''"'']*\s*(entre|after)?/i.test(lower)) return true;
+  
+  // B) "Descansar" (sempre é instrução)
+  if (/^descansar\b/i.test(lower)) return true;
+  
+  // C) "Descanso:" seguido de instruções
+  if (/^descanso\s*:/i.test(lower)) return true;
+  
+  // D) Frases típicas de descanso intra-bloco
+  if (/descanso\s+(entre|between)\s+(rounds?|s[ée]ries?|sets?|exerc[ií]cios?)/i.test(lower)) return true;
+  if (/descanso\s+(necess[aá]rio|livre|ativo|passivo|conforme)/i.test(lower)) return true;
+  if (/descanso\s+a\s+cada/i.test(lower)) return true;
+  if (/descanso\s+de\s+\d+/i.test(lower)) return true;
+  
+  // E) Variantes em inglês
+  if (/^rest\s*\d+/i.test(lower)) return true;
+  if (/rest\s+between/i.test(lower)) return true;
+  if (/rest\s+as\s+needed/i.test(lower)) return true;
+  
+  // F) Match exato para padrões como "Descanso 2'"
+  if (/^descanso\s+\d+[''"'']+\s*$/i.test(trimmed)) return true;
+  if (/^descanso\s+\d+\s*(min|seg|s|segundos?|minutos?)\s*$/i.test(trimmed)) return true;
+  
+  return false;
+}
+
 // Verifica se linha é um heading/título de bloco (não precisa ser MAIÚSCULA)
 // MVP0 FIX: Usa WHITELIST e verifica BLACKLIST
+// MVP0 PATCH: DESCANSO INTRA-BLOCO NUNCA É HEADING
 function isHeadingLine(line: string): boolean {
   const trimmed = line.trim();
   
   // Debug log para rastrear
   console.log('[isHeadingLine] Verificando:', JSON.stringify(trimmed), 'len=', trimmed.length);
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // REGRA ABSOLUTA: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
+  // Verifica PRIMEIRO, antes de qualquer outra regra
+  // ════════════════════════════════════════════════════════════════════════════
+  if (isRestInstructionLineGlobal(trimmed)) {
+    console.log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
+    return false;
+  }
   
   // BLACKLIST: NUNCA é heading
   if (isBlacklistLine(trimmed)) {
@@ -1774,28 +1823,58 @@ export function parseStructuredText(text: string): ParseResult {
    * - Alterar estado do dia
    * ════════════════════════════════════════════════════════════════════════════
    */
+  /**
+   * MVP0 PATCH: isRestInstructionLine - Detecta linhas de descanso DENTRO de bloco
+   * ════════════════════════════════════════════════════════════════════════════
+   * REGRA ABSOLUTA: Descanso intra-bloco NÃO tem poder estrutural
+   * É apenas nota/instrução — NÃO pode:
+   * - Virar heading/título de bloco
+   * - Fechar bloco atual
+   * - Criar novo bloco
+   * - Alterar estado do dia (isRestDay)
+   * - Mudar classificação do dia (opcional/leve)
+   * ════════════════════════════════════════════════════════════════════════════
+   */
   const isRestWithinBlock = (line: string): boolean => {
-    const trimmed = line.trim().toLowerCase();
+    const trimmed = line.trim();
+    const lower = trimmed.toLowerCase();
     
-    // A) "Descanso" seguido de tempo: 2', 90'', 2 min, 1:30, etc.
-    if (/^descanso\s+\d+/i.test(trimmed)) return true;
-    if (/descanso\s+\d+\s*['"'']+/i.test(trimmed)) return true;
-    if (/descanso\s+\d+\s*(min|seg|s|segundos?)/i.test(trimmed)) return true;
-    if (/descanso\s+\d+:\d+/i.test(trimmed)) return true; // "Descanso 1:30"
+    // REGRA: Se começa com "descanso" ou "descansar", verificar contexto
+    
+    // A) "Descanso" seguido de tempo: 2', 90'', 2 min, 1:30, 1'30'', etc.
+    // Padrões: "Descanso 2'", "Descanso 90''", "Descanso 2 min", "Descanso 1:30"
+    // REGEX CORRIGIDO: permite espaço opcional entre "descanso" e o número
+    if (/^descanso\s*\d+/i.test(lower)) return true; // "Descanso2'" ou "Descanso 2'"
+    if (/^descanso\s+\d+\s*[''"'']+/i.test(lower)) return true; // "Descanso 2'"
+    if (/^descanso\s+\d+\s*(min|seg|s|segundos?|minutos?)/i.test(lower)) return true;
+    if (/^descanso\s+\d+:\d+/i.test(lower)) return true; // "Descanso 1:30"
+    if (/^descanso\s+\d+[''"'']+\d*[''"'']*\s*(entre|after)?/i.test(lower)) return true; // "Descanso 1'30'' entre rounds"
     
     // B) "Descansar" (sempre é instrução, não estrutural)
-    if (/^descansar\b/i.test(trimmed)) return true;
+    if (/^descansar\b/i.test(lower)) return true;
     
     // C) "Descanso:" seguido de instruções
-    if (/^descanso\s*:/i.test(trimmed)) return true;
+    if (/^descanso\s*:/i.test(lower)) return true;
     
     // D) Frases típicas de descanso intra-bloco
-    if (/descanso\s+entre\s+(rounds?|s[ée]ries?|sets?)/i.test(trimmed)) return true;
-    if (/descanso\s+(necess[aá]rio|livre|ativo|passivo)/i.test(trimmed)) return true;
+    if (/descanso\s+(entre|between)\s+(rounds?|s[ée]ries?|sets?|exerc[ií]cios?)/i.test(lower)) return true;
+    if (/descanso\s+(necess[aá]rio|livre|ativo|passivo|conforme)/i.test(lower)) return true;
+    if (/descanso\s+a\s+cada/i.test(lower)) return true; // "Descanso a cada round"
+    if (/descanso\s+de\s+\d+/i.test(lower)) return true; // "Descanso de 2 min"
     
-    // E) Variantes: "Rest 2'", "Rest between sets"
-    if (/^rest\s+\d+/i.test(trimmed)) return true;
-    if (/rest\s+between/i.test(trimmed)) return true;
+    // E) Variantes em inglês: "Rest 2'", "Rest between sets"
+    if (/^rest\s*\d+/i.test(lower)) return true;
+    if (/rest\s+between/i.test(lower)) return true;
+    if (/rest\s+as\s+needed/i.test(lower)) return true;
+    
+    // F) "Descanso" dentro de uma linha maior (não no início)
+    // Ex: "após os burpees, descanso 2 min"
+    if (/\bdescanso\s+\d+\s*[''"'']+/i.test(lower) && !lower.startsWith('descanso')) return true;
+    
+    // G) Linha que contém apenas "Descanso X'" onde X é número com tempo
+    // Match exato para padrões como "Descanso 2'" (case insensitive)
+    if (/^descanso\s+\d+[''"'']+\s*$/i.test(trimmed)) return true;
+    if (/^descanso\s+\d+\s*(min|seg|s|segundos?|minutos?)\s*$/i.test(trimmed)) return true;
     
     return false;
   };
@@ -2198,6 +2277,15 @@ export function parseStructuredText(text: string): ParseResult {
     errors: result.errors,
     warnings: result.warnings,
   });
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: LOG FINAL DE VALIDAÇÃO (blocksCount e headingsList por dia)
+  // ════════════════════════════════════════════════════════════════════════════
+  for (const day of result.days) {
+    const dayLabel = day.day || 'DESCONHECIDO';
+    const dayHeadings = day.blocks.map(b => b.title).filter(Boolean);
+    console.log(`[PARSER] day=${dayLabel.toUpperCase()} blocksCount=${day.blocks.length} headingsList=${JSON.stringify(dayHeadings)}`);
+  }
   
   return result;
 }
