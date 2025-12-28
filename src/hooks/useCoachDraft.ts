@@ -7,6 +7,7 @@
  * 3. Semana OBRIGATÓRIA antes do preview
  * 4. Publish usa editedDays se existir, senão parsedDays
  * 5. Draft só é limpo após publish com sucesso
+ * 6. mode='edit' | 'preview' é EXPLÍCITO - nunca inferido
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -15,17 +16,28 @@ import type { DayWorkout } from '@/types/outlier';
 import type { ParseResult } from '@/utils/structuredTextParser';
 import type { WeekPeriod } from '@/components/WeekPeriodSelector';
 
-export type DraftView = 'editing' | 'preview';
+/**
+ * mode: Flag explícito que governa TODA a renderização
+ * - 'edit': Tela de edição - controles habilitados
+ * - 'preview': Tela de preview - 100% read-only
+ * 
+ * NUNCA INFERIR mode a partir de validação, parsing ou sucesso
+ */
+export type DraftMode = 'edit' | 'preview';
 
 export interface CoachDraft {
   rawText: string;
   weekId: WeekPeriod | null;
   parsedDays: DayWorkout[] | null;
+  /** Versão editada manualmente no modo edição (SE existir) */
   editedDays: DayWorkout[] | null;
   parseResult: ParseResult | null;
   restDays: Record<number, boolean>;
-  view: DraftView;
+  /** Mode explícito: 'edit' ou 'preview' */
+  mode: DraftMode;
   updatedAt: string;
+  /** Flag que indica se houve edição manual */
+  isDirty: boolean;
 }
 
 const STORAGE_KEY_PREFIX = 'outlier:coachDraft:';
@@ -42,8 +54,9 @@ function getEmptyDraft(): CoachDraft {
     editedDays: null,
     parseResult: null,
     restDays: {},
-    view: 'editing',
+    mode: 'edit',
     updatedAt: new Date().toISOString(),
+    isDirty: false,
   };
 }
 
@@ -102,7 +115,8 @@ export function useCoachDraft() {
       ...draft,
       rawText: text,
       // NÃO limpar parseResult ao editar texto - preservar draft
-      view: 'editing',
+      mode: 'edit',
+      isDirty: true,
     });
   }, [draft, saveDraft]);
 
@@ -122,23 +136,27 @@ export function useCoachDraft() {
       parsedDays: workouts,
       editedDays: null, // Reset edições ao reparsear
       restDays: {},
-      view: 'preview',
+      mode: 'preview',
     });
   }, [draft, saveDraft]);
 
-  // Atualizar dias editados (edições manuais no preview)
+  // Atualizar dias editados (edições manuais - SEMPRE marca isDirty)
   const setEditedDays = useCallback((workouts: DayWorkout[]) => {
+    console.debug('[useCoachDraft] setEditedDays → isDirty=true', { count: workouts.length });
     saveDraft({
       ...draft,
       editedDays: workouts,
+      isDirty: true,
     });
   }, [draft, saveDraft]);
 
   // Atualizar parseResult (para toggles de isMainWod, etc)
   const updateParseResult = useCallback((result: ParseResult) => {
+    console.debug('[useCoachDraft] updateParseResult → isDirty=true');
     saveDraft({
       ...draft,
       parseResult: result,
+      isDirty: true,
     });
   }, [draft, saveDraft]);
 
@@ -150,11 +168,11 @@ export function useCoachDraft() {
     });
   }, [draft, saveDraft]);
 
-  // Alternar view (editing <-> preview)
-  const setView = useCallback((view: DraftView) => {
+  // Alternar mode (edit <-> preview)
+  const setMode = useCallback((mode: DraftMode) => {
     saveDraft({
       ...draft,
-      view,
+      mode,
     });
   }, [draft, saveDraft]);
 
@@ -162,7 +180,7 @@ export function useCoachDraft() {
   const goBackToEditing = useCallback(() => {
     saveDraft({
       ...draft,
-      view: 'editing',
+      mode: 'edit',
     });
   }, [draft, saveDraft]);
 
@@ -211,7 +229,7 @@ export function useCoachDraft() {
     setEditedDays,
     updateParseResult,
     setRestDays,
-    setView,
+    setMode,
     goBackToEditing,
     clearDraft,
     
@@ -222,6 +240,7 @@ export function useCoachDraft() {
     editedDays: draft.editedDays,
     parseResult: draft.parseResult,
     restDays: draft.restDays,
-    view: draft.view,
+    mode: draft.mode,
+    isDirty: draft.isDirty,
   };
 }
