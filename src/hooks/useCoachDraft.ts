@@ -1,18 +1,19 @@
 /**
  * useCoachDraft - Hook para gerenciar draft único de programação semanal
  * 
- * REGRAS MVP0 - FLUXO DE 3 TELAS:
+ * REGRAS MVP0 - FLUXO DE 2 TELAS (EDIÇÃO → PREVIEW → PROGRAMAÇÕES):
  * 1. Fonte única de verdade: draftProgram
  * 2. Persiste em localStorage para sobreviver a F5/voltar
- * 3. Semana OBRIGATÓRIA antes de ir para revisão
- * 4. Publish usa editedDays se existir, senão parsedDays
- * 5. Draft só é limpo após publish com sucesso
- * 6. mode='edit' | 'review' | 'publish' é EXPLÍCITO - nunca inferido
+ * 3. Semana OBRIGATÓRIA antes de ir para preview
+ * 4. Preview é 100% read-only
+ * 5. "Salvar e ir para Programações" salva como rascunho no banco e navega para aba Programações
+ * 6. Publicação acontece SOMENTE na aba Programações (CoachProgramsTab)
+ * 7. Draft é limpo após salvar com sucesso
  * 
  * FLUXO:
  * - Tela 1 (EDIÇÃO): mode='edit' → edita tudo, semana obrigatória
- * - Tela 2 (REVISÃO): mode='review' → 100% read-only, apenas visualização
- * - Tela 3 (PUBLICAÇÃO): mode='publish' → read-only + botão publicar
+ * - Tela 2 (PREVIEW): mode='preview' → 100% read-only, "Voltar" ou "Salvar e ir para Programações"
+ * - Tela 3 (PROGRAMAÇÕES): aba separada que gerencia workouts salvos (publicar/excluir)
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -24,12 +25,11 @@ import type { WeekPeriod } from '@/components/WeekPeriodSelector';
 /**
  * mode: Flag explícito que governa TODA a renderização
  * - 'edit': Tela 1 - edição completa, controles habilitados
- * - 'review': Tela 2 - 100% read-only, apenas visualização
- * - 'publish': Tela 3 - read-only + ação de publicar
+ * - 'preview': Tela 2 - 100% read-only, apenas visualização + salvar
  * 
  * NUNCA INFERIR mode a partir de validação, parsing ou sucesso
  */
-export type DraftMode = 'edit' | 'review' | 'publish';
+export type DraftMode = 'edit' | 'preview';
 
 export interface CoachDraft {
   rawText: string;
@@ -39,7 +39,7 @@ export interface CoachDraft {
   editedDays: DayWorkout[] | null;
   parseResult: ParseResult | null;
   restDays: Record<number, boolean>;
-  /** Mode explícito: 'edit', 'review' ou 'publish' */
+  /** Mode explícito: 'edit' ou 'preview' */
   mode: DraftMode;
   updatedAt: string;
   /** Flag que indica se houve edição manual */
@@ -185,7 +185,7 @@ export function useCoachDraft() {
     });
   }, [draft, saveDraft]);
 
-  // Alternar mode (edit <-> review <-> publish)
+  // Alternar mode (edit <-> preview)
   const setMode = useCallback((mode: DraftMode) => {
     console.debug('[useCoachDraft] setMode →', mode);
     saveDraft({
@@ -194,21 +194,12 @@ export function useCoachDraft() {
     });
   }, [draft, saveDraft]);
 
-  // Ir para revisão (Tela 2)
-  const goToReview = useCallback(() => {
-    console.debug('[useCoachDraft] goToReview');
+  // Ir para preview (Tela 2)
+  const goToPreview = useCallback(() => {
+    console.debug('[useCoachDraft] goToPreview');
     saveDraft({
       ...draft,
-      mode: 'review',
-    });
-  }, [draft, saveDraft]);
-
-  // Ir para publicação (Tela 3)
-  const goToPublish = useCallback(() => {
-    console.debug('[useCoachDraft] goToPublish');
-    saveDraft({
-      ...draft,
-      mode: 'publish',
+      mode: 'preview',
     });
   }, [draft, saveDraft]);
 
@@ -221,16 +212,7 @@ export function useCoachDraft() {
     });
   }, [draft, saveDraft]);
 
-  // Voltar da publicação para revisão
-  const goBackToReview = useCallback(() => {
-    console.debug('[useCoachDraft] goBackToReview');
-    saveDraft({
-      ...draft,
-      mode: 'review',
-    });
-  }, [draft, saveDraft]);
-
-  // Limpar draft completamente (após publish com sucesso)
+  // Limpar draft completamente (após salvar com sucesso)
   const clearDraft = useCallback(() => {
     if (!coachId) return;
     
@@ -245,23 +227,23 @@ export function useCoachDraft() {
     setDraft(getEmptyDraft());
   }, [coachId]);
 
-  // Dados finais para publicar: editedDays se existir, senão parsedDays
-  const workoutsToPublish = useMemo(() => {
+  // Dados finais para salvar: editedDays se existir, senão parsedDays
+  const workoutsToSave = useMemo(() => {
     return draft.editedDays || draft.parsedDays;
   }, [draft.editedDays, draft.parsedDays]);
 
-  // Validação: pode ir para revisão? (semana obrigatória + parseResult válido)
-  const canGoToReview = useMemo(() => {
+  // Validação: pode ir para preview? (semana obrigatória + parseResult válido)
+  const canGoToPreview = useMemo(() => {
     return draft.weekId !== null && 
            draft.parseResult !== null && 
            draft.parseResult.success === true &&
            draft.parseResult.days.length > 0;
   }, [draft.weekId, draft.parseResult]);
 
-  // Validação: pode publicar?
-  const canPublish = useMemo(() => {
-    return draft.weekId !== null && workoutsToPublish !== null && workoutsToPublish.length > 0;
-  }, [draft.weekId, workoutsToPublish]);
+  // Validação: pode salvar?
+  const canSave = useMemo(() => {
+    return draft.weekId !== null && workoutsToSave !== null && workoutsToSave.length > 0;
+  }, [draft.weekId, workoutsToSave]);
 
   return {
     // Estado
@@ -269,9 +251,9 @@ export function useCoachDraft() {
     isHydrated,
     
     // Dados derivados
-    workoutsToPublish,
-    canGoToReview,
-    canPublish,
+    workoutsToSave,
+    canGoToPreview,
+    canSave,
     
     // Setters
     setRawText,
@@ -284,10 +266,8 @@ export function useCoachDraft() {
     setMode,
     
     // Navegação entre telas
-    goToReview,
-    goToPublish,
+    goToPreview,
     goBackToEditing,
-    goBackToReview,
     clearDraft,
     
     // Acesso direto aos campos
