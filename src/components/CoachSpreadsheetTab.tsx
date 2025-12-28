@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { PublishToAthletesModal } from './PublishToAthletesModal';
-import { WeekPeriodSelector, WeekPeriod } from './WeekPeriodSelector';
+import { WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { getActiveParams } from '@/config/outlierParams';
@@ -621,11 +621,29 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
               ))}
             </div>
 
-            {/* OBRIGATÓRIO: Seletor de Semana */}
-            <WeekPeriodSelector
-              selectedWeek={selectedWeek}
-              onWeekSelect={setSelectedWeek}
-            />
+            {/* MVP0: Semana selecionada - READ-ONLY no preview */}
+            {selectedWeek && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-foreground">
+                    Semana: <span className="font-semibold">{selectedWeek.label}</span>
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // MVP0: Voltar para edição para alterar semana
+                    console.debug('[CoachSpreadsheet] onBackToEdit → voltando para alterar semana');
+                    setParsedWorkouts(null);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Alterar semana
+                </Button>
+              </div>
+            )}
 
             {/* Erro de WOD Principal faltando */}
             {!mainWodValidation.isValid && (
