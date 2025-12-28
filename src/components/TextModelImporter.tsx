@@ -34,7 +34,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Upload, Eye, Trash2, 
   AlertTriangle, Star, FileImage, Loader2, Moon, MoreVertical, Pencil, Settings2, ArrowLeft,
-  Puzzle, Copy, X
+  Puzzle, Copy, X, ArrowRight
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { DaySelectionModal } from './DaySelectionModal';
@@ -128,6 +128,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
   // Modal de modelo/template
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
+  
+  // MVP0: Estado para highlight de bloco com erro (scroll + expand + highlight)
+  const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
+  const [expandedDayForScroll, setExpandedDayForScroll] = useState<string | null>(null);
 
   // Detectar dias distintos no texto (determinístico, sem IA)
   const detectDaysInText = (textContent: string): number => {
@@ -149,6 +153,26 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
       }
     }
     return count;
+  };
+
+  // MVP0: Scroll para bloco com erro + expand accordion + highlight
+  const scrollToBlock = (dayIndex: number, blockIndex?: number) => {
+    // Expandir o accordion do dia
+    setExpandedDayForScroll(`day-${dayIndex}`);
+    
+    // Aguardar render do accordion e fazer scroll
+    setTimeout(() => {
+      const blockId = blockIndex !== undefined 
+        ? `block-${dayIndex}-${blockIndex}` 
+        : `day-accordion-${dayIndex}`;
+      const element = document.getElementById(blockId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight temporário
+        setHighlightedBlock({ dayIndex, blockIndex });
+        setTimeout(() => setHighlightedBlock(null), 3000);
+      }
+    }, 150);
   };
 
   // Salvar linhas editadas de um bloco
@@ -879,6 +903,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                 {issue.lineNumber && `Linha ${issue.lineNumber}: `}{issue.message}
                               </p>
                               
+                              {/* MVP0: Mostrar a linha problemática */}
+                              {issue.lineText && (
+                                <p className="text-xs text-muted-foreground italic bg-muted/30 px-2 py-1 rounded">
+                                  "{issue.lineText.length > 80 ? issue.lineText.substring(0, 80) + '...' : issue.lineText}"
+                                </p>
+                              )}
+                              
                               {issue.sampleFix && (
                                 <div className="p-2 rounded bg-muted/50 border border-border">
                                   <p className="text-xs font-medium text-muted-foreground mb-1">Como corrigir:</p>
@@ -886,6 +917,19 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                     {issue.sampleFix}
                                   </pre>
                                 </div>
+                              )}
+                              
+                              {/* MVP0: Botão "Ir para o bloco" — scroll + expand + highlight */}
+                              {issue.dayIndex !== undefined && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => scrollToBlock(issue.dayIndex!, issue.blockIndex)}
+                                  className="h-7 text-xs gap-1.5"
+                                >
+                                  <ArrowRight className="w-3 h-3" />
+                                  Ir para o bloco
+                                </Button>
                               )}
                             </div>
                           </div>
@@ -930,7 +974,13 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                 {parseResult.success && parseResult.days.length > 0 && (
                   <TooltipProvider>
                     <div className="space-y-4">
-                      <Accordion type="single" collapsible className="space-y-4">
+                      <Accordion 
+                        type="single" 
+                        collapsible 
+                        className="space-y-4"
+                        value={expandedDayForScroll || undefined}
+                        onValueChange={(value) => setExpandedDayForScroll(value || null)}
+                      >
                         {parseResult.days.map((day, dayIndex) => {
                           const dayName = day.day ? getDayName(day.day) : (selectedDay ? getDayName(selectedDay) : 'Dia não definido');
                           const isRestDay = restDays[dayIndex] || false;
@@ -984,6 +1034,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                             <AccordionItem 
                               key={day.day || `day-${dayIndex}`} 
                               value={`day-${dayIndex}`}
+                              id={`day-accordion-${dayIndex}`}
                               className="border-2 border-border rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 bg-card"
                             >
                               <AccordionTrigger className="px-5 py-5 min-h-[72px] hover:no-underline hover:bg-secondary/30 transition-colors group">
@@ -1134,15 +1185,21 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
                                       type: block.type,
                                     });
                                     
+                                    // MVP0: Verificar se este bloco está destacado (scroll + highlight)
+                                    const isHighlighted = highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex;
+                                    
                                     return (
                                       <div 
-                                        key={blockIndex} 
-                                        className={`p-4 rounded-xl space-y-3 transition-all duration-200 ${
-                                          hasTitleError
-                                            ? 'bg-amber-500/10 border-2 border-amber-500/50 shadow-md'
-                                            : block.isMainWod 
-                                              ? 'bg-primary/10 border-2 border-primary/40 shadow-sm' 
-                                              : 'bg-muted/50 border border-border/60'
+                                        key={blockIndex}
+                                        id={`block-${dayIndex}-${blockIndex}`}
+                                        className={`p-4 rounded-xl space-y-3 transition-all duration-300 ${
+                                          isHighlighted
+                                            ? 'bg-amber-400/30 border-2 border-amber-500 shadow-lg ring-2 ring-amber-400/50'
+                                            : hasTitleError
+                                              ? 'bg-amber-500/10 border-2 border-amber-500/50 shadow-md'
+                                              : block.isMainWod 
+                                                ? 'bg-primary/10 border-2 border-primary/40 shadow-sm' 
+                                                : 'bg-muted/50 border border-border/60'
                                         }`}
                                       >
                                         {/* Erro de título - mensagem no topo do bloco */}
