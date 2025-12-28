@@ -120,6 +120,18 @@ export interface ParsedDay {
   restSuggestionReason?: string; // MVP0: Motivo da sugestão
 }
 
+// MVP0: Issue de estrutura com severidade (para validação pós-parse)
+export type IssueSeverity = 'ERROR' | 'WARNING';
+
+export interface StructureIssue {
+  dayIndex?: number;
+  blockIndex?: number;
+  lineNumber?: number;
+  message: string;
+  severity: IssueSeverity;
+  sampleFix?: string; // Exemplo de como corrigir
+}
+
 export interface ParseResult {
   success: boolean;
   days: ParsedDay[];
@@ -129,6 +141,7 @@ export interface ParseResult {
   needsDaySelection?: boolean; // Indica se precisa selecionar dia manualmente
   hasDayAnchors?: boolean; // MVP0: Indica se o texto tem âncoras de dia (SEGUNDA, TERÇA, etc.)
   structureWarnings?: string[]; // MVP0: Avisos de estrutura inválida (mistura TREINO + COMENTÁRIO)
+  structureIssues?: StructureIssue[]; // MVP0: Issues de estrutura com severidade (ERROR bloqueia importação)
 }
 
 // ============================================
@@ -2816,6 +2829,7 @@ export interface CoachInputValidation {
   errors: string[];
   warnings: string[];
   requiresTags: boolean; // Indica se o contexto exige tags [TREINO]/[COMENTÁRIO]
+  issues: StructureIssue[]; // MVP0: Issues com severidade para mostrar no preview
 }
 
 /**
@@ -2875,6 +2889,7 @@ function contextRequiresTags(text: string): boolean {
 export function validateCoachInput(text: string): CoachInputValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const issues: StructureIssue[] = [];
   const lines = text.split('\n');
   
   const usesTagFormat = textUsesTagFormat(text);
@@ -2909,6 +2924,14 @@ export function validateCoachInput(text: string): CoachInputValidation {
       hybridLineCount++;
       const truncated = line.length > 50 ? line.substring(0, 50) + '...' : line;
       errors.push(`Linha ${i + 1}: "${truncated}" — Mistura treino + comentário.`);
+      
+      // MVP0: Adicionar issue com severidade ERROR para bloquear importação
+      issues.push({
+        lineNumber: i + 1,
+        message: `Mistura treino + comentário`,
+        severity: 'ERROR',
+        sampleFix: `[TREINO]\n${line.split(',')[0] || line}\n\n[COMENTÁRIO]\n${line.split(',').slice(1).join(',').trim() || 'Descreva a intenção aqui'}`,
+      });
     }
   }
   
@@ -2921,6 +2944,11 @@ export function validateCoachInput(text: string): CoachInputValidation {
     const hasNarrativeAnywhere = lines.some(line => isNarrativeLine(line.trim()));
     if (hasNarrativeAnywhere) {
       warnings.push('Este treino contém "Descanso/Opcional" com estímulo. Considere usar [TREINO] e [COMENTÁRIO] para separar.');
+      issues.push({
+        message: 'Contexto de descanso/opcional com estímulo sem separação clara',
+        severity: 'WARNING',
+        sampleFix: `[TREINO]\nSeu estímulo aqui\n\n[COMENTÁRIO]\nOpcional / apenas para soltar`,
+      });
     }
   }
   
@@ -2932,6 +2960,7 @@ export function validateCoachInput(text: string): CoachInputValidation {
     errors,
     warnings,
     requiresTags: requiresTags && !usesTagFormat,
+    issues,
   };
 }
 

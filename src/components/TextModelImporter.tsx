@@ -181,19 +181,6 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     setDayValidationError(null);
     setInputValidationError(null);
     
-    // ═══════════════════════════════════════════════════════════════════════════
-    // MVP0: TRAVA DE INPUT — VALIDAÇÃO ANTES DO PARSE
-    // ═══════════════════════════════════════════════════════════════════════════
-    // REGRA: Bloquear se detectar linhas híbridas (treino + comentário misturados)
-    // O coach DEVE separar usando [TREINO] e [COMENTÁRIO]
-    // ═══════════════════════════════════════════════════════════════════════════
-    const inputValidation = validateCoachInput(textareaValue);
-    
-    if (!inputValidation.isValid) {
-      setInputValidationError(inputValidation.errors);
-      return; // BLOQUEIA - não avança para parse
-    }
-    
     // MVP0 FIX: Se já existe parseResult e preview está oculto, apenas reexibir
     // (usuário clicou "Voltar" e quer ver o preview novamente)
     if (parseResult && !showPreview) {
@@ -212,22 +199,30 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     const dayValidation = validateDayAnchors(textareaValue);
     const daysDetected = dayValidation.daysFound.length;
     
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MVP0: VALIDAÇÃO PÓS-PARSE — NUNCA BLOQUEIA PREVIEW
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REGRA: O preview SEMPRE renderiza. Erros são mostrados DENTRO do preview.
+    // O bloqueio acontece apenas no botão "Importar treino".
+    // ═══════════════════════════════════════════════════════════════════════════
+    const inputValidation = validateCoachInput(textareaValue);
+    
     // Se 1+ dias detectados no texto → ir para preview normalmente
     if (daysDetected >= 1) {
-      executeParseMultiDay();
+      executeParseMultiDay(inputValidation.issues);
       return;
     }
     
     // Se 0 dias detectados → NÃO abrir modal, assumir SEGUNDA com alerta
     // MVP0 FIX: Fluxo "Importar Semana" nunca pergunta dia
-    executeParseWithFallbackDay();
+    executeParseWithFallbackDay(inputValidation.issues);
   };
   
   /**
    * CANÔNICO — Parse para texto multi-dia (2+ dias detectados)
    * NÃO CRIAR VARIAÇÕES
    */
-  const executeParseMultiDay = () => {
+  const executeParseMultiDay = (structureIssues?: import('@/utils/structuredTextParser').StructureIssue[]) => {
     const textareaValue = text.trim();
     if (!textareaValue) return;
     
@@ -236,6 +231,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     
     // Texto multi-dia não precisa de seleção de dia
     result.needsDaySelection = false;
+    
+    // MVP0: Adicionar issues de estrutura ao resultado (para exibir no preview)
+    if (structureIssues && structureIssues.length > 0) {
+      result.structureIssues = structureIssues;
+    }
     
     setParseResult(result);
     setShowPreview(true);
@@ -248,7 +248,7 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
    * MVP0: Parse com fallback para SEGUNDA quando nenhum dia detectado
    * NUNCA abre modal - assume SEGUNDA e mostra alerta
    */
-  const executeParseWithFallbackDay = () => {
+  const executeParseWithFallbackDay = (structureIssues?: import('@/utils/structuredTextParser').StructureIssue[]) => {
     const textareaValue = text.trim();
     if (!textareaValue) return;
     
@@ -292,6 +292,11 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     result.warnings.push('Não encontramos os dias (SEGUNDA, TERÇA…). Você pode adicionar no texto ou ajustar no preview.');
     
     result.needsDaySelection = false;
+    
+    // MVP0: Adicionar issues de estrutura ao resultado (para exibir no preview)
+    if (structureIssues && structureIssues.length > 0) {
+      result.structureIssues = structureIssues;
+    }
     
     setParseResult(result);
     setShowPreview(true);
@@ -640,10 +645,16 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
     !hasMissingCategory &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
-  // Pode importar (rascunho): precisa de treino válido, títulos e categorias corretos
+  // MVP0: Contar issues de estrutura com severidade ERROR (bloqueia importação)
+  const structureErrorCount = parseResult?.structureIssues?.filter(i => i.severity === 'ERROR').length ?? 0;
+  const structureWarningCount = parseResult?.structureIssues?.filter(i => i.severity === 'WARNING').length ?? 0;
+  const hasStructureErrors = structureErrorCount > 0;
+
+  // Pode importar (rascunho): precisa de treino válido, títulos e categorias corretos, SEM erros de estrutura
   const canImport = parseResult?.success && 
     !hasInvalidTitles &&
     !hasMissingCategory &&
+    !hasStructureErrors &&
     (!parseResult.needsDaySelection || selectedDay !== null);
 
   return (
@@ -695,53 +706,10 @@ export function TextModelImporter({ onImport }: TextModelImporterProps) {
             Usar modelo para facilitar sua vida
           </button>
 
-          {/* MVP0: Erro de validação de estrutura (mistura treino + comentário narrativo) */}
-          {inputValidationError && inputValidationError.length > 0 && (
-            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
-                <div className="space-y-2 flex-1">
-                  <p className="text-sm font-semibold text-destructive">
-                    ⚠️ Treino e comentário precisam estar separados
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Detectamos linhas que misturam estímulo com explicação narrativa (ex: "foco em", "objetivo", "pra recuperar").
-                  </p>
-                  <div className="space-y-1 mt-2">
-                    {inputValidationError.map((error, idx) => (
-                      <p key={idx} className="text-xs text-destructive/90 font-mono bg-destructive/5 px-2 py-1 rounded">
-                        {error}
-                      </p>
-                    ))}
-                  </div>
-                  <div className="mt-3 p-3 rounded bg-muted/50 border border-border space-y-2">
-                    <p className="text-xs font-medium text-foreground">✅ Formato correto:</p>
-                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-{`[TREINO]
-Corrida contínua
-45 minutos
-Zona 2
-
-[COMENTÁRIO]
-Ritmo leve e confortável. Foco em recuperação.`}
-                    </pre>
-                    <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
-                      💡 <strong>Adjetivos simples são OK:</strong> "500m trote leve", "Bike 30 min solto" passam sem problema.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 text-xs"
-                    onClick={() => setShowTemplateModal(true)}
-                  >
-                    <Puzzle className="w-3 h-3 mr-1.5" />
-                    📋 Modelo recomendado
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* MVP0: Erro de validação de estrutura - REMOVIDO
+              Erros agora aparecem no PREVIEW, não bloqueiam a visualização
+              O bloqueio acontece apenas no botão "Importar treino"
+          */}
 
           {/* MVP0: Erro de validação de dias */}
           {dayValidationError && (
@@ -873,6 +841,66 @@ Ritmo leve e confortável. Foco em recuperação.`}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* MVP0: BANNER DE ISSUES DE ESTRUTURA — Mistura treino + comentário */}
+                {parseResult.structureIssues && parseResult.structureIssues.length > 0 && (
+                  <div className={`p-4 rounded-xl border-2 space-y-3 ${
+                    hasStructureErrors 
+                      ? 'bg-destructive/10 border-destructive/40' 
+                      : 'bg-amber-500/10 border-amber-500/40'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className={`w-5 h-5 ${hasStructureErrors ? 'text-destructive' : 'text-amber-600'}`} />
+                      <span className={`font-semibold text-sm ${hasStructureErrors ? 'text-destructive' : 'text-amber-700'}`}>
+                        {structureErrorCount > 0 && `${structureErrorCount} erro${structureErrorCount > 1 ? 's' : ''}`}
+                        {structureErrorCount > 0 && structureWarningCount > 0 && ' / '}
+                        {structureWarningCount > 0 && `${structureWarningCount} aviso${structureWarningCount > 1 ? 's' : ''}`}
+                        {' de estrutura'}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {parseResult.structureIssues.map((issue, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`p-3 rounded-lg border ${
+                            issue.severity === 'ERROR' 
+                              ? 'bg-destructive/5 border-destructive/30' 
+                              : 'bg-amber-500/5 border-amber-500/30'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                              issue.severity === 'ERROR' ? 'text-destructive' : 'text-amber-600'
+                            }`} />
+                            <div className="space-y-2 flex-1">
+                              <p className={`text-sm font-medium ${
+                                issue.severity === 'ERROR' ? 'text-destructive' : 'text-amber-700'
+                              }`}>
+                                {issue.lineNumber && `Linha ${issue.lineNumber}: `}{issue.message}
+                              </p>
+                              
+                              {issue.sampleFix && (
+                                <div className="p-2 rounded bg-muted/50 border border-border">
+                                  <p className="text-xs font-medium text-muted-foreground mb-1">Como corrigir:</p>
+                                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">
+                                    {issue.sampleFix}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {hasStructureErrors && (
+                      <p className="text-xs text-destructive/80 font-medium pt-2 border-t border-destructive/20">
+                        🚫 Corrija os erros acima para poder importar o treino.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Erros críticos */}
                 {parseResult.errors.length > 0 && (
                   <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-1">
@@ -1425,14 +1453,21 @@ Ritmo leve e confortável. Foco em recuperação.`}
                             )}
                             
                             {/* Título inválido */}
-                            {!hasMissingCategory && hasInvalidTitles && (
+                            {!hasMissingCategory && !hasStructureErrors && hasInvalidTitles && (
                               <p className="text-sm text-amber-900 font-medium">
                                 Corrija os blocos com problemas de título antes de continuar.
                               </p>
                             )}
                             
+                            {/* Erros de estrutura (mistura treino + comentário) */}
+                            {!hasMissingCategory && hasStructureErrors && (
+                              <p className="text-sm text-amber-900 font-medium">
+                                Corrija {structureErrorCount} linha{structureErrorCount > 1 ? 's' : ''} que mistura{structureErrorCount > 1 ? 'm' : ''} treino + comentário. Veja os erros acima.
+                              </p>
+                            )}
+                            
                             {/* Dia da semana faltando */}
-                            {!hasMissingCategory && !hasInvalidTitles && parseResult.needsDaySelection && !selectedDay && (
+                            {!hasMissingCategory && !hasInvalidTitles && !hasStructureErrors && parseResult.needsDaySelection && !selectedDay && (
                               <p className="text-sm text-amber-900 font-medium">
                                 Selecione o dia da semana para este treino.
                               </p>
