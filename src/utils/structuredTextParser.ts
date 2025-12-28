@@ -126,7 +126,9 @@ export type IssueSeverity = 'ERROR' | 'WARNING';
 export interface StructureIssue {
   dayIndex?: number;
   blockIndex?: number;
-  lineNumber?: number;
+  lineIndex?: number; // Índice da linha dentro do bloco (para highlight)
+  lineNumber?: number; // Número da linha no texto original (para exibição)
+  lineText?: string; // Texto da linha problemática (para exibição)
   message: string;
   severity: IssueSeverity;
   sampleFix?: string; // Exemplo de como corrigir
@@ -252,9 +254,21 @@ const DAY_MAP: Record<string, DayOfWeek> = {
 // - "Ritmo confortável" (descrição sem medida)
 // ============================================
 
+// ============================================
+// MVP0: CONECTIVOS NARRATIVOS — GATILHOS REAIS DE BLOQUEIO
+// ============================================
+// SÓ bloquear quando a linha contém estes conectivos JUNTO com métrica.
+// Adjetivos simples ("leve", "moderado", "forte") NÃO bloqueiam!
+// ============================================
+const NARRATIVE_CONNECTIVES = [
+  'bem', 'para', 'pra', 'foco', 'objetivo', 'com objetivo', 'a fim de',
+  'se', 'caso', 'apenas', 'só', 'confortável', 'tranquilo', 'recuperação',
+  'soltar', 'porque', 'visando', 'priorizando', 'focando',
+];
+
 // Padrões que SEMPRE indicam narrativa explicativa (bloqueiam se tiverem medida)
 const NARRATIVE_PATTERNS = [
-  // Vírgula seguida de explicação/qualificador
+  // Vírgula seguida de conectivo narrativo
   /,\s*(?:bem|muito|super|bastante|pra|para|visando|priorizando|focando|com\s+foco)/i,
   // Expressões de objetivo/intenção
   /\bobjetivo\s*[éeː:]/i,
@@ -270,7 +284,9 @@ const NARRATIVE_PATTERNS = [
   /\bsó\s+para\b/i,
   /\bquer\s+dizer\b/i,
   // Expressões de sensação pós-vírgula
-  /,\s*(?:confort[aá]vel|tranquil[oa]|suave|leve|relaxad[oa])/i,
+  /,\s*(?:confort[aá]vel|tranquil[oa]|suave|relaxad[oa])/i,
+  // Conectivos narrativos após vírgula
+  /,\s*(?:recuperação|pra\s+recuperar|para\s+recuperar|apenas|só)\b/i,
 ];
 
 // Adjetivos SIMPLES — NÃO bloqueiam sozinhos!
@@ -2922,15 +2938,20 @@ export function validateCoachInput(text: string): CoachInputValidation {
     
     if (hasMeasure && hasNarrative) {
       hybridLineCount++;
-      const truncated = line.length > 50 ? line.substring(0, 50) + '...' : line;
+      const truncated = line.length > 60 ? line.substring(0, 60) + '...' : line;
       errors.push(`Linha ${i + 1}: "${truncated}" — Mistura treino + comentário.`);
       
       // MVP0: Adicionar issue com severidade ERROR para bloquear importação
+      // Inclui lineText para exibição no botão "Ir para o bloco"
+      const cleanMeasure = line.split(',')[0]?.trim() || line;
+      const commentPart = line.split(',').slice(1).join(',').trim() || 'Descreva a intenção aqui';
+      
       issues.push({
         lineNumber: i + 1,
+        lineText: line,
         message: `Mistura treino + comentário`,
         severity: 'ERROR',
-        sampleFix: `[TREINO]\n${line.split(',')[0] || line}\n\n[COMENTÁRIO]\n${line.split(',').slice(1).join(',').trim() || 'Descreva a intenção aqui'}`,
+        sampleFix: `[TREINO]\n${cleanMeasure}\n\n[COMENTÁRIO]\n${commentPart}`,
       });
     }
   }
