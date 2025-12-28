@@ -913,26 +913,15 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* MVP0: Semana selecionada - READ-ONLY no preview */}
+                {/* MVP0: Semana selecionada - 100% READ-ONLY no preview (sem botão alterar) */}
                 {selectedWeek && (
-                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between gap-2">
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-primary" />
                       <span className="text-sm text-foreground">
                         Semana: <span className="font-semibold">{selectedWeek.label}</span>
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        console.debug('[TextModelImporter] onBackToEdit → voltando para alterar semana');
-                        setShowPreview(false);
-                      }}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      Alterar semana
-                    </Button>
                   </div>
                 )}
 
@@ -1056,91 +1045,14 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
                                     </Badge>
                                   )}
                                   
-                                  {/* Spacer para empurrar toggle e alerta para direita */}
+                                  {/* Spacer */}
                                   <div className="flex-1" />
                                   
-                                  {/* ALERTA LARANJA - triângulo + número (REATIVO) */}
-                                  {hasIssues && (
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/40">
-                                      <AlertTriangle className="w-5 h-5 text-amber-600" />
-                                      <span className="font-bold text-sm text-amber-600">{issuesCount}</span>
-                                    </div>
-                                  )}
-                                  
-                                  {/* Toggle descanso no header */}
-                                  <div 
-                                    className="flex items-center gap-2"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-muted-foreground">Descanso</span>
-                                          <Switch
-                                            checked={isRestDay}
-                                            onCheckedChange={() => toggleRestDay(dayIndex, dayName)}
-                                            className="data-[state=checked]:bg-blue-500"
-                                          />
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="bg-popover text-popover-foreground z-50">
-                                        <p className="text-xs">Dia de descanso não exige WOD principal.</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
+                                  {/* MVP0 PREVIEW 100% READ-ONLY: Sem alertas, sem toggles */}
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-5 pb-5">
-                                {/* MVP0 PATCH: Sugestão discreta de descanso (não bloqueante) */}
-                                {day.restSuggestion && !isRestDay && (
-                                  <div className="mb-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 flex items-center gap-2">
-                                    <Moon className="w-4 h-4 text-blue-400" />
-                                    <span className="text-xs text-blue-500">
-                                      Sugestão: parece dia de descanso. Confirme no toggle se for o caso.
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                {/* Alertas do dia - CAIXA LARANJA (REATIVO) */}
-                                {hasIssues && (
-                                  <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40">
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <AlertTriangle className="w-5 h-5 text-amber-600" />
-                                      <span className="font-semibold text-sm text-amber-600">
-                                        Ajustes pendentes neste dia:
-                                      </span>
-                                    </div>
-                                    <ul className="space-y-1.5 ml-7">
-                                      {dayIssues.map((issue, issueIdx) => {
-                                        let issueMessage = '';
-                                        
-                                        if (issue.type === 'wod_principal') {
-                                          issueMessage = 'Marcar o WOD principal';
-                                        } else if (issue.type === 'categoria_faltando' && issue.blockIndex !== undefined) {
-                                          // MVP0: Categoria obrigatória
-                                          issueMessage = `Bloco ${issue.blockIndex + 1}: Selecione a categoria`;
-                                        } else if (issue.type === 'titulo_invalido' && issue.blockIndex !== undefined) {
-                                          const blockWithIssue = day.blocks[issue.blockIndex];
-                                          const title = blockWithIssue.title?.trim() || '';
-                                          if (!title) {
-                                            issueMessage = `Bloco ${issue.blockIndex + 1}: Adicionar título do bloco`;
-                                          } else {
-                                            issueMessage = `Bloco ${issue.blockIndex + 1}: Ajustar título (parece exercício)`;
-                                          }
-                                        } else if (issue.type === 'dia_semana') {
-                                          issueMessage = 'Selecionar o dia da semana';
-                                        }
-                                        
-                                        return (
-                                          <li key={issueIdx} className="text-sm text-amber-700 flex items-start gap-2">
-                                            <span className="text-amber-500">•</span>
-                                            {issueMessage}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  </div>
-                                )}
+                                {/* MVP0 PREVIEW 100% READ-ONLY: Sem sugestões ou alertas de ação */}
                                 
                                 {/* Mensagem de dia de descanso — Copy padronizada Coach/Admin */}
                                 {isRestDay && (
@@ -1221,36 +1133,17 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
                                           </div>
                                         )}
                                         
+                                      {/* MVP0 PREVIEW 100% READ-ONLY: Apenas exibição, sem controles */}
                                       <div className="flex items-center gap-2 flex-wrap">
-                                          {/* Título do bloco - SEMPRE EDITÁVEL se inválido ou sem título */}
-                                          {/* Usa derivedTitle para determinar se precisa edição */}
-                                          {hasTitleError || editingBlockTitle?.dayIndex === dayIndex && editingBlockTitle?.blockIndex === blockIndex ? (
-                                            <input
-                                              type="text"
-                                              value={block.title || ''}
-                                              onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
-                                              onBlur={() => setEditingBlockTitle(null)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') setEditingBlockTitle(null);
-                                              }}
-                                              className={`font-semibold text-base bg-transparent border-b-2 focus:outline-none px-1 min-w-[150px] max-w-[220px] ${
-                                                hasTitleError 
-                                                  ? 'border-amber-500 text-amber-700 placeholder:text-amber-500/60'
-                                                  : 'border-primary text-foreground placeholder:text-muted-foreground'
-                                              }`}
-                                              placeholder="Digite: Aquecimento, Força, etc."
-                                              autoFocus
-                                            />
-                                          ) : (
-                                            <span className="font-semibold text-base">
-                                              {displayTitle}
-                                              {headerMeta && (
-                                                <span className="text-muted-foreground font-normal ml-2">• {headerMeta}</span>
-                                              )}
-                                            </span>
-                                          )}
+                                          {/* Título do bloco - SOMENTE LEITURA */}
+                                          <span className="font-semibold text-base">
+                                            {displayTitle}
+                                            {headerMeta && (
+                                              <span className="text-muted-foreground font-normal ml-2">• {headerMeta}</span>
+                                            )}
+                                          </span>
                                         
-                                        {/* Badge Principal - fixo quando marcado */}
+                                        {/* Badge Principal - exibição apenas */}
                                         {block.isMainWod && (
                                           <Badge className="bg-primary text-primary-foreground text-xs px-2">
                                             <Star className="w-3 h-3 mr-1 fill-current" />
@@ -1265,28 +1158,12 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
                                           </Badge>
                                         )}
                                         
-                                        {/* Dropdown categoria - OBRIGATÓRIO (MVP0: sem valor default) */}
-                                        <Select
-                                          value={block.type || ''}
-                                          onValueChange={(val) => changeBlockType(dayIndex, blockIndex, val)}
-                                        >
-                                          <SelectTrigger 
-                                            className={`h-7 w-auto min-w-[140px] text-xs ${
-                                              !block.type 
-                                                ? 'border-amber-500 bg-amber-500/10 text-amber-700 border-2' 
-                                                : 'border-dashed'
-                                            }`}
-                                          >
-                                            <SelectValue placeholder="Selecione a categoria" />
-                                          </SelectTrigger>
-                                          <SelectContent className="bg-popover z-50">
-                                            {BLOCK_TYPE_OPTIONS.map(opt => (
-                                              <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                                {opt.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                        {/* MVP0 PREVIEW READ-ONLY: Categoria como Badge (não dropdown) */}
+                                        {block.type && (
+                                          <Badge variant="outline" className="text-xs px-2">
+                                            {BLOCK_TYPE_OPTIONS.find(opt => opt.value === block.type)?.label || block.type}
+                                          </Badge>
+                                        )}
                                         
                                         {/* Chip de formato - se aplicável e não tiver formatDisplay */}
                                         {!block.formatDisplay && block.format !== 'outro' && (
@@ -1302,53 +1179,7 @@ export function TextModelImporter({ onImport, selectedWeek, onWeekSelect, onClea
                                           </Badge>
                                         )}
                                         
-                                        {/* Spacer */}
-                                        <div className="flex-1" />
-                                        
-                                        {/* Botão para marcar WOD principal */}
-                                        {!isRestDay && !block.optional && (
-                                          <Button
-                                            variant={block.isMainWod ? "secondary" : "ghost"}
-                                            size="sm"
-                                            className="h-7 text-xs"
-                                            onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                          >
-                                            <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                            {block.isMainWod ? 'Desmarcar' : 'Marcar principal'}
-                                          </Button>
-                                        )}
-                                        
-                                        {/* Menu de ações do bloco */}
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                              <MoreVertical className="w-4 h-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem 
-                                              onClick={() => setEditingBlockTitle({ dayIndex, blockIndex })}
-                                              className="text-sm"
-                                            >
-                                              <Pencil className="w-4 h-4 mr-2" />
-                                              Editar título
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem 
-                                              onClick={() => setEditingBlock({ dayIndex, blockIndex })}
-                                              className="text-sm"
-                                            >
-                                              <Settings2 className="w-4 h-4 mr-2" />
-                                              Editar bloco
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem 
-                                              onClick={() => setDeleteConfirm({ dayIndex, blockIndex })}
-                                              className="text-sm text-destructive focus:text-destructive"
-                                            >
-                                              <Trash2 className="w-4 h-4 mr-2" />
-                                              Excluir bloco
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        {/* MVP0 PREVIEW READ-ONLY: Sem botões de ação, sem dropdown menu */}
                                       </div>
                                       
                                       {/* ================================================

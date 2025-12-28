@@ -480,22 +480,12 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                         className="overflow-hidden"
                       >
                         <div className="p-3 space-y-3 bg-background">
-                          {/* CALLOUT FIXO: WOD Principal obrigatório */}
-                          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                            <div className="flex items-start gap-2">
-                              <Star className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <div className="text-xs text-amber-700 dark:text-amber-300 whitespace-pre-line">
-                                {getMainBlockCopy().calloutText}
-                              </div>
-                            </div>
-                          </div>
+                          {/* MVP0 PREVIEW 100% READ-ONLY: Sem callout de ação */}
                           
                           {workout.blocks.map((block, blockIndex) => {
                             const mainBlockCopy = getMainBlockCopy();
-                            // Determinar se este bloco é o principal (APENAS manual agora)
                             const mainBlockResult = identifyMainBlock(workout.blocks);
                             const isMainBlock = mainBlockResult.blockIndex === blockIndex;
-                            const isManualMain = block.isMainWod === true;
                             
                             return (
                             <div key={block.id} className={`p-3 rounded-lg border ${
@@ -506,7 +496,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm font-medium">{getBlockDisplayTitle(block, blockIndex)}</span>
-                                  {/* MVP0: Exibir categoria */}
                                   <span className="text-xs text-muted-foreground">
                                     • {getBlockCategoryLabel(block)}
                                   </span>
@@ -515,31 +504,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                                       {mainBlockCopy.icon} {mainBlockCopy.manualLabel}
                                     </span>
                                   )}
-                                  {/* REGRA MVP0: Benchmark badge removido do Coach - apenas Admin pode ver/editar */}
-                                </div>
-                                <div className="flex gap-2">
-                                  {/* Botão WOD Principal */}
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant={isManualMain ? "default" : "outline"}
-                                          size="sm"
-                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                          className={`h-7 text-xs ${isManualMain ? 'bg-primary hover:bg-primary/90' : ''}`}
-                                        >
-                                          <Star className={`w-3 h-3 mr-1 ${isManualMain ? 'fill-current' : ''}`} />
-                                          Principal
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs">
-                                        <p className="font-medium mb-1">{mainBlockCopy.label}</p>
-                                        <p className="text-xs text-muted-foreground">{mainBlockCopy.editorDescription}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  
-                                  {/* REGRA MVP0: Botão Benchmark removido do Coach - apenas Admin pode definir */}
                                 </div>
                               </div>
 
@@ -621,27 +585,15 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
               ))}
             </div>
 
-            {/* MVP0: Semana selecionada - READ-ONLY no preview */}
+            {/* MVP0 PREVIEW 100% READ-ONLY: Semana apenas exibição */}
             {selectedWeek && (
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between gap-2">
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-primary" />
                   <span className="text-sm text-foreground">
                     Semana: <span className="font-semibold">{selectedWeek.label}</span>
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // MVP0: Voltar para edição para alterar semana
-                    console.debug('[CoachSpreadsheet] onBackToEdit → voltando para alterar semana');
-                    setParsedWorkouts(null);
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Alterar semana
-                </Button>
               </div>
             )}
 
