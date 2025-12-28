@@ -614,7 +614,33 @@ export function Dashboard() {
               <div className="mb-8">
                 <h2 className="font-display text-4xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
                 
-                {/* Training Level Badge */}
+                {/* MVP0: Rest Day Informative Message - NEVER blocks */}
+                {currentWorkout.isRestDay && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-6 rounded-xl bg-blue-500/10 border-2 border-blue-500/30"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-full bg-blue-500/20">
+                        <Clock className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <h3 className="font-display text-xl text-blue-500">🌙 Dia de descanso</h3>
+                    </div>
+                    <p className="text-sm text-foreground/80 mb-2">
+                      Hoje está marcado como dia de descanso no seu planejamento.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Você não tem treino obrigatório, mas pode treinar e registrar normalmente se desejar.
+                    </p>
+                    <p className="text-xs text-blue-500/80 font-medium">
+                      O descanso também faz parte da performance.
+                    </p>
+                  </motion.div>
+                )}
+                
+                {/* Training Level Badge - only show when NOT rest day */}
+                {!currentWorkout.isRestDay && (
                 <div className="mb-3">
                   {athleteConfig?.trainingLevel ? (
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold uppercase text-sm tracking-wide ${
@@ -642,7 +668,10 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
+                )}
 
+                {/* Workout stats - only show when NOT rest day */}
+                {!currentWorkout.isRestDay && (
                 <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
@@ -659,6 +688,7 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Workout Adjusted Note - Institutional copy */}
