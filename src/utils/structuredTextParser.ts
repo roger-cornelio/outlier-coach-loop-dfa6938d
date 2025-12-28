@@ -227,94 +227,76 @@ const DAY_MAP: Record<string, DayOfWeek> = {
 };
 
 // ============================================
-// MVP0 PATCH: ADJETIVOS SUBJETIVOS — LISTA EXAUSTIVA
+// MVP0 PATCH: DETECÇÃO CIRÚRGICA DE NARRATIVA
 // ============================================
-// Linhas que contêm esses adjetivos/frases NÃO são EXERCISE
-// Devem ir para block.notes ou block.coachNotes
-// NUNCA influenciam carga, status, ajuste ou classificação do motor
+// SÓ BLOQUEAR quando uma mesma linha tem:
+// 1) Estímulo mensurável (tempo, distância, reps)
+// 2) Linguagem explicativa/narrativa (vírgula + explicação, "objetivo", "foco", "para")
+// 
+// NÃO BLOQUEAR linhas como:
+// - "500m trote leve" (adjetivo simples, sem narrativa)
+// - "Corrida contínua 45 minutos Zona 2" (estímulo puro)
+// - "Ritmo confortável" (descrição sem medida)
 // ============================================
 
-const SUBJECTIVE_ADJECTIVES = [
-  // Intensidade subjetiva
-  /\bleve\b/i,
-  /\bleves\b/i,
-  /\bmoderada?\b/i,
-  /\bmoderadas?\b/i,
-  /\bpesada?\b/i,
-  /\bpesadas?\b/i,
-  /\bintensa?\b/i,
-  /\bintensas?\b/i,
-  /\btranquil[oa]?\b/i,
-  /\btranquilas?\b/i,
-  /\bsuave\b/i,
-  /\bsuaves\b/i,
-  /\bconfort[aá]vel\b/i,
-  /\bconfort[aá]veis\b/i,
-  /\bfácil\b/i,
-  /\bfáceis\b/i,
-  /\bdif[íi]cil\b/i,
-  /\bdif[íi]ceis\b/i,
-  /\bfirme\b/i,
-  /\bforte\b/i,
-  /\bfortes\b/i,
-  
-  // Intenção/recomendação
+// Padrões que SEMPRE indicam narrativa explicativa (bloqueiam se tiverem medida)
+const NARRATIVE_PATTERNS = [
+  // Vírgula seguida de explicação/qualificador
+  /,\s*(?:bem|muito|super|bastante|pra|para|visando|priorizando|focando|com\s+foco)/i,
+  // Expressões de objetivo/intenção
+  /\bobjetivo\s*[éeː:]/i,
+  /\bfoco\s+(?:em|é|:)/i,
+  /\ba\s+ideia\s+é\b/i,
+  /\bvisando\b/i,
+  /\bpriorizando\b/i,
+  /\bpra\s+(?:soltar|recuperar|trabalhar|manter|melhorar|desenvolver)/i,
+  /\bpara\s+(?:soltar|recuperar|trabalhar|manter|melhorar|desenvolver)/i,
+  // Frases compostas com recomendação
   /\bsem\s+for[çc]ar\b/i,
-  /\bsem\s+pressa\b/i,
-  /\bno\s+ritmo\b/i,
-  /\bao\s+seu\s+ritmo\b/i,
-  /\bconvers[aá]vel\b/i,
-  /\bconfortável\s+de\s+falar\b/i,
-  /\bpara\s+soltar\b/i,
   /\bapenas\s+para\b/i,
   /\bsó\s+para\b/i,
-  /\bbem\s+leve\b/i,
-  /\bbem\s+tranquil[ao]\b/i,
-  /\bbem\s+confort[aá]vel\b/i,
-  /\bbem\s+suave\b/i,
-  
-  // Expressões narrativas
-  /\bprioriz(?:ar|ando)\b/i,
-  /\bmantenha\b/i,
-  /\bmanter\b/i,
-  /\bprocure\b/i,
-  /\btente\b/i,
-  /\bevite\b/i,
-  /\bfoco\s+em\b/i,
-  /\bobjetivo\s*[éeː:]\b/i,
-  /\ba\s+ideia\s+é\b/i,
   /\bquer\s+dizer\b/i,
-  
-  // Qualificadores subjetivos em inglês
-  /\beasy\b/i,
-  /\blight\b/i,
-  /\bmoderate\b/i,
-  /\bheavy\b/i,
-  /\bhard\b/i,
-  /\bsteady\b/i,
-  /\bcomfortable\b/i,
-  /\brelaxed\b/i,
+  // Expressões de sensação pós-vírgula
+  /,\s*(?:confort[aá]vel|tranquil[oa]|suave|leve|relaxad[oa])/i,
+];
+
+// Adjetivos SIMPLES — NÃO bloqueiam sozinhos!
+// "500m trote leve" é VÁLIDO
+// "Corrida leve até 45 min, bem confortável" é BLOQUEADO (por ter vírgula + narrativa)
+const SIMPLE_ADJECTIVES_OK = [
+  'leve', 'leves', 'moderada', 'moderado', 'pesada', 'pesado',
+  'tranquilo', 'tranquila', 'suave', 'solto', 'solta',
+  'firme', 'forte', 'easy', 'light', 'moderate', 'heavy',
 ];
 
 // ============================================
-// MVP0: isSubjectiveLine — LINHA CONTÉM TEXTO SUBJETIVO
+// MVP0: isNarrativeLine — LINHA CONTÉM NARRATIVA EXPLICATIVA
 // ============================================
-// REGRA: Se a linha contém adjetivo/intenção/explicação,
-// NÃO pode ser classificada como EXERCISE puro.
-// Deve ser separada em TREINO + COMENTÁRIO ou ir para notas.
+// REGRA CIRÚRGICA: Só retorna TRUE se a linha tem padrão de narrativa.
+// Adjetivos simples ("leve", "tranquilo") NÃO são narrativa.
 // ============================================
-function isSubjectiveLine(line: string): boolean {
+function isNarrativeLine(line: string): boolean {
   const lower = line.toLowerCase();
   
-  // Verificar se contém algum adjetivo subjetivo
-  for (const pattern of SUBJECTIVE_ADJECTIVES) {
+  // Verificar padrões de narrativa explicativa
+  for (const pattern of NARRATIVE_PATTERNS) {
     if (pattern.test(lower)) {
-      console.log('[isSubjectiveLine] → TRUE (subjetivo detectado):', line);
+      console.log('[isNarrativeLine] → TRUE (narrativa detectada):', line);
       return true;
     }
   }
   
   return false;
+}
+
+// ============================================
+// MVP0: isSubjectiveLine — APENAS para compatibilidade
+// ============================================
+// AGORA: Só retorna TRUE se for narrativa explicativa
+// NÃO bloqueia adjetivos simples isolados
+// ============================================
+function isSubjectiveLine(line: string): boolean {
+  return isNarrativeLine(line);
 }
 
 // ============================================
@@ -346,26 +328,33 @@ function hasMeasurableStimulus(line: string): boolean {
 }
 
 // ============================================
-// MVP0: isPureExerciseLine — LINHA É EXERCÍCIO PURO (SEM SUBJETIVO)
+// MVP0: isPureExerciseLine — LINHA É EXERCÍCIO PURO (SEM NARRATIVA)
 // ============================================
-// REGRA ANTI-BURRO: Linha só é exercício puro se:
+// REGRA CIRÚRGICA: Linha só é bloqueada se:
 // 1) Tem estímulo mensurável
-// 2) NÃO contém adjetivo subjetivo
-// Se tiver os dois misturados, exige separação!
+// 2) E TEM narrativa explicativa (vírgula + explicação, "objetivo", "foco em", etc.)
+// 
+// PERMITIDO:
+// - "500m trote leve" → é exercício puro (adjetivo simples OK)
+// - "Corrida contínua 45 minutos Zona 2" → é exercício puro
+// 
+// BLOQUEADO:
+// - "Corrida leve até 45 min, bem confortável" → mistura medida + narrativa
 // ============================================
 function isPureExerciseLine(line: string): boolean {
   const hasMeasurable = hasMeasurableStimulus(line);
-  const hasSubjective = isSubjectiveLine(line);
+  const hasNarrative = isNarrativeLine(line);
   
-  // Se tem medida MAS também tem subjetivo → NÃO é exercício puro
+  // Se tem medida MAS também tem narrativa → NÃO é exercício puro
   // Isso vai forçar a separação TREINO + COMENTÁRIO
-  if (hasMeasurable && hasSubjective) {
-    console.log('[isPureExerciseLine] → FALSE (mistura medida + subjetivo):', line);
+  if (hasMeasurable && hasNarrative) {
+    console.log('[isPureExerciseLine] → FALSE (mistura medida + narrativa):', line);
     return false;
   }
   
-  // Se tem medida SEM subjetivo → é exercício puro
-  if (hasMeasurable && !hasSubjective) {
+  // Se tem medida SEM narrativa → é exercício puro
+  // Adjetivos simples como "leve", "tranquilo" são OK!
+  if (hasMeasurable) {
     return true;
   }
   
@@ -376,14 +365,14 @@ function isPureExerciseLine(line: string): boolean {
 // REGRA MESTRA: isTrainingStimulus — ESTÍMULO = TREINO
 // ============================================
 // Se existe estímulo mensurável, é TREINO. PONTO FINAL.
-// MVP0 PATCH: Agora também verifica se NÃO é linha subjetiva!
-// Retorna true se a linha contiver padrão de estímulo físico PURO
+// MVP0 PATCH CIRÚRGICO: Só bloqueia se tiver narrativa explicativa!
+// Adjetivos simples como "leve", "tranquilo" são OK.
 
 function isTrainingStimulus(line: string): boolean {
-  // MVP0: Se tem texto subjetivo, NÃO é estímulo puro
-  // Deve ser separado em TREINO + COMENTÁRIO
-  if (isSubjectiveLine(line)) {
-    console.log('[isTrainingStimulus] → FALSE (linha subjetiva):', line);
+  // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa
+  // Adjetivos simples são OK!
+  if (isNarrativeLine(line)) {
+    console.log('[isTrainingStimulus] → FALSE (linha com narrativa):', line);
     return false;
   }
   
@@ -415,12 +404,13 @@ function isTrainingStimulus(line: string): boolean {
 // Para dias de descanso: detecta se a linha é prescrição de treino
 // REGRA: Tempo ou distância SOZINHOS já caracterizam treino!
 // "45 min" ou "10km" são VÁLIDOS mesmo sem atividade explícita
-// MVP0 PATCH: Agora também verifica se NÃO é linha subjetiva!
+// MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa!
 
 function isPrescriptionLine(line: string): boolean {
-  // MVP0: Se tem texto subjetivo, NÃO é prescrição pura
-  if (isSubjectiveLine(line)) {
-    console.log('[isPrescriptionLine] → FALSE (linha subjetiva):', line);
+  // MVP0 CIRÚRGICO: Só bloqueia narrativa explicativa
+  // Adjetivos simples são OK!
+  if (isNarrativeLine(line)) {
+    console.log('[isPrescriptionLine] → FALSE (linha com narrativa):', line);
     return false;
   }
   
@@ -2843,27 +2833,44 @@ function textUsesTagFormat(text: string): boolean {
 }
 
 /**
- * Detecta se o contexto exige tags obrigatórias:
- * - Corrida/bike/remo por tempo ou distância
- * - Dias com "Descanso", "Opcional", "Day off", "Rest day"
+ * MVP0 CIRÚRGICO: Detecta se o contexto exige tags obrigatórias
+ * SOMENTE quando há NARRATIVA detectada junto com medida.
+ * 
+ * NÃO exige tags para:
+ * - "500m trote leve" (adjetivo simples, sem narrativa)
+ * - "Corrida 45 min Zona 2" (estímulo puro)
  */
 function contextRequiresTags(text: string): boolean {
-  const lower = text.toLowerCase();
+  const lines = text.split('\n');
   
-  // Corrida/bike/remo + tempo ou distância
-  const hasEnduranceWithMeasure = 
-    (/\b(?:corrida|bike|remo|row|run|ciclismo|swim|nata[çc][aã]o)\b/i.test(text)) &&
-    (/\d+\s*(?:km|m|min|minutos?|'|'')\b/i.test(text));
+  // Só exige tags se houver pelo menos uma linha com narrativa + medida
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    // Se a linha tem tag, ignora
+    if (hasTrainingTags(trimmed)) continue;
+    
+    // Só exige tags se tiver NARRATIVA + MEDIDA na mesma linha
+    if (hasMeasurableStimulus(trimmed) && isNarrativeLine(trimmed)) {
+      return true;
+    }
+  }
   
-  // Descanso / Opcional / Day off / Rest day
-  const hasRestContext = /\b(?:descanso|opcional|day\s*off|rest\s*day|folga)\b/i.test(lower);
-  
-  return hasEnduranceWithMeasure || hasRestContext;
+  return false;
 }
 
 /**
- * Valida o input do coach ANTES de fazer o parse.
- * Bloqueia se detectar problemas estruturais.
+ * MVP0 CIRÚRGICO: Valida o input do coach ANTES de fazer o parse.
+ * Bloqueia APENAS quando há mistura de estímulo + narrativa explicativa.
+ * 
+ * PERMITIDO:
+ * - "500m trote leve" (adjetivo simples OK)
+ * - "Corrida contínua 45 min Zona 2" (estímulo puro)
+ * 
+ * BLOQUEADO:
+ * - "Corrida leve até 45 min, bem confortável" (narrativa explicativa)
+ * - "90+ min corrida, foco em zona 2" (narrativa explicativa)
  */
 export function validateCoachInput(text: string): CoachInputValidation {
   const errors: string[] = [];
@@ -2871,42 +2878,53 @@ export function validateCoachInput(text: string): CoachInputValidation {
   const lines = text.split('\n');
   
   const usesTagFormat = textUsesTagFormat(text);
-  const requiresTags = contextRequiresTags(text);
   
   let hybridLineCount = 0;
+  let inCommentSection = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
+    // Se está em seção de comentário [COMENTÁRIO], não valida
+    if (/^\[COMENT[ÁA]RIO\]/i.test(line)) {
+      inCommentSection = true;
+      continue;
+    }
+    if (/^\[TREINO\]/i.test(line)) {
+      inCommentSection = false;
+      continue;
+    }
+    if (inCommentSection) continue;
+    
     // Se já usa tags, não precisa validar híbridos
     if (hasTrainingTags(line)) continue;
     
-    // Detectar linha híbrida (mensurável + subjetivo)
+    // Detectar linha híbrida (mensurável + NARRATIVA)
+    // NOTA: Adjetivos simples como "leve", "tranquilo" NÃO são narrativa!
     const hasMeasure = hasMeasurableStimulus(line);
-    const hasSubjective = isSubjectiveLine(line);
+    const hasNarrative = isNarrativeLine(line);
     
-    if (hasMeasure && hasSubjective) {
+    if (hasMeasure && hasNarrative) {
       hybridLineCount++;
       const truncated = line.length > 50 ? line.substring(0, 50) + '...' : line;
       errors.push(`Linha ${i + 1}: "${truncated}" — Mistura treino + comentário.`);
     }
   }
   
-  // Se contexto exige tags mas não usa formato correto
-  if (requiresTags && !usesTagFormat && errors.length === 0) {
-    // Verificar se há linhas híbridas implícitas
-    const hasImplicitHybrid = lines.some(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return false;
-      return hasMeasurableStimulus(trimmed) && isSubjectiveLine(trimmed);
-    });
-    
-    if (hasImplicitHybrid) {
-      warnings.push('Este treino contém corrida/bike ou descanso. Considere usar as tags [TREINO] e [COMENTÁRIO] para separar estímulo de explicação.');
+  // Contexto de descanso SEM estrutura clara
+  const hasRestContext = /\b(?:descanso|opcional|day\s*off|rest\s*day|folga)\b/i.test(text.toLowerCase());
+  const hasExecutableStimulus = lines.some(line => hasMeasurableStimulus(line.trim()));
+  
+  if (hasRestContext && hasExecutableStimulus && !usesTagFormat && errors.length === 0) {
+    // Só avisa se houver narrativa detectada
+    const hasNarrativeAnywhere = lines.some(line => isNarrativeLine(line.trim()));
+    if (hasNarrativeAnywhere) {
+      warnings.push('Este treino contém "Descanso/Opcional" com estímulo. Considere usar [TREINO] e [COMENTÁRIO] para separar.');
     }
   }
   
+  const requiresTags = contextRequiresTags(text);
   const isValid = errors.length === 0;
   
   return {
