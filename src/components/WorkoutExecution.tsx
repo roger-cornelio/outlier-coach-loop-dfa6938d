@@ -338,17 +338,24 @@ export function WorkoutExecution() {
                             </pre>
                           )}
                           
-                          {/* Coach comments - visually separated */}
+                          {/* Coach comments - visually separated callout */}
                           {commentLines.length > 0 && (
-                            <div className="mt-3 p-3 rounded-lg bg-secondary/50 border border-border/30">
-                              <div className="flex items-start gap-2">
-                                <MessageSquare className="w-4 h-4 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
-                                <div className="space-y-1">
-                                  {commentLines.map((comment, i) => (
-                                    <p key={i} className="text-xs text-muted-foreground/80 leading-relaxed">
-                                      {comment}
-                                    </p>
-                                  ))}
+                            <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
+                              <div className="flex items-start gap-3">
+                                <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
+                                  <MessageSquare className="w-3.5 h-3.5 text-primary/70" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
+                                    Comentário do Coach
+                                  </p>
+                                  <div className="space-y-1">
+                                    {commentLines.map((comment, i) => (
+                                      <p key={i} className="text-xs text-muted-foreground leading-relaxed">
+                                        {comment}
+                                      </p>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>
