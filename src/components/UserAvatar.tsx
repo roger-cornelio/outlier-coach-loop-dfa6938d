@@ -1,4 +1,4 @@
-import { User, UserRound, Crown, Star, Flame, Zap, Target } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AthleteStatus, TrainingLevel } from '@/types/outlier';
 
@@ -19,7 +19,10 @@ interface UserAvatarProps {
   showGlow?: boolean;
 }
 
-// Configuração visual por STATUS do atleta (fonte de verdade)
+// ═══════════════════════════════════════════════════════════════════════════
+// MVP0: COROA CANÔNICA - Único símbolo de status em todo o app
+// Cor varia por nível, ícone é sempre Crown (lucide-react)
+// ═══════════════════════════════════════════════════════════════════════════
 const STATUS_VISUAL: Record<AthleteStatus, {
   icon: typeof Crown;
   gradient: string;
@@ -30,7 +33,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
   animate: boolean;
 }> = {
   iniciante: {
-    icon: Target,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     border: 'border-slate-400/60',
     glow: 'rgba(100, 116, 139, 0.3)',
@@ -39,7 +42,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   intermediario: {
-    icon: Zap,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     border: 'border-emerald-400/70',
     glow: 'rgba(16, 185, 129, 0.4)',
@@ -48,7 +51,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   avancado: {
-    icon: Flame,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     border: 'border-orange-400/80',
     glow: 'rgba(249, 115, 22, 0.5)',
@@ -57,7 +60,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   hyrox_open: {
-    icon: Star,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     border: 'border-purple-400/80',
     glow: 'rgba(168, 85, 247, 0.5)',
@@ -66,7 +69,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: true,
   },
   hyrox_pro: {
-    icon: Crown,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     border: 'border-amber-400',
     glow: 'rgba(251, 191, 36, 0.6)',
@@ -78,7 +81,7 @@ const STATUS_VISUAL: Record<AthleteStatus, {
 
 // Cores padrão (fallback - sem status definido)
 const DEFAULT_VISUAL = {
-  icon: Target,
+  icon: Crown, // MVP0: Mesmo ícone no fallback
   gradient: 'from-muted to-muted',
   border: 'border-border',
   glow: 'transparent',

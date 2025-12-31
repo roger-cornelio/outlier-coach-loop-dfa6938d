@@ -505,3 +505,57 @@
     animation: pulse-slow 3s ease-in-out infinite;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MVP0: TIPOGRAFIA GLOBAL OUTLIER
+   Família única de fontes para todo o app
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  /* Títulos principais (h1-h3) */
+  .text-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /* Subtítulos (h4-h6) */
+  .text-subtitle {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* Labels e badges */
+  .text-label {
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+  }
+
+  /* Texto auxiliar */
+  .text-helper {
+    font-family: var(--font-body);
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Body text padrão */
+  .text-body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.6;
+  }
+
+  /* Texto de destaque */
+  .text-emphasis {
+    font-family: var(--font-body);
+    font-weight: 600;
+  }
+}
