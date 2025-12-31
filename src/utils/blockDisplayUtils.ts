@@ -245,3 +245,114 @@ export function isInBlockRestInstruction(text: string): boolean {
   
   return false;
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MVP0: SEPARAÇÃO VISUAL DE COMENTÁRIOS DO BLOCO
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Identifica linhas de comentário/instrução do coach vs linhas de exercício.
+ * 
+ * COMENTÁRIOS incluem:
+ * - Linhas que começam com "nota:", "obs:", "observação:", "dica:", etc.
+ * - Frases que terminam com "..." ou contêm "o necessário", "conforme", "se sentir"
+ * - Linhas sem números/métricas (sem rep, tempo, distância)
+ * - Linhas que começam com "intervalo" sem tempo específico
+ */
+
+export interface SeparatedBlockContent {
+  exerciseLines: string[];
+  commentLines: string[];
+}
+
+/**
+ * Detecta se uma linha é comentário/instrução do coach
+ */
+function isCommentLine(line: string): boolean {
+  if (!line) return false;
+  
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  
+  const lower = trimmed.toLowerCase();
+  
+  // A) Prefixos explícitos de comentário
+  if (/^(nota|obs|observa[çc][aã]o|dica|aten[çc][aã]o|importante|lembrete|orienta[çc][aã]o)\s*:/i.test(lower)) {
+    return true;
+  }
+  
+  // B) Frases que terminam com "..." (reticências indicam instrução aberta)
+  if (/\.{2,}$/.test(trimmed) || /…$/.test(trimmed)) {
+    return true;
+  }
+  
+  // C) Frases com padrões de instrução subjetiva
+  const subjectivePatterns = [
+    /o\s+necess[aá]rio/i,
+    /conforme\s+(necess[aá]rio|poss[ií]vel|sentir)/i,
+    /se\s+sentir/i,
+    /manter\s+(o\s+)?ritmo/i,
+    /foco\s+(em|no|na)/i,
+    /priorizar/i,
+    /aten[çc][aã]o\s+(ao|à|a)/i,
+    /cuidado\s+(com|ao)/i,
+    /lembrar\s+de/i,
+    /n[aã]o\s+esquecer/i,
+    /evitar/i,
+    /tentar\s+(manter|n[aã]o|fazer)/i,
+  ];
+  
+  for (const pattern of subjectivePatterns) {
+    if (pattern.test(lower)) {
+      return true;
+    }
+  }
+  
+  // D) Linha sem números E sem estrutura de exercício
+  const hasNumbers = /\d/.test(trimmed);
+  const hasExercisePattern = /^(\d+|x\d+|\d+x)/i.test(lower) || 
+    /\b(rep|reps|rounds?|sets?|series?|min|seg|sec|metros?|km|cal|calorias?)\b/i.test(lower);
+  
+  // Se não tem números NEM padrão de exercício, é provavelmente comentário
+  // MAS precisa ter pelo menos 20 caracteres para evitar falsos positivos
+  if (!hasNumbers && !hasExercisePattern && trimmed.length >= 20) {
+    // Verificar se não é nome de exercício comum
+    const exerciseNames = [
+      /^(burpee|squat|deadlift|clean|snatch|press|push|pull|row|run|bike|ski|swim)/i,
+      /^(agach|levantamento|remada|flexão|corrida|bicicleta)/i,
+    ];
+    
+    const looksLikeExerciseName = exerciseNames.some(p => p.test(lower));
+    if (!looksLikeExerciseName) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Separa o conteúdo do bloco em exercícios e comentários
+ */
+export function separateBlockContent(content: string): SeparatedBlockContent {
+  if (!content) {
+    return { exerciseLines: [], commentLines: [] };
+  }
+  
+  const lines = content.split('\n');
+  const exerciseLines: string[] = [];
+  const commentLines: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue; // Ignorar linhas vazias
+    
+    if (isCommentLine(trimmed)) {
+      commentLines.push(trimmed);
+    } else {
+      exerciseLines.push(trimmed);
+    }
+  }
+  
+  return { exerciseLines, commentLines };
+}
