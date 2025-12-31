@@ -316,6 +316,18 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       // CERCA HARD V1: Verificar ordem invertida
       const hasInvertedOrder = treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
       
+      // ═══ DIAGNÓSTICO C) LOG POR BLOCO (ONDE DUPLICA) ═══
+      const blockText = [...currentTrainLines, ...currentCommentLines].join('\n');
+      const tagLines = [...currentTrainLines, ...currentCommentLines]
+        .map((l, i) => ({ i: i + 1, l }))
+        .filter(x => /\[(TREINO|COMENT[ÁA]RIO)\]/i.test(x.l));
+      console.log("[BLOCK_TAG_AUDIT]", {
+        title: currentBlockTitle,
+        treinoCount: treinoTagCount,
+        comentarioCount: comentarioTagCount,
+        tagLines,
+      });
+      
       blocks.push({
         title: currentBlockTitle,
         dayName: currentDay?.name,
