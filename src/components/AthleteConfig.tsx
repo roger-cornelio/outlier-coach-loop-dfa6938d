@@ -373,8 +373,8 @@ export function AthleteConfig() {
                 <div className="flex items-center gap-2 mb-2">
                   {/* PRO sempre tem ícone laranja, OPEN só quando selecionado */}
                   <Icon className={`w-5 h-5 ${isSelected || isPro ? 'text-primary' : 'text-muted-foreground'}`} />
-                  {/* PRO sempre tem label laranja */}
-                  <span className={`font-display text-lg ${isPro && !isSelected ? 'text-primary' : ''}`}>{option.label}</span>
+                  {/* Texto sempre branco/foreground, nunca laranja */}
+                  <span className="font-display text-lg">{option.label}</span>
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
               </button>
