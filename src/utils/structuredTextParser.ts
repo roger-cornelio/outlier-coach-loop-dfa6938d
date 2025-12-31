@@ -2931,9 +2931,15 @@ export function getTypeLabel(type: string): string {
 // MVP0: VALIDAÇÃO DE INPUT DO COACH — TRAVA ANTI-BURRO
 // ============================================
 // Valida se o texto do coach está estruturado corretamente.
-// Bloqueia importação se detectar linhas híbridas ou contextos
-// que exigem tags [TREINO]/[COMENTÁRIO] mas não as usam.
+// CERCA V1: Delimitação obrigatória [TREINO] / [COMENTÁRIO]
 // ============================================
+
+import {
+  textUsesFenceFormat,
+  validateFence,
+  fenceErrorsToStructureIssues,
+  FENCE_FORMAT_ERROR,
+} from './fenceValidation';
 
 export interface CoachInputValidation {
   isValid: boolean;
@@ -2941,6 +2947,7 @@ export interface CoachInputValidation {
   warnings: string[];
   requiresTags: boolean; // Indica se o contexto exige tags [TREINO]/[COMENTÁRIO]
   issues: StructureIssue[]; // MVP0: Issues com severidade para mostrar no preview
+  fenceErrors?: boolean; // CERCA V1: Indica se há erros de delimitador
 }
 
 /**
@@ -2986,16 +2993,22 @@ function contextRequiresTags(text: string): boolean {
 }
 
 /**
- * MVP0 CIRÚRGICO: Valida o input do coach ANTES de fazer o parse.
- * Bloqueia APENAS quando há mistura de estímulo + narrativa explicativa.
+ * CERCA V1: Valida o input do coach com delimitadores obrigatórios.
+ * 
+ * REGRAS CERCA V1:
+ * 1) [TREINO] é obrigatório em todo bloco
+ * 2) [COMENTÁRIO] é obrigatório em todo bloco
+ * 3) Se faltar delimitador, bloqueia publicação (não draft)
+ * 4) Pelo menos 1 âncora válida em cada zona de treino
+ * 5) Nenhum texto humano/explicativo na zona de treino
  * 
  * PERMITIDO:
  * - "500m trote leve" (adjetivo simples OK)
  * - "Corrida contínua 45 min Zona 2" (estímulo puro)
  * 
- * BLOQUEADO:
- * - "Corrida leve até 45 min, bem confortável" (narrativa explicativa)
- * - "90+ min corrida, foco em zona 2" (narrativa explicativa)
+ * BLOQUEADO (em [TREINO]):
+ * - Texto de comentário/explicação
+ * - Linhas sem âncora estruturada
  */
 export function validateCoachInput(text: string): CoachInputValidation {
   const errors: string[] = [];
@@ -3004,6 +3017,43 @@ export function validateCoachInput(text: string): CoachInputValidation {
   const lines = text.split('\n');
   
   const usesTagFormat = textUsesTagFormat(text);
+  let fenceErrors = false;
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // CERCA V1: VALIDAÇÃO DETERMINÍSTICA COM DELIMITADORES
+  // ════════════════════════════════════════════════════════════════════════════
+  // Se o texto usa formato de cerca [TREINO]/[COMENTÁRIO], aplicar validação
+  // completa. Se não usa, exigir que use (para publicação).
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  if (usesTagFormat) {
+    // Validar com as regras da cerca
+    const fenceResult = validateFence(text);
+    
+    if (!fenceResult.isValid) {
+      fenceErrors = true;
+      
+      // Converter erros de cerca para issues
+      const fenceIssues = fenceErrorsToStructureIssues(fenceResult);
+      issues.push(...fenceIssues);
+      
+      // Adicionar erros legíveis
+      for (const err of fenceResult.errors) {
+        const dayPart = err.dayName ? ` (${err.dayName})` : '';
+        const blockPart = err.blockTitle ? ` "${err.blockTitle}"` : '';
+        errors.push(`${err.message}${blockPart}${dayPart}`);
+      }
+    }
+    
+    // Adicionar warnings da cerca
+    for (const warn of fenceResult.warnings) {
+      warnings.push(warn.message);
+    }
+  }
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // VALIDAÇÃO LEGACY (quando não usa formato de cerca)
+  // ════════════════════════════════════════════════════════════════════════════
   
   let hybridLineCount = 0;
   let inCommentSection = false;
@@ -3179,6 +3229,7 @@ export function validateCoachInput(text: string): CoachInputValidation {
     warnings,
     requiresTags: requiresTags && !usesTagFormat,
     issues,
+    fenceErrors, // CERCA V1: Indica se há erros de delimitador
   };
 }
 
