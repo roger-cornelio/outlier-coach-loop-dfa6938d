@@ -4,39 +4,45 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { type TrainingLevel, type SessionDuration } from '@/types/outlier';
+import { type TrainingLevel, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
 import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2, User, Check } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 
-// Níveis de treino - sem métricas visíveis
-const trainingLevelOptions: { value: TrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
+// ═══════════════════════════════════════════════════════════════════════════
+// MVP0: Níveis OPEN/PRO (ambos mapeiam para 'performance' internamente)
+// Isso mantém compatibilidade com o motor de adaptação existente
+// ═══════════════════════════════════════════════════════════════════════════
+type UITrainingLevel = 'open' | 'pro';
+
+const trainingLevelOptions: { value: UITrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
   { 
-    value: 'base', 
-    label: 'BASE', 
-    description: 'Movimentos fundamentais com foco em técnica e controle',
+    value: 'open', 
+    label: 'OPEN', 
+    description: 'Treino completo com volume otimizado para competição',
     icon: Target
   },
   { 
-    value: 'progressivo', 
-    label: 'PROGRESSIVO', 
-    description: 'Ritmo consistente com estímulo sustentável e evolutivo',
-    icon: TrendingUp
-  },
-  { 
-    value: 'performance', 
-    label: 'PERFORMANCE', 
-    description: 'Alta intensidade com desafio máximo',
+    value: 'pro', 
+    label: 'PRO', 
+    description: 'Intensidade máxima para atletas de elite',
     icon: Zap
   },
 ];
 
-const durationOptions: { value: SessionDuration; label: string }[] = [
-  { value: 45, label: 'até 45 min' },
+// Mapeamento UI -> Motor (ambos viram 'performance' no MVP0)
+const uiLevelToMotorLevel = (uiLevel: UITrainingLevel): TrainingLevel => 'performance';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MVP0: Tempo apenas 60 ou null (sem limite)
+// null = motor não adapta por tempo
+// ═══════════════════════════════════════════════════════════════════════════
+type UIDuration = 60 | null;
+
+const durationOptions: { value: UIDuration; label: string }[] = [
   { value: 60, label: 'até 60 min' },
-  { value: 90, label: 'até 90 min' },
-  { value: 'ilimitado', label: 'Sem limite' },
+  { value: null, label: 'Sem limite' },
 ];
 
 const sexOptions = [
@@ -61,10 +67,9 @@ export function AthleteConfig() {
   const [nameError, setNameError] = useState('');
   
   // Use existing values as defaults
-  const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>(
-    athleteConfig?.trainingLevel || athleteConfig?.trainingDifficulty || 'progressivo'
-  );
-  const [duration, setDuration] = useState<SessionDuration>(athleteConfig?.sessionDuration || 60);
+  // MVP0: UI usa 'open'/'pro', mas internamente persiste 'performance'
+  const [uiTrainingLevel, setUITrainingLevel] = useState<UITrainingLevel>('open');
+  const [duration, setDuration] = useState<UIDuration>(60);
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
@@ -79,8 +84,16 @@ export function AthleteConfig() {
 
   useEffect(() => {
     if (athleteConfig) {
-      if (athleteConfig.trainingLevel) setTrainingLevel(athleteConfig.trainingLevel);
-      if (athleteConfig.sessionDuration) setDuration(athleteConfig.sessionDuration);
+      // MVP0: Não há mapeamento reverso de performance -> open/pro
+      // Mantém 'open' como default ao carregar
+      if (athleteConfig.sessionDuration) {
+        // Converte valores antigos para o novo formato
+        if (athleteConfig.sessionDuration === 'ilimitado' || athleteConfig.sessionDuration === null) {
+          setDuration(null);
+        } else if (typeof athleteConfig.sessionDuration === 'number') {
+          setDuration(athleteConfig.sessionDuration === 60 ? 60 : 60); // Normaliza para 60
+        }
+      }
       if (athleteConfig.altura) setAltura(athleteConfig.altura.toString());
       if (athleteConfig.peso) setPeso(athleteConfig.peso.toString());
       if (athleteConfig.idade) setIdade(athleteConfig.idade.toString());
@@ -111,9 +124,22 @@ export function AthleteConfig() {
 
     setIsSaving(true);
 
-    const newConfig = {
-      trainingLevel,
-      sessionDuration: duration,
+    // ═══════════════════════════════════════════════════════════════════════
+    // MVP0: LOGS DE CONFIRMAÇÃO (OBRIGATÓRIO)
+    // ═══════════════════════════════════════════════════════════════════════
+    const motorLevel = uiLevelToMotorLevel(uiTrainingLevel);
+    const motorDuration = duration; // null = sem limite, 60 = até 60 min
+    
+    console.info(`[AthleteConfig] Nível (UI): ${uiTrainingLevel.toUpperCase()}`);
+    console.info(`[AthleteConfig] Nível (persistido): ${motorLevel}`);
+    console.info(`[AthleteConfig] Tempo disponível (persistido): ${motorDuration}`);
+
+    // Converter para o tipo SessionDuration esperado pelo motor
+    const sessionDurationForMotor: SessionDuration = motorDuration === null ? 'ilimitado' : 60;
+
+    const newConfig: AthleteConfigType = {
+      trainingLevel: motorLevel, // CRÍTICO: Persiste 'performance' para o motor
+      sessionDuration: sessionDurationForMotor,
       unavailableEquipment: athleteConfig?.unavailableEquipment || [],
       equipmentNotes: athleteConfig?.equipmentNotes || '',
       coachStyle,
@@ -324,23 +350,23 @@ export function AthleteConfig() {
         <p className="text-sm text-muted-foreground mb-4">
           Escolha o estímulo ideal para você hoje.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {trainingLevelOptions.map((option) => {
             const Icon = option.icon;
             return (
               <button
                 key={option.value}
-                onClick={() => setTrainingLevel(option.value)}
+                onClick={() => setUITrainingLevel(option.value)}
                 className={`
                   p-4 rounded-lg border transition-all duration-200 text-left
-                  ${trainingLevel === option.value
+                  ${uiTrainingLevel === option.value
                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
                     : 'border-border bg-card hover:border-muted-foreground/50'
                   }
                 `}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Icon className={`w-5 h-5 ${trainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Icon className={`w-5 h-5 ${uiTrainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className="font-display text-lg">{option.label}</span>
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
