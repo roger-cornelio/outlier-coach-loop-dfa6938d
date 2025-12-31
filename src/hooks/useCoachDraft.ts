@@ -24,12 +24,13 @@ import type { WeekPeriod } from '@/components/WeekPeriodSelector';
 
 /**
  * mode: Flag explícito que governa TODA a renderização
- * - 'edit': Tela 1 - edição completa, controles habilitados
- * - 'preview': Tela 2 - 100% read-only, apenas visualização + salvar
+ * - 'import': Tela inicial - colar texto bruto (sem parse ainda)
+ * - 'edit': Tela de edição - blocos parseados, controles habilitados
+ * - 'preview': Tela final - 100% read-only, apenas visualização + salvar
  * 
  * NUNCA INFERIR mode a partir de validação, parsing ou sucesso
  */
-export type DraftMode = 'edit' | 'preview';
+export type DraftMode = 'import' | 'edit' | 'preview';
 
 export interface CoachDraft {
   rawText: string;
@@ -62,7 +63,7 @@ function getEmptyDraft(): CoachDraft {
     editedDays: null,
     parseResult: null,
     restDays: {},
-    mode: 'edit',
+    mode: 'import', // Começa no modo de colagem
     updatedAt: new Date().toISOString(),
     isDirty: false,
     programName: '',
@@ -78,10 +79,7 @@ export function useCoachDraft() {
 
   // Carregar draft do localStorage na inicialização
   useEffect(() => {
-    console.log('[useCoachDraft] useEffect triggered, coachId:', coachId || '(empty)');
-    
     if (!coachId) {
-      console.log('[useCoachDraft] No coachId, setting isHydrated=true with empty draft');
       setIsHydrated(true);
       return;
     }
@@ -90,20 +88,19 @@ export function useCoachDraft() {
       const stored = localStorage.getItem(getStorageKey(coachId));
       if (stored) {
         const parsed = JSON.parse(stored) as CoachDraft;
-        // Validar estrutura básica
         if (parsed && typeof parsed.rawText === 'string') {
-          console.log('[useCoachDraft] Rehydrated draft from localStorage, mode:', parsed.mode);
+          // Garantir que mode antigo 'edit' sem parseResult vá para 'import'
+          if (parsed.mode === 'edit' && !parsed.parseResult) {
+            parsed.mode = 'import';
+          }
           setDraft(parsed);
         }
-      } else {
-        console.log('[useCoachDraft] No stored draft, using empty draft');
       }
     } catch (err) {
       console.error('[useCoachDraft] Error loading draft:', err);
     }
     
     setIsHydrated(true);
-    console.log('[useCoachDraft] isHydrated set to true');
   }, [coachId]);
 
   // Persistir draft no localStorage sempre que mudar
@@ -130,7 +127,7 @@ export function useCoachDraft() {
       ...draft,
       rawText: text,
       // NÃO limpar parseResult ao editar texto - preservar draft
-      mode: 'edit',
+      // NÃO mudar mode aqui - modo é explícito
       isDirty: true,
     });
   }, [draft, saveDraft]);
@@ -202,12 +199,31 @@ export function useCoachDraft() {
     });
   }, [draft, saveDraft]);
 
-  // Ir para preview (Tela 2)
+  // Ir para edição (Tela 2 - após parse bem sucedido)
+  const goToEdit = useCallback(() => {
+    console.debug('[useCoachDraft] goToEdit');
+    saveDraft({
+      ...draft,
+      mode: 'edit',
+    });
+  }, [draft, saveDraft]);
+
+  // Ir para preview (Tela 3)
   const goToPreview = useCallback(() => {
     console.debug('[useCoachDraft] goToPreview');
     saveDraft({
       ...draft,
       mode: 'preview',
+    });
+  }, [draft, saveDraft]);
+
+  // Voltar para import (limpa parse, volta ao início)
+  const goBackToImport = useCallback(() => {
+    console.debug('[useCoachDraft] goBackToImport');
+    saveDraft({
+      ...draft,
+      mode: 'import',
+      // NÃO limpa rawText para preservar o texto digitado
     });
   }, [draft, saveDraft]);
 
@@ -289,7 +305,9 @@ export function useCoachDraft() {
     setMode,
 
     // Navegação entre telas
+    goToEdit,
     goToPreview,
+    goBackToImport,
     goBackToEditing,
     clearDraft,
 

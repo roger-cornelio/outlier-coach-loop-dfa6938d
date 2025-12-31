@@ -105,7 +105,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     updateParseResult,
     setRestDays,
     setProgramName,
+    goToEdit,
     goToPreview,
+    goBackToImport,
     goBackToEditing,
     clearDraft,
   } = useCoachDraft();
@@ -172,6 +174,11 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     
     console.debug('[TextModelImporter] handleParse → days=', result.days.length);
     setParsedResult(result, workouts);
+    
+    // NAVEGAR PARA MODO EDIT após parse bem sucedido
+    if (result.success && result.days.length > 0) {
+      goToEdit();
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -421,17 +428,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // RENDER - AGUARDAR HIDRATAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
   
-  // [UI_DIAG] Log para diagnóstico
-  console.log('[UI_DIAG] TextModelImporter render', { 
-    isHydrated, 
-    mode, 
-    hasRawText: !!rawText,
-    hasParseResult: !!parseResult,
-    weekId: !!weekId,
-  });
-  
   if (!isHydrated) {
-    console.log('[UI_DIAG] Showing loading - isHydrated is false');
     return (
       <Card>
         <CardContent className="p-8 flex items-center justify-center">
@@ -443,13 +440,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TELA 1 - EDIÇÃO
+  // TELA 1 - IMPORT (COLAR TEXTO)
   // ═══════════════════════════════════════════════════════════════════════════
   
-  if (mode === 'edit') {
+  if (mode === 'import') {
     return (
       <div className="space-y-4">
-        {/* ÁREA DE TEXTO */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -466,7 +462,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
               <div className="grid gap-1.5 mt-2">
                 <p><span className="font-medium">SEGUNDA</span> — início do dia</p>
                 <p><span className="font-medium">Aquecimento / Força / WOD</span> — nome do bloco</p>
-                <p><span className="font-medium">⸻</span> — separador entre blocos (opcional)</p>
+                <p><span className="font-medium">[TREINO]</span> — início do treino executável</p>
+                <p><span className="font-medium">[COMENTÁRIO]</span> — observações do coach</p>
               </div>
             </div>
 
@@ -474,7 +471,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               placeholder="Cole aqui o treino da semana inteira (SEGUNDA a DOMINGO)…"
-              className="min-h-[180px] text-sm"
+              className="min-h-[200px] text-sm"
             />
             
             <button
@@ -496,9 +493,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
 
             {/* NOME DA PROGRAMAÇÃO */}
             <div className="space-y-2">
-              <Label htmlFor="program-name">Nome da Programação (opcional)</Label>
+              <Label htmlFor="program-name-import">Nome da Programação (opcional)</Label>
               <Input
-                id="program-name"
+                id="program-name-import"
                 value={programName}
                 onChange={(e) => setProgramName(e.target.value)}
                 placeholder="Ex: Semana de força"
@@ -509,7 +506,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
               <Button
                 onClick={handleParse}
                 disabled={!rawText.trim()}
-                variant="outline"
                 className="flex-1 min-w-[150px]"
               >
                 <Eye className="w-4 h-4 mr-2" />
@@ -532,330 +528,350 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
           </CardContent>
         </Card>
 
-        {/* PREVIEW DE EDIÇÃO - COM CONTROLES */}
-        {parseResult && parseResult.success && (
-          <Card className="border-green-500/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                Edição do Treino
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Revise e ajuste os blocos. Defina a categoria e marque o WOD principal.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Erros de estrutura */}
-              {parseResult.structureIssues && parseResult.structureIssues.length > 0 && (
-                <StructuredErrorDisplay 
-                  issues={parseResult.structureIssues}
-                  onScrollToBlock={scrollToBlock}
-                />
-              )}
-
-              {/* Semana selecionada */}
-              {weekId && (
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-foreground">
-                      Semana: <span className="font-semibold">{weekId.label}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
-              <TooltipProvider>
-                <Accordion 
-                  type="single" 
-                  collapsible 
-                  className="space-y-4"
-                  value={expandedDayForScroll || undefined}
-                  onValueChange={(value) => setExpandedDayForScroll(value || null)}
-                >
-                  {parseResult.days.map((day, dayIndex) => {
-                    const dayName = day.day ? getDayName(day.day) : 'Dia não definido';
-                    const isRestDay = restDays[dayIndex] || false;
-                    
-                    return (
-                      <AccordionItem 
-                        key={day.day || `day-${dayIndex}`} 
-                        value={`day-${dayIndex}`}
-                        className="border-2 border-border rounded-2xl overflow-hidden shadow-md bg-card"
-                      >
-                        <AccordionTrigger className="px-5 py-5 min-h-[72px] hover:no-underline hover:bg-secondary/30">
-                          <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
-                            <span className="font-bold text-lg uppercase tracking-wide text-foreground">
-                              {dayName}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
-                            </span>
-                            
-                            {isRestDay && (
-                              <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 border-2 border-blue-500/30 px-3 py-1">
-                                <Moon className="w-4 h-4 mr-1.5" />
-                                DESCANSO
-                              </Badge>
-                            )}
-                            
-                            <div className="flex-1" />
-                            
-                            {/* Toggle de descanso - APENAS NA EDIÇÃO */}
-                            <div 
-                              className="flex items-center gap-2" 
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="text-xs text-muted-foreground">Descanso</span>
-                              <Switch
-                                checked={isRestDay}
-                                onCheckedChange={() => toggleRestDay(dayIndex, dayName)}
-                              />
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-5 pb-5">
-                          {isRestDay ? (
-                            <div className="p-5 rounded-xl bg-blue-500/10 border-2 border-blue-500/30">
-                              <div className="flex items-center gap-3">
-                                <Moon className="w-6 h-6 text-blue-500" />
-                                <p className="text-sm text-blue-600 font-semibold">
-                                  🌙 Dia de descanso — {dayName.toUpperCase()}
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {day.blocks.map((block, blockIndex) => {
-                                const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
-                                const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
-                                
-                                return (
-                                  <div 
-                                    key={blockIndex}
-                                    id={`block-${dayIndex}-${blockIndex}`}
-                                    className={`p-4 rounded-xl border-2 ${
-                                      block.isMainWod 
-                                        ? 'border-primary/50 bg-primary/5' 
-                                        : hasTitleError || !block.type
-                                          ? 'border-amber-500/50 bg-amber-500/5'
-                                          : 'border-border bg-card'
-                                    } ${highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex ? 'ring-2 ring-primary' : ''}`}
-                                  >
-                                    {/* Header do bloco COM CONTROLES */}
-                                    <div className="flex items-center gap-2 flex-wrap mb-3">
-                                      {/* Título editável */}
-                                      <Input
-                                        value={displayTitle}
-                                        onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
-                                        className={`h-8 w-[200px] text-sm font-semibold ${hasTitleError ? 'border-amber-500' : ''}`}
-                                      />
-                                      
-                                      {/* Botão WOD Principal */}
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant={block.isMainWod ? "default" : "outline"}
-                                            size="sm"
-                                            className={`h-7 px-2 text-xs ${block.isMainWod ? 'bg-primary' : ''}`}
-                                            onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                          >
-                                            <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                            Principal
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{block.isMainWod ? 'Desmarcar WOD principal' : 'Marcar como WOD principal'}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                      
-                                      {/* Dropdown de categoria */}
-                                      <Select
-                                        value={block.type || ''}
-                                        onValueChange={(value) => changeBlockType(dayIndex, blockIndex, value)}
-                                      >
-                                        <SelectTrigger className={`h-7 w-[140px] text-xs ${!block.type ? 'border-amber-500 bg-amber-500/10' : ''}`}>
-                                          <SelectValue placeholder="Categoria *" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {BLOCK_TYPE_OPTIONS.map(opt => (
-                                            <SelectItem key={opt.value} value={opt.value}>
-                                              {opt.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      
-                                      {/* Menu de ações */}
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                            <MoreVertical className="w-4 h-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onClick={() => setEditingBlock({ dayIndex, blockIndex })}>
-                                            <Pencil className="w-4 h-4 mr-2" />
-                                            Editar linhas
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem 
-                                            onClick={() => setDeleteConfirm({ dayIndex, blockIndex })}
-                                            className="text-destructive"
-                                            disabled={block.isMainWod}
-                                          >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Excluir
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
-                                    
-                                    {/* Conteúdo do bloco */}
-                                    {block.lines && block.lines.length > 0 && (
-                                      <div className="text-sm space-y-1 pl-2 border-l-2 border-border">
-                                        {block.lines.slice(0, 5).map((line) => (
-                                          <p key={line.id} className="text-foreground/80">
-                                            {normalizeRestLineForDisplay(line.text)}
-                                          </p>
-                                        ))}
-                                        {block.lines.length > 5 && (
-                                          <p className="text-muted-foreground text-xs">
-                                            +{block.lines.length - 5} linhas...
-                                          </p>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              </TooltipProvider>
-
-              {/* BANNER DE VALIDAÇÃO */}
-              {!canSaveAndGoToPreview && (
-                <div className="p-4 bg-amber-500/95 border-2 border-amber-600 rounded-lg">
-                  <h3 className="text-base font-bold text-amber-950 flex items-center gap-2 mb-2">
-                    ⚠️ Corrija antes de continuar
-                  </h3>
-                  {hasMissingCategory && (
-                    <p className="text-sm text-amber-900">
-                      Falta definir a categoria de {blocksWithoutCategory} bloco{blocksWithoutCategory > 1 ? 's' : ''}.
-                    </p>
-                  )}
-                  {hasInvalidTitles && !hasMissingCategory && (
-                    <p className="text-sm text-amber-900">
-                      Corrija os blocos com problemas de título.
-                    </p>
-                  )}
-                  {hasStructureErrors && !hasMissingCategory && !hasInvalidTitles && (
-                    <p className="text-sm text-amber-900">
-                      Corrija os erros de estrutura indicados acima.
-                    </p>
-                  )}
-                  {!weekId && !hasMissingCategory && !hasInvalidTitles && !hasStructureErrors && (
-                    <p className="text-sm text-amber-900">
-                      Selecione a semana de referência.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* BOTÃO ÚNICO: SALVAR E IR PARA PREVIEW */}
-              <Button 
-                onClick={handleGoToPreview} 
-                className="w-full"
-                size="lg"
-                disabled={!canSaveAndGoToPreview}
-              >
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Salvar e ir para preview
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Modais */}
-        <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+        {/* MODAL DE TEMPLATE */}
+        <AlertDialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir bloco?</AlertDialogTitle>
+              <AlertDialogTitle>Modelo de Texto</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita.
+                Use este modelo como base para criar seus treinos:
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => deleteConfirm && deleteBlock(deleteConfirm.dayIndex, deleteConfirm.blockIndex)}
-                className="bg-destructive"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {editingBlock && parseResult && (
-          <BlockEditorModal
-            open={true}
-            onOpenChange={(open) => !open && setEditingBlock(null)}
-            blockTitle={parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].title}
-            lines={parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].lines || []}
-            onSave={(newLines) => saveBlockLines(editingBlock.dayIndex, editingBlock.blockIndex, newLines)}
-          />
-        )}
-
-        {/* Modal de template */}
-        <AlertDialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-          <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <Puzzle className="w-5 h-5 text-primary" />
-                📋 Modelo recomendado
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <div className="bg-muted/50 rounded-lg p-4 text-xs font-mono whitespace-pre-wrap border">
+            <div className="p-3 rounded-lg bg-muted/50 font-mono text-xs whitespace-pre-wrap">
 {`SEGUNDA-FEIRA
 
 Aquecimento
-- 500m Run
-- 3 Rounds: 15 Bom Dia, 20 Avanços
+[TREINO]
+500m Run leve
+[COMENTÁRIO]
+Foco na mobilidade
 
 ⸻
 
 WOD
-- EMOM 30'
-  Min 1: 10 Burpee
-  Min 2: 15 Wall Balls
+[TREINO]
+For Time: 21-15-9
+Thrusters (43/30kg)
+Pull-ups
+[COMENTÁRIO]
+Cap 12 minutos
 
 ⸻
 
 TERÇA-FEIRA
-
-Força
-- 5x5 Back Squat
-
-⸻
-
-QUINTA-FEIRA
 
 Descanso`}
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Fechar</AlertDialogCancel>
               <AlertDialogAction onClick={() => {
-                navigator.clipboard.writeText(`SEGUNDA-FEIRA\n\nAquecimento\n- 500m Run\n\n⸻\n\nWOD\n- For Time: 21-15-9 Thrusters, Pull-ups\n\n⸻\n\nTERÇA-FEIRA\n\nDescanso`);
+                navigator.clipboard.writeText(`SEGUNDA-FEIRA\n\nAquecimento\n[TREINO]\n500m Run leve\n[COMENTÁRIO]\nFoco na mobilidade\n\n⸻\n\nWOD\n[TREINO]\nFor Time: 21-15-9\nThrusters (43/30kg)\nPull-ups\n[COMENTÁRIO]\nCap 12 minutos\n\n⸻\n\nTERÇA-FEIRA\n\nDescanso`);
                 setTemplateCopied(true);
                 setTimeout(() => setTemplateCopied(false), 2000);
               }}>
                 {templateCopied ? <><CheckCircle className="w-4 h-4 mr-2" />Copiado!</> : <><Copy className="w-4 h-4 mr-2" />Copiar</>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TELA 2 - EDIÇÃO (BLOCOS PARSEADOS)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  if (mode === 'edit') {
+    // Se não tem parseResult, voltar para import
+    if (!parseResult || !parseResult.success) {
+      console.log('[UI_DIAG] mode=edit mas sem parseResult, voltando para import');
+      goBackToImport();
+      return null;
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* HEADER COM BOTÃO VOLTAR */}
+        <Card className="border-green-500/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={goBackToImport} className="h-8 w-8 p-0">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Edição do Treino
+              </CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Revise e ajuste os blocos. Defina a categoria e marque o WOD principal.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Erros de estrutura */}
+            {parseResult.structureIssues && parseResult.structureIssues.length > 0 && (
+              <StructuredErrorDisplay 
+                issues={parseResult.structureIssues}
+                onScrollToBlock={scrollToBlock}
+              />
+            )}
+
+            {/* Semana selecionada */}
+            {weekId && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-foreground">
+                    Semana: <span className="font-semibold">{weekId.label}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
+            <TooltipProvider>
+              <Accordion 
+                type="single" 
+                collapsible 
+                className="space-y-4"
+                value={expandedDayForScroll || undefined}
+                onValueChange={(value) => setExpandedDayForScroll(value || null)}
+              >
+                {parseResult.days.map((day, dayIndex) => {
+                  const dayName = day.day ? getDayName(day.day) : 'Dia não definido';
+                  const isRestDay = restDays[dayIndex] || false;
+                  
+                  return (
+                    <AccordionItem 
+                      key={day.day || `day-${dayIndex}`} 
+                      value={`day-${dayIndex}`}
+                      className="border-2 border-border rounded-2xl overflow-hidden shadow-md bg-card"
+                    >
+                      <AccordionTrigger className="px-5 py-5 min-h-[72px] hover:no-underline hover:bg-secondary/30">
+                        <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
+                          <span className="font-bold text-lg uppercase tracking-wide text-foreground">
+                            {dayName}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
+                          </span>
+                          
+                          {isRestDay && (
+                            <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 border-2 border-blue-500/30 px-3 py-1">
+                              <Moon className="w-4 h-4 mr-1.5" />
+                              DESCANSO
+                            </Badge>
+                          )}
+                          
+                          <div className="flex-1" />
+                          
+                          {/* Toggle de descanso */}
+                          <div 
+                            className="flex items-center gap-2" 
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-xs text-muted-foreground">Descanso</span>
+                            <Switch
+                              checked={isRestDay}
+                              onCheckedChange={() => toggleRestDay(dayIndex, dayName)}
+                            />
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5">
+                        {isRestDay ? (
+                          <div className="p-5 rounded-xl bg-blue-500/10 border-2 border-blue-500/30">
+                            <div className="flex items-center gap-3">
+                              <Moon className="w-6 h-6 text-blue-500" />
+                              <p className="text-sm text-blue-600 font-semibold">
+                                🌙 Dia de descanso — {dayName.toUpperCase()}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {day.blocks.map((block, blockIndex) => {
+                              const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
+                              const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
+                              
+                              return (
+                                <div 
+                                  key={blockIndex}
+                                  id={`block-${dayIndex}-${blockIndex}`}
+                                  className={`p-4 rounded-xl border-2 ${
+                                    block.isMainWod 
+                                      ? 'border-primary/50 bg-primary/5' 
+                                      : hasTitleError || !block.type
+                                        ? 'border-amber-500/50 bg-amber-500/5'
+                                        : 'border-border bg-card'
+                                  } ${highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex ? 'ring-2 ring-primary' : ''}`}
+                                >
+                                  {/* Header do bloco COM CONTROLES */}
+                                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                                    {/* Título editável */}
+                                    <Input
+                                      value={displayTitle}
+                                      onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
+                                      className={`h-8 w-[200px] text-sm font-semibold ${hasTitleError ? 'border-amber-500' : ''}`}
+                                    />
+                                    
+                                    {/* Seletor de categoria */}
+                                    <Select
+                                      value={block.type || ''}
+                                      onValueChange={(value) => changeBlockType(dayIndex, blockIndex, value)}
+                                    >
+                                      <SelectTrigger className={`h-8 w-[160px] text-xs ${!block.type ? 'border-amber-500' : ''}`}>
+                                        <SelectValue placeholder="Categoria" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {BLOCK_TYPE_OPTIONS.map((opt) => (
+                                          <SelectItem key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    {/* Badge WOD Principal */}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
+                                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                                            block.isMainWod
+                                              ? 'bg-primary text-primary-foreground'
+                                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                          }`}
+                                        >
+                                          <Star className={`w-3 h-3 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                          Principal
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Marcar como WOD principal do dia</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+
+                                    <div className="flex-1" />
+
+                                    {/* Menu de ações */}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setEditingBlock({ dayIndex, blockIndex })}>
+                                          <Pencil className="w-4 h-4 mr-2" />
+                                          Editar conteúdo
+                                        </DropdownMenuItem>
+                                        {!block.isMainWod && (
+                                          <DropdownMenuItem
+                                            className="text-destructive"
+                                            onClick={() => setDeleteConfirm({ dayIndex, blockIndex })}
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Excluir bloco
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+
+                                  {/* Conteúdo do bloco (preview) */}
+                                  <div className="text-sm space-y-1 text-foreground/80">
+                                    {(block.lines || []).slice(0, 5).map((line, idx) => (
+                                      <p key={idx} className="truncate">
+                                        {normalizeRestLineForDisplay(typeof line === 'string' ? line : line?.text || '')}
+                                      </p>
+                                    ))}
+                                    {(block.lines || []).length > 5 && (
+                                      <p className="text-muted-foreground text-xs">
+                                        ... +{(block.lines || []).length - 5} linhas
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </TooltipProvider>
+
+            {/* BOTÕES DE NAVEGAÇÃO */}
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={goBackToImport} className="flex-1">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Editar texto
+              </Button>
+              <Button
+                onClick={handleGoToPreview}
+                className="flex-1"
+                disabled={!canSaveAndGoToPreview}
+              >
+                <ArrowRight className="w-4 h-4 mr-2" />
+                Ver preview
+              </Button>
+            </div>
+
+            {!weekId && (
+              <p className="text-xs text-amber-600 text-center">
+                ⚠️ Volte e selecione a semana de referência para continuar
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* MODAL DE EDIÇÃO DE BLOCO */}
+        <BlockEditorModal
+          open={!!editingBlock}
+          onOpenChange={(open) => !open && setEditingBlock(null)}
+          blockTitle={
+            editingBlock && parseResult.days[editingBlock.dayIndex]?.blocks[editingBlock.blockIndex]
+              ? parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].title
+              : ''
+          }
+          lines={
+            editingBlock && parseResult.days[editingBlock.dayIndex]?.blocks[editingBlock.blockIndex]
+              ? parseResult.days[editingBlock.dayIndex].blocks[editingBlock.blockIndex].lines || []
+              : []
+          }
+          onSave={(newLines) => {
+            if (editingBlock) {
+              saveBlockLines(editingBlock.dayIndex, editingBlock.blockIndex, newLines);
+            }
+            setEditingBlock(null);
+          }}
+        />
+
+        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+        <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir bloco?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O bloco será removido permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deleteConfirm) {
+                    deleteBlock(deleteConfirm.dayIndex, deleteConfirm.blockIndex);
+                  }
+                }}
+              >
+                Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
