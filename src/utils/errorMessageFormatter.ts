@@ -19,7 +19,7 @@
 
 import type { StructureIssue } from './structuredTextParser';
 
-// Tipos de erro conhecidos
+// Tipos de erro conhecidos (incluindo CERCA HARD V1)
 export type ErrorType = 
   | 'HYBRID_LINE' 
   | 'NO_STRUCTURE' 
@@ -28,6 +28,11 @@ export type ErrorType =
   | 'AMBIGUOUS_CONTENT'
   | 'REST_WITH_STIMULUS'
   | 'MISSING_INTENSITY'
+  | 'MISSING_TREINO'
+  | 'MISSING_COMENTARIO'
+  | 'MISSING_BOTH_DELIMITERS'
+  | 'INVERTED_ORDER'
+  | 'MULTIPLE_DELIMITERS'
   | 'GENERIC';
 
 // Mapeamento de dias
@@ -74,6 +79,27 @@ const ERROR_COPIES: Record<ErrorType, {
     whatHappened: 'Você descreveu duração/modalidade, mas não informou intensidade no TREINO. Intensidade escrita em comentário/notas NÃO entra no cálculo do OUTLIER.',
     whatToDo: 'Inclua no TREINO um parâmetro objetivo (PSE, Zona, Pace ou FC alvo). O motor considerará apenas volume (tempo) e marcará intensidade como "desconhecida".',
   },
+  // CERCA HARD V1: Erros de delimitadores
+  MISSING_TREINO: {
+    whatHappened: 'O bloco não contém a tag [TREINO]. Todo bloco DEVE ter [TREINO] e [COMENTÁRIO].',
+    whatToDo: 'Adicione a tag [TREINO] antes das linhas de treino executável.',
+  },
+  MISSING_COMENTARIO: {
+    whatHappened: 'O bloco não contém a tag [COMENTÁRIO]. Todo bloco DEVE ter [TREINO] e [COMENTÁRIO].',
+    whatToDo: 'Adicione a tag [COMENTÁRIO] após as linhas de treino, antes das observações.',
+  },
+  MISSING_BOTH_DELIMITERS: {
+    whatHappened: 'O bloco não contém nenhum delimitador. Todo bloco DEVE ter [TREINO] e [COMENTÁRIO].',
+    whatToDo: 'Adicione [TREINO] antes do treino e [COMENTÁRIO] após, antes das observações.',
+  },
+  INVERTED_ORDER: {
+    whatHappened: 'A tag [COMENTÁRIO] está antes da tag [TREINO]. A ordem correta é [TREINO] → [COMENTÁRIO].',
+    whatToDo: 'Reorganize o bloco: [TREINO] deve vir antes de [COMENTÁRIO].',
+  },
+  MULTIPLE_DELIMITERS: {
+    whatHappened: 'O bloco contém mais de uma ocorrência da mesma tag. Deve haver exatamente 1 [TREINO] e 1 [COMENTÁRIO].',
+    whatToDo: 'Remova as tags duplicadas, mantendo apenas 1 [TREINO] e 1 [COMENTÁRIO].',
+  },
   GENERIC: {
     whatHappened: 'O sistema identificou um problema na estrutura do treino.',
     whatToDo: 'Revise o texto e corrija.',
@@ -86,6 +112,24 @@ const ERROR_COPIES: Record<ErrorType, {
 export function detectErrorType(issue: StructureIssue): ErrorType {
   const msg = issue.message.toLowerCase();
   
+  // CERCA HARD V1: Erros de delimitadores (prioridade alta)
+  if (msg.includes('faltou [treino]') && msg.includes('[comentário]')) {
+    return 'MISSING_BOTH_DELIMITERS';
+  }
+  if (msg.includes('faltou [treino]')) {
+    return 'MISSING_TREINO';
+  }
+  if (msg.includes('faltou [comentário]')) {
+    return 'MISSING_COMENTARIO';
+  }
+  if (msg.includes('ordem inválida') || msg.includes('precisa vir após')) {
+    return 'INVERTED_ORDER';
+  }
+  if (msg.includes('múltiplos delimitadores') || msg.includes('mantenha apenas 1')) {
+    return 'MULTIPLE_DELIMITERS';
+  }
+  
+  // Erros legacy
   if (msg.includes('mistura') && (msg.includes('treino') || msg.includes('comentário'))) {
     return 'HYBRID_LINE';
   }
