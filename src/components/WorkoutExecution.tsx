@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
-import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockCategoryLabel, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { MessageSquare } from 'lucide-react';
 
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -325,9 +326,36 @@ export function WorkoutExecution() {
                         </span>
                       )}
                     </div>
-                    <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {effectiveContent}
-                    </pre>
+                    {/* Separated Exercise Content and Coach Comments */}
+                    {(() => {
+                      const { exerciseLines, commentLines } = separateBlockContent(effectiveContent);
+                      return (
+                        <>
+                          {/* Exercise lines - main content */}
+                          {exerciseLines.length > 0 && (
+                            <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                              {exerciseLines.join('\n')}
+                            </pre>
+                          )}
+                          
+                          {/* Coach comments - visually separated */}
+                          {commentLines.length > 0 && (
+                            <div className="mt-3 p-3 rounded-lg bg-secondary/50 border border-border/30">
+                              <div className="flex items-start gap-2">
+                                <MessageSquare className="w-4 h-4 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                  {commentLines.map((comment, i) => (
+                                    <p key={i} className="text-xs text-muted-foreground/80 leading-relaxed">
+                                      {comment}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                     
                     {/* Level-specific notes */}
                     {effectiveNotes && (

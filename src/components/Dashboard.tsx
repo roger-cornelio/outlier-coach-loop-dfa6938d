@@ -23,8 +23,9 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
-import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockCategoryLabel, separateBlockContent } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
+import { MessageSquare } from 'lucide-react';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -808,10 +809,36 @@ export function Dashboard() {
                           )}
                         </div>
                       </div>
-                      
-                      <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed mb-4">
-                        {block.content}
-                      </pre>
+                      {/* Separated Exercise Content and Coach Comments */}
+                      {(() => {
+                        const { exerciseLines, commentLines } = separateBlockContent(block.content);
+                        return (
+                          <>
+                            {/* Exercise lines - main content */}
+                            {exerciseLines.length > 0 && (
+                              <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed mb-4">
+                                {exerciseLines.join('\n')}
+                              </pre>
+                            )}
+                            
+                            {/* Coach comments - visually separated */}
+                            {commentLines.length > 0 && (
+                              <div className="mt-3 p-3 rounded-lg bg-secondary/50 border border-border/30">
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare className="w-4 h-4 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
+                                  <div className="space-y-1">
+                                    {commentLines.map((comment, i) => (
+                                      <p key={i} className="text-xs text-muted-foreground/80 leading-relaxed">
+                                        {comment}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {/* Block Stats */}
                       {block.type !== 'notas' && (
