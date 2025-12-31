@@ -1,14 +1,15 @@
-import { Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { StatusCrown, type StatusCrownSize } from '@/components/ui/StatusCrown';
 import type { AthleteStatus } from '@/types/outlier';
 
 /**
- * AthleteStatusAvatar - Avatar Central de Status
+ * ═══════════════════════════════════════════════════════════════════════════
+ * AthleteStatusAvatar — Avatar Central de Status com StatusCrown Canônico
+ * ═══════════════════════════════════════════════════════════════════════════
  * 
  * Componente principal de identidade do atleta.
- * Exibe avatar grande com nível/status de forma proeminente.
- * Usa mesma fonte de verdade visual que UserAvatar.
+ * Usa <StatusCrown /> para garantir consistência pixel-perfect.
  */
 
 interface AthleteStatusAvatarProps {
@@ -20,13 +21,11 @@ interface AthleteStatusAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 }
 
-// MVP0: Coroa canônica exibida em TODOS os níveis de status
-// Todos os níveis usam Crown como ícone único
-
-// Configuração visual por nível (fonte de verdade única)
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO VISUAL POR STATUS (ícone é sempre StatusCrown)
+// ═══════════════════════════════════════════════════════════════════════════
 const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
-  icon: typeof Crown;
   gradient: string;
   glow: string;
   glowIntensity: string;
@@ -38,7 +37,6 @@ const STATUS_CONFIG: Record<AthleteStatus, {
 }> = {
   iniciante: {
     label: 'INICIANTE',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     glow: 'rgba(100, 116, 139, 0.4)',
     glowIntensity: '0 0 20px',
@@ -50,7 +48,6 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   intermediario: {
     label: 'INTERMEDIÁRIO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     glow: 'rgba(16, 185, 129, 0.5)',
     glowIntensity: '0 0 30px',
@@ -62,7 +59,6 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   avancado: {
     label: 'AVANÇADO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     glow: 'rgba(249, 115, 22, 0.5)',
     glowIntensity: '0 0 40px',
@@ -74,7 +70,6 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   hyrox_open: {
     label: 'HYROX OPEN',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     glow: 'rgba(168, 85, 247, 0.6)',
     glowIntensity: '0 0 50px',
@@ -86,7 +81,6 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   hyrox_pro: {
     label: 'HYROX PRO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     glow: 'rgba(251, 191, 36, 0.7)',
     glowIntensity: '0 0 60px, 0 0 100px',
@@ -98,13 +92,18 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
 };
 
-// Tamanhos do avatar
-const SIZE_CONFIG = {
-  sm: { container: 'w-10 h-10', icon: 'w-5 h-5', crown: 'w-3 h-3', crownTop: 'top-1', statusIcon: 'w-3 h-3', text: 'text-xs' },
-  md: { container: 'w-14 h-14', icon: 'w-7 h-7', crown: 'w-4 h-4', crownTop: 'top-1.5', statusIcon: 'w-4 h-4', text: 'text-sm' },
-  lg: { container: 'w-20 h-20', icon: 'w-10 h-10', crown: 'w-5 h-5', crownTop: 'top-2', statusIcon: 'w-5 h-5', text: 'text-base' },
-  xl: { container: 'w-28 h-28', icon: 'w-14 h-14', crown: 'w-7 h-7', crownTop: 'top-3', statusIcon: 'w-6 h-6', text: 'text-lg' },
-  hero: { container: 'w-36 h-36', icon: 'w-18 h-18', crown: 'w-8 h-8', crownTop: 'top-4', statusIcon: 'w-8 h-8', text: 'text-xl' },
+// Tamanhos do avatar com mapeamento para StatusCrown
+const SIZE_CONFIG: Record<string, {
+  container: string;
+  crownSize: StatusCrownSize;
+  badgeCrownSize: StatusCrownSize;
+  text: string;
+}> = {
+  sm: { container: 'w-10 h-10', crownSize: 'sm', badgeCrownSize: 'xs', text: 'text-xs' },
+  md: { container: 'w-14 h-14', crownSize: 'md', badgeCrownSize: 'sm', text: 'text-sm' },
+  lg: { container: 'w-20 h-20', crownSize: 'lg', badgeCrownSize: 'sm', text: 'text-base' },
+  xl: { container: 'w-28 h-28', crownSize: 'xl', badgeCrownSize: 'md', text: 'text-lg' },
+  hero: { container: 'w-36 h-36', crownSize: 'hero', badgeCrownSize: 'lg', text: 'text-xl' },
 };
 
 export function AthleteStatusAvatar({
@@ -117,9 +116,6 @@ export function AthleteStatusAvatar({
 }: AthleteStatusAvatarProps) {
   const config = STATUS_CONFIG[status];
   const sizeConfig = SIZE_CONFIG[size];
-  const StatusIcon = config.icon; // Sempre Crown
-  
-  // MVP0: Coroa canônica em TODOS os níveis
 
   return (
     <div className={cn('flex flex-col items-center gap-3', className)}>
@@ -152,14 +148,11 @@ export function AthleteStatusAvatar({
             boxShadow: `${config.glowIntensity} ${config.glow}`,
           }}
         >
-          {/* MVP0: Coroa canônica central - símbolo único de status */}
-          <Crown 
-            className={cn(
-              sizeConfig.icon,
-              config.crownColor || 'text-white/90',
-              'drop-shadow-md'
-            )}
-            strokeWidth={1.5}
+          {/* StatusCrown canônico */}
+          <StatusCrown 
+            size={sizeConfig.crownSize}
+            colorClass={config.crownColor}
+            className="drop-shadow-md"
           />
         </div>
       </motion.div>
@@ -175,12 +168,12 @@ export function AthleteStatusAvatar({
           <div 
             className={cn(
               'inline-flex items-center gap-2 px-4 py-2 rounded-full',
-              'border font-bold uppercase tracking-wider',
+              'border font-bold uppercase tracking-wider text-status-title',
               config.badge,
               sizeConfig.text
             )}
           >
-            <StatusIcon className={cn('w-4 h-4', config.text)} />
+            <StatusCrown size="sm" colorClass={config.text} />
             <span>ATLETA {config.label}</span>
           </div>
         </motion.div>
@@ -212,17 +205,16 @@ export function AthleteStatusBadge({
   size?: 'sm' | 'md';
 }) {
   const config = STATUS_CONFIG[status];
-  const StatusIcon = config.icon;
   
   return (
     <div 
       className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border',
+        'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-status-label',
         config.badge,
         size === 'sm' ? 'text-xs' : 'text-sm'
       )}
     >
-      <StatusIcon className="w-3 h-3" />
+      <StatusCrown size="xs" colorClass={config.text} />
       <span className="font-semibold uppercase">{config.label}</span>
     </div>
   );

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { StatusCrown } from '@/components/ui/StatusCrown';
 import type { AthleteStatus } from '@/types/outlier';
 
 /**
- * LevelUpModal - Modal de Subida de Nível
+ * ═══════════════════════════════════════════════════════════════════════════
+ * LevelUpModal — Modal de Subida de Nível com StatusCrown Canônico
+ * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Exibido em tela cheia quando o atleta sobe de nível.
- * Bloqueia interação até o usuário confirmar.
+ * Usa <StatusCrown /> para garantir consistência pixel-perfect.
  */
 
 interface LevelUpModalProps {
@@ -18,48 +20,48 @@ interface LevelUpModalProps {
   onContinue: () => void;
 }
 
-// Configuração visual por nível
+// Configuração visual por nível (ícone é sempre StatusCrown)
 const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
-  icon: typeof Crown;
   gradient: string;
   glow: string;
   particleColor: string;
+  crownColor: string;
 }> = {
   iniciante: {
     label: 'INICIANTE',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     glow: 'shadow-slate-500/60',
     particleColor: 'bg-slate-400',
+    crownColor: 'text-white/90',
   },
   intermediario: {
     label: 'INTERMEDIÁRIO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     glow: 'shadow-emerald-500/60',
     particleColor: 'bg-emerald-400',
+    crownColor: 'text-white/90',
   },
   avancado: {
     label: 'AVANÇADO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     glow: 'shadow-orange-500/60',
     particleColor: 'bg-orange-400',
+    crownColor: 'text-white/90',
   },
   hyrox_open: {
     label: 'HYROX OPEN',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     glow: 'shadow-purple-500/60',
     particleColor: 'bg-purple-400',
+    crownColor: 'text-white',
   },
   hyrox_pro: {
     label: 'HYROX PRO',
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 to-yellow-500',
     glow: 'shadow-amber-500/70',
     particleColor: 'bg-amber-400',
+    crownColor: 'text-white',
   },
 };
 
@@ -97,7 +99,6 @@ function FloatingParticles({ color }: { color: string }) {
 export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProps) {
   const [showContent, setShowContent] = useState(false);
   const config = STATUS_CONFIG[newStatus];
-  const StatusIcon = config.icon;
 
   // Delay content for dramatic effect
   useEffect(() => {
@@ -160,7 +161,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="text-3xl md:text-4xl font-display font-bold text-white mb-8"
+                  className="text-3xl md:text-4xl font-display font-bold text-white mb-8 text-status-title"
                 >
                   NOVO STATUS ALCANÇADO
                 </motion.h1>
@@ -216,7 +217,8 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       `shadow-2xl ${config.glow}`
                     )}
                   >
-                    <StatusIcon className="w-20 h-20 text-white/90" strokeWidth={1.5} />
+                    {/* StatusCrown canônico */}
+                    <StatusCrown size="hero" colorClass={config.crownColor} />
                   </div>
                 </motion.div>
               )}
@@ -234,12 +236,12 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   <div 
                     className={cn(
                       'inline-flex items-center gap-3 px-6 py-3 rounded-full',
-                      'border-2 font-bold uppercase tracking-wider text-xl',
+                      'border-2 font-bold uppercase tracking-wider text-xl text-status-title',
                       `bg-gradient-to-r ${config.gradient}`,
                       'text-white border-white/20'
                     )}
                   >
-                    <StatusIcon className="w-6 h-6" />
+                    <StatusCrown size="lg" colorClass="text-white" />
                     <span>ATLETA {config.label}</span>
                   </div>
                 </motion.div>

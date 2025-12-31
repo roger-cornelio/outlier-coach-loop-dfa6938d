@@ -1,11 +1,15 @@
-import { Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusCrown, type StatusCrownSize } from '@/components/ui/StatusCrown';
 import type { AthleteStatus, TrainingLevel } from '@/types/outlier';
 
-// ============================================
-// AVATAR COM SÍMBOLO DO STATUS DO ATLETA
-// Exibe o ícone do nível em vez de silhueta de pessoa
-// ============================================
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * UserAvatar — Avatar com Símbolo Canônico do Status do Atleta
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Exibe <StatusCrown /> (componente canônico) em vez de ícone direto.
+ * Cor, gradiente e glow variam por status; ícone é sempre idêntico.
+ */
 
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -20,11 +24,9 @@ interface UserAvatarProps {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MVP0: COROA CANÔNICA - Único símbolo de status em todo o app
-// Cor varia por nível, ícone é sempre Crown (lucide-react)
+// CONFIGURAÇÃO VISUAL POR STATUS (cores apenas, ícone é StatusCrown)
 // ═══════════════════════════════════════════════════════════════════════════
 const STATUS_VISUAL: Record<AthleteStatus, {
-  icon: typeof Crown;
   gradient: string;
   border: string;
   glow: string;
@@ -33,7 +35,6 @@ const STATUS_VISUAL: Record<AthleteStatus, {
   animate: boolean;
 }> = {
   iniciante: {
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     border: 'border-slate-400/60',
     glow: 'rgba(100, 116, 139, 0.3)',
@@ -42,7 +43,6 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   intermediario: {
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     border: 'border-emerald-400/70',
     glow: 'rgba(16, 185, 129, 0.4)',
@@ -51,7 +51,6 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   avancado: {
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     border: 'border-orange-400/80',
     glow: 'rgba(249, 115, 22, 0.5)',
@@ -60,7 +59,6 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: false,
   },
   hyrox_open: {
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     border: 'border-purple-400/80',
     glow: 'rgba(168, 85, 247, 0.5)',
@@ -69,7 +67,6 @@ const STATUS_VISUAL: Record<AthleteStatus, {
     animate: true,
   },
   hyrox_pro: {
-    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     border: 'border-amber-400',
     glow: 'rgba(251, 191, 36, 0.6)',
@@ -79,9 +76,8 @@ const STATUS_VISUAL: Record<AthleteStatus, {
   },
 };
 
-// Cores padrão (fallback - sem status definido)
+// Fallback sem status definido
 const DEFAULT_VISUAL = {
-  icon: Crown, // MVP0: Mesmo ícone no fallback
   gradient: 'from-muted to-muted',
   border: 'border-border',
   glow: 'transparent',
@@ -90,21 +86,19 @@ const DEFAULT_VISUAL = {
   animate: false,
 };
 
-// Tamanhos do avatar
+// Mapeamento de tamanho avatar → tamanho StatusCrown
 const SIZE_CONFIG: Record<AvatarSize, { 
   container: string; 
-  icon: string; 
+  crownSize: StatusCrownSize;
 }> = {
-  sm: { container: 'w-8 h-8', icon: 'w-4 h-4' },
-  md: { container: 'w-10 h-10', icon: 'w-5 h-5' },
-  lg: { container: 'w-12 h-12', icon: 'w-6 h-6' },
-  xl: { container: 'w-16 h-16', icon: 'w-8 h-8' },
+  sm: { container: 'w-8 h-8', crownSize: 'sm' },
+  md: { container: 'w-10 h-10', crownSize: 'md' },
+  lg: { container: 'w-12 h-12', crownSize: 'lg' },
+  xl: { container: 'w-16 h-16', crownSize: 'xl' },
 };
 
 /**
- * Componente de avatar com símbolo do status do atleta.
- * Exibe o ícone do nível (Target, Zap, Flame, Star, Crown) 
- * com cor, gradiente, glow e animação baseados no status.
+ * Avatar com símbolo canônico do status do atleta.
  */
 export function UserAvatar({
   name,
@@ -115,32 +109,21 @@ export function UserAvatar({
   className,
   showGlow = true,
 }: UserAvatarProps) {
-  // Prioridade: athleteStatus (calculado)
   const statusKey = athleteStatus || null;
   const visual = statusKey ? STATUS_VISUAL[statusKey] : DEFAULT_VISUAL;
   const sizeConfig = SIZE_CONFIG[size];
-  
-  // Ícone do status
-  const StatusIcon = visual.icon;
 
   return (
     <div
       className={cn(
-        // Base
         'relative rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all duration-300 overflow-hidden',
-        // Tamanho
         sizeConfig.container,
-        // Gradiente de fundo
         `bg-gradient-to-br ${visual.gradient}`,
-        // Borda
         visual.border,
-        // Animação para níveis altos
         visual.animate && 'animate-pulse-slow',
-        // Classes customizadas
         className
       )}
       style={{
-        // Glow externo baseado no status
         boxShadow: showGlow && statusKey ? `${visual.glowIntensity} ${visual.glow}` : 'none',
       }}
       title={`${name || 'Usuário'} • ${statusKey ? statusKey.replace('_', ' ').toUpperCase() : 'Nível não definido'}`}
@@ -152,21 +135,15 @@ export function UserAvatar({
             'absolute inset-0 rounded-full opacity-30',
             `bg-gradient-to-br ${visual.gradient}`
           )}
-          style={{
-            filter: 'blur(2px)',
-          }}
+          style={{ filter: 'blur(2px)' }}
         />
       )}
       
-      {/* Símbolo do STATUS do atleta */}
-      <StatusIcon 
-        className={cn(
-          'relative z-10',
-          sizeConfig.icon,
-          visual.iconColor,
-          'drop-shadow-sm'
-        )}
-        strokeWidth={2.5}
+      {/* StatusCrown canônico */}
+      <StatusCrown 
+        size={sizeConfig.crownSize}
+        colorClass={visual.iconColor}
+        className="relative z-10"
       />
     </div>
   );
