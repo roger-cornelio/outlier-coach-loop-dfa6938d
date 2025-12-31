@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { StatusCrown } from '@/components/ui/StatusCrown';
+import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import type { AthleteStatus } from '@/types/outlier';
 
 /**
@@ -217,8 +217,8 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       `shadow-2xl ${config.glow}`
                     )}
                   >
-                    {/* StatusCrown canônico */}
-                    <StatusCrown size="hero" colorClass={config.crownColor} />
+                    {/* StatusCrownPreset canônico */}
+                    <StatusCrownPreset size="hero" colorClass={config.crownColor} />
                   </div>
                 </motion.div>
               )}
@@ -241,7 +241,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       'text-white border-white/20'
                     )}
                   >
-                    <StatusCrown size="lg" colorClass="text-white" />
+                    <StatusCrownPreset size="lg" colorClass="text-white" />
                     <span>ATLETA {config.label}</span>
                   </div>
                 </motion.div>

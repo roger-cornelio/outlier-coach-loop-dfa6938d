@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { StatusCrown, type StatusCrownSize } from '@/components/ui/StatusCrown';
+import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
+import { type StatusCrownSize } from '@/components/ui/StatusCrown';
 import type { AthleteStatus } from '@/types/outlier';
 
 /**
@@ -148,11 +149,10 @@ export function AthleteStatusAvatar({
             boxShadow: `${config.glowIntensity} ${config.glow}`,
           }}
         >
-          {/* StatusCrown canônico */}
-          <StatusCrown 
+          {/* StatusCrownPreset canônico */}
+          <StatusCrownPreset 
             size={sizeConfig.crownSize}
             colorClass={config.crownColor}
-            className="drop-shadow-md"
           />
         </div>
       </motion.div>
@@ -173,7 +173,7 @@ export function AthleteStatusAvatar({
               sizeConfig.text
             )}
           >
-            <StatusCrown size="sm" colorClass={config.text} />
+            <StatusCrownPreset size="sm" colorClass={config.text} />
             <span>ATLETA {config.label}</span>
           </div>
         </motion.div>
@@ -214,7 +214,7 @@ export function AthleteStatusBadge({
         size === 'sm' ? 'text-xs' : 'text-sm'
       )}
     >
-      <StatusCrown size="xs" colorClass={config.text} />
+      <StatusCrownPreset size="xs" colorClass={config.text} />
       <span className="font-semibold uppercase">{config.label}</span>
     </div>
   );

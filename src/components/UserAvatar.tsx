@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
-import { StatusCrown, type StatusCrownSize } from '@/components/ui/StatusCrown';
+import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
+import { type StatusCrownSize } from '@/components/ui/StatusCrown';
 import type { AthleteStatus, TrainingLevel } from '@/types/outlier';
 
 /**
@@ -139,8 +140,8 @@ export function UserAvatar({
         />
       )}
       
-      {/* StatusCrown canônico */}
-      <StatusCrown 
+      {/* StatusCrownPreset canônico */}
+      <StatusCrownPreset 
         size={sizeConfig.crownSize}
         colorClass={visual.iconColor}
         className="relative z-10"

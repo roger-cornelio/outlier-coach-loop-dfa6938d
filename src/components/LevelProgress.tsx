@@ -3,7 +3,7 @@ import {
   Trophy, Star, Zap, Flame, Lock, ChevronRight, 
   TrendingUp, Target, Sparkles, Shield, Swords
 } from 'lucide-react';
-import { StatusCrown } from '@/components/ui/StatusCrown';
+import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
@@ -80,8 +80,8 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
     iconAnimation: '',
   },
   hyrox_pro: {
-    icon: <StatusCrown size="lg" />,
-    heroIcon: <StatusCrown size="hero" className="animate-crown-float" />,
+    icon: <StatusCrownPreset size="lg" />,
+    heroIcon: <StatusCrownPreset size="hero" className="animate-crown-float" />,
     gradient: 'from-amber-400 via-yellow-400 to-orange-400',
     textGradient: 'from-amber-300 to-yellow-300',
     bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%), radial-gradient(ellipse at bottom, hsl(40 40% 15% / 0.5), transparent 50%), radial-gradient(circle at 20% 80%, hsl(30 50% 15% / 0.3), transparent 30%)',
