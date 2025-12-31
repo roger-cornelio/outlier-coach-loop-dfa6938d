@@ -248,9 +248,18 @@ export function useCoachDraft() {
   }, [draft.weekId, draft.parseResult]);
 
   // Validação: pode salvar?
+  // CERCA HARD V1: Bloqueia se houver erros de estrutura (severity === 'ERROR')
   const canSave = useMemo(() => {
-    return draft.weekId !== null && effectiveDays !== null && effectiveDays.length > 0;
-  }, [draft.weekId, effectiveDays]);
+    const hasBasicRequirements = draft.weekId !== null && effectiveDays !== null && effectiveDays.length > 0;
+    
+    // Verificar se há erros de estrutura bloqueantes
+    const structureErrors = draft.parseResult?.structureIssues?.filter(
+      issue => issue.severity === 'ERROR'
+    ) ?? [];
+    const hasBlockingErrors = structureErrors.length > 0;
+    
+    return hasBasicRequirements && !hasBlockingErrors;
+  }, [draft.weekId, effectiveDays, draft.parseResult?.structureIssues]);
 
   return {
     // Estado

@@ -30,10 +30,26 @@ export interface FenceValidationResult {
   errors: FenceError[];
   warnings: FenceWarning[];
   blocks: ParsedFenceBlock[];
+  /** True if at least one block is missing [TREINO] or [COMENTÁRIO] */
+  hasMissingDelimiters: boolean;
+  /** True if [COMENTÁRIO] appears before [TREINO] in any block */
+  hasInvertedOrder: boolean;
+  /** True if any block has multiple occurrences of the same delimiter */
+  hasMultipleDelimiters: boolean;
 }
 
+export type FenceErrorType = 
+  | 'MISSING_TREINO' 
+  | 'MISSING_COMENTARIO' 
+  | 'MISSING_BOTH'
+  | 'INVERTED_ORDER'
+  | 'MULTIPLE_TREINO'
+  | 'MULTIPLE_COMENTARIO'
+  | 'MISSING_ANCHOR' 
+  | 'HUMAN_TEXT_IN_TREINO';
+
 export interface FenceError {
-  type: 'MISSING_TREINO' | 'MISSING_COMENTARIO' | 'MISSING_ANCHOR' | 'HUMAN_TEXT_IN_TREINO';
+  type: FenceErrorType;
   blockTitle?: string;
   dayName?: string;
   lineNumber?: number;
@@ -57,6 +73,12 @@ export interface ParsedFenceBlock {
   commentLines: string[];
   hasAnchor: boolean;
   humanTextLines: HumanTextLine[];
+  /** Number of [TREINO] tags found in this block */
+  treinoTagCount: number;
+  /** Number of [COMENTÁRIO] tags found in this block */
+  comentarioTagCount: number;
+  /** True if [COMENTÁRIO] appears before [TREINO] */
+  hasInvertedOrder: boolean;
 }
 
 export interface HumanTextLine {
@@ -249,6 +271,11 @@ function isBlockTitle(line: string): boolean {
 /**
  * Extrai blocos com delimitadores [TREINO] e [COMENTÁRIO]
  * PARSING DETERMINÍSTICO — sem adivinhação
+ * 
+ * CERCA HARD V1:
+ * - Cada bloco DEVE ter exatamente 1 [TREINO] e 1 [COMENTÁRIO]
+ * - [TREINO] DEVE vir antes de [COMENTÁRIO]
+ * - Sem isso: BLOQUEIA publicação
  */
 export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
   const lines = text.split('\n');
@@ -261,6 +288,12 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
   let inTrainingSection = false;
   let inCommentSection = false;
   let blockStartLine = 0;
+  
+  // CERCA HARD V1: Rastrear contagem e ordem de tags
+  let treinoTagCount = 0;
+  let comentarioTagCount = 0;
+  let treinoTagLineIdx = -1;
+  let comentarioTagLineIdx = -1;
   
   const flushBlock = () => {
     if (currentBlockTitle) {
@@ -280,6 +313,9 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         }
       });
       
+      // CERCA HARD V1: Verificar ordem invertida
+      const hasInvertedOrder = treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
+      
       blocks.push({
         title: currentBlockTitle,
         dayName: currentDay?.name,
@@ -288,6 +324,9 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         commentLines: [...currentCommentLines],
         hasAnchor,
         humanTextLines,
+        treinoTagCount,
+        comentarioTagCount,
+        hasInvertedOrder,
       });
     }
     
@@ -297,6 +336,10 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     currentCommentLines = [];
     inTrainingSection = false;
     inCommentSection = false;
+    treinoTagCount = 0;
+    comentarioTagCount = 0;
+    treinoTagLineIdx = -1;
+    comentarioTagLineIdx = -1;
   };
   
   for (let i = 0; i < lines.length; i++) {
@@ -321,6 +364,8 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     
     // Detectar [TREINO]
     if (/^\[TREINO\]/i.test(trimmed)) {
+      treinoTagCount++;
+      treinoTagLineIdx = i;
       inTrainingSection = true;
       inCommentSection = false;
       continue;
@@ -328,6 +373,8 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     
     // Detectar [COMENTÁRIO]
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
+      comentarioTagCount++;
+      comentarioTagLineIdx = i;
       inTrainingSection = false;
       inCommentSection = true;
       continue;
@@ -348,32 +395,135 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-// VALIDAÇÃO PRINCIPAL — CERCA V1
+// VALIDAÇÃO PRINCIPAL — CERCA HARD V1
 // ════════════════════════════════════════════════════════════════════════════════
 
 /**
  * Valida texto do coach com regras de cerca determinísticas
  * 
- * REGRAS:
- * 1) [TREINO] é obrigatório em todo bloco
- * 2) [COMENTÁRIO] é obrigatório em todo bloco
- * 3) Pelo menos 1 âncora válida em cada zona de treino
- * 4) Nenhum texto humano/explicativo na zona de treino
+ * REGRAS ABSOLUTAS (CERCA HARD V1):
+ * 1) [TREINO] é obrigatório em todo bloco — exatamente 1 ocorrência
+ * 2) [COMENTÁRIO] é obrigatório em todo bloco — exatamente 1 ocorrência
+ * 3) A posição deve obedecer: index([TREINO]) < index([COMENTÁRIO])
+ * 4) A zona TREINO = linhas entre os dois delimitadores
+ * 5) A zona COMENTÁRIO = linhas após [COMENTÁRIO]
+ * 
+ * PROIBIDO:
+ * - 0 delimitadores
+ * - apenas um delimitador
+ * - ordem invertida
+ * - múltiplas ocorrências do mesmo delimitador
  */
 export function validateFence(text: string): FenceValidationResult {
   const errors: FenceError[] = [];
   const warnings: FenceWarning[] = [];
   const lines = text.split('\n');
   
-  // Parse blocks
+  // Parse blocks com contagem de tags
   const blocks = parseBlocksWithFence(text);
+  
+  // CERCA HARD V1: Flags de validação
+  let hasMissingDelimiters = false;
+  let hasInvertedOrder = false;
+  let hasMultipleDelimiters = false;
   
   // Detectar blocos que existem mas não têm delimitadores
   let currentDay: { name: string; index: number } | null = null;
   let currentBlockTitle = '';
-  let hasTreeinoTag = false;
-  let hasComentarioTag = false;
+  let treinoTagCount = 0;
+  let comentarioTagCount = 0;
+  let treinoTagLineIdx = -1;
+  let comentarioTagLineIdx = -1;
   let blockStartLine = 0;
+  
+  const checkAndFlushBlock = () => {
+    if (!currentBlockTitle) return;
+    
+    const hasTreino = treinoTagCount > 0;
+    const hasComentario = comentarioTagCount > 0;
+    const hasMultipleTreino = treinoTagCount > 1;
+    const hasMultipleComentario = comentarioTagCount > 1;
+    const isInverted = hasTreino && hasComentario && comentarioTagLineIdx < treinoTagLineIdx;
+    
+    // CERCA HARD V1: Verificar cada condição separadamente
+    
+    // Caso 1: Faltam ambos delimitadores
+    if (!hasTreino && !hasComentario) {
+      hasMissingDelimiters = true;
+      errors.push({
+        type: 'MISSING_BOTH',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: blockStartLine,
+        message: `Bloco '${currentBlockTitle}': faltou [TREINO] e [COMENTÁRIO]`,
+      });
+    }
+    // Caso 2: Faltou só [TREINO]
+    else if (!hasTreino) {
+      hasMissingDelimiters = true;
+      errors.push({
+        type: 'MISSING_TREINO',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: blockStartLine,
+        message: `Bloco '${currentBlockTitle}': faltou [TREINO]`,
+      });
+    }
+    // Caso 3: Faltou só [COMENTÁRIO]
+    else if (!hasComentario) {
+      hasMissingDelimiters = true;
+      errors.push({
+        type: 'MISSING_COMENTARIO',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: blockStartLine,
+        message: `Bloco '${currentBlockTitle}': faltou [COMENTÁRIO]`,
+      });
+    }
+    
+    // Caso 4: Ordem invertida
+    if (isInverted) {
+      hasInvertedOrder = true;
+      errors.push({
+        type: 'INVERTED_ORDER',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: comentarioTagLineIdx + 1,
+        message: `Bloco '${currentBlockTitle}': ordem inválida — [COMENTÁRIO] precisa vir após [TREINO]`,
+      });
+    }
+    
+    // Caso 5: Múltiplos [TREINO]
+    if (hasMultipleTreino) {
+      hasMultipleDelimiters = true;
+      errors.push({
+        type: 'MULTIPLE_TREINO',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: blockStartLine,
+        message: `Bloco '${currentBlockTitle}': múltiplos delimitadores — mantenha apenas 1 [TREINO] e 1 [COMENTÁRIO]`,
+      });
+    }
+    
+    // Caso 6: Múltiplos [COMENTÁRIO]
+    if (hasMultipleComentario) {
+      hasMultipleDelimiters = true;
+      errors.push({
+        type: 'MULTIPLE_COMENTARIO',
+        blockTitle: currentBlockTitle,
+        dayName: currentDay?.name,
+        lineNumber: blockStartLine,
+        message: `Bloco '${currentBlockTitle}': múltiplos delimitadores — mantenha apenas 1 [TREINO] e 1 [COMENTÁRIO]`,
+      });
+    }
+    
+    // Reset
+    currentBlockTitle = '';
+    treinoTagCount = 0;
+    comentarioTagCount = 0;
+    treinoTagLineIdx = -1;
+    comentarioTagLineIdx = -1;
+  };
   
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
@@ -381,119 +531,58 @@ export function validateFence(text: string): FenceValidationResult {
     // Detectar mudança de dia
     const dayDetected = detectDay(trimmed);
     if (dayDetected) {
-      // Verificar bloco anterior se existia
-      if (currentBlockTitle && (!hasTreeinoTag || !hasComentarioTag)) {
-        if (!hasTreeinoTag) {
-          errors.push({
-            type: 'MISSING_TREINO',
-            blockTitle: currentBlockTitle,
-            dayName: currentDay?.name,
-            lineNumber: blockStartLine,
-            message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-          });
-        }
-        if (!hasComentarioTag) {
-          errors.push({
-            type: 'MISSING_COMENTARIO',
-            blockTitle: currentBlockTitle,
-            dayName: currentDay?.name,
-            lineNumber: blockStartLine,
-            message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-          });
-        }
-      }
-      
+      checkAndFlushBlock();
       currentDay = dayDetected;
-      currentBlockTitle = '';
-      hasTreeinoTag = false;
-      hasComentarioTag = false;
       continue;
     }
     
     // Detectar início de bloco
-    if (isBlockTitle(trimmed) && !hasTreeinoTag && !hasComentarioTag) {
-      // Verificar bloco anterior se existia
-      if (currentBlockTitle && (!hasTreeinoTag || !hasComentarioTag)) {
-        if (!hasTreeinoTag) {
-          errors.push({
-            type: 'MISSING_TREINO',
-            blockTitle: currentBlockTitle,
-            dayName: currentDay?.name,
-            lineNumber: blockStartLine,
-            message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-          });
-        }
-        if (!hasComentarioTag) {
-          errors.push({
-            type: 'MISSING_COMENTARIO',
-            blockTitle: currentBlockTitle,
-            dayName: currentDay?.name,
-            lineNumber: blockStartLine,
-            message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-          });
-        }
-      }
-      
+    if (isBlockTitle(trimmed) && treinoTagCount === 0 && comentarioTagCount === 0) {
+      checkAndFlushBlock();
       currentBlockTitle = trimmed;
       blockStartLine = i + 1;
-      hasTreeinoTag = false;
-      hasComentarioTag = false;
       continue;
     }
     
     // Detectar tags
     if (/^\[TREINO\]/i.test(trimmed)) {
-      hasTreeinoTag = true;
+      treinoTagCount++;
+      treinoTagLineIdx = i;
     }
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
-      hasComentarioTag = true;
+      comentarioTagCount++;
+      comentarioTagLineIdx = i;
     }
   }
   
   // Verificar último bloco
-  if (currentBlockTitle && (!hasTreeinoTag || !hasComentarioTag)) {
-    if (!hasTreeinoTag) {
-      errors.push({
-        type: 'MISSING_TREINO',
-        blockTitle: currentBlockTitle,
-        dayName: currentDay?.name,
-        lineNumber: blockStartLine,
-        message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-      });
-    }
-    if (!hasComentarioTag) {
-      errors.push({
-        type: 'MISSING_COMENTARIO',
-        blockTitle: currentBlockTitle,
-        dayName: currentDay?.name,
-        lineNumber: blockStartLine,
-        message: `Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].`,
-      });
-    }
-  }
+  checkAndFlushBlock();
   
-  // Validar cada bloco parseado
+  // Validar cada bloco parseado (âncora + texto humano)
   for (const block of blocks) {
-    // C1) Regra da ÂNCORA (obrigatória)
-    if (!block.hasAnchor && block.trainLines.length > 0) {
-      errors.push({
-        type: 'MISSING_ANCHOR',
-        blockTitle: block.title,
-        dayName: block.dayName,
-        message: `Treino sem âncora. Inclua uma linha como: '90 min corrida', '10 km corrida', 'EMOM 30 min' ou '5 Rounds'.`,
-      });
-    }
-    
-    // C2) Linhas com texto humano dentro do TREINO
-    for (const humanLine of block.humanTextLines) {
-      errors.push({
-        type: 'HUMAN_TEXT_IN_TREINO',
-        blockTitle: block.title,
-        dayName: block.dayName,
-        lineNumber: humanLine.lineNumber,
-        lineText: humanLine.text,
-        message: `Texto de comentário detectado dentro de [TREINO]. Mova esta frase para [COMENTÁRIO].`,
-      });
+    // Só validar âncora se o bloco tem tags corretas
+    if (block.treinoTagCount === 1 && block.comentarioTagCount === 1 && !block.hasInvertedOrder) {
+      // C1) Regra da ÂNCORA (obrigatória)
+      if (!block.hasAnchor && block.trainLines.length > 0) {
+        errors.push({
+          type: 'MISSING_ANCHOR',
+          blockTitle: block.title,
+          dayName: block.dayName,
+          message: `Treino sem âncora. Inclua uma linha como: '90 min corrida', '10 km corrida', 'EMOM 30 min' ou '5 Rounds'.`,
+        });
+      }
+      
+      // C2) Linhas com texto humano dentro do TREINO
+      for (const humanLine of block.humanTextLines) {
+        errors.push({
+          type: 'HUMAN_TEXT_IN_TREINO',
+          blockTitle: block.title,
+          dayName: block.dayName,
+          lineNumber: humanLine.lineNumber,
+          lineText: humanLine.text,
+          message: `Texto de comentário detectado dentro de [TREINO]. Mova esta frase para [COMENTÁRIO].`,
+        });
+      }
     }
   }
   
@@ -504,6 +593,9 @@ export function validateFence(text: string): FenceValidationResult {
     errors,
     warnings,
     blocks,
+    hasMissingDelimiters,
+    hasInvertedOrder,
+    hasMultipleDelimiters,
   };
 }
 
