@@ -24,6 +24,7 @@ import { AthleteStatusAvatar } from './AthleteStatusAvatar';
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
 import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
+import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -394,7 +395,7 @@ export function Dashboard() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="font-display text-3xl text-gradient">OUTLIER</h1>
+                <OutlierWordmark size="sm" className="block" />
               {athleteConfig && (
                   <p className="text-sm text-muted-foreground">
                     Coach {athleteConfig.coachStyle}
