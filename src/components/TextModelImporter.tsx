@@ -128,6 +128,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
     
+    // ═══ DIAGNÓSTICO A) LOG DO rawText (FONTE DE VERDADE) ═══
+    console.log("[RAW_TEXT_HEAD]", textareaValue.slice(0, 400));
+    console.log("[RAW_TEXT_TAG_COUNTS]", {
+      treino: (textareaValue.match(/\[TREINO\]/gi) || []).length,
+      comentario: (textareaValue.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+    });
+    
     const dayValidation = validateDayAnchors(textareaValue);
     const inputValidation = validateCoachInput(textareaValue);
     const daysDetected = dayValidation.daysFound.length;
