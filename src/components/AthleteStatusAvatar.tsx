@@ -1,4 +1,4 @@
-import { User, UserRound, Crown, Star, Flame, Zap, Target } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import type { AthleteStatus } from '@/types/outlier';
@@ -20,8 +20,8 @@ interface AthleteStatusAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 }
 
-// Status que exibem coroa DENTRO do avatar (apenas os mais altos)
-const CROWN_STATUS: AthleteStatus[] = ['avancado', 'hyrox_open', 'hyrox_pro'];
+// MVP0: Coroa canônica exibida em TODOS os níveis de status
+// Todos os níveis usam Crown como ícone único
 
 // Configuração visual por nível (fonte de verdade única)
 const STATUS_CONFIG: Record<AthleteStatus, {
@@ -38,31 +38,31 @@ const STATUS_CONFIG: Record<AthleteStatus, {
 }> = {
   iniciante: {
     label: 'INICIANTE',
-    icon: Target,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     glow: 'rgba(100, 116, 139, 0.4)',
     glowIntensity: '0 0 20px',
     border: 'border-slate-400/60',
     text: 'text-slate-300',
     badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-    crownColor: '', // sem coroa
+    crownColor: 'text-slate-300',
     animate: false,
   },
   intermediario: {
     label: 'INTERMEDIÁRIO',
-    icon: Zap,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     glow: 'rgba(16, 185, 129, 0.5)',
     glowIntensity: '0 0 30px',
     border: 'border-emerald-400/70',
     text: 'text-emerald-400',
     badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    crownColor: '', // sem coroa
+    crownColor: 'text-emerald-300',
     animate: false,
   },
   avancado: {
     label: 'AVANÇADO',
-    icon: Flame,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     glow: 'rgba(249, 115, 22, 0.5)',
     glowIntensity: '0 0 40px',
@@ -74,7 +74,7 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   hyrox_open: {
     label: 'HYROX OPEN',
-    icon: Star,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     glow: 'rgba(168, 85, 247, 0.6)',
     glowIntensity: '0 0 50px',
@@ -86,7 +86,7 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   },
   hyrox_pro: {
     label: 'HYROX PRO',
-    icon: Crown,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     glow: 'rgba(251, 191, 36, 0.7)',
     glowIntensity: '0 0 60px, 0 0 100px',
@@ -117,18 +117,9 @@ export function AthleteStatusAvatar({
 }: AthleteStatusAvatarProps) {
   const config = STATUS_CONFIG[status];
   const sizeConfig = SIZE_CONFIG[size];
-  const StatusIcon = config.icon;
+  const StatusIcon = config.icon; // Sempre Crown
   
-  // Exibir coroa apenas para status altos
-  const showCrown = CROWN_STATUS.includes(status);
-
-  const renderUserIcon = () => {
-    const iconClass = cn(sizeConfig.icon, 'text-white/90');
-    if (gender === 'feminino') {
-      return <UserRound className={iconClass} strokeWidth={1.5} />;
-    }
-    return <User className={iconClass} strokeWidth={1.5} />;
-  };
+  // MVP0: Coroa canônica em TODOS os níveis
 
   return (
     <div className={cn('flex flex-col items-center gap-3', className)}>
@@ -161,23 +152,15 @@ export function AthleteStatusAvatar({
             boxShadow: `${config.glowIntensity} ${config.glow}`,
           }}
         >
-          {/* Coroa DENTRO do avatar (apenas status altos) */}
-          {showCrown && (
-            <Crown 
-              className={cn(
-                'absolute z-20',
-                sizeConfig.crown,
-                sizeConfig.crownTop,
-                config.crownColor,
-                'drop-shadow-md'
-              )}
-              strokeWidth={2}
-              fill="currentColor"
-            />
-          )}
-          
-          {/* Ícone de usuário */}
-          {renderUserIcon()}
+          {/* MVP0: Coroa canônica central - símbolo único de status */}
+          <Crown 
+            className={cn(
+              sizeConfig.icon,
+              config.crownColor || 'text-white/90',
+              'drop-shadow-md'
+            )}
+            strokeWidth={1.5}
+          />
         </div>
       </motion.div>
 
