@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { type TrainingLevel, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2, User, Check, Flame } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2, User, Check, Trophy } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
@@ -27,7 +27,7 @@ const trainingLevelOptions: { value: UITrainingLevel; label: string; description
     value: 'pro', 
     label: 'PRO', 
     description: 'Intensidade máxima para atletas de elite.',
-    icon: Flame
+    icon: Trophy
   },
 ];
 
