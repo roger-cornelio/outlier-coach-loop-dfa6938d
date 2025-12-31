@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Star, Flame, Zap, Target, Sparkles } from 'lucide-react';
+import { Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { AthleteStatus } from '@/types/outlier';
@@ -28,35 +28,35 @@ const STATUS_CONFIG: Record<AthleteStatus, {
 }> = {
   iniciante: {
     label: 'INICIANTE',
-    icon: Target,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-slate-500 to-slate-600',
     glow: 'shadow-slate-500/60',
     particleColor: 'bg-slate-400',
   },
   intermediario: {
     label: 'INTERMEDIÁRIO',
-    icon: Zap,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-emerald-500 to-green-600',
     glow: 'shadow-emerald-500/60',
     particleColor: 'bg-emerald-400',
   },
   avancado: {
     label: 'AVANÇADO',
-    icon: Flame,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-orange-500 to-red-600',
     glow: 'shadow-orange-500/60',
     particleColor: 'bg-orange-400',
   },
   hyrox_open: {
     label: 'HYROX OPEN',
-    icon: Star,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-purple-500 to-pink-600',
     glow: 'shadow-purple-500/60',
     particleColor: 'bg-purple-400',
   },
   hyrox_pro: {
     label: 'HYROX PRO',
-    icon: Crown,
+    icon: Crown, // MVP0: Coroa canônica
     gradient: 'from-amber-400 to-yellow-500',
     glow: 'shadow-amber-500/70',
     particleColor: 'bg-amber-400',
