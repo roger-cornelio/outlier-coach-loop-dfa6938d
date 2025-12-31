@@ -558,4 +558,32 @@
     font-family: var(--font-body);
     font-weight: 600;
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TIPOGRAFIA DE STATUS DO ATLETA — Classes canônicas
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Título de status (ex: ATLETA HYROX PRO) */
+  .text-status-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Label de status em badges */
+  .text-status-label {
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* Texto auxiliar de status */
+  .text-status-helper {
+    font-family: var(--font-body);
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: 0.875rem;
+  }
 }
