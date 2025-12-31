@@ -78,7 +78,10 @@ export function useCoachDraft() {
 
   // Carregar draft do localStorage na inicialização
   useEffect(() => {
+    console.log('[useCoachDraft] useEffect triggered, coachId:', coachId || '(empty)');
+    
     if (!coachId) {
+      console.log('[useCoachDraft] No coachId, setting isHydrated=true with empty draft');
       setIsHydrated(true);
       return;
     }
@@ -89,15 +92,18 @@ export function useCoachDraft() {
         const parsed = JSON.parse(stored) as CoachDraft;
         // Validar estrutura básica
         if (parsed && typeof parsed.rawText === 'string') {
-          console.log('[useCoachDraft] Rehydrated draft from localStorage');
+          console.log('[useCoachDraft] Rehydrated draft from localStorage, mode:', parsed.mode);
           setDraft(parsed);
         }
+      } else {
+        console.log('[useCoachDraft] No stored draft, using empty draft');
       }
     } catch (err) {
       console.error('[useCoachDraft] Error loading draft:', err);
     }
     
     setIsHydrated(true);
+    console.log('[useCoachDraft] isHydrated set to true');
   }, [coachId]);
 
   // Persistir draft no localStorage sempre que mudar
