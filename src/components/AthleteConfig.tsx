@@ -353,21 +353,28 @@ export function AthleteConfig() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {trainingLevelOptions.map((option) => {
             const Icon = option.icon;
+            const isSelected = uiTrainingLevel === option.value;
+            const isPro = option.value === 'pro';
+            
             return (
               <button
                 key={option.value}
                 onClick={() => setUITrainingLevel(option.value)}
                 className={`
                   p-4 rounded-lg border transition-all duration-200 text-left
-                  ${uiTrainingLevel === option.value
+                  ${isSelected
                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
-                    : 'border-border bg-card hover:border-muted-foreground/50'
+                    : isPro
+                      ? 'border-primary/50 bg-card hover:border-primary hover:bg-primary/5'
+                      : 'border-border bg-card hover:border-muted-foreground/50'
                   }
                 `}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Icon className={`w-5 h-5 ${uiTrainingLevel === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="font-display text-lg">{option.label}</span>
+                  {/* PRO sempre tem ícone laranja, OPEN só quando selecionado */}
+                  <Icon className={`w-5 h-5 ${isSelected || isPro ? 'text-primary' : 'text-muted-foreground'}`} />
+                  {/* PRO sempre tem label laranja */}
+                  <span className={`font-display text-lg ${isPro && !isSelected ? 'text-primary' : ''}`}>{option.label}</span>
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
               </button>
