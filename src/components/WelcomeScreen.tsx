@@ -16,6 +16,7 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import type { CoachStyle } from '@/types/outlier';
 import { Flame, Heart, Zap, LogOut, User, Loader2 } from 'lucide-react';
 import { getCoachCopy } from '@/config/coachCopy';
+import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 
 // Use centralized copy - pick any coach since selectCoachScreen is the same for all
 const screenCopy = getCoachCopy('PULSE').selectCoachScreen;
@@ -116,9 +117,7 @@ export function WelcomeScreen() {
             BE THE
           </p>
           {/* Main logo - LOCKED: orange, bold, large - DO NOT MODIFY */}
-          <h1 className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo">
-            OUTLIER
-          </h1>
+          <OutlierWordmark size="hero" />
         </motion.div>
         
         <motion.p 
