@@ -421,11 +421,22 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // RENDER - AGUARDAR HIDRATAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
   
+  // [UI_DIAG] Log para diagnóstico
+  console.log('[UI_DIAG] TextModelImporter render', { 
+    isHydrated, 
+    mode, 
+    hasRawText: !!rawText,
+    hasParseResult: !!parseResult,
+    weekId: !!weekId,
+  });
+  
   if (!isHydrated) {
+    console.log('[UI_DIAG] Showing loading - isHydrated is false');
     return (
       <Card>
         <CardContent className="p-8 flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
         </CardContent>
       </Card>
     );
@@ -984,6 +995,21 @@ Descanso`}
     );
   }
 
-  // Fallback
-  return null;
+  // Fallback - se chegou aqui, mode não é 'edit' nem 'preview'
+  console.error('[UI_DIAG] TextModelImporter fallback! mode is:', mode);
+  
+  // Tentar renderizar como 'edit' como fallback seguro
+  return (
+    <Card className="border-amber-500/50">
+      <CardContent className="p-8">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-10 h-10 mx-auto text-amber-500" />
+          <p className="text-amber-600">Estado inesperado: mode="{mode}"</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Recarregar página
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
