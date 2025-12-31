@@ -20,7 +20,7 @@ import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { getCoachCopy } from '@/config/coachCopy';
 import { WeekNavigator } from './WeekNavigator';
 import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
-import { AthleteStatusAvatar } from './AthleteStatusAvatar';
+
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
 import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
@@ -446,21 +446,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* ============================================
-          AVATAR CENTRAL DE STATUS
-          Elemento visual mais chamativo da home
-          ============================================ */}
-      <section className="py-8 px-6 border-b border-border/50 bg-gradient-to-b from-background to-secondary/20">
-        <div className="max-w-6xl mx-auto flex flex-col items-center">
-          <AthleteStatusAvatar
-            name={user?.email?.split('@')[0]}
-            gender={athleteConfig?.sexo}
-            status={status}
-            size="hero"
-            showLabel={true}
-          />
-        </div>
-      </section>
+      {/* Bloco central de status REMOVIDO — status visível apenas no header */}
 
       {/* Adaptation Status Banner - Texto fixo sem métricas */}
       {hasBaseWorkouts && isShowingAdapted && (
