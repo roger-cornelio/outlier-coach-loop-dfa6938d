@@ -351,14 +351,31 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     if (dayDetected) {
       flushBlock();
       currentDay = dayDetected;
+      console.log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
     
-    // Detectar novo bloco (título)
-    if (isBlockTitle(trimmed) && !inTrainingSection && !inCommentSection) {
-      flushBlock();
+    // FIX CIRÚRGICO: Detectar novo bloco INDEPENDENTE do estado das seções
+    // Antes: condição (!inTrainingSection && !inCommentSection) impedia detecção
+    // de novos blocos após o primeiro, causando vazamento de estado.
+    // Agora: qualquer título de bloco válido dispara flush + novo bloco.
+    if (isBlockTitle(trimmed)) {
+      // Se já existe um bloco em progresso, flush antes de iniciar novo
+      if (currentBlockTitle) {
+        flushBlock();
+      }
       currentBlockTitle = trimmed;
       blockStartLine = i + 1;
+      // RESET EXPLÍCITO POR BLOCO (garantia anti-vazamento)
+      inTrainingSection = false;
+      inCommentSection = false;
+      treinoTagCount = 0;
+      comentarioTagCount = 0;
+      treinoTagLineIdx = -1;
+      comentarioTagLineIdx = -1;
+      currentTrainLines = [];
+      currentCommentLines = [];
+      console.log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
     
@@ -368,6 +385,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       treinoTagLineIdx = i;
       inTrainingSection = true;
       inCommentSection = false;
+      console.log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
       continue;
     }
     
@@ -377,6 +395,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       comentarioTagLineIdx = i;
       inTrainingSection = false;
       inCommentSection = true;
+      console.log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
       continue;
     }
     
@@ -533,25 +552,40 @@ export function validateFence(text: string): FenceValidationResult {
     if (dayDetected) {
       checkAndFlushBlock();
       currentDay = dayDetected;
+      console.log('[validateFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
     
-    // Detectar início de bloco
-    if (isBlockTitle(trimmed) && treinoTagCount === 0 && comentarioTagCount === 0) {
-      checkAndFlushBlock();
+    // FIX CIRÚRGICO: Detectar início de bloco INDEPENDENTE do estado das tags
+    // Antes: condição (treinoTagCount === 0 && comentarioTagCount === 0) impedia detecção
+    // de novos blocos após o primeiro, causando vazamento de estado entre blocos.
+    // Agora: qualquer título de bloco válido dispara flush + reset.
+    if (isBlockTitle(trimmed)) {
+      // Se já existe um bloco em progresso, flush antes de iniciar novo
+      if (currentBlockTitle) {
+        checkAndFlushBlock();
+      }
       currentBlockTitle = trimmed;
       blockStartLine = i + 1;
+      // RESET EXPLÍCITO POR BLOCO (garantia anti-vazamento)
+      treinoTagCount = 0;
+      comentarioTagCount = 0;
+      treinoTagLineIdx = -1;
+      comentarioTagLineIdx = -1;
+      console.log('[validateFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
     
-    // Detectar tags
+    // Detectar tags (contagem POR BLOCO)
     if (/^\[TREINO\]/i.test(trimmed)) {
       treinoTagCount++;
       treinoTagLineIdx = i;
+      console.log('[validateFence] [TAG] TREINO detectado no bloco', currentBlockTitle, '→ count=', treinoTagCount);
     }
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
       comentarioTagCount++;
       comentarioTagLineIdx = i;
+      console.log('[validateFence] [TAG] COMENTÁRIO detectado no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
     }
   }
   
