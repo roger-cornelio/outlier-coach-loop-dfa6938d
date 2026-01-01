@@ -127,20 +127,32 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   const handleParse = () => {
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
-    
-    // ═══ DIAGNÓSTICO A) LOG DO rawText (FONTE DE VERDADE) ═══
-    console.log("[RAW_TEXT_HEAD]", textareaValue.slice(0, 400));
+
+    // (1) NO INPUT (Textarea) — fonte de verdade
     console.log("[RAW_TEXT_TAG_COUNTS]", {
       treino: (textareaValue.match(/\[TREINO\]/gi) || []).length,
       comentario: (textareaValue.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
     });
-    
+    console.log("[RAW_TEXT_FIRST_300]", textareaValue.slice(0, 300));
+    console.log(
+      "[RAW_TEXT_HAS_FENCE_MARKERS]",
+      /\[TREINO\]|\[COMENT[ÁA]RIO\]/i.test(textareaValue)
+    );
+
+    // (2) TEXTO PARA PARSE — logo ANTES de parseStructuredText(...)
+    const textForParse = textareaValue;
+    console.log("[TEXT_FOR_PARSE_TAG_COUNTS]", {
+      treino: (textForParse.match(/\[TREINO\]/gi) || []).length,
+      comentario: (textForParse.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+    });
+    console.log("[TEXT_FOR_PARSE_DIFF_HINT]", textareaValue !== textForParse);
+
     const dayValidation = validateDayAnchors(textareaValue);
     const inputValidation = validateCoachInput(textareaValue);
     const daysDetected = dayValidation.daysFound.length;
-    
+
     // Parse o texto
-    const result = parseStructuredText(textareaValue);
+    const result = parseStructuredText(textForParse);
     
     // Se não detectou dias, assumir SEGUNDA
     if (daysDetected === 0 && (result.days.length === 0 || result.days.every(d => d.blocks.length === 0))) {

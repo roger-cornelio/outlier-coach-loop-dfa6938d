@@ -269,18 +269,81 @@ function isBlockTitle(line: string): boolean {
 }
 
 /**
+ * Remove tags [TREINO]/[COMENTÁRIO] duplicadas DENTRO do mesmo bloco.
+ * - Mantém a primeira ocorrência de cada tag
+ * - Reseta a contagem ao iniciar novo bloco ou dia
+ */
+function dedupeFenceTagsPerBlock(text: string): string {
+  const lines = text.split("\n");
+  let seenTreino = false;
+  let seenComentario = false;
+
+  const out: string[] = [];
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+
+    // Reset ao trocar de dia
+    if (detectDay(trimmed)) {
+      seenTreino = false;
+      seenComentario = false;
+      out.push(rawLine);
+      continue;
+    }
+
+    // Reset ao iniciar novo bloco
+    if (isBlockTitle(trimmed)) {
+      seenTreino = false;
+      seenComentario = false;
+      out.push(rawLine);
+      continue;
+    }
+
+    if (/^\[TREINO\]\s*$/i.test(trimmed)) {
+      if (seenTreino) continue;
+      seenTreino = true;
+      out.push(rawLine);
+      continue;
+    }
+
+    if (/^\[COMENT[ÁA]RIO\]\s*$/i.test(trimmed)) {
+      if (seenComentario) continue;
+      seenComentario = true;
+      out.push(rawLine);
+      continue;
+    }
+
+    out.push(rawLine);
+  }
+
+  return out.join("\n");
+}
+
+/**
  * Extrai blocos com delimitadores [TREINO] e [COMENTÁRIO]
  * PARSING DETERMINÍSTICO — sem adivinhação
- * 
+ *
  * CERCA HARD V1:
  * - Cada bloco DEVE ter exatamente 1 [TREINO] e 1 [COMENTÁRIO]
  * - [TREINO] DEVE vir antes de [COMENTÁRIO]
  * - Sem isso: BLOQUEIA publicação
  */
 export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
-  const lines = text.split('\n');
+  console.log("[FENCE_IN_TAG_COUNTS]", {
+    treino: (text.match(/\[TREINO\]/gi) || []).length,
+    comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+  });
+
+  const fenceOutText = dedupeFenceTagsPerBlock(text);
+
+  console.log("[FENCE_OUT_TAG_COUNTS]", {
+    treino: (fenceOutText.match(/\[TREINO\]/gi) || []).length,
+    comentario: (fenceOutText.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+  });
+
+  const lines = fenceOutText.split("\n");
   const blocks: ParsedFenceBlock[] = [];
-  
+
   let currentDay: { name: string; index: number } | null = null;
   let currentBlockTitle = '';
   let currentTrainLines: string[] = [];
@@ -288,18 +351,18 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
   let inTrainingSection = false;
   let inCommentSection = false;
   let blockStartLine = 0;
-  
+
   // CERCA HARD V1: Rastrear contagem e ordem de tags
   let treinoTagCount = 0;
   let comentarioTagCount = 0;
   let treinoTagLineIdx = -1;
   let comentarioTagLineIdx = -1;
-  
+
   const flushBlock = () => {
     if (currentBlockTitle) {
       // Calcular se tem âncora
-      const hasAnchor = currentTrainLines.some(line => isAnchorLine(line.trim()));
-      
+      const hasAnchor = currentTrainLines.some((line) => isAnchorLine(line.trim()));
+
       // Detectar linhas com texto humano
       const humanTextLines: HumanTextLine[] = [];
       currentTrainLines.forEach((line, idx) => {
@@ -312,22 +375,18 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
           });
         }
       });
-      
+
       // CERCA HARD V1: Verificar ordem invertida
-      const hasInvertedOrder = treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
-      
-      // ═══ DIAGNÓSTICO C) LOG POR BLOCO (ONDE DUPLICA) ═══
-      const blockText = [...currentTrainLines, ...currentCommentLines].join('\n');
-      const tagLines = [...currentTrainLines, ...currentCommentLines]
-        .map((l, i) => ({ i: i + 1, l }))
-        .filter(x => /\[(TREINO|COMENT[ÁA]RIO)\]/i.test(x.l));
+      const hasInvertedOrder =
+        treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
+
+      // BLOCK_TAG_AUDIT (por bloco)
       console.log("[BLOCK_TAG_AUDIT]", {
-        title: currentBlockTitle,
+        blockTitle: currentBlockTitle,
         treinoCount: treinoTagCount,
         comentarioCount: comentarioTagCount,
-        tagLines,
       });
-      
+
       blocks.push({
         title: currentBlockTitle,
         dayName: currentDay?.name,
@@ -341,7 +400,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         hasInvertedOrder,
       });
     }
-    
+
     // Reset
     currentBlockTitle = '';
     currentTrainLines = [];
@@ -353,11 +412,11 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     treinoTagLineIdx = -1;
     comentarioTagLineIdx = -1;
   };
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
-    
+
     // Detectar mudança de dia
     const dayDetected = detectDay(trimmed);
     if (dayDetected) {
@@ -366,7 +425,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       console.log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
-    
+
     // FIX CIRÚRGICO: Detectar novo bloco INDEPENDENTE do estado das seções
     // Antes: condição (!inTrainingSection && !inCommentSection) impedia detecção
     // de novos blocos após o primeiro, causando vazamento de estado.
@@ -390,7 +449,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       console.log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
-    
+
     // Detectar [TREINO]
     if (/^\[TREINO\]/i.test(trimmed)) {
       treinoTagCount++;
@@ -400,7 +459,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       console.log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
       continue;
     }
-    
+
     // Detectar [COMENTÁRIO]
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
       comentarioTagCount++;
@@ -410,7 +469,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       console.log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
       continue;
     }
-    
+
     // Acumular linhas na seção correta
     if (inTrainingSection && currentBlockTitle) {
       currentTrainLines.push(trimmed);
@@ -418,10 +477,10 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       currentCommentLines.push(trimmed);
     }
   }
-  
+
   // Flush último bloco
   flushBlock();
-  
+
   return blocks;
 }
 
@@ -431,14 +490,14 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
 
 /**
  * Valida texto do coach com regras de cerca determinísticas
- * 
+ *
  * REGRAS ABSOLUTAS (CERCA HARD V1):
  * 1) [TREINO] é obrigatório em todo bloco — exatamente 1 ocorrência
  * 2) [COMENTÁRIO] é obrigatório em todo bloco — exatamente 1 ocorrência
  * 3) A posição deve obedecer: index([TREINO]) < index([COMENTÁRIO])
  * 4) A zona TREINO = linhas entre os dois delimitadores
  * 5) A zona COMENTÁRIO = linhas após [COMENTÁRIO]
- * 
+ *
  * PROIBIDO:
  * - 0 delimitadores
  * - apenas um delimitador
@@ -448,18 +507,13 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
 export function validateFence(text: string): FenceValidationResult {
   const errors: FenceError[] = [];
   const warnings: FenceWarning[] = [];
-  const lines = text.split('\n');
-  
-  // ═══ DIAGNÓSTICO B) LOG ANTES DE parseBlocksWithFence ═══
-  console.log("[FENCE_TEXT_FOR_PARSE_HEAD]", text.slice(0, 400));
-  console.log("[FENCE_TEXT_FOR_PARSE_TAG_COUNTS]", {
-    treino: (text.match(/\[TREINO\]/gi) || []).length,
-    comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
-  });
-  
+
+  const fenceOutText = dedupeFenceTagsPerBlock(text);
+  const lines = fenceOutText.split('\n');
+
   // Parse blocks com contagem de tags
   const blocks = parseBlocksWithFence(text);
-  
+
   // CERCA HARD V1: Flags de validação
   let hasMissingDelimiters = false;
   let hasInvertedOrder = false;
