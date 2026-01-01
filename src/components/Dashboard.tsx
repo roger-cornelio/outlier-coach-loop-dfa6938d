@@ -814,14 +814,19 @@ export function Dashboard() {
                         const { exerciseLines, commentLines } = separateBlockContent(block.content);
                         return (
                           <>
-                            {/* Exercise lines - main content */}
+                            {/* Caixa 1: TREINO - main content */}
                             {exerciseLines.length > 0 && (
-                              <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed mb-4">
-                                {exerciseLines.join('\n')}
-                              </pre>
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                                  Treino
+                                </p>
+                                <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                  {exerciseLines.join('\n')}
+                                </pre>
+                              </div>
                             )}
                             
-                            {/* Coach comments - visually separated callout */}
+                            {/* Caixa 2: COMENTÁRIO DO COACH - visually separated callout */}
                             {commentLines.length > 0 && (
                               <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
                                 <div className="flex items-start gap-3">
