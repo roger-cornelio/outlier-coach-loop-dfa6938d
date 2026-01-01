@@ -136,6 +136,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // ═══════════════════════════════════════════════════════════════════════════
   
   const handleParse = () => {
+    console.log('[VALIDATE_CLICK] mode=import');
+    
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
 
@@ -205,9 +207,25 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     console.debug('[TextModelImporter] handleParse → days=', result.days.length);
     setParsedResult(result, workouts);
     
-    // NAVEGAR PARA MODO EDIT após parse bem sucedido
+    // Log de resultado da validação
+    console.log('[VALIDATE_RESULT] success=' + result.success);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REGRA: Validar + Avançar automaticamente
+    // Se parsing bem-sucedido E semana selecionada → PREVIEW direto
+    // Se parsing bem-sucedido MAS sem semana → EDIT (para selecionar semana)
+    // Se parsing falhou → permanece em import
+    // ═══════════════════════════════════════════════════════════════════════════
     if (result.success && result.days.length > 0) {
-      goToEdit();
+      if (weekId !== null) {
+        // Semana já selecionada → PREVIEW automático
+        console.log('[MODE_CHANGE] import → preview (reason=validate_success)');
+        goToPreview();
+      } else {
+        // Precisa selecionar semana → EDIT
+        console.log('[MODE_CHANGE] import → edit (reason=validate_success_needs_week)');
+        goToEdit();
+      }
     }
   };
 
