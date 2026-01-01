@@ -3009,14 +3009,49 @@ function contextRequiresTags(text: string): boolean {
  * - Texto de comentário/explicação
  * - Linhas sem âncora estruturada
  */
-export function validateCoachInput(text: string): CoachInputValidation {
+/**
+ * Opções para validateCoachInput
+ */
+export interface ValidateCoachInputOptions {
+  /** 
+   * Se true, pula validação de fence (tags [TREINO]/[COMENTÁRIO]).
+   * Usar para modo estruturado (UI) onde blocos não passam por texto.
+   */
+  isStructured?: boolean;
+}
+
+export function validateCoachInput(text: string, options?: ValidateCoachInputOptions): CoachInputValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
   const issues: StructureIssue[] = [];
   const lines = text.split('\n');
   
+  const isStructured = options?.isStructured ?? false;
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // GUARD: MODO STRUCTURED NUNCA PASSA POR FENCE
+  // ════════════════════════════════════════════════════════════════════════════
+  // Fence ([TREINO]/[COMENTÁRIO]) é EXCLUSIVA do modo IMPORT.
+  // Modo STRUCTURED nunca passa por fence nem valida tags.
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  if (isStructured) {
+    console.log('[FENCE_GUARD] mode=edit | structured=true → fence IGNORADA');
+    // Retorna validação vazia - blocos estruturados são validados pela UI
+    return {
+      isValid: true,
+      errors: [],
+      warnings: [],
+      issues: [],
+      requiresTags: false,
+      fenceErrors: false,
+    };
+  }
+  
   const usesTagFormat = textUsesTagFormat(text);
   let fenceErrors = false;
+  
+  console.log('[FENCE_GUARD] mode=import | structured=false → fence ATIVA');
   
   // ════════════════════════════════════════════════════════════════════════════
   // CERCA V1: VALIDAÇÃO DETERMINÍSTICA COM DELIMITADORES
