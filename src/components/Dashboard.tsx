@@ -812,13 +812,7 @@ export function Dashboard() {
                       {/* Separated Exercise Content and Coach Comments */}
                       {(() => {
                         const { exerciseLines, commentLines } = separateBlockContent(block.content);
-                        
-                        // Log de diagnóstico para validar separação
-                        console.log('[UI_SPLIT_HEAD]', {
-                          title: getBlockDisplayTitle(block, index),
-                          trainHead: exerciseLines[0]?.slice(0, 40) || '(vazio)',
-                          commentHead: commentLines[0]?.slice(0, 40) || '(vazio)',
-                        });
+                        // Logs movidos para separateBlockContent (centralizado)
                         
                         return (
                           <>

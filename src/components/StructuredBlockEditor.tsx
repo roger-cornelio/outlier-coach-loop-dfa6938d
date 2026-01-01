@@ -125,6 +125,12 @@ export function isBlockValid(block: StructuredBlock): boolean {
 // ============================================
 
 export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBlock {
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: TAGS SÃO FONTE DE VERDADE
+  // O content DEVE usar tags [TREINO] e [COMENTÁRIO] para separação determinística
+  // Isso garante que o comentário NUNCA apareça como treino na UI
+  // ════════════════════════════════════════════════════════════════════════════
+  
   // Gera o content a partir dos items estruturados
   const itemsContent = structured.items
     .filter(item => item.quantity !== '' && item.movement.trim())
@@ -134,10 +140,20 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
     })
     .join('\n');
 
-  // Adiciona notas do coach se existir
-  const fullContent = structured.coachNotes.trim()
-    ? `${itemsContent}\n\n📝 ${structured.coachNotes.trim()}`
-    : itemsContent;
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 FIX: Usar tags [TREINO]/[COMENTÁRIO] para separação soberana
+  // NUNCA concatenar comentário diretamente no treino sem tags
+  // ════════════════════════════════════════════════════════════════════════════
+  let fullContent: string;
+  const hasCoachNotes = structured.coachNotes?.trim();
+  
+  if (hasCoachNotes) {
+    // Usar tags para separação determinística
+    fullContent = `[TREINO]\n${itemsContent}\n[COMENTÁRIO]\n${structured.coachNotes.trim()}`;
+  } else {
+    // Sem comentário - só treino (sem tag necessária)
+    fullContent = itemsContent;
+  }
 
   // Mapear tipo para o formato do WorkoutBlock
   const typeMap: Record<string, WorkoutBlock['type']> = {
@@ -162,18 +178,57 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
 }
 
 export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
-  // Parse do content para extrair items
-  const lines = block.content.split('\n').filter(l => l.trim());
-  const items: WorkoutItem[] = [];
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: TAGS SÃO FONTE DE VERDADE
+  // Se o content usa tags [TREINO]/[COMENTÁRIO], usar split determinístico
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  let trainingContent = block.content;
   let coachNotes = '';
+  
+  // Detectar tags e fazer split determinístico
+  const hasTreinoTag = block.content.includes('[TREINO]');
+  const hasComentarioTag = block.content.includes('[COMENTÁRIO]');
+  
+  if (hasTreinoTag || hasComentarioTag) {
+    if (hasTreinoTag && hasComentarioTag) {
+      // Caso ideal: ambas as tags existem
+      const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
+      const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+      const comentarioContentStart = comentarioStart + '[COMENTÁRIO]'.length;
+      
+      trainingContent = block.content.slice(treinoStart, comentarioStart).trim();
+      coachNotes = block.content.slice(comentarioContentStart).trim();
+    } else if (hasTreinoTag) {
+      // Só [TREINO]: tudo depois é treino
+      const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
+      trainingContent = block.content.slice(treinoStart).trim();
+    } else if (hasComentarioTag) {
+      // Só [COMENTÁRIO]: tudo antes é treino, depois é comentário
+      const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+      trainingContent = block.content.slice(0, comentarioStart).trim();
+      coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
+    }
+  } else {
+    // Fallback: detectar notas com emoji (legado)
+    const lines = block.content.split('\n');
+    const trainingLines: string[] = [];
+    
+    for (const line of lines) {
+      if (line.startsWith('📝') || line.toLowerCase().includes('nota:')) {
+        coachNotes = line.replace(/^📝\s*/, '').replace(/^nota:\s*/i, '');
+      } else {
+        trainingLines.push(line);
+      }
+    }
+    trainingContent = trainingLines.join('\n');
+  }
+  
+  // Parse do trainingContent para extrair items
+  const lines = trainingContent.split('\n').filter(l => l.trim());
+  const items: WorkoutItem[] = [];
 
   for (const line of lines) {
-    // Detecta notas do coach
-    if (line.startsWith('📝') || line.toLowerCase().includes('nota:')) {
-      coachNotes = line.replace(/^📝\s*/, '').replace(/^nota:\s*/i, '');
-      continue;
-    }
-
     // Tenta parsear como item estruturado
     const match = line.match(/^(\d+(?:\.\d+)?)\s*(reps?|m|km|cal|min|sec|rounds?|x)\s+(.+?)(?:\s*\((.+)\))?$/i);
     if (match) {
@@ -204,7 +259,7 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
     id: block.id,
     title: block.title,
     type: block.type,
-    format: detectFormat(block.content),
+    format: detectFormat(trainingContent),
     items,
     coachNotes,
     isMainWod: block.isMainWod,
