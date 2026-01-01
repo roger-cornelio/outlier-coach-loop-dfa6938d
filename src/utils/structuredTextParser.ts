@@ -2889,19 +2889,27 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
   }));
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MVP0: formatBlockContent — USAR TAGS PARA SEPARAÇÃO DETERMINÍSTICA
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * REGRA ABSOLUTA:
+ * - Se o bloco tem coachNotes, o content DEVE usar tags [TREINO] e [COMENTÁRIO]
+ * - Isso garante que o split na exibição seja determinístico
+ * - Comentário NUNCA pode aparecer como treino na UI
+ */
 function formatBlockContent(block: ParsedBlock): string {
-  const parts: string[] = [];
+  const trainParts: string[] = [];
   
   // Instrução principal primeiro
   if (block.instruction) {
-    parts.push(block.instruction);
-    parts.push('');
+    trainParts.push(block.instruction);
   }
   
   // Instruções adicionais
   if (block.instructions && block.instructions.length > 0) {
-    parts.push(block.instructions.join('\n'));
-    parts.push('');
+    trainParts.push(block.instructions.join('\n'));
   }
   
   // Items (exercícios)
@@ -2916,16 +2924,23 @@ function formatBlockContent(block: ParsedBlock): string {
     .join('\n');
   
   if (itemsText) {
-    parts.push(itemsText);
+    trainParts.push(itemsText);
   }
+  
+  const trainContent = trainParts.filter(p => p.trim()).join('\n').trim();
 
-  // Notas do coach (apenas se existirem)
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 FIX: USAR TAGS PARA SEPARAÇÃO SOBERANA
+  // Se tem coachNotes, SEMPRE usar tags [TREINO] e [COMENTÁRIO]
+  // ════════════════════════════════════════════════════════════════════════════
   if (block.coachNotes && block.coachNotes.length > 0) {
-    parts.push('');
-    parts.push(`📝 ${block.coachNotes.join('\n')}`);
+    const commentContent = block.coachNotes.join('\n').trim();
+    // Usar tags para garantir split determinístico
+    return `[TREINO]\n${trainContent}\n[COMENTÁRIO]\n${commentContent}`;
   }
 
-  return parts.join('\n').trim();
+  // Sem comentário - retornar só o treino (sem tags necessárias)
+  return trainContent;
 }
 
 // ============================================
