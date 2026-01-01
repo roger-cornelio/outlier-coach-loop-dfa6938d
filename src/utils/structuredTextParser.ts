@@ -1382,29 +1382,37 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     });
   }
   
-  // Adicionar coachNotes
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 FIX: TAGS SÃO FONTE DE VERDADE
+  // coachNotes SEMPRE são NOTE, nunca passam por classificação de exercício
+  // Isso garante que linhas dentro de [COMENTÁRIO] NUNCA viram treino
+  // ════════════════════════════════════════════════════════════════════════════
   if (block.coachNotes) {
     for (const note of block.coachNotes) {
       if (note.trim() && !shouldDiscard(note, lineIndex, prevNormalized)) {
-        // Notes do coach: usar classificação mas priorizar NOTE
-        const classified = classifyItemDeterministic(note);
-        // Se o coach colocou como nota, respeitar como NOTE a menos que seja exercício óbvio
-        const finalKind = classified.kind === 'EXERCISE' && classified.confidence === 'HIGH' 
-          ? 'EXERCISE' 
-          : 'NOTE';
+        // REGRA ABSOLUTA: Se veio de coachNotes, É NOTE. Ponto final.
+        // Não rodar classificador - isso evita que "Wall Balls unbroken" vire treino
         lines.push({
           id: generateLineId(),
           text: note.trim(),
-          type: finalKind === 'EXERCISE' ? 'exercise' : 'comment',
-          kind: finalKind,
-          confidence: classified.confidence,
-          flags: classified.flags,
+          type: 'comment',
+          kind: 'NOTE',
+          confidence: 'HIGH', // Alta confiança pois foi marcado explicitamente por tag
         });
         prevNormalized = normalizeText(note);
       }
       lineIndex++;
     }
   }
+  
+  // Log de diagnóstico
+  const trainCount = lines.filter(l => l.kind === 'EXERCISE' || l.kind === 'REST').length;
+  const commentCount = lines.filter(l => l.kind === 'NOTE').length;
+  console.log('[TAG_PARSE]', {
+    title: block.title || '(sem título)',
+    itemsCount: trainCount,
+    commentFirst50: block.coachNotes?.[0]?.substring(0, 50) || '',
+  });
   
   // ============================================
   // DEDUP FINAL: remover linhas duplicadas por type + normalizedText
@@ -2138,6 +2146,17 @@ export function parseStructuredText(text: string): ParseResult {
           currentBlock.optional = true;
         }
         
+        // ════════════════════════════════════════════════════════════════════════════
+        // MVP0 LOG: TAG_SPLIT para diagnóstico
+        // ════════════════════════════════════════════════════════════════════════════
+        const hasTags = currentBlock.coachNotes.length > 0 || inTrainingTagMode || inCommentTagMode;
+        console.log('[TAG_SPLIT]', {
+          title: currentBlock.title || '(sem título)',
+          hasTags,
+          trainChars: currentBlock.instructions.join('\n').length + currentBlock.items.length * 20,
+          commentChars: currentBlock.coachNotes.join('\n').length,
+        });
+        
         // Classificar linhas do bloco (exercise vs comment)
         // MVP0 PATCH: Passar flag currentOptional para classificação
         currentBlock.lines = classifyBlockLinesWithOptional(currentBlock, currentOptional);
@@ -2155,6 +2174,10 @@ export function parseStructuredText(text: string): ParseResult {
     // MVP0 PATCH: Resetar flag isInsideBlock ao encerrar bloco
     // ════════════════════════════════════════════════════════════════════════════
     isInsideBlock = false;
+    // MVP0 FIX: Resetar modos de tag ao encerrar bloco
+    // Isso garante que tags de um bloco não afetam o próximo
+    inCommentTagMode = false;
+    inTrainingTagMode = false;
     // MVP0 PATCH: Resetar flag opcional ao trocar de bloco
     // NOTA: NÃO resetamos aqui para permitir que "Opcional:" afete múltiplas linhas
     // O reset só acontece ao mudar de dia
@@ -2414,6 +2437,9 @@ export function parseStructuredText(text: string): ParseResult {
       currentOptional = false;
       isInsideBlock = false;
       hasSeenValidHeading = false; // RESET: Novo dia, nenhum heading visto ainda
+      // MVP0 FIX: Reset modos de tag ao mudar de dia
+      inCommentTagMode = false;
+      inTrainingTagMode = false;
       
       // Criar nova entrada de dia
       currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
@@ -2559,6 +2585,16 @@ export function parseStructuredText(text: string): ParseResult {
     // ════════════════════════════════════════════════════════════════════════════
     
     if (isInsideBlock && currentBlock) {
+      // ════════════════════════════════════════════════════════════════════════════
+      // MVP0 FIX: TAGS SÃO FONTE DE VERDADE
+      // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
+      // ════════════════════════════════════════════════════════════════════════════
+      if (inCommentTagMode) {
+        console.log('[TAG_SPLIT] Linha vai para COMENTÁRIO (inCommentTagMode):', line.substring(0, 50));
+        currentBlock.coachNotes.push(line);
+        continue;
+      }
+      
       // Linha de exercício (começa com número ou marcador)
       if (/^[-•*]?\s*\d/.test(line)) {
         const item = parseExerciseLine(line);
@@ -2626,6 +2662,16 @@ export function parseStructuredText(text: string): ParseResult {
 
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
     if (currentBlock) {
+      // ════════════════════════════════════════════════════════════════════════════
+      // MVP0 FIX: TAGS SÃO FONTE DE VERDADE (fallback)
+      // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
+      // ════════════════════════════════════════════════════════════════════════════
+      if (inCommentTagMode) {
+        console.log('[TAG_SPLIT] Linha vai para COMENTÁRIO (fallback, inCommentTagMode):', line.substring(0, 50));
+        currentBlock.coachNotes.push(line);
+        continue;
+      }
+      
       if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
         currentBlock.instructions.push(line);
         if (/\bopcional\b/i.test(line)) {
