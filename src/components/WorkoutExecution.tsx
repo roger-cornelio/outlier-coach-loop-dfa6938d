@@ -329,31 +329,41 @@ export function WorkoutExecution() {
                     {/* Separated Exercise Content and Coach Comments */}
                     {(() => {
                       const { exerciseLines, commentLines } = separateBlockContent(effectiveContent);
+                      
+                      // Log de diagnóstico para validar separação
+                      console.log('[UI_SPLIT_HEAD]', {
+                        title: getBlockDisplayTitle(block, index),
+                        trainHead: exerciseLines[0]?.slice(0, 40) || '(vazio)',
+                        commentHead: commentLines[0]?.slice(0, 40) || '(vazio)',
+                      });
+                      
                       return (
                         <>
                           {/* Caixa 1: TREINO - main content */}
-                          {exerciseLines.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                                Treino
-                              </p>
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                              Treino
+                            </p>
+                            {exerciseLines.length > 0 ? (
                               <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                                 {exerciseLines.join('\n')}
                               </pre>
-                            </div>
-                          )}
+                            ) : (
+                              <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
+                            )}
+                          </div>
                           
-                          {/* Caixa 2: COMENTÁRIO DO COACH - visually separated callout */}
-                          {commentLines.length > 0 && (
-                            <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
-                              <div className="flex items-start gap-3">
-                                <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
-                                  <MessageSquare className="w-3.5 h-3.5 text-primary/70" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
-                                    Comentário do Coach
-                                  </p>
+                          {/* Caixa 2: COMENTÁRIO DO COACH - SEMPRE VISÍVEL */}
+                          <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
+                            <div className="flex items-start gap-3">
+                              <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
+                                <MessageSquare className="w-3.5 h-3.5 text-primary/70" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
+                                  Comentário do Coach
+                                </p>
+                                {commentLines.length > 0 ? (
                                   <div className="space-y-1">
                                     {commentLines.map((comment, i) => (
                                       <p key={i} className="text-xs text-muted-foreground leading-relaxed">
@@ -361,10 +371,12 @@ export function WorkoutExecution() {
                                       </p>
                                     ))}
                                   </div>
-                                </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground/50 italic">Sem comentário.</p>
+                                )}
                               </div>
                             </div>
-                          )}
+                          </div>
                         </>
                       );
                     })()}
