@@ -271,12 +271,14 @@ export interface SeparatedBlockContent {
  * SPLIT DETERMINÍSTICO POR TAGS [TREINO] / [COMENTÁRIO]
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * REGRAS:
+ * REGRAS ABSOLUTAS:
  * - Tudo entre [TREINO] e [COMENTÁRIO] é treino
  * - Tudo depois de [COMENTÁRIO] é comentário até o fim
  * - Se faltar [COMENTÁRIO], comentário = vazio
  * - Se faltar [TREINO], treino = texto inteiro (fallback) e comentário vazio
  * - Tags são removidas do output
+ * 
+ * PRIORIDADE: TAGS SÃO SOBERANAS. Nenhuma heurística pode sobrescrever.
  */
 function splitByTags(content: string): { treinoText: string; comentarioText: string; hasTags: boolean } {
   const treinoTag = '[TREINO]';
@@ -401,17 +403,26 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     return { exerciseLines: [], commentLines: [] };
   }
   
-  // 1. Tentar split por tags (determinístico)
+  // 1. Tentar split por tags (determinístico) - TAGS SÃO SOBERANAS
   const { treinoText, comentarioText, hasTags } = splitByTags(content);
   
-  // Log de diagnóstico (formato curto conforme especificação)
+  // ════════════════════════════════════════════════════════════════════════════
+  // LOG OBRIGATÓRIO: [TAG_SPLIT] - 1 linha por bloco
+  // ════════════════════════════════════════════════════════════════════════════
   const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-  console.log(`[UI_SPLIT] title="${blockSnippet}${content.length > 30 ? '...' : ''}" hasTags=${hasTags} trainChars=${treinoText.length} commentChars=${comentarioText.length}`);
+  const firstComment = comentarioText.split('\n')[0]?.slice(0, 50) || '';
+  console.log(`[TAG_SPLIT] title="${blockSnippet}${content.length > 30 ? '...' : ''}" treinoLines=${treinoText.split('\n').filter(l => l.trim()).length} commentLines=${comentarioText.split('\n').filter(l => l.trim()).length} firstComment="${firstComment}"`);
   
   if (hasTags) {
-    // Split por tags: direto, sem heurística
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0: SPLIT POR TAGS É SOBERANO - ZERO HEURÍSTICA
+    // Comentário NUNCA passa por detector de exercício
+    // ════════════════════════════════════════════════════════════════════════════
     const exerciseLines = treinoText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const commentLines = comentarioText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    // LOG: [TRAIN_PARSE_INPUT] - mostrar que só treino entra no parser
+    console.log(`[TRAIN_PARSE_INPUT] title="${blockSnippet}..." lines=${exerciseLines.length}`);
     
     return { exerciseLines, commentLines };
   }
