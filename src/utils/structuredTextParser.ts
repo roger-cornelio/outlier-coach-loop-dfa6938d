@@ -1943,14 +1943,6 @@ function isExercisePatternLine(line: string): boolean {
 export function parseStructuredText(text: string): ParseResult {
   console.log('[PARSER] === parseStructuredText INICIADO ===');
   console.log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
-  
-  // ═══ DIAGNÓSTICO B) LOG DO TEXTO USADO NO PARSER ═══
-  console.log("[TEXT_FOR_PARSE_HEAD]", text.slice(0, 400));
-  console.log("[TEXT_FOR_PARSE_TAG_COUNTS]", {
-    treino: (text.match(/\[TREINO\]/gi) || []).length,
-    comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
-  });
-  
   const lines = text.split('\n');
   console.log('[PARSER] Total de linhas:', lines.length);
   
