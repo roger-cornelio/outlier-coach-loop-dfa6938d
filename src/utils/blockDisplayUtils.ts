@@ -251,13 +251,14 @@ export function isInBlockRestInstruction(text: string): boolean {
  * MVP0: SEPARAÇÃO VISUAL DE COMENTÁRIOS DO BLOCO
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Identifica linhas de comentário/instrução do coach vs linhas de exercício.
+ * PRIORIDADE DE DADOS (ORDEM FIXA):
+ * 1. Se existem tags [TREINO] e [COMENTÁRIO] → split determinístico por tags
+ * 2. Se não existem tags → fallback para heurística de padrões
  * 
- * COMENTÁRIOS incluem:
- * - Linhas que começam com "nota:", "obs:", "observação:", "dica:", etc.
- * - Frases que terminam com "..." ou contêm "o necessário", "conforme", "se sentir"
- * - Linhas sem números/métricas (sem rep, tempo, distância)
- * - Linhas que começam com "intervalo" sem tempo específico
+ * REGRA ABSOLUTA:
+ * - Tags nunca aparecem na UI
+ * - Comentário nunca se mistura com treino
+ * - Sem heurística "por IA" ou "frases"
  */
 
 export interface SeparatedBlockContent {
@@ -266,7 +267,60 @@ export interface SeparatedBlockContent {
 }
 
 /**
- * Detecta se uma linha é comentário/instrução do coach
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SPLIT DETERMINÍSTICO POR TAGS [TREINO] / [COMENTÁRIO]
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * REGRAS:
+ * - Tudo entre [TREINO] e [COMENTÁRIO] é treino
+ * - Tudo depois de [COMENTÁRIO] é comentário até o fim
+ * - Se faltar [COMENTÁRIO], comentário = vazio
+ * - Se faltar [TREINO], treino = texto inteiro (fallback) e comentário vazio
+ * - Tags são removidas do output
+ */
+function splitByTags(content: string): { treinoText: string; comentarioText: string; hasTags: boolean } {
+  const treinoTag = '[TREINO]';
+  const comentarioTag = '[COMENTÁRIO]';
+  
+  const hasTreinoTag = content.includes(treinoTag);
+  const hasComentarioTag = content.includes(comentarioTag);
+  
+  // Se não tem nenhuma tag, retornar indicador de que não há tags
+  if (!hasTreinoTag && !hasComentarioTag) {
+    return { treinoText: content, comentarioText: '', hasTags: false };
+  }
+  
+  let treinoText = '';
+  let comentarioText = '';
+  
+  if (hasTreinoTag && hasComentarioTag) {
+    // Caso ideal: ambas as tags existem
+    const treinoStart = content.indexOf(treinoTag) + treinoTag.length;
+    const comentarioStart = content.indexOf(comentarioTag);
+    const comentarioContentStart = comentarioStart + comentarioTag.length;
+    
+    // Treino = entre [TREINO] e [COMENTÁRIO]
+    treinoText = content.slice(treinoStart, comentarioStart).trim();
+    // Comentário = tudo depois de [COMENTÁRIO]
+    comentarioText = content.slice(comentarioContentStart).trim();
+  } else if (hasTreinoTag && !hasComentarioTag) {
+    // Só [TREINO] existe: tudo depois é treino, comentário vazio
+    const treinoStart = content.indexOf(treinoTag) + treinoTag.length;
+    treinoText = content.slice(treinoStart).trim();
+    comentarioText = '';
+  } else if (!hasTreinoTag && hasComentarioTag) {
+    // Só [COMENTÁRIO] existe: tudo antes é treino, tudo depois é comentário
+    const comentarioStart = content.indexOf(comentarioTag);
+    const comentarioContentStart = comentarioStart + comentarioTag.length;
+    treinoText = content.slice(0, comentarioStart).trim();
+    comentarioText = content.slice(comentarioContentStart).trim();
+  }
+  
+  return { treinoText, comentarioText, hasTags: true };
+}
+
+/**
+ * Detecta se uma linha é comentário/instrução do coach (fallback heurístico)
  */
 function isCommentLine(line: string): boolean {
   if (!line) return false;
@@ -332,13 +386,42 @@ function isCommentLine(line: string): boolean {
 }
 
 /**
- * Separa o conteúdo do bloco em exercícios e comentários
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FUNÇÃO PRINCIPAL: separateBlockContent
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Separa o conteúdo do bloco em exercícios e comentários.
+ * 
+ * PRIORIDADE:
+ * 1. Split determinístico por tags [TREINO] / [COMENTÁRIO] se existirem
+ * 2. Fallback heurístico se não existirem tags
  */
 export function separateBlockContent(content: string): SeparatedBlockContent {
   if (!content) {
     return { exerciseLines: [], commentLines: [] };
   }
   
+  // 1. Tentar split por tags (determinístico)
+  const { treinoText, comentarioText, hasTags } = splitByTags(content);
+  
+  // Log de diagnóstico
+  const blockTitle = content.slice(0, 30).replace(/\n/g, ' ').trim();
+  console.log('[UI_SPLIT]', {
+    block: blockTitle + (content.length > 30 ? '...' : ''),
+    treinoChars: treinoText.length,
+    comentarioChars: comentarioText.length,
+    hasTags,
+  });
+  
+  if (hasTags) {
+    // Split por tags: direto, sem heurística
+    const exerciseLines = treinoText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const commentLines = comentarioText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    return { exerciseLines, commentLines };
+  }
+  
+  // 2. Fallback: heurística por padrões (texto sem tags)
   const lines = content.split('\n');
   const exerciseLines: string[] = [];
   const commentLines: string[] = [];
