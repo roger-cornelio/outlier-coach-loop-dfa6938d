@@ -269,18 +269,40 @@ export function useCoachDraft() {
            draft.parseResult.days.length > 0;
   }, [draft.weekId, draft.parseResult]);
 
-  // Validação: pode salvar?
-  // CERCA HARD V1: Bloqueia se houver erros de estrutura (severity === 'ERROR')
+  // ════════════════════════════════════════════════════════════════════════════
+  // REGRA DE PUBLICAÇÃO SEMANAL (V2):
+  // - Permite 0-7 dias com conteúdo (não exige semana completa)
+  // - Dias vazios NÃO bloqueiam publicação
+  // - Bloqueia APENAS se:
+  //   (A) Semana vazia (0 dias com conteúdo) → anti-acidente
+  //   (B) Qualquer dia com conteúdo tem erro real de validação (severity === 'ERROR')
+  // ════════════════════════════════════════════════════════════════════════════
   const canSave = useMemo(() => {
-    const hasBasicRequirements = draft.weekId !== null && effectiveDays !== null && effectiveDays.length > 0;
-    
     // Verificar se há erros de estrutura bloqueantes
     const structureErrors = draft.parseResult?.structureIssues?.filter(
       issue => issue.severity === 'ERROR'
     ) ?? [];
     const hasBlockingErrors = structureErrors.length > 0;
     
-    return hasBasicRequirements && !hasBlockingErrors;
+    // Contar dias com conteúdo (pelo menos 1 bloco)
+    const daysWithContent = effectiveDays?.filter(d => d.blocks && d.blocks.length > 0) ?? [];
+    const daysEmpty = effectiveDays?.filter(d => !d.blocks || d.blocks.length === 0) ?? [];
+    
+    // Semana precisa ter pelo menos 1 dia com conteúdo
+    const hasContentDays = daysWithContent.length >= 1;
+    
+    // Pode salvar se: semana selecionada + tem conteúdo + sem erros
+    const result = draft.weekId !== null && hasContentDays && !hasBlockingErrors;
+    
+    // Log de diagnóstico
+    console.log('[PUBLISH_GUARD] useCoachDraft', {
+      daysWithContent: daysWithContent.length,
+      daysEmpty: daysEmpty.length,
+      hasBlockingErrors,
+      canSave: result,
+    });
+    
+    return result;
   }, [draft.weekId, effectiveDays, draft.parseResult?.structureIssues]);
 
   return {

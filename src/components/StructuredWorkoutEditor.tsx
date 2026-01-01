@@ -174,6 +174,43 @@ export function StructuredWorkoutEditor({
       };
     }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA DE PUBLICAÇÃO SEMANAL (V2):
+    // - Permite 0-7 dias com conteúdo (não exige semana completa)
+    // - Dias vazios NÃO bloqueiam publicação
+    // - Bloqueia APENAS se:
+    //   (A) Semana vazia (0 dias com conteúdo) → anti-acidente
+    //   (B) Qualquer dia com conteúdo tem erro real de validação
+    // ════════════════════════════════════════════════════════════════════════════
+    
+    // Contar dias com conteúdo (pelo menos 1 bloco)
+    const daysWithContent = days.filter(d => d.blocks.length > 0);
+    const daysEmpty = days.filter(d => d.blocks.length === 0);
+    
+    // Erros APENAS em dias com conteúdo
+    const errorsInContentDays = Object.entries(dayValidations)
+      .filter(([dayKey, val]) => {
+        const dayData = days.find(d => d.day === dayKey);
+        return dayData && dayData.blocks.length > 0 && !val.isRestDay;
+      })
+      .reduce((sum, [, val]) => sum + val.errorCount + (val.hasMainWod ? 0 : 1) + (val.multipleMainBlocks ? 1 : 0), 0);
+
+    // Pode salvar/publicar se:
+    // - Tem pelo menos 1 dia com conteúdo (não vazio)
+    // - Semana selecionada
+    // - Nenhum erro nos dias com conteúdo
+    const canPublish = daysWithContent.length >= 1 && 
+                       selectedWeek !== null && 
+                       errorsInContentDays === 0;
+
+    // Log de diagnóstico
+    console.log('[PUBLISH_GUARD]', {
+      daysWithContent: daysWithContent.length,
+      daysEmpty: daysEmpty.length,
+      errorsInContentDays,
+      canPublish,
+    });
+
     return {
       dayValidations,
       totalErrors,
@@ -181,10 +218,10 @@ export function StructuredWorkoutEditor({
       daysWithMultipleMain,
       hasAnyDay: days.length > 0,
       hasWeek: selectedWeek !== null,
-      canSave: days.length > 0 && 
-               selectedWeek !== null && 
-               totalErrors === 0 && 
-               daysWithoutMain === 0,
+      canSave: canPublish, // Usa a nova lógica
+      daysWithContent: daysWithContent.length,
+      daysEmpty: daysEmpty.length,
+      errorsInContentDays,
     };
   }, [days, selectedWeek]);
 
@@ -310,15 +347,32 @@ export function StructuredWorkoutEditor({
     setShowValidation(true);
     setError(null);
 
+    // Log de diagnóstico no clique de publicar
+    const reason = !validation.hasWeek 
+      ? 'NO_WEEK' 
+      : (validation.daysWithContent ?? 0) === 0 
+        ? 'EMPTY_WEEK' 
+        : (validation.errorsInContentDays ?? 0) > 0 
+          ? 'HAS_ERRORS' 
+          : 'OK';
+    
+    console.log('[PUBLISH_CLICK]', { 
+      canPublish: validation.canSave, 
+      reason,
+      status,
+    });
+
     if (!validation.canSave) {
       if (!validation.hasWeek) {
         setError('Selecione a semana de referência');
-      } else if (validation.totalErrors > 0) {
-        setError(`Corrija os ${validation.totalErrors} erro(s) nos blocos antes de salvar`);
-      } else if (validation.daysWithoutMain > 0) {
-        setError('Defina o WOD Principal em todos os dias');
+      } else if ((validation.daysWithContent ?? 0) === 0) {
+        // T0: Semana vazia - anti-acidente
+        setError('Adicione pelo menos 1 dia de treino para publicar a semana.');
+      } else if ((validation.errorsInContentDays ?? 0) > 0) {
+        // T2: Erros em dias com conteúdo
+        setError(`Corrija os erros nos dias com conteúdo antes de ${status === 'published' ? 'publicar' : 'salvar'}`);
       } else {
-        setError('Adicione pelo menos um dia com blocos');
+        setError('Verifique os dias com conteúdo');
       }
       return;
     }
@@ -686,9 +740,11 @@ export function StructuredWorkoutEditor({
                       <p>
                         {!validation.hasWeek 
                           ? 'Selecione a semana' 
-                          : validation.totalErrors > 0 
-                            ? 'Corrija os erros nos blocos'
-                            : 'Defina WOD Principal em todos os dias'
+                          : (validation.daysWithContent ?? 0) === 0 
+                            ? 'Adicione pelo menos 1 dia de treino'
+                            : (validation.errorsInContentDays ?? 0) > 0 
+                              ? 'Corrija os erros nos dias com conteúdo'
+                              : 'Verifique os dias com conteúdo'
                         }
                       </p>
                     </TooltipContent>
@@ -715,9 +771,11 @@ export function StructuredWorkoutEditor({
                       <p>
                         {!validation.hasWeek 
                           ? 'Selecione a semana' 
-                          : validation.totalErrors > 0 
-                            ? 'Corrija os erros nos blocos'
-                            : 'Defina WOD Principal em todos os dias'
+                          : (validation.daysWithContent ?? 0) === 0 
+                            ? 'Adicione pelo menos 1 dia de treino'
+                            : (validation.errorsInContentDays ?? 0) > 0 
+                              ? 'Corrija os erros nos dias com conteúdo'
+                              : 'Verifique os dias com conteúdo'
                         }
                       </p>
                     </TooltipContent>
