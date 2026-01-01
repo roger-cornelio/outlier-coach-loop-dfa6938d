@@ -89,7 +89,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // ═══════════════════════════════════════════════════════════════════════════
   const {
     isHydrated,
-    mode,
+    mode: rawMode,
     rawText,
     weekId,
     parseResult,
@@ -111,6 +111,17 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     goBackToEditing,
     clearDraft,
   } = useCoachDraft();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NORMALIZAÇÃO DE MODE (HOTFIX: 'publish' → 'preview')
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Se mode vier como 'publish' (valor inválido/legado), tratar como 'preview'
+  const mode: DraftMode = (rawMode === 'publish' as any) ? 'preview' : rawMode;
+  
+  // Log de diagnóstico
+  if (rawMode !== mode) {
+    console.log('[MODE_NORMALIZE]', { mode: rawMode, effective: mode });
+  }
 
   // Estados locais (UI only)
   const [deleteConfirm, setDeleteConfirm] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
@@ -1030,19 +1041,24 @@ Descanso`}
     );
   }
 
-  // Fallback - se chegou aqui, mode não é 'edit' nem 'preview'
-  console.error('[UI_DIAG] TextModelImporter fallback! mode is:', mode);
+  // Fallback - se chegou aqui, mode não é 'import', 'edit' nem 'preview'
+  // Isso não deveria acontecer após a normalização, mas se acontecer, voltar para import
+  console.error('[UI_DIAG] TextModelImporter fallback! mode is:', mode, 'rawMode was:', rawMode);
   
-  // Tentar renderizar como 'edit' como fallback seguro
   return (
     <Card className="border-amber-500/50">
       <CardContent className="p-8">
         <div className="text-center space-y-4">
           <AlertCircle className="w-10 h-10 mx-auto text-amber-500" />
-          <p className="text-amber-600">Estado inesperado: mode="{mode}"</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Recarregar página
-          </Button>
+          <p className="text-amber-600">Estado inesperado detectado. Reiniciando...</p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={goBackToImport}>
+              Voltar para início
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Recarregar página
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
