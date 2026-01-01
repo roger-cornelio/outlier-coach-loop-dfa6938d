@@ -404,14 +404,9 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   // 1. Tentar split por tags (determinístico)
   const { treinoText, comentarioText, hasTags } = splitByTags(content);
   
-  // Log de diagnóstico
-  const blockTitle = content.slice(0, 30).replace(/\n/g, ' ').trim();
-  console.log('[UI_SPLIT]', {
-    block: blockTitle + (content.length > 30 ? '...' : ''),
-    treinoChars: treinoText.length,
-    comentarioChars: comentarioText.length,
-    hasTags,
-  });
+  // Log de diagnóstico (formato curto conforme especificação)
+  const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
+  console.log(`[UI_SPLIT] title="${blockSnippet}${content.length > 30 ? '...' : ''}" hasTags=${hasTags} trainChars=${treinoText.length} commentChars=${comentarioText.length}`);
   
   if (hasTags) {
     // Split por tags: direto, sem heurística
