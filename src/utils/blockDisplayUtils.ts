@@ -280,6 +280,17 @@ export interface SeparatedBlockContent {
  * 
  * PRIORIDADE: TAGS SÃO SOBERANAS. Nenhuma heurística pode sobrescrever.
  */
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SPLIT DETERMINÍSTICO POR TAGS — FONTE DA VERDADE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * REGRA ABSOLUTA:
+ * - Tudo APÓS [COMENTÁRIO] é comentário puro (NUNCA passa por parser de treino)
+ * - Tudo ENTRE [TREINO] e [COMENTÁRIO] (ou até fim) é treino
+ * - Tags são removidas do output
+ * - Se há tags, o split é SOBERANO (nenhuma heurística pode sobrescrever)
+ */
 function splitByTags(content: string): { treinoText: string; comentarioText: string; hasTags: boolean } {
   const treinoTag = '[TREINO]';
   const comentarioTag = '[COMENTÁRIO]';
@@ -295,34 +306,49 @@ function splitByTags(content: string): { treinoText: string; comentarioText: str
   let treinoText = '';
   let comentarioText = '';
   
-  if (hasTreinoTag && hasComentarioTag) {
-    // Caso ideal: ambas as tags existem
-    const treinoStart = content.indexOf(treinoTag) + treinoTag.length;
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: ORDEM DE PRIORIDADE PARA SPLIT
+  // 1. Se tem [COMENTÁRIO], TUDO depois dela é comentário (ponto final)
+  // 2. Se tem [TREINO], conteúdo entre ela e [COMENTÁRIO] (ou fim) é treino
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  if (hasComentarioTag) {
     const comentarioStart = content.indexOf(comentarioTag);
     const comentarioContentStart = comentarioStart + comentarioTag.length;
     
-    // Treino = entre [TREINO] e [COMENTÁRIO]
-    treinoText = content.slice(treinoStart, comentarioStart).trim();
-    // Comentário = tudo depois de [COMENTÁRIO]
+    // TUDO depois de [COMENTÁRIO] é comentário - REGRA ABSOLUTA
     comentarioText = content.slice(comentarioContentStart).trim();
-  } else if (hasTreinoTag && !hasComentarioTag) {
+    
+    // Treino é o que vem ANTES de [COMENTÁRIO]
+    let prePart = content.slice(0, comentarioStart);
+    
+    // Se tem [TREINO], pegar conteúdo DEPOIS dela
+    if (hasTreinoTag) {
+      const treinoStart = prePart.indexOf(treinoTag);
+      if (treinoStart !== -1) {
+        treinoText = prePart.slice(treinoStart + treinoTag.length).trim();
+      } else {
+        treinoText = prePart.trim();
+      }
+    } else {
+      treinoText = prePart.trim();
+    }
+  } else if (hasTreinoTag) {
     // Só [TREINO] existe: tudo depois é treino, comentário vazio
     const treinoStart = content.indexOf(treinoTag) + treinoTag.length;
     treinoText = content.slice(treinoStart).trim();
     comentarioText = '';
-  } else if (!hasTreinoTag && hasComentarioTag) {
-    // Só [COMENTÁRIO] existe: tudo antes é treino, tudo depois é comentário
-    const comentarioStart = content.indexOf(comentarioTag);
-    const comentarioContentStart = comentarioStart + comentarioTag.length;
-    treinoText = content.slice(0, comentarioStart).trim();
-    comentarioText = content.slice(comentarioContentStart).trim();
   }
+  
+  // LOG: Diagnóstico do split
+  console.log(`[TAG_SPLIT] block="${content.slice(0, 30).replace(/\n/g, ' ')}..." treinoChars=${treinoText.length} commentChars=${comentarioText.length} firstCommentLine="${comentarioText.split('\n')[0]?.slice(0, 60) || '(vazio)'}"`);
   
   return { treinoText, comentarioText, hasTags: true };
 }
 
 /**
  * Detecta se uma linha é comentário/instrução do coach (fallback heurístico)
+ * NOTA: Esta função só é usada quando NÃO há tags [TREINO]/[COMENTÁRIO]
  */
 function isCommentLine(line: string): boolean {
   if (!line) return false;
@@ -332,17 +358,22 @@ function isCommentLine(line: string): boolean {
   
   const lower = trimmed.toLowerCase();
   
-  // A) Prefixos explícitos de comentário
+  // A) Emoji de nota (legado) - SEMPRE é comentário
+  if (trimmed.startsWith('📝')) {
+    return true;
+  }
+  
+  // B) Prefixos explícitos de comentário
   if (/^(nota|obs|observa[çc][aã]o|dica|aten[çc][aã]o|importante|lembrete|orienta[çc][aã]o)\s*:/i.test(lower)) {
     return true;
   }
   
-  // B) Frases que terminam com "..." (reticências indicam instrução aberta)
+  // C) Frases que terminam com "..." ou "…" (reticências indicam instrução aberta)
   if (/\.{2,}$/.test(trimmed) || /…$/.test(trimmed)) {
     return true;
   }
   
-  // C) Frases com padrões de instrução subjetiva
+  // D) Padrões de instrução subjetiva
   const subjectivePatterns = [
     /o\s+necess[aá]rio/i,
     /conforme\s+(necess[aá]rio|poss[ií]vel|sentir)/i,
@@ -356,6 +387,8 @@ function isCommentLine(line: string): boolean {
     /n[aã]o\s+esquecer/i,
     /evitar/i,
     /tentar\s+(manter|n[aã]o|fazer)/i,
+    /\bunbroken\b/i, // Instrução de execução "unbroken"
+    /\bdescansar\b/i, // Instrução de descanso
   ];
   
   for (const pattern of subjectivePatterns) {
@@ -403,26 +436,30 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     return { exerciseLines: [], commentLines: [] };
   }
   
-  // 1. Tentar split por tags (determinístico) - TAGS SÃO SOBERANAS
+  // ════════════════════════════════════════════════════════════════════════════
+  // MVP0: SPLIT POR TAGS É SOBERANO — ACONTECE PRIMEIRO
+  // Se existem tags, o split determinístico é a ÚNICA fonte de verdade
+  // Nenhuma heurística pode sobrescrever
+  // ════════════════════════════════════════════════════════════════════════════
   const { treinoText, comentarioText, hasTags } = splitByTags(content);
   
-  // ════════════════════════════════════════════════════════════════════════════
-  // LOG OBRIGATÓRIO: [TAG_SPLIT] - 1 linha por bloco
-  // ════════════════════════════════════════════════════════════════════════════
-  const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-  const firstComment = comentarioText.split('\n')[0]?.slice(0, 50) || '';
-  console.log(`[TAG_SPLIT] title="${blockSnippet}${content.length > 30 ? '...' : ''}" treinoLines=${treinoText.split('\n').filter(l => l.trim()).length} commentLines=${comentarioText.split('\n').filter(l => l.trim()).length} firstComment="${firstComment}"`);
-  
   if (hasTags) {
-    // ════════════════════════════════════════════════════════════════════════════
-    // MVP0: SPLIT POR TAGS É SOBERANO - ZERO HEURÍSTICA
-    // Comentário NUNCA passa por detector de exercício
-    // ════════════════════════════════════════════════════════════════════════════
-    const exerciseLines = treinoText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const commentLines = comentarioText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // REGRA ABSOLUTA: Comentário NUNCA passa por parser/classificador
+    // Treino = exerciseLines (já limpo, sem comentário)
+    // Comentário = commentLines (string pura, sem tocar)
+    const exerciseLines = treinoText
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
     
-    // LOG: [TRAIN_PARSE_INPUT] - mostrar que só treino entra no parser
-    console.log(`[TRAIN_PARSE_INPUT] title="${blockSnippet}..." lines=${exerciseLines.length}`);
+    const commentLines = comentarioText
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+    
+    // LOG: [TRAIN_PARSE_INPUT] - confirmar que só treino entra no parser
+    const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
+    console.log(`[TRAIN_PARSE_INPUT] block="${blockSnippet}..." exerciseCount=${exerciseLines.length} commentCount=${commentLines.length}`);
     
     return { exerciseLines, commentLines };
   }
