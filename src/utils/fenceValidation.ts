@@ -450,6 +450,13 @@ export function validateFence(text: string): FenceValidationResult {
   const warnings: FenceWarning[] = [];
   const lines = text.split('\n');
   
+  // ═══ DIAGNÓSTICO B) LOG ANTES DE parseBlocksWithFence ═══
+  console.log("[FENCE_TEXT_FOR_PARSE_HEAD]", text.slice(0, 400));
+  console.log("[FENCE_TEXT_FOR_PARSE_TAG_COUNTS]", {
+    treino: (text.match(/\[TREINO\]/gi) || []).length,
+    comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+  });
+  
   // Parse blocks com contagem de tags
   const blocks = parseBlocksWithFence(text);
   
