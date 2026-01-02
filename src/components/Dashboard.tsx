@@ -812,8 +812,15 @@ export function Dashboard() {
                       {/* Separated Exercise Content and Coach Comments */}
                       {(() => {
                         const { exerciseLines, commentLines } = separateBlockContent(block.content);
-                        // Logs movidos para separateBlockContent (centralizado)
                         
+                        // [UI_BLOCK] Log obrigatório
+                        console.log("[UI_BLOCK]", {
+                          title: block.title,
+                          hasTraining: exerciseLines.length,
+                          hasComment: commentLines.length,
+                        });
+                        // [UI_SPLIT_RENDER] Log de renderização
+                        console.log(`[UI_SPLIT_RENDER] title="${block.title || 'Bloco'}" training=${exerciseLines.length} comment=${commentLines.length}`);
                         return (
                           <>
                             {/* Caixa 1: TREINO - main content */}
