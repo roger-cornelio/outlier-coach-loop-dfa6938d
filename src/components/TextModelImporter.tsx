@@ -59,7 +59,6 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   parseStructuredText, 
-  parsedToDayWorkouts,
   getDayName,
   isInvalidBlockTitle,
   normalizeText,
@@ -88,6 +87,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
   const {
+    draft,
     isHydrated,
     mode: rawMode,
     rawText,
@@ -131,6 +131,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
 
+  const summarizeDraft = (d: any) => {
+    const days = (d?.editedDays || d?.parsedDays) as DayWorkout[] | null;
+    const blocksTotal = (days || []).reduce((sum, day) => sum + ((day?.blocks?.length as number) || 0), 0);
+    return {
+      mode: d?.mode,
+      weekId: d?.weekId?.label ?? null,
+      daysCount: days?.length ?? 0,
+      blocksTotal,
+      firstBlockTitle: days?.[0]?.blocks?.[0]?.title ?? null,
+      hasRawText: Boolean(d?.rawText && String(d.rawText).trim().length > 0),
+    };
+  };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PARSING E VALIDAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
@@ -166,6 +179,17 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
 
     // Parse o texto
     const result = parseStructuredText(textForParse);
+
+    // (A) [DIAG_PARSE_RESULT] — shape do resultado do parse
+    console.log("[DIAG_PARSE_RESULT]", {
+      success: result?.success,
+      totalDays: result?.days?.length,
+      daysCount: result?.days?.length,
+      day0_blocks: result?.days?.[0]?.blocks?.length,
+      day0_block0_keys: result?.days?.[0]?.blocks?.[0]
+        ? Object.keys(result.days[0].blocks[0] as any)
+        : null,
+    });
     
     // Se não detectou dias, assumir SEGUNDA
     if (daysDetected === 0 && (result.days.length === 0 || result.days.every(d => d.blocks.length === 0))) {
@@ -200,12 +224,46 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     }
     
     result.needsDaySelection = false;
-    
-    // Converter para DayWorkout[]
-    const workouts = parsedToDayWorkouts(result);
+
+    // Converter para DayWorkout[] (sem depender de items/coachNotes — usar lines já classificadas)
+    const workouts: DayWorkout[] = result.days.map((day) => ({
+      day: (day.day || 'seg') as DayOfWeek,
+      stimulus: '',
+      estimatedTime: 60,
+      isRestDay: day.isRestDay || false,
+      blocks: day.blocks.map((block, idx) => {
+        const lines = block.lines || [];
+        const training = lines.filter(l => l.type !== 'comment').map(l => l.text);
+        const comments = lines.filter(l => l.type === 'comment').map(l => l.text);
+
+        const content = comments.length > 0
+          ? `[TREINO]\n${training.join('\n')}\n[COMENTÁRIO]\n${comments.join('\n')}`
+          : training.join('\n');
+
+        return {
+          id: `${day.day || 'new'}-${idx}-${Date.now()}`,
+          type: block.type,
+          title: block.title,
+          content,
+          isMainWod: block.isMainWod || undefined,
+          isBenchmark: block.isBenchmark || undefined,
+        };
+      }),
+    }));
+
+    // (B) [DIAG_STATE_BEFORE_SET] / [DIAG_STATE_AFTER_SET]
+    console.log("[DIAG_STATE_BEFORE_SET]", summarizeDraft(draft));
+    console.log("[DIAG_STATE_AFTER_SET]", summarizeDraft({
+      ...draft,
+      parseResult: result,
+      parsedDays: workouts,
+      editedDays: null,
+      restDays: {},
+    }));
     
     console.debug('[TextModelImporter] handleParse → days=', result.days.length);
     setParsedResult(result, workouts);
+    
     
     // Log de resultado da validação
     console.log('[VALIDATE_RESULT] success=' + result.success);
@@ -955,6 +1013,39 @@ Descanso`}
   
   if (mode === 'preview') {
     const days = effectiveDays || [];
+    const blocksTotal = days.reduce((sum, d) => sum + ((d.blocks || []).length), 0);
+
+    // (C) [DIAG_PREVIEW_INPUT] — o que o Preview está usando como fonte
+    console.log("[DIAG_PREVIEW_INPUT]", {
+      mode,
+      weekId: weekId?.label ?? null,
+      daysCount: days.length,
+      blocksTotal,
+      rawTextLen: rawText?.length ?? 0,
+      firstDayLabel: days?.[0]?.day ?? null,
+      firstBlockTitle: days?.[0]?.blocks?.[0]?.title ?? null,
+      firstBlockKeys: days?.[0]?.blocks?.[0]
+        ? Object.keys(days[0].blocks[0] as any)
+        : null,
+      firstBlockContentLen:
+        typeof days?.[0]?.blocks?.[0]?.content === 'string'
+          ? days[0].blocks[0].content.length
+          : 0,
+    });
+
+    // (D) [DIAG_RENDER_GUARD] — se Preview estiver vazio, registrar motivo
+    if (days.length === 0) {
+      console.log('[DIAG_RENDER_GUARD]', {
+        reason: 'NO_EFFECTIVE_DAYS',
+        conditionValues: {
+          parseSuccess: parseResult?.success ?? null,
+          parsedDaysCount: draft.parsedDays?.length ?? 0,
+          editedDaysCount: draft.editedDays?.length ?? 0,
+          weekId: weekId?.label ?? null,
+        },
+      });
+    }
+
     const restCount = days.reduce((acc, d, idx) => acc + ((d.isRestDay || restDays[idx]) ? 1 : 0), 0);
 
     return (
