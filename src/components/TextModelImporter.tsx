@@ -67,7 +67,7 @@ import {
   validateCoachInput,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import { normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
+import { normalizeRestLineForDisplay, separateBlockContent } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
@@ -1024,13 +1024,47 @@ Descanso`}
                           )}
                         </div>
 
-                        {block.content && (
-                          <div className="text-sm space-y-1 text-foreground/80">
-                            {block.content.split('\n').map((line, idx) => (
-                              <p key={`${block.id || blockIndex}-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
-                            ))}
-                          </div>
-                        )}
+                        {/* SEPARAÇÃO DETERMINÍSTICA: TREINO vs COMENTÁRIO */}
+                        {(() => {
+                          const { exerciseLines, commentLines } = separateBlockContent(block.content || '');
+                          
+                          // [UI_BLOCK] Log obrigatório
+                          console.log("[UI_BLOCK]", {
+                            title: block.title,
+                            hasTraining: exerciseLines.length,
+                            hasComment: commentLines.length,
+                          });
+
+                          return (
+                            <div className="space-y-3">
+                              {/* CAIXA 1: TREINO - SEMPRE VISÍVEL */}
+                              <div className="text-sm space-y-1 text-foreground/80 pl-2 border-l-2 border-primary/40">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">
+                                  Treino
+                                </p>
+                                {exerciseLines.length > 0 ? (
+                                  exerciseLines.map((line, idx) => (
+                                    <p key={`${block.id || blockIndex}-ex-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
+                                  ))
+                                ) : (
+                                  <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
+                                )}
+                              </div>
+
+                              {/* CAIXA 2: COMENTÁRIO DO COACH - SEMPRE VISÍVEL */}
+                              <div className="text-xs text-muted-foreground p-2 rounded bg-muted/30 border border-border/40 space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground/70">💬 Comentário do Coach</span>
+                                {commentLines.length > 0 ? (
+                                  commentLines.map((line, idx) => (
+                                    <p key={`${block.id || blockIndex}-cm-${idx}`} className="italic">{normalizeRestLineForDisplay(line)}</p>
+                                  ))
+                                ) : (
+                                  <p className="text-muted-foreground/50 italic">Sem comentário.</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
