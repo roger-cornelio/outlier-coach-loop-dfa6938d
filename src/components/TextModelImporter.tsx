@@ -751,7 +751,19 @@ Descanso`}
                             {day.blocks.map((block, blockIndex) => {
                               const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
                               const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
+                              const hasValidationErrors = hasTitleError || !block.type;
                               
+                              // [RENDER_CHECK] Log obrigatório - render NUNCA depende de errors
+                              console.log("[RENDER_CHECK]", {
+                                day: dayName,
+                                blockTitle: displayTitle,
+                                trainingLines: (block.lines || []).length,
+                                validationErrors: hasValidationErrors ? 1 : 0,
+                              });
+                              // [RENDER_BLOCK] Bloco sempre renderizado
+                              console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=true`);
+                              
+                              // REGRA: Erros afetam APENAS estilo visual, NUNCA condicionam render
                               return (
                                 <div 
                                   key={blockIndex}
@@ -759,7 +771,7 @@ Descanso`}
                                   className={`p-4 rounded-xl border-2 ${
                                     block.isMainWod 
                                       ? 'border-primary/50 bg-primary/5' 
-                                      : hasTitleError || !block.type
+                                      : hasValidationErrors
                                         ? 'border-amber-500/50 bg-amber-500/5'
                                         : 'border-border bg-card'
                                   } ${highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex ? 'ring-2 ring-primary' : ''}`}
@@ -990,6 +1002,14 @@ Descanso`}
             const dayName = getDayName(dayWorkout.day);
             const isRestDay = Boolean(dayWorkout.isRestDay || restDays[dayIndex]);
 
+            // [RENDER_CHECK] Log obrigatório - dia SEMPRE renderizado
+            console.log("[RENDER_CHECK]", {
+              day: dayName,
+              blocksCount: (dayWorkout.blocks || []).length,
+              isRestDay,
+            });
+
+            // REGRA: Dia SEMPRE renderizado, independente de erros
             return (
               <div key={`${dayWorkout.day}-${dayIndex}`} className="border rounded-lg overflow-hidden">
                 <div className="p-4 bg-secondary/30 flex items-center gap-3">

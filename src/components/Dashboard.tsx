@@ -782,6 +782,16 @@ export function Dashboard() {
                   const estimatedKcal = blockEstimate?.estimatedKcal || 0;
                   const confidence = blockEstimate?.confidence || 'low';
 
+                  // [RENDER_CHECK] Log obrigatório - bloco SEMPRE renderizado
+                  console.log("[RENDER_CHECK]", {
+                    day: currentWorkout.day,
+                    blockTitle: block.title,
+                    trainingLines: block.content?.split('\n').length || 0,
+                    validationErrors: 0, // Dashboard não valida, apenas renderiza
+                  });
+                  // [RENDER_BLOCK] Confirmação de renderização
+                  console.log(`[RENDER_BLOCK] title="${block.title || 'Bloco'}" rendered=true`);
+
                   return (
                     <motion.div
                       key={block.id}
