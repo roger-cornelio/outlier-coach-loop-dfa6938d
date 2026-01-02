@@ -336,9 +336,11 @@ function isSubjectiveLine(line: string): boolean {
 // - Distância (km, m)
 // - Tempo (min, ', '')
 // - Reps/Rounds/Sets
+// - Carga (%, kg, lb)
+// - Intensidade (PSE, Zona, Pace)
 // SEM texto subjetivo misturado
 // ============================================
-function hasMeasurableStimulus(line: string): boolean {
+export function hasMeasurableStimulus(line: string): boolean {
   // Tempo: min, ', ''
   if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) return true;
   
@@ -353,6 +355,19 @@ function hasMeasurableStimulus(line: string): boolean {
   
   // Padrão sets x reps
   if (/\d+\s*x\s*\d+/i.test(line)) return true;
+  
+  // Carga: %, kg, lb
+  if (/\d+\s*(?:%|kg|lb)\b/i.test(line)) return true;
+  
+  // Intensidade: PSE, RPE, Zona, Z1-Z5
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
+  if (/\b(?:zona|zone|z)\s*\d/i.test(line)) return true;
+  
+  // Pace: 5:00/km
+  if (/\d+:\d{2}\s*\/?\s*km/i.test(line)) return true;
+  
+  // Calorias
+  if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) return true;
   
   return false;
 }
@@ -3401,36 +3416,46 @@ function validateCardioBlockIntensity(
 export const TEMPLATE_EXAMPLE = `SEGUNDA
 
 AQUECIMENTO
-3 rounds
-400m Run
-10 Air Squats
-10 Arm Circles
 
-AMRAP 20 MIN
-5 Pull-ups
-10 Push-ups
-15 Air Squats
+= TREINO
+- 500 m Run Z2
+- 2x10 Air Squats
+- 10 Arm Circles
+
+> COMENTÁRIO
+> Foco em mobilidade
+
+
+WOD
+
+= TREINO
+- AMRAP 20 min
+- 5 Pull-ups
+- 10 Push-ups
+- 15 Air Squats
+
+> COMENTÁRIO
+> Manter ritmo constante
+
 
 TERÇA
 
-FORÇA - BACK SQUAT
-5 reps @ 70%
-5 reps @ 75%
-5 reps @ 80%
+FORÇA
 
-FOR TIME
-21-15-9
-Thrusters 43/30kg
-Pull-ups`;
+= TREINO
+- 5x5 Back Squat @75%
+- Rest 2:00 entre séries
+
+> COMENTÁRIO
+> Subir carga se PSE < 7`;
 
 // ============================================
-// MVP0: MODELO RECOMENDADO COM TAGS
+// MVP0: MODELO RECOMENDADO COM MARCADORES DETERMINÍSTICOS
 // ============================================
 
-export const RECOMMENDED_TEMPLATE = `[TREINO]
-Modalidade:
-Tempo / Distância / Reps:
-Intensidade (PSE / Zona):
+export const RECOMMENDED_TEMPLATE = `= TREINO
+- <modalidade> <duração/volume> <intensidade>
+- <exercício> <séries x reps> <carga>
 
-[COMENTÁRIO] (opcional)
-Intenção do treino / observações / sensações:`;
+> COMENTÁRIO
+> <observação/intenção>`;

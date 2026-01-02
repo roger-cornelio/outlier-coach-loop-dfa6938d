@@ -1,21 +1,30 @@
 /**
  * blockDisplayUtils.ts - Utilitários para exibição de blocos de treino
  * 
- * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: MODELO DETERMINÍSTICO COM MARCADORES
- * ═══════════════════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MODELO DETERMINÍSTICO DE SEPARAÇÃO TREINO vs COMENTÁRIO (MVP0)
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * PRIORIDADE DE PARSING (com fallback):
- * 1. MARCADORES NOVOS: =, -, > (determinístico, sem heurística)
- * 2. TAGS: [TREINO], [COMENTÁRIO] (legado, split por região)
- * 3. HEURÍSTICA: padrões de comentário (fallback final)
+ * O motor NÃO interpreta texto. O motor APENAS classifica por MARCADOR.
  * 
- * MARCADORES:
- * - `=` → Header técnico (duração, modalidade, intensidade)
- * - `-` → Item executável de treino
- * - `>` → Comentário do coach
+ * MARCADORES OFICIAIS:
+ * - `= TREINO` → Início do bloco de treino (header)
+ * - `-` → Item executável de treino (deve ter métrica objetiva)
+ * - `> COMENTÁRIO` ou `>` → Observação do coach
  * 
- * REGRA ABSOLUTA: Comentário NUNCA passa por parser de treino.
+ * REGRA DE FLUXO:
+ * - Texto após `= TREINO` é treino até encontrar `>`
+ * - Texto após `>` é comentário até mudar o marcador
+ * - Linha sem marcador segue o marcador anterior
+ * 
+ * FALLBACKS (para textos legados):
+ * 1. TAGS: [TREINO], [COMENTÁRIO] — split por região
+ * 2. HEURÍSTICA: padrões de comentário (último recurso)
+ * 
+ * REGRA CRÍTICA:
+ * - Comentário NUNCA passa por parser de treino
+ * - Comentário NUNCA vira exercício
+ * - Linha de treino sem métrica = WARNING
  */
 
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -278,17 +287,23 @@ export interface SeparatedBlockContent {
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: SPLIT DETERMINÍSTICO POR MARCADORES (=, -, >)
+ * MVP0: SPLIT DETERMINÍSTICO POR MARCADORES
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * REGRAS:
- * - `=` no início da linha → header técnico (duração, modalidade)
- * - `-` no início da linha → item executável de treino
- * - `>` no início da linha → comentário do coach
+ * MARCADORES OFICIAIS:
+ * - `= TREINO` → Header do bloco de treino
+ * - `-` → Item executável de treino
+ * - `> COMENTÁRIO` ou `>` → Comentário do coach
  * 
- * Se encontrar QUALQUER marcador, usa modo determinístico.
- * Se não encontrar marcadores, retorna hasMarkers=false.
+ * REGRA DE FLUXO:
+ * - Após `= TREINO`: linhas vão para treino
+ * - Após `> COMENTÁRIO` ou `>`: linhas vão para comentário
+ * - Linha `-` sempre é treino
+ * - Linha `>` sempre é comentário
+ * - Linha sem marcador segue o marcador de seção anterior
  */
+type CurrentSection = 'treino' | 'comentario' | 'none';
+
 function splitByMarkers(content: string): { 
   headerLines: string[]; 
   trainingLines: string[]; 
@@ -303,30 +318,49 @@ function splitByMarkers(content: string): {
   const invalidLines: string[] = [];
   
   let foundAnyMarker = false;
+  let currentSection: CurrentSection = 'none';
   
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     
-    // Detectar marcadores no início da linha
-    if (trimmed.startsWith('=')) {
+    // Detectar marcadores de SEÇÃO (= TREINO, > COMENTÁRIO)
+    if (/^=\s*TREINO\b/i.test(trimmed)) {
       foundAnyMarker = true;
-      headerLines.push(trimmed.slice(1).trim());
-    } else if (trimmed.startsWith('-')) {
+      currentSection = 'treino';
+      headerLines.push(trimmed.replace(/^=\s*TREINO\s*/i, '').trim() || 'TREINO');
+      continue;
+    }
+    
+    if (/^>\s*COMENT[ÁA]RIO\b/i.test(trimmed)) {
+      foundAnyMarker = true;
+      currentSection = 'comentario';
+      continue;
+    }
+    
+    // Detectar marcadores de LINHA (-, >)
+    if (trimmed.startsWith('-')) {
       foundAnyMarker = true;
       trainingLines.push(trimmed.slice(1).trim());
-    } else if (trimmed.startsWith('>')) {
+      continue;
+    }
+    
+    if (trimmed.startsWith('>')) {
       foundAnyMarker = true;
       commentLines.push(trimmed.slice(1).trim());
+      continue;
+    }
+    
+    // Linha sem marcador explícito → segue a seção atual
+    if (currentSection === 'treino') {
+      trainingLines.push(trimmed);
+    } else if (currentSection === 'comentario') {
+      commentLines.push(trimmed);
     } else {
-      // Linha sem marcador
+      // Nenhuma seção definida ainda
       invalidLines.push(trimmed);
     }
   }
-  
-  // Se encontrou qualquer marcador, considerar modo determinístico ativo
-  // Linhas inválidas (sem marcador) são tratadas como erro no modo estrito
-  // Mas no modo fallback, permitimos
   
   return {
     headerLines,
