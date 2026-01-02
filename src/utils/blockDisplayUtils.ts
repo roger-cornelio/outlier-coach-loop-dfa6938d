@@ -2,11 +2,20 @@
  * blockDisplayUtils.ts - Utilitários para exibição de blocos de treino
  * 
  * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: HEADER DO BLOCO = TÍTULO REAL (NUNCA "Bloco X" SE HÁ TÍTULO)
+ * MVP0: MODELO DETERMINÍSTICO COM MARCADORES
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * REGRA ÚNICA: O título real deve aparecer sempre que existir.
- * "Bloco X" é FALLBACK FINAL quando não há nenhum título preenchido.
+ * PRIORIDADE DE PARSING (com fallback):
+ * 1. MARCADORES NOVOS: =, -, > (determinístico, sem heurística)
+ * 2. TAGS: [TREINO], [COMENTÁRIO] (legado, split por região)
+ * 3. HEURÍSTICA: padrões de comentário (fallback final)
+ * 
+ * MARCADORES:
+ * - `=` → Header técnico (duração, modalidade, intensidade)
+ * - `-` → Item executável de treino
+ * - `>` → Comentário do coach
+ * 
+ * REGRA ABSOLUTA: Comentário NUNCA passa por parser de treino.
  */
 
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -264,32 +273,74 @@ export function isInBlockRestInstruction(text: string): boolean {
 export interface SeparatedBlockContent {
   exerciseLines: string[];
   commentLines: string[];
+  headerLines?: string[]; // Linhas de header técnico (=)
 }
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SPLIT DETERMINÍSTICO POR TAGS [TREINO] / [COMENTÁRIO]
+ * MVP0: SPLIT DETERMINÍSTICO POR MARCADORES (=, -, >)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * REGRAS ABSOLUTAS:
- * - Tudo entre [TREINO] e [COMENTÁRIO] é treino
- * - Tudo depois de [COMENTÁRIO] é comentário até o fim
- * - Se faltar [COMENTÁRIO], comentário = vazio
- * - Se faltar [TREINO], treino = texto inteiro (fallback) e comentário vazio
- * - Tags são removidas do output
+ * REGRAS:
+ * - `=` no início da linha → header técnico (duração, modalidade)
+ * - `-` no início da linha → item executável de treino
+ * - `>` no início da linha → comentário do coach
  * 
- * PRIORIDADE: TAGS SÃO SOBERANAS. Nenhuma heurística pode sobrescrever.
+ * Se encontrar QUALQUER marcador, usa modo determinístico.
+ * Se não encontrar marcadores, retorna hasMarkers=false.
  */
+function splitByMarkers(content: string): { 
+  headerLines: string[]; 
+  trainingLines: string[]; 
+  commentLines: string[]; 
+  invalidLines: string[];
+  hasMarkers: boolean;
+} {
+  const lines = content.split('\n');
+  const headerLines: string[] = [];
+  const trainingLines: string[] = [];
+  const commentLines: string[] = [];
+  const invalidLines: string[] = [];
+  
+  let foundAnyMarker = false;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    // Detectar marcadores no início da linha
+    if (trimmed.startsWith('=')) {
+      foundAnyMarker = true;
+      headerLines.push(trimmed.slice(1).trim());
+    } else if (trimmed.startsWith('-')) {
+      foundAnyMarker = true;
+      trainingLines.push(trimmed.slice(1).trim());
+    } else if (trimmed.startsWith('>')) {
+      foundAnyMarker = true;
+      commentLines.push(trimmed.slice(1).trim());
+    } else {
+      // Linha sem marcador
+      invalidLines.push(trimmed);
+    }
+  }
+  
+  // Se encontrou qualquer marcador, considerar modo determinístico ativo
+  // Linhas inválidas (sem marcador) são tratadas como erro no modo estrito
+  // Mas no modo fallback, permitimos
+  
+  return {
+    headerLines,
+    trainingLines,
+    commentLines,
+    invalidLines,
+    hasMarkers: foundAnyMarker,
+  };
+}
+
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SPLIT DETERMINÍSTICO POR TAGS — FONTE DA VERDADE
+ * SPLIT POR TAGS [TREINO] / [COMENTÁRIO] — LEGADO
  * ═══════════════════════════════════════════════════════════════════════════
- * 
- * REGRA ABSOLUTA:
- * - Tudo APÓS [COMENTÁRIO] é comentário puro (NUNCA passa por parser de treino)
- * - Tudo ENTRE [TREINO] e [COMENTÁRIO] (ou até fim) é treino
- * - Tags são removidas do output
- * - Se há tags, o split é SOBERANO (nenhuma heurística pode sobrescrever)
  */
 function splitByTags(content: string): { treinoText: string; comentarioText: string; hasTags: boolean } {
   const treinoTag = '[TREINO]';
@@ -305,12 +356,6 @@ function splitByTags(content: string): { treinoText: string; comentarioText: str
   
   let treinoText = '';
   let comentarioText = '';
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: ORDEM DE PRIORIDADE PARA SPLIT
-  // 1. Se tem [COMENTÁRIO], TUDO depois dela é comentário (ponto final)
-  // 2. Se tem [TREINO], conteúdo entre ela e [COMENTÁRIO] (ou fim) é treino
-  // ════════════════════════════════════════════════════════════════════════════
   
   if (hasComentarioTag) {
     const comentarioStart = content.indexOf(comentarioTag);
@@ -339,9 +384,6 @@ function splitByTags(content: string): { treinoText: string; comentarioText: str
     treinoText = content.slice(treinoStart).trim();
     comentarioText = '';
   }
-  
-  // LOG: Diagnóstico do split
-  console.log(`[TAG_SPLIT] block="${content.slice(0, 30).replace(/\n/g, ' ')}..." treinoChars=${treinoText.length} commentChars=${comentarioText.length} firstCommentLine="${comentarioText.split('\n')[0]?.slice(0, 60) || '(vazio)'}"`);
   
   return { treinoText, comentarioText, hasTags: true };
 }
@@ -427,26 +469,48 @@ function isCommentLine(line: string): boolean {
  * 
  * Separa o conteúdo do bloco em exercícios e comentários.
  * 
- * PRIORIDADE:
- * 1. Split determinístico por tags [TREINO] / [COMENTÁRIO] se existirem
- * 2. Fallback heurístico se não existirem tags
+ * PRIORIDADE (COM FALLBACK):
+ * 1. MARCADORES (=, -, >) — determinístico, sem heurística
+ * 2. TAGS ([TREINO], [COMENTÁRIO]) — split por região
+ * 3. HEURÍSTICA — padrões de comentário (fallback final)
  */
 export function separateBlockContent(content: string): SeparatedBlockContent {
   if (!content) {
-    return { exerciseLines: [], commentLines: [] };
+    return { exerciseLines: [], commentLines: [], headerLines: [] };
   }
   
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: SPLIT POR TAGS É SOBERANO — ACONTECE PRIMEIRO
-  // Se existem tags, o split determinístico é a ÚNICA fonte de verdade
-  // Nenhuma heurística pode sobrescrever
+  // PRIORIDADE 1: MARCADORES (=, -, >) — DETERMINÍSTICO
+  // Se encontrar qualquer marcador, usar modo determinístico
+  // ════════════════════════════════════════════════════════════════════════════
+  const markerResult = splitByMarkers(content);
+  
+  if (markerResult.hasMarkers) {
+    // LOG obrigatório
+    const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
+    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${markerResult.trainingLines.length} commentLines=${markerResult.commentLines.length} invalidLines=${markerResult.invalidLines.length}`);
+    
+    // REGRA: Linhas sem marcador no modo determinístico vão para treino (fallback interno)
+    // Isso permite transição gradual sem quebrar textos existentes
+    const exerciseLines = [
+      ...markerResult.headerLines.map(h => `⚙️ ${h}`), // Header com emoji para destaque
+      ...markerResult.trainingLines,
+      ...markerResult.invalidLines, // Linhas sem marcador vão para treino
+    ].filter(l => l.length > 0);
+    
+    return {
+      exerciseLines,
+      commentLines: markerResult.commentLines,
+      headerLines: markerResult.headerLines,
+    };
+  }
+  
+  // ════════════════════════════════════════════════════════════════════════════
+  // PRIORIDADE 2: TAGS ([TREINO], [COMENTÁRIO]) — SPLIT POR REGIÃO
   // ════════════════════════════════════════════════════════════════════════════
   const { treinoText, comentarioText, hasTags } = splitByTags(content);
   
   if (hasTags) {
-    // REGRA ABSOLUTA: Comentário NUNCA passa por parser/classificador
-    // Treino = exerciseLines (já limpo, sem comentário)
-    // Comentário = commentLines (string pura, sem tocar)
     const exerciseLines = treinoText
       .split('\n')
       .map(l => l.trim())
@@ -457,21 +521,23 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
       .map(l => l.trim())
       .filter(l => l.length > 0);
     
-    // LOG: [TRAIN_PARSE_INPUT] - confirmar que só treino entra no parser
+    // LOG
     const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-    console.log(`[TRAIN_PARSE_INPUT] block="${blockSnippet}..." exerciseCount=${exerciseLines.length} commentCount=${commentLines.length}`);
+    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${exerciseLines.length} commentLines=${commentLines.length} invalidLines=0`);
     
     return { exerciseLines, commentLines };
   }
   
-  // 2. Fallback: heurística por padrões (texto sem tags)
+  // ════════════════════════════════════════════════════════════════════════════
+  // PRIORIDADE 3: HEURÍSTICA — FALLBACK FINAL
+  // ════════════════════════════════════════════════════════════════════════════
   const lines = content.split('\n');
   const exerciseLines: string[] = [];
   const commentLines: string[] = [];
   
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) continue; // Ignorar linhas vazias
+    if (!trimmed) continue;
     
     if (isCommentLine(trimmed)) {
       commentLines.push(trimmed);

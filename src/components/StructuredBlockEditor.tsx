@@ -126,34 +126,43 @@ export function isBlockValid(block: StructuredBlock): boolean {
 
 export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBlock {
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: TAGS SÃO FONTE DE VERDADE
-  // O content DEVE usar tags [TREINO] e [COMENTÁRIO] para separação determinística
-  // Isso garante que o comentário NUNCA apareça como treino na UI
+  // MVP0: MARCADORES DETERMINÍSTICOS (=, -, >)
+  // O content usa marcadores para separação 100% determinística:
+  // - `=` → Header técnico (formato/duração)
+  // - `-` → Item executável de treino
+  // - `>` → Comentário do coach
   // ════════════════════════════════════════════════════════════════════════════
   
-  // Gera o content a partir dos items estruturados
-  const itemsContent = structured.items
-    .filter(item => item.quantity !== '' && item.movement.trim())
-    .map(item => {
-      const base = `${item.quantity} ${item.unit} ${item.movement}`;
-      return item.notes ? `${base} (${item.notes})` : base;
-    })
-    .join('\n');
-
-  // ════════════════════════════════════════════════════════════════════════════
-  // MVP0 FIX: Usar tags [TREINO]/[COMENTÁRIO] para separação soberana
-  // NUNCA concatenar comentário diretamente no treino sem tags
-  // ════════════════════════════════════════════════════════════════════════════
-  let fullContent: string;
-  const hasCoachNotes = structured.coachNotes?.trim();
+  const lines: string[] = [];
   
-  if (hasCoachNotes) {
-    // Usar tags para separação determinística
-    fullContent = `[TREINO]\n${itemsContent}\n[COMENTÁRIO]\n${structured.coachNotes.trim()}`;
-  } else {
-    // Sem comentário - só treino (sem tag necessária)
-    fullContent = itemsContent;
+  // Adicionar header se tiver formato
+  if (structured.format && structured.format !== 'outro') {
+    const formatLabel = BLOCK_FORMATS.find(f => f.value === structured.format)?.label || structured.format;
+    lines.push(`= ${formatLabel}`);
   }
+  
+  // Gerar itens de treino com marcador `-`
+  for (const item of structured.items) {
+    if (item.quantity !== '' && item.movement.trim()) {
+      const base = `${item.quantity} ${item.unit} ${item.movement}`;
+      const fullLine = item.notes ? `${base} (${item.notes})` : base;
+      lines.push(`- ${fullLine}`);
+    }
+  }
+  
+  // Adicionar comentários com marcador `>`
+  const hasCoachNotes = structured.coachNotes?.trim();
+  if (hasCoachNotes) {
+    // Cada linha de comentário recebe o marcador `>`
+    const noteLines = structured.coachNotes.trim().split('\n');
+    for (const noteLine of noteLines) {
+      if (noteLine.trim()) {
+        lines.push(`> ${noteLine.trim()}`);
+      }
+    }
+  }
+
+  const fullContent = lines.join('\n');
 
   // Mapear tipo para o formato do WorkoutBlock
   const typeMap: Record<string, WorkoutBlock['type']> = {
@@ -163,8 +172,8 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
     especifico: 'especifico',
     core: 'core',
     corrida: 'corrida',
-    bike: 'conditioning', // bike mapeia para conditioning
-    remo: 'conditioning', // remo mapeia para conditioning
+    bike: 'conditioning',
+    remo: 'conditioning',
   };
 
   return {
@@ -179,68 +188,96 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
 
 export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: TAGS SÃO FONTE DE VERDADE
-  // Se o content usa tags [TREINO]/[COMENTÁRIO], usar split determinístico
+  // MVP0: MARCADORES DETERMINÍSTICOS (=, -, >) TÊM PRIORIDADE
+  // Depois tags [TREINO]/[COMENTÁRIO], depois fallback legado
   // ════════════════════════════════════════════════════════════════════════════
   
-  let trainingContent = block.content;
+  const lines = block.content.split('\n');
   let coachNotes = '';
+  const trainingLines: string[] = [];
+  const headerLines: string[] = [];
+  let hasMarkers = false;
   
-  // Detectar tags e fazer split determinístico
-  const hasTreinoTag = block.content.includes('[TREINO]');
-  const hasComentarioTag = block.content.includes('[COMENTÁRIO]');
-  
-  if (hasTreinoTag || hasComentarioTag) {
-    if (hasTreinoTag && hasComentarioTag) {
-      // Caso ideal: ambas as tags existem
-      const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
-      const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
-      const comentarioContentStart = comentarioStart + '[COMENTÁRIO]'.length;
-      
-      trainingContent = block.content.slice(treinoStart, comentarioStart).trim();
-      coachNotes = block.content.slice(comentarioContentStart).trim();
-    } else if (hasTreinoTag) {
-      // Só [TREINO]: tudo depois é treino
-      const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
-      trainingContent = block.content.slice(treinoStart).trim();
-    } else if (hasComentarioTag) {
-      // Só [COMENTÁRIO]: tudo antes é treino, depois é comentário
-      const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
-      trainingContent = block.content.slice(0, comentarioStart).trim();
-      coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
-    }
-  } else {
-    // Fallback: detectar notas com emoji (legado)
-    const lines = block.content.split('\n');
-    const trainingLines: string[] = [];
+  // PRIORIDADE 1: Detectar marcadores (=, -, >)
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
     
-    for (const line of lines) {
-      if (line.startsWith('📝') || line.toLowerCase().includes('nota:')) {
-        coachNotes = line.replace(/^📝\s*/, '').replace(/^nota:\s*/i, '');
-      } else {
-        trainingLines.push(line);
-      }
+    if (trimmed.startsWith('=')) {
+      hasMarkers = true;
+      headerLines.push(trimmed.slice(1).trim());
+    } else if (trimmed.startsWith('-')) {
+      hasMarkers = true;
+      trainingLines.push(trimmed.slice(1).trim());
+    } else if (trimmed.startsWith('>')) {
+      hasMarkers = true;
+      // Concatenar linhas de comentário
+      const noteText = trimmed.slice(1).trim();
+      coachNotes = coachNotes ? `${coachNotes}\n${noteText}` : noteText;
+    } else if (!hasMarkers) {
+      // Se ainda não encontrou marcadores, acumular como treino
+      trainingLines.push(trimmed);
+    } else {
+      // Linha sem marcador em modo marcador: vai para treino
+      trainingLines.push(trimmed);
     }
-    trainingContent = trainingLines.join('\n');
   }
   
-  // Parse do trainingContent para extrair items
-  const lines = trainingContent.split('\n').filter(l => l.trim());
+  // Se não encontrou marcadores, tentar tags legadas
+  if (!hasMarkers) {
+    const hasTreinoTag = block.content.includes('[TREINO]');
+    const hasComentarioTag = block.content.includes('[COMENTÁRIO]');
+    
+    if (hasTreinoTag || hasComentarioTag) {
+      trainingLines.length = 0; // Limpar
+      let trainingContent = block.content;
+      
+      if (hasTreinoTag && hasComentarioTag) {
+        const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
+        const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+        trainingContent = block.content.slice(treinoStart, comentarioStart).trim();
+        coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
+      } else if (hasTreinoTag) {
+        const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
+        trainingContent = block.content.slice(treinoStart).trim();
+      } else if (hasComentarioTag) {
+        const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+        trainingContent = block.content.slice(0, comentarioStart).trim();
+        coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
+      }
+      
+      for (const l of trainingContent.split('\n')) {
+        if (l.trim()) trainingLines.push(l.trim());
+      }
+    } else {
+      // Fallback: emoji legado
+      trainingLines.length = 0;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('📝') || trimmed.toLowerCase().startsWith('nota:')) {
+          coachNotes = trimmed.replace(/^📝\s*/, '').replace(/^nota:\s*/i, '');
+        } else if (trimmed) {
+          trainingLines.push(trimmed);
+        }
+      }
+    }
+  }
+  
+  // Parse das trainingLines para extrair items estruturados
   const items: WorkoutItem[] = [];
 
-  for (const line of lines) {
-    // Tenta parsear como item estruturado
+  for (const line of trainingLines) {
+    // Tenta parsear como item estruturado: "10 reps Pull-ups (notas)"
     const match = line.match(/^(\d+(?:\.\d+)?)\s*(reps?|m|km|cal|min|sec|rounds?|x)\s+(.+?)(?:\s*\((.+)\))?$/i);
     if (match) {
       items.push({
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         quantity: parseFloat(match[1]),
-        unit: match[2].toLowerCase().replace(/s$/, ''), // normaliza plural
+        unit: match[2].toLowerCase().replace(/s$/, ''),
         movement: match[3].trim(),
         notes: match[4]?.trim(),
       });
     } else if (line.trim()) {
-      // Linha não parseada - adiciona como movimento sem quantidade
       items.push({
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         quantity: 1,
@@ -250,16 +287,18 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
     }
   }
 
-  // Se não encontrou items, adiciona um vazio
   if (items.length === 0) {
     items.push(createEmptyItem());
   }
 
+  // Detectar formato a partir do header ou do conteúdo
+  const allContent = [...headerLines, ...trainingLines].join(' ');
+  
   return {
     id: block.id,
     title: block.title,
     type: block.type,
-    format: detectFormat(trainingContent),
+    format: detectFormat(allContent),
     items,
     coachNotes,
     isMainWod: block.isMainWod,
