@@ -126,19 +126,20 @@ export function isBlockValid(block: StructuredBlock): boolean {
 
 export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBlock {
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0: MARCADORES DETERMINÍSTICOS (=, -, >)
-  // O content usa marcadores para separação 100% determinística:
-  // - `=` → Header técnico (formato/duração)
+  // MVP0: MARCADORES DETERMINÍSTICOS
+  // - `= TREINO` → Início do bloco de treino
   // - `-` → Item executável de treino
-  // - `>` → Comentário do coach
+  // - `> COMENTÁRIO` → Início de comentário do coach
   // ════════════════════════════════════════════════════════════════════════════
   
   const lines: string[] = [];
   
-  // Adicionar header se tiver formato
+  // Iniciar bloco de treino com marcador = TREINO
   if (structured.format && structured.format !== 'outro') {
     const formatLabel = BLOCK_FORMATS.find(f => f.value === structured.format)?.label || structured.format;
-    lines.push(`= ${formatLabel}`);
+    lines.push(`= TREINO ${formatLabel}`);
+  } else {
+    lines.push('= TREINO');
   }
   
   // Gerar itens de treino com marcador `-`
@@ -150,10 +151,11 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
     }
   }
   
-  // Adicionar comentários com marcador `>`
+  // Adicionar comentários com marcador `> COMENTÁRIO`
   const hasCoachNotes = structured.coachNotes?.trim();
   if (hasCoachNotes) {
-    // Cada linha de comentário recebe o marcador `>`
+    lines.push('> COMENTÁRIO');
+    // Cada linha de comentário adicional recebe o marcador `>`
     const noteLines = structured.coachNotes.trim().split('\n');
     for (const noteLine of noteLines) {
       if (noteLine.trim()) {
@@ -198,10 +200,28 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
   const headerLines: string[] = [];
   let hasMarkers = false;
   
-  // PRIORIDADE 1: Detectar marcadores (=, -, >)
+  // PRIORIDADE 1: Detectar marcadores (= TREINO, -, > COMENTÁRIO)
+  let inCommentSection = false;
+  
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+    
+    // Detectar = TREINO (início do treino)
+    if (/^=\s*TREINO\b/i.test(trimmed)) {
+      hasMarkers = true;
+      inCommentSection = false;
+      const rest = trimmed.replace(/^=\s*TREINO\s*/i, '').trim();
+      if (rest) headerLines.push(rest);
+      continue;
+    }
+    
+    // Detectar > COMENTÁRIO (início do comentário)
+    if (/^>\s*COMENT[ÁA]RIO\b/i.test(trimmed)) {
+      hasMarkers = true;
+      inCommentSection = true;
+      continue;
+    }
     
     if (trimmed.startsWith('=')) {
       hasMarkers = true;
@@ -211,14 +231,15 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
       trainingLines.push(trimmed.slice(1).trim());
     } else if (trimmed.startsWith('>')) {
       hasMarkers = true;
-      // Concatenar linhas de comentário
+      inCommentSection = true;
       const noteText = trimmed.slice(1).trim();
-      coachNotes = coachNotes ? `${coachNotes}\n${noteText}` : noteText;
+      if (noteText) coachNotes = coachNotes ? `${coachNotes}\n${noteText}` : noteText;
+    } else if (inCommentSection) {
+      // Linha sem marcador em seção de comentário
+      coachNotes = coachNotes ? `${coachNotes}\n${trimmed}` : trimmed;
     } else if (!hasMarkers) {
-      // Se ainda não encontrou marcadores, acumular como treino
       trainingLines.push(trimmed);
     } else {
-      // Linha sem marcador em modo marcador: vai para treino
       trainingLines.push(trimmed);
     }
   }

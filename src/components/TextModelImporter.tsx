@@ -506,12 +506,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="font-medium text-foreground">Estrutura esperada:</p>
-              <div className="grid gap-1.5 mt-2">
-                <p><span className="font-medium">SEGUNDA</span> — início do dia</p>
-                <p><span className="font-medium">Aquecimento / Força / WOD</span> — nome do bloco</p>
-                <p><span className="font-medium">[TREINO]</span> — início do treino executável</p>
-                <p><span className="font-medium">[COMENTÁRIO]</span> — observações do coach</p>
+              <p className="font-medium text-foreground">Estrutura determinística:</p>
+              <div className="grid gap-1.5 mt-2 font-mono">
+                <p><span className="font-semibold">SEGUNDA</span> — início do dia</p>
+                <p><span className="font-semibold">Nome do Bloco</span> — título do treino</p>
+                <p><span className="font-semibold text-primary">= TREINO</span> — início do treino</p>
+                <p><span className="font-semibold text-primary">- item</span> — exercício (com métrica)</p>
+                <p><span className="font-semibold text-primary">&gt; COMENTÁRIO</span> — observação</p>
               </div>
             </div>
 
@@ -580,40 +581,48 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         <AlertDialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Modelo de Texto</AlertDialogTitle>
+              <AlertDialogTitle>Modelo Determinístico</AlertDialogTitle>
               <AlertDialogDescription>
-                Use este modelo como base para criar seus treinos:
+                Use este modelo para garantir que o sistema interprete corretamente:
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="p-3 rounded-lg bg-muted/50 font-mono text-xs whitespace-pre-wrap">
-{`SEGUNDA-FEIRA
+{`SEGUNDA
 
 Aquecimento
-[TREINO]
-500m Run leve
-[COMENTÁRIO]
-Foco na mobilidade
 
-⸻
+= TREINO
+- 500 m Run leve Z2
+- 2x10 Air Squats
+
+> COMENTÁRIO
+> Foco na mobilidade
+
 
 WOD
-[TREINO]
-For Time: 21-15-9
-Thrusters (43/30kg)
-Pull-ups
-[COMENTÁRIO]
-Cap 12 minutos
 
-⸻
+= TREINO
+- For Time: 21-15-9
+- Thrusters @43/30 kg
+- Pull-ups
 
-TERÇA-FEIRA
+> COMENTÁRIO
+> Cap 12 min. Manter ritmo.
+
+
+TERÇA
 
 Descanso`}
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1 mt-2">
+              <p><span className="font-mono font-semibold">=</span> TREINO → início do bloco</p>
+              <p><span className="font-mono font-semibold">-</span> item → cada exercício</p>
+              <p><span className="font-mono font-semibold">&gt;</span> comentário → observação do coach</p>
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Fechar</AlertDialogCancel>
               <AlertDialogAction onClick={() => {
-                navigator.clipboard.writeText(`SEGUNDA-FEIRA\n\nAquecimento\n[TREINO]\n500m Run leve\n[COMENTÁRIO]\nFoco na mobilidade\n\n⸻\n\nWOD\n[TREINO]\nFor Time: 21-15-9\nThrusters (43/30kg)\nPull-ups\n[COMENTÁRIO]\nCap 12 minutos\n\n⸻\n\nTERÇA-FEIRA\n\nDescanso`);
+                navigator.clipboard.writeText(`SEGUNDA\n\nAquecimento\n\n= TREINO\n- 500 m Run leve Z2\n- 2x10 Air Squats\n\n> COMENTÁRIO\n> Foco na mobilidade\n\n\nWOD\n\n= TREINO\n- For Time: 21-15-9\n- Thrusters @43/30 kg\n- Pull-ups\n\n> COMENTÁRIO\n> Cap 12 min. Manter ritmo.\n\n\nTERÇA\n\nDescanso`);
                 setTemplateCopied(true);
                 setTimeout(() => setTemplateCopied(false), 2000);
               }}>

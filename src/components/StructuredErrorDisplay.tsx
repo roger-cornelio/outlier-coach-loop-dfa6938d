@@ -126,15 +126,30 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-// CONSTANTE FIXA — Texto oficial aprovado (única versão permitida)
-const MODEL_RECOMMENDED_TEMPLATE = `DIA_DA_SEMANA (ex: SEGUNDA)
-NOME_DO_BLOCO (ex: Força / Condicionamento / Corrida)
+// CONSTANTE FIXA — Modelo determinístico oficial (única versão permitida)
+// O motor NÃO interpreta texto. Ele APENAS classifica por MARCADOR.
+const MODEL_RECOMMENDED_TEMPLATE = `SEGUNDA
 
-[TREINO]
-<DURAÇÃO ou VOLUME> <MODALIDADE> <INTENSIDADE OBJETIVA>
+NOME_DO_BLOCO
 
-[COMENTÁRIO]
-<PERCEPÇÃO / SENSAÇÃO / OBSERVAÇÃO>`;
+= TREINO
+- <linha de treino com métrica objetiva>
+- <linha de treino com métrica objetiva>
+
+> COMENTÁRIO
+> <observação do coach>
+
+
+TERÇA
+
+NOME_DO_BLOCO
+
+= TREINO
+- <linha de treino>
+- <linha de treino>
+
+> COMENTÁRIO
+> <observação do coach>`;
 
 interface RecommendedModelBlockProps {
   // Props removidas intencionalmente — modelo é FIXO e não depende de contexto
@@ -204,18 +219,36 @@ export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
             </pre>
           </div>
           
-          {/* Unidades recomendadas */}
+          {/* Marcadores obrigatórios */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground/80">📏 Unidades recomendadas no OUTLIER</p>
-            <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
-              <p><span className="font-medium">Corrida / Cardio:</span> tempo (min), distância (m/km), intensidade (PSE, Zona, Pace)</p>
-              <p><span className="font-medium">Força:</span> séries x repetições, carga (% ou kg)</p>
-              <p><span className="font-medium">Metcon / Condicionamento:</span> tempo (AMRAP, EMOM), repetições, movimentos claros</p>
-              <p><span className="font-medium">Acessórios / Mobilidade:</span> tempo ou repetições</p>
+            <p className="text-xs font-semibold text-foreground/80">🔒 Marcadores obrigatórios</p>
+            <div className="text-xs text-foreground/70 space-y-1.5 pl-2 font-mono">
+              <p><span className="font-semibold text-primary">=</span> TREINO → início do bloco de treino</p>
+              <p><span className="font-semibold text-primary">-</span> item de treino → cada exercício</p>
+              <p><span className="font-semibold text-primary">&gt;</span> COMENTÁRIO → observação do coach</p>
             </div>
-            <p className="text-xs text-muted-foreground italic pt-1 border-t border-border/50">
-              Use unidades objetivas. Sensações ficam no comentário.
-            </p>
+          </div>
+          
+          {/* Métricas aceitas */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-foreground/80">📏 Métricas obrigatórias por modalidade</p>
+            <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
+              <p><span className="font-medium">🏃 Corrida:</span> tempo (30 min), distância (5 km), intensidade (Z2, PSE 5, pace 5:00/km)</p>
+              <p><span className="font-medium">🏋️ Força:</span> séries x reps (5x5), carga (75% ou 60 kg), rest (2:00)</p>
+              <p><span className="font-medium">🔥 Metcon:</span> formato (EMOM 12, AMRAP 15, For Time), reps explícitas</p>
+              <p><span className="font-medium">🧘 Acessórios:</span> tempo (3 min) ou reps (2x15)</p>
+            </div>
+          </div>
+          
+          {/* Regras determinísticas */}
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <p className="text-xs font-semibold text-destructive/80">⚠️ Regras absolutas</p>
+            <div className="text-xs text-foreground/70 space-y-1 pl-2">
+              <p>• Linha de treino SEM métrica = erro</p>
+              <p>• Comentário SEM marcador <span className="font-mono">&gt;</span> = erro</p>
+              <p>• Texto sem marcador segue o marcador anterior</p>
+              <p>• O sistema não move texto entre treino e comentário</p>
+            </div>
           </div>
         </div>
       )}
