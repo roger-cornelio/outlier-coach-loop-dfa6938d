@@ -1,7 +1,27 @@
 /**
  * workoutValidation.ts - Validação obrigatória de treinos
  * 
- * REGRA DEFINITIVA:
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * REGRA DEFINITIVA: RENDER ≠ VALIDAÇÃO
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * 1. RENDER: Acontece SEMPRE que existir título ou conteúdo
+ *    - Erros NUNCA podem impedir renderização
+ *    - Blocos SEMPRE aparecem, mesmo com erros
+ * 
+ * 2. VALIDAÇÃO: Afeta APENAS:
+ *    - Estilo visual (badge de erro, borda amarela)
+ *    - Bloqueio de PUBLICAÇÃO
+ *    - NUNCA afeta edição ou visualização
+ * 
+ * 3. LOGS OBRIGATÓRIOS:
+ *    - [RENDER_BLOCK]: Confirma que bloco foi renderizado
+ *    - [VALIDATION_ERROR]: Registra erros de validação
+ *    - [PUBLISH_GUARD]: Registra decisão de bloqueio de publicação
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * REGRAS ADICIONAIS:
  * - É PROIBIDO salvar/publicar treino sem scheduled_date
  * - Treinos legados sem data devem ser logados e ignorados
  * - Treinos com data passada são automaticamente arquivados (read-only)
@@ -36,17 +56,25 @@ export function validateWorkoutForSave(
   // REGRA 1: Data obrigatória
   if (!scheduledDate) {
     errors.push('Data de agendamento é obrigatória. Selecione uma data antes de salvar.');
+    console.log('[VALIDATION_ERROR] line=0 reason="scheduled_date ausente"');
   }
 
   // REGRA 2: Verificar se workouts existe
   if (!workouts || workouts.length === 0) {
     errors.push('Nenhum treino para salvar.');
+    console.log('[VALIDATION_ERROR] line=0 reason="Nenhum treino para salvar"');
   }
 
   // REGRA 3: Título recomendado
   if (!title || title.trim().length < 3) {
     warnings.push('Título não informado. Será usado um título padrão.');
   }
+
+  // [PUBLISH_GUARD] Log de resultado
+  console.log('[PUBLISH_GUARD] validateWorkoutForSave', {
+    blocked: errors.length > 0,
+    errors: errors.length,
+  });
 
   return {
     isValid: errors.length === 0,
@@ -70,19 +98,28 @@ export function validateWorkoutForPublish(
   // REGRA: Verificar se workouts existe
   if (!workouts || workouts.length === 0) {
     errors.push('Nenhum treino para publicar.');
+    console.log('[VALIDATION_ERROR] line=0 reason="Nenhum treino para publicar"');
   }
 
   // REGRA: Pelo menos um atleta selecionado
   if (!selectedAthletes || selectedAthletes.length === 0) {
     errors.push('Selecione pelo menos um atleta.');
+    console.log('[VALIDATION_ERROR] line=0 reason="Nenhum atleta selecionado"');
   }
 
   // REGRA: week_start/scheduledDate deve existir
   if (!weekStartOrScheduledDate) {
     errors.push('Semana não definida. Salve a programação com uma semana selecionada.');
+    console.log('[VALIDATION_ERROR] line=0 reason="Semana não definida"');
   }
 
   // NOTA: Não bloqueamos por data passada - permitimos publicar qualquer semana
+
+  // [PUBLISH_GUARD] Log de resultado
+  console.log('[PUBLISH_GUARD] validateWorkoutForPublish', {
+    blocked: errors.length > 0,
+    errors: errors.length,
+  });
 
   return {
     isValid: errors.length === 0,

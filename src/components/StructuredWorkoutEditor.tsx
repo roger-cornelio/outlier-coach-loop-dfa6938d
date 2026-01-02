@@ -550,6 +550,15 @@ export function StructuredWorkoutEditor({
                 const dayLabel = DAYS.find(d => d.value === day.day)?.label || day.day;
                 const dayValidation = validation.dayValidations[day.day];
 
+                // [RENDER_CHECK] Log obrigatório - dia SEMPRE renderizado
+                console.log("[RENDER_CHECK]", {
+                  day: dayLabel,
+                  blocksCount: day.blocks.length,
+                  validationErrors: dayValidation?.errorCount || 0,
+                  isRestDay: day.isRestDay || false,
+                });
+
+                // REGRA: Dia SEMPRE renderizado, erros afetam APENAS estilo visual e publicação
                 return (
                   <div key={day.day} className="border border-border rounded-lg overflow-hidden">
                     {/* Header do dia */}
@@ -650,30 +659,34 @@ export function StructuredWorkoutEditor({
                         </div>
                       )}
                       
-                      {day.blocks.map((block) => (
-                        <div key={block.id} className="space-y-2">
-                          {/* Botões Principal/Benchmark acima do editor */}
-                          {/* MVP0: Ocultar botão Principal para dias de descanso */}
-                          {!day.isRestDay && (
-                            <div className="flex items-center gap-2 justify-end">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant={block.isMainWod ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => toggleMainWod(day.day, block.id)}
-                                      className={`h-7 text-xs ${block.isMainWod ? 'bg-primary' : ''}`}
-                                    >
-                                      <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                      Principal
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Marcar como WOD Principal do dia</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                      {day.blocks.map((block) => {
+                        // [RENDER_BLOCK] Log obrigatório - bloco SEMPRE renderizado
+                        console.log(`[RENDER_BLOCK] title="${block.title || 'Bloco'}" rendered=true`);
+                        
+                        return (
+                          <div key={block.id} className="space-y-2">
+                            {/* Botões Principal/Benchmark acima do editor */}
+                            {/* MVP0: Ocultar botão Principal para dias de descanso */}
+                            {!day.isRestDay && (
+                              <div className="flex items-center gap-2 justify-end">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant={block.isMainWod ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => toggleMainWod(day.day, block.id)}
+                                        className={`h-7 text-xs ${block.isMainWod ? 'bg-primary' : ''}`}
+                                      >
+                                        <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                        Principal
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Marcar como WOD Principal do dia</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
 
                               {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
                             </div>
@@ -688,7 +701,8 @@ export function StructuredWorkoutEditor({
                             onToggleExpand={() => toggleBlockExpand(block.id)}
                           />
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
