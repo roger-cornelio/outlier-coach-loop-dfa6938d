@@ -12,7 +12,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trash2, HelpCircle, Calendar, Moon } from "lucide-react";
+import { Plus, Save, Send, AlertTriangle, CheckCircle, Star, Trash2, HelpCircle, Calendar, Moon, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -680,6 +680,32 @@ export function StructuredWorkoutEditor({
                           }" rendered=true`,
                         );
 
+                        // ═══════════════════════════════════════════════════════════
+                        // NOTAS/COMENTÁRIO: Renderização visual discreta
+                        // Sem header, sem ações, sem container de bloco padrão
+                        // ═══════════════════════════════════════════════════════════
+                        if (block.type === "notas") {
+                          const commentText = block.coachNotes || "";
+                          if (!commentText.trim()) return null;
+                          
+                          return (
+                            <div
+                              key={block.id}
+                              className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
+                            >
+                              <div className="flex items-start gap-2">
+                                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                  {commentText}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // ═══════════════════════════════════════════════════════════
+                        // TREINO: Bloco funcional completo com header e ações
+                        // ═══════════════════════════════════════════════════════════
                         return (
                           <div key={block.id} className="space-y-2">
                             {/* Botões Principal/Benchmark acima do editor */}
