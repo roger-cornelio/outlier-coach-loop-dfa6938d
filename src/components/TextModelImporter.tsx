@@ -946,6 +946,21 @@ Descanso`}
                                       </p>
                                     )}
                                   </div>
+                                  
+                                  {/* MVP0: Comentário do coach como sub-bloco visual */}
+                                  {Array.isArray(block.coachNotes) && block.coachNotes.length > 0 && (
+                                    <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
+                                      <div className="flex items-start gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <div className="space-y-1">
+                                          <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário</span>
+                                          {block.coachNotes.map((note, idx) => (
+                                            <p key={idx} className="text-xs text-muted-foreground italic truncate">{note}</p>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1162,13 +1177,21 @@ Descanso`}
 
                         {/* SEPARAÇÃO DETERMINÍSTICA: TREINO vs COMENTÁRIO */}
                         {(() => {
-                          const { exerciseLines, commentLines } = separateBlockContent(block.content || '');
+                          const { exerciseLines, commentLines: contentCommentLines } = separateBlockContent(block.content || '');
+                          
+                          // MVP0: Priorizar coachNotes do bloco (parser) sobre separateBlockContent
+                          // coachNotes pode ser array (ParsedBlock) ou já serializado no content
+                          const blockCoachNotes = (block as any).coachNotes;
+                          const commentLines = Array.isArray(blockCoachNotes) && blockCoachNotes.length > 0
+                            ? blockCoachNotes
+                            : contentCommentLines;
                           
                           // [UI_BLOCK] Log obrigatório
                           console.log("[UI_BLOCK]", {
                             title: block.title,
                             hasTraining: exerciseLines.length,
                             hasComment: commentLines.length,
+                            source: Array.isArray(blockCoachNotes) && blockCoachNotes.length > 0 ? 'coachNotes' : 'content',
                           });
 
                           return (
@@ -1187,16 +1210,21 @@ Descanso`}
                                 )}
                               </div>
 
-                              {/* CAIXA 2: COMENTÁRIO DO COACH - SEMPRE VISÍVEL */}
-                              <div className="text-xs text-muted-foreground p-2 rounded bg-muted/30 border border-border/40 space-y-1">
-                                <span className="text-xs font-medium text-muted-foreground/70">💬 Comentário do Coach</span>
-                                {commentLines.length > 0 ? (
-                                  commentLines.map((line, idx) => (
-                                    <p key={`${block.id || blockIndex}-cm-${idx}`} className="italic">{normalizeRestLineForDisplay(line)}</p>
-                                  ))
-                                ) : (
-                                  <p className="text-muted-foreground/50 italic">Sem comentário.</p>
-                                )}
+                              {/* CAIXA 2: COMENTÁRIO DO COACH - visual de sub-bloco */}
+                              <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário do Coach</span>
+                                    {commentLines.length > 0 ? (
+                                      commentLines.map((line, idx) => (
+                                        <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground italic">{normalizeRestLineForDisplay(line)}</p>
+                                      ))
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground/50 italic">Sem comentário</p>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           );
