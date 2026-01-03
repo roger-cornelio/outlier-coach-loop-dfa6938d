@@ -1618,6 +1618,11 @@ const GLOBAL_TITLE_BLACKLIST = [
   /zona\s*\d/i,  // "Zona 2" não é título
   /^\d/,  // Linhas que começam com número
   /^#/,   // Linhas que começam com #
+  /^>/,   // Linhas que começam com > (marcador de comentário)
+  /^=\s*COMENT[AÁ]RIO/i,  // = COMENTÁRIO nunca é título
+  /^>\s*COMENT[AÁ]RIO/i,  // > COMENTÁRIO nunca é título
+  /^COMENT[AÁ]RIO\s*:?$/i,  // COMENTÁRIO sozinho nunca é título
+  /^\[COMENT[AÁ]RIO\]/i,  // [COMENTÁRIO] nunca é título
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2376,23 +2381,50 @@ export function parseStructuredText(text: string): ParseResult {
     if (!line) continue;
     
     // ════════════════════════════════════════════════════════════════════════════
-    // MVP0: DETECTAR TAGS [TREINO] E [COMENTÁRIO]
+    // MVP0: DETECTAR TAGS [TREINO] E [COMENTÁRIO] / MARCADORES = TREINO e > COMENTÁRIO
     // ════════════════════════════════════════════════════════════════════════════
     // Tags mudam o modo de interpretação das linhas seguintes.
-    // [TREINO] = linhas são tratadas como exercícios puros
-    // [COMENTÁRIO] = linhas são tratadas como notas (sem warning de mistura)
+    // [TREINO] / = TREINO = linhas são tratadas como exercícios puros
+    // [COMENTÁRIO] / > COMENTÁRIO = linhas são tratadas como notas (sem warning de mistura)
+    // REGRA CIRÚRGICA: "COMENTÁRIO" NUNCA cria novo bloco - anexa ao bloco anterior
     // ════════════════════════════════════════════════════════════════════════════
-    if (/^\[TREINO\]$/i.test(line.trim())) {
-      console.log('[TAG_MODE] → TREINO');
+    const trimmedLine = line.trim();
+    
+    // Detectar marcadores de TREINO: [TREINO] ou = TREINO
+    if (/^\[TREINO\]$/i.test(trimmedLine) || /^=\s*TREINO\s*$/i.test(trimmedLine)) {
+      console.log('[TAG_MODE] → TREINO (marcador detectado):', trimmedLine);
       inTrainingTagMode = true;
       inCommentTagMode = false;
       continue;
     }
     
-    if (/^\[COMENT[AÁ]RIO\]/i.test(line.trim())) {
-      console.log('[TAG_MODE] → COMENTÁRIO');
+    // Detectar marcadores de COMENTÁRIO: [COMENTÁRIO] ou > COMENTÁRIO ou = COMENTÁRIO ou COMENTÁRIO:
+    // REGRA CRÍTICA: NUNCA criar novo bloco, apenas ativar modo de comentário
+    if (/^\[COMENT[AÁ]RIO\]/i.test(trimmedLine) || 
+        /^>\s*COMENT[AÁ]RIO\s*$/i.test(trimmedLine) ||
+        /^=\s*COMENT[AÁ]RIO\s*$/i.test(trimmedLine) ||
+        /^COMENT[AÁ]RIO\s*:?\s*$/i.test(trimmedLine)) {
+      console.log('[TAG_MODE] → COMENTÁRIO (marcador detectado, NÃO cria bloco):', trimmedLine);
       inCommentTagMode = true;
       inTrainingTagMode = false;
+      // NÃO fazer continue aqui se não tiver bloco - garantir que bloco existe
+      if (!currentBlock) {
+        // Se não há bloco, criar um vazio para receber os comentários
+        // Isso é raro mas pode acontecer se o texto começar com "> COMENTÁRIO"
+        currentBlock = createNewBlock('', true);
+        isInsideBlock = true;
+      }
+      continue;
+    }
+    
+    // Detectar linhas que começam com ">" (conteúdo de comentário)
+    // Estas linhas vão direto para coachNotes do bloco atual
+    if (/^>\s+/.test(trimmedLine) && currentBlock) {
+      const commentContent = trimmedLine.replace(/^>\s*/, '').trim();
+      if (commentContent) {
+        console.log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
+        currentBlock.coachNotes.push(commentContent);
+      }
       continue;
     }
     
