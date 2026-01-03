@@ -2419,11 +2419,18 @@ export function parseStructuredText(text: string): ParseResult {
     
     // Detectar linhas que começam com ">" (conteúdo de comentário)
     // Estas linhas vão direto para coachNotes do bloco atual
-    if (/^>\s+/.test(trimmedLine) && currentBlock) {
+    // REGRA: ">" com ou sem espaço = comentário
+    if (/^>/.test(trimmedLine)) {
       const commentContent = trimmedLine.replace(/^>\s*/, '').trim();
-      if (commentContent) {
+      if (commentContent && currentBlock) {
         console.log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
         currentBlock.coachNotes.push(commentContent);
+      } else if (commentContent && !currentBlock) {
+        // Se não há bloco atual, criar um para receber o comentário
+        currentBlock = createNewBlock('', true);
+        isInsideBlock = true;
+        currentBlock.coachNotes.push(commentContent);
+        console.log('[COMMENT_LINE] Criado bloco vazio para comentário:', commentContent);
       }
       continue;
     }
