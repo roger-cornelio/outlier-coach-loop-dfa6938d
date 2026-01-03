@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
-  Puzzle, Copy, ArrowLeft, ArrowRight, Save
+  Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
@@ -821,7 +821,32 @@ Descanso`}
                               // [RENDER_BLOCK] Bloco sempre renderizado
                               console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=true`);
                               
-                              // REGRA: Erros afetam APENAS estilo visual, NUNCA condicionam render
+                              // ═══════════════════════════════════════════════════════════
+                              // NOTAS/COMENTÁRIO: Renderização visual discreta
+                              // Sem header, sem ações, sem container de bloco padrão
+                              // ═══════════════════════════════════════════════════════════
+                              if (block.type === "notas") {
+                                const commentText = block.coachNotes?.join('\n') || "";
+                                if (!commentText.trim()) return null;
+                                
+                                return (
+                                  <div
+                                    key={blockIndex}
+                                    className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                        {commentText}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // ═══════════════════════════════════════════════════════════
+                              // TREINO: Bloco funcional completo com header e ações
+                              // ═══════════════════════════════════════════════════════════
                               return (
                                 <div 
                                   key={blockIndex}
