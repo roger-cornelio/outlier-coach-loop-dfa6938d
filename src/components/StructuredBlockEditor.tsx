@@ -1,6 +1,6 @@
 /**
  * StructuredBlockEditor - Editor estruturado de bloco de treino
- * 
+ *
  * MODELO ANTI-BURRO:
  * - Título obrigatório
  * - Tipo obrigatório (dropdown)
@@ -9,29 +9,29 @@
  * - Notas do coach (campo separado, opcional)
  */
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp, Clipboard, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { WorkoutBlock } from '@/types/outlier';
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp, Clipboard, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import type { WorkoutBlock } from "@/types/outlier";
 
 // ============================================
 // TIPOS E CONSTANTES
 // ============================================
 
 // FONTE ÚNICA: Todas as listas vêm de categoryValidation.ts
-import { 
-  BLOCK_CATEGORIES, 
+import {
+  BLOCK_CATEGORIES,
   BLOCK_FORMATS,
   WORKOUT_UNITS,
   QUICK_PRESETS,
-  validateBlockByCategory, 
+  validateBlockByCategory,
   canBlockBeMain,
   getCategoryEmoji,
   VALIDATION_MESSAGES,
@@ -39,7 +39,7 @@ import {
   type BlockCategory,
   type BlockFormat,
   type WorkoutUnit,
-} from '@/utils/categoryValidation';
+} from "@/utils/categoryValidation";
 
 // Re-exportar para compatibilidade com código existente
 export const BLOCK_TYPES = BLOCK_CATEGORIES;
@@ -48,18 +48,44 @@ export { BLOCK_FORMATS, QUICK_PRESETS };
 
 // Movimentos comuns para autocomplete (base inicial)
 const COMMON_MOVEMENTS = [
-  'Pull-ups', 'Push-ups', 'Air Squats', 'Burpees', 'Box Jumps',
-  'Kettlebell Swings', 'Deadlifts', 'Cleans', 'Snatches', 'Thrusters',
-  'Wall Balls', 'Double Unders', 'Toes to Bar', 'Muscle-ups', 'Handstand Push-ups',
-  'Rowing', 'Assault Bike', 'Running', 'Ski Erg', 'Sled Push', 'Sled Pull',
-  'Lunges', 'Step-ups', 'Farmers Carry', 'Sandbag Carry',
-  'Burpee Broad Jump', 'Box Jump Over', 'Devil Press', 'Dumbbell Snatch',
-  'Rope Climbs', 'Pistols', 'GHD Sit-ups', 'Back Extensions',
+  "Pull-ups",
+  "Push-ups",
+  "Air Squats",
+  "Burpees",
+  "Box Jumps",
+  "Kettlebell Swings",
+  "Deadlifts",
+  "Cleans",
+  "Snatches",
+  "Thrusters",
+  "Wall Balls",
+  "Double Unders",
+  "Toes to Bar",
+  "Muscle-ups",
+  "Handstand Push-ups",
+  "Rowing",
+  "Assault Bike",
+  "Running",
+  "Ski Erg",
+  "Sled Push",
+  "Sled Pull",
+  "Lunges",
+  "Step-ups",
+  "Farmers Carry",
+  "Sandbag Carry",
+  "Burpee Broad Jump",
+  "Box Jump Over",
+  "Devil Press",
+  "Dumbbell Snatch",
+  "Rope Climbs",
+  "Pistols",
+  "GHD Sit-ups",
+  "Back Extensions",
 ];
 
 export interface WorkoutItem {
   id: string;
-  quantity: number | '';
+  quantity: number | "";
   unit: string;
   movement: string;
   notes?: string;
@@ -85,32 +111,30 @@ export interface BlockValidationError {
 // ============================================
 // VALIDAÇÃO
 // ============================================
-
 export function validateBlock(block: StructuredBlock): BlockValidationError[] {
   const errors: BlockValidationError[] = [];
 
-  // Título obrigatório
-  if (!block.title.trim()) {
-    errors.push({ field: 'title', message: 'Título é obrigatório' });
+  // comentário NÃO precisa de validação
+  if (block.type === "comment") return [];
+
+  if (!block.title?.trim()) {
+    errors.push({ field: "title", message: "Título é obrigatório" });
   }
 
-  // Tipo obrigatório
   if (!block.type) {
-    errors.push({ field: 'type', message: 'Selecione o tipo do bloco' });
+    errors.push({ field: "type", message: "Selecione o tipo do bloco" });
   }
 
-  // Formato obrigatório
   if (!block.format) {
-    errors.push({ field: 'format', message: 'Selecione o formato do bloco' });
+    errors.push({ field: "format", message: "Selecione o formato do bloco" });
   }
 
-  // Mínimo 1 item válido
-  const validItems = block.items.filter(
-    item => item.quantity !== '' && item.quantity > 0 && item.unit && item.movement.trim()
+  const validItems = (block.items ?? []).filter(
+    (item) => item.quantity !== "" && item.quantity > 0 && item.unit && item.movement?.trim(),
   );
 
   if (validItems.length === 0) {
-    errors.push({ field: 'items', message: 'Adicione pelo menos 1 item válido (quantidade + unidade + movimento)' });
+    errors.push({ field: "items", message: "Adicione pelo menos 1 item válido (quantidade + unidade + movimento)" });
   }
 
   return errors;
@@ -131,32 +155,32 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
   // - `-` → Item executável de treino
   // - `> COMENTÁRIO` → Início de comentário do coach
   // ════════════════════════════════════════════════════════════════════════════
-  
+
   const lines: string[] = [];
-  
+
   // Iniciar bloco de treino com marcador = TREINO
-  if (structured.format && structured.format !== 'outro') {
-    const formatLabel = BLOCK_FORMATS.find(f => f.value === structured.format)?.label || structured.format;
+  if (structured.format && structured.format !== "outro") {
+    const formatLabel = BLOCK_FORMATS.find((f) => f.value === structured.format)?.label || structured.format;
     lines.push(`= TREINO ${formatLabel}`);
   } else {
-    lines.push('= TREINO');
+    lines.push("= TREINO");
   }
-  
+
   // Gerar itens de treino com marcador `-`
   for (const item of structured.items) {
-    if (item.quantity !== '' && item.movement.trim()) {
+    if (item.quantity !== "" && item.movement.trim()) {
       const base = `${item.quantity} ${item.unit} ${item.movement}`;
       const fullLine = item.notes ? `${base} (${item.notes})` : base;
       lines.push(`- ${fullLine}`);
     }
   }
-  
+
   // Adicionar comentários com marcador `> COMENTÁRIO`
   const hasCoachNotes = structured.coachNotes?.trim();
   if (hasCoachNotes) {
-    lines.push('> COMENTÁRIO');
+    lines.push("> COMENTÁRIO");
     // Cada linha de comentário adicional recebe o marcador `>`
-    const noteLines = structured.coachNotes.trim().split('\n');
+    const noteLines = structured.coachNotes.trim().split("\n");
     for (const noteLine of noteLines) {
       if (noteLine.trim()) {
         lines.push(`> ${noteLine.trim()}`);
@@ -164,23 +188,23 @@ export function structuredToWorkoutBlock(structured: StructuredBlock): WorkoutBl
     }
   }
 
-  const fullContent = lines.join('\n');
+  const fullContent = lines.join("\n");
 
   // Mapear tipo para o formato do WorkoutBlock
-  const typeMap: Record<string, WorkoutBlock['type']> = {
-    aquecimento: 'aquecimento',
-    forca: 'forca',
-    conditioning: 'conditioning',
-    especifico: 'especifico',
-    core: 'core',
-    corrida: 'corrida',
-    bike: 'conditioning',
-    remo: 'conditioning',
+  const typeMap: Record<string, WorkoutBlock["type"]> = {
+    aquecimento: "aquecimento",
+    forca: "forca",
+    conditioning: "conditioning",
+    especifico: "especifico",
+    core: "core",
+    corrida: "corrida",
+    bike: "conditioning",
+    remo: "conditioning",
   };
 
   return {
     id: structured.id,
-    type: typeMap[structured.type] || 'conditioning',
+    type: typeMap[structured.type] || "conditioning",
     title: structured.title.trim(),
     content: fullContent,
     isMainWod: structured.isMainWod,
@@ -193,43 +217,43 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
   // MVP0: MARCADORES DETERMINÍSTICOS (=, -, >) TÊM PRIORIDADE
   // Depois tags [TREINO]/[COMENTÁRIO], depois fallback legado
   // ════════════════════════════════════════════════════════════════════════════
-  
-  const lines = block.content.split('\n');
-  let coachNotes = '';
+
+  const lines = block.content.split("\n");
+  let coachNotes = "";
   const trainingLines: string[] = [];
   const headerLines: string[] = [];
   let hasMarkers = false;
-  
+
   // PRIORIDADE 1: Detectar marcadores (= TREINO, -, > COMENTÁRIO)
   let inCommentSection = false;
-  
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    
+
     // Detectar = TREINO (início do treino)
     if (/^=\s*TREINO\b/i.test(trimmed)) {
       hasMarkers = true;
       inCommentSection = false;
-      const rest = trimmed.replace(/^=\s*TREINO\s*/i, '').trim();
+      const rest = trimmed.replace(/^=\s*TREINO\s*/i, "").trim();
       if (rest) headerLines.push(rest);
       continue;
     }
-    
+
     // Detectar > COMENTÁRIO (início do comentário)
     if (/^>\s*COMENT[ÁA]RIO\b/i.test(trimmed)) {
       hasMarkers = true;
       inCommentSection = true;
       continue;
     }
-    
-    if (trimmed.startsWith('=')) {
+
+    if (trimmed.startsWith("=")) {
       hasMarkers = true;
       headerLines.push(trimmed.slice(1).trim());
-    } else if (trimmed.startsWith('-')) {
+    } else if (trimmed.startsWith("-")) {
       hasMarkers = true;
       trainingLines.push(trimmed.slice(1).trim());
-    } else if (trimmed.startsWith('>')) {
+    } else if (trimmed.startsWith(">")) {
       hasMarkers = true;
       inCommentSection = true;
       const noteText = trimmed.slice(1).trim();
@@ -243,31 +267,31 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
       trainingLines.push(trimmed);
     }
   }
-  
+
   // Se não encontrou marcadores, tentar tags legadas
   if (!hasMarkers) {
-    const hasTreinoTag = block.content.includes('[TREINO]');
-    const hasComentarioTag = block.content.includes('[COMENTÁRIO]');
-    
+    const hasTreinoTag = block.content.includes("[TREINO]");
+    const hasComentarioTag = block.content.includes("[COMENTÁRIO]");
+
     if (hasTreinoTag || hasComentarioTag) {
       trainingLines.length = 0; // Limpar
       let trainingContent = block.content;
-      
+
       if (hasTreinoTag && hasComentarioTag) {
-        const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
-        const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+        const treinoStart = block.content.indexOf("[TREINO]") + "[TREINO]".length;
+        const comentarioStart = block.content.indexOf("[COMENTÁRIO]");
         trainingContent = block.content.slice(treinoStart, comentarioStart).trim();
-        coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
+        coachNotes = block.content.slice(comentarioStart + "[COMENTÁRIO]".length).trim();
       } else if (hasTreinoTag) {
-        const treinoStart = block.content.indexOf('[TREINO]') + '[TREINO]'.length;
+        const treinoStart = block.content.indexOf("[TREINO]") + "[TREINO]".length;
         trainingContent = block.content.slice(treinoStart).trim();
       } else if (hasComentarioTag) {
-        const comentarioStart = block.content.indexOf('[COMENTÁRIO]');
+        const comentarioStart = block.content.indexOf("[COMENTÁRIO]");
         trainingContent = block.content.slice(0, comentarioStart).trim();
-        coachNotes = block.content.slice(comentarioStart + '[COMENTÁRIO]'.length).trim();
+        coachNotes = block.content.slice(comentarioStart + "[COMENTÁRIO]".length).trim();
       }
-      
-      for (const l of trainingContent.split('\n')) {
+
+      for (const l of trainingContent.split("\n")) {
         if (l.trim()) trainingLines.push(l.trim());
       }
     } else {
@@ -275,15 +299,15 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
       trainingLines.length = 0;
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('📝') || trimmed.toLowerCase().startsWith('nota:')) {
-          coachNotes = trimmed.replace(/^📝\s*/, '').replace(/^nota:\s*/i, '');
+        if (trimmed.startsWith("📝") || trimmed.toLowerCase().startsWith("nota:")) {
+          coachNotes = trimmed.replace(/^📝\s*/, "").replace(/^nota:\s*/i, "");
         } else if (trimmed) {
           trainingLines.push(trimmed);
         }
       }
     }
   }
-  
+
   // Parse das trainingLines para extrair items estruturados
   const items: WorkoutItem[] = [];
 
@@ -294,7 +318,7 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
       items.push({
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         quantity: parseFloat(match[1]),
-        unit: match[2].toLowerCase().replace(/s$/, ''),
+        unit: match[2].toLowerCase().replace(/s$/, ""),
         movement: match[3].trim(),
         notes: match[4]?.trim(),
       });
@@ -302,7 +326,7 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
       items.push({
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         quantity: 1,
-        unit: 'reps',
+        unit: "reps",
         movement: line.trim(),
       });
     }
@@ -313,8 +337,8 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
   }
 
   // Detectar formato a partir do header ou do conteúdo
-  const allContent = [...headerLines, ...trainingLines].join(' ');
-  
+  const allContent = [...headerLines, ...trainingLines].join(" ");
+
   return {
     id: block.id,
     title: block.title,
@@ -329,20 +353,20 @@ export function workoutBlockToStructured(block: WorkoutBlock): StructuredBlock {
 
 function detectFormat(content: string): string {
   const lower = content.toLowerCase();
-  if (lower.includes('amrap')) return 'amrap';
-  if (lower.includes('emom')) return 'emom';
-  if (lower.includes('for time')) return 'for_time';
-  if (/\d+\s*rounds?/.test(lower)) return 'rounds';
-  if (lower.includes('interval')) return 'intervalos';
-  return 'outro';
+  if (lower.includes("amrap")) return "amrap";
+  if (lower.includes("emom")) return "emom";
+  if (lower.includes("for time")) return "for_time";
+  if (/\d+\s*rounds?/.test(lower)) return "rounds";
+  if (lower.includes("interval")) return "intervalos";
+  return "outro";
 }
 
 function createEmptyItem(): WorkoutItem {
   return {
     id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    quantity: '',
-    unit: 'reps',
-    movement: '',
+    quantity: "",
+    unit: "reps",
+    movement: "",
   };
 }
 
@@ -370,12 +394,12 @@ export function StructuredBlockEditor({
   movementHistory = [],
 }: StructuredBlockEditorProps) {
   const [showPasteInput, setShowPasteInput] = useState(false);
-  const [pasteText, setPasteText] = useState('');
+  const [pasteText, setPasteText] = useState("");
   const [activeMovementField, setActiveMovementField] = useState<string | null>(null);
-  const [movementSearch, setMovementSearch] = useState('');
-  
+  const [movementSearch, setMovementSearch] = useState("");
+
   const errors = showValidation ? validateBlock(block) : [];
-  const hasError = (field: string) => errors.some(e => e.field === field);
+  const hasError = (field: string) => errors.some((e) => e.field === field);
 
   // Combinar movimentos comuns com histórico do coach
   const allMovements = useMemo(() => {
@@ -387,14 +411,15 @@ export function StructuredBlockEditor({
   const movementSuggestions = useMemo(() => {
     if (!movementSearch.trim()) return allMovements.slice(0, 10);
     const search = movementSearch.toLowerCase();
-    return allMovements
-      .filter(m => m.toLowerCase().includes(search))
-      .slice(0, 10);
+    return allMovements.filter((m) => m.toLowerCase().includes(search)).slice(0, 10);
   }, [movementSearch, allMovements]);
 
-  const updateBlock = useCallback((updates: Partial<StructuredBlock>) => {
-    onChange({ ...block, ...updates });
-  }, [block, onChange]);
+  const updateBlock = useCallback(
+    (updates: Partial<StructuredBlock>) => {
+      onChange({ ...block, ...updates });
+    },
+    [block, onChange],
+  );
 
   const addItem = useCallback(() => {
     updateBlock({
@@ -403,17 +428,20 @@ export function StructuredBlockEditor({
   }, [block.items, updateBlock]);
 
   // Adicionar item com preset
-  const addItemWithPreset = useCallback((unit: string, defaultQty: number) => {
-    const newItem: WorkoutItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      quantity: defaultQty,
-      unit,
-      movement: '',
-    };
-    updateBlock({
-      items: [...block.items, newItem],
-    });
-  }, [block.items, updateBlock]);
+  const addItemWithPreset = useCallback(
+    (unit: string, defaultQty: number) => {
+      const newItem: WorkoutItem = {
+        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        quantity: defaultQty,
+        unit,
+        movement: "",
+      };
+      updateBlock({
+        items: [...block.items, newItem],
+      });
+    },
+    [block.items, updateBlock],
+  );
 
   // Parser de texto colado
   const parseAndAddItems = useCallback(() => {
@@ -422,7 +450,7 @@ export function StructuredBlockEditor({
       return;
     }
 
-    const lines = pasteText.split('\n').filter(l => l.trim());
+    const lines = pasteText.split("\n").filter((l) => l.trim());
     const parsedItems: WorkoutItem[] = [];
     const unparsedLines: string[] = [];
 
@@ -444,26 +472,26 @@ export function StructuredBlockEditor({
       ];
 
       let matched = false;
-      
+
       for (const pattern of patterns) {
         const match = line.trim().match(pattern);
         if (match) {
-          const qty = parseFloat(match[1].replace(',', '.'));
-          let unit = 'reps';
-          let movement = '';
-          let notes = '';
+          const qty = parseFloat(match[1].replace(",", "."));
+          let unit = "reps";
+          let movement = "";
+          let notes = "";
 
           // Detectar unidade
-          const unitMatch = match[2]?.toLowerCase() || '';
-          if (unitMatch.startsWith('m') && !unitMatch.includes('min')) unit = 'm';
-          else if (unitMatch.includes('km')) unit = 'km';
-          else if (unitMatch.startsWith('cal')) unit = 'cal';
-          else if (unitMatch.startsWith('round') || unitMatch.startsWith('rodada')) unit = 'rounds';
-          else if (unitMatch.startsWith('min')) unit = 'min';
-          else if (unitMatch.startsWith('sec') || unitMatch.startsWith('seg')) unit = 'sec';
+          const unitMatch = match[2]?.toLowerCase() || "";
+          if (unitMatch.startsWith("m") && !unitMatch.includes("min")) unit = "m";
+          else if (unitMatch.includes("km")) unit = "km";
+          else if (unitMatch.startsWith("cal")) unit = "cal";
+          else if (unitMatch.startsWith("round") || unitMatch.startsWith("rodada")) unit = "rounds";
+          else if (unitMatch.startsWith("min")) unit = "min";
+          else if (unitMatch.startsWith("sec") || unitMatch.startsWith("seg")) unit = "sec";
 
-          movement = match[3]?.trim() || match[2]?.trim() || '';
-          notes = match[4]?.trim() || '';
+          movement = match[3]?.trim() || match[2]?.trim() || "";
+          notes = match[4]?.trim() || "";
 
           if (movement) {
             parsedItems.push({
@@ -487,46 +515,49 @@ export function StructuredBlockEditor({
     // Atualizar bloco
     if (parsedItems.length > 0) {
       // Remover itens vazios e adicionar os parseados
-      const existingValidItems = block.items.filter(
-        item => item.quantity !== '' && item.movement.trim()
-      );
+      const existingValidItems = block.items.filter((item) => item.quantity !== "" && item.movement.trim());
       updateBlock({
         items: [...existingValidItems, ...parsedItems],
-        coachNotes: unparsedLines.length > 0 
-          ? (block.coachNotes ? block.coachNotes + '\n' : '') + unparsedLines.join('\n')
-          : block.coachNotes,
+        coachNotes:
+          unparsedLines.length > 0
+            ? (block.coachNotes ? block.coachNotes + "\n" : "") + unparsedLines.join("\n")
+            : block.coachNotes,
       });
     } else if (unparsedLines.length > 0) {
       // Tudo foi para notas
       updateBlock({
-        coachNotes: (block.coachNotes ? block.coachNotes + '\n' : '') + unparsedLines.join('\n'),
+        coachNotes: (block.coachNotes ? block.coachNotes + "\n" : "") + unparsedLines.join("\n"),
       });
     }
 
-    setPasteText('');
+    setPasteText("");
     setShowPasteInput(false);
   }, [pasteText, block.items, block.coachNotes, updateBlock]);
 
-  const removeItem = useCallback((itemId: string) => {
-    updateBlock({
-      items: block.items.filter(i => i.id !== itemId),
-    });
-  }, [block.items, updateBlock]);
+  const removeItem = useCallback(
+    (itemId: string) => {
+      updateBlock({
+        items: block.items.filter((i) => i.id !== itemId),
+      });
+    },
+    [block.items, updateBlock],
+  );
 
-  const updateItem = useCallback((itemId: string, updates: Partial<WorkoutItem>) => {
-    updateBlock({
-      items: block.items.map(item => 
-        item.id === itemId ? { ...item, ...updates } : item
-      ),
-    });
-  }, [block.items, updateBlock]);
+  const updateItem = useCallback(
+    (itemId: string, updates: Partial<WorkoutItem>) => {
+      updateBlock({
+        items: block.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+      });
+    },
+    [block.items, updateBlock],
+  );
 
-  const typeConfig = BLOCK_TYPES.find(t => t.value === block.type);
+  const typeConfig = BLOCK_TYPES.find((t) => t.value === block.type);
 
   return (
-    <div className={`border rounded-lg overflow-hidden ${
-      errors.length > 0 ? 'border-destructive/50' : 'border-border'
-    }`}>
+    <div
+      className={`border rounded-lg overflow-hidden ${errors.length > 0 ? "border-destructive/50" : "border-border"}`}
+    >
       {/* Header colapsável */}
       <button
         type="button"
@@ -535,9 +566,7 @@ export function StructuredBlockEditor({
       >
         <div className="flex items-center gap-2">
           {typeConfig && <span>{typeConfig.emoji}</span>}
-          <span className="font-medium text-sm">
-            {block.title || 'Novo Bloco'}
-          </span>
+          <span className="font-medium text-sm">{String(block.title || "Novo Bloco").replace(/^[=<>-]+\s*/, "")}</span>
           {errors.length > 0 && (
             <span className="text-destructive text-xs flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
@@ -573,7 +602,7 @@ export function StructuredBlockEditor({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
@@ -588,19 +617,19 @@ export function StructuredBlockEditor({
                   value={block.title}
                   onChange={(e) => updateBlock({ title: e.target.value })}
                   placeholder="Ex: AMRAP 20min"
-                  className={hasError('title') ? 'border-destructive' : ''}
+                  className={hasError("title") ? "border-destructive" : ""}
                 />
-                {hasError('title') && (
-                  <p className="text-xs text-destructive">Título é obrigatório</p>
-                )}
+                {hasError("title") && <p className="text-xs text-destructive">Título é obrigatório</p>}
               </div>
 
               {/* Tipo e Formato */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Tipo <span className="text-destructive">*</span></Label>
+                  <Label>
+                    Tipo <span className="text-destructive">*</span>
+                  </Label>
                   <Select value={block.type} onValueChange={(v) => updateBlock({ type: v })}>
-                    <SelectTrigger className={hasError('type') ? 'border-destructive' : ''}>
+                    <SelectTrigger className={hasError("type") ? "border-destructive" : ""}>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
@@ -614,9 +643,11 @@ export function StructuredBlockEditor({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Formato <span className="text-destructive">*</span></Label>
+                  <Label>
+                    Formato <span className="text-destructive">*</span>
+                  </Label>
                   <Select value={block.format} onValueChange={(v) => updateBlock({ format: v })}>
-                    <SelectTrigger className={hasError('format') ? 'border-destructive' : ''}>
+                    <SelectTrigger className={hasError("format") ? "border-destructive" : ""}>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
@@ -648,16 +679,11 @@ export function StructuredBlockEditor({
                       <Clipboard className="w-3 h-3 mr-1" />
                       Colar
                     </Button>
-                    
+
                     {/* Presets rápidos */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                        >
+                        <Button type="button" variant="outline" size="sm" className="h-7 text-xs">
                           <Zap className="w-3 h-3 mr-1" />
                           Rápido
                         </Button>
@@ -682,13 +708,7 @@ export function StructuredBlockEditor({
                       </PopoverContent>
                     </Popover>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addItem}
-                      className="h-7 text-xs"
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-7 text-xs">
                       <Plus className="w-3 h-3 mr-1" />
                       Item
                     </Button>
@@ -700,7 +720,7 @@ export function StructuredBlockEditor({
                   {showPasteInput && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
+                      animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
@@ -725,7 +745,7 @@ export function StructuredBlockEditor({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setPasteText('');
+                              setPasteText("");
                               setShowPasteInput(false);
                             }}
                             className="h-7 text-xs"
@@ -747,7 +767,7 @@ export function StructuredBlockEditor({
                   )}
                 </AnimatePresence>
 
-                {hasError('items') && (
+                {hasError("items") && (
                   <p className="text-xs text-destructive">
                     Adicione pelo menos 1 item válido (quantidade + unidade + movimento)
                   </p>
@@ -757,24 +777,23 @@ export function StructuredBlockEditor({
                   {block.items.map((item, index) => (
                     <div key={item.id} className="flex items-center gap-2">
                       <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-move" />
-                      
+
                       {/* Quantidade */}
                       <Input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateItem(item.id, { 
-                          quantity: e.target.value === '' ? '' : parseFloat(e.target.value) 
-                        })}
+                        onChange={(e) =>
+                          updateItem(item.id, {
+                            quantity: e.target.value === "" ? "" : parseFloat(e.target.value),
+                          })
+                        }
                         placeholder="Qtd"
                         className="w-16 text-center"
                         min={0}
                       />
 
                       {/* Unidade */}
-                      <Select 
-                        value={item.unit} 
-                        onValueChange={(v) => updateItem(item.id, { unit: v })}
-                      >
+                      <Select value={item.unit} onValueChange={(v) => updateItem(item.id, { unit: v })}>
                         <SelectTrigger className="w-20">
                           <SelectValue />
                         </SelectTrigger>
@@ -788,8 +807,8 @@ export function StructuredBlockEditor({
                       </Select>
 
                       {/* Movimento com autocomplete */}
-                      <Popover 
-                        open={activeMovementField === item.id} 
+                      <Popover
+                        open={activeMovementField === item.id}
                         onOpenChange={(open) => {
                           setActiveMovementField(open ? item.id : null);
                           if (open) setMovementSearch(item.movement);
@@ -811,14 +830,14 @@ export function StructuredBlockEditor({
                             className="flex-1"
                           />
                         </PopoverTrigger>
-                        <PopoverContent 
-                          className="w-64 p-0 bg-popover border border-border" 
+                        <PopoverContent
+                          className="w-64 p-0 bg-popover border border-border"
                           align="start"
                           onOpenAutoFocus={(e) => e.preventDefault()}
                         >
                           <Command>
-                            <CommandInput 
-                              placeholder="Buscar movimento..." 
+                            <CommandInput
+                              placeholder="Buscar movimento..."
                               value={movementSearch}
                               onValueChange={setMovementSearch}
                             />
@@ -845,7 +864,7 @@ export function StructuredBlockEditor({
 
                       {/* Observação */}
                       <Input
-                        value={item.notes || ''}
+                        value={item.notes || ""}
                         onChange={(e) => updateItem(item.id, { notes: e.target.value })}
                         placeholder="Obs"
                         className="w-24"
@@ -900,11 +919,11 @@ export function StructuredBlockEditor({
 export function createEmptyStructuredBlock(): StructuredBlock {
   return {
     id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    title: '',
-    type: '',
-    format: '',
+    title: "",
+    type: "",
+    format: "",
     items: [createEmptyItem()],
-    coachNotes: '',
+    coachNotes: "",
   };
 }
 
@@ -917,7 +936,7 @@ export function validateAllBlocks(blocks: StructuredBlock[]): {
       blockIndex: index,
       errors: validateBlock(block),
     }))
-    .filter(b => b.errors.length > 0);
+    .filter((b) => b.errors.length > 0);
 
   return {
     isValid: blockErrors.length === 0,
