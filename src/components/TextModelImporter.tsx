@@ -1213,12 +1213,9 @@ Descanso`}
                           });
 
                           return (
-                            <div className="space-y-3">
-                              {/* CAIXA 1: TREINO - SEMPRE VISÍVEL */}
-                              <div className="text-sm space-y-1 text-foreground/80 pl-2 border-l-2 border-primary/40">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">
-                                  Treino
-                                </p>
+                            <div className="space-y-2">
+                              {/* TREINO - conteúdo principal */}
+                              <div className="text-sm space-y-1 text-foreground/90">
                                 {exerciseLines.length > 0 ? (
                                   exerciseLines.map((line, idx) => (
                                     <p key={`${block.id || blockIndex}-ex-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
@@ -1228,22 +1225,20 @@ Descanso`}
                                 )}
                               </div>
 
-                              {/* CAIXA 2: COMENTÁRIO DO COACH - visual de sub-bloco */}
-                              <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
-                                <div className="flex items-start gap-2">
-                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                  <div className="space-y-1">
-                                    <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário do Coach</span>
-                                    {commentLines.length > 0 ? (
-                                      commentLines.map((line, idx) => (
-                                        <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground italic">{normalizeRestLineForDisplay(line)}</p>
-                                      ))
-                                    ) : (
-                                      <p className="text-xs text-muted-foreground/50 italic">Sem comentário</p>
-                                    )}
+                              {/* SUB-BLOCO: COMENTÁRIO DO COACH - SÓ RENDERIZA SE EXISTIR */}
+                              {commentLines.length > 0 && (
+                                <div className="mt-3 ml-1 pl-3 py-2 border-l-2 border-muted-foreground/20 bg-muted/20 rounded-r-sm">
+                                  <div className="flex items-start gap-2">
+                                    <MessageSquare className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
+                                    <div className="space-y-0.5">
+                                      <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide">Nota do Coach</span>
+                                      {commentLines.map((line, idx) => (
+                                        <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground/70 leading-relaxed">{normalizeRestLineForDisplay(line)}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                           );
                         })()}
