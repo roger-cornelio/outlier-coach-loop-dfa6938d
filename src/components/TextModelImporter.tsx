@@ -811,14 +811,31 @@ Descanso`}
                               const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
                               const hasValidationErrors = hasTitleError || !block.type;
                               
-                              // [RENDER_CHECK] Log obrigatório - render NUNCA depende de errors
+                              // ═══════════════════════════════════════════════════════════
+                              // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
+                              // Bloco só é renderizado como TREINO se:
+                              // - block.lines existir E block.lines.length > 0
+                              // Se não tiver linhas de treino, NÃO renderiza como bloco
+                              // ═══════════════════════════════════════════════════════════
+                              const trainingLines = block.lines || [];
+                              const hasExecutableLines = trainingLines.length > 0;
+                              
+                              // [RENDER_CHECK] Log obrigatório
                               console.log("[RENDER_CHECK]", {
                                 day: dayName,
                                 blockTitle: displayTitle,
-                                trainingLines: (block.lines || []).length,
+                                trainingLines: trainingLines.length,
+                                hasExecutableLines,
                                 validationErrors: hasValidationErrors ? 1 : 0,
                               });
-                              // [RENDER_BLOCK] Bloco sempre renderizado
+                              
+                              // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco de treino
+                              if (!hasExecutableLines && block.type !== "notas") {
+                                console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=false (sem linhas executáveis)`);
+                                return null;
+                              }
+                              
+                              // [RENDER_BLOCK] Bloco renderizado
                               console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=true`);
                               
                               // ═══════════════════════════════════════════════════════════
@@ -1155,25 +1172,49 @@ Descanso`}
 
                 {!isRestDay && (
                   <div className="p-4 space-y-3">
-                    {(dayWorkout.blocks || []).map((block, blockIndex) => (
-                      <div
-                        key={block.id || blockIndex}
-                        className={`p-3 rounded-lg border ${block.isMainWod ? 'border-primary/50 bg-primary/5' : 'border-border'}`}
-                      >
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <span className="font-medium">{block.title}</span>
-                          {block.isMainWod && (
-                            <Badge variant="default" className="text-xs">
-                              <Star className="w-3 h-3 mr-1 fill-current" />
-                              Principal
-                            </Badge>
-                          )}
-                          {block.type && (
-                            <Badge variant="outline" className="text-xs">
-                              {BLOCK_TYPE_OPTIONS.find(o => o.value === block.type)?.label || block.type}
-                            </Badge>
-                          )}
-                        </div>
+                    {(dayWorkout.blocks || []).map((block, blockIndex) => {
+                      // ════════════════════════════════════════════════════════════════════════════
+                      // MVP0: VERIFICAR SE BLOCO TEM LINHAS EXECUTÁVEIS ANTES DE RENDERIZAR
+                      // ════════════════════════════════════════════════════════════════════════════
+                      let contentForCheck = block.content || '';
+                      
+                      // Limpar [COMENTÁRIO] de dados antigos para verificação
+                      if (contentForCheck.includes('[COMENTÁRIO]')) {
+                        const comentarioIdx = contentForCheck.indexOf('[COMENTÁRIO]');
+                        contentForCheck = contentForCheck.slice(0, comentarioIdx).trim();
+                        contentForCheck = contentForCheck.replace(/^\[TREINO\]\s*/i, '');
+                      }
+                      
+                      const checkLines = contentForCheck
+                        .split('\n')
+                        .map(l => l.trim())
+                        .filter(l => l.length > 0);
+                      
+                      // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco
+                      if (checkLines.length === 0) {
+                        console.log(`[RENDER_BLOCK] Preview title="${block.title}" rendered=false (sem linhas executáveis)`);
+                        return null;
+                      }
+                      
+                      return (
+                        <div
+                          key={block.id || blockIndex}
+                          className={`p-3 rounded-lg border ${block.isMainWod ? 'border-primary/50 bg-primary/5' : 'border-border'}`}
+                        >
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="font-medium">{block.title}</span>
+                            {block.isMainWod && (
+                              <Badge variant="default" className="text-xs">
+                                <Star className="w-3 h-3 mr-1 fill-current" />
+                                Principal
+                              </Badge>
+                            )}
+                            {block.type && (
+                              <Badge variant="outline" className="text-xs">
+                                {BLOCK_TYPE_OPTIONS.find(o => o.value === block.type)?.label || block.type}
+                              </Badge>
+                            )}
+                          </div>
 
                         {/* FONTE ÚNICA: coachNotes para comentário, content para treino */}
                         {(() => {
@@ -1243,7 +1284,8 @@ Descanso`}
                           );
                         })()}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
