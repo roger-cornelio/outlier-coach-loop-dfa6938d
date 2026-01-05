@@ -1672,6 +1672,19 @@ function isRestInstructionLineGlobal(line: string): boolean {
   const lower = normalized.toLowerCase();
   
   // ════════════════════════════════════════════════════════════════════════════
+  // MVP0 PATCH: PRIORIDADE ABSOLUTA — isExercisePatternLine PRIMEIRO!
+  // Se a linha parece exercício (tem tempo, distância, reps), NÃO é descanso.
+  // Exemplos que DEVEM ser TREINO:
+  //   "10' Aquecimento (PSE 3)"
+  //   "8 rounds: 60m (PSE 9) com 1'30 descanso entre rounds"
+  //   "90+ minutos de corrida contínua em Zona 2"
+  // ════════════════════════════════════════════════════════════════════════════
+  if (isExercisePatternLine(normalized)) {
+    console.log('[isRestInstructionLineGlobal] → FALSE (isExercisePatternLine=true, prioridade exercício):', line);
+    return false;
+  }
+  
+  // ════════════════════════════════════════════════════════════════════════════
   // REGRA 1: REST_DAY_CANDIDATE = "descanso" SOZINHO (sem tempo/unidade/número)
   // Se for apenas "Descanso" ou "Descanso total", NÃO é instrução intra-bloco
   // ════════════════════════════════════════════════════════════════════════════
@@ -1691,6 +1704,7 @@ function isRestInstructionLineGlobal(line: string): boolean {
   // ════════════════════════════════════════════════════════════════════════════
   // REGRA 2: CONTÉM DÍGITO OU UNIDADE DE TEMPO? → É INSTRUÇÃO INTRA-BLOCO
   // Se tem "descanso" + qualquer número, é SEMPRE instrução de intervalo
+  // NOTA: Só chegamos aqui se isExercisePatternLine=false
   // ════════════════════════════════════════════════════════════════════════════
   
   // Verificação rápida: se a linha contém "descanso" E contém dígito → IN_BLOCK_REST
