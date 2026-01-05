@@ -496,12 +496,46 @@ function isCommentLine(line: string): boolean {
   return false;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// MVP0: REGRA DETERMINÍSTICA — LINHA EXECUTÁVEL
+// ════════════════════════════════════════════════════════════════════════════
+// Uma linha só é considerada TREINO se:
+// 1) Contiver pelo menos UM número
+// E
+// 2) Contiver unidade ou estrutura válida (reps, x, m, km, s, min, PSE, Z1–Z5, EMOM, AMRAP, FOR TIME, rest)
+
+const EXECUTABLE_UNITS_PATTERN = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|minutos?\b|['']|PSE|RPE|Z[1-5]|Zona\s*[1-5]|EMOM|AMRAP|For\s*Time|RFT|Tabata|rest|descanso|rounds?|sets?|séries?|%|kg\b|lb\b|cal\b|calorias?\b|kcal\b)/i;
+
+/**
+ * Verifica se uma linha é EXECUTÁVEL (treino válido)
+ * REGRA: Deve ter número + unidade/estrutura válida
+ */
+export function isExecutableLine(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Linha vazia é ignorada (não conta como executável nem não-executável)
+  if (!trimmed) return true;
+  
+  // REGRA 1: Deve conter pelo menos um número
+  const hasNumber = /\d/.test(trimmed);
+  if (!hasNumber) return false;
+  
+  // REGRA 2: Deve conter unidade ou estrutura válida
+  const hasValidUnit = EXECUTABLE_UNITS_PATTERN.test(trimmed);
+  
+  return hasValidUnit;
+}
+
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FUNÇÃO PRINCIPAL: separateBlockContent
  * ═══════════════════════════════════════════════════════════════════════════
  * 
  * Separa o conteúdo do bloco em exercícios e comentários.
+ * 
+ * MVP0 REGRA CRÍTICA:
+ * - exerciseLines APENAS contém linhas executáveis (com métrica)
+ * - Linhas sem métrica são classificadas como comentário ou ignoradas
  * 
  * PRIORIDADE (COM FALLBACK):
  * 1. MARCADORES (=, -, >) — determinístico, sem heurística
@@ -522,14 +556,22 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   if (markerResult.hasMarkers) {
     // LOG obrigatório
     const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${markerResult.trainingLines.length} commentLines=${markerResult.commentLines.length} invalidLines=${markerResult.invalidLines.length}`);
+    
+    // MVP0: FILTRAR linhas NÃO executáveis das trainingLines
+    const executableTrainingLines = markerResult.trainingLines.filter(l => isExecutableLine(l));
+    const nonExecutableTrainingLines = markerResult.trainingLines.filter(l => l.trim() && !isExecutableLine(l));
+    
+    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${executableTrainingLines.length} nonExec=${nonExecutableTrainingLines.length} commentLines=${markerResult.commentLines.length}`);
     
     // REGRA: Linhas sem marcador no modo determinístico vão para treino (fallback interno)
     // Isso permite transição gradual sem quebrar textos existentes
+    // MVP0: Também filtrar invalidLines
+    const executableInvalidLines = markerResult.invalidLines.filter(l => isExecutableLine(l));
+    
     const exerciseLines = [
       ...markerResult.headerLines.map(h => `⚙️ ${h}`), // Header com emoji para destaque
-      ...markerResult.trainingLines,
-      ...markerResult.invalidLines, // Linhas sem marcador vão para treino
+      ...executableTrainingLines,
+      ...executableInvalidLines,
     ].filter(l => l.length > 0);
     
     return {
@@ -545,10 +587,14 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   const { treinoText, comentarioText, hasTags } = splitByTags(content);
   
   if (hasTags) {
-    const exerciseLines = treinoText
+    const allTreinoLines = treinoText
       .split('\n')
       .map(l => l.trim())
       .filter(l => l.length > 0);
+    
+    // MVP0: FILTRAR linhas NÃO executáveis
+    const exerciseLines = allTreinoLines.filter(l => isExecutableLine(l));
+    const nonExecutableLines = allTreinoLines.filter(l => !isExecutableLine(l));
     
     const commentLines = comentarioText
       .split('\n')
@@ -557,7 +603,7 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     
     // LOG
     const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${exerciseLines.length} commentLines=${commentLines.length} invalidLines=0`);
+    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${exerciseLines.length} nonExec=${nonExecutableLines.length} commentLines=${commentLines.length}`);
     
     return { exerciseLines, commentLines };
   }
@@ -572,6 +618,13 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+    
+    // MVP0: Primeiro verificar se é executável
+    if (!isExecutableLine(trimmed)) {
+      // Não é executável -> comentário
+      commentLines.push(trimmed);
+      continue;
+    }
     
     if (isCommentLine(trimmed)) {
       commentLines.push(trimmed);
