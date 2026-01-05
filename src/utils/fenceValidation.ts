@@ -196,8 +196,10 @@ const EXECUTABLE_UNITS_PATTERN = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|
 /**
  * Verifica se uma linha é EXECUTÁVEL (treino válido)
  * REGRA: Deve ter número + unidade/estrutura válida
+ * 
+ * EXPORTADA para uso em testes e blockDisplayUtils
  */
-function isExecutableLine(line: string): boolean {
+export function isExecutableLine(line: string): boolean {
   const trimmed = line.trim();
   
   // Linha vazia é ignorada (não é erro)
