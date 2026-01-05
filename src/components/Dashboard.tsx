@@ -776,21 +776,32 @@ export function Dashboard() {
               {/* Workout Blocks */}
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
+                  // ═══════════════════════════════════════════════════════════
+                  // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
+                  // Bloco só é renderizado se tiver linhas executáveis
+                  // ═══════════════════════════════════════════════════════════
+                  const { exerciseLines: trainingLines } = separateBlockContent(block.content);
+                  
+                  // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco de treino
+                  if (trainingLines.length === 0) {
+                    console.log(`[RENDER_BLOCK] Dashboard title="${block.title}" rendered=false (sem linhas executáveis)`);
+                    return null;
+                  }
+                  
                   // Tempo e calorias vêm do workoutEstimation (fonte única)
                   const blockEstimate = workoutEstimation?.blocks[index];
                   const estimatedMinutes = blockEstimate?.estimatedMinutes || 0;
                   const estimatedKcal = blockEstimate?.estimatedKcal || 0;
                   const confidence = blockEstimate?.confidence || 'low';
 
-                  // [RENDER_CHECK] Log obrigatório - bloco SEMPRE renderizado
+                  // [RENDER_CHECK] Log obrigatório
                   console.log("[RENDER_CHECK]", {
                     day: currentWorkout.day,
                     blockTitle: block.title,
-                    trainingLines: block.content?.split('\n').length || 0,
-                    validationErrors: 0, // Dashboard não valida, apenas renderiza
+                    trainingLines: trainingLines.length,
+                    validationErrors: 0,
                   });
-                  // [RENDER_BLOCK] Confirmação de renderização
-                  console.log(`[RENDER_BLOCK] title="${block.title || 'Bloco'}" rendered=true`);
+                  console.log(`[RENDER_BLOCK] Dashboard title="${block.title}" rendered=true`);
 
                   return (
                     <motion.div
