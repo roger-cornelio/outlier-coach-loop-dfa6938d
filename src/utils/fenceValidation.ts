@@ -46,7 +46,8 @@ export type FenceErrorType =
   | 'MULTIPLE_TREINO'
   | 'MULTIPLE_COMENTARIO'
   | 'MISSING_ANCHOR' 
-  | 'HUMAN_TEXT_IN_TREINO';
+  | 'HUMAN_TEXT_IN_TREINO'
+  | 'NON_EXECUTABLE_LINE';
 
 export interface FenceError {
   type: FenceErrorType;
@@ -73,6 +74,7 @@ export interface ParsedFenceBlock {
   commentLines: string[];
   hasAnchor: boolean;
   humanTextLines: HumanTextLine[];
+  nonExecutableLines: NonExecutableLine[];
   /** Number of [TREINO] tags found in this block */
   treinoTagCount: number;
   /** Number of [COMENTÁRIO] tags found in this block */
@@ -85,6 +87,11 @@ export interface HumanTextLine {
   lineNumber: number;
   text: string;
   reason: string;
+}
+
+export interface NonExecutableLine {
+  lineNumber: number;
+  text: string;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -177,6 +184,36 @@ function isAllowedTrainingLine(line: string): boolean {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// MVP0: REGRA DETERMINÍSTICA — LINHA EXECUTÁVEL
+// ════════════════════════════════════════════════════════════════════════════════
+// Uma linha só é considerada TREINO se:
+// 1) Contiver pelo menos UM número
+// E
+// 2) Contiver unidade ou estrutura válida (reps, x, m, km, s, min, PSE, Z1–Z5, EMOM, AMRAP, FOR TIME, rest)
+
+const EXECUTABLE_UNITS_PATTERN = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|minutos?\b|['']|PSE|RPE|Z[1-5]|Zona\s*[1-5]|EMOM|AMRAP|For\s*Time|RFT|Tabata|rest|descanso|rounds?|sets?|séries?|%|kg\b|lb\b|cal\b|calorias?\b|kcal\b)/i;
+
+/**
+ * Verifica se uma linha é EXECUTÁVEL (treino válido)
+ * REGRA: Deve ter número + unidade/estrutura válida
+ */
+function isExecutableLine(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Linha vazia é ignorada (não é erro)
+  if (!trimmed) return true;
+  
+  // REGRA 1: Deve conter pelo menos um número
+  const hasNumber = /\d/.test(trimmed);
+  if (!hasNumber) return false;
+  
+  // REGRA 2: Deve conter unidade ou estrutura válida
+  const hasValidUnit = EXECUTABLE_UNITS_PATTERN.test(trimmed);
+  
+  return hasValidUnit;
+}
+
+
 // DETECÇÃO DE TEXTO HUMANO/EXPLICATIVO
 // ════════════════════════════════════════════════════════════════════════════════
 // Se uma linha dentro de trainLines[] contiver frase humana/explicativa, BLOQUEAR
@@ -401,6 +438,23 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         }
       });
 
+      // MVP0: Detectar linhas NÃO EXECUTÁVEIS (fora de [COMENTÁRIO])
+      const nonExecutableLines: NonExecutableLine[] = [];
+      currentTrainLines.forEach((line, idx) => {
+        const trimmed = line.trim();
+        // Ignorar linhas vazias
+        if (!trimmed) return;
+        
+        // Se não é executável, é erro duro
+        if (!isExecutableLine(trimmed)) {
+          nonExecutableLines.push({
+            lineNumber: blockStartLine + idx,
+            text: trimmed,
+          });
+          console.log('[NON_EXECUTABLE] Linha bloqueante detectada:', trimmed);
+        }
+      });
+
       // CERCA HARD V1: Verificar ordem invertida
       const hasInvertedOrder =
         treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
@@ -410,6 +464,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         blockTitle: currentBlockTitle,
         treinoCount: treinoTagCount,
         comentarioCount: comentarioTagCount,
+        nonExecutableCount: nonExecutableLines.length,
       });
 
       blocks.push({
@@ -420,6 +475,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         commentLines: [...currentCommentLines],
         hasAnchor,
         humanTextLines,
+        nonExecutableLines,
         treinoTagCount,
         comentarioTagCount,
         hasInvertedOrder,
@@ -715,6 +771,18 @@ export function validateFence(text: string): FenceValidationResult {
           message: `Texto de comentário detectado dentro de [TREINO]. Mova esta frase para [COMENTÁRIO].`,
         });
       }
+      
+      // C3) MVP0: Linhas NÃO EXECUTÁVEIS dentro do TREINO (ERRO DURO - BLOQUEANTE)
+      for (const nonExecLine of block.nonExecutableLines) {
+        errors.push({
+          type: 'NON_EXECUTABLE_LINE',
+          blockTitle: block.title,
+          dayName: block.dayName,
+          lineNumber: nonExecLine.lineNumber,
+          lineText: nonExecLine.text,
+          message: `Linha não executável no treino: O OUTLIER aceita apenas estímulos mensuráveis dentro do treino. Esta linha não possui métrica e não pode ser processada pelo motor. Mova para [COMENTÁRIO] ou adicione uma métrica objetiva.`,
+        });
+      }
     }
   }
   
@@ -774,3 +842,4 @@ export function textUsesFenceFormat(text: string): boolean {
 export const FENCE_FORMAT_ERROR = 'Formato inválido. Todo bloco precisa conter [TREINO] e [COMENTÁRIO].';
 export const FENCE_ANCHOR_ERROR = "Treino sem âncora. Inclua uma linha como: '90 min corrida', '10 km corrida', 'EMOM 30 min' ou '5 Rounds'.";
 export const FENCE_HUMAN_TEXT_ERROR = 'Texto de comentário detectado dentro de [TREINO]. Mova esta frase para [COMENTÁRIO].';
+export const FENCE_NON_EXECUTABLE_ERROR = 'Linha não executável no treino: O OUTLIER aceita apenas estímulos mensuráveis dentro do treino. Esta linha não possui métrica e não pode ser processada pelo motor. Mova para [COMENTÁRIO] ou adicione uma métrica objetiva.';

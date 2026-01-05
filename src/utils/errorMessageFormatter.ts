@@ -33,6 +33,7 @@ export type ErrorType =
   | 'MISSING_BOTH_DELIMITERS'
   | 'INVERTED_ORDER'
   | 'MULTIPLE_DELIMITERS'
+  | 'NON_EXECUTABLE_LINE'
   | 'GENERIC';
 
 // Mapeamento de dias
@@ -100,6 +101,11 @@ const ERROR_COPIES: Record<ErrorType, {
     whatHappened: 'O bloco contém mais de uma ocorrência da mesma tag. Deve haver exatamente 1 [TREINO] e 1 [COMENTÁRIO].',
     whatToDo: 'Remova as tags duplicadas, mantendo apenas 1 [TREINO] e 1 [COMENTÁRIO].',
   },
+  // MVP0: Linha não executável (erro duro bloqueante)
+  NON_EXECUTABLE_LINE: {
+    whatHappened: 'O OUTLIER aceita apenas estímulos mensuráveis dentro do treino. Esta linha não possui métrica (número + unidade) e não pode ser processada pelo motor.',
+    whatToDo: 'Mova esta frase para [COMENTÁRIO] ou adicione uma métrica objetiva (ex: tempo, distância, repetições, PSE, Zona).',
+  },
   GENERIC: {
     whatHappened: 'O sistema identificou um problema na estrutura do treino.',
     whatToDo: 'Revise o texto e corrija.',
@@ -127,6 +133,10 @@ export function detectErrorType(issue: StructureIssue): ErrorType {
   }
   if (msg.includes('múltiplos delimitadores') || msg.includes('mantenha apenas 1')) {
     return 'MULTIPLE_DELIMITERS';
+  }
+  // MVP0: Linha não executável (erro duro bloqueante)
+  if (msg.includes('linha não executável') || msg.includes('não possui métrica')) {
+    return 'NON_EXECUTABLE_LINE';
   }
   
   // Erros legacy
