@@ -2931,27 +2931,41 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
     day: (day.day || selectedDay || 'seg') as DayOfWeek,
     stimulus: '',
     estimatedTime: 60,
-    blocks: day.blocks.map((block, idx) => ({
-      id: `${day.day || selectedDay || 'new'}-${idx}-${Date.now()}`,
-      type: block.type,
-      title: block.title,
-      content: formatBlockContent(block),
-      isMainWod: block.isMainWod || undefined,
-      isBenchmark: block.isBenchmark || undefined,
-    })),
+    blocks: day.blocks.map((block, idx) => {
+      const workoutBlock = {
+        id: `${day.day || selectedDay || 'new'}-${idx}-${Date.now()}`,
+        type: block.type,
+        title: block.title,
+        content: formatBlockContent(block),
+        isMainWod: block.isMainWod || undefined,
+        isBenchmark: block.isBenchmark || undefined,
+        // MVP0 CORREÇÃO: Passar coachNotes como campo separado (fonte única)
+        coachNotes: block.coachNotes && block.coachNotes.length > 0 ? block.coachNotes : undefined,
+      };
+      
+      // LOG de verificação
+      console.log('[CONVERT_BLOCK] parsedToDayWorkouts:', {
+        title: workoutBlock.title?.substring(0, 30),
+        contentHasComentarioTag: workoutBlock.content.includes('[COMENTÁRIO]'),
+        coachNotesLength: workoutBlock.coachNotes?.length || 0,
+      });
+      
+      return workoutBlock;
+    }),
     isRestDay: day.isRestDay || false, // MVP0: Preservar flag de descanso
   }));
 }
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: formatBlockContent — USAR TAGS PARA SEPARAÇÃO DETERMINÍSTICA
+ * MVP0: formatBlockContent — APENAS TREINO (coachNotes é fonte separada)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * REGRA ABSOLUTA:
- * - Se o bloco tem coachNotes, o content DEVE usar tags [TREINO] e [COMENTÁRIO]
- * - Isso garante que o split na exibição seja determinístico
- * - Comentário NUNCA pode aparecer como treino na UI
+ * REGRA ABSOLUTA (CORREÇÃO DEFINITIVA):
+ * - block.content = APENAS treino executável
+ * - block.coachNotes = APENAS comentários (fonte única, NÃO serializar aqui)
+ * - NUNCA injetar [COMENTÁRIO] no content
+ * - UI deve ler coachNotes diretamente, não extrair do content
  */
 function formatBlockContent(block: ParsedBlock): string {
   const trainParts: string[] = [];
@@ -2984,16 +2998,19 @@ function formatBlockContent(block: ParsedBlock): string {
   const trainContent = trainParts.filter(p => p.trim()).join('\n').trim();
 
   // ════════════════════════════════════════════════════════════════════════════
-  // MVP0 FIX: USAR TAGS PARA SEPARAÇÃO SOBERANA
-  // Se tem coachNotes, SEMPRE usar tags [TREINO] e [COMENTÁRIO]
+  // MVP0 CORREÇÃO DEFINITIVA: NÃO INJETAR coachNotes NO content
+  // coachNotes é fonte única separada, UI lê direto do campo coachNotes
   // ════════════════════════════════════════════════════════════════════════════
-  if (block.coachNotes && block.coachNotes.length > 0) {
-    const commentContent = block.coachNotes.join('\n').trim();
-    // Usar tags para garantir split determinístico
-    return `[TREINO]\n${trainContent}\n[COMENTÁRIO]\n${commentContent}`;
-  }
-
-  // Sem comentário - retornar só o treino (sem tags necessárias)
+  // LOG de verificação (temporário)
+  const hasCoachNotes = block.coachNotes && block.coachNotes.length > 0;
+  console.log('[SAVE_BLOCK] formatBlockContent:', {
+    title: block.title?.substring(0, 30),
+    contentHasComentarioTag: trainContent.includes('[COMENTÁRIO]'),
+    coachNotesLength: block.coachNotes?.length || 0,
+    hasCoachNotes,
+  });
+  
+  // Retornar APENAS treino (sem tags [COMENTÁRIO])
   return trainContent;
 }
 

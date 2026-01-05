@@ -1175,23 +1175,41 @@ Descanso`}
                           )}
                         </div>
 
-                        {/* SEPARAÇÃO DETERMINÍSTICA: TREINO vs COMENTÁRIO */}
+                        {/* FONTE ÚNICA: coachNotes para comentário, content para treino */}
                         {(() => {
-                          const { exerciseLines, commentLines: contentCommentLines } = separateBlockContent(block.content || '');
+                          // ════════════════════════════════════════════════════════════════════════════
+                          // MVP0 CORREÇÃO DEFINITIVA: 
+                          // - Treino: block.content (limpo, sem [COMENTÁRIO])
+                          // - Comentário: block.coachNotes (única fonte, sem fallback para content)
+                          // ════════════════════════════════════════════════════════════════════════════
                           
-                          // MVP0: Priorizar coachNotes do bloco (parser) sobre separateBlockContent
-                          // coachNotes pode ser array (ParsedBlock) ou já serializado no content
+                          // TREINO: extrair do content, mas limpar [COMENTÁRIO] de dados antigos
+                          let contentForTraining = block.content || '';
+                          
+                          // FALLBACK MIGRAÇÃO: remover [COMENTÁRIO] de dados antigos (sem popular coachNotes)
+                          if (contentForTraining.includes('[COMENTÁRIO]')) {
+                            const comentarioIdx = contentForTraining.indexOf('[COMENTÁRIO]');
+                            contentForTraining = contentForTraining.slice(0, comentarioIdx).trim();
+                            // Também remover [TREINO] se existir
+                            contentForTraining = contentForTraining.replace(/^\[TREINO\]\s*/i, '');
+                          }
+                          
+                          const exerciseLines = contentForTraining
+                            .split('\n')
+                            .map(l => l.trim())
+                            .filter(l => l.length > 0);
+                          
+                          // COMENTÁRIO: ÚNICA FONTE = coachNotes (sem fallback)
                           const blockCoachNotes = (block as any).coachNotes;
-                          const commentLines = Array.isArray(blockCoachNotes) && blockCoachNotes.length > 0
-                            ? blockCoachNotes
-                            : contentCommentLines;
+                          const commentLines = Array.isArray(blockCoachNotes) ? blockCoachNotes : [];
                           
-                          // [UI_BLOCK] Log obrigatório
-                          console.log("[UI_BLOCK]", {
+                          // [UI_BLOCK] Log de verificação
+                          console.log("[UI_BLOCK] Fonte única:", {
                             title: block.title,
-                            hasTraining: exerciseLines.length,
-                            hasComment: commentLines.length,
-                            source: Array.isArray(blockCoachNotes) && blockCoachNotes.length > 0 ? 'coachNotes' : 'content',
+                            contentHasComentarioTag: (block.content || '').includes('[COMENTÁRIO]'),
+                            trainingLines: exerciseLines.length,
+                            coachNotesLength: commentLines.length,
+                            source: 'coachNotes_only',
                           });
 
                           return (
