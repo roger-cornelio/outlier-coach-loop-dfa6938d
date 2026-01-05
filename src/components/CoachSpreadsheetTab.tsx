@@ -496,6 +496,23 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                             const mainBlockResult = identifyMainBlock(workout.blocks);
                             const isMainBlock = mainBlockResult.blockIndex === blockIndex;
                             
+                            // ═══════════════════════════════════════════════════════════
+                            // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
+                            // Bloco só é renderizado se block.lines tiver linhas executáveis
+                            // ═══════════════════════════════════════════════════════════
+                            const lines = (block as any).lines as
+                              | { id: string; text: string; type: string }[]
+                              | undefined;
+                            const exerciseLines = lines?.filter((l) => l.type === 'exercise') || [];
+                            
+                            // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco
+                            if (exerciseLines.length === 0) {
+                              console.log(`[RENDER_BLOCK] CoachSpreadsheet title="${block.title}" rendered=false (sem linhas executáveis)`);
+                              return null;
+                            }
+                            
+                            console.log(`[RENDER_BLOCK] CoachSpreadsheet title="${block.title}" rendered=true`);
+                            
                             return (
                             <div key={block.id} className={`p-3 rounded-lg border ${
                               isMainBlock 
