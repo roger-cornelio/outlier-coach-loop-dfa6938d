@@ -141,17 +141,26 @@ const ALLOWED_TRAINING_PATTERNS: RegExp[] = [
   /\d+\s*x\s*\d+/i,
   /\d+\s*(?:reps?|sets?|séries?|rodadas?)\b/i,
   // Movimentos com carga: Front Squat, Deadlift, Wall Balls
-  /\b(?:Squat|Deadlift|Press|Clean|Snatch|Jerk|Row|Pull-?Up|Push-?Up|Burpee|Wall\s*Ball|Lunge|Jump|Carry|Sled|Farmer)\b/i,
+  /\b(?:Squat|Deadlift|Press|Clean|Snatch|Jerk|Row|Pull-?Up|Push-?Up|Burpee|Wall\s*Ball|Lunge|Jump|Carry|Sled|Farmer|Aquecimento|Run|Corrida|Trote)\b/i,
   // Distâncias: 500m, 10km, 100m
   /\d+\s*(?:m|km)\b/i,
-  // Tempos: 30 min, 45', 1h
-  /\d+\s*(?:min|minutos?|'|h|hora)\b/i,
+  // Tempos: 30 min, 45', 1h, 90+ min
+  /\d+\+?\s*(?:min|minutos?|'|h|hora)\b/i,
   // Unbroken, Sprint, Max
   /\b(?:Unbroken|Sprint|Max)\b/i,
   // Min X: (EMOM pattern)
   /^Min\s*\d+\s*:/i,
   // Alternating, Single, Double
   /\b(?:Alternating|Single|Double)\b/i,
+  // MVP0 PATCH: Rounds com estrutura (8 rounds: ..., 5 rounds com descanso)
+  /\d+\s*rounds?\s*:/i,
+  /\d+\s*rounds?\s+com\b/i,
+  // MVP0 PATCH: Descanso intra-bloco (1'30 descanso, 2' descanso entre)
+  /\d+['']?\d*\s*(?:descanso|rest)/i,
+  /descanso\s+entre\s+(?:rounds?|s[ée]ries?|sets?)/i,
+  // MVP0 PATCH: Corrida contínua, zona 2, pace
+  /\bcorr(?:ida|er)\s+cont[ií]nu/i,
+  /\bpace\b/i,
 ];
 
 /**
@@ -197,12 +206,28 @@ function detectHumanText(line: string): string | null {
   // Linha vazia é OK
   if (!trimmed) return null;
   
-  // Se a linha é uma âncora ou padrão de treino claramente estruturado, não bloquear
+  // ════════════════════════════════════════════════════════════════════════════════
+  // MVP0 PATCH: PRIORIDADE ABSOLUTA — Padrões de treino têm precedência!
+  // Se a linha contém tempo, distância, reps, PSE, Zona, etc., é EXERCÍCIO.
+  // Exemplos que NÃO podem ser bloqueados:
+  //   "10' Aquecimento (PSE 3)"
+  //   "8 rounds: 60m (PSE 9) com 1'30 descanso entre rounds"
+  //   "90+ minutos de corrida contínua em Zona 2"
+  // ════════════════════════════════════════════════════════════════════════════════
+  
+  // Se a linha é uma âncora, não bloquear
   if (isAnchorLine(trimmed)) return null;
+  
+  // Se a linha contém padrões permitidos de treino, NÃO bloquear
+  if (isAllowedTrainingLine(trimmed)) {
+    console.log('[detectHumanText] → null (padrão de treino permitido):', trimmed);
+    return null;
+  }
   
   // Verificar indicadores de texto humano
   for (const indicator of HUMAN_TEXT_INDICATORS) {
     if (indicator.test(trimmed)) {
+      console.log('[detectHumanText] → BLOQUEADO (texto humano):', trimmed, '|', indicator.reason);
       return indicator.reason;
     }
   }
