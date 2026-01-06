@@ -28,6 +28,7 @@
  */
 
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
+import { parseStructureLine, isWrappedStructure, type WorkoutStructure } from '@/utils/workoutStructures';
 
 /**
  * Interface flexível para aceitar diferentes estruturas de bloco
@@ -301,6 +302,8 @@ export interface SeparatedBlockContent {
   inlineComments: InlineComment[]; // Comentários inline fora de "> COMENTÁRIO"
   alerts: ParseAlert[];
   headerLines?: string[];
+  structures?: WorkoutStructure[]; // Estruturas tipadas (**ROUNDS**, **EMOM**, etc.)
+  structureTags?: string[]; // Tags reservadas para armazenamento
 }
 
 // Padrão para detectar texto entre parênteses
@@ -480,7 +483,9 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
       coachNotes: [],
       inlineComments: [],
       alerts: [],
-      headerLines: [] 
+      headerLines: [],
+      structures: [],
+      structureTags: []
     };
   }
   
@@ -490,6 +495,7 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   const inlineComments: InlineComment[] = [];
   const alerts: ParseAlert[] = [];
   const headerLines: string[] = [];
+  const structures: WorkoutStructure[] = [];
   
   let inCommentSection = false;
   
@@ -516,6 +522,22 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     
     // Se a linha era PURAMENTE comentário, já processamos. Próxima linha.
     if (!content) {
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DETECTAR ESTRUTURAS ENTRE ** ** (ANTES de qualquer outra checagem)
+    // Ex: **3 ROUNDS**, **EMOM 30**, **AMRAP 15**, **FOR TIME**
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isWrappedStructure(content)) {
+      const structure = parseStructureLine(content);
+      if (structure) {
+        structures.push(structure);
+        // Estruturas NÃO vão para exerciseLines nem headerLines
+        continue;
+      }
+      // Se tem ** ** mas não foi reconhecido, trata como header
+      headerLines.push(content);
       continue;
     }
     
@@ -597,10 +619,14 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   // LOG DE VERIFICAÇÃO (OBRIGATÓRIO PARA DEBUG)
   // ═══════════════════════════════════════════════════════════════════════════
   const blockSnippet = content.slice(0, 40).replace(/\n/g, ' ').trim();
-  console.log(`[PARSE_RESULT] blockTitle="${blockSnippet}..." exerciseLines=${exerciseLines.length}, inlineComments=${inlineComments.length}, coachNotes=${coachNotes.length}, alerts=${alerts.length}`);
+  console.log(`[PARSE_RESULT] blockTitle="${blockSnippet}..." exerciseLines=${exerciseLines.length}, inlineComments=${inlineComments.length}, coachNotes=${coachNotes.length}, structures=${structures.length}, alerts=${alerts.length}`);
   
   if (alerts.length > 0) {
     console.log(`[PARSE_ALERTS]`, alerts.map(a => `${a.type}: "${a.line}"`).join('; '));
+  }
+  
+  if (structures.length > 0) {
+    console.log(`[PARSE_STRUCTURES]`, structures.map(s => s.tag).join(', '));
   }
   
   return { 
@@ -609,7 +635,9 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     coachNotes,
     inlineComments,
     alerts,
-    headerLines 
+    headerLines,
+    structures,
+    structureTags: structures.map(s => s.tag)
   };
 }
 
