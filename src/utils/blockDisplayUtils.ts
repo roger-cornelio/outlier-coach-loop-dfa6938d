@@ -351,10 +351,24 @@ function looksLikeExercise(line: string): boolean {
 
 /**
  * Verifica se uma linha é título de bloco (all caps ou padrão específico)
+ * REGRA CRÍTICA: Texto entre parênteses NUNCA é título
  */
 function isBlockTitle(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REGRA CRÍTICA: Se a linha inteira estiver entre parênteses, NUNCA é título
+  // Ex: "(Treino focado em manutenção...)" NÃO é título
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (/^\([^)]+\)$/.test(trimmed)) {
+    return false;
+  }
+  
+  // Se começa com parênteses, não é título
+  if (trimmed.startsWith('(')) {
+    return false;
+  }
   
   // All caps (mais de 2 palavras ou palavra única >= 4 letras)
   if (/^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s]+$/.test(trimmed) && trimmed.length >= 4) {
