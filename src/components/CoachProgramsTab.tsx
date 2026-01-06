@@ -200,16 +200,17 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                         <div className="p-3 space-y-3 bg-background">
                           {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
                             const { headerTitle, headerMeta } = getBlockHeader(block, idx);
-                            // MVP0: Separar treino e comentário - NUNCA renderizar block.content direto
-                            const { exerciseLines, commentLines: parsedComments } = separateBlockContent(block.content || '');
+                            // MVP0 REGRA FINAL: Separar treino e comentário
+                            const parseResult = separateBlockContent(block.content || '');
+                            const { exerciseLines, coachNotes, inlineComments, alerts } = parseResult;
                             
-                            // Comentários: priorizar parsedComments, fallback para coachNotes
-                            const finalComments = parsedComments.length > 0 
-                              ? parsedComments 
+                            // Comentários: priorizar coachNotes do parser, fallback para block.coachNotes
+                            const finalComments = coachNotes.length > 0 
+                              ? coachNotes 
                               : (Array.isArray(block.coachNotes) ? block.coachNotes : []);
                             
-                            // REGRA: Se não tem linhas executáveis NEM comentários, não renderiza bloco
-                            if (exerciseLines.length === 0 && finalComments.length === 0) {
+                            // REGRA: Se não tem exercícios NEM comentários NEM inline, não renderiza
+                            if (exerciseLines.length === 0 && finalComments.length === 0 && inlineComments.length === 0) {
                               return null;
                             }
                             
@@ -221,13 +222,35 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                                   <span className="text-xs text-muted-foreground">• {headerMeta}</span>
                                 )}
                               </div>
-                              {/* TREINO: apenas linhas executáveis */}
+                              
+                              {/* ALERTAS (não bloqueiam) */}
+                              {alerts.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {alerts.slice(0, 3).map((alert, i) => (
+                                    <div key={i} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600">
+                                      ⚠️ {alert.type === 'MISSING_DASH' ? 'Sem hífen' : 'Fora de ( )'}: "{alert.line.slice(0, 30)}..."
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* TREINO: apenas linhas com "- " */}
                               {exerciseLines.length > 0 && (
                                 <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
                                   {exerciseLines.join('\n')}
                                 </pre>
                               )}
-                              {/* COMENTÁRIO: sub-bloco visual */}
+                              
+                              {/* COMENTÁRIOS INLINE (fora de "> COMENTÁRIO") */}
+                              {inlineComments.length > 0 && (
+                                <div className="mt-1 text-xs text-muted-foreground/60 italic">
+                                  {inlineComments.map((ic, i) => (
+                                    <span key={i}>({ic.text}) </span>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* SUB-BLOCO COMENTÁRIO (da seção "> COMENTÁRIO") */}
                               {finalComments.length > 0 && (
                                 <div className="mt-2 text-xs text-muted-foreground/70 pl-2 border-l-2 border-muted-foreground/20 bg-muted/20 p-2 rounded-r">
                                   <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide block mb-1">Comentário</span>
