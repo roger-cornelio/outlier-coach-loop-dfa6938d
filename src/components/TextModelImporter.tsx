@@ -1216,9 +1216,9 @@ Descanso`}
                           const { exerciseLines, commentLines: parsedComments } = separateBlockContent(block.content || '');
                           
                           // Fallback para coachNotes se parsedComments vazio
-                          const blockCoachNotes = (block as any).coachNotes;
+                          const blockCoachNotes = block.coachNotes;
                           const commentLines = parsedComments.length > 0 
-                            ? parsedComments 
+                            ? parsedComments
                             : (Array.isArray(blockCoachNotes) ? blockCoachNotes : []);
 
                           return (
