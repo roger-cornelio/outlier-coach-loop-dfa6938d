@@ -281,12 +281,24 @@ export function PublishToAthletesModal({
     setError(null);
     setPublishedCount(0);
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // AUDITORIA DE COMENTÁRIOS (coachNotes) - OBRIGATÓRIO PARA DEBUG
+    // ════════════════════════════════════════════════════════════════════════════
+    const coachNotesTotal = workouts.reduce((total, day) => {
+      return total + (day.blocks || []).reduce((blockTotal, block) => {
+        const notes = block.coachNotes || [];
+        return blockTotal + notes.length;
+      }, 0);
+    }, 0);
+
     // LOG: PUBLISH_ATTEMPT (antes de iniciar)
+    console.log('[PUBLISH] coachNotesTotal=', coachNotesTotal);
     console.log('PUBLISH_ATTEMPT', {
       week_start: weekStart,
       athleteCount: selectedAthletes.size,
       coachId: profile.id,
       title: title || `Treino Semana ${weekPeriodLabel}`,
+      coachNotesTotal,
     });
 
     let successCount = 0;
