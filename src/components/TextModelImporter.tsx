@@ -1219,14 +1219,17 @@ Descanso`}
                   <div className="p-4 space-y-3">
                     {(dayWorkout.blocks || []).map((block, blockIndex) => {
                       // ════════════════════════════════════════════════════════════════════════════
-                      // MVP0: VERIFICAR SE BLOCO TEM LINHAS EXECUTÁVEIS ANTES DE RENDERIZAR
-                      // Usando separateBlockContent para garantir consistência com a renderização
+                      // MVP0: Usar separateBlockContent para verificar conteúdo
+                      // REGRA: Bloco renderizado se tem exerciseLines OU coachNotes OU inlineComments
                       // ════════════════════════════════════════════════════════════════════════════
-                      const { exerciseLines: checkExecLines } = separateBlockContent(block.content || '');
+                      const checkParse = separateBlockContent(block.content || '');
+                      const hasExecLines = checkParse.exerciseLines.length > 0;
+                      const hasCoachNotes = checkParse.coachNotes.length > 0 || (Array.isArray(block.coachNotes) && block.coachNotes.length > 0);
+                      const hasInlineComments = checkParse.inlineComments.length > 0;
                       
-                      // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco
-                      if (checkExecLines.length === 0) {
-                        console.log(`[RENDER_BLOCK] Preview title="${block.title}" rendered=false (sem linhas executáveis)`);
+                      // REGRA: Só esconder se não tem NENHUM conteúdo útil
+                      if (!hasExecLines && !hasCoachNotes && !hasInlineComments) {
+                        console.log(`[RENDER_BLOCK] Preview title="${block.title}" rendered=false (sem conteúdo)`);
                         return null;
                       }
                       
