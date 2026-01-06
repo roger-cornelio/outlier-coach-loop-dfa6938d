@@ -839,6 +839,8 @@ export function isFormatLine(line: string): boolean {
     /^tabata\b/i,                    // Tabata
     /^every\s+\d+/i,                 // Every 2 min, Every 90 sec
     /^rft\b/i,                       // RFT (Rounds For Time)
+    /^\d+\s*rounds?\b/i,             // 3 Rounds, 5 rounds
+    /^\*\*.*\*\*$/,                  // **estruturas** entre asteriscos duplos
   ];
   
   return formatPatterns.some(pattern => pattern.test(trimmed));
@@ -1866,6 +1868,15 @@ function isHeadingLine(line: string): boolean {
   console.log('[isHeadingLine] Verificando:', JSON.stringify(trimmed), 'len=', trimmed.length);
   
   // ════════════════════════════════════════════════════════════════════════════
+  // REGRA ABSOLUTA 0: ESTRUTURAS ENTRE ** ** NUNCA SÃO HEADINGS
+  // Ex: **3 ROUNDS**, **EMOM 30**, **FOR TIME** → são estruturas do bloco
+  // ════════════════════════════════════════════════════════════════════════════
+  if (/^\*\*.*\*\*$/.test(trimmed)) {
+    console.log('[isHeadingLine] → STRUCTURE_LINE (** **), retorna false (nunca é heading)');
+    return false;
+  }
+  
+  // ════════════════════════════════════════════════════════════════════════════
   // REGRA ABSOLUTA 1: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
   // Verifica PRIMEIRO, antes de qualquer outra regra
   // ════════════════════════════════════════════════════════════════════════════
@@ -2649,9 +2660,10 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
-    // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line)
+    // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line E não é estrutura **)
     // MVP0: Também é uma transição válida de bloco
-    if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line)) {
+    // MVP0 FIX: Estruturas entre ** ** NUNCA são títulos de bloco
+    if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line) && !/^\*\*.*\*\*$/.test(line.trim())) {
       console.log('[PARSER] Título MAIÚSCULO detectado:', line);
       console.log('[BLOCK_START] Novo bloco iniciado por título maiúsculo:', line);
       saveCurrentBlock();

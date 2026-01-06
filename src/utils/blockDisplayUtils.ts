@@ -31,6 +31,80 @@ import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { parseStructureLine, isWrappedStructure, type WorkoutStructure } from '@/utils/workoutStructures';
 import { isDSLDayLine, isDSLBlockLine, isDSLExerciseLine, isDSLStructureLine, extractDSLDay, extractDSLBlockName, extractDSLExercise, extractDSLStructure, isDSLPureCommentLine, extractDSLComment, isDSLSeparatorLine } from '@/utils/dslParser';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FUNÇÕES DE NORMALIZAÇÃO DSL PARA DISPLAY
+// ═══════════════════════════════════════════════════════════════════════════════
+// Estas funções APENAS afetam a exibição, NÃO o motor de parsing/cálculo.
+
+/**
+ * Normaliza o label de um dia, removendo o prefixo "DIA:" se existir.
+ * Ex: "DIA: SEGUNDA" → "SEGUNDA"
+ *     "SEGUNDA" → "SEGUNDA"
+ */
+export function normalizeDayLabel(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  
+  // Se começa com "DIA:", extrair o valor após o prefixo
+  if (/^DIA:\s*/i.test(trimmed)) {
+    return trimmed.replace(/^DIA:\s*/i, '').trim() || trimmed;
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Normaliza o título de um bloco, removendo o prefixo "BLOCO:" se existir.
+ * Se o valor estiver entre ** ** (estrutura), retorna '' (não é título).
+ * Ex: "BLOCO: AQUECIMENTO" → "AQUECIMENTO"
+ *     "AQUECIMENTO" → "AQUECIMENTO"
+ *     "**3 ROUNDS**" → "" (é estrutura, não título)
+ */
+export function normalizeBlockTitle(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  
+  // Se é uma estrutura entre ** **, não é título de bloco
+  if (isStructureLine(trimmed)) {
+    return '';
+  }
+  
+  // Se começa com "BLOCO:", extrair o valor após o prefixo
+  if (/^BLOCO:\s*/i.test(trimmed)) {
+    return trimmed.replace(/^BLOCO:\s*/i, '').trim() || trimmed;
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Extrai o label de uma estrutura entre ** **, sem os asteriscos.
+ * Ex: "**3 ROUNDS**" → "3 ROUNDS"
+ *     "**EMOM 30 MIN**" → "EMOM 30 MIN"
+ *     "AQUECIMENTO" → null (não é estrutura)
+ */
+export function normalizeStructureLabel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  
+  // Verifica se está entre ** **
+  const match = trimmed.match(/^\*\*([^*]+)\*\*$/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  return null;
+}
+
+/**
+ * Verifica se uma linha é uma estrutura entre ** **.
+ * Ex: "**3 ROUNDS**" → true
+ *     "AQUECIMENTO" → false
+ */
+export function isStructureLine(raw: string | null | undefined): boolean {
+  return normalizeStructureLabel(raw) !== null;
+}
+
 /**
  * Interface flexível para aceitar diferentes estruturas de bloco
  */

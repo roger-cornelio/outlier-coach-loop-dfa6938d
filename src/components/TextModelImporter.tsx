@@ -66,7 +66,7 @@ import {
   validateCoachInput,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import { normalizeRestLineForDisplay, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { normalizeRestLineForDisplay, separateBlockContent, normalizeBlockTitle, normalizeDayLabel } from '@/utils/blockDisplayUtils';
 import { validateStructures, getStructureDescription, type WorkoutStructure, type StructureValidationError } from '@/utils/workoutStructures';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -895,8 +895,11 @@ BLOCO: DESCANSO
                         ) : (
                           <div className="space-y-4">
                             {day.blocks.map((block, blockIndex) => {
-                              const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
-                              const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
+                              // Normalizar título (remover prefixo "BLOCO:" se existir)
+                              const rawTitle = block.title?.trim() || '';
+                              const normalizedTitle = normalizeBlockTitle(rawTitle);
+                              const displayTitle = normalizedTitle || `Bloco ${blockIndex + 1}`;
+                              const hasTitleError = !normalizedTitle || isInvalidBlockTitle(block.title, block);
                               
                               // Verificar erros de preview para este bloco
                               const blockPreviewErrors = previewValidation.invalidBlocks.filter(
@@ -1390,7 +1393,10 @@ BLOCO: DESCANSO
                             {block.isMainWod && (
                               <Star className="w-4 h-4 text-primary fill-primary flex-shrink-0" />
                             )}
-                            <span className={`font-medium ${block.isMainWod ? 'text-primary' : ''}`}>{block.title}</span>
+                            {/* Título do bloco - normalizado (sem prefixo "BLOCO:") */}
+                            <span className={`font-medium ${block.isMainWod ? 'text-primary' : ''}`}>
+                              {normalizeBlockTitle(block.title) || `Bloco ${blockIndex + 1}`}
+                            </span>
                             {block.isMainWod && (
                               <Badge className="text-xs bg-primary text-primary-foreground">
                                 WOD Principal
