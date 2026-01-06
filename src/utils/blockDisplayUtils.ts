@@ -307,7 +307,35 @@ export interface SeparatedBlockContent {
 const PARENTHESES_PATTERN = /\([^)]+\)/g;
 
 // Padrão para detectar linhas que "parecem exercício"
-const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|cal\b|kg\b|lb\b|PSE|RPE|EMOM|AMRAP|for\s*time)/i;
+const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|cal\b|kg\b|lb\b|PSE|RPE)/i;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PADRÕES DE LINHAS ESTRUTURAIS (Rounds, EMOM, AMRAP, For Time)
+// Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
+// ═══════════════════════════════════════════════════════════════════════════
+const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
+  /^\d+\s+Rounds?$/i,          // "5 Rounds", "3 rounds"
+  /^EMOM\s+\d+/i,              // "EMOM 30", "EMOM 10'"
+  /^AMRAP\s+\d+/i,             // "AMRAP 15", "AMRAP 20'"
+  /^For\s+Time$/i,             // "For Time"
+  /^RFT$/i,                    // "RFT" (Rounds For Time)
+  /^Tabata$/i,                 // "Tabata"
+  /^E\d+M(?:OM)?$/i,           // "E2MOM", "E3MOM"
+  /^Every\s+\d+\s*(?:min|')/i, // "Every 2 min", "Every 3'"
+  /^Time\s*cap\s*:?\s*\d+/i,   // "Time cap: 20", "Time cap 15'"
+  /^\d+\s*['']?\s*Time\s*cap/i, // "20' Time cap"
+];
+
+/**
+ * Verifica se uma linha é uma LINHA ESTRUTURAL (Rounds, EMOM, AMRAP, For Time)
+ * Estas linhas descrevem a estrutura do bloco, não são exercícios.
+ * NÃO devem gerar alerta MISSING_DASH.
+ */
+export function isStructuralLine(line: string): boolean {
+  const trimmed = (line ?? "").trim();
+  if (!trimmed) return false;
+  return STRUCTURAL_LINE_PATTERNS.some(pattern => pattern.test(trimmed));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // REGRA SUPREMA: EXTRAIR COMENTÁRIOS ENTRE ( ) ANTES DE QUALQUER CHECAGEM
@@ -364,10 +392,16 @@ function extractParenthesesComments(line: string): { cleanLine: string; comments
 
 /**
  * Detecta se uma linha parece exercício (para gerar alerta MISSING_DASH)
+ * IMPORTANTE: Linhas estruturais (Rounds, EMOM, etc.) NÃO são exercícios.
  */
 function looksLikeExercise(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REGRA: Linhas estruturais NÃO são exercícios
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (isStructuralLine(trimmed)) return false;
   
   // Começa com número
   if (/^\d/.test(trimmed)) return true;
@@ -532,6 +566,15 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     
     // É título de bloco? (já tratado acima, mas double-check)
     if (isBlockTitle(content)) {
+      headerLines.push(content);
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LINHA ESTRUTURAL (Rounds, EMOM, AMRAP, For Time)
+    // Não é exercício, não gera alerta. Armazena como headerLine.
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isStructuralLine(content)) {
       headerLines.push(content);
       continue;
     }
