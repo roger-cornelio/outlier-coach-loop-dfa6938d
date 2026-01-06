@@ -227,6 +227,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     result.needsDaySelection = false;
 
     // Converter para DayWorkout[] (sem depender de items/coachNotes — usar lines já classificadas)
+    // IMPORTANTE: Preservar coachNotes como campo explícito para persistência
     const workouts: DayWorkout[] = result.days.map((day) => ({
       day: (day.day || 'seg') as DayOfWeek,
       stimulus: '',
@@ -237,8 +238,14 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         const training = lines.filter(l => l.type !== 'comment').map(l => l.text);
         const comments = lines.filter(l => l.type === 'comment').map(l => l.text);
 
-        const content = comments.length > 0
-          ? `[TREINO]\n${training.join('\n')}\n[COMENTÁRIO]\n${comments.join('\n')}`
+        // Usar coachNotes do bloco parseado se existir, senão usar comments extraídos das lines
+        const coachNotes = (block.coachNotes && block.coachNotes.length > 0) 
+          ? block.coachNotes 
+          : comments;
+
+        // Content deve incluir TREINO + COMENTÁRIO para manter estrutura completa
+        const content = coachNotes.length > 0
+          ? `[TREINO]\n${training.join('\n')}\n[COMENTÁRIO]\n${coachNotes.join('\n')}`
           : training.join('\n');
 
         return {
@@ -246,6 +253,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
           type: block.type,
           title: block.title,
           content,
+          // FONTE ÚNICA DE VERDADE: coachNotes persistido explicitamente
+          coachNotes: coachNotes.length > 0 ? coachNotes : undefined,
           isMainWod: block.isMainWod || undefined,
           isBenchmark: block.isBenchmark || undefined,
         };
@@ -636,13 +645,25 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     const title = programName.trim() || 'Treino semanal';
     const weekStart = weekId.startDate || null;
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // AUDITORIA DE COMENTÁRIOS (coachNotes) - OBRIGATÓRIO PARA DEBUG
+    // ════════════════════════════════════════════════════════════════════════════
+    const coachNotesTotal = effectiveDays.reduce((total, day) => {
+      return total + (day.blocks || []).reduce((blockTotal, block) => {
+        const notes = block.coachNotes || [];
+        return blockTotal + notes.length;
+      }, 0);
+    }, 0);
+
     // LOG OBRIGATÓRIO: Estado completo no momento do save
+    console.log('[SAVE] coachNotesTotal=', coachNotesTotal);
     console.log('[SAVE_TO_PROGRAMS]', {
       weekId: weekId.label,
       weekStart,
       title,
       daysCount: effectiveDays.length,
       daysWithContent: effectiveDays.filter(d => d.blocks?.length > 0).length,
+      coachNotesTotal,
     });
 
     if (onSaveAndGoToPrograms) {
