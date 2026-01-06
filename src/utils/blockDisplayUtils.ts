@@ -29,6 +29,7 @@
 
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { parseStructureLine, isWrappedStructure, type WorkoutStructure } from '@/utils/workoutStructures';
+import { isDSLDayLine, isDSLBlockLine, isDSLExerciseLine, isDSLStructureLine, extractDSLDay, extractDSLBlockName, extractDSLExercise, extractDSLStructure, isDSLPureCommentLine, extractDSLComment, isDSLSeparatorLine } from '@/utils/dslParser';
 
 /**
  * Interface flexível para aceitar diferentes estruturas de bloco
@@ -507,6 +508,70 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     if (!trimmed) continue;
     
     // ═══════════════════════════════════════════════════════════════════════════
+    // DSL EXPLÍCITO: PRIORIDADE ABSOLUTA
+    // Linhas DIA:, BLOCO:, estruturas **** são tratadas ANTES de qualquer outra coisa
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // DIA: X - ignorar (é marcador de contexto, não conteúdo do bloco)
+    if (isDSLDayLine(trimmed)) {
+      continue;
+    }
+    
+    // BLOCO: X - ignorar (é marcador de contexto, não conteúdo do bloco)
+    if (isDSLBlockLine(trimmed)) {
+      continue;
+    }
+    
+    // Separador (⸻ ou múltiplos traços) - ignorar
+    if (isDSLSeparatorLine(trimmed)) {
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DSL: ESTRUTURA ENTRE ** ** (ANTES de parênteses)
+    // Ex: **3 ROUNDS**, **EMOM 30**, **AMRAP 15**, **FOR TIME**
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isDSLStructureLine(trimmed)) {
+      const structContent = extractDSLStructure(trimmed);
+      // Tentar parsear como estrutura tipada
+      const fullStructLine = `**${structContent}**`;
+      const structure = parseStructureLine(fullStructLine);
+      if (structure) {
+        structures.push(structure);
+        continue;
+      }
+      // Se não foi reconhecido como estrutura tipada, adicionar como header
+      headerLines.push(structContent);
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DSL: COMENTÁRIO PURO (...)
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isDSLPureCommentLine(trimmed)) {
+      const commentText = extractDSLComment(trimmed);
+      if (commentText) {
+        if (inCommentSection) {
+          coachNotes.push(commentText);
+        } else {
+          inlineComments.push({ lineIndex, text: commentText });
+        }
+      }
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DSL: EXERCÍCIO "- "
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isDSLExerciseLine(trimmed)) {
+      const exerciseText = extractDSLExercise(trimmed);
+      if (exerciseText) {
+        exerciseLines.push(exerciseText);
+      }
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
     // ★★★ REGRA SUPREMA: EXTRAIR PARÊNTESES ANTES DE QUALQUER CHECAGEM ★★★
     // ═══════════════════════════════════════════════════════════════════════════
     const { content, comments } = extractInlineComments(trimmed);
@@ -526,7 +591,7 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // DETECTAR ESTRUTURAS ENTRE ** ** (ANTES de qualquer outra checagem)
+    // DETECTAR ESTRUTURAS ENTRE ** ** (fallback para parser legado)
     // Ex: **3 ROUNDS**, **EMOM 30**, **AMRAP 15**, **FOR TIME**
     // ═══════════════════════════════════════════════════════════════════════════
     if (isWrappedStructure(content)) {
