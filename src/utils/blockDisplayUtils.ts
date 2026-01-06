@@ -309,28 +309,57 @@ const PARENTHESES_PATTERN = /\([^)]+\)/g;
 // Padrão para detectar linhas que "parecem exercício"
 const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|cal\b|kg\b|lb\b|PSE|RPE|EMOM|AMRAP|for\s*time)/i;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// REGRA SUPREMA: EXTRAIR COMENTÁRIOS ENTRE ( ) ANTES DE QUALQUER CHECAGEM
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Extrai todos os comentários entre parênteses de uma linha
  * Retorna o texto sem os parênteses e os comentários extraídos
+ * 
+ * REGRA SUPREMA: Esta função DEVE ser chamada ANTES de qualquer
+ * verificação de título, exercício ou qualquer outro classificador.
+ */
+export function extractInlineComments(rawLine: string): { content: string; comments: string[] } {
+  const line = rawLine ?? "";
+  const comments: string[] = [];
+
+  const regex = /\(([^)]*)\)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(line)) !== null) {
+    const c = (match[1] ?? "").trim();
+    if (c) comments.push(c);
+  }
+
+  const content = line
+    .replace(regex, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return { content, comments };
+}
+
+/**
+ * Verifica se uma linha é PURAMENTE comentário (só tem parênteses)
+ * Ex: "(Treino focado em...)" → true
+ * Ex: "AQUECIMENTO (Z2)" → false
+ */
+export function isPureCommentLine(rawLine: string): boolean {
+  const t = (rawLine ?? "").trim();
+  if (!t) return false;
+  // Linha começa com ( e termina com )
+  if (!t.startsWith("(") || !t.endsWith(")")) return false;
+  // Após extrair parênteses, conteúdo é vazio
+  return extractInlineComments(t).content === "";
+}
+
+/**
+ * @deprecated Use extractInlineComments instead
  */
 function extractParenthesesComments(line: string): { cleanLine: string; comments: string[] } {
-  const comments: string[] = [];
-  const matches = line.match(PARENTHESES_PATTERN);
-  
-  if (matches) {
-    for (const match of matches) {
-      // Remove os parênteses e guarda o conteúdo
-      const content = match.slice(1, -1).trim();
-      if (content) {
-        comments.push(content);
-      }
-    }
-  }
-  
-  // Remove todos os parênteses da linha
-  const cleanLine = line.replace(PARENTHESES_PATTERN, '').trim();
-  
-  return { cleanLine, comments };
+  const { content, comments } = extractInlineComments(line);
+  return { cleanLine: content, comments };
 }
 
 /**
@@ -351,22 +380,27 @@ function looksLikeExercise(line: string): boolean {
 
 /**
  * Verifica se uma linha é título de bloco (all caps ou padrão específico)
- * REGRA CRÍTICA: Texto entre parênteses NUNCA é título
+ * 
+ * REGRA SUPREMA: Esta função DEVE receber o texto JÁ LIMPO (sem parênteses).
+ * Use extractInlineComments() antes de chamar esta função.
+ * 
+ * BLINDAGEM EXTRA: Mesmo assim, rejeitamos qualquer linha que:
+ * - Comece ou termine com parênteses
+ * - Seja puramente comentário
  */
-function isBlockTitle(line: string): boolean {
-  const trimmed = line.trim();
+export function isBlockTitle(line: string): boolean {
+  const trimmed = (line ?? "").trim();
   if (!trimmed) return false;
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // REGRA CRÍTICA: Se a linha inteira estiver entre parênteses, NUNCA é título
-  // Ex: "(Treino focado em manutenção...)" NÃO é título
+  // BLINDAGEM EXTRA: Se ainda contém parênteses no início/fim, não é título
   // ═══════════════════════════════════════════════════════════════════════════
-  if (/^\([^)]+\)$/.test(trimmed)) {
+  if (trimmed.startsWith('(') || trimmed.endsWith(')')) {
     return false;
   }
   
-  // Se começa com parênteses, não é título
-  if (trimmed.startsWith('(')) {
+  // Não pode ser linha puramente de comentário
+  if (isPureCommentLine(line)) {
     return false;
   }
   
@@ -433,27 +467,11 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     if (!trimmed) continue;
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // DETECTAR INÍCIO/FIM DA SEÇÃO "> COMENTÁRIO"
+    // ★★★ REGRA SUPREMA: EXTRAIR PARÊNTESES ANTES DE QUALQUER CHECAGEM ★★★
     // ═══════════════════════════════════════════════════════════════════════════
-    if (isCommentSectionStart(trimmed)) {
-      inCommentSection = true;
-      continue; // Não renderizar a linha "> COMENTÁRIO" em si
-    }
+    const { content, comments } = extractInlineComments(trimmed);
     
-    // Novo título de bloco encerra seção de comentário
-    if (isBlockTitle(trimmed) && !trimmed.startsWith('-')) {
-      inCommentSection = false;
-      // Títulos de bloco são headers
-      headerLines.push(trimmed);
-      continue;
-    }
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // EXTRAIR COMENTÁRIOS ENTRE PARÊNTESES
-    // ═══════════════════════════════════════════════════════════════════════════
-    const { cleanLine, comments } = extractParenthesesComments(trimmed);
-    
-    // Guardar comentários extraídos
+    // Guardar comentários extraídos IMEDIATAMENTE
     for (const comment of comments) {
       if (inCommentSection) {
         coachNotes.push(comment);
@@ -462,12 +480,28 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
       }
     }
     
+    // Se a linha era PURAMENTE comentário, já processamos. Próxima linha.
+    if (!content) {
+      continue;
+    }
+    
     // ═══════════════════════════════════════════════════════════════════════════
-    // CLASSIFICAR A LINHA (APÓS REMOVER PARÊNTESES)
+    // A PARTIR DAQUI, USAR APENAS `content` (NUNCA `trimmed`)
     // ═══════════════════════════════════════════════════════════════════════════
     
-    // Linha vazia após remover parênteses - só tinha comentário
-    if (!cleanLine) continue;
+    // DETECTAR INÍCIO DA SEÇÃO "> COMENTÁRIO"
+    if (isCommentSectionStart(content)) {
+      inCommentSection = true;
+      continue;
+    }
+    
+    // Novo título de bloco encerra seção de comentário
+    // IMPORTANTE: Só checar isBlockTitle com `content` (já limpo)
+    if (isBlockTitle(content) && !content.startsWith('-')) {
+      inCommentSection = false;
+      headerLines.push(content);
+      continue;
+    }
     
     // ─────────────────────────────────────────────────────────────────────────
     // DENTRO DE "> COMENTÁRIO"
@@ -488,9 +522,8 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     // ─────────────────────────────────────────────────────────────────────────
     
     // EXERCÍCIO: Linha começa com "- "
-    if (cleanLine.startsWith('- ') || cleanLine.startsWith('-')) {
-      // Remove o hífen e espaço iniciais
-      const exerciseText = cleanLine.replace(/^-\s*/, '').trim();
+    if (content.startsWith('- ') || content.startsWith('-')) {
+      const exerciseText = content.replace(/^-\s*/, '').trim();
       if (exerciseText) {
         exerciseLines.push(exerciseText);
       }
@@ -498,25 +531,23 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     }
     
     // É título de bloco? (já tratado acima, mas double-check)
-    if (isBlockTitle(cleanLine)) {
-      headerLines.push(cleanLine);
+    if (isBlockTitle(content)) {
+      headerLines.push(content);
       continue;
     }
     
     // PARECE EXERCÍCIO MAS NÃO TEM HÍFEN → ALERTA
-    if (looksLikeExercise(cleanLine)) {
+    if (looksLikeExercise(content)) {
       alerts.push({
         type: 'MISSING_DASH',
         message: "Linha parece exercício, mas precisa começar com '- '. Corrija para não afetar o motor.",
         line: trimmed,
         lineIndex
       });
-      // Não adiciona como exercício NEM como comentário - só alerta
       continue;
     }
     
     // Qualquer outra linha fora de seção → ignorar silenciosamente
-    // (não é exercício, não é comentário, não é título)
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
