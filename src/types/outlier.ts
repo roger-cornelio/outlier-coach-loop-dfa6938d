@@ -77,6 +77,9 @@ export interface WorkoutBlock {
   type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
   title: string;
   content: string; // Base content (used when no level variants)
+  // MVP0: Linhas de treino e comentários parseados
+  lines?: string[];
+  coachNotes?: string[];
   isMainWod?: boolean;
   isBenchmark?: boolean;
   wodType?: WodType;
