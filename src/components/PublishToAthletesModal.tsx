@@ -245,6 +245,33 @@ export function PublishToAthletesModal({
       return;
     }
 
+    // MVP0: Validar categoria e bloco Principal em dias não-descanso
+    let daysWithMissingCategory = 0;
+    let daysWithoutMain = 0;
+
+    for (const day of workouts) {
+      const isRestDay = day.isRestDay === true;
+      if (isRestDay) continue;
+
+      if (!day.blocks || day.blocks.length === 0) continue;
+
+      const blocksWithoutCategory = day.blocks.filter((b) => !b.type).length;
+      if (blocksWithoutCategory > 0) daysWithMissingCategory++;
+
+      const hasMain = day.blocks.some((b) => b.isMainWod === true);
+      if (!hasMain) daysWithoutMain++;
+    }
+
+    if (daysWithMissingCategory > 0) {
+      setError(`${daysWithMissingCategory} dia(s) com blocos sem categoria. Volte e ajuste.`);
+      return;
+    }
+
+    if (daysWithoutMain > 0) {
+      setError(`${daysWithoutMain} dia(s) sem bloco Principal marcado. Volte e ajuste.`);
+      return;
+    }
+
     if (!profile?.id) {
       setError('Dados incompletos. Perfil não encontrado.');
       return;
