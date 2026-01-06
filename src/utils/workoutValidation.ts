@@ -85,7 +85,14 @@ export function validateWorkoutForSave(
 
 /**
  * Valida se um treino pode ser publicado para atletas
- * REGRA: week_start é a fonte única - não bloqueamos por data passada
+ * REGRA MVP0 V3:
+ * - week_start é obrigatório
+ * - Permite 1-7 dias com conteúdo (não exige semana completa)
+ * - Bloqueia se:
+ *   (A) Nenhum atleta selecionado
+ *   (B) Semana não definida
+ *   (C) Bloco sem categoria em dia não-descanso
+ *   (D) Dia não-descanso sem bloco Principal
  */
 export function validateWorkoutForPublish(
   workouts: DayWorkout[],
@@ -95,7 +102,7 @@ export function validateWorkoutForPublish(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // REGRA: Verificar se workouts existe
+  // REGRA: Verificar se workouts existe e tem pelo menos 1 dia
   if (!workouts || workouts.length === 0) {
     errors.push('Nenhum treino para publicar.');
     console.log('[VALIDATION_ERROR] line=0 reason="Nenhum treino para publicar"');
@@ -113,7 +120,41 @@ export function validateWorkoutForPublish(
     console.log('[VALIDATION_ERROR] line=0 reason="Semana não definida"');
   }
 
-  // NOTA: Não bloqueamos por data passada - permitimos publicar qualquer semana
+  // REGRA MVP0: Validar categoria e bloco Principal em dias não-descanso
+  if (workouts && workouts.length > 0) {
+    let daysWithMissingCategory = 0;
+    let daysWithoutMain = 0;
+
+    for (const day of workouts) {
+      const isRestDay = day.isRestDay === true;
+      if (isRestDay) continue; // Descanso não exige validação
+
+      // Verificar se tem blocos
+      if (!day.blocks || day.blocks.length === 0) continue;
+
+      // Verificar categoria em cada bloco
+      const blocksWithoutCategory = day.blocks.filter((b) => !b.type).length;
+      if (blocksWithoutCategory > 0) {
+        daysWithMissingCategory++;
+      }
+
+      // Verificar se tem pelo menos 1 bloco Principal
+      const hasMain = day.blocks.some((b) => b.isMainWod === true);
+      if (!hasMain) {
+        daysWithoutMain++;
+      }
+    }
+
+    if (daysWithMissingCategory > 0) {
+      errors.push(`${daysWithMissingCategory} dia(s) com blocos sem categoria.`);
+      console.log('[VALIDATION_ERROR] reason="missing_category" count=' + daysWithMissingCategory);
+    }
+
+    if (daysWithoutMain > 0) {
+      errors.push(`${daysWithoutMain} dia(s) sem bloco Principal marcado.`);
+      console.log('[VALIDATION_ERROR] reason="missing_main_wod" count=' + daysWithoutMain);
+    }
+  }
 
   // [PUBLISH_GUARD] Log de resultado
   console.log('[PUBLISH_GUARD] validateWorkoutForPublish', {

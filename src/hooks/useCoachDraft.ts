@@ -290,12 +290,14 @@ export function useCoachDraft() {
   }, [draft.weekId, draft.parseResult]);
 
   // ════════════════════════════════════════════════════════════════════════════
-  // REGRA DE PUBLICAÇÃO SEMANAL (V2):
-  // - Permite 0-7 dias com conteúdo (não exige semana completa)
+  // REGRA DE PUBLICAÇÃO SEMANAL (V3):
+  // - Permite 1-7 dias com conteúdo (não exige semana completa)
   // - Dias vazios NÃO bloqueiam publicação
   // - Bloqueia APENAS se:
   //   (A) Semana vazia (0 dias com conteúdo) → anti-acidente
-  //   (B) Qualquer dia com conteúdo tem erro real de validação (severity === 'ERROR')
+  //   (B) Qualquer dia com conteúdo tem bloco sem categoria (exceto descanso)
+  //   (C) Qualquer dia não-descanso não tem bloco Principal
+  //   (D) Erro de estrutura (severity === 'ERROR')
   // ════════════════════════════════════════════════════════════════════════════
   const canSave = useMemo(() => {
     // Verificar se há erros de estrutura bloqueantes
@@ -304,19 +306,43 @@ export function useCoachDraft() {
 
     // Contar dias com conteúdo (pelo menos 1 bloco)
     const daysWithContent = effectiveDays?.filter((d) => d.blocks && d.blocks.length > 0) ?? [];
-    const daysEmpty = effectiveDays?.filter((d) => !d.blocks || d.blocks.length === 0) ?? [];
 
     // Semana precisa ter pelo menos 1 dia com conteúdo
     const hasContentDays = daysWithContent.length >= 1;
 
+    // VALIDAÇÃO MVP0: categoria + bloco principal
+    let missingCategory = 0;
+    let missingMainWod = 0;
+
+    for (const day of daysWithContent) {
+      const isRestDay = day.isRestDay === true;
+      if (isRestDay) continue; // Descanso não exige validação
+
+      // Verificar se todos os blocos têm categoria
+      for (const block of day.blocks) {
+        if (!block.type) {
+          missingCategory++;
+        }
+      }
+
+      // Verificar se tem pelo menos 1 bloco Principal
+      const hasMain = day.blocks.some((b) => b.isMainWod === true);
+      if (!hasMain) {
+        missingMainWod++;
+      }
+    }
+
+    const hasValidationErrors = missingCategory > 0 || missingMainWod > 0;
+
     // Pode salvar se: semana selecionada + tem conteúdo + sem erros
-    const result = draft.weekId !== null && hasContentDays && !hasBlockingErrors;
+    const result = draft.weekId !== null && hasContentDays && !hasBlockingErrors && !hasValidationErrors;
 
     // Log de diagnóstico
     console.log("[PUBLISH_GUARD] useCoachDraft", {
       daysWithContent: daysWithContent.length,
-      daysEmpty: daysEmpty.length,
       hasBlockingErrors,
+      missingCategory,
+      missingMainWod,
       canSave: result,
     });
 

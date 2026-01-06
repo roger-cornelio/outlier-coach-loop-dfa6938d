@@ -140,11 +140,12 @@ export function StructuredWorkoutEditor({
   // ============================================
 
   const validation = useMemo(() => {
-    const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean; isRestDay: boolean }> =
+    const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean; isRestDay: boolean; missingCategory: boolean }> =
       {} as any;
     let totalErrors = 0;
     let daysWithoutMain = 0;
     let daysWithMultipleMain = 0;
+    let daysWithMissingCategory = 0;
 
     for (const day of days) {
       // MVP0: Dias de descanso NÃO exigem WOD Principal e NÃO contam erros de validação de WOD
@@ -153,6 +154,13 @@ export function StructuredWorkoutEditor({
       // Validar todos os blocos
       const blockValidation = validateAllBlocks(day.blocks);
       totalErrors += blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0);
+
+      // Verificar se todos os blocos têm categoria/tipo (OBRIGATÓRIO para dias não-descanso)
+      const blocksWithoutCategory = isRestDay ? 0 : day.blocks.filter((b) => !b.type).length;
+      const hasMissingCategory = blocksWithoutCategory > 0;
+      if (hasMissingCategory) {
+        daysWithMissingCategory++;
+      }
 
       // Verificar WOD Principal - APENAS para dias de treino (não descanso)
       const workoutBlocks = day.blocks.map(structuredToWorkoutBlock);
@@ -179,29 +187,37 @@ export function StructuredWorkoutEditor({
         errorCount: blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0),
         multipleMainBlocks: isRestDay ? false : multipleMainBlocks,
         isRestDay,
+        missingCategory: hasMissingCategory,
       };
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // REGRA DE PUBLICAÇÃO SEMANAL (V2):
-    // - Permite 0-7 dias com conteúdo (não exige semana completa)
+    // REGRA DE PUBLICAÇÃO SEMANAL (V3):
+    // - Permite 1-7 dias com conteúdo (não exige semana completa)
     // - Dias vazios NÃO bloqueiam publicação
     // - Bloqueia APENAS se:
     //   (A) Semana vazia (0 dias com conteúdo) → anti-acidente
-    //   (B) Qualquer dia com conteúdo tem erro real de validação
+    //   (B) Qualquer dia com conteúdo tem bloco sem categoria (exceto descanso)
+    //   (C) Qualquer dia não-descanso não tem bloco Principal
     // ════════════════════════════════════════════════════════════════════════════
 
     // Contar dias com conteúdo (pelo menos 1 bloco)
     const daysWithContent = days.filter((d) => d.blocks.length > 0);
     const daysEmpty = days.filter((d) => d.blocks.length === 0);
 
-    // Erros APENAS em dias com conteúdo
+    // Erros APENAS em dias com conteúdo (incluindo categoria + principal)
     const errorsInContentDays = Object.entries(dayValidations)
       .filter(([dayKey, val]) => {
         const dayData = days.find((d) => d.day === dayKey);
         return dayData && dayData.blocks.length > 0 && !val.isRestDay;
       })
-      .reduce((sum, [, val]) => sum + val.errorCount + (val.hasMainWod ? 0 : 1) + (val.multipleMainBlocks ? 1 : 0), 0);
+      .reduce((sum, [, val]) => {
+        let count = val.errorCount;
+        if (!val.hasMainWod) count++;
+        if (val.multipleMainBlocks) count++;
+        if (val.missingCategory) count++;
+        return sum + count;
+      }, 0);
 
     // Pode salvar/publicar se:
     // - Tem pelo menos 1 dia com conteúdo (não vazio)
@@ -214,6 +230,8 @@ export function StructuredWorkoutEditor({
       daysWithContent: daysWithContent.length,
       daysEmpty: daysEmpty.length,
       errorsInContentDays,
+      daysWithMissingCategory,
+      daysWithoutMain,
       canPublish,
     });
 
@@ -222,6 +240,7 @@ export function StructuredWorkoutEditor({
       totalErrors,
       daysWithoutMain,
       daysWithMultipleMain,
+      daysWithMissingCategory,
       hasAnyDay: days.length > 0,
       hasWeek: selectedWeek !== null,
       canSave: canPublish, // Usa a nova lógica
@@ -386,8 +405,17 @@ export function StructuredWorkoutEditor({
         } else if ((validation.daysWithContent ?? 0) === 0) {
           // T0: Semana vazia - anti-acidente
           setError("Adicione pelo menos 1 dia de treino para publicar a semana.");
+        } else if ((validation.daysWithMissingCategory ?? 0) > 0) {
+          // Categoria obrigatória
+          setError(`${validation.daysWithMissingCategory} dia(s) com blocos sem categoria selecionada.`);
+        } else if ((validation.daysWithoutMain ?? 0) > 0) {
+          // WOD Principal obrigatório
+          setError(`${validation.daysWithoutMain} dia(s) sem bloco Principal marcado.`);
+        } else if ((validation.daysWithMultipleMain ?? 0) > 0) {
+          // Múltiplos principais
+          setError(`${validation.daysWithMultipleMain} dia(s) com múltiplos blocos Principal.`);
         } else if ((validation.errorsInContentDays ?? 0) > 0) {
-          // T2: Erros em dias com conteúdo
+          // Outros erros
           setError(`Corrija os erros nos dias com conteúdo antes de ${status === "published" ? "publicar" : "salvar"}`);
         } else {
           setError("Verifique os dias com conteúdo");
@@ -473,6 +501,40 @@ export function StructuredWorkoutEditor({
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <p className="text-sm text-green-500">{success}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Alerta de blocos sem categoria */}
+        {validation.daysWithMissingCategory > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-lg bg-destructive/10 border border-destructive/20"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">
+                {validation.daysWithMissingCategory} dia(s) com blocos sem categoria. Selecione a categoria de cada bloco.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Alerta de dias sem WOD Principal */}
+        {validation.daysWithoutMain > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-lg bg-destructive/10 border border-destructive/20"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">
+                {validation.daysWithoutMain} dia(s) sem bloco Principal. Marque um bloco como Principal em cada dia.
+              </p>
             </div>
           </motion.div>
         )}
