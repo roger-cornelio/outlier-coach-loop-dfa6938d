@@ -201,10 +201,15 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                           {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
                             const { headerTitle, headerMeta } = getBlockHeader(block, idx);
                             // MVP0: Separar treino e comentário - NUNCA renderizar block.content direto
-                            const { exerciseLines, commentLines } = separateBlockContent(block.content || '');
+                            const { exerciseLines, commentLines: parsedComments } = separateBlockContent(block.content || '');
                             
-                            // REGRA: Se não tem linhas executáveis, não renderiza bloco
-                            if (exerciseLines.length === 0) {
+                            // Comentários: priorizar parsedComments, fallback para coachNotes
+                            const finalComments = parsedComments.length > 0 
+                              ? parsedComments 
+                              : (Array.isArray(block.coachNotes) ? block.coachNotes : []);
+                            
+                            // REGRA: Se não tem linhas executáveis NEM comentários, não renderiza bloco
+                            if (exerciseLines.length === 0 && finalComments.length === 0) {
                               return null;
                             }
                             
@@ -217,14 +222,16 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                                 )}
                               </div>
                               {/* TREINO: apenas linhas executáveis */}
-                              <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
-                                {exerciseLines.join('\n')}
-                              </pre>
+                              {exerciseLines.length > 0 && (
+                                <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
+                                  {exerciseLines.join('\n')}
+                                </pre>
+                              )}
                               {/* COMENTÁRIO: sub-bloco visual */}
-                              {commentLines.length > 0 && (
+                              {finalComments.length > 0 && (
                                 <div className="mt-2 text-xs text-muted-foreground/70 pl-2 border-l-2 border-muted-foreground/20 bg-muted/20 p-2 rounded-r">
                                   <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide block mb-1">Comentário</span>
-                                  {commentLines.map((line, i) => (
+                                  {finalComments.map((line, i) => (
                                     <p key={i}>{line}</p>
                                   ))}
                                 </div>
