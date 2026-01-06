@@ -52,6 +52,8 @@ export interface PublishToAthletesModalProps {
   onSuccess?: () => void;
   /** Segunda-feira da semana (YYYY-MM-DD) - fonte única da verdade */
   weekStart: string | null;
+  /** ID do workout na tabela workouts (para atualizar status para published) */
+  workoutId?: string | null;
 }
 
 // Step enum for the wizard - agora só 2 steps
@@ -66,6 +68,7 @@ export function PublishToAthletesModal({
   loadingAthletes = false,
   onSuccess,
   weekStart,
+  workoutId,
 }: PublishToAthletesModalProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -307,7 +310,36 @@ export function PublishToAthletesModal({
         console.log('PUBLISH_SUCCESS', {
           week_start: weekStart,
           athleteCount: successCount,
+          workoutId: workoutId,
         });
+
+        // CRÍTICO: Atualizar status do workout para 'published' na tabela workouts
+        if (workoutId) {
+          console.log('PUBLISH_WORKOUT_STATUS_UPDATE', {
+            workoutId,
+            newStatus: 'published',
+          });
+          
+          const { error: workoutUpdateError } = await supabase
+            .from('workouts')
+            .update({ 
+              status: 'published',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', workoutId);
+          
+          if (workoutUpdateError) {
+            console.error('PUBLISH_WORKOUT_STATUS_FAIL', {
+              workoutId,
+              error: workoutUpdateError,
+            });
+          } else {
+            console.log('PUBLISH_WORKOUT_STATUS_SUCCESS', {
+              workoutId,
+              newStatus: 'published',
+            });
+          }
+        }
 
         toast({
           title: 'Treino publicado!',
