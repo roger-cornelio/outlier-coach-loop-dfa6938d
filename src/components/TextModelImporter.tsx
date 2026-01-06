@@ -1224,15 +1224,16 @@ Descanso`}
                           return (
                             <div className="space-y-2">
                               {/* TREINO - apenas linhas executáveis */}
-                              <div className="text-sm space-y-1 text-foreground/90">
-                                {exerciseLines.length > 0 ? (
-                                  exerciseLines.map((line, idx) => (
+                              {exerciseLines.length > 0 && (
+                                <div className="text-sm space-y-1 text-foreground/90">
+                                  {exerciseLines.map((line, idx) => (
                                     <p key={`${block.id || blockIndex}-ex-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
-                                  ))
-                                ) : (
-                                  <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
-                                )}
-                              </div>
+                                  ))}
+                                </div>
+                              )}
+                              {exerciseLines.length === 0 && commentLines.length === 0 && (
+                                <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
+                              )}
 
                               {/* SUB-BLOCO: COMENTÁRIO DO COACH - SÓ RENDERIZA SE EXISTIR */}
                               {commentLines.length > 0 && (
