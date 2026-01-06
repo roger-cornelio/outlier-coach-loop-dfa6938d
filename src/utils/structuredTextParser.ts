@@ -45,6 +45,7 @@
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { detectUnits, hasRecognizedUnit, type UnitConfidence } from './unitDetection';
+import { extractInlineComments } from './blockDisplayUtils';
 
 // ============================================
 // TIPOS
@@ -2069,6 +2070,10 @@ export function parseStructuredText(text: string): ParseResult {
     // PASSO 1: Procurar título na LISTA BRANCA (prioridade máxima)
     for (let i = 0; i < Math.min(5, nonEmptyLines.length); i++) {
       const line = nonEmptyLines[i].trim();
+
+      // REGRA SUPREMA: linha puramente "( ... )" nunca pode virar heading/título
+      const { content, comments } = extractInlineComments(line);
+      if (comments.length > 0 && content.length === 0) continue;
       
       // Se está na lista negra, pular
       if (isBlacklistLine(line)) continue;
@@ -2085,6 +2090,10 @@ export function parseStructuredText(text: string): ParseResult {
     // PASSO 2: Heurística - linha curta, sem número, sem lista negra
     for (let i = 0; i < Math.min(5, nonEmptyLines.length); i++) {
       const line = nonEmptyLines[i].trim();
+
+      // REGRA SUPREMA: linha puramente "( ... )" nunca pode virar heading/título
+      const { content, comments } = extractInlineComments(line);
+      if (comments.length > 0 && content.length === 0) continue;
       
       // Se está na lista negra, pular
       if (isBlacklistLine(line)) continue;
@@ -2403,6 +2412,16 @@ export function parseStructuredText(text: string): ParseResult {
     // REGRA CIRÚRGICA: "COMENTÁRIO" NUNCA cria novo bloco - anexa ao bloco anterior
     // ════════════════════════════════════════════════════════════════════════════
     const trimmedLine = line.trim();
+
+    // REGRA SUPREMA: qualquer linha "( ... )" é SEMPRE comentário e NUNCA vira título/bloco
+    const { content: parenContent, comments: parenComments } = extractInlineComments(trimmedLine);
+    if (parenComments.length > 0 && parenContent.length === 0) {
+      // Anexar ao bloco atual (se existir); se não houver, ignorar (não cria bloco)
+      if (currentBlock) {
+        currentBlock.coachNotes.push(...parenComments);
+      }
+      continue;
+    }
     
     // Detectar marcadores de TREINO: [TREINO] ou = TREINO
     if (/^\[TREINO\]$/i.test(trimmedLine) || /^=\s*TREINO\s*$/i.test(trimmedLine)) {
