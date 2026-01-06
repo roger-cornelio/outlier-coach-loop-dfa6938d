@@ -67,6 +67,7 @@ import {
   type ParseResult 
 } from '@/utils/structuredTextParser';
 import { normalizeRestLineForDisplay, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { validateStructures, getStructureDescription, type WorkoutStructure, type StructureValidationError } from '@/utils/workoutStructures';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
@@ -504,6 +505,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         if (!block.type) {
           invalidBlocks.push({ dayIndex, blockIndex, reason: 'category' });
         }
+        
+        // VALIDAR CONFLITOS DE ESTRUTURA (**ROUNDS**, **EMOM**, etc.)
+        // Reconstruir conteúdo do bloco a partir das linhas
+        const blockContent = block.lines?.map(l => l.text || '').join('\n') || '';
+        if (blockContent) {
+          const blockParse = separateBlockContent(blockContent);
+          if (blockParse.structures && blockParse.structures.length > 0) {
+            const structErrors = validateStructures(blockParse.structures);
+            if (structErrors.length > 0) {
+              invalidBlocks.push({ dayIndex, blockIndex, reason: 'structure_conflict' });
+            }
+          }
+        }
       });
       
       // Verificar bloco Principal (exatamente 1 por dia)
@@ -529,6 +543,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     const daysWithoutCategory = new Set(invalidBlocks.filter(ib => ib.reason === 'category').map(ib => ib.dayIndex));
     const daysWithoutMain = new Set(invalidBlocks.filter(ib => ib.reason === 'no_main').map(ib => ib.dayIndex));
     const daysWithMultipleMain = new Set(invalidBlocks.filter(ib => ib.reason === 'multiple_main').map(ib => ib.dayIndex));
+    const daysWithStructureConflict = new Set(invalidBlocks.filter(ib => ib.reason === 'structure_conflict').map(ib => ib.dayIndex));
     
     if (daysWithoutCategory.size > 0) {
       errors.push(`${daysWithoutCategory.size} dia(s) com blocos sem categoria`);
@@ -538,6 +553,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     }
     if (daysWithMultipleMain.size > 0) {
       errors.push(`${daysWithMultipleMain.size} dia(s) com múltiplos blocos Principal`);
+    }
+    if (daysWithStructureConflict.size > 0) {
+      errors.push(`${daysWithStructureConflict.size} dia(s) com conflito de estrutura (ex: EMOM + ROUNDS)`);
     }
     
     return {
@@ -894,6 +912,7 @@ Descanso`}
                               const isMissingCategory = blockPreviewErrors.some(e => e.reason === 'category');
                               const isMissingMain = blockPreviewErrors.some(e => e.reason === 'no_main');
                               const hasMultipleMain = blockPreviewErrors.some(e => e.reason === 'multiple_main');
+                              const hasStructureConflict = blockPreviewErrors.some(e => e.reason === 'structure_conflict');
                               
                               const hasValidationErrors = hasTitleError || !block.type || hasPreviewError;
                               
@@ -1025,6 +1044,11 @@ Descanso`}
                                         {hasMultipleMain && (
                                           <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
                                             Múltiplos Principal
+                                          </Badge>
+                                        )}
+                                        {hasStructureConflict && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-destructive text-destructive bg-destructive/10">
+                                            Conflito de estrutura
                                           </Badge>
                                         )}
                                       </div>
@@ -1391,11 +1415,16 @@ Descanso`}
                           // MVP0 REGRA FINAL:
                           // - Exercício = linhas com "- " no início
                           // - Comentário = texto entre "( )"
+                          // - Estruturas = linhas entre ** ** (ROUNDS, EMOM, AMRAP, FOR TIME)
                           // - Alertas visuais (não bloqueiam)
                           // ════════════════════════════════════════════════════════════════════════════
                           
                           const parseResult = separateBlockContent(block.content || '');
-                          const { exerciseLines, coachNotes, inlineComments, alerts } = parseResult;
+                          const { exerciseLines, coachNotes, inlineComments, alerts, structures = [] } = parseResult;
+                          
+                          // Validar conflitos de estrutura
+                          const structureErrors = validateStructures(structures);
+                          const structureDescription = getStructureDescription(structures);
                           
                           // Fallback para coachNotes legado do bloco
                           const blockCoachNotes = block.coachNotes;
@@ -1406,10 +1435,31 @@ Descanso`}
                           // Log de verificação
                           const hasExercise = exerciseLines.length > 0;
                           const renderedCoachNotes = finalCoachNotes.length > 0;
-                          console.log(`[RENDER_RESULT] hasExercise=${hasExercise}, renderedCoachNotes=${renderedCoachNotes}, renderedInlineCommentsCount=${inlineComments.length}`);
+                          console.log(`[RENDER_RESULT] hasExercise=${hasExercise}, renderedCoachNotes=${renderedCoachNotes}, structures=${structures.length}, structureErrors=${structureErrors.length}`);
 
                           return (
                             <div className="space-y-2">
+                              {/* ERROS DE CONFLITO DE ESTRUTURA (BLOQUEIAM PUBLICAÇÃO) */}
+                              {structureErrors.length > 0 && (
+                                <div className="space-y-1">
+                                  {structureErrors.map((err, idx) => (
+                                    <div key={`struct-err-${idx}`} className="text-xs px-2 py-1.5 rounded bg-destructive/10 text-destructive border border-destructive/20">
+                                      <span className="font-medium">❌ Erro de estrutura:</span>{' '}
+                                      <span>{err.message}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* ESTRUTURA DO BLOCO (**ROUNDS**, **EMOM**, etc.) */}
+                              {structureDescription && (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs font-medium bg-primary/10 text-primary border-primary/20">
+                                    🔁 {structureDescription}
+                                  </Badge>
+                                </div>
+                              )}
+                              
                               {/* ALERTAS (não bloqueiam, apenas informam) */}
                               {alerts.length > 0 && (
                                 <div className="space-y-1">
@@ -1452,7 +1502,7 @@ Descanso`}
                                 </div>
                               )}
                               
-                              {exerciseLines.length === 0 && finalCoachNotes.length === 0 && inlineComments.length === 0 && (
+                              {exerciseLines.length === 0 && finalCoachNotes.length === 0 && inlineComments.length === 0 && structures.length === 0 && (
                                 <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
                               )}
 
