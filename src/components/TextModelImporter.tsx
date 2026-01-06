@@ -482,6 +482,73 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // Warnings para exibir (não bloqueiam)
   const structureWarningCount = parseResult?.structureIssues?.length ?? 0;
   const hasStructureWarnings = structureWarningCount > 0;
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // VALIDAÇÃO OBRIGATÓRIA PARA PREVIEW
+  // - Todo bloco deve ter categoria selecionada
+  // - Todo dia (não-descanso) deve ter exatamente 1 bloco Principal
+  // ═══════════════════════════════════════════════════════════════════════════════
+  
+  // Calcular erros de validação para Preview
+  const previewValidation = (() => {
+    if (!parseResult?.days) return { isValid: true, errors: [] as string[], invalidBlocks: [] as { dayIndex: number; blockIndex: number; reason: string }[] };
+    
+    const errors: string[] = [];
+    const invalidBlocks: { dayIndex: number; blockIndex: number; reason: string }[] = [];
+    
+    parseResult.days.forEach((day, dayIndex) => {
+      if (restDays[dayIndex]) return; // Ignorar dias de descanso
+      
+      // Verificar categoria em cada bloco
+      day.blocks.forEach((block, blockIndex) => {
+        if (!block.type) {
+          invalidBlocks.push({ dayIndex, blockIndex, reason: 'category' });
+        }
+      });
+      
+      // Verificar bloco Principal (exatamente 1 por dia)
+      const mainBlocks = day.blocks.filter(b => b.isMainWod);
+      if (mainBlocks.length === 0 && day.blocks.length > 0) {
+        // Nenhum bloco principal - marcar todos os blocos do dia como inválidos
+        day.blocks.forEach((_, blockIndex) => {
+          if (!invalidBlocks.some(ib => ib.dayIndex === dayIndex && ib.blockIndex === blockIndex)) {
+            invalidBlocks.push({ dayIndex, blockIndex, reason: 'no_main' });
+          }
+        });
+      } else if (mainBlocks.length > 1) {
+        // Múltiplos blocos principais
+        day.blocks.forEach((block, blockIndex) => {
+          if (block.isMainWod && !invalidBlocks.some(ib => ib.dayIndex === dayIndex && ib.blockIndex === blockIndex)) {
+            invalidBlocks.push({ dayIndex, blockIndex, reason: 'multiple_main' });
+          }
+        });
+      }
+    });
+    
+    // Gerar mensagens de erro
+    const daysWithoutCategory = new Set(invalidBlocks.filter(ib => ib.reason === 'category').map(ib => ib.dayIndex));
+    const daysWithoutMain = new Set(invalidBlocks.filter(ib => ib.reason === 'no_main').map(ib => ib.dayIndex));
+    const daysWithMultipleMain = new Set(invalidBlocks.filter(ib => ib.reason === 'multiple_main').map(ib => ib.dayIndex));
+    
+    if (daysWithoutCategory.size > 0) {
+      errors.push(`${daysWithoutCategory.size} dia(s) com blocos sem categoria`);
+    }
+    if (daysWithoutMain.size > 0) {
+      errors.push(`${daysWithoutMain.size} dia(s) sem bloco Principal marcado`);
+    }
+    if (daysWithMultipleMain.size > 0) {
+      errors.push(`${daysWithMultipleMain.size} dia(s) com múltiplos blocos Principal`);
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      invalidBlocks,
+    };
+  })();
+  
+  // Estado para mostrar erros de validação
+  const [previewValidationError, setPreviewValidationError] = useState<string | null>(null);
   
   // Draft pode ser salvo mesmo com warnings semânticos
   // Requisitos mínimos: texto parseado + semana selecionada
@@ -493,6 +560,15 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   
   const handleGoToPreview = () => {
     if (!canSaveAndGoToPreview) return;
+    
+    // VALIDAÇÃO OBRIGATÓRIA: categoria + bloco principal
+    if (!previewValidation.isValid) {
+      setPreviewValidationError(previewValidation.errors.join('. '));
+      console.log('[PREVIEW_BLOCKED]', previewValidation.errors);
+      return;
+    }
+    
+    setPreviewValidationError(null);
     console.debug('[TextModelImporter] Navegando para PREVIEW');
     goToPreview();
   };
@@ -809,7 +885,17 @@ Descanso`}
                             {day.blocks.map((block, blockIndex) => {
                               const displayTitle = block.title?.trim() || `Bloco ${blockIndex + 1}`;
                               const hasTitleError = !block.title?.trim() || isInvalidBlockTitle(block.title, block);
-                              const hasValidationErrors = hasTitleError || !block.type;
+                              
+                              // Verificar erros de preview para este bloco
+                              const blockPreviewErrors = previewValidation.invalidBlocks.filter(
+                                ib => ib.dayIndex === dayIndex && ib.blockIndex === blockIndex
+                              );
+                              const hasPreviewError = blockPreviewErrors.length > 0;
+                              const isMissingCategory = blockPreviewErrors.some(e => e.reason === 'category');
+                              const isMissingMain = blockPreviewErrors.some(e => e.reason === 'no_main');
+                              const hasMultipleMain = blockPreviewErrors.some(e => e.reason === 'multiple_main');
+                              
+                              const hasValidationErrors = hasTitleError || !block.type || hasPreviewError;
                               
                               // ═══════════════════════════════════════════════════════════
                               // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
@@ -923,6 +1009,27 @@ Descanso`}
                                       </TooltipContent>
                                     </Tooltip>
 
+                                    {/* Labels de erro de validação para Preview */}
+                                    {hasPreviewError && (
+                                      <div className="flex gap-1 flex-wrap">
+                                        {isMissingCategory && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
+                                            Selecione categoria
+                                          </Badge>
+                                        )}
+                                        {isMissingMain && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
+                                            Marque como Principal
+                                          </Badge>
+                                        )}
+                                        {hasMultipleMain && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
+                                            Múltiplos Principal
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+
                                     <div className="flex-1" />
 
                                     {/* Menu de ações */}
@@ -1034,6 +1141,25 @@ Descanso`}
                 })}
               </Accordion>
             </TooltipProvider>
+
+            {/* ALERTA DE ERRO DE VALIDAÇÃO PARA PREVIEW */}
+            {previewValidationError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4 rounded-lg bg-destructive/10 border border-destructive/30"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-destructive">Não é possível ir para Preview</p>
+                    <p className="text-xs text-destructive/80 mt-1">{previewValidationError}</p>
+                    <p className="text-xs text-muted-foreground mt-2">Corrija os erros nos blocos destacados acima.</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* BOTÕES DE NAVEGAÇÃO */}
             <div className="flex gap-3 pt-4">
