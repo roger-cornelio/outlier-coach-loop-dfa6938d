@@ -167,6 +167,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
   const [programStatus, setProgramStatus] = useState<'draft' | 'published'>('draft');
   const [isSavingToDb, setIsSavingToDb] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [savedWorkoutId, setSavedWorkoutId] = useState<string | null>(null);
   
   // OBRIGATÓRIO: Semana de referência
   const [selectedWeek, setSelectedWeek] = useState<WeekPeriod | null>(null);
@@ -324,6 +325,35 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
     }
   };
 
+  // Handler para abrir modal de publicação - PRIMEIRO salva workout na tabela workouts
+  const handleOpenPublishModal = async () => {
+    if (!parsedWorkouts || !selectedWeek) return;
+    
+    setIsSavingToDb(true);
+    setError(null);
+    
+    try {
+      const title = programName.trim() || `Treino semanal`;
+      const weekStart = selectedWeek.startDate;
+      
+      // Salvar como PUBLISHED (status final após publicar para atletas)
+      const workoutId = await saveToDb(title, parsedWorkouts, 'published', 0, weekStart);
+      
+      if (workoutId) {
+        console.log('[CoachSpreadsheetTab] Workout saved with ID:', workoutId, 'status: published');
+        setSavedWorkoutId(workoutId);
+        setShowPublishModal(true);
+      } else {
+        setError('Erro ao salvar treino no banco.');
+      }
+    } catch (err) {
+      console.error('[CoachSpreadsheetTab] Error saving before publish:', err);
+      setError('Erro ao salvar treino');
+    } finally {
+      setIsSavingToDb(false);
+    }
+  };
+
   return (
     <Tabs defaultValue="structured" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
@@ -437,12 +467,12 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
                     <TooltipTrigger asChild>
                       <Button
                         size="sm"
-                        onClick={() => setShowPublishModal(true)}
+                        onClick={handleOpenPublishModal}
                         className="flex items-center gap-1.5"
-                        disabled={linkedAthletes.length === 0 || !selectedWeek}
+                        disabled={linkedAthletes.length === 0 || !selectedWeek || isSavingToDb}
                       >
                         <Send className="w-4 h-4" />
-                        Publicar para Atletas
+                        {isSavingToDb ? 'Salvando...' : 'Publicar para Atletas'}
                       </Button>
                     </TooltipTrigger>
                     {(linkedAthletes.length === 0 || !selectedWeek) && (
@@ -741,18 +771,23 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
       {/* Modal de publicar para atletas - usa preview local */}
       <PublishToAthletesModal
         open={showPublishModal}
-        onOpenChange={setShowPublishModal}
+        onOpenChange={(open) => {
+          setShowPublishModal(open);
+          if (!open) setSavedWorkoutId(null);
+        }}
         workouts={parsedWorkouts || []}
         title={programName || (selectedWeek ? `Semana ${selectedWeek.label}` : `Semana ${new Date().toLocaleDateString('pt-BR')}`)}
         linkedAthletes={linkedAthletes}
         loadingAthletes={loadingAthletes}
         weekStart={selectedWeek?.startDate || null}
+        workoutId={savedWorkoutId}
         onSuccess={() => {
           // MVP0: Limpar draft após publish com sucesso
           setParsedWorkouts(null);
           setSpreadsheetText('');
           setProgramName('');
           setSelectedWeek(null);
+          setSavedWorkoutId(null);
           setSuccess('Treino publicado com sucesso!');
         }}
       />
