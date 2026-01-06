@@ -1208,41 +1208,82 @@ Descanso`}
                         {/* FONTE ÚNICA: separateBlockContent para treino e comentário */}
                         {(() => {
                           // ════════════════════════════════════════════════════════════════════════════
-                          // MVP0 CORREÇÃO DEFINITIVA: 
-                          // - Treino: exerciseLines do separateBlockContent (apenas linhas executáveis)
-                          // - Comentário: commentLines do separateBlockContent ou coachNotes
+                          // MVP0 REGRA FINAL:
+                          // - Exercício = linhas com "- " no início
+                          // - Comentário = texto entre "( )"
+                          // - Alertas visuais (não bloqueiam)
                           // ════════════════════════════════════════════════════════════════════════════
                           
-                          const { exerciseLines, commentLines: parsedComments } = separateBlockContent(block.content || '');
+                          const parseResult = separateBlockContent(block.content || '');
+                          const { exerciseLines, coachNotes, inlineComments, alerts } = parseResult;
                           
-                          // Fallback para coachNotes se parsedComments vazio
+                          // Fallback para coachNotes legado do bloco
                           const blockCoachNotes = block.coachNotes;
-                          const commentLines = parsedComments.length > 0 
-                            ? parsedComments
+                          const finalCoachNotes = coachNotes.length > 0 
+                            ? coachNotes
                             : (Array.isArray(blockCoachNotes) ? blockCoachNotes : []);
+                          
+                          // Log de verificação
+                          const hasExercise = exerciseLines.length > 0;
+                          const renderedCoachNotes = finalCoachNotes.length > 0;
+                          console.log(`[RENDER_RESULT] hasExercise=${hasExercise}, renderedCoachNotes=${renderedCoachNotes}, renderedInlineCommentsCount=${inlineComments.length}`);
 
                           return (
                             <div className="space-y-2">
-                              {/* TREINO - apenas linhas executáveis */}
-                              {exerciseLines.length > 0 && (
-                                <div className="text-sm space-y-1 text-foreground/90">
-                                  {exerciseLines.map((line, idx) => (
-                                    <p key={`${block.id || blockIndex}-ex-${idx}`}>{normalizeRestLineForDisplay(line)}</p>
+                              {/* ALERTAS (não bloqueiam, apenas informam) */}
+                              {alerts.length > 0 && (
+                                <div className="space-y-1">
+                                  {alerts.map((alert, idx) => (
+                                    <div key={`alert-${idx}`} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                      <span className="font-medium">{alert.type === 'MISSING_DASH' ? '⚠️ Sem hífen:' : '⚠️ Fora de ( ):'}</span>{' '}
+                                      <span className="italic">"{alert.line}"</span>
+                                    </div>
                                   ))}
                                 </div>
                               )}
-                              {exerciseLines.length === 0 && commentLines.length === 0 && (
+                              
+                              {/* TREINO - apenas linhas com "- " */}
+                              {exerciseLines.length > 0 && (
+                                <div className="text-sm space-y-1 text-foreground/90">
+                                  {exerciseLines.map((line, idx) => {
+                                    // Verificar se há comentário inline para esta linha
+                                    const lineInlineComment = inlineComments.find(c => c.lineIndex === idx);
+                                    return (
+                                      <div key={`${block.id || blockIndex}-ex-${idx}`}>
+                                        <p>{normalizeRestLineForDisplay(line)}</p>
+                                        {/* Comentário inline (se existir para esta linha) */}
+                                        {lineInlineComment && (
+                                          <p className="text-xs text-muted-foreground/60 italic ml-2 mt-0.5">
+                                            ({lineInlineComment.text})
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              
+                              {/* Comentários inline que não têm linha correspondente */}
+                              {inlineComments.length > 0 && exerciseLines.length === 0 && (
+                                <div className="text-xs text-muted-foreground/60 italic space-y-0.5">
+                                  {inlineComments.map((ic, idx) => (
+                                    <p key={`inline-${idx}`}>({ic.text})</p>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {exerciseLines.length === 0 && finalCoachNotes.length === 0 && inlineComments.length === 0 && (
                                 <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
                               )}
 
-                              {/* SUB-BLOCO: COMENTÁRIO DO COACH - SÓ RENDERIZA SE EXISTIR */}
-                              {commentLines.length > 0 && (
+                              {/* SUB-BLOCO: COMENTÁRIO DO COACH (da seção "> COMENTÁRIO") */}
+                              {finalCoachNotes.length > 0 && (
                                 <div className="mt-3 ml-1 pl-3 py-2 border-l-2 border-muted-foreground/20 bg-muted/20 rounded-r-sm">
                                   <div className="flex items-start gap-2">
                                     <MessageSquare className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
                                     <div className="space-y-0.5">
-                                      <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide">Nota do Coach</span>
-                                      {commentLines.map((line, idx) => (
+                                      <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide">Comentário</span>
+                                      {finalCoachNotes.map((line, idx) => (
                                         <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground/70 leading-relaxed">{normalizeRestLineForDisplay(line)}</p>
                                       ))}
                                     </div>

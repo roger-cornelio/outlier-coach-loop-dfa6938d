@@ -266,372 +266,275 @@ export function isInBlockRestInstruction(text: string): boolean {
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: SEPARAÇÃO VISUAL DE COMENTÁRIOS DO BLOCO
+ * MVP0 REGRA FINAL: SEPARAÇÃO TREINO vs COMENTÁRIO (100% DETERMINÍSTICA)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * PRIORIDADE DE DADOS (ORDEM FIXA):
- * 1. Se existem tags [TREINO] e [COMENTÁRIO] → split determinístico por tags
- * 2. Se não existem tags → fallback para heurística de padrões
+ * EXERCÍCIO (linha executável):
+ * - Só é exercício se a linha começar com "- " (hífen + espaço)
  * 
- * REGRA ABSOLUTA:
- * - Tags nunca aparecem na UI
- * - Comentário nunca se mistura com treino
- * - Sem heurística "por IA" ou "frases"
+ * COMENTÁRIO:
+ * - Qualquer trecho entre parênteses "(...)" é comentário
+ * - Comentário NUNCA vira exercício
+ * - Comentário NÃO altera o motor
+ * 
+ * SEÇÃO "> COMENTÁRIO":
+ * - Define que comentários abaixo vão para o sub-bloco visual
+ * - Texto dentro de "> COMENTÁRIO" que NÃO estiver entre "( )" gera ALERTA
  */
+
+export interface ParseAlert {
+  type: 'MISSING_DASH' | 'COMMENT_NOT_IN_PARENS';
+  message: string;
+  line: string;
+  lineIndex: number;
+}
+
+export interface InlineComment {
+  lineIndex: number;
+  text: string;
+}
 
 export interface SeparatedBlockContent {
   exerciseLines: string[];
-  commentLines: string[];
-  headerLines?: string[]; // Linhas de header técnico (=)
+  commentLines: string[]; // Alias for coachNotes (backward compat)
+  coachNotes: string[];   // Comentários da seção "> COMENTÁRIO"
+  inlineComments: InlineComment[]; // Comentários inline fora de "> COMENTÁRIO"
+  alerts: ParseAlert[];
+  headerLines?: string[];
 }
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * MVP0: SPLIT DETERMINÍSTICO POR MARCADORES
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * MARCADORES OFICIAIS:
- * - `= TREINO` → Header do bloco de treino
- * - `-` → Item executável de treino
- * - `> COMENTÁRIO` ou `>` → Comentário do coach
- * 
- * REGRA DE FLUXO:
- * - Após `= TREINO`: linhas vão para treino
- * - Após `> COMENTÁRIO` ou `>`: linhas vão para comentário
- * - Linha `-` sempre é treino
- * - Linha `>` sempre é comentário
- * - Linha sem marcador segue o marcador de seção anterior
- */
-type CurrentSection = 'treino' | 'comentario' | 'none';
+// Padrão para detectar texto entre parênteses
+const PARENTHESES_PATTERN = /\([^)]+\)/g;
 
-function splitByMarkers(content: string): { 
-  headerLines: string[]; 
-  trainingLines: string[]; 
-  commentLines: string[]; 
-  invalidLines: string[];
-  hasMarkers: boolean;
-} {
-  const lines = content.split('\n');
-  const headerLines: string[] = [];
-  const trainingLines: string[] = [];
-  const commentLines: string[] = [];
-  const invalidLines: string[] = [];
-  
-  let foundAnyMarker = false;
-  let currentSection: CurrentSection = 'none';
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    
-    // Detectar marcadores de SEÇÃO (= TREINO, > COMENTÁRIO)
-    if (/^=\s*TREINO\b/i.test(trimmed)) {
-      foundAnyMarker = true;
-      currentSection = 'treino';
-      headerLines.push(trimmed.replace(/^=\s*TREINO\s*/i, '').trim() || 'TREINO');
-      continue;
-    }
-    
-    if (/^>\s*COMENT[ÁA]RIO\b/i.test(trimmed)) {
-      foundAnyMarker = true;
-      currentSection = 'comentario';
-      continue;
-    }
-    
-    // Detectar marcadores de LINHA (-, >)
-    if (trimmed.startsWith('-')) {
-      foundAnyMarker = true;
-      trainingLines.push(trimmed.slice(1).trim());
-      continue;
-    }
-    
-    if (trimmed.startsWith('>')) {
-      foundAnyMarker = true;
-      commentLines.push(trimmed.slice(1).trim());
-      continue;
-    }
-    
-    // Linha sem marcador explícito → segue a seção atual
-    if (currentSection === 'treino') {
-      trainingLines.push(trimmed);
-    } else if (currentSection === 'comentario') {
-      commentLines.push(trimmed);
-    } else {
-      // Nenhuma seção definida ainda
-      invalidLines.push(trimmed);
-    }
-  }
-  
-  return {
-    headerLines,
-    trainingLines,
-    commentLines,
-    invalidLines,
-    hasMarkers: foundAnyMarker,
-  };
-}
+// Padrão para detectar linhas que "parecem exercício"
+const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|cal\b|kg\b|lb\b|PSE|RPE|EMOM|AMRAP|for\s*time)/i;
 
 /**
- * ═══════════════════════════════════════════════════════════════════════════
- * SPLIT POR TAGS [TREINO] / [COMENTÁRIO] — LEGADO
- * ═══════════════════════════════════════════════════════════════════════════
+ * Extrai todos os comentários entre parênteses de uma linha
+ * Retorna o texto sem os parênteses e os comentários extraídos
  */
-function splitByTags(content: string): { treinoText: string; comentarioText: string; hasTags: boolean } {
-  const treinoTag = '[TREINO]';
-  const comentarioTag = '[COMENTÁRIO]';
+function extractParenthesesComments(line: string): { cleanLine: string; comments: string[] } {
+  const comments: string[] = [];
+  const matches = line.match(PARENTHESES_PATTERN);
   
-  const hasTreinoTag = content.includes(treinoTag);
-  const hasComentarioTag = content.includes(comentarioTag);
-  
-  // Se não tem nenhuma tag, retornar indicador de que não há tags
-  if (!hasTreinoTag && !hasComentarioTag) {
-    return { treinoText: content, comentarioText: '', hasTags: false };
-  }
-  
-  let treinoText = '';
-  let comentarioText = '';
-  
-  if (hasComentarioTag) {
-    const comentarioStart = content.indexOf(comentarioTag);
-    const comentarioContentStart = comentarioStart + comentarioTag.length;
-    
-    // TUDO depois de [COMENTÁRIO] é comentário - REGRA ABSOLUTA
-    comentarioText = content.slice(comentarioContentStart).trim();
-    
-    // Treino é o que vem ANTES de [COMENTÁRIO]
-    let prePart = content.slice(0, comentarioStart);
-    
-    // Se tem [TREINO], pegar conteúdo DEPOIS dela
-    if (hasTreinoTag) {
-      const treinoStart = prePart.indexOf(treinoTag);
-      if (treinoStart !== -1) {
-        treinoText = prePart.slice(treinoStart + treinoTag.length).trim();
-      } else {
-        treinoText = prePart.trim();
+  if (matches) {
+    for (const match of matches) {
+      // Remove os parênteses e guarda o conteúdo
+      const content = match.slice(1, -1).trim();
+      if (content) {
+        comments.push(content);
       }
-    } else {
-      treinoText = prePart.trim();
     }
-  } else if (hasTreinoTag) {
-    // Só [TREINO] existe: tudo depois é treino, comentário vazio
-    const treinoStart = content.indexOf(treinoTag) + treinoTag.length;
-    treinoText = content.slice(treinoStart).trim();
-    comentarioText = '';
   }
   
-  return { treinoText, comentarioText, hasTags: true };
+  // Remove todos os parênteses da linha
+  const cleanLine = line.replace(PARENTHESES_PATTERN, '').trim();
+  
+  return { cleanLine, comments };
 }
 
 /**
- * Detecta se uma linha é comentário/instrução do coach (fallback heurístico)
- * NOTA: Esta função só é usada quando NÃO há tags [TREINO]/[COMENTÁRIO]
+ * Detecta se uma linha parece exercício (para gerar alerta MISSING_DASH)
  */
-function isCommentLine(line: string): boolean {
-  if (!line) return false;
-  
+function looksLikeExercise(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
   
-  const lower = trimmed.toLowerCase();
+  // Começa com número
+  if (/^\d/.test(trimmed)) return true;
   
-  // A) Emoji de nota (legado) - SEMPRE é comentário
-  if (trimmed.startsWith('📝')) {
+  // Contém padrões de exercício
+  if (LOOKS_LIKE_EXERCISE_PATTERN.test(trimmed)) return true;
+  
+  return false;
+}
+
+/**
+ * Verifica se uma linha é título de bloco (all caps ou padrão específico)
+ */
+function isBlockTitle(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  
+  // All caps (mais de 2 palavras ou palavra única >= 4 letras)
+  if (/^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s]+$/.test(trimmed) && trimmed.length >= 4) {
     return true;
   }
   
-  // B) Prefixos explícitos de comentário
-  if (/^(nota|obs|observa[çc][aã]o|dica|aten[çc][aã]o|importante|lembrete|orienta[çc][aã]o)\s*:/i.test(lower)) {
+  // Padrões de título conhecidos
+  if (/^(AQUECIMENTO|FORÇA|WOD|TÉCNICO|CARDIO|MOBILIDADE|SKILL|METCON|COOL\s*DOWN)/i.test(trimmed)) {
     return true;
-  }
-  
-  // C) Frases que terminam com "..." ou "…" (reticências indicam instrução aberta)
-  if (/\.{2,}$/.test(trimmed) || /…$/.test(trimmed)) {
-    return true;
-  }
-  
-  // D) Padrões de instrução subjetiva
-  const subjectivePatterns = [
-    /o\s+necess[aá]rio/i,
-    /conforme\s+(necess[aá]rio|poss[ií]vel|sentir)/i,
-    /se\s+sentir/i,
-    /manter\s+(o\s+)?ritmo/i,
-    /foco\s+(em|no|na)/i,
-    /priorizar/i,
-    /aten[çc][aã]o\s+(ao|à|a)/i,
-    /cuidado\s+(com|ao)/i,
-    /lembrar\s+de/i,
-    /n[aã]o\s+esquecer/i,
-    /evitar/i,
-    /tentar\s+(manter|n[aã]o|fazer)/i,
-    /\bunbroken\b/i, // Instrução de execução "unbroken"
-    /\bdescansar\b/i, // Instrução de descanso
-  ];
-  
-  for (const pattern of subjectivePatterns) {
-    if (pattern.test(lower)) {
-      return true;
-    }
-  }
-  
-  // D) Linha sem números E sem estrutura de exercício
-  const hasNumbers = /\d/.test(trimmed);
-  const hasExercisePattern = /^(\d+|x\d+|\d+x)/i.test(lower) || 
-    /\b(rep|reps|rounds?|sets?|series?|min|seg|sec|metros?|km|cal|calorias?)\b/i.test(lower);
-  
-  // Se não tem números NEM padrão de exercício, é provavelmente comentário
-  // MAS precisa ter pelo menos 20 caracteres para evitar falsos positivos
-  if (!hasNumbers && !hasExercisePattern && trimmed.length >= 20) {
-    // Verificar se não é nome de exercício comum
-    const exerciseNames = [
-      /^(burpee|squat|deadlift|clean|snatch|press|push|pull|row|run|bike|ski|swim)/i,
-      /^(agach|levantamento|remada|flexão|corrida|bicicleta)/i,
-    ];
-    
-    const looksLikeExerciseName = exerciseNames.some(p => p.test(lower));
-    if (!looksLikeExerciseName) {
-      return true;
-    }
   }
   
   return false;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// MVP0: REGRA DETERMINÍSTICA — LINHA EXECUTÁVEL
-// ════════════════════════════════════════════════════════════════════════════
-// Uma linha só é considerada TREINO se:
-// 1) Contiver pelo menos UM número
-// E
-// 2) Contiver unidade ou estrutura válida (reps, x, m, km, s, min, PSE, Z1–Z5, EMOM, AMRAP, FOR TIME, rest)
-
-const EXECUTABLE_UNITS_PATTERN = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|minutos?\b|['']|PSE|RPE|Z[1-5]|Zona\s*[1-5]|EMOM|AMRAP|For\s*Time|RFT|Tabata|rest|descanso|rounds?|sets?|séries?|%|kg\b|lb\b|cal\b|calorias?\b|kcal\b)/i;
-
 /**
- * Verifica se uma linha é EXECUTÁVEL (treino válido)
- * REGRA: Deve ter número + unidade/estrutura válida
+ * Detecta início da seção de comentário
  */
-export function isExecutableLine(line: string): boolean {
+function isCommentSectionStart(line: string): boolean {
   const trimmed = line.trim();
-  
-  // Linha vazia é ignorada (não conta como executável nem não-executável)
-  if (!trimmed) return true;
-  
-  // REGRA 1: Deve conter pelo menos um número
-  const hasNumber = /\d/.test(trimmed);
-  if (!hasNumber) return false;
-  
-  // REGRA 2: Deve conter unidade ou estrutura válida
-  const hasValidUnit = EXECUTABLE_UNITS_PATTERN.test(trimmed);
-  
-  return hasValidUnit;
+  // Aceita: "> COMENTÁRIO", ">COMENTÁRIO", "COMENTÁRIO", "> COMENTARIO"
+  return /^>?\s*COMENT[ÁA]RIO$/i.test(trimmed);
 }
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FUNÇÃO PRINCIPAL: separateBlockContent
+ * FUNÇÃO PRINCIPAL: separateBlockContent (MVP0 REGRA FINAL)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Separa o conteúdo do bloco em exercícios e comentários.
- * 
- * MVP0 REGRA CRÍTICA:
- * - exerciseLines APENAS contém linhas executáveis (com métrica)
- * - Linhas sem métrica são classificadas como comentário ou ignoradas
- * 
- * PRIORIDADE (COM FALLBACK):
- * 1. MARCADORES (=, -, >) — determinístico, sem heurística
- * 2. TAGS ([TREINO], [COMENTÁRIO]) — split por região
- * 3. HEURÍSTICA — padrões de comentário (fallback final)
+ * Input: block.content (texto bruto)
+ * Output:
+ *   - exerciseLines: string[] (apenas linhas que começam com "- ")
+ *   - coachNotes: string[] (comentários dentro de "> COMENTÁRIO")
+ *   - inlineComments: InlineComment[] (comentários fora de "> COMENTÁRIO")
+ *   - alerts: ParseAlert[]
  */
 export function separateBlockContent(content: string): SeparatedBlockContent {
   if (!content) {
-    return { exerciseLines: [], commentLines: [], headerLines: [] };
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // PRIORIDADE 1: MARCADORES (=, -, >) — DETERMINÍSTICO
-  // Se encontrar qualquer marcador, usar modo determinístico
-  // ════════════════════════════════════════════════════════════════════════════
-  const markerResult = splitByMarkers(content);
-  
-  if (markerResult.hasMarkers) {
-    // LOG obrigatório
-    const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-    
-    // MVP0: FILTRAR linhas NÃO executáveis das trainingLines
-    const executableTrainingLines = markerResult.trainingLines.filter(l => isExecutableLine(l));
-    const nonExecutableTrainingLines = markerResult.trainingLines.filter(l => l.trim() && !isExecutableLine(l));
-    
-    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${executableTrainingLines.length} nonExec=${nonExecutableTrainingLines.length} commentLines=${markerResult.commentLines.length}`);
-    
-    // REGRA: Linhas sem marcador no modo determinístico vão para treino (fallback interno)
-    // Isso permite transição gradual sem quebrar textos existentes
-    // MVP0: Também filtrar invalidLines
-    const executableInvalidLines = markerResult.invalidLines.filter(l => isExecutableLine(l));
-    
-    const exerciseLines = [
-      ...markerResult.headerLines.map(h => `⚙️ ${h}`), // Header com emoji para destaque
-      ...executableTrainingLines,
-      ...executableInvalidLines,
-    ].filter(l => l.length > 0);
-    
-    return {
-      exerciseLines,
-      commentLines: markerResult.commentLines,
-      headerLines: markerResult.headerLines,
+    return { 
+      exerciseLines: [], 
+      commentLines: [], 
+      coachNotes: [],
+      inlineComments: [],
+      alerts: [],
+      headerLines: [] 
     };
   }
   
-  // ════════════════════════════════════════════════════════════════════════════
-  // PRIORIDADE 2: TAGS ([TREINO], [COMENTÁRIO]) — SPLIT POR REGIÃO
-  // ════════════════════════════════════════════════════════════════════════════
-  const { treinoText, comentarioText, hasTags } = splitByTags(content);
-  
-  if (hasTags) {
-    const allTreinoLines = treinoText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-    
-    // MVP0: FILTRAR linhas NÃO executáveis
-    const exerciseLines = allTreinoLines.filter(l => isExecutableLine(l));
-    const nonExecutableLines = allTreinoLines.filter(l => !isExecutableLine(l));
-    
-    const commentLines = comentarioText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-    
-    // LOG
-    const blockSnippet = content.slice(0, 30).replace(/\n/g, ' ').trim();
-    console.log(`[TAG_SPLIT] blockTitle="${blockSnippet}..." trainingLines=${exerciseLines.length} nonExec=${nonExecutableLines.length} commentLines=${commentLines.length}`);
-    
-    return { exerciseLines, commentLines };
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // PRIORIDADE 3: HEURÍSTICA — FALLBACK FINAL
-  // ════════════════════════════════════════════════════════════════════════════
   const lines = content.split('\n');
   const exerciseLines: string[] = [];
-  const commentLines: string[] = [];
+  const coachNotes: string[] = [];
+  const inlineComments: InlineComment[] = [];
+  const alerts: ParseAlert[] = [];
+  const headerLines: string[] = [];
   
-  for (const line of lines) {
-    const trimmed = line.trim();
+  let inCommentSection = false;
+  
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const rawLine = lines[lineIndex];
+    const trimmed = rawLine.trim();
+    
+    // Linha vazia - ignorar
     if (!trimmed) continue;
     
-    // MVP0: Primeiro verificar se é executável
-    if (!isExecutableLine(trimmed)) {
-      // Não é executável -> comentário
-      commentLines.push(trimmed);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DETECTAR INÍCIO/FIM DA SEÇÃO "> COMENTÁRIO"
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isCommentSectionStart(trimmed)) {
+      inCommentSection = true;
+      continue; // Não renderizar a linha "> COMENTÁRIO" em si
+    }
+    
+    // Novo título de bloco encerra seção de comentário
+    if (isBlockTitle(trimmed) && !trimmed.startsWith('-')) {
+      inCommentSection = false;
+      // Títulos de bloco são headers
+      headerLines.push(trimmed);
       continue;
     }
     
-    if (isCommentLine(trimmed)) {
-      commentLines.push(trimmed);
-    } else {
-      exerciseLines.push(trimmed);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EXTRAIR COMENTÁRIOS ENTRE PARÊNTESES
+    // ═══════════════════════════════════════════════════════════════════════════
+    const { cleanLine, comments } = extractParenthesesComments(trimmed);
+    
+    // Guardar comentários extraídos
+    for (const comment of comments) {
+      if (inCommentSection) {
+        coachNotes.push(comment);
+      } else {
+        inlineComments.push({ lineIndex, text: comment });
+      }
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CLASSIFICAR A LINHA (APÓS REMOVER PARÊNTESES)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Linha vazia após remover parênteses - só tinha comentário
+    if (!cleanLine) continue;
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // DENTRO DE "> COMENTÁRIO"
+    // ─────────────────────────────────────────────────────────────────────────
+    if (inCommentSection) {
+      // Texto dentro de "> COMENTÁRIO" que NÃO estava em parênteses → ALERTA
+      alerts.push({
+        type: 'COMMENT_NOT_IN_PARENS',
+        message: 'Dentro de > COMENTÁRIO, todo comentário deve estar entre ( ).',
+        line: trimmed,
+        lineIndex
+      });
+      continue;
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // FORA DE "> COMENTÁRIO"
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    // EXERCÍCIO: Linha começa com "- "
+    if (cleanLine.startsWith('- ') || cleanLine.startsWith('-')) {
+      // Remove o hífen e espaço iniciais
+      const exerciseText = cleanLine.replace(/^-\s*/, '').trim();
+      if (exerciseText) {
+        exerciseLines.push(exerciseText);
+      }
+      continue;
+    }
+    
+    // É título de bloco? (já tratado acima, mas double-check)
+    if (isBlockTitle(cleanLine)) {
+      headerLines.push(cleanLine);
+      continue;
+    }
+    
+    // PARECE EXERCÍCIO MAS NÃO TEM HÍFEN → ALERTA
+    if (looksLikeExercise(cleanLine)) {
+      alerts.push({
+        type: 'MISSING_DASH',
+        message: "Linha parece exercício, mas precisa começar com '- '. Corrija para não afetar o motor.",
+        line: trimmed,
+        lineIndex
+      });
+      // Não adiciona como exercício NEM como comentário - só alerta
+      continue;
+    }
+    
+    // Qualquer outra linha fora de seção → ignorar silenciosamente
+    // (não é exercício, não é comentário, não é título)
   }
   
-  return { exerciseLines, commentLines };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LOG DE VERIFICAÇÃO (OBRIGATÓRIO PARA DEBUG)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const blockSnippet = content.slice(0, 40).replace(/\n/g, ' ').trim();
+  console.log(`[PARSE_RESULT] blockTitle="${blockSnippet}..." exerciseLines=${exerciseLines.length}, inlineComments=${inlineComments.length}, coachNotes=${coachNotes.length}, alerts=${alerts.length}`);
+  
+  if (alerts.length > 0) {
+    console.log(`[PARSE_ALERTS]`, alerts.map(a => `${a.type}: "${a.line}"`).join('; '));
+  }
+  
+  return { 
+    exerciseLines, 
+    commentLines: coachNotes, // Backward compatibility
+    coachNotes,
+    inlineComments,
+    alerts,
+    headerLines 
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// LEGACY EXPORTS (backward compatibility)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Verifica se uma linha é EXECUTÁVEL (treino válido)
+ * MVP0: Agora só verifica se começa com "- "
+ */
+export function isExecutableLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return true; // Linha vazia é "válida" (não bloqueia)
+  return trimmed.startsWith('- ') || trimmed.startsWith('-');
 }
