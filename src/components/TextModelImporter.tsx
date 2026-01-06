@@ -950,19 +950,64 @@ Descanso`}
                                     </DropdownMenu>
                                   </div>
 
-                                  {/* Conteúdo do bloco (preview) */}
-                                  <div className="text-sm space-y-1 text-foreground/80">
-                                    {(block.lines || []).slice(0, 5).map((line, idx) => (
-                                      <p key={idx} className="truncate">
-                                        {normalizeRestLineForDisplay(typeof line === 'string' ? line : line?.text || '')}
-                                      </p>
-                                    ))}
-                                    {(block.lines || []).length > 5 && (
-                                      <p className="text-muted-foreground text-xs">
-                                        ... +{(block.lines || []).length - 5} linhas
-                                      </p>
-                                    )}
-                                  </div>
+                                  {/* Conteúdo do bloco - COM ESTILO DE COMENTÁRIO PARA () */}
+                                  {(() => {
+                                    // Usar o parser para separar exercícios e comentários inline
+                                    const blockContent = (block.lines || []).map(l => 
+                                      `- ${typeof l === 'string' ? l : l?.text || ''}`
+                                    ).join('\n');
+                                    const parseResult = separateBlockContent(blockContent);
+                                    const { exerciseLines, inlineComments, alerts } = parseResult;
+                                    
+                                    // Limitar exibição a 5 linhas
+                                    const displayExercises = exerciseLines.slice(0, 5);
+                                    const hasMore = exerciseLines.length > 5;
+                                    
+                                    return (
+                                      <div className="text-sm space-y-1 text-foreground/80">
+                                        {/* Alertas (se houver) */}
+                                        {alerts.length > 0 && (
+                                          <div className="mb-2 space-y-1">
+                                            {alerts.slice(0, 2).map((alert, idx) => (
+                                              <div key={`alert-${idx}`} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600">
+                                                ⚠️ {alert.type === 'MISSING_DASH' ? 'Sem hífen' : 'Fora de ( )'}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        
+                                        {/* Exercícios */}
+                                        {displayExercises.map((line, idx) => {
+                                          // Verificar se há comentário inline para esta linha
+                                          const inlineComment = inlineComments.find(c => c.lineIndex === idx);
+                                          return (
+                                            <div key={idx}>
+                                              <p className="truncate">{normalizeRestLineForDisplay(line)}</p>
+                                              {/* Comentário inline com estilo de comentário */}
+                                              {inlineComment && (
+                                                <p className="text-xs text-muted-foreground/60 italic ml-2 truncate">
+                                                  ({inlineComment.text})
+                                                </p>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                        
+                                        {/* Comentários inline orphans (sem linha correspondente) */}
+                                        {inlineComments.filter(c => c.lineIndex >= displayExercises.length || c.lineIndex < 0).slice(0, 2).map((ic, idx) => (
+                                          <p key={`orphan-${idx}`} className="text-xs text-muted-foreground/60 italic truncate">
+                                            ({ic.text})
+                                          </p>
+                                        ))}
+                                        
+                                        {hasMore && (
+                                          <p className="text-muted-foreground text-xs">
+                                            ... +{exerciseLines.length - 5} linhas
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                   
                                   {/* MVP0: Comentário do coach como sub-bloco visual */}
                                   {Array.isArray(block.coachNotes) && block.coachNotes.length > 0 && (
