@@ -270,21 +270,14 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     console.log('[VALIDATE_RESULT] success=' + result.success);
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // REGRA: Validar + Avançar automaticamente
-    // Se parsing bem-sucedido E semana selecionada → PREVIEW direto
-    // Se parsing bem-sucedido MAS sem semana → EDIT (para selecionar semana)
-    // Se parsing falhou → permanece em import
+    // REGRA MVP0: Validar texto → ir DIRETO para EDIT
+    // - Parser só interpreta TEXTO
+    // - Semana, nome, publicação = metadados (escolhidos na Tela 2 - EDIÇÃO)
+    // - Parser NUNCA depende de semana
     // ═══════════════════════════════════════════════════════════════════════════
     if (result.success && result.days.length > 0) {
-      if (weekId !== null) {
-        // Semana já selecionada → PREVIEW automático
-        console.log('[MODE_CHANGE] import → preview (reason=validate_success)');
-        goToPreview();
-      } else {
-        // Precisa selecionar semana → EDIT
-        console.log('[MODE_CHANGE] import → edit (reason=validate_success_needs_week)');
-        goToEdit();
-      }
+      console.log('[MODE_CHANGE] import → edit (reason=validate_success)');
+      goToEdit();
     }
   };
 
@@ -567,24 +560,46 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   
   // Estado para mostrar erros de validação
   const [previewValidationError, setPreviewValidationError] = useState<string | null>(null);
-  
-  // Draft pode ser salvo mesmo com warnings semânticos
-  // Requisitos mínimos: texto parseado + semana selecionada
-  const canSaveAndGoToPreview = parseResult?.success && weekId !== null;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // NAVEGAÇÃO ENTRE TELAS
+  // NAVEGAÇÃO ENTRE TELAS + GUARDS CENTRALIZADOS
   // ═══════════════════════════════════════════════════════════════════════════
   
   const handleGoToPreview = () => {
-    if (!canSaveAndGoToPreview) return;
-    
-    // VALIDAÇÃO OBRIGATÓRIA: categoria + bloco principal
-    if (!previewValidation.isValid) {
-      setPreviewValidationError(previewValidation.errors.join('. '));
-      console.log('[PREVIEW_BLOCKED]', previewValidation.errors);
+    // GUARD 1: Semana obrigatória
+    if (!weekId) {
+      setPreviewValidationError('Selecione a semana de referência');
+      console.log('[PREVIEW_BLOCKED]', { reason: 'NO_WEEK', weekId: null });
       return;
     }
+    
+    // GUARD 2: Parse bem-sucedido
+    if (!parseResult?.success) {
+      setPreviewValidationError('Texto não foi validado');
+      console.log('[PREVIEW_BLOCKED]', { reason: 'NO_PARSE', parseResult: null });
+      return;
+    }
+    
+    // GUARD 3: Categoria + bloco principal
+    if (!previewValidation.isValid) {
+      setPreviewValidationError(previewValidation.errors.join('. '));
+      console.log('[PREVIEW_BLOCKED]', { 
+        reason: 'VALIDATION_ERRORS',
+        errors: previewValidation.errors,
+        invalidBlocks: previewValidation.invalidBlocks.length 
+      });
+      return;
+    }
+    
+    // LOG OBRIGATÓRIO: Estado completo no momento do preview
+    console.log('[PREVIEW_ALLOWED]', {
+      weekId: weekId?.label,
+      daysWithContent: effectiveDays?.filter(d => d.blocks?.length > 0).length ?? 0,
+      missingCategory: previewValidation.invalidBlocks.filter(b => b.reason === 'category').length,
+      missingMainWod: previewValidation.invalidBlocks.filter(b => b.reason === 'no_main').length,
+      canSave,
+      canGoToPreview: true
+    });
     
     setPreviewValidationError(null);
     console.debug('[TextModelImporter] Navegando para PREVIEW');
@@ -605,15 +620,29 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleSaveAndGoToPrograms = async () => {
-    if (!effectiveDays || !weekId) return;
+    // GUARD: weekId obrigatório
+    if (!weekId) {
+      setPreviewValidationError('Selecione a semana de referência');
+      console.log('[SAVE_BLOCKED]', { reason: 'NO_WEEK' });
+      return;
+    }
+    
+    if (!effectiveDays || effectiveDays.length === 0) {
+      setPreviewValidationError('Nenhum treino para salvar');
+      console.log('[SAVE_BLOCKED]', { reason: 'NO_CONTENT' });
+      return;
+    }
 
     const title = programName.trim() || 'Treino semanal';
     const weekStart = weekId.startDate || null;
 
-    console.debug('[TextModelImporter] Salvando e indo para Programações (effectiveDays)', {
-      title,
+    // LOG OBRIGATÓRIO: Estado completo no momento do save
+    console.log('[SAVE_TO_PROGRAMS]', {
+      weekId: weekId.label,
       weekStart,
+      title,
       daysCount: effectiveDays.length,
+      daysWithContent: effectiveDays.filter(d => d.blocks?.length > 0).length,
     });
 
     if (onSaveAndGoToPrograms) {
@@ -686,23 +715,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
 
             <RecommendedModelBlock />
 
-            {/* SELETOR DE SEMANA - OBRIGATÓRIO */}
-            <WeekPeriodSelector
-              selectedWeek={weekId}
-              onWeekSelect={(week) => setWeekId(week)}
-            />
-
-            {/* NOME DA PROGRAMAÇÃO */}
-            <div className="space-y-2">
-              <Label htmlFor="program-name-import">Nome da Programação (opcional)</Label>
-              <Input
-                id="program-name-import"
-                value={programName}
-                onChange={(e) => setProgramName(e.target.value)}
-                placeholder="Ex: Semana de força"
-              />
-            </div>
-
+            {/* BOTÕES */}
             <div className="flex gap-2 flex-wrap">
               <Button
                 onClick={handleParse}
@@ -720,12 +733,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
                 </Button>
               )}
             </div>
-            
-            {rawText.trim() && !weekId && (
-              <p className="text-xs text-amber-600 text-center">
-                ⚠️ Selecione a semana de referência para continuar
-              </p>
-            )}
           </CardContent>
         </Card>
 
@@ -820,17 +827,38 @@ BLOCO: DESCANSO
               />
             )}
 
-            {/* Semana selecionada */}
-            {weekId && (
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-foreground">
-                    Semana: <span className="font-semibold">{weekId.label}</span>
-                  </span>
-                </div>
+            {/* METADADOS OBRIGATÓRIOS: Semana + Nome */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* SELETOR DE SEMANA - OBRIGATÓRIO */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                  Semana de Referência (obrigatório)
+                </Label>
+                <WeekPeriodSelector
+                  selectedWeek={weekId}
+                  onWeekSelect={(week) => setWeekId(week)}
+                />
+                {!weekId && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Selecione a semana para salvar ou publicar
+                  </p>
+                )}
               </div>
-            )}
+              
+              {/* NOME DA PROGRAMAÇÃO */}
+              <div className="space-y-2">
+                <Label htmlFor="program-name-edit" className="text-sm font-medium">
+                  Nome da Programação (opcional)
+                </Label>
+                <Input
+                  id="program-name-edit"
+                  value={programName}
+                  onChange={(e) => setProgramName(e.target.value)}
+                  placeholder="Ex: Semana de força"
+                />
+              </div>
+            </div>
 
             {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
             <TooltipProvider>
@@ -1191,18 +1219,12 @@ BLOCO: DESCANSO
               <Button
                 onClick={handleGoToPreview}
                 className="flex-1"
-                disabled={!canSaveAndGoToPreview}
+                disabled={!parseResult?.success}
               >
                 <ArrowRight className="w-4 h-4 mr-2" />
                 Ver preview
               </Button>
             </div>
-
-            {!weekId && (
-              <p className="text-xs text-amber-600 text-center">
-                ⚠️ Volte e selecione a semana de referência para continuar
-              </p>
-            )}
           </CardContent>
         </Card>
 
