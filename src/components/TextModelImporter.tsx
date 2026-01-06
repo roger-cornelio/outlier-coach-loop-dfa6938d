@@ -1175,23 +1175,12 @@ Descanso`}
                     {(dayWorkout.blocks || []).map((block, blockIndex) => {
                       // ════════════════════════════════════════════════════════════════════════════
                       // MVP0: VERIFICAR SE BLOCO TEM LINHAS EXECUTÁVEIS ANTES DE RENDERIZAR
+                      // Usando separateBlockContent para garantir consistência com a renderização
                       // ════════════════════════════════════════════════════════════════════════════
-                      let contentForCheck = block.content || '';
-                      
-                      // Limpar [COMENTÁRIO] de dados antigos para verificação
-                      if (contentForCheck.includes('[COMENTÁRIO]')) {
-                        const comentarioIdx = contentForCheck.indexOf('[COMENTÁRIO]');
-                        contentForCheck = contentForCheck.slice(0, comentarioIdx).trim();
-                        contentForCheck = contentForCheck.replace(/^\[TREINO\]\s*/i, '');
-                      }
-                      
-                      const checkLines = contentForCheck
-                        .split('\n')
-                        .map(l => l.trim())
-                        .filter(l => l.length > 0);
+                      const { exerciseLines: checkExecLines } = separateBlockContent(block.content || '');
                       
                       // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco
-                      if (checkLines.length === 0) {
+                      if (checkExecLines.length === 0) {
                         console.log(`[RENDER_BLOCK] Preview title="${block.title}" rendered=false (sem linhas executáveis)`);
                         return null;
                       }
@@ -1216,46 +1205,25 @@ Descanso`}
                             )}
                           </div>
 
-                        {/* FONTE ÚNICA: coachNotes para comentário, content para treino */}
+                        {/* FONTE ÚNICA: separateBlockContent para treino e comentário */}
                         {(() => {
                           // ════════════════════════════════════════════════════════════════════════════
                           // MVP0 CORREÇÃO DEFINITIVA: 
-                          // - Treino: block.content (limpo, sem [COMENTÁRIO])
-                          // - Comentário: block.coachNotes (única fonte, sem fallback para content)
+                          // - Treino: exerciseLines do separateBlockContent (apenas linhas executáveis)
+                          // - Comentário: commentLines do separateBlockContent ou coachNotes
                           // ════════════════════════════════════════════════════════════════════════════
                           
-                          // TREINO: extrair do content, mas limpar [COMENTÁRIO] de dados antigos
-                          let contentForTraining = block.content || '';
+                          const { exerciseLines, commentLines: parsedComments } = separateBlockContent(block.content || '');
                           
-                          // FALLBACK MIGRAÇÃO: remover [COMENTÁRIO] de dados antigos (sem popular coachNotes)
-                          if (contentForTraining.includes('[COMENTÁRIO]')) {
-                            const comentarioIdx = contentForTraining.indexOf('[COMENTÁRIO]');
-                            contentForTraining = contentForTraining.slice(0, comentarioIdx).trim();
-                            // Também remover [TREINO] se existir
-                            contentForTraining = contentForTraining.replace(/^\[TREINO\]\s*/i, '');
-                          }
-                          
-                          const exerciseLines = contentForTraining
-                            .split('\n')
-                            .map(l => l.trim())
-                            .filter(l => l.length > 0);
-                          
-                          // COMENTÁRIO: ÚNICA FONTE = coachNotes (sem fallback)
+                          // Fallback para coachNotes se parsedComments vazio
                           const blockCoachNotes = (block as any).coachNotes;
-                          const commentLines = Array.isArray(blockCoachNotes) ? blockCoachNotes : [];
-                          
-                          // [UI_BLOCK] Log de verificação
-                          console.log("[UI_BLOCK] Fonte única:", {
-                            title: block.title,
-                            contentHasComentarioTag: (block.content || '').includes('[COMENTÁRIO]'),
-                            trainingLines: exerciseLines.length,
-                            coachNotesLength: commentLines.length,
-                            source: 'coachNotes_only',
-                          });
+                          const commentLines = parsedComments.length > 0 
+                            ? parsedComments 
+                            : (Array.isArray(blockCoachNotes) ? blockCoachNotes : []);
 
                           return (
                             <div className="space-y-2">
-                              {/* TREINO - conteúdo principal */}
+                              {/* TREINO - apenas linhas executáveis */}
                               <div className="text-sm space-y-1 text-foreground/90">
                                 {exerciseLines.length > 0 ? (
                                   exerciseLines.map((line, idx) => (

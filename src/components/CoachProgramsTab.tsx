@@ -52,7 +52,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { getBlockHeader } from '@/utils/blockDisplayUtils';
+import { getBlockHeader, separateBlockContent } from '@/utils/blockDisplayUtils';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
 import {
   Tooltip,
@@ -200,6 +200,14 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                         <div className="p-3 space-y-3 bg-background">
                           {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
                             const { headerTitle, headerMeta } = getBlockHeader(block, idx);
+                            // MVP0: Separar treino e comentário - NUNCA renderizar block.content direto
+                            const { exerciseLines, commentLines } = separateBlockContent(block.content || '');
+                            
+                            // REGRA: Se não tem linhas executáveis, não renderiza bloco
+                            if (exerciseLines.length === 0) {
+                              return null;
+                            }
+                            
                             return (
                             <div key={block.id || idx} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -208,9 +216,19 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                                   <span className="text-xs text-muted-foreground">• {headerMeta}</span>
                                 )}
                               </div>
+                              {/* TREINO: apenas linhas executáveis */}
                               <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
-                                {block.content}
+                                {exerciseLines.join('\n')}
                               </pre>
+                              {/* COMENTÁRIO: sub-bloco visual */}
+                              {commentLines.length > 0 && (
+                                <div className="mt-2 text-xs text-muted-foreground/70 pl-2 border-l-2 border-muted-foreground/20 bg-muted/20 p-2 rounded-r">
+                                  <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide block mb-1">Comentário</span>
+                                  {commentLines.map((line, i) => (
+                                    <p key={i}>{line}</p>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             );
                           })}
