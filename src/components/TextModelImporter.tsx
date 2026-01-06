@@ -658,13 +658,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="font-medium text-foreground">Estrutura determinística:</p>
+              <p className="font-medium text-foreground">Sintaxe DSL (determinística):</p>
               <div className="grid gap-1.5 mt-2 font-mono">
-                <p><span className="font-semibold">SEGUNDA</span> — início do dia</p>
-                <p><span className="font-semibold">Nome do Bloco</span> — título do treino</p>
-                <p><span className="font-semibold text-primary">= TREINO</span> — início do treino</p>
-                <p><span className="font-semibold text-primary">- item</span> — exercício (com métrica)</p>
-                <p><span className="font-semibold text-primary">&gt; COMENTÁRIO</span> — observação</p>
+                <p><span className="font-semibold text-primary">DIA: SEGUNDA</span> — início do dia</p>
+                <p><span className="font-semibold text-primary">BLOCO: AQUECIMENTO</span> — início do bloco</p>
+                <p><span className="font-semibold">**3 ROUNDS**</span> — estrutura do bloco</p>
+                <p><span className="font-semibold">- exercício</span> — cada exercício (com métrica)</p>
+                <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>
             </div>
 
@@ -739,42 +739,36 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="p-3 rounded-lg bg-muted/50 font-mono text-xs whitespace-pre-wrap">
-{`SEGUNDA
+{`DIA: SEGUNDA
 
-Aquecimento
-
-= TREINO
+BLOCO: AQUECIMENTO
 - 500 m Run leve Z2
 - 2x10 Air Squats
+(Foco na mobilidade)
 
-> COMENTÁRIO
-> Foco na mobilidade
-
-
-WOD
-
-= TREINO
-- For Time: 21-15-9
+BLOCO: WOD PRINCIPAL
+**FOR TIME**
+- 21-15-9
 - Thrusters @43/30 kg
 - Pull-ups
+(Cap 12 min. Manter ritmo.)
 
-> COMENTÁRIO
-> Cap 12 min. Manter ritmo.
+DIA: TERÇA
 
-
-TERÇA
-
-Descanso`}
+BLOCO: DESCANSO
+(Dia de recuperação)`}
             </div>
             <div className="text-xs text-muted-foreground space-y-1 mt-2">
-              <p><span className="font-mono font-semibold">=</span> TREINO → início do bloco</p>
-              <p><span className="font-mono font-semibold">-</span> item → cada exercício</p>
-              <p><span className="font-mono font-semibold">&gt;</span> comentário → observação do coach</p>
+              <p><span className="font-mono font-semibold text-primary">DIA:</span> → início do dia (SEGUNDA, TERÇA, etc.)</p>
+              <p><span className="font-mono font-semibold text-primary">BLOCO:</span> → início do bloco</p>
+              <p><span className="font-mono font-semibold">**estrutura**</span> → ROUNDS, EMOM, AMRAP, FOR TIME</p>
+              <p><span className="font-mono font-semibold">-</span> → cada exercício</p>
+              <p><span className="font-mono font-semibold">(...)</span> → comentário do coach</p>
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Fechar</AlertDialogCancel>
               <AlertDialogAction onClick={() => {
-                navigator.clipboard.writeText(`SEGUNDA\n\nAquecimento\n\n= TREINO\n- 500 m Run leve Z2\n- 2x10 Air Squats\n\n> COMENTÁRIO\n> Foco na mobilidade\n\n\nWOD\n\n= TREINO\n- For Time: 21-15-9\n- Thrusters @43/30 kg\n- Pull-ups\n\n> COMENTÁRIO\n> Cap 12 min. Manter ritmo.\n\n\nTERÇA\n\nDescanso`);
+                navigator.clipboard.writeText(`DIA: SEGUNDA\n\nBLOCO: AQUECIMENTO\n- 500 m Run leve Z2\n- 2x10 Air Squats\n(Foco na mobilidade)\n\nBLOCO: WOD PRINCIPAL\n**FOR TIME**\n- 21-15-9\n- Thrusters @43/30 kg\n- Pull-ups\n(Cap 12 min. Manter ritmo.)\n\nDIA: TERÇA\n\nBLOCO: DESCANSO\n(Dia de recuperação)`);
                 setTemplateCopied(true);
                 setTimeout(() => setTemplateCopied(false), 2000);
               }}>
@@ -1451,12 +1445,12 @@ Descanso`}
                                 </div>
                               )}
                               
-                              {/* ESTRUTURA DO BLOCO (**ROUNDS**, **EMOM**, etc.) */}
+                              {/* ESTRUTURA DO BLOCO (subheader com tipografia distinta) */}
                               {structureDescription && (
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="text-xs font-medium bg-primary/10 text-primary border-primary/20">
-                                    🔁 {structureDescription}
-                                  </Badge>
+                                <div className="mb-2 py-1.5 px-2 rounded bg-secondary/50 border-l-4 border-primary/40">
+                                  <p className="text-sm font-semibold text-primary uppercase tracking-wide">
+                                    {structureDescription}
+                                  </p>
                                 </div>
                               )}
                               
