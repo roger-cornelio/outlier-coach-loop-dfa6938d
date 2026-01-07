@@ -66,7 +66,7 @@ import {
   validateCoachInput,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import { normalizeRestLineForDisplay, separateBlockContent, normalizeBlockTitle, normalizeDayLabel } from '@/utils/blockDisplayUtils';
+import { normalizeRestLineForDisplay, separateBlockContent, normalizeBlockTitle, normalizeDayLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { validateStructures, getStructureDescription, type WorkoutStructure, type StructureValidationError } from '@/utils/workoutStructures';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -1127,60 +1127,40 @@ BLOCO: DESCANSO
                                     </DropdownMenu>
                                   </div>
 
-                                  {/* Conteúdo do bloco - COM ESTILO DE COMENTÁRIO PARA () */}
+                                  {/* Conteúdo do bloco - SEM REPARSE (usa dados já parseados) */}
                                   {(() => {
-                                    // Usar o parser para separar exercícios e comentários inline
-                                    const blockContent = (block.lines || []).map(l => 
-                                      `- ${typeof l === 'string' ? l : l?.text || ''}`
-                                    ).join('\n');
-                                    const parseResult = separateBlockContent(blockContent);
-                                    const { exerciseLines, inlineComments, alerts } = parseResult;
+                                    // ════════════════════════════════════════════════════════════════════════════
+                                    // MVP0 REGRA: Usar getBlockDisplayDataFromParsed (SEM REPARSE)
+                                    // Alertas de validação vêm do parseResult.structureIssues, não de reparse
+                                    // ════════════════════════════════════════════════════════════════════════════
+                                    const displayData = getBlockDisplayDataFromParsed(block);
                                     
                                     // Limitar exibição a 5 linhas
-                                    const displayExercises = exerciseLines.slice(0, 5);
-                                    const hasMore = exerciseLines.length > 5;
+                                    const displayExercises = displayData.exerciseLines.slice(0, 5);
+                                    const hasMore = displayData.exerciseLines.length > 5;
                                     
                                     return (
                                       <div className="text-sm space-y-1 text-foreground/80">
-                                        {/* Alertas (se houver) */}
-                                        {alerts.length > 0 && (
-                                          <div className="mb-2 space-y-1">
-                                            {alerts.slice(0, 2).map((alert, idx) => (
-                                              <div key={`alert-${idx}`} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600">
-                                                ⚠️ {alert.type === 'MISSING_DASH' ? 'Sem hífen' : 'Fora de ( )'}
-                                              </div>
-                                            ))}
+                                        {/* Estrutura (se houver) */}
+                                        {displayData.structureDescription && (
+                                          <div className="mb-1 text-xs font-semibold text-primary uppercase">
+                                            {displayData.structureDescription}
                                           </div>
                                         )}
                                         
                                         {/* Exercícios */}
-                                        {displayExercises.map((line, idx) => {
-                                          // Verificar se há comentário inline para esta linha
-                                          const inlineComment = inlineComments.find(c => c.lineIndex === idx);
-                                          return (
-                                            <div key={idx}>
-                                              <p className="truncate">{normalizeRestLineForDisplay(line)}</p>
-                                              {/* Comentário inline com estilo de comentário */}
-                                              {inlineComment && (
-                                                <p className="text-xs text-muted-foreground/60 italic ml-2 truncate">
-                                                  ({inlineComment.text})
-                                                </p>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
-                                        
-                                        {/* Comentários inline orphans (sem linha correspondente) */}
-                                        {inlineComments.filter(c => c.lineIndex >= displayExercises.length || c.lineIndex < 0).slice(0, 2).map((ic, idx) => (
-                                          <p key={`orphan-${idx}`} className="text-xs text-muted-foreground/60 italic truncate">
-                                            ({ic.text})
-                                          </p>
+                                        {displayExercises.map((line, idx) => (
+                                          <p key={idx} className="truncate">{normalizeRestLineForDisplay(line)}</p>
                                         ))}
                                         
                                         {hasMore && (
                                           <p className="text-muted-foreground text-xs">
-                                            ... +{exerciseLines.length - 5} linhas
+                                            ... +{displayData.exerciseLines.length - 5} linhas
                                           </p>
+                                        )}
+                                        
+                                        {displayData.exerciseLines.length === 0 && !displayData.structureDescription && (
+                                          <p className="text-xs text-muted-foreground/50 italic">Sem linhas de exercício</p>
                                         )}
                                       </div>
                                     );
@@ -1409,17 +1389,24 @@ BLOCO: DESCANSO
                   <div className="p-4 space-y-3">
                     {(dayWorkout.blocks || []).map((block, blockIndex) => {
                       // ════════════════════════════════════════════════════════════════════════════
-                      // MVP0: Usar separateBlockContent para verificar conteúdo
-                      // REGRA: Bloco renderizado se tem exerciseLines OU coachNotes OU inlineComments
+                      // MVP0 REGRA FINAL: PREVIEW USA DADOS JÁ PARSEADOS (SEM REPARSE)
+                      // 
+                      // PROIBIDO no Preview:
+                      // - Chamar separateBlockContent()
+                      // - Chamar parseStructuredText()
+                      // - Gerar alertas de sintaxe
+                      // - Validar DSL
+                      // 
+                      // PERMITIDO:
+                      // - Usar block.lines (já parseado)
+                      // - Usar block.coachNotes (já extraído)
+                      // - Formatar para exibição limpa
                       // ════════════════════════════════════════════════════════════════════════════
-                      const checkParse = separateBlockContent(block.content || '');
-                      const hasExecLines = checkParse.exerciseLines.length > 0;
-                      const hasCoachNotes = checkParse.coachNotes.length > 0 || (Array.isArray(block.coachNotes) && block.coachNotes.length > 0);
-                      const hasInlineComments = checkParse.inlineComments.length > 0;
+                      
+                      const displayData = getBlockDisplayDataFromParsed(block);
                       
                       // REGRA: Só esconder se não tem NENHUM conteúdo útil
-                      if (!hasExecLines && !hasCoachNotes && !hasInlineComments) {
-                        console.log(`[RENDER_BLOCK] Preview title="${block.title}" rendered=false (sem conteúdo)`);
+                      if (!displayData.hasContent) {
                         return null;
                       }
                       
@@ -1452,121 +1439,52 @@ BLOCO: DESCANSO
                             )}
                           </div>
 
-                        {/* FONTE ÚNICA: separateBlockContent para treino e comentário */}
-                        {(() => {
-                          // ════════════════════════════════════════════════════════════════════════════
-                          // MVP0 REGRA FINAL:
-                          // - Exercício = linhas com "- " no início
-                          // - Comentário = texto entre "( )"
-                          // - Estruturas = linhas entre ** ** (ROUNDS, EMOM, AMRAP, FOR TIME)
-                          // - Alertas visuais (não bloqueiam)
-                          // ════════════════════════════════════════════════════════════════════════════
-                          
-                          const parseResult = separateBlockContent(block.content || '');
-                          const { exerciseLines, coachNotes, inlineComments, alerts, structures = [] } = parseResult;
-                          
-                          // Validar conflitos de estrutura
-                          const structureErrors = validateStructures(structures);
-                          const structureDescription = getStructureDescription(structures);
-                          
-                          // Fallback para coachNotes legado do bloco
-                          const blockCoachNotes = block.coachNotes;
-                          const finalCoachNotes = coachNotes.length > 0 
-                            ? coachNotes
-                            : (Array.isArray(blockCoachNotes) ? blockCoachNotes : []);
-                          
-                          // Log de verificação
-                          const hasExercise = exerciseLines.length > 0;
-                          const renderedCoachNotes = finalCoachNotes.length > 0;
-                          console.log(`[RENDER_RESULT] hasExercise=${hasExercise}, renderedCoachNotes=${renderedCoachNotes}, structures=${structures.length}, structureErrors=${structureErrors.length}`);
-
-                          return (
-                            <div className="space-y-2">
-                              {/* ERROS DE CONFLITO DE ESTRUTURA (BLOQUEIAM PUBLICAÇÃO) */}
-                              {structureErrors.length > 0 && (
-                                <div className="space-y-1">
-                                  {structureErrors.map((err, idx) => (
-                                    <div key={`struct-err-${idx}`} className="text-xs px-2 py-1.5 rounded bg-destructive/10 text-destructive border border-destructive/20">
-                                      <span className="font-medium">❌ Erro de estrutura:</span>{' '}
-                                      <span>{err.message}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* ESTRUTURA DO BLOCO (subheader com tipografia distinta) */}
-                              {structureDescription && (
-                                <div className="mb-2 py-1.5 px-2 rounded bg-secondary/50 border-l-4 border-primary/40">
-                                  <p className="text-sm font-semibold text-primary uppercase tracking-wide">
-                                    {structureDescription}
+                          {/* ════════════════════════════════════════════════════════════════════════════
+                              EXIBIÇÃO PURA (SEM REPARSE) - Usando displayData
+                              ════════════════════════════════════════════════════════════════════════════ */}
+                          <div className="space-y-2">
+                            {/* ESTRUTURA DO BLOCO (subheader com tipografia distinta) */}
+                            {displayData.structureDescription && (
+                              <div className="mb-2 py-1.5 px-2 rounded bg-secondary/50 border-l-4 border-primary/40">
+                                <p className="text-sm font-semibold text-primary uppercase tracking-wide">
+                                  {displayData.structureDescription}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* TREINO - linhas de exercício formatadas */}
+                            {displayData.exerciseLines.length > 0 && (
+                              <div className="text-sm space-y-1 text-foreground/90">
+                                {displayData.exerciseLines.map((line, idx) => (
+                                  <p key={`${block.id || blockIndex}-ex-${idx}`}>
+                                    {normalizeRestLineForDisplay(line)}
                                   </p>
-                                </div>
-                              )}
-                              
-                              {/* ALERTAS (não bloqueiam, apenas informam) */}
-                              {alerts.length > 0 && (
-                                <div className="space-y-1">
-                                  {alerts.map((alert, idx) => (
-                                    <div key={`alert-${idx}`} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                                      <span className="font-medium">{alert.type === 'MISSING_DASH' ? '⚠️ Sem hífen:' : '⚠️ Fora de ( ):'}</span>{' '}
-                                      <span className="italic">"{alert.line}"</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* TREINO - apenas linhas com "- " */}
-                              {exerciseLines.length > 0 && (
-                                <div className="text-sm space-y-1 text-foreground/90">
-                                  {exerciseLines.map((line, idx) => {
-                                    // Verificar se há comentário inline para esta linha
-                                    const lineInlineComment = inlineComments.find(c => c.lineIndex === idx);
-                                    return (
-                                      <div key={`${block.id || blockIndex}-ex-${idx}`}>
-                                        <p>{normalizeRestLineForDisplay(line)}</p>
-                                        {/* Comentário inline (se existir para esta linha) */}
-                                        {lineInlineComment && (
-                                          <p className="text-xs text-muted-foreground/60 italic ml-2 mt-0.5">
-                                            ({lineInlineComment.text})
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              
-                              {/* Comentários inline que não têm linha correspondente */}
-                              {inlineComments.length > 0 && exerciseLines.length === 0 && (
-                                <div className="text-xs text-muted-foreground/60 italic space-y-0.5">
-                                  {inlineComments.map((ic, idx) => (
-                                    <p key={`inline-${idx}`}>({ic.text})</p>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {exerciseLines.length === 0 && finalCoachNotes.length === 0 && inlineComments.length === 0 && structures.length === 0 && (
-                                <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
-                              )}
+                                ))}
+                              </div>
+                            )}
+                            
+                            {displayData.exerciseLines.length === 0 && displayData.coachNotes.length === 0 && !displayData.structureDescription && (
+                              <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
+                            )}
 
-                              {/* SUB-BLOCO: COMENTÁRIO DO COACH (da seção "> COMENTÁRIO") */}
-                              {finalCoachNotes.length > 0 && (
-                                <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
-                                  <div className="flex items-start gap-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                    <div className="space-y-1">
-                                      <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário</span>
-                                      {finalCoachNotes.map((line, idx) => (
-                                        <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground italic">{normalizeRestLineForDisplay(line)}</p>
-                                      ))}
-                                    </div>
+                            {/* SUB-BLOCO: COMENTÁRIO DO COACH */}
+                            {displayData.coachNotes.length > 0 && (
+                              <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário</span>
+                                    {displayData.coachNotes.map((line, idx) => (
+                                      <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground italic">
+                                        {normalizeRestLineForDisplay(line)}
+                                      </p>
+                                    ))}
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>

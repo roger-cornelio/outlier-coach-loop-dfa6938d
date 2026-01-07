@@ -23,7 +23,7 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
-import { getBlockDisplayTitle, getBlockCategoryLabel, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockCategoryLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { MessageSquare } from 'lucide-react';
 
@@ -777,14 +777,12 @@ export function Dashboard() {
               <div className="space-y-4 mb-8">
                 {currentWorkout.blocks.map((block, index) => {
                   // ═══════════════════════════════════════════════════════════
-                  // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
-                  // Bloco só é renderizado se tiver linhas executáveis
+                  // MVP0: REGRA OBRIGATÓRIA - SEM REPARSE (usa dados já parseados)
                   // ═══════════════════════════════════════════════════════════
-                  const { exerciseLines: trainingLines } = separateBlockContent(block.content);
+                  const displayData = getBlockDisplayDataFromParsed(block);
                   
-                  // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco de treino
-                  if (trainingLines.length === 0) {
-                    console.log(`[RENDER_BLOCK] Dashboard title="${block.title}" rendered=false (sem linhas executáveis)`);
+                  // REGRA: Se não tem conteúdo, NÃO renderiza
+                  if (!displayData.hasContent) {
                     return null;
                   }
                   
@@ -794,14 +792,8 @@ export function Dashboard() {
                   const estimatedKcal = blockEstimate?.estimatedKcal || 0;
                   const confidence = blockEstimate?.confidence || 'low';
 
-                  // [RENDER_CHECK] Log obrigatório
-                  console.log("[RENDER_CHECK]", {
-                    day: currentWorkout.day,
-                    blockTitle: block.title,
-                    trainingLines: trainingLines.length,
-                    validationErrors: 0,
-                  });
-                  console.log(`[RENDER_BLOCK] Dashboard title="${block.title}" rendered=true`);
+                  // Usar displayData já calculado
+                  const trainingLines = displayData.exerciseLines;
 
                   return (
                     <motion.div
@@ -830,18 +822,9 @@ export function Dashboard() {
                           )}
                         </div>
                       </div>
-                      {/* Separated Exercise Content and Coach Comments */}
+                      {/* Conteúdo do bloco - SEM REPARSE */}
                       {(() => {
-                        const { exerciseLines, commentLines } = separateBlockContent(block.content);
-                        
-                        // [UI_BLOCK] Log obrigatório
-                        console.log("[UI_BLOCK]", {
-                          title: block.title,
-                          hasTraining: exerciseLines.length,
-                          hasComment: commentLines.length,
-                        });
-                        // [UI_SPLIT_RENDER] Log de renderização
-                        console.log(`[UI_SPLIT_RENDER] title="${block.title || 'Bloco'}" training=${exerciseLines.length} comment=${commentLines.length}`);
+                        const { exerciseLines, coachNotes: commentLines } = displayData;
                         return (
                           <>
                             {/* Caixa 1: TREINO - main content */}
