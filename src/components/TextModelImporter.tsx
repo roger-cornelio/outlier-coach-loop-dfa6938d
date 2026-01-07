@@ -69,8 +69,7 @@ import {
   validateCoachInput,
   type ParseResult 
 } from '@/utils/structuredTextParser';
-import { normalizeRestLineForDisplay, separateBlockContent, normalizeBlockTitle, normalizeDayLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
-import { validateStructures, getStructureDescription, type WorkoutStructure, type StructureValidationError } from '@/utils/workoutStructures';
+import { normalizeRestLineForDisplay, normalizeBlockTitle, normalizeDayLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
@@ -229,34 +228,44 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     
     result.needsDaySelection = false;
 
-    // Converter para DayWorkout[] (sem depender de items/coachNotes — usar lines já classificadas)
-    // IMPORTANTE: Preservar coachNotes como campo explícito para persistência
+    // Converter para DayWorkout[] (fonte única para Preview/Publicar/Atleta)
+    // REGRA MVP0:
+    // - content = APENAS treino executável (sem comentários)
+    // - coachNotes = comentários (fonte única)
+    // - lines = linhas já parseadas (para render sem reparse)
     const workouts: DayWorkout[] = result.days.map((day) => ({
       day: (day.day || 'seg') as DayOfWeek,
       stimulus: '',
       estimatedTime: 60,
       isRestDay: day.isRestDay || false,
       blocks: day.blocks.map((block, idx) => {
-        const lines = block.lines || [];
-        const training = lines.filter(l => l.type !== 'comment').map(l => l.text);
-        const comments = lines.filter(l => l.type === 'comment').map(l => l.text);
+        const parsedLines = block.lines || [];
 
-        // Usar coachNotes do bloco parseado se existir, senão usar comments extraídos das lines
-        const coachNotes = (block.coachNotes && block.coachNotes.length > 0) 
-          ? block.coachNotes 
-          : comments;
+        // Linhas de treino (inclui estruturas **...** e exercícios)
+        const trainingLines = parsedLines
+          .filter(l => l.type !== 'comment')
+          .map(l => (l.text || '').trim())
+          .filter(Boolean);
 
-        // Content deve incluir TREINO + COMENTÁRIO para manter estrutura completa
-        const content = coachNotes.length > 0
-          ? `[TREINO]\n${training.join('\n')}\n[COMENTÁRIO]\n${coachNotes.join('\n')}`
-          : training.join('\n');
+        // Comentários (linhas puramente comment)
+        const commentLines = parsedLines
+          .filter(l => l.type === 'comment')
+          .map(l => (l.text || '').trim())
+          .filter(Boolean);
+
+        // FONTE ÚNICA: coachNotes do parse, com fallback para comments
+        const coachNotes = (Array.isArray(block.coachNotes) && block.coachNotes.length > 0)
+          ? block.coachNotes
+          : commentLines;
 
         return {
           id: `${day.day || 'new'}-${idx}-${Date.now()}`,
           type: block.type,
           title: block.title,
-          content,
-          // FONTE ÚNICA DE VERDADE: coachNotes persistido explicitamente
+          // content: apenas treino (sem tags, sem comentários)
+          content: trainingLines.join('\n'),
+          // lines: para renderização sem reparse (Preview/Publicação/Atleta)
+          lines: trainingLines.length > 0 ? trainingLines : undefined,
           coachNotes: coachNotes.length > 0 ? coachNotes : undefined,
           isMainWod: block.isMainWod || undefined,
           isBenchmark: block.isBenchmark || undefined,
@@ -510,19 +519,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
         if (!block.type) {
           invalidBlocks.push({ dayIndex, blockIndex, reason: 'category' });
         }
-        
-        // VALIDAR CONFLITOS DE ESTRUTURA (**ROUNDS**, **EMOM**, etc.)
-        // Reconstruir conteúdo do bloco a partir das linhas
-        const blockContent = block.lines?.map(l => l.text || '').join('\n') || '';
-        if (blockContent) {
-          const blockParse = separateBlockContent(blockContent);
-          if (blockParse.structures && blockParse.structures.length > 0) {
-            const structErrors = validateStructures(blockParse.structures);
-            if (structErrors.length > 0) {
-              invalidBlocks.push({ dayIndex, blockIndex, reason: 'structure_conflict' });
-            }
-          }
-        }
+
+        // MVP0 REGRA: Preview/Publicação/Atleta NÃO reparseiam e NÃO validam sintaxe.
+        // Conflitos de estrutura (EMOM + ROUNDS, etc.) são reportados como issues na EDIÇÃO.
       });
       
       // Verificar bloco Principal (exatamente 1 por dia)
@@ -548,7 +547,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     const daysWithoutCategory = new Set(invalidBlocks.filter(ib => ib.reason === 'category').map(ib => ib.dayIndex));
     const daysWithoutMain = new Set(invalidBlocks.filter(ib => ib.reason === 'no_main').map(ib => ib.dayIndex));
     const daysWithMultipleMain = new Set(invalidBlocks.filter(ib => ib.reason === 'multiple_main').map(ib => ib.dayIndex));
-    const daysWithStructureConflict = new Set(invalidBlocks.filter(ib => ib.reason === 'structure_conflict').map(ib => ib.dayIndex));
     
     if (daysWithoutCategory.size > 0) {
       errors.push(`${daysWithoutCategory.size} dia(s) com blocos sem categoria`);
@@ -558,9 +556,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     }
     if (daysWithMultipleMain.size > 0) {
       errors.push(`${daysWithMultipleMain.size} dia(s) com múltiplos blocos Principal`);
-    }
-    if (daysWithStructureConflict.size > 0) {
-      errors.push(`${daysWithStructureConflict.size} dia(s) com conflito de estrutura (ex: EMOM + ROUNDS)`);
     }
     
     return {
