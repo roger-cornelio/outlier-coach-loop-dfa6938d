@@ -27,10 +27,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
-  Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare
+  Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare,
+  Wand2
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
+import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
+import { StructureBadge, CommentSubBlock } from './DSLBlockRenderer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -747,6 +750,25 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
                 Validar texto
               </Button>
               
+              {/* AUTOFORMAT BUTTON - Adiciona hífens automaticamente */}
+              {rawText.trim() && (() => {
+                const preview = previewAutoFormatChanges(rawText);
+                if (!preview.hasChanges) return null;
+                return (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const formatted = autoFormatDSL(rawText);
+                      setRawText(formatted);
+                    }}
+                    title="Autoformatar adiciona hífen em exercícios dentro de blocos estruturados"
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Autoformatar ({preview.changesCount})
+                  </Button>
+                );
+              })()}
+              
               {rawText.trim() && (
                 <Button variant="outline" onClick={handleClear}>
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -754,6 +776,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
                 </Button>
               )}
             </div>
+            
+            {/* Microcopy - Dica de autoformat */}
+            {rawText.trim() && previewAutoFormatChanges(rawText).hasChanges && (
+              <p className="text-xs text-muted-foreground">
+                💡 <strong>Autoformatar</strong> adiciona hífen em exercícios dentro de blocos estruturados (**ROUNDS**, **EMOM**, etc.)
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -1141,10 +1170,10 @@ BLOCO: DESCANSO
                                     
                                     return (
                                       <div className="text-sm space-y-1 text-foreground/80">
-                                        {/* Estrutura (se houver) */}
+                                        {/* Estrutura - Badge visual */}
                                         {displayData.structureDescription && (
-                                          <div className="mb-1 text-xs font-semibold text-primary uppercase">
-                                            {displayData.structureDescription}
+                                          <div className="mb-2">
+                                            <StructureBadge structure={displayData.structureDescription} />
                                           </div>
                                         )}
                                         
@@ -1443,12 +1472,10 @@ BLOCO: DESCANSO
                               EXIBIÇÃO PURA (SEM REPARSE) - Usando displayData
                               ════════════════════════════════════════════════════════════════════════════ */}
                           <div className="space-y-2">
-                            {/* ESTRUTURA DO BLOCO (subheader com tipografia distinta) */}
+                            {/* ESTRUTURA DO BLOCO - Badge visual (ROUNDS, EMOM, etc.) */}
                             {displayData.structureDescription && (
-                              <div className="mb-2 py-1.5 px-2 rounded bg-secondary/50 border-l-4 border-primary/40">
-                                <p className="text-sm font-semibold text-primary uppercase tracking-wide">
-                                  {displayData.structureDescription}
-                                </p>
+                              <div className="mb-2">
+                                <StructureBadge structure={displayData.structureDescription} />
                               </div>
                             )}
                             

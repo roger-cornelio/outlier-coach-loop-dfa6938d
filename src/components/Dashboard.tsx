@@ -26,6 +26,7 @@ import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
 import { getBlockDisplayTitle, getBlockCategoryLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { MessageSquare } from 'lucide-react';
+import { StructureBadge, CommentSubBlock } from './DSLBlockRenderer';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -824,9 +825,16 @@ export function Dashboard() {
                       </div>
                       {/* Conteúdo do bloco - SEM REPARSE */}
                       {(() => {
-                        const { exerciseLines, coachNotes: commentLines } = displayData;
+                        const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
                         return (
                           <>
+                            {/* Structure Badge (se houver) */}
+                            {structureDescription && (
+                              <div className="mb-3">
+                                <StructureBadge structure={structureDescription} />
+                              </div>
+                            )}
+                            
                             {/* Caixa 1: TREINO - main content */}
                             <div className="space-y-2">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
