@@ -793,3 +793,122 @@ export function isExecutableLine(line: string): boolean {
   if (!trimmed) return true; // Linha vazia é "válida" (não bloqueia)
   return trimmed.startsWith('- ') || trimmed.startsWith('-');
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// MVP0 REGRA FINAL: getBlockDisplayDataFromParsed
+// ════════════════════════════════════════════════════════════════════════════
+// 
+// FUNÇÃO PARA PREVIEW/ATLETA: Extrai dados de exibição SEM REPARSE
+// 
+// REGRA ABSOLUTA:
+// - Preview, Publicação e Tela do Atleta NUNCA reparsam texto
+// - Usam dados já estruturados do bloco (block.lines, block.coachNotes)
+// - Não geram alertas, não validam sintaxe
+// ════════════════════════════════════════════════════════════════════════════
+
+export interface BlockDisplayData {
+  /** Linhas de exercício para exibição (sem hífen) */
+  exerciseLines: string[];
+  /** Notas do coach (comentários) */
+  coachNotes: string[];
+  /** Descrição da estrutura (ex: "3 ROUNDS", "EMOM 30 MIN") */
+  structureDescription: string | null;
+  /** Se o bloco tem conteúdo renderizável */
+  hasContent: boolean;
+}
+
+/**
+ * Extrai dados de exibição a partir de um bloco JÁ PARSEADO.
+ * 
+ * REGRA ABSOLUTA:
+ * - NÃO reparse texto
+ * - NÃO gera alertas
+ * - NÃO valida sintaxe
+ * - Apenas formata para exibição
+ * 
+ * @param block - Objeto do bloco com lines, coachNotes, content
+ * @returns Dados formatados para exibição (exerciseLines, coachNotes, structureDescription)
+ */
+export function getBlockDisplayDataFromParsed(block: {
+  lines?: Array<{ text?: string; type?: string } | string>;
+  coachNotes?: string[];
+  content?: string;
+}): BlockDisplayData {
+  const exerciseLines: string[] = [];
+  const coachNotes: string[] = [];
+  let structureDescription: string | null = null;
+
+  // 1) Extrair linhas de treino de block.lines (já parseadas)
+  if (Array.isArray(block.lines) && block.lines.length > 0) {
+    for (const line of block.lines) {
+      const text = typeof line === 'string' ? line : (line?.text || '');
+      const type = typeof line === 'string' ? 'exercise' : (line?.type || 'exercise');
+      
+      if (!text.trim()) continue;
+      
+      // Comentários vão para coachNotes
+      if (type === 'comment') {
+        coachNotes.push(text.trim());
+        continue;
+      }
+      
+      // Estruturas (**ROUNDS**, **EMOM**, etc.) - extrair descrição
+      const structLabel = normalizeStructureLabel(text);
+      if (structLabel) {
+        structureDescription = structLabel;
+        continue;
+      }
+      
+      // Exercícios - remover hífen para exibição limpa
+      const cleanLine = text.replace(/^-\s*/, '').trim();
+      if (cleanLine) {
+        exerciseLines.push(cleanLine);
+      }
+    }
+  }
+  
+  // 2) Adicionar coachNotes do bloco (já extraídos durante parse)
+  if (Array.isArray(block.coachNotes) && block.coachNotes.length > 0) {
+    for (const note of block.coachNotes) {
+      if (note?.trim() && !coachNotes.includes(note.trim())) {
+        coachNotes.push(note.trim());
+      }
+    }
+  }
+  
+  // 3) Fallback: Se não tem lines mas tem content, extrair estrutura apenas
+  //    NÃO faz parse completo, apenas busca estrutura entre ** **
+  if (exerciseLines.length === 0 && block.content) {
+    const lines = block.content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Estrutura entre ** **
+      const structLabel = normalizeStructureLabel(trimmed);
+      if (structLabel && !structureDescription) {
+        structureDescription = structLabel;
+        continue;
+      }
+      
+      // Exercício com hífen - remover para exibição
+      if (trimmed.startsWith('- ') || trimmed.startsWith('-')) {
+        const cleanLine = trimmed.replace(/^-\s*/, '').trim();
+        if (cleanLine) {
+          exerciseLines.push(cleanLine);
+        }
+      }
+    }
+  }
+
+  const hasContent = exerciseLines.length > 0 || coachNotes.length > 0 || structureDescription !== null;
+
+  // LOG silencioso (sem [PARSE_*] para evitar confusão)
+  // console.log('[DISPLAY_DATA]', { exerciseLines: exerciseLines.length, coachNotes: coachNotes.length, structureDescription, hasContent });
+
+  return {
+    exerciseLines,
+    coachNotes,
+    structureDescription,
+    hasContent,
+  };
+}
