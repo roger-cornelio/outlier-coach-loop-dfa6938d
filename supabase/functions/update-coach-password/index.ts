@@ -15,17 +15,10 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Create admin client
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    // Get request body
+    // Get request body first to check email
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -36,6 +29,59 @@ serve(async (req) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // ========== JWT AUTHENTICATION ==========
+    // This endpoint can be called by:
+    // 1. The coach themselves (setting their own password)
+    // 2. An admin/superadmin (resetting any coach's password)
+    const authHeader = req.headers.get("Authorization");
+    
+    // Create admin client
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // If auth header is provided, validate it
+    if (authHeader?.startsWith("Bearer ")) {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data: { user: callerUser }, error: userError } = await supabaseAuth.auth.getUser();
+      
+      if (!userError && callerUser) {
+        // User is authenticated - check if they are:
+        // 1. Setting their own password (email matches)
+        // 2. An admin/superadmin
+        const callerEmail = callerUser.email?.toLowerCase().trim();
+        
+        if (callerEmail !== normalizedEmail) {
+          // Not their own email - check if admin
+          const { data: callerRoles } = await supabaseAdmin
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", callerUser.id);
+
+          const hasAdminRole = callerRoles?.some(r => r.role === "admin" || r.role === "superadmin");
+          if (!hasAdminRole) {
+            console.error("[update-coach-password] Non-admin trying to update another user's password:", callerUser.id);
+            return new Response(
+              JSON.stringify({ error: "Forbidden - Cannot update another user's password" }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          console.log("[update-coach-password] Admin updating password for:", normalizedEmail);
+        } else {
+          console.log("[update-coach-password] User updating their own password:", normalizedEmail);
+        }
+      }
+    }
+    // Note: If no auth header, we still proceed but require the user exists and has coach role
+    // This allows the initial password set flow when user doesn't have a session yet
+    // ========== END AUTHENTICATION ==========
 
     console.log("[update-coach-password] Updating password for:", normalizedEmail);
 
