@@ -71,32 +71,33 @@ function mapStatusToLevel(status: AthleteStatus): string {
 }
 
 // Division aliases for lookup fallback
+// The database uses 'HYROX' for OPEN division and 'HYROX PRO' for PRO division
 const DIVISION_ALIASES: Record<string, string[]> = {
   'HYROX PRO': ['HYROX PRO'],
-  'HYROX OPEN': ['HYROX OPEN', 'HYROX'],
-  'HYROX': ['HYROX', 'HYROX OPEN'],
+  'HYROX OPEN': ['HYROX', 'HYROX OPEN'],  // Try 'HYROX' first (actual DB value)
+  'HYROX': ['HYROX'],
   'PRO': ['HYROX PRO'],
-  'OPEN': ['HYROX OPEN', 'HYROX'],
+  'OPEN': ['HYROX'],
 };
 
-// Normalize division string for lookup
-function normalizeDivision(division: string): string {
+// Normalize division string for lookup - returns human-readable label
+function normalizeDivisionLabel(division: string): string {
   const upper = (division || '').toUpperCase().trim();
-  // Direct canonical values
-  if (upper === 'HYROX PRO' || upper === 'HYROX OPEN') {
-    return upper;
-  }
-  // Aliases
-  if (upper.includes('PRO')) return 'HYROX PRO';
-  if (upper.includes('OPEN') || upper === 'HYROX') return 'HYROX OPEN';
-  // Default fallback
-  return 'HYROX OPEN';
+  if (upper === 'HYROX PRO' || upper.includes('PRO')) return 'HYROX PRO';
+  return 'HYROX (OPEN)';
 }
 
 // Get fallback divisions to try in order
 function getDivisionFallbacks(division: string): string[] {
-  const normalized = normalizeDivision(division);
-  return DIVISION_ALIASES[normalized] || [normalized, 'HYROX OPEN', 'HYROX PRO'];
+  const upper = (division || '').toUpperCase().trim();
+  
+  // PRO divisions
+  if (upper === 'HYROX PRO' || upper === 'PRO' || upper.includes('PRO')) {
+    return ['HYROX PRO'];
+  }
+  
+  // OPEN divisions - database uses 'HYROX' not 'HYROX OPEN'
+  return ['HYROX', 'HYROX OPEN'];
 }
 
 export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division, gender }: Props) {
@@ -248,7 +249,7 @@ export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division
               Comparação com referência do seu nível
             </p>
             <p className="text-sm text-muted-foreground">
-              Sem referência configurada para {normalizeDivision(division)} / {athleteGender === 'F' ? 'Feminino' : 'Masculino'} / {levelLabel}
+              Sem referência configurada para {normalizeDivisionLabel(division)} / {athleteGender === 'F' ? 'Feminino' : 'Masculino'} / {levelLabel}
             </p>
             <p className="text-xs text-muted-foreground/70">
               Ajuste no painel de Admin para habilitar comparações de nível.

@@ -39,10 +39,16 @@ const LEVELS = [
   { key: 'iniciante', label: 'Iniciante' },
   { key: 'intermediario', label: 'Intermediário' },
   { key: 'avancado', label: 'Avançado' },
-  { key: 'pro', label: 'PRO' },
+  { key: 'hyrox_open', label: 'HYROX OPEN' },
+  { key: 'hyrox_pro', label: 'HYROX PRO' },
 ];
 
-const DIVISIONS = ['HYROX PRO', 'HYROX OPEN'];
+// Division values that match the database
+const DIVISIONS = [
+  { key: 'HYROX PRO', label: 'HYROX PRO' },
+  { key: 'HYROX', label: 'HYROX (OPEN)' },
+];
+
 const GENDERS = [
   { key: 'M', label: 'Masculino' },
   { key: 'F', label: 'Feminino' },
@@ -228,7 +234,7 @@ export function LevelBenchmarksEditor() {
               </SelectTrigger>
               <SelectContent className="bg-background border-border z-[200]">
                 {DIVISIONS.map(d => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                  <SelectItem key={d.key} value={d.key}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
