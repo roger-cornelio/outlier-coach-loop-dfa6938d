@@ -25,12 +25,27 @@ export interface CalculatedScore {
 /**
  * Result of the percentile calculation
  */
+/**
+ * Error codes for structured error handling
+ */
+export type PercentileErrorCode = 
+  | 'RESULT_NOT_FOUND'
+  | 'BANDS_NOT_FOUND'
+  | 'INSERT_FAILED'
+  | 'AUTH_ERROR'
+  | 'VALIDATION_ERROR'
+  | 'UNKNOWN_ERROR';
+
+/**
+ * Result of the percentile calculation
+ */
 export interface PercentileCalculationResult {
   success: boolean;
   scores?: CalculatedScore[];
   saved_count?: number;
   missing_bands?: string[];
   error?: string;
+  errorCode?: PercentileErrorCode;
 }
 
 /**
@@ -122,6 +137,8 @@ export async function calculateAndSaveHyroxPercentiles(
   }
 
   try {
+    console.log('[HYROX_PERCENTILE] Invoking edge function...');
+    
     const { data, error } = await supabase.functions.invoke('calculate-hyrox-percentiles', {
       body: {
         hyrox_result_id: hyroxResultId,
@@ -133,18 +150,52 @@ export async function calculateAndSaveHyroxPercentiles(
 
     if (error) {
       console.error('[HYROX_PERCENTILE] Edge function error:', error);
+      
+      // Parse error type
+      let errorCode: PercentileErrorCode = 'UNKNOWN_ERROR';
+      const errorMsg = error.message || String(error);
+      
+      if (errorMsg.includes('401') || errorMsg.includes('token') || errorMsg.includes('authorization')) {
+        errorCode = 'AUTH_ERROR';
+      }
+      
       return { 
         success: false, 
-        error: error.message || 'Failed to calculate percentiles' 
+        error: errorMsg,
+        errorCode
       };
     }
 
-    if (!data.success) {
-      console.error('[HYROX_PERCENTILE] Calculation failed:', data.error);
+    // Check for explicit error in response
+    if (data?.error) {
+      console.error('[HYROX_PERCENTILE] Calculation failed:', data.error, data);
+      
+      // Determine error code from response
+      let errorCode: PercentileErrorCode = 'UNKNOWN_ERROR';
+      
+      if (data.error.includes('No percentile bands')) {
+        errorCode = 'BANDS_NOT_FOUND';
+      } else if (data.error.includes('Failed to save')) {
+        errorCode = 'INSERT_FAILED';
+      } else if (data.error.includes('Missing required')) {
+        errorCode = 'VALIDATION_ERROR';
+      }
+      
       return { 
         success: false, 
         error: data.error,
-        missing_bands: data.missing_bands
+        errorCode,
+        missing_bands: data.missing_bands || data.missingBands
+      };
+    }
+
+    // Check for success flag
+    if (!data?.success) {
+      console.error('[HYROX_PERCENTILE] No success flag in response:', data);
+      return { 
+        success: false, 
+        error: 'Invalid response from calculation service',
+        errorCode: 'UNKNOWN_ERROR'
       };
     }
 
@@ -164,7 +215,8 @@ export async function calculateAndSaveHyroxPercentiles(
     console.error('[HYROX_PERCENTILE] Unexpected error:', err);
     return { 
       success: false, 
-      error: err instanceof Error ? err.message : 'Unknown error' 
+      error: err instanceof Error ? err.message : 'Unknown error',
+      errorCode: 'UNKNOWN_ERROR'
     };
   }
 }
