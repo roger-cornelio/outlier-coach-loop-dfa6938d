@@ -384,6 +384,51 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_level_benchmarks: {
+        Row: {
+          avg_sec: number
+          benchmark_set_id: string
+          division: string
+          gender: string
+          id: string
+          is_active: boolean
+          level: string
+          metric: string
+          p25_sec: number | null
+          p75_sec: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          avg_sec: number
+          benchmark_set_id?: string
+          division: string
+          gender: string
+          id?: string
+          is_active?: boolean
+          level: string
+          metric: string
+          p25_sec?: number | null
+          p75_sec?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          avg_sec?: number
+          benchmark_set_id?: string
+          division?: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          level?: string
+          metric?: string
+          p25_sec?: number | null
+          p75_sec?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           altura: number | null

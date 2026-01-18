@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, Loader2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { HyroxRadarChart } from './HyroxRadarChart';
 import { HyroxRadarExplanation } from './HyroxRadarExplanation';
+import { LevelBenchmarkComparison } from './LevelBenchmarkComparison';
 import { useHyroxMetricScores } from '@/hooks/useHyroxMetricScores';
 import { 
   calculateAndSaveHyroxPercentiles, 
@@ -274,6 +275,16 @@ export function HyroxAnalysisCard({
               division={division}
               gender={gender}
             />
+
+            {/* TAREFA 4: Level benchmark comparison */}
+            <div className="mt-4">
+              <LevelBenchmarkComparison
+                hyroxResultId={resultId}
+                metricScores={scores}
+                division={division}
+                gender={gender}
+              />
+            </div>
           </motion.div>
         ) : analysisState.status === 'error' ? (
           /* Error state with retry option */
