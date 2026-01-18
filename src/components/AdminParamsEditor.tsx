@@ -39,7 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
-import { SystemParamsTable } from '@/components/SystemParamsTable';
+import { FriendlyParamsEditor } from '@/components/FriendlyParamsEditor';
 import type { AthleteLevel } from '@/types/outlier';
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -500,23 +500,23 @@ export function AdminParamsEditor() {
             </TabsTrigger>
           </TabsList>
           
-          {/* Database Parameters Tab */}
+          {/* Database Parameters Tab - Friendly UI */}
           <TabsContent value="database">
             <div className="card-elevated rounded-xl p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-semibold flex items-center gap-2">
                     <Database className="w-5 h-5" />
-                    Parâmetros Centralizados
+                    Configurações do Sistema
                   </h2>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Parâmetros armazenados no banco com auditoria (quem alterou, quando).
-                    Apenas administradores podem visualizar e editar.
+                    Configure os parâmetros do sistema de forma intuitiva.
+                    Todas as alterações são auditadas e impactam cálculos futuros.
                   </p>
                 </div>
               </div>
               
-              <SystemParamsTable />
+              <FriendlyParamsEditor />
             </div>
           </TabsContent>
           
