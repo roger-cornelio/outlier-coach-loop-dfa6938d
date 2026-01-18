@@ -9,6 +9,7 @@ const corsHeaders = {
 interface MetricInput {
   metric: string;
   raw_time_sec: number;
+  data_source?: 'real' | 'estimated';
 }
 
 interface CalculateRequest {
@@ -32,6 +33,7 @@ interface CalculatedScore {
   raw_time_sec: number;
   percentile_value: number;
   percentile_set_id_used: string;
+  data_source: 'real' | 'estimated';
 }
 
 /**
@@ -191,7 +193,8 @@ serve(async (req) => {
         metric: input.metric,
         raw_time_sec: input.raw_time_sec,
         percentile_value: percentileValue,
-        percentile_set_id_used: 'v1'
+        percentile_set_id_used: 'v1',
+        data_source: input.data_source || 'estimated'
       });
 
       console.log('[PERCENTILE_CALC] Calculated:', {
@@ -214,7 +217,8 @@ serve(async (req) => {
       metric: score.metric,
       raw_time_sec: score.raw_time_sec,
       percentile_value: score.percentile_value,
-      percentile_set_id_used: score.percentile_set_id_used
+      percentile_set_id_used: score.percentile_set_id_used,
+      data_source: score.data_source
     }));
 
     const { data: insertedScores, error: insertError } = await supabase

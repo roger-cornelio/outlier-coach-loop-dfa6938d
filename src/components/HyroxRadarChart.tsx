@@ -9,6 +9,7 @@ import {
   Tooltip,
   Dot
 } from 'recharts';
+import { AlertCircle } from 'lucide-react';
 import { HYROX_METRICS, type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
 /**
@@ -53,6 +54,8 @@ interface RadarDataPoint {
   percentile: number | null;
   raw_time_sec: number | null;
   color: string;
+  /** Whether this metric was estimated (vs real athlete-provided data) */
+  isEstimated: boolean;
 }
 
 interface HyroxRadarChartProps {
@@ -75,6 +78,7 @@ interface HyroxRadarChartProps {
 
 /**
  * Custom dot component with dynamic color per metric
+ * Estimated metrics have reduced opacity and dashed appearance
  */
 function CustomDot(props: any) {
   const { cx, cy, payload } = props;
@@ -84,21 +88,24 @@ function CustomDot(props: any) {
   }
   
   const color = payload?.color || METRIC_COLORS.ski;
+  const isEstimated = payload?.isEstimated === true;
   
   return (
     <Dot
       cx={cx}
       cy={cy}
-      r={5}
+      r={isEstimated ? 4 : 5}
       fill={color}
       stroke="hsl(var(--background))"
       strokeWidth={2}
+      fillOpacity={isEstimated ? 0.6 : 1}
     />
   );
 }
 
 /**
  * Custom tooltip for radar chart
+ * Shows "Estimado pelo sistema" indicator for estimated metrics
  */
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload || !payload.length) {
@@ -124,6 +131,12 @@ function CustomTooltip({ active, payload }: any) {
           {data.raw_time_sec !== null && (
             <p className="text-xs text-muted-foreground">
               Tempo: {formatTime(data.raw_time_sec)}
+            </p>
+          )}
+          {data.isEstimated && (
+            <p className="text-xs text-amber-500 italic mt-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Estimado pelo sistema
             </p>
           )}
         </>
@@ -187,13 +200,18 @@ export function HyroxRadarChart({ scores, loading, className }: HyroxRadarChartP
         // Use frozen percentile or null (NEVER calculate)
         percentile: frozenScore?.percentile_value ?? null,
         raw_time_sec: frozenScore?.raw_time_sec ?? null,
-        color: METRIC_COLORS[metric] || METRIC_COLORS.ski
+        color: METRIC_COLORS[metric] || METRIC_COLORS.ski,
+        // Track if this metric was estimated
+        isEstimated: frozenScore?.data_source === 'estimated'
       };
     });
   }, [scores]);
   
   // Check if we have any data to show
   const hasAnyData = radarData.some(d => d.percentile !== null);
+  
+  // Check if any metrics are estimated (for the warning message)
+  const hasEstimatedMetrics = radarData.some(d => d.isEstimated && d.percentile !== null);
   
   if (loading) {
     return (
@@ -289,6 +307,17 @@ export function HyroxRadarChart({ scores, loading, className }: HyroxRadarChartP
           <span className="text-muted-foreground">Estações</span>
         </div>
       </div>
+      
+      {/* Estimated metrics warning */}
+      {hasEstimatedMetrics && (
+        <div className="flex items-start gap-2 mt-4 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Algumas métricas foram estimadas automaticamente com base no seu resultado geral.
+            Passe o mouse sobre os pontos para ver quais métricas são estimativas.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

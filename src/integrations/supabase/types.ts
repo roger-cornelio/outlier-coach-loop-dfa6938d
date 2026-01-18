@@ -276,6 +276,7 @@ export type Database = {
       hyrox_metric_scores: {
         Row: {
           created_at: string
+          data_source: string
           hyrox_result_id: string
           id: string
           metric: string
@@ -285,6 +286,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          data_source?: string
           hyrox_result_id: string
           id?: string
           metric: string
@@ -294,6 +296,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          data_source?: string
           hyrox_result_id?: string
           id?: string
           metric?: string
