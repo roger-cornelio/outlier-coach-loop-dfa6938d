@@ -565,6 +565,10 @@ export type Database = {
         Returns: boolean
       }
       is_coach_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      owns_benchmark_result: {
+        Args: { _benchmark_result_id: string }
+        Returns: boolean
+      }
       reject_coach_application: {
         Args: { _admin_id: string; _application_id: string; _reason?: string }
         Returns: boolean
