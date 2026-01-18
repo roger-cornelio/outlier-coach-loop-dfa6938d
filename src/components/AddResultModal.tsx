@@ -18,6 +18,51 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
+import { 
+  calculateAndSaveHyroxPercentiles, 
+  hasExistingScores,
+  type MetricInput 
+} from '@/utils/hyroxPercentileCalculator';
+
+/**
+ * Generates estimated metric times from total race time.
+ * Distribution based on typical HYROX race structure.
+ */
+function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
+  const runPercent = 0.42;
+  const stationPercent = 0.48;
+  const roxzonePercent = 0.10;
+  
+  const totalRunTime = totalSeconds * runPercent;
+  const totalStationTime = totalSeconds * stationPercent;
+  const totalRoxzone = totalSeconds * roxzonePercent;
+  
+  const runAvg = totalRunTime / 8;
+  
+  const stationWeights = {
+    ski: 0.14,
+    sled_push: 0.12,
+    sled_pull: 0.10,
+    bbj: 0.14,
+    row: 0.14,
+    farmers: 0.12,
+    sandbag: 0.14,
+    wallballs: 0.10
+  };
+  
+  return [
+    { metric: 'run_avg', raw_time_sec: Math.round(runAvg) },
+    { metric: 'roxzone', raw_time_sec: Math.round(totalRoxzone) },
+    { metric: 'ski', raw_time_sec: Math.round(totalStationTime * stationWeights.ski) },
+    { metric: 'sled_push', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_push) },
+    { metric: 'sled_pull', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_pull) },
+    { metric: 'bbj', raw_time_sec: Math.round(totalStationTime * stationWeights.bbj) },
+    { metric: 'row', raw_time_sec: Math.round(totalStationTime * stationWeights.row) },
+    { metric: 'farmers', raw_time_sec: Math.round(totalStationTime * stationWeights.farmers) },
+    { metric: 'sandbag', raw_time_sec: Math.round(totalStationTime * stationWeights.sandbag) },
+    { metric: 'wallballs', raw_time_sec: Math.round(totalStationTime * stationWeights.wallballs) }
+  ];
+}
 
 export type ResultType = 'benchmark' | 'simulado' | 'prova_oficial';
 
@@ -201,8 +246,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         screenshotUrl = publicUrl;
       }
 
-      // Insert the result
-      const { error: insertError } = await supabase
+      // Insert the result and get the ID back
+      const { data: insertedData, error: insertError } = await supabase
         .from('benchmark_results')
         .insert({
           user_id: user.id,
@@ -216,15 +261,31 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           block_id: `${resultType}_${Date.now()}`,
           workout_id: `${resultType}_${Date.now()}`,
           benchmark_id: resultType === 'prova_oficial' ? 'HYROX_OFFICIAL' : 'HYROX_SIMULADO',
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      const resultId = insertedData?.id;
 
       toast.success(
         resultType === 'prova_oficial' 
           ? 'Prova oficial registrada! 🏆' 
           : 'Simulado registrado! 💪'
       );
+
+      // AUTOMATIC ANALYSIS GENERATION
+      // Only trigger for results with time and valid gender
+      if (resultId && totalSeconds > 0 && hasGenderConfigured) {
+        // Fire and forget - don't block the UI
+        triggerAutoAnalysis(
+          resultId,
+          totalSeconds,
+          athleteConfig?.sexo === 'feminino' ? 'F' : 'M',
+          resultType === 'prova_oficial' ? raceCategory : 'OPEN'
+        );
+      }
 
       // Reset form
       setEventName('');
@@ -243,6 +304,54 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       toast.error('Erro ao salvar resultado');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Triggers automatic analysis generation in the background.
+   * Non-blocking, with idempotency check.
+   */
+  const triggerAutoAnalysis = async (
+    resultId: string,
+    totalSeconds: number,
+    gender: 'M' | 'F',
+    category: 'OPEN' | 'PRO'
+  ) => {
+    console.log('[AUTO_ANALYSIS] Starting automatic analysis for:', resultId);
+    
+    try {
+      // IDEMPOTENCY CHECK: Don't recalculate if scores exist
+      const alreadyExists = await hasExistingScores(resultId);
+      if (alreadyExists) {
+        console.log('[AUTO_ANALYSIS] Scores already exist, skipping:', resultId);
+        return;
+      }
+
+      // Generate metrics from total time
+      const metrics = generateMetricsFromTotal(totalSeconds);
+      const division = category === 'PRO' ? 'HYROX PRO' : 'HYROX';
+
+      console.log('[AUTO_ANALYSIS] Calling edge function:', { resultId, division, gender });
+
+      // Call the calculation
+      const result = await calculateAndSaveHyroxPercentiles(
+        resultId,
+        division,
+        gender,
+        metrics
+      );
+
+      if (result.success) {
+        console.log('[AUTO_ANALYSIS] Analysis generated successfully');
+        // Trigger refresh so HyroxAnalysisCard picks up the new scores
+        triggerExternalResultsRefresh();
+      } else {
+        console.warn('[AUTO_ANALYSIS] Analysis failed:', result.error);
+        // Non-blocking warning - don't show toast to avoid confusion
+      }
+    } catch (err) {
+      console.error('[AUTO_ANALYSIS] Unexpected error:', err);
+      // Silent failure - the UI will show appropriate state
     }
   };
 
