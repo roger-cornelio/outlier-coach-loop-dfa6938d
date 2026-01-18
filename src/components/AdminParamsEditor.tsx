@@ -472,7 +472,7 @@ export function AdminParamsEditor() {
       </header>
       
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Warning banner */}
+        {/* Warning banner for global params */}
         <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
@@ -480,6 +480,49 @@ export function AdminParamsEditor() {
               <p className="text-sm font-medium text-amber-500">Atenção: Parâmetros globais</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Alterações aqui afetam TODOS os cálculos do sistema: benchmarks, estimativas de tempo, calorias, classificações e progressão.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Percentile Bands Section - Separate from global params */}
+        <div className="mb-6 card-elevated rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold flex items-center gap-2">
+                  📊 Calibração de Percentis
+                  <Badge variant="outline" className="text-xs font-mono">
+                    percentile_set_id: v1
+                  </Badge>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Modelo estatístico versionado — NÃO é um parâmetro global
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            {/* Info banner specific to percentile bands */}
+            <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20 mb-4">
+              <div className="flex items-start gap-3">
+                <Clock className="w-4 h-4 text-sky-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-sky-500">Alterações impactam apenas novos resultados.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Resultados históricos permanecem inalterados. Cada resultado armazena a versão do modelo utilizada no momento do registro.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center py-6 text-muted-foreground">
+              <p className="text-sm">
+                Edição de percentile_bands disponível via banco de dados.
+              </p>
+              <p className="text-xs mt-1">
+                Tabela: <code className="bg-muted px-1 py-0.5 rounded">percentile_bands</code> • 
+                Versão ativa: <code className="bg-muted px-1 py-0.5 rounded">v1</code>
               </p>
             </div>
           </div>
