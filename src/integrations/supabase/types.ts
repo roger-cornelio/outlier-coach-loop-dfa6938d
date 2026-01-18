@@ -273,6 +273,54 @@ export type Database = {
           },
         ]
       }
+      percentile_bands: {
+        Row: {
+          division: string
+          gender: string
+          id: string
+          is_active: boolean
+          metric: string
+          p10_sec: number
+          p25_sec: number
+          p50_sec: number
+          p75_sec: number
+          p90_sec: number
+          percentile_set_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          division: string
+          gender: string
+          id?: string
+          is_active?: boolean
+          metric: string
+          p10_sec: number
+          p25_sec: number
+          p50_sec: number
+          p75_sec: number
+          p90_sec: number
+          percentile_set_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          division?: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          metric?: string
+          p10_sec?: number
+          p25_sec?: number
+          p50_sec?: number
+          p75_sec?: number
+          p90_sec?: number
+          percentile_set_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           altura: number | null
