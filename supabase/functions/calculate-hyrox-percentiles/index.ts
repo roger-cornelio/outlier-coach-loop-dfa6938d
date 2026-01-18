@@ -127,8 +127,43 @@ serve(async (req) => {
     if (!hyrox_result_id || !division || !gender || !metrics || metrics.length === 0) {
       console.error('[PERCENTILE_CALC] Missing required fields:', { hyrox_result_id, division, gender, metricsCount: metrics?.length });
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: hyrox_result_id, division, gender, metrics' }),
+        JSON.stringify({ 
+          error: 'Missing required fields: hyrox_result_id, division, gender, metrics',
+          errorCode: 'VALIDATION_ERROR'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate hyrox_result_id is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(hyrox_result_id)) {
+      console.error('[PERCENTILE_CALC] Invalid UUID format:', hyrox_result_id);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid hyrox_result_id format',
+          errorCode: 'VALIDATION_ERROR'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the benchmark_result exists and belongs to the user
+    const { data: resultCheck, error: resultCheckError } = await supabase
+      .from('benchmark_results')
+      .select('id, user_id')
+      .eq('id', hyrox_result_id)
+      .single();
+
+    if (resultCheckError || !resultCheck) {
+      console.error('[PERCENTILE_CALC] Result not found:', hyrox_result_id, resultCheckError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Benchmark result not found',
+          errorCode: 'RESULT_NOT_FOUND',
+          details: resultCheckError?.message
+        }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -136,7 +171,8 @@ serve(async (req) => {
       hyrox_result_id,
       division,
       gender,
-      metricsCount: metrics.length
+      metricsCount: metrics.length,
+      result_owner: resultCheck.user_id
     });
 
     // Fetch percentile bands for v1 only (MODEL A requirement)
@@ -153,7 +189,11 @@ serve(async (req) => {
     if (bandsError) {
       console.error('[PERCENTILE_CALC] Error fetching bands:', bandsError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch percentile bands', details: bandsError.message }),
+        JSON.stringify({ 
+          error: 'Failed to fetch percentile bands', 
+          errorCode: 'BANDS_NOT_FOUND',
+          details: bandsError.message 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -161,7 +201,11 @@ serve(async (req) => {
     if (!bands || bands.length === 0) {
       console.warn('[PERCENTILE_CALC] No bands found for:', { division, gender, metrics: metricNames });
       return new Response(
-        JSON.stringify({ error: 'No percentile bands found for the specified division/gender/metrics' }),
+        JSON.stringify({ 
+          error: `No percentile bands found for division=${division}, gender=${gender}`,
+          errorCode: 'BANDS_NOT_FOUND',
+          missingBands: metricNames
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -206,7 +250,11 @@ serve(async (req) => {
 
     if (calculatedScores.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'No scores could be calculated', missingBands }),
+        JSON.stringify({ 
+          error: 'No scores could be calculated', 
+          errorCode: 'BANDS_NOT_FOUND',
+          missingBands 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -229,7 +277,11 @@ serve(async (req) => {
     if (insertError) {
       console.error('[PERCENTILE_CALC] Insert error:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to save scores', details: insertError.message }),
+        JSON.stringify({ 
+          error: 'Failed to save scores', 
+          errorCode: 'INSERT_FAILED',
+          details: insertError.message 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -249,7 +301,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('[PERCENTILE_CALC] Unexpected error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        errorCode: 'UNKNOWN_ERROR',
+        details: String(error) 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
