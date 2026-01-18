@@ -273,6 +273,36 @@ export type Database = {
           },
         ]
       }
+      hyrox_metric_scores: {
+        Row: {
+          created_at: string
+          hyrox_result_id: string
+          id: string
+          metric: string
+          percentile_set_id_used: string
+          percentile_value: number
+          raw_time_sec: number
+        }
+        Insert: {
+          created_at?: string
+          hyrox_result_id: string
+          id?: string
+          metric: string
+          percentile_set_id_used?: string
+          percentile_value: number
+          raw_time_sec: number
+        }
+        Update: {
+          created_at?: string
+          hyrox_result_id?: string
+          id?: string
+          metric?: string
+          percentile_set_id_used?: string
+          percentile_value?: number
+          raw_time_sec?: number
+        }
+        Relationships: []
+      }
       percentile_bands: {
         Row: {
           division: string
