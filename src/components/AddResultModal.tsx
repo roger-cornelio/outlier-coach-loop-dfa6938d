@@ -27,6 +27,7 @@ import {
 /**
  * Generates estimated metric times from total race time.
  * Distribution based on typical HYROX race structure.
+ * All metrics are marked as 'estimated' since they're inferred from total time.
  */
 function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
   const runPercent = 0.42;
@@ -50,17 +51,18 @@ function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
     wallballs: 0.10
   };
   
+  // All metrics are estimated from total time - mark as 'estimated'
   return [
-    { metric: 'run_avg', raw_time_sec: Math.round(runAvg) },
-    { metric: 'roxzone', raw_time_sec: Math.round(totalRoxzone) },
-    { metric: 'ski', raw_time_sec: Math.round(totalStationTime * stationWeights.ski) },
-    { metric: 'sled_push', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_push) },
-    { metric: 'sled_pull', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_pull) },
-    { metric: 'bbj', raw_time_sec: Math.round(totalStationTime * stationWeights.bbj) },
-    { metric: 'row', raw_time_sec: Math.round(totalStationTime * stationWeights.row) },
-    { metric: 'farmers', raw_time_sec: Math.round(totalStationTime * stationWeights.farmers) },
-    { metric: 'sandbag', raw_time_sec: Math.round(totalStationTime * stationWeights.sandbag) },
-    { metric: 'wallballs', raw_time_sec: Math.round(totalStationTime * stationWeights.wallballs) }
+    { metric: 'run_avg', raw_time_sec: Math.round(runAvg), data_source: 'estimated' as const },
+    { metric: 'roxzone', raw_time_sec: Math.round(totalRoxzone), data_source: 'estimated' as const },
+    { metric: 'ski', raw_time_sec: Math.round(totalStationTime * stationWeights.ski), data_source: 'estimated' as const },
+    { metric: 'sled_push', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_push), data_source: 'estimated' as const },
+    { metric: 'sled_pull', raw_time_sec: Math.round(totalStationTime * stationWeights.sled_pull), data_source: 'estimated' as const },
+    { metric: 'bbj', raw_time_sec: Math.round(totalStationTime * stationWeights.bbj), data_source: 'estimated' as const },
+    { metric: 'row', raw_time_sec: Math.round(totalStationTime * stationWeights.row), data_source: 'estimated' as const },
+    { metric: 'farmers', raw_time_sec: Math.round(totalStationTime * stationWeights.farmers), data_source: 'estimated' as const },
+    { metric: 'sandbag', raw_time_sec: Math.round(totalStationTime * stationWeights.sandbag), data_source: 'estimated' as const },
+    { metric: 'wallballs', raw_time_sec: Math.round(totalStationTime * stationWeights.wallballs), data_source: 'estimated' as const }
   ];
 }
 

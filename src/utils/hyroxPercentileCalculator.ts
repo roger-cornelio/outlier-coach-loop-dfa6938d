@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 export interface MetricInput {
   metric: string;
   raw_time_sec: number;
+  /** Source of the data: 'real' (athlete-provided) or 'estimated' (system-inferred) */
+  data_source?: 'real' | 'estimated';
 }
 
 /**
@@ -16,6 +18,8 @@ export interface CalculatedScore {
   raw_time_sec: number;
   percentile_value: number;
   percentile_set_id_used: string;
+  /** Source of the data: 'real' (athlete-provided) or 'estimated' (system-inferred) */
+  data_source: 'real' | 'estimated';
 }
 
 /**
@@ -181,7 +185,7 @@ export async function getHyroxMetricScores(
 
   const { data, error } = await supabase
     .from('hyrox_metric_scores')
-    .select('metric, raw_time_sec, percentile_value, percentile_set_id_used')
+    .select('metric, raw_time_sec, percentile_value, percentile_set_id_used, data_source')
     .eq('hyrox_result_id', hyroxResultId)
     .order('created_at', { ascending: true });
 
