@@ -2,10 +2,11 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronUp, ChevronDown, Minus, Target, Info } from 'lucide-react';
+import { ChevronUp, ChevronDown, Minus, Target, Info, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useAuth } from '@/hooks/useAuth';
 import type { AthleteStatus } from '@/types/outlier';
 
 interface MetricScore {
@@ -56,9 +57,9 @@ function formatDifference(diffSeconds: number): string {
 function mapStatusToLevel(status: AthleteStatus): string {
   switch (status) {
     case 'hyrox_pro':
-      return 'pro';
+      return 'hyrox_pro';
     case 'hyrox_open':
-      return 'avancado';
+      return 'hyrox_open';
     case 'avancado':
       return 'avancado';
     case 'intermediario':
@@ -69,52 +70,127 @@ function mapStatusToLevel(status: AthleteStatus): string {
   }
 }
 
+// Division aliases for lookup fallback
+const DIVISION_ALIASES: Record<string, string[]> = {
+  'HYROX PRO': ['HYROX PRO'],
+  'HYROX OPEN': ['HYROX OPEN', 'HYROX'],
+  'HYROX': ['HYROX', 'HYROX OPEN'],
+  'PRO': ['HYROX PRO'],
+  'OPEN': ['HYROX OPEN', 'HYROX'],
+};
+
+// Normalize division string for lookup
+function normalizeDivision(division: string): string {
+  const upper = (division || '').toUpperCase().trim();
+  // Direct canonical values
+  if (upper === 'HYROX PRO' || upper === 'HYROX OPEN') {
+    return upper;
+  }
+  // Aliases
+  if (upper.includes('PRO')) return 'HYROX PRO';
+  if (upper.includes('OPEN') || upper === 'HYROX') return 'HYROX OPEN';
+  // Default fallback
+  return 'HYROX OPEN';
+}
+
+// Get fallback divisions to try in order
+function getDivisionFallbacks(division: string): string[] {
+  const normalized = normalizeDivision(division);
+  return DIVISION_ALIASES[normalized] || [normalized, 'HYROX OPEN', 'HYROX PRO'];
+}
+
 export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division, gender }: Props) {
   const [benchmarks, setBenchmarks] = useState<LevelBenchmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [lookupInfo, setLookupInfo] = useState<{ division: string; gender: string; level: string; found: number } | null>(null);
   const { status } = useAthleteStatus();
   const { athleteConfig } = useOutlierStore();
+  const { isAdmin } = useAuth();
 
   const athleteLevel = mapStatusToLevel(status);
   const athleteGender = athleteConfig?.sexo === 'feminino' ? 'F' : 'M';
 
   useEffect(() => {
     async function fetchBenchmarks() {
-      try {
-        const { data, error } = await supabase
-          .from('performance_level_benchmarks')
-          .select('metric, avg_sec, p25_sec, p75_sec')
-          .eq('division', division)
-          .eq('gender', athleteGender)
-          .eq('level', athleteLevel)
-          .eq('benchmark_set_id', 'v1')
-          .eq('is_active', true);
+      setLoading(true);
+      const divisionsToTry = getDivisionFallbacks(division);
+      
+      let foundData: LevelBenchmark[] = [];
+      let usedDivision = division;
 
-        if (error) throw error;
-        setBenchmarks(data || []);
-      } catch (err) {
-        console.error('Error fetching level benchmarks:', err);
-      } finally {
-        setLoading(false);
+      // Try each division fallback until we find data
+      for (const divToTry of divisionsToTry) {
+        try {
+          const { data, error } = await supabase
+            .from('performance_level_benchmarks')
+            .select('metric, avg_sec, p25_sec, p75_sec')
+            .eq('division', divToTry)
+            .eq('gender', athleteGender)
+            .eq('level', athleteLevel)
+            .eq('benchmark_set_id', 'v1')
+            .eq('is_active', true);
+
+          if (error) {
+            console.error(`Error fetching benchmarks for division ${divToTry}:`, error);
+            continue;
+          }
+
+          if (data && data.length > 0) {
+            foundData = data;
+            usedDivision = divToTry;
+            break;
+          }
+        } catch (err) {
+          console.error(`Error in benchmark fetch for ${divToTry}:`, err);
+        }
       }
+
+      setBenchmarks(foundData);
+      setLookupInfo({
+        division: usedDivision,
+        gender: athleteGender,
+        level: athleteLevel,
+        found: foundData.length,
+      });
+      setLoading(false);
     }
 
     fetchBenchmarks();
   }, [division, athleteGender, athleteLevel]);
 
+  // All 10 metrics for HYROX
+  const ALL_METRICS = ['run_avg', 'roxzone', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'];
+
   const comparisons = useMemo(() => {
-    return metricScores.map(score => {
-      const benchmark = benchmarks.find(b => b.metric === score.metric);
+    // Use metricScores if available, otherwise create empty entries for all metrics
+    const scoreMap = new Map(metricScores.map(s => [s.metric, s]));
+    
+    return ALL_METRICS.map(metric => {
+      const score = scoreMap.get(metric);
+      const benchmark = benchmarks.find(b => b.metric === metric);
       
+      if (!score) {
+        return {
+          metric,
+          athleteTime: null,
+          referenceTime: benchmark?.avg_sec ?? null,
+          difference: null,
+          classification: 'none' as const,
+          dataSource: 'none',
+          hasBenchmark: !!benchmark,
+        };
+      }
+
       if (!benchmark) {
         return {
-          metric: score.metric,
+          metric,
           athleteTime: score.raw_time_sec,
           referenceTime: null,
           difference: null,
           classification: 'none' as const,
           dataSource: score.data_source,
+          hasBenchmark: false,
         };
       }
 
@@ -133,7 +209,7 @@ export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division
       }
 
       return {
-        metric: score.metric,
+        metric,
         athleteTime: score.raw_time_sec,
         referenceTime: benchmark.avg_sec,
         p25: benchmark.p25_sec,
@@ -141,15 +217,66 @@ export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division
         difference: diff,
         classification,
         dataSource: score.data_source,
+        hasBenchmark: true,
       };
     });
   }, [metricScores, benchmarks]);
 
-  if (loading || benchmarks.length === 0) {
-    return null;
+  const levelLabel = athleteLevel.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const hasAnyBenchmark = comparisons.some(c => c.hasBenchmark);
+
+  // Always render - never return null
+  if (loading) {
+    return (
+      <div className="p-3 rounded-lg bg-secondary/30">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Target className="w-4 h-4 animate-pulse" />
+          <span>Carregando comparação com nível...</span>
+        </div>
+      </div>
+    );
   }
 
-  const levelLabel = athleteLevel.charAt(0).toUpperCase() + athleteLevel.slice(1);
+  // Empty state when no benchmarks found
+  if (!hasAnyBenchmark) {
+    return (
+      <div className="p-4 rounded-lg bg-secondary/30 border border-border/50">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              Comparação com referência do seu nível
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Sem referência configurada para {normalizeDivision(division)} / {athleteGender === 'F' ? 'Feminino' : 'Masculino'} / {levelLabel}
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Ajuste no painel de Admin para habilitar comparações de nível.
+            </p>
+            
+            {/* Admin debug info */}
+            {isAdmin && lookupInfo && (
+              <div className="mt-3 p-2 rounded bg-black/20 border border-border/30">
+                <p className="text-xs font-mono text-muted-foreground">
+                  [DEBUG] Lookup: division={lookupInfo.division}, gender={lookupInfo.gender}, level={lookupInfo.level}, set=v1; encontrados: {lookupInfo.found}
+                </p>
+              </div>
+            )}
+            
+            {/* Show all metrics as empty */}
+            <div className="mt-4 space-y-1">
+              {ALL_METRICS.map(metric => (
+                <div key={metric} className="flex items-center justify-between py-1 text-sm">
+                  <span className="text-muted-foreground">{METRIC_LABELS[metric] || metric}</span>
+                  <span className="text-xs italic text-muted-foreground/50">Sem referência</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -174,6 +301,15 @@ export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division
       </CollapsibleTrigger>
 
       <CollapsibleContent className="pt-3">
+        {/* Admin debug info at top when data found */}
+        {isAdmin && lookupInfo && (
+          <div className="mb-3 p-2 rounded bg-black/20 border border-border/30">
+            <p className="text-xs font-mono text-muted-foreground">
+              [DEBUG] Lookup: division={lookupInfo.division}, gender={lookupInfo.gender}, level={lookupInfo.level}, set=v1; encontrados: {lookupInfo.found}
+            </p>
+          </div>
+        )}
+
         <div className="rounded-lg border border-border/50 overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-secondary/50 text-xs font-medium text-muted-foreground">
@@ -208,7 +344,7 @@ export function LevelBenchmarkComparison({ hyroxResultId, metricScores, division
                 </div>
                 
                 <div className="text-center font-mono">
-                  {formatSecondsToMMSS(comp.athleteTime)}
+                  {comp.athleteTime !== null ? formatSecondsToMMSS(comp.athleteTime) : '—'}
                 </div>
                 
                 <div className="text-center font-mono text-muted-foreground">
