@@ -7,6 +7,7 @@ import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
 import { CoachWorkoutManager } from "@/components/CoachWorkoutManager";
+import { LevelBenchmarksEditor } from "@/components/LevelBenchmarksEditor";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -15,7 +16,7 @@ import {
   Users, 
   UserPlus, 
   Settings2, 
-   
+  Target,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -26,7 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "levelBenchmarks";
 
 interface NavItem {
   id: AdminView;
@@ -59,6 +60,12 @@ const navItems: NavItem[] = [
     label: "Performance", 
     icon: <Activity className="w-5 h-5" />,
     description: "Métricas de atletas"
+  },
+  { 
+    id: "levelBenchmarks", 
+    label: "Benchmarks", 
+    icon: <Target className="w-5 h-5" />,
+    description: "Referências por nível"
   },
   { 
     id: "allowlist", 
@@ -160,6 +167,8 @@ const AdminPortal = () => {
         return <CoachApplicationsAdmin />;
       case "workouts":
         return <CoachWorkoutManager />;
+      case "levelBenchmarks":
+        return <LevelBenchmarksEditor />;
       case "allowlist":
       default:
         return <AdminAllowlistManager />;
