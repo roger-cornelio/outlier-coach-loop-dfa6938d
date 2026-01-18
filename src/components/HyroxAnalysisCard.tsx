@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, Loader2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { HyroxRadarChart } from './HyroxRadarChart';
+import { HyroxRadarExplanation } from './HyroxRadarExplanation';
 import { useHyroxMetricScores } from '@/hooks/useHyroxMetricScores';
 import { 
   calculateAndSaveHyroxPercentiles, 
@@ -23,6 +24,8 @@ interface HyroxAnalysisCardProps {
 
 /**
  * Generates estimated metric times from total race time.
+ * These serve as FALLBACK when real times are not available.
+ * The edge function will prioritize REAL times from benchmark_results columns.
  */
 function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
   const runPercent = 0.42;
@@ -77,6 +80,10 @@ type AnalysisState =
  * 3. If no scores -> trigger generation
  * 4. After generation -> poll for max 20s
  * 5. If poll timeout or error -> show error with retry button
+ * 
+ * REAL > ESTIMATED:
+ * The edge function will use REAL times from benchmark_results columns
+ * when available, falling back to ESTIMATED from total time.
  */
 export function HyroxAnalysisCard({
   resultId,
@@ -96,6 +103,9 @@ export function HyroxAnalysisCard({
     refresh 
   } = useHyroxMetricScores(resultId);
 
+  // Calculate division for explanation component
+  const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
+
   /**
    * Triggers analysis generation via edge function
    */
@@ -113,8 +123,9 @@ export function HyroxAnalysisCard({
         return;
       }
 
+      // Generate estimated metrics as FALLBACK
+      // Edge function will use REAL times from DB when available
       const metrics = generateMetricsFromTotal(totalTimeSeconds);
-      const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
 
       console.log('[HYROX_CARD] Calling edge function:', { resultId, division, gender });
 
@@ -137,11 +148,14 @@ export function HyroxAnalysisCard({
         let message = 'Não foi possível gerar a análise.';
         let canRetry = true;
         
-        if (result.error?.includes('percentile bands') || result.missing_bands?.length) {
+        if (result.errorCode === 'BANDS_NOT_FOUND' || result.missing_bands?.length) {
           message = 'Faixas de percentil não configuradas para esta categoria/gênero.';
           canRetry = false;
-        } else if (result.error?.includes('401') || result.error?.includes('token')) {
+        } else if (result.errorCode === 'AUTH_ERROR') {
           message = 'Sessão expirada. Faça login novamente.';
+          canRetry = false;
+        } else if (result.errorCode === 'RESULT_NOT_FOUND') {
+          message = 'Resultado não encontrado no banco de dados.';
           canRetry = false;
         }
         
@@ -155,7 +169,7 @@ export function HyroxAnalysisCard({
         canRetry: true 
       });
     }
-  }, [resultId, totalTimeSeconds, gender, raceCategory, refresh]);
+  }, [resultId, totalTimeSeconds, gender, division, refresh]);
 
   /**
    * Main effect: orchestrates the analysis flow
@@ -253,6 +267,13 @@ export function HyroxAnalysisCard({
               </div>
             </div>
             <HyroxRadarChart scores={scores} />
+            
+            {/* TAREFA 2: Explanation table */}
+            <HyroxRadarExplanation 
+              scores={scores}
+              division={division}
+              gender={gender}
+            />
           </motion.div>
         ) : analysisState.status === 'error' ? (
           /* Error state with retry option */

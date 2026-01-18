@@ -94,6 +94,7 @@ export type Database = {
       benchmark_results: {
         Row: {
           athlete_level: string | null
+          bbj_sec: number | null
           benchmark_id: string | null
           block_id: string
           bucket: string | null
@@ -101,17 +102,27 @@ export type Database = {
           created_at: string
           event_date: string | null
           event_name: string | null
+          farmers_sec: number | null
           id: string
           race_category: string | null
           result_type: string | null
+          row_sec: number | null
+          roxzone_sec: number | null
+          run_avg_sec: number | null
+          sandbag_sec: number | null
           score: number | null
           screenshot_url: string | null
+          ski_sec: number | null
+          sled_pull_sec: number | null
+          sled_push_sec: number | null
           time_in_seconds: number | null
           user_id: string
+          wallballs_sec: number | null
           workout_id: string
         }
         Insert: {
           athlete_level?: string | null
+          bbj_sec?: number | null
           benchmark_id?: string | null
           block_id: string
           bucket?: string | null
@@ -119,17 +130,27 @@ export type Database = {
           created_at?: string
           event_date?: string | null
           event_name?: string | null
+          farmers_sec?: number | null
           id?: string
           race_category?: string | null
           result_type?: string | null
+          row_sec?: number | null
+          roxzone_sec?: number | null
+          run_avg_sec?: number | null
+          sandbag_sec?: number | null
           score?: number | null
           screenshot_url?: string | null
+          ski_sec?: number | null
+          sled_pull_sec?: number | null
+          sled_push_sec?: number | null
           time_in_seconds?: number | null
           user_id: string
+          wallballs_sec?: number | null
           workout_id: string
         }
         Update: {
           athlete_level?: string | null
+          bbj_sec?: number | null
           benchmark_id?: string | null
           block_id?: string
           bucket?: string | null
@@ -137,13 +158,22 @@ export type Database = {
           created_at?: string
           event_date?: string | null
           event_name?: string | null
+          farmers_sec?: number | null
           id?: string
           race_category?: string | null
           result_type?: string | null
+          row_sec?: number | null
+          roxzone_sec?: number | null
+          run_avg_sec?: number | null
+          sandbag_sec?: number | null
           score?: number | null
           screenshot_url?: string | null
+          ski_sec?: number | null
+          sled_pull_sec?: number | null
+          sled_push_sec?: number | null
           time_in_seconds?: number | null
           user_id?: string
+          wallballs_sec?: number | null
           workout_id?: string
         }
         Relationships: []
