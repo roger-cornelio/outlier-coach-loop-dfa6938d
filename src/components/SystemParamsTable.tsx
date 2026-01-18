@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Table, 
@@ -9,7 +9,6 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -19,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { 
@@ -31,10 +40,12 @@ import {
   ChevronRight,
   AlertTriangle,
   Database,
-  RefreshCw
+  RefreshCw,
+  Info,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useSystemParams, type SystemParam, type ParamCategory } from '@/hooks/useSystemParams';
+import { useSystemParams, type SystemParam } from '@/hooks/useSystemParams';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ParamValueDisplayProps {
@@ -97,14 +108,18 @@ function EditParamDialog({ param, open, onOpenChange, onSave }: EditParamDialogP
   const [editValue, setEditValue] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingValue, setPendingValue] = useState<any>(null);
 
-  // Reset when param changes
-  useState(() => {
-    if (param) {
+  // Reset when param changes or dialog opens
+  useEffect(() => {
+    if (open && param) {
       setEditValue(JSON.stringify(param.value, null, 2));
       setJsonError(null);
+      setShowConfirm(false);
+      setPendingValue(null);
     }
-  });
+  }, [open, param]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && param) {
@@ -114,87 +129,152 @@ function EditParamDialog({ param, open, onOpenChange, onSave }: EditParamDialogP
     onOpenChange(isOpen);
   };
 
-  const handleSave = async () => {
+  const handlePreSave = () => {
     if (!param) return;
 
     try {
       const parsed = JSON.parse(editValue);
-      setSaving(true);
-      
-      const success = await onSave(param.key, parsed);
-      
-      if (success) {
-        toast.success(`Parâmetro "${param.key}" atualizado`);
-        onOpenChange(false);
-      } else {
-        toast.error('Erro ao salvar parâmetro');
-      }
+      setPendingValue(parsed);
+      setShowConfirm(true);
     } catch (e) {
       setJsonError('JSON inválido: ' + (e as Error).message);
-    } finally {
-      setSaving(false);
     }
+  };
+
+  const handleConfirmSave = async () => {
+    if (!param || pendingValue === null) return;
+
+    setSaving(true);
+    setShowConfirm(false);
+    
+    const success = await onSave(param.key, pendingValue);
+    
+    if (success) {
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Parâmetro "{param.key}" atualizado</span>
+          <span className="text-xs text-muted-foreground">
+            Alteração aplicada. Impacta cálculos futuros.
+          </span>
+        </div>,
+        { duration: 5000 }
+      );
+      onOpenChange(false);
+    } else {
+      toast.error('Erro ao salvar parâmetro');
+    }
+    
+    setSaving(false);
+    setPendingValue(null);
   };
 
   if (!param) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpen}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit2 className="w-4 h-4" />
-            Editar Parâmetro
-          </DialogTitle>
-          <DialogDescription>
-            {param.description || `Editando: ${param.key}`}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div>
-            <Label className="text-xs text-muted-foreground">Chave</Label>
-            <code className="block mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
-              {param.key}
-            </code>
+    <>
+      <Dialog open={open} onOpenChange={handleOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="w-4 h-4" />
+              Editar Parâmetro
+            </DialogTitle>
+            <DialogDescription>
+              {param.description || `Editando: ${param.key}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Admin-only warning */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-amber-500">
+                    Edição restrita a administradores
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Esta alteração será auditada e afetará cálculos futuros.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Chave</Label>
+              <code className="block mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                {param.key}
+              </code>
+            </div>
+            
+            <div>
+              <Label className="text-xs text-muted-foreground">Categoria</Label>
+              <Badge variant="outline" className="mt-1 capitalize">
+                {param.category}
+              </Badge>
+            </div>
+            
+            <div>
+              <Label className="text-xs text-muted-foreground">Valor (JSON)</Label>
+              <Textarea
+                value={editValue}
+                onChange={(e) => {
+                  setEditValue(e.target.value);
+                  setJsonError(null);
+                }}
+                className="mt-1 font-mono text-sm h-40 resize-none"
+                placeholder="Valor em formato JSON"
+              />
+              {jsonError && (
+                <p className="text-xs text-destructive mt-1">{jsonError}</p>
+              )}
+            </div>
           </div>
           
-          <div>
-            <Label className="text-xs text-muted-foreground">Categoria</Label>
-            <Badge variant="outline" className="mt-1 capitalize">
-              {param.category}
-            </Badge>
-          </div>
-          
-          <div>
-            <Label className="text-xs text-muted-foreground">Valor (JSON)</Label>
-            <Textarea
-              value={editValue}
-              onChange={(e) => {
-                setEditValue(e.target.value);
-                setJsonError(null);
-              }}
-              className="mt-1 font-mono text-sm h-40 resize-none"
-              placeholder="Valor em formato JSON"
-            />
-            {jsonError && (
-              <p className="text-xs text-destructive mt-1">{jsonError}</p>
-            )}
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            <X className="w-4 h-4 mr-1" />
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Check className="w-4 h-4 mr-1" />
-            {saving ? 'Salvando…' : 'Salvar'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              <X className="w-4 h-4 mr-1" />
+              Cancelar
+            </Button>
+            <Button onClick={handlePreSave} disabled={saving}>
+              <Check className="w-4 h-4 mr-1" />
+              {saving ? 'Salvando…' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Confirmar alteração
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a alterar o parâmetro <code className="bg-muted px-1 rounded">{param.key}</code>.
+                </p>
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Esta alteração afetará <strong>todos os cálculos futuros</strong> do sistema.
+                    Benchmarks e resultados existentes não serão recalculados.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSave}>
+              Confirmar e Aplicar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -309,6 +389,24 @@ export function SystemParamsTable({ categories: filterCategories }: SystemParams
 
   return (
     <div className="space-y-4">
+      {/* Conceptual Separation Banner - Percentiles are NOT here */}
+      <div className="p-4 rounded-lg bg-sky-500/10 border border-sky-500/20">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-sky-500 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-sky-500">
+              Percentis NÃO são configurados aqui
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Percentis fazem parte de um modelo estatístico versionado separado. 
+              Para calibrar percentis, acesse a seção{' '}
+              <span className="font-medium text-foreground">"Calibração de Percentis (v1)"</span>{' '}
+              na aba "Editor Local".
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
