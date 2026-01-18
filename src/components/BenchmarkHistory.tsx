@@ -8,6 +8,7 @@ import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
+import { HyroxAnalysisCard } from './HyroxAnalysisCard';
 
 interface BenchmarkData {
   block: WorkoutBlock;
@@ -25,6 +26,7 @@ interface ExternalResult {
   event_date: string | null;
   time_in_seconds: number | null;
   screenshot_url: string | null;
+  race_category: 'OPEN' | 'PRO' | null;
   created_at: string;
 }
 
@@ -129,7 +131,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
       try {
         let query = supabase
           .from('benchmark_results')
-          .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, created_at')
+          .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
           .eq('user_id', user.id)
           .in('result_type', ['simulado', 'prova_oficial'])
           .order('created_at', { ascending: false });
@@ -312,6 +314,16 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
                       </div>
                     </a>
                   </div>
+                )}
+
+                {/* HYROX Analysis Card - only for results with time */}
+                {result.time_in_seconds && result.time_in_seconds > 0 && (
+                  <HyroxAnalysisCard
+                    resultId={result.id}
+                    totalTimeSeconds={result.time_in_seconds}
+                    gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
+                    raceCategory={result.race_category}
+                  />
                 )}
               </div>
             </motion.div>
