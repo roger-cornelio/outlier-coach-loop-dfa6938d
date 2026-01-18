@@ -37,6 +37,22 @@ interface CalculatedScore {
 }
 
 /**
+ * Mapping from metric names to benchmark_results column names
+ */
+const METRIC_TO_COLUMN: Record<string, string> = {
+  run_avg: 'run_avg_sec',
+  roxzone: 'roxzone_sec',
+  ski: 'ski_sec',
+  sled_push: 'sled_push_sec',
+  sled_pull: 'sled_pull_sec',
+  bbj: 'bbj_sec',
+  row: 'row_sec',
+  farmers: 'farmers_sec',
+  sandbag: 'sandbag_sec',
+  wallballs: 'wallballs_sec'
+};
+
+/**
  * Calculates percentile using linear interpolation.
  * Lower time = higher percentile (better performance).
  * 
@@ -102,7 +118,7 @@ serve(async (req) => {
     if (!authHeader) {
       console.error('[PERCENTILE_CALC] Missing authorization header');
       return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
+        JSON.stringify({ error: 'Missing authorization header', errorCode: 'AUTH_ERROR' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -113,7 +129,7 @@ serve(async (req) => {
     if (authError || !user) {
       console.error('[PERCENTILE_CALC] Auth error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
+        JSON.stringify({ error: 'Invalid token', errorCode: 'AUTH_ERROR' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -148,14 +164,14 @@ serve(async (req) => {
       );
     }
 
-    // Verify the benchmark_result exists and belongs to the user
-    const { data: resultCheck, error: resultCheckError } = await supabase
+    // Fetch the benchmark_result WITH real times for each metric
+    const { data: resultData, error: resultCheckError } = await supabase
       .from('benchmark_results')
-      .select('id, user_id')
+      .select('id, user_id, time_in_seconds, run_avg_sec, roxzone_sec, ski_sec, sled_push_sec, sled_pull_sec, bbj_sec, row_sec, farmers_sec, sandbag_sec, wallballs_sec')
       .eq('id', hyrox_result_id)
       .single();
 
-    if (resultCheckError || !resultCheck) {
+    if (resultCheckError || !resultData) {
       console.error('[PERCENTILE_CALC] Result not found:', hyrox_result_id, resultCheckError);
       return new Response(
         JSON.stringify({ 
@@ -167,16 +183,51 @@ serve(async (req) => {
       );
     }
 
+    console.log('[PERCENTILE_CALC] Found benchmark_result:', {
+      id: resultData.id,
+      user_id: resultData.user_id,
+      total_time: resultData.time_in_seconds,
+      has_real_data: !!(resultData.run_avg_sec || resultData.ski_sec)
+    });
+
+    // PRIORITY: REAL > ESTIMATED
+    // Build final metrics list using REAL times from DB when available
+    const finalMetrics: MetricInput[] = [];
+    
+    for (const inputMetric of metrics) {
+      const columnName = METRIC_TO_COLUMN[inputMetric.metric];
+      const realTimeFromDb = columnName ? (resultData as any)[columnName] : null;
+      
+      if (realTimeFromDb !== null && realTimeFromDb !== undefined && realTimeFromDb > 0) {
+        // Use REAL time from database
+        finalMetrics.push({
+          metric: inputMetric.metric,
+          raw_time_sec: realTimeFromDb,
+          data_source: 'real'
+        });
+        console.log(`[PERCENTILE_CALC] Using REAL time for ${inputMetric.metric}:`, realTimeFromDb);
+      } else {
+        // Use ESTIMATED time from input
+        finalMetrics.push({
+          metric: inputMetric.metric,
+          raw_time_sec: inputMetric.raw_time_sec,
+          data_source: 'estimated'
+        });
+        console.log(`[PERCENTILE_CALC] Using ESTIMATED time for ${inputMetric.metric}:`, inputMetric.raw_time_sec);
+      }
+    }
+
     console.log('[PERCENTILE_CALC] Processing request:', {
       hyrox_result_id,
       division,
       gender,
-      metricsCount: metrics.length,
-      result_owner: resultCheck.user_id
+      totalMetrics: finalMetrics.length,
+      realCount: finalMetrics.filter(m => m.data_source === 'real').length,
+      estimatedCount: finalMetrics.filter(m => m.data_source === 'estimated').length
     });
 
     // Fetch percentile bands for v1 only (MODEL A requirement)
-    const metricNames = metrics.map(m => m.metric);
+    const metricNames = finalMetrics.map(m => m.metric);
     const { data: bands, error: bandsError } = await supabase
       .from('percentile_bands')
       .select('metric, p10_sec, p25_sec, p50_sec, p75_sec, p90_sec')
@@ -222,7 +273,7 @@ serve(async (req) => {
     const calculatedScores: CalculatedScore[] = [];
     const missingBands: string[] = [];
 
-    for (const input of metrics) {
+    for (const input of finalMetrics) {
       const band = bandMap.get(input.metric);
       
       if (!band) {
@@ -244,7 +295,8 @@ serve(async (req) => {
       console.log('[PERCENTILE_CALC] Calculated:', {
         metric: input.metric,
         raw_time_sec: input.raw_time_sec,
-        percentile_value: percentileValue
+        percentile_value: percentileValue,
+        data_source: input.data_source
       });
     }
 
@@ -293,7 +345,9 @@ serve(async (req) => {
         success: true,
         scores: calculatedScores,
         saved_count: insertedScores?.length || 0,
-        missing_bands: missingBands.length > 0 ? missingBands : undefined
+        missing_bands: missingBands.length > 0 ? missingBands : undefined,
+        real_count: calculatedScores.filter(s => s.data_source === 'real').length,
+        estimated_count: calculatedScores.filter(s => s.data_source === 'estimated').length
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
