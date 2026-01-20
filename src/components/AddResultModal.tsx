@@ -68,6 +68,23 @@ function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
 
 export type ResultType = 'benchmark' | 'simulado' | 'prova_oficial';
 
+/**
+ * Interface for extracted/real splits from screenshot or manual input.
+ * These are the canonical split times in seconds.
+ */
+export interface ExtractedSplits {
+  run_avg_sec: number | null;
+  roxzone_sec: number | null;
+  ski_sec: number | null;
+  sled_push_sec: number | null;
+  sled_pull_sec: number | null;
+  bbj_sec: number | null;
+  row_sec: number | null;
+  farmers_sec: number | null;
+  sandbag_sec: number | null;
+  wallballs_sec: number | null;
+}
+
 interface AddResultModalProps {
   onResultAdded?: () => void;
 }
@@ -76,6 +93,20 @@ const RESULT_TYPES = [
   { value: 'simulado', label: 'Simulado', icon: Timer, description: 'Treino simulando prova oficial' },
   { value: 'prova_oficial', label: 'Prova Oficial', icon: Medal, description: 'Competição HYROX oficial' },
 ] as const;
+
+// Empty splits object
+const EMPTY_SPLITS: ExtractedSplits = {
+  run_avg_sec: null,
+  roxzone_sec: null,
+  ski_sec: null,
+  sled_push_sec: null,
+  sled_pull_sec: null,
+  bbj_sec: null,
+  row_sec: null,
+  farmers_sec: null,
+  sandbag_sec: null,
+  wallballs_sec: null,
+};
 
 export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const { user } = useAuth();
@@ -94,6 +125,10 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionConfidence, setExtractionConfidence] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // NEW: State for extracted splits
+  const [extractedSplits, setExtractedSplits] = useState<ExtractedSplits>(EMPTY_SPLITS);
+  const [splitsConfidence, setSplitsConfidence] = useState<string | null>(null);
 
   // Check if gender is configured
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
@@ -157,6 +192,30 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
           setRaceCategory(data.race_category as 'OPEN' | 'PRO');
         }
 
+        // NEW: Capture extracted splits
+        if (data.splits) {
+          const newSplits: ExtractedSplits = {
+            run_avg_sec: data.splits.run_avg_sec ?? null,
+            roxzone_sec: data.splits.roxzone_sec ?? null,
+            ski_sec: data.splits.ski_sec ?? null,
+            sled_push_sec: data.splits.sled_push_sec ?? null,
+            sled_pull_sec: data.splits.sled_pull_sec ?? null,
+            bbj_sec: data.splits.bbj_sec ?? null,
+            row_sec: data.splits.row_sec ?? null,
+            farmers_sec: data.splits.farmers_sec ?? null,
+            sandbag_sec: data.splits.sandbag_sec ?? null,
+            wallballs_sec: data.splits.wallballs_sec ?? null,
+          };
+          setExtractedSplits(newSplits);
+          setSplitsConfidence(data.splits_confidence || null);
+          
+          // Count how many splits were extracted
+          const splitsCount = Object.values(newSplits).filter(v => v !== null).length;
+          if (splitsCount > 0) {
+            console.log(`[EXTRACTION] Captured ${splitsCount} real splits from screenshot`);
+          }
+        }
+
         const confidenceLabel = {
           high: 'alta',
           medium: 'média', 
@@ -167,6 +226,15 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         if (data.race_category) {
           successMsg += ` | Categoria: ${data.race_category}`;
         }
+        
+        // Add splits info to toast
+        if (data.splits && data.splits_confidence !== 'none') {
+          const splitsCount = Object.values(data.splits).filter((v: unknown) => v !== null && v !== undefined).length;
+          if (splitsCount > 0) {
+            successMsg += ` | ${splitsCount} splits extraídos`;
+          }
+        }
+        
         successMsg += ` (confiança ${confidenceLabel})`;
 
         toast.success(successMsg);
@@ -185,6 +253,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
     setScreenshotFile(null);
     setScreenshotPreview(null);
     setExtractionConfidence(null);
+    setSplitsConfidence(null);
+    setExtractedSplits(EMPTY_SPLITS);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -199,6 +269,9 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
     if (h === 0 && m === 0 && s === 0) return null;
     return h * 3600 + m * 60 + s;
   };
+
+  // Check if we have any real splits
+  const hasRealSplits = Object.values(extractedSplits).some(v => v !== null);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -248,22 +321,42 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         screenshotUrl = publicUrl;
       }
 
+      // Build insert object with real splits when available
+      const insertPayload = {
+        user_id: user.id,
+        result_type: resultType,
+        event_name: eventName.trim(),
+        event_date: eventDate || null,
+        time_in_seconds: totalSeconds,
+        screenshot_url: screenshotUrl,
+        race_category: resultType === 'prova_oficial' ? raceCategory : null,
+        completed: true,
+        block_id: `${resultType}_${Date.now()}`,
+        workout_id: `${resultType}_${Date.now()}`,
+        benchmark_id: resultType === 'prova_oficial' ? 'HYROX_OFFICIAL' : 'HYROX_SIMULADO',
+        // Add extracted splits (null values are fine)
+        run_avg_sec: extractedSplits.run_avg_sec,
+        roxzone_sec: extractedSplits.roxzone_sec,
+        ski_sec: extractedSplits.ski_sec,
+        sled_push_sec: extractedSplits.sled_push_sec,
+        sled_pull_sec: extractedSplits.sled_pull_sec,
+        bbj_sec: extractedSplits.bbj_sec,
+        row_sec: extractedSplits.row_sec,
+        farmers_sec: extractedSplits.farmers_sec,
+        sandbag_sec: extractedSplits.sandbag_sec,
+        wallballs_sec: extractedSplits.wallballs_sec,
+      };
+
+      console.log('[SUBMIT] Insert payload with splits:', {
+        totalSeconds,
+        hasRealSplits,
+        splitsCount: Object.values(extractedSplits).filter(v => v !== null).length,
+      });
+
       // Insert the result and get the ID back
       const { data: insertedData, error: insertError } = await supabase
         .from('benchmark_results')
-        .insert({
-          user_id: user.id,
-          result_type: resultType,
-          event_name: eventName.trim(),
-          event_date: eventDate || null,
-          time_in_seconds: totalSeconds,
-          screenshot_url: screenshotUrl,
-          race_category: resultType === 'prova_oficial' ? raceCategory : null,
-          completed: true,
-          block_id: `${resultType}_${Date.now()}`,
-          workout_id: `${resultType}_${Date.now()}`,
-          benchmark_id: resultType === 'prova_oficial' ? 'HYROX_OFFICIAL' : 'HYROX_SIMULADO',
-        })
+        .insert(insertPayload)
         .select('id')
         .single();
 
@@ -297,6 +390,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setSeconds('');
       setRaceCategory('OPEN');
       setExtractionConfidence(null);
+      setSplitsConfidence(null);
+      setExtractedSplits(EMPTY_SPLITS);
       removeScreenshot();
       setOpen(false);
       triggerExternalResultsRefresh();
