@@ -56,34 +56,46 @@ const METRIC_TO_COLUMN: Record<string, string> = {
  * Calculates percentile using linear interpolation.
  * Lower time = higher percentile (better performance).
  * 
- * Bands: p10 (slowest) → p25 → p50 → p75 → p90 (fastest)
+ * Database constraint: p10_sec < p25_sec < p50_sec < p75_sec < p90_sec
+ * Meaning:
+ *   - p10_sec = FASTEST time (top 10% of athletes)
+ *   - p90_sec = SLOWEST time (bottom 10% of athletes)
+ * 
  * Percentile output: 1-99 (clamped)
+ *   - time <= p10 → percentile ~90-99 (elite)
+ *   - time >= p90 → percentile ~1-10 (needs work)
  */
 function calculatePercentile(rawTimeSec: number, band: PercentileBand): number {
   const { p10_sec, p25_sec, p50_sec, p75_sec, p90_sec } = band;
   
   // Define the interpolation ranges
-  // Note: Lower time = higher percentile
-  // p90_sec is fastest (best), p10_sec is slowest (worst)
+  // Each range maps a time interval to a percentile interval
+  // Lower time = higher percentile (monotonically decreasing)
   const ranges = [
-    { minTime: p90_sec, maxTime: p75_sec, minPercentile: 90, maxPercentile: 75 },
-    { minTime: p75_sec, maxTime: p50_sec, minPercentile: 75, maxPercentile: 50 },
-    { minTime: p50_sec, maxTime: p25_sec, minPercentile: 50, maxPercentile: 25 },
-    { minTime: p25_sec, maxTime: p10_sec, minPercentile: 25, maxPercentile: 10 },
+    { minTime: p10_sec, maxTime: p25_sec, maxPercentile: 90, minPercentile: 75 },
+    { minTime: p25_sec, maxTime: p50_sec, maxPercentile: 75, minPercentile: 50 },
+    { minTime: p50_sec, maxTime: p75_sec, maxPercentile: 50, minPercentile: 25 },
+    { minTime: p75_sec, maxTime: p90_sec, maxPercentile: 25, minPercentile: 10 },
   ];
   
-  // If faster than p90 (top tier)
-  if (rawTimeSec <= p90_sec) {
-    // Extrapolate above p90 (up to 99)
-    const extrapolationFactor = (p90_sec - rawTimeSec) / (p90_sec - p75_sec);
+  // If FASTER than p10 (elite tier - top 10%)
+  if (rawTimeSec <= p10_sec) {
+    // Extrapolate above 90th percentile (up to 99)
+    // The faster beyond p10, the higher the percentile
+    const timeBeyondP10 = p10_sec - rawTimeSec;
+    const rangeSize = p25_sec - p10_sec;
+    const extrapolationFactor = rangeSize > 0 ? timeBeyondP10 / rangeSize : 0;
     const percentile = 90 + (extrapolationFactor * 9); // Max extrapolation to 99
     return Math.min(99, Math.round(percentile));
   }
   
-  // If slower than p10 (bottom tier)
-  if (rawTimeSec >= p10_sec) {
-    // Extrapolate below p10 (down to 1)
-    const extrapolationFactor = (rawTimeSec - p10_sec) / (p25_sec - p10_sec);
+  // If SLOWER than p90 (bottom tier - slowest 10%)
+  if (rawTimeSec >= p90_sec) {
+    // Extrapolate below 10th percentile (down to 1)
+    // The slower beyond p90, the lower the percentile
+    const timeBeyondP90 = rawTimeSec - p90_sec;
+    const rangeSize = p90_sec - p75_sec;
+    const extrapolationFactor = rangeSize > 0 ? timeBeyondP90 / rangeSize : 0;
     const percentile = 10 - (extrapolationFactor * 9); // Min extrapolation to 1
     return Math.max(1, Math.round(percentile));
   }
@@ -91,14 +103,26 @@ function calculatePercentile(rawTimeSec: number, band: PercentileBand): number {
   // Find the appropriate range and interpolate
   for (const range of ranges) {
     if (rawTimeSec >= range.minTime && rawTimeSec <= range.maxTime) {
-      // Linear interpolation
-      const timeFraction = (rawTimeSec - range.minTime) / (range.maxTime - range.minTime);
-      const percentile = range.minPercentile - (timeFraction * (range.minPercentile - range.maxPercentile));
+      // Linear interpolation within the range
+      const timeRange = range.maxTime - range.minTime;
+      const percentileRange = range.maxPercentile - range.minPercentile;
+      
+      if (timeRange === 0) {
+        return Math.round((range.maxPercentile + range.minPercentile) / 2);
+      }
+      
+      // How far into the time range are we? (0 = at minTime, 1 = at maxTime)
+      const timeFraction = (rawTimeSec - range.minTime) / timeRange;
+      
+      // Interpolate percentile (decreasing as time increases)
+      const percentile = range.maxPercentile - (timeFraction * percentileRange);
+      
       return Math.max(1, Math.min(99, Math.round(percentile)));
     }
   }
   
-  // Fallback (shouldn't reach here)
+  // Fallback (shouldn't reach here if bands are valid)
+  console.warn('[PERCENTILE_CALC] Time fell outside all ranges:', { rawTimeSec, band });
   return 50;
 }
 
