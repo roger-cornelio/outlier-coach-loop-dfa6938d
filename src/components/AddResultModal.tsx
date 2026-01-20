@@ -355,9 +355,22 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         wallballs_sec: extractedSplits.wallballs_sec,
       };
 
-      console.log('[SUBMIT] Insert payload with splits:', {
+      console.log('[SUBMIT] INSERT payload with splits:', {
+        resultType,
         totalSeconds,
         hasRealSplits,
+        splitsData: {
+          run_avg_sec: extractedSplits.run_avg_sec,
+          roxzone_sec: extractedSplits.roxzone_sec,
+          ski_sec: extractedSplits.ski_sec,
+          sled_push_sec: extractedSplits.sled_push_sec,
+          sled_pull_sec: extractedSplits.sled_pull_sec,
+          bbj_sec: extractedSplits.bbj_sec,
+          row_sec: extractedSplits.row_sec,
+          farmers_sec: extractedSplits.farmers_sec,
+          sandbag_sec: extractedSplits.sandbag_sec,
+          wallballs_sec: extractedSplits.wallballs_sec,
+        },
         splitsCount: Object.values(extractedSplits).filter(v => v !== null).length,
       });
 
@@ -365,12 +378,22 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       const { data: insertedData, error: insertError } = await supabase
         .from('benchmark_results')
         .insert(insertPayload)
-        .select('id')
+        .select('id, run_avg_sec, roxzone_sec, ski_sec')
         .single();
 
       if (insertError) throw insertError;
 
       const resultId = insertedData?.id;
+
+      console.log('[SUBMIT] INSERT successful:', {
+        resultId,
+        insertedSplits: {
+          run_avg_sec: insertedData?.run_avg_sec,
+          roxzone_sec: insertedData?.roxzone_sec,
+          ski_sec: insertedData?.ski_sec,
+        },
+        message: 'Splits saved to benchmark_results table'
+      });
 
       toast.success(
         resultType === 'prova_oficial' 

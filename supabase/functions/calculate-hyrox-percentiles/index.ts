@@ -211,7 +211,19 @@ serve(async (req) => {
       id: resultData.id,
       user_id: resultData.user_id,
       total_time: resultData.time_in_seconds,
-      has_real_data: !!(resultData.run_avg_sec || resultData.ski_sec)
+      has_real_data: !!(resultData.run_avg_sec || resultData.ski_sec),
+      real_splits_from_db: {
+        run_avg_sec: resultData.run_avg_sec,
+        roxzone_sec: resultData.roxzone_sec,
+        ski_sec: resultData.ski_sec,
+        sled_push_sec: resultData.sled_push_sec,
+        sled_pull_sec: resultData.sled_pull_sec,
+        bbj_sec: resultData.bbj_sec,
+        row_sec: resultData.row_sec,
+        farmers_sec: resultData.farmers_sec,
+        sandbag_sec: resultData.sandbag_sec,
+        wallballs_sec: resultData.wallballs_sec,
+      }
     });
 
     // PRIORITY: REAL > ESTIMATED

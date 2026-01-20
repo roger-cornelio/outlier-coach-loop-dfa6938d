@@ -234,6 +234,7 @@ export async function getHyroxMetricScores(
   hyroxResultId: string
 ): Promise<CalculatedScore[] | null> {
   console.log('[HYROX_PERCENTILE] Fetching scores for:', hyroxResultId);
+  console.log('[HYROX_PERCENTILE] Reading from TABLE: hyrox_metric_scores');
 
   const { data, error } = await supabase
     .from('hyrox_metric_scores')
@@ -245,6 +246,16 @@ export async function getHyroxMetricScores(
     console.error('[HYROX_PERCENTILE] Fetch error:', error);
     return null;
   }
+
+  // Log what we found
+  console.log('[HYROX_PERCENTILE] Scores loaded from hyrox_metric_scores:', {
+    count: data?.length || 0,
+    metrics: data?.map(d => ({
+      metric: d.metric,
+      data_source: d.data_source,
+      percentile: d.percentile_value
+    }))
+  });
 
   return data as CalculatedScore[];
 }
