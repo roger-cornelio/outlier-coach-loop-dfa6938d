@@ -37,13 +37,13 @@ const METRIC_COLORS: Record<string, string> = {
  * "Roxzone Time" is the official label from HYROX workout summaries
  */
 const METRIC_LABELS: Record<string, string> = {
-  run_avg: 'Corrida',
+  run_avg: 'Run',
   roxzone: 'Roxzone Time',
   ski: 'Ski Erg',
   sled_push: 'Sled Push',
   sled_pull: 'Sled Pull',
   bbj: 'Burpee BJ',
-  row: 'Remo',
+  row: 'Row',
   farmers: 'Farmers',
   sandbag: 'Sandbag',
   wallballs: 'Wall Balls'
@@ -245,53 +245,56 @@ export function HyroxRadarChart({ scores, loading, className }: HyroxRadarChartP
   }));
   
   return (
-    <div className={`w-full h-80 ${className || ''}`}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
-          <PolarGrid 
-            stroke="hsl(var(--border))" 
-            strokeOpacity={0.5}
-          />
-          <PolarAngleAxis
-            dataKey="label"
-            tick={{ 
-              fill: 'hsl(var(--muted-foreground))', 
-              fontSize: 11,
-              fontWeight: 500
-            }}
-            tickLine={false}
-          />
-          <PolarRadiusAxis
-            angle={90}
-            domain={[0, 100]}
-            tick={{ 
-              fill: 'hsl(var(--muted-foreground))', 
-              fontSize: 10 
-            }}
-            tickCount={5}
-            axisLine={false}
-          />
-          <Radar
-            name="Percentil"
-            dataKey="percentile"
-            stroke="hsl(173, 80%, 40%)"
-            fill="hsl(173, 80%, 40%)"
-            fillOpacity={0.25}
-            strokeWidth={2}
-            dot={<CustomDot />}
-          />
-          <Tooltip content={<CustomTooltip />} />
-        </RadarChart>
-      </ResponsiveContainer>
+    <div className={`w-full ${className || ''}`}>
+      {/* Larger radar chart container */}
+      <div className="h-[340px] sm:h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+            <PolarGrid 
+              stroke="hsl(var(--border))" 
+              strokeOpacity={0.4}
+            />
+            <PolarAngleAxis
+              dataKey="label"
+              tick={{ 
+                fill: 'hsl(var(--muted-foreground))', 
+                fontSize: 11,
+                fontWeight: 500
+              }}
+              tickLine={false}
+            />
+            <PolarRadiusAxis
+              angle={90}
+              domain={[0, 100]}
+              tick={{ 
+                fill: 'hsl(var(--muted-foreground))', 
+                fontSize: 10 
+              }}
+              tickCount={5}
+              axisLine={false}
+            />
+            <Radar
+              name="Percentil"
+              dataKey="percentile"
+              stroke="hsl(var(--primary))"
+              fill="hsl(var(--primary))"
+              fillOpacity={0.35}
+              strokeWidth={2.5}
+              dot={<CustomDot />}
+            />
+            <Tooltip content={<CustomTooltip />} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
       
       {/* Legend */}
-      <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs">
+      <div className="flex flex-wrap justify-center gap-4 mt-3 text-xs">
         <div className="flex items-center gap-1.5">
           <span 
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: METRIC_COLORS.run_avg }}
           />
-          <span className="text-muted-foreground">Corrida</span>
+          <span className="text-muted-foreground">Run</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span 
@@ -305,7 +308,7 @@ export function HyroxRadarChart({ scores, loading, className }: HyroxRadarChartP
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: METRIC_COLORS.ski }}
           />
-          <span className="text-muted-foreground">Estações</span>
+          <span className="text-muted-foreground">Stations</span>
         </div>
       </div>
       
