@@ -63,7 +63,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert at reading HYROX competition results from screenshots.
+            content: `You are an expert at reading HYROX competition results from screenshots (Workout Summary).
 
 Your task is to extract:
 1. The FINAL/TOTAL TIME (most important)
@@ -80,13 +80,21 @@ HYROX has 8 running segments and 8 workout stations in this order:
 7. Run 7 → Sandbag Lunges (100m)
 8. Run 8 → Wall Balls (100 reps)
 
-There's also "Roxzone" time which is the transition time between stations.
+CRITICAL EXTRACTION RULES:
+1. "Run Total" or "Running" - This is the TOTAL running time (sum of 8 runs). Extract as run_total_sec.
+   DO NOT extract individual Running 1-8 times, only the "Run Total" or "Running" aggregate.
+   
+2. "Roxzone Time" or "Roxzone" - This is the TOTAL transition time between stations. Extract as roxzone_sec.
+   This is the official "Roxzone Time" shown in HYROX workout summaries.
 
-Look for:
+3. Station times (SkiErg, Sled Push, Sled Pull, Burpee Broad Jump, Row, Farmers Carry, Sandbag Lunges, Wall Balls)
+   - Extract each station's time individually in seconds.
+
+Look for these labels in the screenshot:
 - "Final Time", "Finish Time", "Total Time", "Tempo Final", "Tempo Total"
-- Individual split times labeled by station name
-- Running times (often labeled as "Running" or individual run segments)
-- "Roxzone" or "Transition" times
+- "Run Total" or "Running" (aggregate running time)
+- "Roxzone Time" or "Roxzone" (transition time)
+- Station names with their times
 
 Return ONLY the extracted data as a JSON object.
 Time values should be in SECONDS (convert from MM:SS or HH:MM:SS format).`
@@ -96,7 +104,7 @@ Time values should be in SECONDS (convert from MM:SS or HH:MM:SS format).`
             content: [
               {
                 type: "text",
-                text: `Extract ALL available times from this HYROX result screenshot.
+                text: `Extract ALL available times from this HYROX Workout Summary screenshot.
 
 Return JSON with format:
 {
@@ -107,8 +115,8 @@ Return JSON with format:
   "event_date": "YYYY-MM-DD or null",
   "race_category": "OPEN"|"PRO"|null,
   "splits": {
-    "run_avg_sec": number or null (average of all 8 runs, or null if not calculable),
-    "roxzone_sec": number or null (total roxzone/transition time),
+    "run_total_sec": number or null (TOTAL running time from "Run Total" or "Running" field),
+    "roxzone_sec": number or null (from "Roxzone Time" field),
     "ski_sec": number or null (Ski Erg station time),
     "sled_push_sec": number or null,
     "sled_pull_sec": number or null,
@@ -121,10 +129,11 @@ Return JSON with format:
   "splits_confidence": "high"|"medium"|"low"|"none" (none if no splits found)
 }
 
-IMPORTANT: 
-- Convert all times to seconds (e.g., "4:32" = 272 seconds)
+CRITICAL:
+- Extract "Run Total" or "Running" as run_total_sec (NOT individual run segments)
+- Extract "Roxzone Time" as roxzone_sec (this is the transition time)
+- Convert all times to seconds (e.g., "4:32" = 272 seconds, "1:15:30" = 4530 seconds)
 - Only include splits you can clearly see in the screenshot
-- For run_avg_sec, calculate the average if multiple run times are visible
 - Set splits to null if not visible or unclear`
               },
               {
@@ -175,13 +184,13 @@ IMPORTANT:
                     type: "object",
                     description: "Individual station and run times in seconds",
                     properties: {
-                      run_avg_sec: {
+                      run_total_sec: {
                         type: "number",
-                        description: "Average run time per segment in seconds"
+                        description: "TOTAL running time from 'Run Total' or 'Running' field (sum of 8 runs)"
                       },
                       roxzone_sec: {
                         type: "number",
-                        description: "Total roxzone/transition time in seconds"
+                        description: "Roxzone Time - total transition time between stations"
                       },
                       ski_sec: {
                         type: "number",
@@ -261,10 +270,18 @@ IMPORTANT:
     if (toolCall?.function?.arguments) {
       const result = JSON.parse(toolCall.function.arguments);
       
+      // DERIVE run_avg_sec from run_total_sec
+      // Rule: run_avg_sec = round(run_total_sec / 8)
+      if (result.splits?.run_total_sec) {
+        result.splits.run_avg_sec = Math.round(result.splits.run_total_sec / 8);
+        console.log(`[extract-time-from-screenshot] Derived run_avg_sec: ${result.splits.run_avg_sec} from run_total: ${result.splits.run_total_sec}`);
+      }
+      
       // Log splits extraction for debugging
       if (result.splits) {
         const splitsCount = Object.values(result.splits).filter(v => v !== null && v !== undefined).length;
         console.log(`[extract-time-from-screenshot] Extracted ${splitsCount} splits with confidence: ${result.splits_confidence || 'unknown'}`);
+        console.log(`[extract-time-from-screenshot] Splits:`, JSON.stringify(result.splits));
       }
       
       return new Response(

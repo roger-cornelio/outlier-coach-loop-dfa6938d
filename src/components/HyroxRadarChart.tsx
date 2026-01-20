@@ -34,10 +34,11 @@ const METRIC_COLORS: Record<string, string> = {
 
 /**
  * Human-readable labels for HYROX metrics
+ * "Roxzone Time" is the official label from HYROX workout summaries
  */
 const METRIC_LABELS: Record<string, string> = {
   run_avg: 'Corrida',
-  roxzone: 'Roxzone',
+  roxzone: 'Roxzone Time',
   ski: 'Ski Erg',
   sled_push: 'Sled Push',
   sled_pull: 'Sled Pull',
@@ -297,7 +298,7 @@ export function HyroxRadarChart({ scores, loading, className }: HyroxRadarChartP
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: METRIC_COLORS.roxzone }}
           />
-          <span className="text-muted-foreground">Roxzone</span>
+          <span className="text-muted-foreground">Roxzone Time</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span 
