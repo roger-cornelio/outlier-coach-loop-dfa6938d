@@ -402,15 +402,20 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       );
 
       // AUTOMATIC ANALYSIS GENERATION
-      // Only trigger for results with time and valid gender
+      // CRITICAL: Wait for analysis to complete BEFORE refreshing the list
+      // This ensures the edge function reads splits that are ALREADY in the database
       if (resultId && totalSeconds > 0 && hasGenderConfigured) {
-        // Fire and forget - don't block the UI
-        triggerAutoAnalysis(
+        console.log('[SUBMIT] Starting automatic analysis (awaiting completion)...');
+        
+        // AWAIT the analysis to ensure splits are read from DB
+        await triggerAutoAnalysis(
           resultId,
           totalSeconds,
           athleteConfig?.sexo === 'feminino' ? 'F' : 'M',
           resultType === 'prova_oficial' ? raceCategory : 'OPEN'
         );
+        
+        console.log('[SUBMIT] Analysis complete, now refreshing list');
       }
 
       // Reset form
@@ -425,6 +430,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       setExtractedSplits(EMPTY_SPLITS);
       removeScreenshot();
       setOpen(false);
+      
+      // Refresh AFTER analysis is complete
       triggerExternalResultsRefresh();
       onResultAdded?.();
     } catch (error) {
@@ -470,9 +477,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
       );
 
       if (result.success) {
-        console.log('[AUTO_ANALYSIS] Analysis generated successfully');
-        // Trigger refresh so HyroxAnalysisCard picks up the new scores
-        triggerExternalResultsRefresh();
+        console.log('[AUTO_ANALYSIS] Analysis generated successfully, real_count:', result.scores?.filter(s => s.data_source === 'real').length);
+        // Note: Refresh is handled by the caller (handleSubmit) after await
       } else {
         console.warn('[AUTO_ANALYSIS] Analysis failed:', result.error);
         // Non-blocking warning - don't show toast to avoid confusion
