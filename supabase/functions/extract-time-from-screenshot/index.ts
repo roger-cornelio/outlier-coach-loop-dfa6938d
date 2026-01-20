@@ -270,19 +270,40 @@ CRITICAL:
     if (toolCall?.function?.arguments) {
       const result = JSON.parse(toolCall.function.arguments);
       
+      // ========== DIAGNOSTIC LOGS START ==========
+      console.log('[EXTRACT_DIAGNOSTIC] Raw AI response splits:', JSON.stringify(result.splits || 'NO_SPLITS_OBJECT'));
+      
       // DERIVE run_avg_sec from run_total_sec
       // Rule: run_avg_sec = round(run_total_sec / 8)
       if (result.splits?.run_total_sec) {
         result.splits.run_avg_sec = Math.round(result.splits.run_total_sec / 8);
-        console.log(`[extract-time-from-screenshot] Derived run_avg_sec: ${result.splits.run_avg_sec} from run_total: ${result.splits.run_total_sec}`);
+        console.log(`[EXTRACT_DIAGNOSTIC] Derived run_avg_sec: ${result.splits.run_avg_sec} from run_total: ${result.splits.run_total_sec}`);
       }
       
-      // Log splits extraction for debugging
-      if (result.splits) {
-        const splitsCount = Object.values(result.splits).filter(v => v !== null && v !== undefined).length;
-        console.log(`[extract-time-from-screenshot] Extracted ${splitsCount} splits with confidence: ${result.splits_confidence || 'unknown'}`);
-        console.log(`[extract-time-from-screenshot] Splits:`, JSON.stringify(result.splits));
+      // Check each split field explicitly
+      const splitFields = {
+        run_total_sec: result.splits?.run_total_sec ?? null,
+        run_avg_sec: result.splits?.run_avg_sec ?? null,
+        roxzone_sec: result.splits?.roxzone_sec ?? null,
+        ski_sec: result.splits?.ski_sec ?? null,
+        sled_push_sec: result.splits?.sled_push_sec ?? null,
+        sled_pull_sec: result.splits?.sled_pull_sec ?? null,
+        bbj_sec: result.splits?.bbj_sec ?? null,
+        row_sec: result.splits?.row_sec ?? null,
+        farmers_sec: result.splits?.farmers_sec ?? null,
+        sandbag_sec: result.splits?.sandbag_sec ?? null,
+        wallballs_sec: result.splits?.wallballs_sec ?? null,
+      };
+      
+      const nonNullCount = Object.values(splitFields).filter(v => v !== null && v !== undefined && v > 0).length;
+      
+      console.log('[EXTRACT_DIAGNOSTIC] Final splits to return:', JSON.stringify(splitFields));
+      console.log(`[EXTRACT_DIAGNOSTIC] Non-null splits count: ${nonNullCount}`);
+      
+      if (nonNullCount === 0) {
+        console.warn('[EXTRACT_DIAGNOSTIC] EXTRACTION_EMPTY: No valid splits extracted from screenshot');
       }
+      // ========== DIAGNOSTIC LOGS END ==========
       
       return new Response(
         JSON.stringify(result),
