@@ -194,8 +194,16 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
 
         // NEW: Capture extracted splits
         if (data.splits) {
+          // DERIVE run_avg_sec from run_total_sec if available
+          // Rule: run_avg_sec = round(run_total_sec / 8)
+          let derivedRunAvg = data.splits.run_avg_sec ?? null;
+          if (data.splits.run_total_sec && !derivedRunAvg) {
+            derivedRunAvg = Math.round(data.splits.run_total_sec / 8);
+            console.log(`[EXTRACTION] Derived run_avg_sec: ${derivedRunAvg} from run_total: ${data.splits.run_total_sec}`);
+          }
+          
           const newSplits: ExtractedSplits = {
-            run_avg_sec: data.splits.run_avg_sec ?? null,
+            run_avg_sec: derivedRunAvg,
             roxzone_sec: data.splits.roxzone_sec ?? null,
             ski_sec: data.splits.ski_sec ?? null,
             sled_push_sec: data.splits.sled_push_sec ?? null,
