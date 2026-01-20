@@ -162,6 +162,12 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         body: { imageUrl: imagePreview }
       });
 
+      // ========== DIAGNOSTIC LOG: Raw response from edge function ==========
+      console.log('[EXTRACT_RESPONSE] Full data from edge function:', JSON.stringify(data, null, 2));
+      console.log('[EXTRACT_RESPONSE] Has splits object?', !!data?.splits);
+      console.log('[EXTRACT_RESPONSE] Splits content:', JSON.stringify(data?.splits || 'NO_SPLITS'));
+      // =====================================================================
+
       if (error) throw error;
 
       if (data.error) {
@@ -374,26 +380,56 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
         splitsCount: Object.values(extractedSplits).filter(v => v !== null).length,
       });
 
+      // ========== DIAGNOSTIC: Log the exact payload being sent ==========
+      console.log('[SUBMIT_DIAGNOSTIC] insertPayload (exact object for INSERT):', JSON.stringify(insertPayload, null, 2));
+      console.log('[SUBMIT_DIAGNOSTIC] Checking split columns in payload:', {
+        run_avg_sec: insertPayload.run_avg_sec,
+        roxzone_sec: insertPayload.roxzone_sec,
+        ski_sec: insertPayload.ski_sec,
+        sled_push_sec: insertPayload.sled_push_sec,
+        sled_pull_sec: insertPayload.sled_pull_sec,
+        bbj_sec: insertPayload.bbj_sec,
+        row_sec: insertPayload.row_sec,
+        farmers_sec: insertPayload.farmers_sec,
+        sandbag_sec: insertPayload.sandbag_sec,
+        wallballs_sec: insertPayload.wallballs_sec,
+      });
+      // ====================================================================
+
       // Insert the result and get the ID back
       const { data: insertedData, error: insertError } = await supabase
         .from('benchmark_results')
         .insert(insertPayload)
-        .select('id, run_avg_sec, roxzone_sec, ski_sec')
+        .select('id, run_avg_sec, roxzone_sec, ski_sec, sled_push_sec, sled_pull_sec, bbj_sec, row_sec, farmers_sec, sandbag_sec, wallballs_sec')
         .single();
 
       if (insertError) throw insertError;
 
       const resultId = insertedData?.id;
 
-      console.log('[SUBMIT] INSERT successful:', {
-        resultId,
-        insertedSplits: {
-          run_avg_sec: insertedData?.run_avg_sec,
-          roxzone_sec: insertedData?.roxzone_sec,
-          ski_sec: insertedData?.ski_sec,
-        },
-        message: 'Splits saved to benchmark_results table'
-      });
+      // ========== DIAGNOSTIC: Log what Supabase returned after INSERT ==========
+      console.log('[SUBMIT_DIAGNOSTIC] INSERT returned (from .select()):', JSON.stringify(insertedData, null, 2));
+      
+      // Verify by re-querying the database
+      if (resultId) {
+        const { data: verifyData } = await supabase
+          .from('benchmark_results')
+          .select('run_avg_sec, roxzone_sec, ski_sec, sled_push_sec, sled_pull_sec, bbj_sec, row_sec, farmers_sec, sandbag_sec, wallballs_sec')
+          .eq('id', resultId)
+          .single();
+        
+        const realSplitCount = verifyData ? Object.values(verifyData).filter(v => v !== null && v > 0).length : 0;
+        
+        console.log('[SUBMIT_DIAGNOSTIC] POST-SAVE VERIFICATION (SELECT from DB):', JSON.stringify(verifyData, null, 2));
+        console.log(`[SUBMIT_DIAGNOSTIC] real_split_count in DB: ${realSplitCount}`);
+        
+        if (realSplitCount === 0) {
+          console.error('[SUBMIT_DIAGNOSTIC] ❌ PROBLEM: All splits are NULL in the database after INSERT!');
+        } else {
+          console.log(`[SUBMIT_DIAGNOSTIC] ✅ SUCCESS: ${realSplitCount} splits saved to database`);
+        }
+      }
+      // ==========================================================================
 
       toast.success(
         resultType === 'prova_oficial' 
