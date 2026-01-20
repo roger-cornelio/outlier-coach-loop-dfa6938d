@@ -2,13 +2,13 @@ import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Trophy, TrendingUp, TrendingDown, Minus, Calendar, Clock, ChevronDown, ChevronUp, Medal, Timer, Image, ExternalLink } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Clock, Calendar } from 'lucide-react';
 import type { WorkoutBlock, WorkoutResult, PerformanceBucket, BenchmarkDirection } from '@/types/outlier';
 import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetricInfo } from '@/utils/benchmarkVariants';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getBlockDisplayTitle, getBlockCategoryLabel } from '@/utils/blockDisplayUtils';
-import { HyroxAnalysisCard } from './HyroxAnalysisCard';
+import { HyroxResultCard } from './HyroxResultCard';
 
 interface BenchmarkData {
   block: WorkoutBlock;
@@ -225,108 +225,15 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
 
   return (
     <div className="space-y-4">
-      {/* External Results - Simulados and Provas */}
+      {/* External Results - Simulados and Provas - Using HyroxResultCard */}
       {filteredExternalResults.length > 0 && (
         <div className="space-y-3">
           {filteredExternalResults.map((result) => (
-            <motion.div
+            <HyroxResultCard
               key={result.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`card-elevated rounded-xl overflow-hidden border-l-4 ${
-                result.result_type === 'prova_oficial' 
-                  ? 'border-l-amber-500' 
-                  : 'border-l-primary'
-              }`}
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      result.result_type === 'prova_oficial'
-                        ? 'bg-amber-500/10'
-                        : 'bg-primary/10'
-                    }`}>
-                      {result.result_type === 'prova_oficial' ? (
-                        <Medal className={`w-5 h-5 text-amber-500`} />
-                      ) : (
-                        <Timer className={`w-5 h-5 text-primary`} />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded ${
-                          result.result_type === 'prova_oficial'
-                            ? 'bg-amber-500/20 text-amber-500'
-                            : 'bg-primary/20 text-primary'
-                        }`}>
-                          {result.result_type === 'prova_oficial' ? 'PROVA OFICIAL' : 'SIMULADO'}
-                        </span>
-                      </div>
-                      <h4 className="font-display text-lg mt-1">
-                        {result.event_name || 'HYROX'}
-                      </h4>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>
-                          {result.event_date 
-                            ? formatFullDate(result.event_date)
-                            : formatFullDate(result.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Time Display */}
-                  {result.time_in_seconds && (
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Tempo</p>
-                      <p className={`font-display text-2xl ${
-                        result.result_type === 'prova_oficial'
-                          ? 'text-amber-500'
-                          : 'text-primary'
-                      }`}>
-                        {formatTime(result.time_in_seconds)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Screenshot Preview */}
-                {result.screenshot_url && (
-                  <div className="mt-4">
-                    <a 
-                      href={result.screenshot_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block relative group"
-                    >
-                      <img 
-                        src={result.screenshot_url} 
-                        alt="Resultado" 
-                        className="w-full h-32 object-cover rounded-lg border border-border"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <div className="flex items-center gap-2 text-white text-sm">
-                          <ExternalLink className="w-4 h-4" />
-                          Ver imagem completa
-                        </div>
-                      </div>
-                    </a>
-                  </div>
-                )}
-
-                {/* HYROX Analysis Card - only for results with time */}
-                {result.time_in_seconds && result.time_in_seconds > 0 && (
-                  <HyroxAnalysisCard
-                    resultId={result.id}
-                    totalTimeSeconds={result.time_in_seconds}
-                    gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
-                    raceCategory={result.race_category}
-                  />
-                )}
-              </div>
-            </motion.div>
+              result={result}
+              gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
+            />
           ))}
         </div>
       )}

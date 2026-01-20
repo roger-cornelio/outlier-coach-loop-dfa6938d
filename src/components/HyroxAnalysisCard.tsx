@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Loader2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
+import { BarChart3, Loader2, Check, AlertTriangle, RefreshCw, Info } from 'lucide-react';
 import { HyroxRadarChart } from './HyroxRadarChart';
 import { HyroxRadarExplanation } from './HyroxRadarExplanation';
 import { LevelBenchmarkComparison } from './LevelBenchmarkComparison';
@@ -11,7 +11,12 @@ import {
   type MetricInput 
 } from '@/utils/hyroxPercentileCalculator';
 import { Button } from '@/components/ui/button';
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 interface HyroxAnalysisCardProps {
   /** The benchmark_results.id to use as hyrox_result_id */
   resultId: string;
@@ -248,44 +253,64 @@ export function HyroxAnalysisCard({
   }
   
   return (
-    <div className="mt-4">
-      <AnimatePresence mode="wait">
-        {/* Success: Show radar chart */}
-        {analysisState.status === 'success' && scores && scores.length > 0 ? (
-          <motion.div
-            key="radar"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-lg bg-secondary/30 border border-border"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <h4 className="font-display text-sm">Análise de Performance</h4>
-              <div className="ml-auto flex items-center gap-1 text-xs text-status-good">
-                <Check className="w-3 h-3" />
-                <span>Análise gerada</span>
+    <TooltipProvider>
+      <div className="mt-4">
+        <AnimatePresence mode="wait">
+          {/* Success: Show radar chart */}
+          {analysisState.status === 'success' && scores && scores.length > 0 ? (
+            <motion.div
+              key="radar"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-4 rounded-lg bg-secondary/30 border border-border"
+            >
+              {/* Header with info tooltip */}
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <h4 className="font-display text-base">Performance Analysis</h4>
+                
+                {/* Info tooltip - easy to click */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="p-1.5 rounded-full hover:bg-muted/50 transition-colors">
+                      <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[280px]">
+                    <p className="text-xs">
+                      O radar mostra seu percentil em cada métrica HYROX. 
+                      Expanda "Como o Radar foi calculado" abaixo para ver detalhes.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <div className="ml-auto flex items-center gap-1 text-xs text-status-good">
+                  <Check className="w-3 h-3" />
+                  <span>Pronto</span>
+                </div>
               </div>
-            </div>
-            <HyroxRadarChart scores={scores} />
-            
-            {/* TAREFA 2: Explanation table */}
-            <HyroxRadarExplanation 
-              scores={scores}
-              division={division}
-              gender={gender}
-            />
-
-            {/* TAREFA 4: Level benchmark comparison */}
-            <div className="mt-4">
-              <LevelBenchmarkComparison
-                hyroxResultId={resultId}
-                metricScores={scores}
+              
+              {/* Radar Chart - main visual focus */}
+              <HyroxRadarChart scores={scores} />
+              
+              {/* Explanation table */}
+              <HyroxRadarExplanation 
+                scores={scores}
                 division={division}
                 gender={gender}
               />
-            </div>
-          </motion.div>
+
+              {/* Level benchmark comparison */}
+              <div className="mt-4">
+                <LevelBenchmarkComparison
+                  hyroxResultId={resultId}
+                  metricScores={scores}
+                  division={division}
+                  gender={gender}
+                />
+              </div>
+            </motion.div>
         ) : analysisState.status === 'error' ? (
           /* Error state with retry option */
           <motion.div
@@ -345,9 +370,10 @@ export function HyroxAnalysisCard({
                 </p>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </TooltipProvider>
   );
 }

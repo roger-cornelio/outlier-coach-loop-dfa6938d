@@ -14,13 +14,13 @@ import {
  * Human-readable labels for HYROX metrics
  */
 const METRIC_LABELS: Record<string, string> = {
-  run_avg: 'Corrida (média)',
-  roxzone: 'Roxzone',
+  run_avg: 'Run (avg)',
+  roxzone: 'Roxzone Time',
   ski: 'Ski Erg',
   sled_push: 'Sled Push',
   sled_pull: 'Sled Pull',
   bbj: 'Burpee Broad Jump',
-  row: 'Remo',
+  row: 'Row',
   farmers: 'Farmers Carry',
   sandbag: 'Sandbag Lunges',
   wallballs: 'Wall Balls'
