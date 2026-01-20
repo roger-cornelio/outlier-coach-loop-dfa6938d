@@ -63,78 +63,86 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert at reading HYROX competition results from screenshots (Workout Summary).
+            content: `You are an expert OCR system specialized in reading HYROX competition "Workout Summary" screenshots.
 
-Your task is to extract:
-1. The FINAL/TOTAL TIME (most important)
-2. The race category (OPEN or PRO)
-3. Individual station times (splits) if visible
+CRITICAL: You MUST extract individual station times from the workout summary table/list.
 
-HYROX has 8 running segments and 8 workout stations in this order:
-1. Run 1 → Ski Erg (1000m)
-2. Run 2 → Sled Push (50m)
-3. Run 3 → Sled Pull (50m)
-4. Run 4 → Burpee Broad Jump (80m)
-5. Run 5 → Rowing (1000m)
-6. Run 6 → Farmers Carry (200m)
-7. Run 7 → Sandbag Lunges (100m)
-8. Run 8 → Wall Balls (100 reps)
+HYROX WORKOUT SUMMARY FORMAT:
+The screenshot shows a table with rows like:
+- "1000m SkiErg" followed by a time (e.g., "4:32")
+- "50m Sled Push" followed by a time
+- "50m Sled Pull" followed by a time
+- "80m Burpee Broad Jump" followed by a time
+- "1000m Row" followed by a time
+- "200m Farmers Carry" followed by a time
+- "100m Sandbag Lunges" followed by a time
+- "Wall Balls" or "75/100 Wall Balls" followed by a time
+- "Roxzone Time" or "Roxzone" followed by a time (transition time)
+- "Run Total" or "Running" followed by a time (total running time, NOT individual runs)
+- "Final Time" or "Finish Time" at the top/bottom
 
-CRITICAL EXTRACTION RULES:
-1. "Run Total" or "Running" - This is the TOTAL running time (sum of 8 runs). Extract as run_total_sec.
-   DO NOT extract individual Running 1-8 times, only the "Run Total" or "Running" aggregate.
-   
-2. "Roxzone Time" or "Roxzone" - This is the TOTAL transition time between stations. Extract as roxzone_sec.
-   This is the official "Roxzone Time" shown in HYROX workout summaries.
+EXTRACTION RULES:
+1. SCAN the entire image for the workout summary section
+2. For EACH station, find the TIME value (format: MM:SS or M:SS)
+3. CONVERT all times to SECONDS: "4:32" = 4*60 + 32 = 272 seconds
+4. For "Run Total"/"Running": this is the SUM of all 8 running segments, extract as run_total_sec
+5. For "Roxzone Time"/"Roxzone": extract as roxzone_sec
 
-3. Station times (SkiErg, Sled Push, Sled Pull, Burpee Broad Jump, Row, Farmers Carry, Sandbag Lunges, Wall Balls)
-   - Extract each station's time individually in seconds.
+STATION MAPPING (be flexible with names):
+- "1000m SkiErg" OR "SkiErg" OR "Ski Erg" → ski_sec
+- "50m Sled Push" OR "Sled Push" → sled_push_sec
+- "50m Sled Pull" OR "Sled Pull" → sled_pull_sec
+- "80m Burpee Broad Jump" OR "Burpee Broad Jump" OR "BBJ" → bbj_sec
+- "1000m Row" OR "Row" OR "Rowing" → row_sec
+- "200m Farmers Carry" OR "Farmers Carry" OR "Farmer Carry" → farmers_sec
+- "100m Sandbag Lunges" OR "Sandbag Lunges" OR "Lunges" → sandbag_sec
+- "Wall Balls" OR "75 Wall Balls" OR "100 Wall Balls" → wallballs_sec
 
-Look for these labels in the screenshot:
-- "Final Time", "Finish Time", "Total Time", "Tempo Final", "Tempo Total"
-- "Run Total" or "Running" (aggregate running time)
-- "Roxzone Time" or "Roxzone" (transition time)
-- Station names with their times
+IGNORE: Individual "Running 1", "Running 2", etc. - only extract "Run Total"/"Running" aggregate.
+IGNORE: "Place" or ranking columns.
 
-Return ONLY the extracted data as a JSON object.
-Time values should be in SECONDS (convert from MM:SS or HH:MM:SS format).`
+YOU MUST return extracted times. If you see a workout summary with times, extract them!`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Extract ALL available times from this HYROX Workout Summary screenshot.
+                text: `TASK: Extract ALL times from this HYROX Workout Summary screenshot.
 
-Return JSON with format:
+STEP 1: Find the "Workout Summary" or results table in the image.
+STEP 2: For EACH row, identify the station name and its time value.
+STEP 3: Convert MM:SS to seconds (e.g., "4:32" = 272, "12:45" = 765).
+
+EXPECTED OUTPUT FORMAT:
 {
-  "time_in_seconds": number (TOTAL/FINAL time),
+  "time_in_seconds": <FINAL/TOTAL time in seconds>,
   "formatted_time": "HH:MM:SS",
   "confidence": "high"|"medium"|"low",
-  "event_name": "string or null",
+  "event_name": "<event name or null>",
   "event_date": "YYYY-MM-DD or null",
   "race_category": "OPEN"|"PRO"|null,
   "splits": {
-    "run_total_sec": number or null (TOTAL running time from "Run Total" or "Running" field),
-    "roxzone_sec": number or null (from "Roxzone Time" field),
-    "ski_sec": number or null (Ski Erg station time),
-    "sled_push_sec": number or null,
-    "sled_pull_sec": number or null,
-    "bbj_sec": number or null (Burpee Broad Jump),
-    "row_sec": number or null (Rowing station),
-    "farmers_sec": number or null (Farmers Carry),
-    "sandbag_sec": number or null (Sandbag Lunges),
-    "wallballs_sec": number or null (Wall Balls)
+    "run_total_sec": <from "Run Total" or "Running" row - this is aggregate, NOT individual runs>,
+    "roxzone_sec": <from "Roxzone Time" or "Roxzone" row>,
+    "ski_sec": <from "1000m SkiErg" or "SkiErg" row>,
+    "sled_push_sec": <from "50m Sled Push" or "Sled Push" row>,
+    "sled_pull_sec": <from "50m Sled Pull" or "Sled Pull" row>,
+    "bbj_sec": <from "80m Burpee Broad Jump" or "Burpee Broad Jump" row>,
+    "row_sec": <from "1000m Row" or "Row" row>,
+    "farmers_sec": <from "200m Farmers Carry" or "Farmers Carry" row>,
+    "sandbag_sec": <from "100m Sandbag Lunges" or "Sandbag Lunges" row>,
+    "wallballs_sec": <from "Wall Balls" row>
   },
-  "splits_confidence": "high"|"medium"|"low"|"none" (none if no splits found)
+  "splits_confidence": "high"|"medium"|"low"
 }
 
-CRITICAL:
-- Extract "Run Total" or "Running" as run_total_sec (NOT individual run segments)
-- Extract "Roxzone Time" as roxzone_sec (this is the transition time)
-- Convert all times to seconds (e.g., "4:32" = 272 seconds, "1:15:30" = 4530 seconds)
-- Only include splits you can clearly see in the screenshot
-- Set splits to null if not visible or unclear`
+IMPORTANT CONVERSION EXAMPLES:
+- "4:32" → 4*60 + 32 = 272 seconds
+- "1:15:30" → 1*3600 + 15*60 + 30 = 4530 seconds
+- "12:45" → 12*60 + 45 = 765 seconds
+
+If you can see station times in the image, you MUST extract them. Do NOT return null for visible times.`
               },
               {
                 type: "image_url",
