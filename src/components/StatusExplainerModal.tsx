@@ -294,48 +294,86 @@ export function StatusExplainerModal() {
                 <AccordionContent className="pb-6">
                   <div className="space-y-4 pl-2">
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      A régua mede sua <strong>consistência e domínio</strong>. 
-                      Ela sobe com treinos registrados e benchmarks OUTLIER.
+                      A régua sobe com <strong>treinos registrados</strong> + <strong>benchmarks OUTLIER</strong> (testes internos).
                     </p>
                     
-                    {currentLevelRule && (
-                      <div className={`p-4 rounded-xl border ${LEVEL_BG_COLORS[currentLevelKey]}`}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Target className={`w-4 h-4 ${LEVEL_COLORS[currentLevelKey]}`} />
-                          <span className={`font-semibold ${LEVEL_COLORS[currentLevelKey]}`}>
-                            Requisitos para {currentLevelRule.label}
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2">
-                              <Dumbbell className="w-4 h-4 text-muted-foreground" />
-                              Treinos
-                            </span>
-                            <span className="font-semibold">
-                              {currentLevelRule.training_min_sessions} nos últimos {currentLevelRule.training_window_days} dias
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2">
-                              <Target className="w-4 h-4 text-muted-foreground" />
-                              Benchmarks OUTLIER
-                            </span>
-                            <span className="font-semibold">
-                              {currentLevelRule.benchmarks_required} concluídos
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm mb-4">
                       <p className="text-amber-300">
-                        ⚠️ <strong>Importante:</strong> Benchmarks são testes internos do OUTLIER 
-                        (treinos mensais de teste). <strong>Não são a prova oficial!</strong>
+                        ⚠️ Benchmarks <strong>não são a prova oficial</strong>.
                       </p>
+                    </div>
+                    
+                    {/* All levels - current level expanded, others collapsible */}
+                    <div className="space-y-2">
+                      <Accordion type="single" collapsible defaultValue={currentLevelKey} className="space-y-2">
+                        {levelRules.map((rule) => {
+                          const isCurrentLevel = rule.level_key === currentLevelKey;
+                          const levelColor = LEVEL_COLORS[rule.level_key] || 'text-muted-foreground';
+                          const levelBg = LEVEL_BG_COLORS[rule.level_key] || 'bg-secondary/30 border-border/50';
+                          
+                          return (
+                            <AccordionItem 
+                              key={rule.level_key} 
+                              value={rule.level_key}
+                              className={`border rounded-xl overflow-hidden ${levelBg} ${isCurrentLevel ? 'ring-2 ring-primary/50' : ''}`}
+                            >
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                                <div className="flex items-center gap-3 w-full">
+                                  <Target className={`w-4 h-4 ${levelColor}`} />
+                                  <span className={`font-semibold ${levelColor}`}>
+                                    {rule.label}
+                                  </span>
+                                  {isCurrentLevel && (
+                                    <Badge variant="outline" className="text-[10px] ml-auto mr-2 bg-primary/10 border-primary/30">
+                                      Seu nível
+                                    </Badge>
+                                  )}
+                                  {rule.official_race_required && (
+                                    <Badge variant="outline" className="text-[10px] bg-purple-500/10 border-purple-500/30 text-purple-300">
+                                      Prova obrigatória
+                                    </Badge>
+                                  )}
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="space-y-3 pt-2 border-t border-border/30">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-muted-foreground">
+                                      <Dumbbell className="w-4 h-4" />
+                                      Treinos
+                                    </span>
+                                    <span className="font-semibold">
+                                      {rule.training_min_sessions} <span className="text-xs text-muted-foreground font-normal">em {rule.training_window_days} dias</span>
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-muted-foreground">
+                                      <Target className="w-4 h-4" />
+                                      Benchmarks
+                                    </span>
+                                    <span className="font-semibold">
+                                      {rule.benchmarks_required}
+                                    </span>
+                                  </div>
+                                  
+                                  {rule.official_race_required && (
+                                    <div className="flex items-center justify-between text-sm pt-2 border-t border-border/20">
+                                      <span className="flex items-center gap-2 text-muted-foreground">
+                                        <Trophy className="w-4 h-4" />
+                                        Sem prova
+                                      </span>
+                                      <span className="text-amber-400 font-semibold">
+                                        Cap em {rule.cap_without_official_race_percent}%
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
                     </div>
                     
                     <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
