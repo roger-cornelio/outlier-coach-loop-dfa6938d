@@ -674,6 +674,127 @@ export type Database = {
           },
         ]
       }
+      status_config: {
+        Row: {
+          created_at: string
+          downgrade_elite_to_level: string
+          elite_recency_days: number
+          elite_requires_recency: boolean
+          id: number
+          progress_model: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          downgrade_elite_to_level?: string
+          elite_recency_days?: number
+          elite_requires_recency?: boolean
+          id?: number
+          progress_model?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          downgrade_elite_to_level?: string
+          elite_recency_days?: number
+          elite_requires_recency?: boolean
+          id?: number
+          progress_model?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_config_downgrade_elite_to_level_fkey"
+            columns: ["downgrade_elite_to_level"]
+            isOneToOne: false
+            referencedRelation: "status_level_rules"
+            referencedColumns: ["level_key"]
+          },
+        ]
+      }
+      status_jump_rules: {
+        Row: {
+          created_at: string
+          is_enabled: boolean
+          jump_key: string
+          race_category: string
+          rank_scope: string
+          rank_top_n: number
+          target_level: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_enabled?: boolean
+          jump_key: string
+          race_category: string
+          rank_scope?: string
+          rank_top_n: number
+          target_level: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_enabled?: boolean
+          jump_key?: string
+          race_category?: string
+          rank_scope?: string
+          rank_top_n?: number
+          target_level?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_jump_rules_target_level_fkey"
+            columns: ["target_level"]
+            isOneToOne: false
+            referencedRelation: "status_level_rules"
+            referencedColumns: ["level_key"]
+          },
+        ]
+      }
+      status_level_rules: {
+        Row: {
+          benchmarks_required: number
+          benchmarks_source: string
+          cap_without_official_race_percent: number
+          created_at: string
+          label: string
+          level_key: string
+          level_order: number
+          official_race_required: boolean
+          training_min_sessions: number
+          training_window_days: number
+          updated_at: string
+        }
+        Insert: {
+          benchmarks_required?: number
+          benchmarks_source?: string
+          cap_without_official_race_percent?: number
+          created_at?: string
+          label: string
+          level_key: string
+          level_order: number
+          official_race_required?: boolean
+          training_min_sessions?: number
+          training_window_days?: number
+          updated_at?: string
+        }
+        Update: {
+          benchmarks_required?: number
+          benchmarks_source?: string
+          cap_without_official_race_percent?: number
+          created_at?: string
+          label?: string
+          level_key?: string
+          level_order?: number
+          official_race_required?: boolean
+          training_min_sessions?: number
+          training_window_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_params: {
         Row: {
           category: string
