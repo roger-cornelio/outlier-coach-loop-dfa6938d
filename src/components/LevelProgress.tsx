@@ -4,6 +4,7 @@ import {
   TrendingUp, Target, Sparkles, Shield, Swords
 } from 'lucide-react';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
+import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
@@ -177,9 +178,10 @@ export function LevelProgress() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2"
+                className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2 flex items-center gap-2"
               >
                 Seu Status
+                <StatusExplainerModal />
               </motion.p>
               <motion.h1
                 initial={{ opacity: 0, x: -20 }}

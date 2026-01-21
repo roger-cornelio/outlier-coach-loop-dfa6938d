@@ -13,6 +13,7 @@ import {
 } from '@/utils/athleteStatusSystem';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 
 // Gradient colors based on status
 const STATUS_GRADIENTS: Record<AthleteStatus, string> = {
@@ -74,9 +75,12 @@ export function StatusDisplay() {
               <Trophy className="w-3.5 h-3.5 text-amber-500" />
             )}
           </div>
-          <h2 className={`font-display text-2xl bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
-            {LEVEL_NAMES[statusData.status]}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className={`font-display text-2xl bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+              {LEVEL_NAMES[statusData.status]}
+            </h2>
+            <StatusExplainerModal />
+          </div>
         </div>
         
         {/* Outlier Score Display */}
