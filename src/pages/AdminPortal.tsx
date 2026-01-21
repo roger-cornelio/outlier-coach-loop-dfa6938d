@@ -9,6 +9,7 @@ import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
 import { CoachWorkoutManager } from "@/components/CoachWorkoutManager";
 import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
+import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -25,11 +26,12 @@ import {
   Activity,
   ArrowLeft,
   Dumbbell,
-  Crown
+  Crown,
+  Medal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "masterBenchmarks";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "masterBenchmarks" | "athleteStatus";
 
 interface NavItem {
   id: AdminView;
@@ -68,6 +70,12 @@ const navItems: NavItem[] = [
     label: "Benchmarks", 
     icon: <Crown className="w-5 h-5" />,
     description: "Sistema de derivação"
+  },
+  { 
+    id: "athleteStatus", 
+    label: "Status Atleta", 
+    icon: <Medal className="w-5 h-5" />,
+    description: "Regras de nível"
   },
   { 
     id: "allowlist", 
@@ -176,6 +184,8 @@ const AdminPortal = () => {
             <BenchmarkOverridesEditor />
           </div>
         );
+      case "athleteStatus":
+        return <AthleteStatusAdmin />;
       case "allowlist":
       default:
         return <AdminAllowlistManager />;
