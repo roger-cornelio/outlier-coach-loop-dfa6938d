@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
@@ -59,89 +59,66 @@ const LEVEL_BG: Record<ExtendedLevelKey, string> = {
   ELITE: 'bg-yellow-500/10 border-yellow-500/20',
 };
 
-const LEVELS_ORDER: ExtendedLevelKey[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'OPEN', 'PRO', 'ELITE'];
-
 export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
   const [open, setOpen] = useState(false);
   
-  const { currentLevel, currentLevelIndex, allLevels, loading } = journeyProgress;
+  const { 
+    targetLevelKey, 
+    targetLevelLabel, 
+    targetLevel, 
+    isAtTop, 
+    hasOfficialRace, 
+    isCapped, 
+    loading 
+  } = journeyProgress;
   
-  const isAtTop = currentLevelIndex >= 5; // ELITE is the top
-  const nextLevelKey = isAtTop ? null : LEVELS_ORDER[currentLevelIndex + 1];
-  const nextLevelRule = nextLevelKey ? allLevels.find((l: any) => l.level_key === nextLevelKey) : null;
+  if (loading) return null;
   
-  // Calculate what's needed for next level
-  const nextLevelAnalysis = useMemo(() => {
-    if (!nextLevelRule || isAtTop) return null;
-    
-    const trainingNeeded = nextLevelRule.training_min_sessions;
-    const trainingCurrent = currentLevel.trainingSessions;
-    const trainingMissing = Math.max(0, trainingNeeded - trainingCurrent);
-    const trainingProgress = Math.min(100, (trainingCurrent / trainingNeeded) * 100);
-    
-    const benchmarksNeeded = nextLevelRule.benchmarks_required;
-    const benchmarksCurrent = currentLevel.benchmarksCompleted;
-    const benchmarksMissing = Math.max(0, benchmarksNeeded - benchmarksCurrent);
-    const benchmarkProgress = Math.min(100, (benchmarksCurrent / benchmarksNeeded) * 100);
-    
-    const requiresRace = nextLevelRule.official_race_required;
-    const hasRace = currentLevel.hasOfficialRace;
-    
-    // Determine status
-    let status: 'close' | 'blocked' | 'working';
-    let statusText: string;
-    let statusColor: string;
-    
-    if (requiresRace && !hasRace) {
-      status = 'blocked';
-      statusText = 'Bloqueado por prova';
-      statusColor = 'text-amber-400';
-    } else if (trainingMissing <= 10 && benchmarksMissing <= 2) {
-      status = 'close';
-      statusText = 'Falta pouco!';
-      statusColor = 'text-green-400';
-    } else {
-      status = 'working';
-      statusText = 'Em progresso';
-      statusColor = 'text-blue-400';
-    }
-    
-    // Generate summary text
-    const summaryParts: string[] = [];
+  // Calculate what's missing
+  const trainingMissing = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
+  const benchmarksMissing = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
+  const requiresRace = targetLevel.officialRaceRequired;
+  
+  // Determine status
+  let status: 'close' | 'blocked' | 'working' | 'top';
+  let statusText: string;
+  let statusColor: string;
+  
+  if (isAtTop) {
+    status = 'top';
+    statusText = 'Topo alcançado!';
+    statusColor = 'text-yellow-300';
+  } else if (requiresRace && !hasOfficialRace) {
+    status = 'blocked';
+    statusText = 'Bloqueado por prova';
+    statusColor = 'text-amber-400';
+  } else if (trainingMissing <= 10 && benchmarksMissing <= 2) {
+    status = 'close';
+    statusText = 'Falta pouco!';
+    statusColor = 'text-green-400';
+  } else {
+    status = 'working';
+    statusText = 'Em progresso';
+    statusColor = 'text-blue-400';
+  }
+  
+  // Generate summary text
+  const summaryParts: string[] = [];
+  if (!isAtTop) {
     if (trainingMissing > 0) {
       summaryParts.push(`${trainingMissing} treino${trainingMissing > 1 ? 's' : ''}`);
     }
     if (benchmarksMissing > 0) {
       summaryParts.push(`${benchmarksMissing} benchmark${benchmarksMissing > 1 ? 's' : ''}`);
     }
-    if (requiresRace && !hasRace) {
+    if (requiresRace && !hasOfficialRace) {
       summaryParts.push('prova oficial');
     }
-    
-    const summaryText = summaryParts.length > 0 
-      ? `Falta${summaryParts.length > 1 || (trainingMissing + benchmarksMissing) > 1 ? 'm' : ''}: ${summaryParts.join(', ')}`
-      : 'Todos os requisitos cumpridos!';
-    
-    return {
-      trainingNeeded,
-      trainingCurrent,
-      trainingMissing,
-      trainingProgress,
-      trainingWindow: nextLevelRule.training_window_days,
-      benchmarksNeeded,
-      benchmarksCurrent,
-      benchmarksMissing,
-      benchmarkProgress,
-      requiresRace,
-      hasRace,
-      status,
-      statusText,
-      statusColor,
-      summaryText,
-    };
-  }, [nextLevelRule, currentLevel, isAtTop]);
+  }
   
-  if (loading) return null;
+  const summaryText = summaryParts.length > 0 
+    ? `Falta${summaryParts.length > 1 || (trainingMissing + benchmarksMissing) > 1 ? 'm' : ''}: ${summaryParts.join(', ')}`
+    : isAtTop ? 'Mantenha a consistência!' : 'Todos os requisitos cumpridos!';
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -151,9 +128,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
           className={`w-full gap-2 border-2 border-dashed ${
             isAtTop 
               ? 'border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10' 
-              : nextLevelKey 
-                ? `${LEVEL_BG[nextLevelKey]} hover:bg-opacity-20`
-                : 'border-border/50'
+              : `${LEVEL_BG[targetLevelKey]} hover:bg-opacity-20`
           }`}
         >
           {isAtTop ? (
@@ -165,11 +140,9 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
             <>
               <ArrowRight className="w-4 h-4" />
               <span>Próximo nível</span>
-              {nextLevelKey && (
-                <Badge variant="outline" className={`ml-auto ${LEVEL_TEXT_COLORS[nextLevelKey]}`}>
-                  {LEVEL_LABELS[nextLevelKey]}
-                </Badge>
-              )}
+              <Badge variant="outline" className={`ml-auto ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
+                {targetLevelLabel}
+              </Badge>
             </>
           )}
         </Button>
@@ -187,15 +160,15 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                   Topo Alcançado!
                 </span>
               </>
-            ) : nextLevelKey && (
+            ) : (
               <>
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${LEVEL_GRADIENTS[nextLevelKey]} flex items-center justify-center`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${LEVEL_GRADIENTS[targetLevelKey]} flex items-center justify-center`}>
                   <Target className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">Próximo nível</span>
-                  <p className={`font-semibold ${LEVEL_TEXT_COLORS[nextLevelKey]}`}>
-                    {LEVEL_LABELS[nextLevelKey]}
+                  <p className={`font-semibold ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
+                    {targetLevelLabel}
                   </p>
                 </div>
               </>
@@ -246,31 +219,31 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                 </div>
               </div>
             </div>
-          ) : nextLevelAnalysis && nextLevelKey && (
+          ) : (
             // Next level requirements
             <div className="space-y-5">
               {/* Status Badge */}
               <div className={`p-4 rounded-xl border ${
-                nextLevelAnalysis.status === 'blocked' 
+                status === 'blocked' 
                   ? 'bg-amber-500/10 border-amber-500/20'
-                  : nextLevelAnalysis.status === 'close'
+                  : status === 'close'
                     ? 'bg-green-500/10 border-green-500/20'
                     : 'bg-blue-500/10 border-blue-500/20'
               }`}>
                 <div className="flex items-center gap-3">
-                  {nextLevelAnalysis.status === 'blocked' ? (
+                  {status === 'blocked' ? (
                     <Lock className="w-5 h-5 text-amber-400" />
-                  ) : nextLevelAnalysis.status === 'close' ? (
+                  ) : status === 'close' ? (
                     <Sparkles className="w-5 h-5 text-green-400" />
                   ) : (
                     <Target className="w-5 h-5 text-blue-400" />
                   )}
                   <div>
-                    <p className={`font-semibold ${nextLevelAnalysis.statusColor}`}>
-                      {nextLevelAnalysis.statusText}
+                    <p className={`font-semibold ${statusColor}`}>
+                      {statusText}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {nextLevelAnalysis.summaryText}
+                      {summaryText}
                     </p>
                   </div>
                 </div>
@@ -279,7 +252,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
               {/* Checklist */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Checklist
+                  Requisitos para {targetLevelLabel}
                 </h4>
                 
                 {/* Training */}
@@ -290,17 +263,17 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       Treinos
                     </span>
                     <span className={`text-sm font-bold ${
-                      nextLevelAnalysis.trainingMissing === 0 ? 'text-green-400' : ''
+                      trainingMissing === 0 ? 'text-green-400' : ''
                     }`}>
-                      {nextLevelAnalysis.trainingCurrent} / {nextLevelAnalysis.trainingNeeded}
+                      {targetLevel.trainingSessions} / {targetLevel.trainingRequired}
                     </span>
                   </div>
-                  <Progress value={nextLevelAnalysis.trainingProgress} className="h-2" />
+                  <Progress value={targetLevel.trainingProgress * 100} className="h-2" />
                   <p className="text-xs text-muted-foreground mt-2">
-                    nos últimos {nextLevelAnalysis.trainingWindow} dias
-                    {nextLevelAnalysis.trainingMissing > 0 && (
+                    nos últimos {targetLevel.trainingWindowDays} dias
+                    {trainingMissing > 0 && (
                       <span className="text-amber-400 ml-2">
-                        (faltam {nextLevelAnalysis.trainingMissing})
+                        (faltam {trainingMissing})
                       </span>
                     )}
                   </p>
@@ -314,24 +287,24 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       Benchmarks OUTLIER
                     </span>
                     <span className={`text-sm font-bold ${
-                      nextLevelAnalysis.benchmarksMissing === 0 ? 'text-green-400' : ''
+                      benchmarksMissing === 0 ? 'text-green-400' : ''
                     }`}>
-                      {nextLevelAnalysis.benchmarksCurrent} / {nextLevelAnalysis.benchmarksNeeded}
+                      {targetLevel.benchmarksCompleted} / {targetLevel.benchmarksRequired}
                     </span>
                   </div>
-                  <Progress value={nextLevelAnalysis.benchmarkProgress} className="h-2" />
-                  {nextLevelAnalysis.benchmarksMissing > 0 && (
+                  <Progress value={targetLevel.benchmarkProgress * 100} className="h-2" />
+                  {benchmarksMissing > 0 && (
                     <p className="text-xs text-amber-400 mt-2">
-                      faltam {nextLevelAnalysis.benchmarksMissing}
+                      faltam {benchmarksMissing}
                     </p>
                   )}
                 </div>
                 
                 {/* Official Race */}
                 <div className={`p-4 rounded-xl border ${
-                  !nextLevelAnalysis.requiresRace
+                  !requiresRace
                     ? 'bg-secondary/30 border-border/50'
-                    : nextLevelAnalysis.hasRace
+                    : hasOfficialRace
                       ? 'bg-green-500/10 border-green-500/20'
                       : 'bg-amber-500/10 border-amber-500/20'
                 }`}>
@@ -340,11 +313,11 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       <Trophy className="w-4 h-4" />
                       Prova oficial
                     </span>
-                    {!nextLevelAnalysis.requiresRace ? (
+                    {!requiresRace ? (
                       <span className="text-sm text-muted-foreground">
                         Não obrigatória
                       </span>
-                    ) : nextLevelAnalysis.hasRace ? (
+                    ) : hasOfficialRace ? (
                       <span className="flex items-center gap-1 text-green-400 text-sm font-semibold">
                         <CheckCircle2 className="w-4 h-4" />
                         OK
@@ -356,16 +329,16 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       </span>
                     )}
                   </div>
-                  {nextLevelAnalysis.requiresRace && !nextLevelAnalysis.hasRace && (
+                  {requiresRace && !hasOfficialRace && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      Para atingir {LEVEL_LABELS[nextLevelKey]}, você precisa de uma prova oficial válida.
+                      Para atingir {targetLevelLabel}, você precisa de uma prova oficial válida.
                     </p>
                   )}
                 </div>
               </div>
               
               {/* Contextual tip */}
-              {nextLevelAnalysis.status === 'blocked' && (
+              {status === 'blocked' && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
@@ -376,12 +349,23 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                 </div>
               )}
               
-              {nextLevelAnalysis.status === 'close' && (
+              {status === 'close' && (
                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-green-400 mt-0.5" />
                     <p className="text-sm text-green-300">
                       <strong>Você está quase lá!</strong> Continue treinando para subir de nível.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {isCapped && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-400 mt-0.5" />
+                    <p className="text-sm text-amber-300">
+                      <strong>Progresso limitado</strong> a {journeyProgress.capPercent}% sem prova oficial.
                     </p>
                   </div>
                 </div>

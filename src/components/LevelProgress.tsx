@@ -163,19 +163,23 @@ function LevelNodeSheet({
   isOpen, 
   onClose, 
   allLevels,
-  currentProgress 
+  journeyProgress 
 }: { 
   levelKey: ExtendedLevelKey;
   isOpen: boolean;
   onClose: () => void;
   allLevels: any[];
-  currentProgress: any;
+  journeyProgress: any;
 }) {
   const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
   const config = LEVEL_CONFIG[levelKey];
-  const isCurrent = currentProgress.currentLevel.levelKey === levelKey;
+  const isCurrent = journeyProgress.currentLevelKey === levelKey;
+  const isTarget = journeyProgress.targetLevelKey === levelKey;
   
   if (!levelRule) return null;
+  
+  // Use target level data when viewing target level
+  const progressData = isTarget ? journeyProgress.targetLevel : null;
   
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -191,6 +195,11 @@ function LevelNodeSheet({
             {isCurrent && (
               <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
                 Seu nível
+              </span>
+            )}
+            {isTarget && !isCurrent && (
+              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                Objetivo
               </span>
             )}
           </SheetTitle>
@@ -209,11 +218,11 @@ function LevelNodeSheet({
                     Treinos
                   </span>
                   <span className="text-sm font-semibold">
-                    {isCurrent ? `${currentProgress.currentLevel.trainingSessions}/` : ''}{levelRule.training_min_sessions}
+                    {progressData ? `${progressData.trainingSessions}/` : ''}{levelRule.training_min_sessions}
                   </span>
                 </div>
-                {isCurrent && (
-                  <Progress value={currentProgress.currentLevel.trainingProgress * 100} className="h-1.5" />
+                {progressData && (
+                  <Progress value={progressData.trainingProgress * 100} className="h-1.5" />
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
                   nos últimos {levelRule.training_window_days} dias
@@ -227,17 +236,17 @@ function LevelNodeSheet({
                     Benchmarks OUTLIER
                   </span>
                   <span className="text-sm font-semibold">
-                    {isCurrent ? `${currentProgress.currentLevel.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
+                    {progressData ? `${progressData.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
                   </span>
                 </div>
-                {isCurrent && (
-                  <Progress value={currentProgress.currentLevel.benchmarkProgress * 100} className="h-1.5" />
+                {progressData && (
+                  <Progress value={progressData.benchmarkProgress * 100} className="h-1.5" />
                 )}
               </div>
               
               {levelRule.official_race_required && (
                 <div className={`p-3 rounded-xl flex items-center justify-between ${
-                  isCurrent && currentProgress.currentLevel.hasOfficialRace
+                  journeyProgress.hasOfficialRace
                     ? 'bg-green-500/10 border border-green-500/20'
                     : 'bg-amber-500/10 border border-amber-500/20'
                 }`}>
@@ -245,20 +254,14 @@ function LevelNodeSheet({
                     <Trophy className="w-4 h-4" />
                     Prova oficial
                   </span>
-                  {isCurrent ? (
-                    currentProgress.currentLevel.hasOfficialRace ? (
-                      <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        OK
-                      </span>
-                    ) : (
-                      <span className="text-amber-400 text-sm font-semibold">
-                        Pendente
-                      </span>
-                    )
+                  {journeyProgress.hasOfficialRace ? (
+                    <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      OK
+                    </span>
                   ) : (
-                    <span className="text-muted-foreground text-sm">
-                      Obrigatória
+                    <span className="text-amber-400 text-sm font-semibold">
+                      Pendente
                     </span>
                   )}
                 </div>
@@ -267,7 +270,7 @@ function LevelNodeSheet({
           </div>
           
           {/* Cap warning */}
-          {isCurrent && currentProgress.isCapped && (
+          {isTarget && journeyProgress.isCapped && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
@@ -305,11 +308,14 @@ export function LevelProgress() {
   } = athleteStatus;
   
   // Map current status to extended level key for visual config
-  const currentLevelKey = journeyProgress.currentLevel.levelKey;
+  const currentLevelKey = journeyProgress.currentLevelKey;
+  const targetLevelKey = journeyProgress.targetLevelKey;
   const currentConfig = LEVEL_CONFIG[currentLevelKey];
+  const targetConfig = LEVEL_CONFIG[targetLevelKey];
   const isElite = currentLevelKey === 'ELITE';
   const isPro = currentLevelKey === 'PRO';
   const isHyrox = currentLevelKey === 'OPEN' || isPro || isElite;
+  const isAtTop = journeyProgress.isAtTop;
 
   // Calculate fill percentage for the continuous ruler
   const fillPercentage = journeyProgress.loading 
@@ -389,7 +395,7 @@ export function LevelProgress() {
             </motion.div>
           </div>
 
-          {/* Score Section */}
+          {/* Score Section - Progress towards TARGET level */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -398,12 +404,18 @@ export function LevelProgress() {
           >
             <div className="flex items-baseline gap-2">
               <span className={`font-display text-7xl md:text-8xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent`}>
-                {journeyProgress.progressInLevel}
+                {journeyProgress.progressToTarget}
               </span>
               <span className="text-2xl text-muted-foreground">/100</span>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              progresso no nível
+              {isAtTop ? (
+                'manutenção do status'
+              ) : (
+                <>
+                  rumo ao <span className={`font-semibold ${LEVEL_CONFIG[targetLevelKey].textGradient.includes('yellow') ? 'text-yellow-300' : LEVEL_CONFIG[targetLevelKey].textGradient.includes('amber') ? 'text-amber-400' : LEVEL_CONFIG[targetLevelKey].textGradient.includes('purple') ? 'text-purple-400' : 'text-green-400'}`}>{journeyProgress.targetLevelLabel}</span>
+                </>
+              )}
               {journeyProgress.isCapped && (
                 <span className="text-amber-400 ml-2">
                   (cap: {journeyProgress.capPercent}%)
@@ -506,7 +518,8 @@ export function LevelProgress() {
             const requiresRace = levelRule?.official_race_required || false;
             
             // Check if this level requires race but athlete doesn't have one
-            const isRaceLocked = requiresRace && !journeyProgress.currentLevel.hasOfficialRace && index > journeyProgress.currentLevelIndex;
+            const isRaceLocked = requiresRace && !journeyProgress.hasOfficialRace && index > journeyProgress.currentLevelIndex;
+            const isTarget = index === journeyProgress.targetLevelIndex;
 
             return (
               <motion.div
@@ -553,12 +566,12 @@ export function LevelProgress() {
                     />
                   )}
                   
-                  {/* Progress indicator within current level */}
-                  {isCurrent && (
+                  {/* Progress indicator within current level (towards next) */}
+                  {isCurrent && !isAtTop && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-black/30 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${journeyProgress.progressInLevel}%` }}
+                        animate={{ width: `${journeyProgress.progressToTarget}%` }}
                         transition={{ duration: 1, delay: 1 }}
                         className={`h-full bg-gradient-to-r ${config.gradient}`}
                       />
@@ -584,7 +597,7 @@ export function LevelProgress() {
         </div>
         
         {/* Race requirement notice */}
-        {!journeyProgress.currentLevel.hasOfficialRace && journeyProgress.currentLevelIndex < 3 && (
+        {!journeyProgress.hasOfficialRace && journeyProgress.currentLevelIndex < 3 && (
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -602,7 +615,7 @@ export function LevelProgress() {
           isOpen={!!selectedLevel}
           onClose={() => setSelectedLevel(null)}
           allLevels={journeyProgress.allLevels}
-          currentProgress={journeyProgress}
+          journeyProgress={journeyProgress}
         />
       )}
 
