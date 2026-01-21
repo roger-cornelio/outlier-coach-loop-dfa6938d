@@ -91,6 +91,174 @@ export type Database = {
           },
         ]
       }
+      benchmark_deltas: {
+        Row: {
+          bbj_delta: number
+          created_at: string
+          delta_key: string
+          delta_type: string
+          farmers_delta: number
+          id: string
+          is_active: boolean
+          row_delta: number
+          roxzone_delta: number
+          run_avg_delta: number
+          sandbag_delta: number
+          ski_delta: number
+          sled_pull_delta: number
+          sled_push_delta: number
+          updated_at: string
+          updated_by: string | null
+          version: string
+          wallballs_delta: number
+        }
+        Insert: {
+          bbj_delta?: number
+          created_at?: string
+          delta_key: string
+          delta_type: string
+          farmers_delta?: number
+          id?: string
+          is_active?: boolean
+          row_delta?: number
+          roxzone_delta?: number
+          run_avg_delta?: number
+          sandbag_delta?: number
+          ski_delta?: number
+          sled_pull_delta?: number
+          sled_push_delta?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+          wallballs_delta?: number
+        }
+        Update: {
+          bbj_delta?: number
+          created_at?: string
+          delta_key?: string
+          delta_type?: string
+          farmers_delta?: number
+          id?: string
+          is_active?: boolean
+          row_delta?: number
+          roxzone_delta?: number
+          run_avg_delta?: number
+          sandbag_delta?: number
+          ski_delta?: number
+          sled_pull_delta?: number
+          sled_push_delta?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+          wallballs_delta?: number
+        }
+        Relationships: []
+      }
+      benchmark_master: {
+        Row: {
+          bbj_sec: number
+          created_at: string
+          farmers_sec: number
+          gender: string
+          id: string
+          is_active: boolean
+          row_sec: number
+          roxzone_sec: number
+          run_avg_sec: number
+          sandbag_sec: number
+          ski_sec: number
+          sled_pull_sec: number
+          sled_push_sec: number
+          tier: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+          wallballs_sec: number
+        }
+        Insert: {
+          bbj_sec: number
+          created_at?: string
+          farmers_sec: number
+          gender?: string
+          id?: string
+          is_active?: boolean
+          row_sec: number
+          roxzone_sec: number
+          run_avg_sec: number
+          sandbag_sec: number
+          ski_sec: number
+          sled_pull_sec: number
+          sled_push_sec: number
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+          wallballs_sec: number
+        }
+        Update: {
+          bbj_sec?: number
+          created_at?: string
+          farmers_sec?: number
+          gender?: string
+          id?: string
+          is_active?: boolean
+          row_sec?: number
+          roxzone_sec?: number
+          run_avg_sec?: number
+          sandbag_sec?: number
+          ski_sec?: number
+          sled_pull_sec?: number
+          sled_push_sec?: number
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+          wallballs_sec?: number
+        }
+        Relationships: []
+      }
+      benchmark_overrides: {
+        Row: {
+          age_group: string
+          created_at: string
+          gender: string
+          id: string
+          is_active: boolean
+          metric: string
+          override_sec: number
+          tier: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          age_group: string
+          created_at?: string
+          gender: string
+          id?: string
+          is_active?: boolean
+          metric: string
+          override_sec: number
+          tier: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          age_group?: string
+          created_at?: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          metric?: string
+          override_sec?: number
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       benchmark_results: {
         Row: {
           athlete_level: string | null
@@ -619,6 +787,19 @@ export type Database = {
       ensure_superadmin_role: {
         Args: { _email: string; _user_id: string }
         Returns: boolean
+      }
+      get_benchmark_reference: {
+        Args: {
+          p_age_group: string
+          p_gender: string
+          p_metric: string
+          p_tier: string
+          p_version?: string
+        }
+        Returns: {
+          ref_sec: number
+          ref_source: string
+        }[]
       }
       get_coach_approval_by_email: {
         Args: { _email: string }

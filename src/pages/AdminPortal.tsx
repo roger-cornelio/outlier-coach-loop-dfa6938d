@@ -7,7 +7,8 @@ import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
 import { CoachWorkoutManager } from "@/components/CoachWorkoutManager";
-import { LevelBenchmarksEditor } from "@/components/LevelBenchmarksEditor";
+import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
+import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -23,11 +24,12 @@ import {
   UserCog,
   Activity,
   ArrowLeft,
-  Dumbbell
+  Dumbbell,
+  Crown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "levelBenchmarks";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "masterBenchmarks";
 
 interface NavItem {
   id: AdminView;
@@ -62,10 +64,10 @@ const navItems: NavItem[] = [
     description: "Métricas de atletas"
   },
   { 
-    id: "levelBenchmarks", 
+    id: "masterBenchmarks", 
     label: "Benchmarks", 
-    icon: <Target className="w-5 h-5" />,
-    description: "Referências por nível"
+    icon: <Crown className="w-5 h-5" />,
+    description: "Sistema de derivação"
   },
   { 
     id: "allowlist", 
@@ -167,8 +169,13 @@ const AdminPortal = () => {
         return <CoachApplicationsAdmin />;
       case "workouts":
         return <CoachWorkoutManager />;
-      case "levelBenchmarks":
-        return <LevelBenchmarksEditor />;
+      case "masterBenchmarks":
+        return (
+          <div className="space-y-6">
+            <MasterBenchmarksEditor />
+            <BenchmarkOverridesEditor />
+          </div>
+        );
       case "allowlist":
       default:
         return <AdminAllowlistManager />;
