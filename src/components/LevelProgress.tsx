@@ -1,16 +1,21 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Star, Zap, Flame, Lock, ChevronRight, 
-  TrendingUp, Target, Sparkles, Shield, Swords
+  TrendingUp, Target, Sparkles, Shield, Swords,
+  Crown, CheckCircle2, AlertTriangle
 } from 'lucide-react';
+import { useState } from 'react';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useJourneyProgress, type ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Progress } from '@/components/ui/progress';
 
-// Level configuration with radical visual identity
-const LEVEL_CONFIG: Record<AthleteStatus, {
+// Extended level configuration with ELITE
+interface LevelVisualConfig {
   icon: React.ReactNode;
   heroIcon: React.ReactNode;
   gradient: string;
@@ -23,9 +28,11 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
   borderStyle: string;
   cardStyle: string;
   iconAnimation: string;
-}> = {
-  iniciante: {
-    icon: <Star className="w-6 h-6" />,
+}
+
+const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
+  BEGINNER: {
+    icon: <Star className="w-5 h-5" />,
     heroIcon: <Star className="w-16 h-16" />,
     gradient: 'from-cyan-500 via-blue-500 to-cyan-400',
     textGradient: 'from-cyan-400 to-blue-400',
@@ -38,8 +45,8 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
     cardStyle: 'bg-gradient-to-br from-cyan-950/50 to-blue-950/30',
     iconAnimation: '',
   },
-  intermediario: {
-    icon: <Zap className="w-6 h-6" />,
+  INTERMEDIATE: {
+    icon: <Zap className="w-5 h-5" />,
     heroIcon: <Zap className="w-20 h-20" />,
     gradient: 'from-emerald-500 via-green-500 to-teal-400',
     textGradient: 'from-emerald-400 to-green-400',
@@ -52,12 +59,12 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
     cardStyle: 'bg-gradient-to-br from-emerald-950/50 to-green-950/30',
     iconAnimation: '',
   },
-  avancado: {
-    icon: <Flame className="w-6 h-6" />,
-    heroIcon: <Flame className="w-24 h-24 animate-fire-flicker" />,
+  ADVANCED: {
+    icon: <Flame className="w-5 h-5" />,
+    heroIcon: <Flame className="w-24 h-24" />,
     gradient: 'from-orange-500 via-amber-500 to-red-500',
     textGradient: 'from-orange-400 to-amber-400',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(25 50% 18% / 0.7), transparent 50%), radial-gradient(ellipse at bottom right, hsl(15 50% 15% / 0.4), transparent 40%)',
+    bgPattern: 'radial-gradient(ellipse at top, hsl(25 50% 18% / 0.7), transparent 50%)',
     particleColor: 'bg-orange-400',
     title: 'AVANÇADO',
     subtitle: 'Fogo interior aceso',
@@ -66,12 +73,12 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
     cardStyle: 'bg-gradient-to-br from-orange-950/60 to-amber-950/40',
     iconAnimation: 'animate-fire-flicker',
   },
-  hyrox_open: {
-    icon: <Trophy className="w-6 h-6" />,
+  OPEN: {
+    icon: <Trophy className="w-5 h-5" />,
     heroIcon: <Trophy className="w-28 h-28" />,
     gradient: 'from-purple-500 via-violet-500 to-fuchsia-500',
     textGradient: 'from-purple-400 to-fuchsia-400',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%), radial-gradient(ellipse at bottom left, hsl(290 40% 15% / 0.5), transparent 40%)',
+    bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%)',
     particleColor: 'bg-purple-400',
     title: 'HYROX OPEN',
     subtitle: 'Competidor oficial',
@@ -80,23 +87,46 @@ const LEVEL_CONFIG: Record<AthleteStatus, {
     cardStyle: 'bg-gradient-to-br from-purple-950/60 to-violet-950/40',
     iconAnimation: '',
   },
-  hyrox_pro: {
-    icon: <StatusCrownPreset size="lg" />,
-    heroIcon: <StatusCrownPreset size="hero" className="animate-crown-float" />,
+  PRO: {
+    icon: <StatusCrownPreset size="sm" />,
+    heroIcon: <StatusCrownPreset size="hero" />,
     gradient: 'from-amber-400 via-yellow-400 to-orange-400',
     textGradient: 'from-amber-300 to-yellow-300',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%), radial-gradient(ellipse at bottom, hsl(40 40% 15% / 0.5), transparent 50%), radial-gradient(circle at 20% 80%, hsl(30 50% 15% / 0.3), transparent 30%)',
+    bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%)',
     particleColor: 'bg-amber-400',
     title: 'HYROX PRO',
-    subtitle: 'Elite absoluta',
+    subtitle: 'Elite competitiva',
     motivation: 'Você é a referência. Mantenha a coroa.',
-    borderStyle: 'border-amber-400/50 shadow-[0_0_30px_hsl(45_93%_47%/0.3)]',
+    borderStyle: 'border-amber-400/50 shadow-[0_0_20px_hsl(45_93%_47%/0.2)]',
     cardStyle: 'bg-gradient-to-br from-amber-950/70 to-yellow-950/50',
+    iconAnimation: 'animate-crown-float',
+  },
+  ELITE: {
+    icon: <Crown className="w-5 h-5" />,
+    heroIcon: <Crown className="w-32 h-32" />,
+    gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
+    textGradient: 'from-yellow-200 to-amber-200',
+    bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
+    particleColor: 'bg-yellow-300',
+    title: 'HYROX ELITE',
+    subtitle: 'Lenda absoluta',
+    motivation: 'O topo é seu. Inspire gerações.',
+    borderStyle: 'border-yellow-300/60 shadow-[0_0_40px_hsl(50_93%_60%/0.4)]',
+    cardStyle: 'bg-gradient-to-br from-yellow-950/80 to-amber-950/60',
     iconAnimation: 'animate-crown-float',
   },
 };
 
-const LEVELS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
+const LEVELS_ORDER: ExtendedLevelKey[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'OPEN', 'PRO', 'ELITE'];
+
+const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
+  BEGINNER: 'Iniciante',
+  INTERMEDIATE: 'Intermediário',
+  ADVANCED: 'Avançado',
+  OPEN: 'HYROX OPEN',
+  PRO: 'HYROX PRO',
+  ELITE: 'HYROX ELITE',
+};
 
 // Particle effect component
 const Particles = ({ color, count = 6 }: { color: string; count?: number }) => (
@@ -126,7 +156,142 @@ const Particles = ({ color, count = 6 }: { color: string; count?: number }) => (
   </div>
 );
 
+// Level Node Tooltip Sheet
+function LevelNodeSheet({ 
+  levelKey, 
+  isOpen, 
+  onClose, 
+  allLevels,
+  currentProgress 
+}: { 
+  levelKey: ExtendedLevelKey;
+  isOpen: boolean;
+  onClose: () => void;
+  allLevels: any[];
+  currentProgress: any;
+}) {
+  const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
+  const config = LEVEL_CONFIG[levelKey];
+  const isCurrent = currentProgress.currentLevel.levelKey === levelKey;
+  
+  if (!levelRule) return null;
+  
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="bottom" className="h-auto max-h-[60vh] rounded-t-3xl">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white`}>
+              {config.icon}
+            </div>
+            <span className={`bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`}>
+              {levelRule.label}
+            </span>
+            {isCurrent && (
+              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                Seu nível
+              </span>
+            )}
+          </SheetTitle>
+        </SheetHeader>
+        
+        <div className="space-y-4 pb-6">
+          {/* Requirements */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground">Requisitos</h4>
+            
+            <div className="grid gap-3">
+              <div className="p-3 bg-secondary/30 rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Treinos
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {isCurrent ? `${currentProgress.currentLevel.trainingSessions}/` : ''}{levelRule.training_min_sessions}
+                  </span>
+                </div>
+                {isCurrent && (
+                  <Progress value={currentProgress.currentLevel.trainingProgress * 100} className="h-1.5" />
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  nos últimos {levelRule.training_window_days} dias
+                </p>
+              </div>
+              
+              <div className="p-3 bg-secondary/30 rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Benchmarks OUTLIER
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {isCurrent ? `${currentProgress.currentLevel.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
+                  </span>
+                </div>
+                {isCurrent && (
+                  <Progress value={currentProgress.currentLevel.benchmarkProgress * 100} className="h-1.5" />
+                )}
+              </div>
+              
+              {levelRule.official_race_required && (
+                <div className={`p-3 rounded-xl flex items-center justify-between ${
+                  isCurrent && currentProgress.currentLevel.hasOfficialRace
+                    ? 'bg-green-500/10 border border-green-500/20'
+                    : 'bg-amber-500/10 border border-amber-500/20'
+                }`}>
+                  <span className="text-sm flex items-center gap-2">
+                    <Trophy className="w-4 h-4" />
+                    Prova oficial
+                  </span>
+                  {isCurrent ? (
+                    currentProgress.currentLevel.hasOfficialRace ? (
+                      <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        OK
+                      </span>
+                    ) : (
+                      <span className="text-amber-400 text-sm font-semibold">
+                        Pendente
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-muted-foreground text-sm">
+                      Obrigatória
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Cap warning */}
+          {isCurrent && currentProgress.isCapped && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
+                <div>
+                  <p className="text-sm text-amber-300 font-medium">
+                    Progresso limitado a {levelRule.cap_without_official_race_percent}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Complete uma prova oficial para desbloquear.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function LevelProgress() {
+  const athleteStatus = useAthleteStatus();
+  const journeyProgress = useJourneyProgress();
+  const [selectedLevel, setSelectedLevel] = useState<ExtendedLevelKey | null>(null);
+  
   const { 
     status, 
     rulerScore, 
@@ -136,18 +301,25 @@ export function LevelProgress() {
     eligibleForPromotion,
     benchmarksUsed,
     weeksWithGoodPerformance,
-  } = useAthleteStatus();
+  } = athleteStatus;
+  
+  // Map current status to extended level key for visual config
+  const currentLevelKey = journeyProgress.currentLevel.levelKey;
+  const currentConfig = LEVEL_CONFIG[currentLevelKey];
+  const isElite = currentLevelKey === 'ELITE';
+  const isPro = currentLevelKey === 'PRO';
+  const isHyrox = currentLevelKey === 'OPEN' || isPro || isElite;
 
-  const currentConfig = LEVEL_CONFIG[status];
-  const currentIndex = LEVELS_ORDER.indexOf(status);
-  const isElite = status === 'hyrox_pro';
-  const isHyrox = status === 'hyrox_open' || status === 'hyrox_pro';
+  // Calculate fill percentage for the continuous ruler
+  const fillPercentage = journeyProgress.loading 
+    ? 0 
+    : (journeyProgress.continuousPosition * 100);
 
   return (
     <div className="space-y-6">
-      {/* HERO CARD - Radical per level */}
+      {/* HERO CARD */}
       <motion.div
-        key={status}
+        key={currentLevelKey}
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -160,7 +332,7 @@ export function LevelProgress() {
         style={{ backgroundImage: currentConfig.bgPattern }}
       >
         {/* Particles for higher levels */}
-        {(status === 'avancado' || isHyrox) && (
+        {(currentLevelKey === 'ADVANCED' || isHyrox) && (
           <Particles color={currentConfig.particleColor} count={isElite ? 12 : 8} />
         )}
 
@@ -208,7 +380,7 @@ export function LevelProgress() {
               transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
               className={`relative ${currentConfig.iconAnimation}`}
             >
-              <div className={`bg-gradient-to-br ${currentConfig.gradient} bg-clip-text text-transparent`}>
+              <div className={`text-white`}>
                 {currentConfig.heroIcon}
               </div>
               {/* Glow behind icon */}
@@ -225,46 +397,41 @@ export function LevelProgress() {
           >
             <div className="flex items-baseline gap-2">
               <span className={`font-display text-7xl md:text-8xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent`}>
-                {Math.round(rulerScore)}
+                {journeyProgress.progressInLevel}
               </span>
               <span className="text-2xl text-muted-foreground">/100</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">pontos de performance</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              progresso no nível
+              {journeyProgress.isCapped && (
+                <span className="text-amber-400 ml-2">
+                  (cap: {journeyProgress.capPercent}%)
+                </span>
+              )}
+            </p>
           </motion.div>
 
-          {/* Progress to Next Level */}
-          {nextStatus && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="space-y-3"
-            >
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">
-                  Progresso para <span className={`bg-gradient-to-r ${LEVEL_CONFIG[nextStatus].textGradient} bg-clip-text text-transparent font-semibold`}>{LEVEL_NAMES[nextStatus]}</span>
-                </span>
-                <span className={`bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent font-bold`}>
-                  {Math.round(progressToNextStatus)}%
-                </span>
-              </div>
-              
-              <div className="relative h-4 bg-black/40 rounded-full overflow-hidden backdrop-blur-sm">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressToNextStatus}%` }}
-                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.7 }}
-                  className={`absolute inset-y-0 left-0 bg-gradient-to-r ${currentConfig.gradient} rounded-full`}
-                />
-                {/* Shimmer */}
-                <motion.div
-                  animate={{ x: [-200, 400] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1.5 }}
-                  className="absolute inset-y-0 w-24 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                />
-              </div>
-            </motion.div>
-          )}
+          {/* Cap Warning */}
+          <AnimatePresence>
+            {journeyProgress.isCapped && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3"
+              >
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                <div>
+                  <p className="text-sm text-amber-300 font-medium">
+                    Prova oficial pendente
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Seu progresso está limitado a {journeyProgress.capPercent}% sem prova válida.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Promotion Alert */}
           <AnimatePresence>
@@ -273,18 +440,18 @@ export function LevelProgress() {
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className={`mt-6 p-4 rounded-2xl bg-gradient-to-r ${LEVEL_CONFIG[nextStatus].gradient} bg-opacity-20 border border-white/20`}
+                className={`mb-4 p-4 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30`}
               >
                 <div className="flex items-center gap-3">
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
                     transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
                   >
-                    <Sparkles className="w-6 h-6 text-white" />
+                    <Sparkles className="w-6 h-6 text-green-400" />
                   </motion.div>
                   <div>
-                    <p className="font-bold text-white">Promoção disponível!</p>
-                    <p className="text-sm text-white/80">Pronto para {LEVEL_NAMES[nextStatus]}</p>
+                    <p className="font-bold text-green-300">Promoção disponível!</p>
+                    <p className="text-sm text-green-300/80">Pronto para {LEVEL_NAMES[nextStatus]}</p>
                   </div>
                 </div>
               </motion.div>
@@ -296,14 +463,14 @@ export function LevelProgress() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-6 text-sm italic text-muted-foreground border-l-2 border-current pl-3 opacity-70"
+            className="text-sm italic text-muted-foreground border-l-2 border-current pl-3 opacity-70"
           >
             "{currentConfig.motivation}"
           </motion.p>
         </div>
       </motion.div>
 
-      {/* Level Journey Track */}
+      {/* Level Journey Track - 6 LEVELS */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -315,72 +482,128 @@ export function LevelProgress() {
           Jornada de Evolução
         </h3>
         
-        <div className="relative flex items-center justify-between py-4">
-          {/* Track line */}
-          <div className="absolute top-1/2 left-6 right-6 h-1.5 bg-secondary/50 rounded-full -translate-y-1/2" />
+        <div className="relative flex items-center justify-between py-4 px-2">
+          {/* Track line (background) */}
+          <div className="absolute top-1/2 left-8 right-8 h-2 bg-secondary/50 rounded-full -translate-y-1/2" />
+          
+          {/* Filled track line (progress) */}
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${(currentIndex / (LEVELS_ORDER.length - 1)) * 100}%` }}
-            transition={{ duration: 1.2, ease: 'easeOut', delay: 0.5 }}
-            className={`absolute top-1/2 left-6 h-1.5 bg-gradient-to-r ${currentConfig.gradient} rounded-full -translate-y-1/2`}
-            style={{ maxWidth: 'calc(100% - 3rem)' }}
+            animate={{ width: `${fillPercentage}%` }}
+            transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
+            className={`absolute top-1/2 left-8 h-2 bg-gradient-to-r ${currentConfig.gradient} rounded-full -translate-y-1/2`}
+            style={{ maxWidth: 'calc(100% - 4rem)' }}
           />
 
-          {LEVELS_ORDER.map((level, index) => {
-            const config = LEVEL_CONFIG[level];
-            const isCompleted = index < currentIndex;
-            const isCurrent = index === currentIndex;
-            const isLocked = index > currentIndex;
+          {/* Level Nodes */}
+          {LEVELS_ORDER.map((levelKey, index) => {
+            const config = LEVEL_CONFIG[levelKey];
+            const isCompleted = index < journeyProgress.currentLevelIndex;
+            const isCurrent = index === journeyProgress.currentLevelIndex;
+            const isLocked = index > journeyProgress.currentLevelIndex;
+            const levelRule = journeyProgress.allLevels.find((l: any) => l.level_key === levelKey);
+            const requiresRace = levelRule?.official_race_required || false;
+            
+            // Check if this level requires race but athlete doesn't have one
+            const isRaceLocked = requiresRace && !journeyProgress.currentLevel.hasOfficialRace && index > journeyProgress.currentLevelIndex;
 
             return (
               <motion.div
-                key={level}
+                key={levelKey}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 + index * 0.1, type: 'spring' }}
-                className="relative z-10 flex flex-col items-center"
+                transition={{ delay: 0.4 + index * 0.08, type: 'spring' }}
+                className="relative z-10 flex flex-col items-center cursor-pointer"
+                onClick={() => setSelectedLevel(levelKey)}
               >
                 <motion.div
-                  whileHover={!isLocked ? { scale: 1.15 } : {}}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                   className={`
-                    relative w-14 h-14 rounded-2xl flex items-center justify-center
+                    relative w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center
                     transition-all duration-300
                     ${isCurrent 
-                      ? `bg-gradient-to-br ${config.gradient} shadow-lg shadow-current/30 ring-2 ring-white/30` 
+                      ? `bg-gradient-to-br ${config.gradient} shadow-lg ring-2 ring-white/40` 
                       : isCompleted 
-                        ? `bg-gradient-to-br ${config.gradient} opacity-70` 
+                        ? `bg-gradient-to-br ${config.gradient} opacity-80` 
                         : 'bg-secondary/80 border-2 border-border/50'
                     }
                   `}
                 >
                   {isLocked ? (
-                    <Lock className="w-5 h-5 text-muted-foreground/50" />
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-muted-foreground/50" />
+                      {isRaceLocked && (
+                        <Trophy className="w-3 h-3 text-amber-400/60 absolute -bottom-1 -right-1" />
+                      )}
+                    </div>
+                  ) : isCompleted ? (
+                    <CheckCircle2 className="w-5 h-5 text-white/90" />
                   ) : (
                     <span className="text-white drop-shadow-lg">{config.icon}</span>
                   )}
                   
+                  {/* Current level pulse */}
                   {isCurrent && (
                     <motion.div
-                      animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
+                      animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${config.gradient}`}
                     />
                   )}
+                  
+                  {/* Progress indicator within current level */}
+                  {isCurrent && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-black/30 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${journeyProgress.progressInLevel}%` }}
+                        transition={{ duration: 1, delay: 1 }}
+                        className={`h-full bg-gradient-to-r ${config.gradient}`}
+                      />
+                    </div>
+                  )}
                 </motion.div>
 
-                <p className={`mt-2 text-xs font-semibold text-center ${isCurrent ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` : isLocked ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}>
-                  {LEVEL_NAMES[level].split(' ')[0]}
+                {/* Level label */}
+                <p className={`mt-2 text-[10px] md:text-xs font-semibold text-center leading-tight ${
+                  isCurrent 
+                    ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` 
+                    : isLocked 
+                      ? 'text-muted-foreground/40' 
+                      : 'text-muted-foreground'
+                }`}>
+                  {LEVEL_LABELS[levelKey].split(' ').map((word, i) => (
+                    <span key={i} className="block">{word}</span>
+                  ))}
                 </p>
-                {LEVEL_NAMES[level].split(' ')[1] && (
-                  <p className={`text-[10px] ${isCurrent ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` : isLocked ? 'text-muted-foreground/40' : 'text-muted-foreground/60'}`}>
-                    {LEVEL_NAMES[level].split(' ')[1]}
-                  </p>
-                )}
               </motion.div>
             );
           })}
         </div>
+        
+        {/* Race requirement notice */}
+        {!journeyProgress.currentLevel.hasOfficialRace && journeyProgress.currentLevelIndex < 3 && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-xs text-muted-foreground mt-2"
+          >
+            🏆 OPEN, PRO e ELITE exigem prova oficial
+          </motion.p>
+        )}
       </motion.div>
+
+      {/* Level Node Sheet */}
+      {selectedLevel && (
+        <LevelNodeSheet
+          levelKey={selectedLevel}
+          isOpen={!!selectedLevel}
+          onClose={() => setSelectedLevel(null)}
+          allLevels={journeyProgress.allLevels}
+          currentProgress={journeyProgress}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3">
@@ -404,25 +627,24 @@ export function LevelProgress() {
       </div>
 
       {/* Next Level Preview */}
-      {nextStatus && !eligibleForPromotion && (
+      {journeyProgress.currentLevelIndex < 5 && !eligibleForPromotion && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className={`p-5 rounded-2xl border-2 border-dashed ${LEVEL_CONFIG[nextStatus].borderStyle} bg-secondary/10`}
+          className={`p-5 rounded-2xl border-2 border-dashed ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].borderStyle} bg-secondary/10`}
         >
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl bg-gradient-to-br ${LEVEL_CONFIG[nextStatus].gradient} opacity-40`}>
-              {LEVEL_CONFIG[nextStatus].icon}
+            <div className={`p-3 rounded-xl bg-gradient-to-br ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].gradient} opacity-40`}>
+              {LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].icon}
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Próximo nível</p>
-              <p className={`font-display text-xl bg-gradient-to-r ${LEVEL_CONFIG[nextStatus].textGradient} bg-clip-text text-transparent`}>
-                {LEVEL_NAMES[nextStatus]}
+              <p className="text-sm text-muted-foreground">Próximo nível</p>
+              <p className={`font-display text-lg bg-gradient-to-r ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].textGradient} bg-clip-text text-transparent`}>
+                {LEVEL_LABELS[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]]}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">{LEVEL_CONFIG[nextStatus].subtitle}</p>
             </div>
-            <ChevronRight className="w-6 h-6 text-muted-foreground" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </div>
         </motion.div>
       )}
