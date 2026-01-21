@@ -67,22 +67,69 @@ const TIER_ORDER = [
 
 const GENDER_ORDER = [
   { key: 'M', label: 'Masculino', description: 'Base (0)' },
-  { key: 'F', label: 'Feminino', description: '+45s' },
+  { key: 'F', label: 'Feminino', description: 'Variável por métrica' },
 ];
 
 const AGE_GROUPS = [
-  { key: '16-24', label: '16-24', description: '-15s' },
+  { key: '16-24', label: '16-24', description: '-5s' },
   { key: '25-29', label: '25-29', description: 'Base (0)' },
-  { key: '30-34', label: '30-34', description: 'Base (0)' },
-  { key: '35-39', label: '35-39', description: '+15s' },
+  { key: '30-34', label: '30-34', description: '+10s' },
+  { key: '35-39', label: '35-39', description: '+20s' },
   { key: '40-44', label: '40-44', description: '+30s' },
   { key: '45-49', label: '45-49', description: '+45s' },
   { key: '50-54', label: '50-54', description: '+60s' },
-  { key: '55-59', label: '55-59', description: '+90s' },
-  { key: '60-64', label: '60-64', description: '+120s' },
-  { key: '65-69', label: '65-69', description: '+150s' },
-  { key: '70+', label: '70+', description: '+180s' },
+  { key: '55-59', label: '55-59', description: '+75s' },
+  { key: '60+', label: '60+', description: '+90s' },
 ];
+
+// ============ DEFAULT VALUES ============
+// Tier defaults (all metrics use same values)
+const DEFAULT_TIER_DELTAS: Record<string, number> = {
+  'hyrox_pro': 0,
+  'hyrox_open': 30,
+  'avancado': 60,
+  'intermediario': 120,
+  'iniciante': 180,
+};
+
+// Gender defaults (per metric for female)
+const DEFAULT_GENDER_DELTAS: Record<string, Record<string, number>> = {
+  'M': {
+    run_avg: 0, roxzone: 0, ski: 0, sled_push: 0, sled_pull: 0,
+    bbj: 0, row: 0, farmers: 0, sandbag: 0, wallballs: 0,
+  },
+  'F': {
+    run_avg: 15, roxzone: 10, ski: 15, sled_push: 20, sled_pull: 20,
+    bbj: 15, row: 15, farmers: 15, sandbag: 15, wallballs: 15,
+  },
+};
+
+// Age group defaults (all metrics use same values)
+const DEFAULT_AGE_DELTAS: Record<string, number> = {
+  '16-24': -5,
+  '25-29': 0,
+  '30-34': 10,
+  '35-39': 20,
+  '40-44': 30,
+  '45-49': 45,
+  '50-54': 60,
+  '55-59': 75,
+  '60+': 90,
+};
+
+// Helper to get default delta value
+function getDefaultDelta(deltaType: string, deltaKey: string, metricKey: string): number {
+  if (deltaType === 'tier') {
+    return DEFAULT_TIER_DELTAS[deltaKey] ?? 0;
+  }
+  if (deltaType === 'gender') {
+    return DEFAULT_GENDER_DELTAS[deltaKey]?.[metricKey] ?? 0;
+  }
+  if (deltaType === 'age_group') {
+    return DEFAULT_AGE_DELTAS[deltaKey] ?? 0;
+  }
+  return 0;
+}
 
 // ============ Helpers ============
 function formatSecondsToMMSS(seconds: number | null): string {
@@ -181,6 +228,7 @@ export function MasterBenchmarksEditor() {
       const ageMap: Record<string, BenchmarkDelta> = {};
       const editedMap: Record<string, Record<string, string>> = {};
       
+      // Process fetched deltas
       (deltasData || []).forEach(d => {
         const deltaId = `${d.delta_type}_${d.delta_key}`;
         editedMap[deltaId] = {};
@@ -194,6 +242,40 @@ export function MasterBenchmarksEditor() {
           genderMap[d.delta_key] = d;
         } else if (d.delta_type === 'age_group') {
           ageMap[d.delta_key] = d;
+        }
+      });
+      
+      // Apply DEFAULT values for missing entries
+      // Tier defaults
+      TIER_ORDER.forEach(tier => {
+        const deltaId = `tier_${tier.key}`;
+        if (!editedMap[deltaId]) {
+          editedMap[deltaId] = {};
+          METRICS.forEach(m => {
+            editedMap[deltaId][m.key] = String(getDefaultDelta('tier', tier.key, m.key));
+          });
+        }
+      });
+      
+      // Gender defaults
+      GENDER_ORDER.forEach(g => {
+        const deltaId = `gender_${g.key}`;
+        if (!editedMap[deltaId]) {
+          editedMap[deltaId] = {};
+          METRICS.forEach(m => {
+            editedMap[deltaId][m.key] = String(getDefaultDelta('gender', g.key, m.key));
+          });
+        }
+      });
+      
+      // Age group defaults
+      AGE_GROUPS.forEach(age => {
+        const deltaId = `age_group_${age.key}`;
+        if (!editedMap[deltaId]) {
+          editedMap[deltaId] = {};
+          METRICS.forEach(m => {
+            editedMap[deltaId][m.key] = String(getDefaultDelta('age_group', age.key, m.key));
+          });
         }
       });
       
@@ -269,20 +351,34 @@ export function MasterBenchmarksEditor() {
         const deltaId = `${deltaType}_${item.key}`;
         const existing = deltaMap[item.key];
         
-        const updates: Record<string, number> = {};
+        const deltaValues: Record<string, number> = {};
         for (const metric of METRICS) {
           const value = parseInt(editedDeltas[deltaId]?.[metric.key] || '0', 10);
-          updates[metric.deltaKey] = isNaN(value) ? 0 : value;
+          deltaValues[metric.deltaKey] = isNaN(value) ? 0 : value;
         }
         
         if (existing) {
+          // Update existing record
           const { error } = await supabase
             .from('benchmark_deltas')
             .update({
-              ...updates,
+              ...deltaValues,
               updated_at: new Date().toISOString(),
             })
             .eq('id', existing.id);
+          
+          if (error) throw error;
+        } else {
+          // Insert new record with current values (from defaults or edited)
+          const { error } = await supabase
+            .from('benchmark_deltas')
+            .insert({
+              delta_type: deltaType,
+              delta_key: item.key,
+              version: 'v1',
+              is_active: true,
+              ...deltaValues,
+            });
           
           if (error) throw error;
         }
