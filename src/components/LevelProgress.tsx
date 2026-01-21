@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Trophy, Star, Zap, Flame, Lock, ChevronRight, 
+  Trophy, Star, Zap, Flame, Lock, 
   TrendingUp, Target, Sparkles, Shield, Swords,
   Crown, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { useState } from 'react';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { StatusExplainerModal } from '@/components/StatusExplainerModal';
+import { NextLevelModal } from '@/components/NextLevelModal';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useJourneyProgress, type ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
@@ -626,28 +627,14 @@ export function LevelProgress() {
         ))}
       </div>
 
-      {/* Next Level Preview */}
-      {journeyProgress.currentLevelIndex < 5 && !eligibleForPromotion && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className={`p-5 rounded-2xl border-2 border-dashed ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].borderStyle} bg-secondary/10`}
-        >
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl bg-gradient-to-br ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].gradient} opacity-40`}>
-              {LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].icon}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Próximo nível</p>
-              <p className={`font-display text-lg bg-gradient-to-r ${LEVEL_CONFIG[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]].textGradient} bg-clip-text text-transparent`}>
-                {LEVEL_LABELS[LEVELS_ORDER[journeyProgress.currentLevelIndex + 1]]}
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </div>
-        </motion.div>
-      )}
+      {/* Next Level Button + Modal */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <NextLevelModal journeyProgress={journeyProgress} />
+      </motion.div>
     </div>
   );
 }

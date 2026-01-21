@@ -1,0 +1,395 @@
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  ArrowRight, 
+  Trophy, 
+  Target, 
+  Dumbbell, 
+  CheckCircle2, 
+  XCircle,
+  AlertTriangle,
+  Crown,
+  Sparkles,
+  Lock
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import type { JourneyPosition, ExtendedLevelKey } from '@/hooks/useJourneyProgress';
+
+interface NextLevelModalProps {
+  journeyProgress: JourneyPosition;
+}
+
+// Level labels and colors
+const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
+  BEGINNER: 'Iniciante',
+  INTERMEDIATE: 'Intermediário',
+  ADVANCED: 'Avançado',
+  OPEN: 'HYROX OPEN',
+  PRO: 'HYROX PRO',
+  ELITE: 'HYROX ELITE',
+};
+
+const LEVEL_GRADIENTS: Record<ExtendedLevelKey, string> = {
+  BEGINNER: 'from-cyan-500 to-blue-500',
+  INTERMEDIATE: 'from-emerald-500 to-green-500',
+  ADVANCED: 'from-orange-500 to-amber-500',
+  OPEN: 'from-purple-500 to-fuchsia-500',
+  PRO: 'from-amber-400 to-yellow-400',
+  ELITE: 'from-yellow-300 to-amber-300',
+};
+
+const LEVEL_TEXT_COLORS: Record<ExtendedLevelKey, string> = {
+  BEGINNER: 'text-cyan-400',
+  INTERMEDIATE: 'text-green-400',
+  ADVANCED: 'text-orange-400',
+  OPEN: 'text-purple-400',
+  PRO: 'text-amber-400',
+  ELITE: 'text-yellow-300',
+};
+
+const LEVEL_BG: Record<ExtendedLevelKey, string> = {
+  BEGINNER: 'bg-cyan-500/10 border-cyan-500/20',
+  INTERMEDIATE: 'bg-green-500/10 border-green-500/20',
+  ADVANCED: 'bg-orange-500/10 border-orange-500/20',
+  OPEN: 'bg-purple-500/10 border-purple-500/20',
+  PRO: 'bg-amber-500/10 border-amber-500/20',
+  ELITE: 'bg-yellow-500/10 border-yellow-500/20',
+};
+
+const LEVELS_ORDER: ExtendedLevelKey[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'OPEN', 'PRO', 'ELITE'];
+
+export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
+  const [open, setOpen] = useState(false);
+  
+  const { currentLevel, currentLevelIndex, allLevels, loading } = journeyProgress;
+  
+  const isAtTop = currentLevelIndex >= 5; // ELITE is the top
+  const nextLevelKey = isAtTop ? null : LEVELS_ORDER[currentLevelIndex + 1];
+  const nextLevelRule = nextLevelKey ? allLevels.find((l: any) => l.level_key === nextLevelKey) : null;
+  
+  // Calculate what's needed for next level
+  const nextLevelAnalysis = useMemo(() => {
+    if (!nextLevelRule || isAtTop) return null;
+    
+    const trainingNeeded = nextLevelRule.training_min_sessions;
+    const trainingCurrent = currentLevel.trainingSessions;
+    const trainingMissing = Math.max(0, trainingNeeded - trainingCurrent);
+    const trainingProgress = Math.min(100, (trainingCurrent / trainingNeeded) * 100);
+    
+    const benchmarksNeeded = nextLevelRule.benchmarks_required;
+    const benchmarksCurrent = currentLevel.benchmarksCompleted;
+    const benchmarksMissing = Math.max(0, benchmarksNeeded - benchmarksCurrent);
+    const benchmarkProgress = Math.min(100, (benchmarksCurrent / benchmarksNeeded) * 100);
+    
+    const requiresRace = nextLevelRule.official_race_required;
+    const hasRace = currentLevel.hasOfficialRace;
+    
+    // Determine status
+    let status: 'close' | 'blocked' | 'working';
+    let statusText: string;
+    let statusColor: string;
+    
+    if (requiresRace && !hasRace) {
+      status = 'blocked';
+      statusText = 'Bloqueado por prova';
+      statusColor = 'text-amber-400';
+    } else if (trainingMissing <= 10 && benchmarksMissing <= 2) {
+      status = 'close';
+      statusText = 'Falta pouco!';
+      statusColor = 'text-green-400';
+    } else {
+      status = 'working';
+      statusText = 'Em progresso';
+      statusColor = 'text-blue-400';
+    }
+    
+    // Generate summary text
+    const summaryParts: string[] = [];
+    if (trainingMissing > 0) {
+      summaryParts.push(`${trainingMissing} treino${trainingMissing > 1 ? 's' : ''}`);
+    }
+    if (benchmarksMissing > 0) {
+      summaryParts.push(`${benchmarksMissing} benchmark${benchmarksMissing > 1 ? 's' : ''}`);
+    }
+    if (requiresRace && !hasRace) {
+      summaryParts.push('prova oficial');
+    }
+    
+    const summaryText = summaryParts.length > 0 
+      ? `Falta${summaryParts.length > 1 || (trainingMissing + benchmarksMissing) > 1 ? 'm' : ''}: ${summaryParts.join(', ')}`
+      : 'Todos os requisitos cumpridos!';
+    
+    return {
+      trainingNeeded,
+      trainingCurrent,
+      trainingMissing,
+      trainingProgress,
+      trainingWindow: nextLevelRule.training_window_days,
+      benchmarksNeeded,
+      benchmarksCurrent,
+      benchmarksMissing,
+      benchmarkProgress,
+      requiresRace,
+      hasRace,
+      status,
+      statusText,
+      statusColor,
+      summaryText,
+    };
+  }, [nextLevelRule, currentLevel, isAtTop]);
+  
+  if (loading) return null;
+  
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button 
+          variant="outline" 
+          className={`w-full gap-2 border-2 border-dashed ${
+            isAtTop 
+              ? 'border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10' 
+              : nextLevelKey 
+                ? `${LEVEL_BG[nextLevelKey]} hover:bg-opacity-20`
+                : 'border-border/50'
+          }`}
+        >
+          {isAtTop ? (
+            <>
+              <Crown className="w-4 h-4 text-yellow-400" />
+              <span className="text-yellow-300">Você está no topo!</span>
+            </>
+          ) : (
+            <>
+              <ArrowRight className="w-4 h-4" />
+              <span>Próximo nível</span>
+              {nextLevelKey && (
+                <Badge variant="outline" className={`ml-auto ${LEVEL_TEXT_COLORS[nextLevelKey]}`}>
+                  {LEVEL_LABELS[nextLevelKey]}
+                </Badge>
+              )}
+            </>
+          )}
+        </Button>
+      </SheetTrigger>
+      
+      <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+        <SheetHeader className="pb-4 border-b border-border/50">
+          <SheetTitle className="flex items-center gap-3">
+            {isAtTop ? (
+              <>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-400 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-black" />
+                </div>
+                <span className="bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">
+                  Topo Alcançado!
+                </span>
+              </>
+            ) : nextLevelKey && (
+              <>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${LEVEL_GRADIENTS[nextLevelKey]} flex items-center justify-center`}>
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Próximo nível</span>
+                  <p className={`font-semibold ${LEVEL_TEXT_COLORS[nextLevelKey]}`}>
+                    {LEVEL_LABELS[nextLevelKey]}
+                  </p>
+                </div>
+              </>
+            )}
+          </SheetTitle>
+        </SheetHeader>
+        
+        <div className="py-6 space-y-5 overflow-y-auto">
+          {isAtTop ? (
+            // Elite message
+            <div className="space-y-4">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex justify-center"
+              >
+                <div className="relative">
+                  <Crown className="w-20 h-20 text-yellow-400" />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0"
+                  >
+                    <Sparkles className="w-6 h-6 text-yellow-300 absolute -top-2 -right-2" />
+                    <Sparkles className="w-4 h-4 text-amber-300 absolute -bottom-1 -left-1" />
+                  </motion.div>
+                </div>
+              </motion.div>
+              
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">
+                  HYROX ELITE
+                </h3>
+                <p className="text-muted-foreground">
+                  Você alcançou o nível máximo. Agora é manter a consistência para sustentar sua posição.
+                </p>
+              </div>
+              
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <Trophy className="w-5 h-5 text-yellow-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-yellow-300">Mantenha o ritmo</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Continue treinando e completando benchmarks para manter seu status de elite.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : nextLevelAnalysis && nextLevelKey && (
+            // Next level requirements
+            <div className="space-y-5">
+              {/* Status Badge */}
+              <div className={`p-4 rounded-xl border ${
+                nextLevelAnalysis.status === 'blocked' 
+                  ? 'bg-amber-500/10 border-amber-500/20'
+                  : nextLevelAnalysis.status === 'close'
+                    ? 'bg-green-500/10 border-green-500/20'
+                    : 'bg-blue-500/10 border-blue-500/20'
+              }`}>
+                <div className="flex items-center gap-3">
+                  {nextLevelAnalysis.status === 'blocked' ? (
+                    <Lock className="w-5 h-5 text-amber-400" />
+                  ) : nextLevelAnalysis.status === 'close' ? (
+                    <Sparkles className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <Target className="w-5 h-5 text-blue-400" />
+                  )}
+                  <div>
+                    <p className={`font-semibold ${nextLevelAnalysis.statusColor}`}>
+                      {nextLevelAnalysis.statusText}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {nextLevelAnalysis.summaryText}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Checklist */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Checklist
+                </h4>
+                
+                {/* Training */}
+                <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Dumbbell className="w-4 h-4" />
+                      Treinos
+                    </span>
+                    <span className={`text-sm font-bold ${
+                      nextLevelAnalysis.trainingMissing === 0 ? 'text-green-400' : ''
+                    }`}>
+                      {nextLevelAnalysis.trainingCurrent} / {nextLevelAnalysis.trainingNeeded}
+                    </span>
+                  </div>
+                  <Progress value={nextLevelAnalysis.trainingProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    nos últimos {nextLevelAnalysis.trainingWindow} dias
+                    {nextLevelAnalysis.trainingMissing > 0 && (
+                      <span className="text-amber-400 ml-2">
+                        (faltam {nextLevelAnalysis.trainingMissing})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                
+                {/* Benchmarks */}
+                <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Target className="w-4 h-4" />
+                      Benchmarks OUTLIER
+                    </span>
+                    <span className={`text-sm font-bold ${
+                      nextLevelAnalysis.benchmarksMissing === 0 ? 'text-green-400' : ''
+                    }`}>
+                      {nextLevelAnalysis.benchmarksCurrent} / {nextLevelAnalysis.benchmarksNeeded}
+                    </span>
+                  </div>
+                  <Progress value={nextLevelAnalysis.benchmarkProgress} className="h-2" />
+                  {nextLevelAnalysis.benchmarksMissing > 0 && (
+                    <p className="text-xs text-amber-400 mt-2">
+                      faltam {nextLevelAnalysis.benchmarksMissing}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Official Race */}
+                <div className={`p-4 rounded-xl border ${
+                  !nextLevelAnalysis.requiresRace
+                    ? 'bg-secondary/30 border-border/50'
+                    : nextLevelAnalysis.hasRace
+                      ? 'bg-green-500/10 border-green-500/20'
+                      : 'bg-amber-500/10 border-amber-500/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Trophy className="w-4 h-4" />
+                      Prova oficial
+                    </span>
+                    {!nextLevelAnalysis.requiresRace ? (
+                      <span className="text-sm text-muted-foreground">
+                        Não obrigatória
+                      </span>
+                    ) : nextLevelAnalysis.hasRace ? (
+                      <span className="flex items-center gap-1 text-green-400 text-sm font-semibold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        OK
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-amber-400 text-sm font-semibold">
+                        <XCircle className="w-4 h-4" />
+                        Obrigatória
+                      </span>
+                    )}
+                  </div>
+                  {nextLevelAnalysis.requiresRace && !nextLevelAnalysis.hasRace && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Para atingir {LEVEL_LABELS[nextLevelKey]}, você precisa de uma prova oficial válida.
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Contextual tip */}
+              {nextLevelAnalysis.status === 'blocked' && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
+                    <p className="text-sm text-amber-300">
+                      <strong>Prova oficial é obrigatória</strong> para atingir níveis HYROX (OPEN, PRO, ELITE).
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {nextLevelAnalysis.status === 'close' && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-green-400 mt-0.5" />
+                    <p className="text-sm text-green-300">
+                      <strong>Você está quase lá!</strong> Continue treinando para subir de nível.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
