@@ -1,15 +1,18 @@
 /**
- * DiagnosticRadarBlock - Radar Chart de diagnóstico da última prova
+ * DiagnosticRadarBlock - Diagnóstico em duas camadas
  * 
- * DESIGN GUIDELINES:
- * - Máximo 6 eixos agregados (Run, Sled Push, Sled Pull, Carry, Engine, Pacing)
- * - Sem números visíveis na escala
- * - Estilo premium, técnico, não gamificado
- * - Texto explicativo obrigatório
+ * CAMADA 1 - Perfil do Atleta (Visão Executiva):
+ * - Radar Chart com 5 dimensões agregadas
+ * - Sem números ou escala visível
+ * - Estilo premium e técnico
+ * 
+ * CAMADA 2 - Diagnóstico por Estação (Detalhado):
+ * - Barras horizontais para as 9 estações HYROX
+ * - Mesma escala visual para todas
  */
 
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   RadarChart, 
   PolarGrid, 
@@ -17,8 +20,10 @@ import {
   Radar, 
   ResponsiveContainer 
 } from 'recharts';
-import { Activity } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
+import { DiagnosticStationsBars } from './DiagnosticStationsBar';
+import { Button } from './ui/button';
 
 interface DiagnosticRadarBlockProps {
   scores: CalculatedScore[];
@@ -26,14 +31,14 @@ interface DiagnosticRadarBlockProps {
   hasData: boolean;
 }
 
-// Agregação de métricas em 6 dimensões principais
+// Agregação de métricas em 5 dimensões principais (Camada 1)
 interface AggregatedDimension {
   name: string;
   value: number;
   fullMark: 100;
 }
 
-// Mapeia métricas HYROX para dimensões agregadas
+// Mapeia métricas HYROX para 5 dimensões agregadas
 function aggregateScores(scores: CalculatedScore[]): AggregatedDimension[] {
   if (!scores || scores.length === 0) return [];
 
@@ -43,11 +48,10 @@ function aggregateScores(scores: CalculatedScore[]): AggregatedDimension[] {
     scoreMap.set(s.metric, s.percentile_value);
   });
 
-  // Agregação em 6 dimensões principais
+  // Agregação em 5 dimensões principais (conforme spec)
   const dimensions: { name: string; metrics: string[] }[] = [
     { name: 'Run', metrics: ['run_avg'] },
-    { name: 'Sled Push', metrics: ['sled_push'] },
-    { name: 'Sled Pull', metrics: ['sled_pull'] },
+    { name: 'Sled', metrics: ['sled_push', 'sled_pull'] },
     { name: 'Carry / Grip', metrics: ['farmers', 'sandbag'] },
     { name: 'Engine', metrics: ['ski', 'row'] },
     { name: 'Stations', metrics: ['bbj', 'wallballs'] }
@@ -75,10 +79,12 @@ export function DiagnosticRadarBlock({
   loading = false, 
   hasData 
 }: DiagnosticRadarBlockProps) {
-  // Agregar scores em 6 dimensões
+  const [showDetails, setShowDetails] = useState(false);
+  
+  // Agregar scores em 5 dimensões para o radar
   const radarData = useMemo(() => aggregateScores(scores), [scores]);
 
-  // Estado vazio ou carregando
+  // Estado carregando
   if (loading) {
     return (
       <motion.div
@@ -96,6 +102,7 @@ export function DiagnosticRadarBlock({
     );
   }
 
+  // Estado vazio
   if (!hasData || radarData.length === 0) {
     return (
       <motion.div
@@ -126,10 +133,10 @@ export function DiagnosticRadarBlock({
         DIAGNÓSTICO
       </h3>
 
-      {/* Radar Chart - estilo premium, sem escalas visíveis */}
-      <div className="h-56 sm:h-64">
+      {/* CAMADA 1 - Perfil do Atleta (Radar) */}
+      <div className="h-52 sm:h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
             {/* Grid sutil sem números */}
             <PolarGrid 
               stroke="hsl(var(--border))" 
@@ -163,9 +170,46 @@ export function DiagnosticRadarBlock({
       </div>
 
       {/* Texto explicativo obrigatório */}
-      <p className="text-sm text-muted-foreground mt-4 text-center">
-        Este gráfico mostra seu perfil atual nas principais demandas da prova.
+      <p className="text-sm text-muted-foreground mt-3 text-center">
+        Perfil geral baseado na sua última prova.
       </p>
+
+      {/* Toggle para Camada 2 */}
+      <div className="mt-4 pt-4 border-t border-border/50">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground hover:text-foreground"
+          onClick={() => setShowDetails(!showDetails)}
+        >
+          {showDetails ? (
+            <>
+              <ChevronUp className="w-4 h-4 mr-2" />
+              Ocultar detalhes por estação
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 mr-2" />
+              Ver detalhes por estação
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* CAMADA 2 - Diagnóstico por Estação (Barras) */}
+      <AnimatePresence>
+        {showDetails && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4 overflow-hidden"
+          >
+            <DiagnosticStationsBars scores={scores} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
