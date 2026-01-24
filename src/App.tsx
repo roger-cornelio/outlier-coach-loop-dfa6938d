@@ -19,13 +19,14 @@ import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 
-// Athlete app pages with sidebar
+// Athlete app pages with sidebar - using RICH existing components
 import { AthleteLayout } from "./components/layouts/AthleteLayout";
 import AthleteDashboard from "./pages/AthleteDashboard";
-import WeeklyTraining from "./pages/WeeklyTraining";
+import WeeklyTrainingPage from "./pages/WeeklyTrainingPage";
+import WorkoutExecutionPage from "./pages/WorkoutExecutionPage";
 import TrainingAdjustments from "./pages/TrainingAdjustments";
 import AthleteStatus from "./pages/AthleteStatus";
-import AthleteSettings from "./pages/AthleteSettings";
+import AthleteConfigPage from "./pages/AthleteConfigPage";
 
 const queryClient = new QueryClient();
 
@@ -82,10 +83,11 @@ const App = () => (
               {/* Main app route (protected) - with sidebar layout */}
               <Route path="/app" element={<AthleteLayout />}>
                 <Route index element={<AthleteDashboard />} />
-                <Route path="treino" element={<WeeklyTraining />} />
+                <Route path="treino" element={<WeeklyTrainingPage />} />
+                <Route path="executar" element={<WorkoutExecutionPage />} />
                 <Route path="ajustes" element={<TrainingAdjustments />} />
                 <Route path="status" element={<AthleteStatus />} />
-                <Route path="config" element={<AthleteSettings />} />
+                <Route path="config" element={<AthleteConfigPage />} />
               </Route>
 
               {/* === LOGIN ROUTES === */}
