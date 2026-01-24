@@ -34,7 +34,7 @@ import { Area, AreaChart as RechartsAreaChart, ResponsiveContainer, XAxis, YAxis
 import type { DayWorkout } from '@/types/outlier';
 import type { EvolutionFocusPoint } from '@/hooks/useEvolutionFocus';
 
-// Mapa de ícones por estação HYROX
+// Mapa de ícones por estação HYROX (estilo técnico/competitivo)
 const STATION_ICONS: Record<string, LucideIcon> = {
   run_avg: Footprints,
   ski: Waves,
@@ -47,6 +47,32 @@ const STATION_ICONS: Record<string, LucideIcon> = {
   wallballs: CircleDot,
   roxzone: Clock
 };
+
+// Labels das estações em inglês (padrão HYROX)
+const STATION_LABELS: Record<string, string> = {
+  run_avg: 'Run',
+  ski: 'SkiErg',
+  sled_push: 'Sled Push',
+  sled_pull: 'Sled Pull',
+  bbj: 'Burpee Broad Jump',
+  row: 'Row',
+  farmers: 'Farmers Carry',
+  sandbag: 'Sandbag Lunges',
+  wallballs: 'Wall Balls',
+  roxzone: 'Roxzone'
+};
+
+// Diagnóstico curto por percentil
+function getStatusLabel(percentile: number): { text: string; short: string } {
+  if (percentile < 25) {
+    return { text: 'Força abaixo do esperado', short: '⬇️' };
+  } else if (percentile < 40) {
+    return { text: 'Atenção', short: '⚠️' };
+  } else if (percentile < 60) {
+    return { text: 'Na média', short: '➡️' };
+  }
+  return { text: 'Ponto forte', short: '✅' };
+}
 
 // ============================================
 // BLOCO 1 — SEU TREINO DE HOJE (Decisão do Dia)
@@ -407,32 +433,64 @@ export function EvolutionFocusBlock({
         FOCOS DE EVOLUÇÃO
       </h3>
       
-      {/* Lista de pontos (máximo 2-3) com ícones por estação */}
+      {/* Mini painel de diagnóstico por estação */}
       <div className="space-y-3 mb-4">
         {focusPoints.map((point) => {
           const IconComponent = STATION_ICONS[point.metric] || Target;
+          const stationLabel = STATION_LABELS[point.metric] || point.label;
+          const status = getStatusLabel(point.percentile);
+          
+          // Sistema de cores: vermelho (<25), amarelo (25-40), verde (>60)
           const isCritical = point.percentile < 25;
-          const isAttention = point.percentile < 40 && point.percentile >= 25;
+          const isAttention = point.percentile >= 25 && point.percentile < 40;
+          const isStrong = point.percentile >= 60;
+          
+          const colorClass = isCritical 
+            ? 'text-red-500' 
+            : isAttention 
+              ? 'text-amber-500' 
+              : isStrong 
+                ? 'text-green-500' 
+                : 'text-primary';
+          
+          const bgClass = isCritical 
+            ? 'bg-red-500/15' 
+            : isAttention 
+              ? 'bg-amber-500/15' 
+              : isStrong 
+                ? 'bg-green-500/15' 
+                : 'bg-primary/15';
           
           return (
             <div 
               key={point.metric}
-              className="flex items-start gap-3"
+              className={`flex items-center gap-3 p-3 rounded-lg ${bgClass} transition-all hover:scale-[1.01]`}
             >
-              <div className={`p-1.5 rounded ${isCritical ? 'bg-red-500/20' : isAttention ? 'bg-amber-500/20' : 'bg-primary/20'}`}>
-                <IconComponent 
-                  className={`w-4 h-4 ${isCritical ? 'text-red-500' : isAttention ? 'text-amber-500' : 'text-primary'}`} 
-                />
+              {/* Ícone da estação */}
+              <div className={`p-2 rounded-lg bg-background/50`}>
+                <IconComponent className={`w-5 h-5 ${colorClass}`} />
               </div>
-              <span className="text-foreground">{point.description}</span>
+              
+              {/* Nome da estação + diagnóstico */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-sm font-semibold text-foreground">
+                    {stationLabel}
+                  </span>
+                  <span className="text-sm">{status.short}</span>
+                </div>
+                <p className={`text-xs ${colorClass} mt-0.5`}>
+                  {status.text}
+                </p>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Texto fixo obrigatório */}
-      <p className="text-sm text-muted-foreground italic border-t border-border/50 pt-3">
-        Esses pontos já estão sendo trabalhados no seu plano.
+      {/* Mensagem de conexão com o treino */}
+      <p className="text-xs text-muted-foreground italic border-t border-border/50 pt-3">
+        Você não é fraco — você perde tempo aqui. Seu plano já está trabalhando esses pontos.
       </p>
     </motion.div>
   );
