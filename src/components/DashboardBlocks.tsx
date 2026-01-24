@@ -1,11 +1,14 @@
 /**
  * Dashboard Blocks - Componentes focados para o Dashboard OUTLIER
  * 
- * HIERARQUIA VISUAL:
- * 1. TodayWorkoutBlock - Ação principal (prioridade máxima)
- * 2. StatusDiagnosisBlock - Diagnóstico rápido
- * 3. EvolutionFocusBlock - Focos de evolução
- * 4. LastWorkoutBlock - Continuidade
+ * HIERARQUIA VISUAL (FINAL):
+ * 1. TodayWorkoutBlock - Decisão do dia (prioridade máxima, CTA único)
+ * 2. EvolutionChartBlock - Evolução do atleta (gráfico + diagnóstico)
+ * 3. EvolutionFocusBlock - Focos de evolução (secundário)
+ * 
+ * REMOVIDOS:
+ * - StatusDiagnosisBlock (absorvido pelo EvolutionChartBlock)
+ * - LastWorkoutBlock (removido da home)
  */
 
 import { motion } from 'framer-motion';
@@ -14,18 +17,17 @@ import {
   Clock, 
   Zap, 
   Target, 
-  TrendingUp, 
+  TrendingUp,
   History,
-  CheckCircle2,
-  AlertCircle
+  AreaChart
 } from 'lucide-react';
+import { Area, AreaChart as RechartsAreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import type { DayWorkout } from '@/types/outlier';
 import type { EvolutionFocusPoint } from '@/hooks/useEvolutionFocus';
-import type { LastWorkoutInfo } from '@/hooks/useLastWorkout';
-import type { AthleteDiagnosis } from '@/hooks/useAthleteDiagnosis';
 
 // ============================================
-// BLOCO 1 — SEU TREINO DE HOJE (Ação Principal)
+// BLOCO 1 — SEU TREINO DE HOJE (Decisão do Dia)
+// CTA ÚNICO PRIMÁRIO DA TELA
 // ============================================
 interface TodayWorkoutBlockProps {
   workout: DayWorkout | null;
@@ -118,7 +120,7 @@ export function TodayWorkoutBlock({
         </div>
       </div>
 
-      {/* CTA Principal */}
+      {/* CTA Principal - ÚNICO DA TELA */}
       {!isViewingHistory && (
         <motion.button
           onClick={onStartWorkout}
@@ -142,39 +144,177 @@ export function TodayWorkoutBlock({
 }
 
 // ============================================
-// BLOCO 2 — STATUS ATUAL (Diagnóstico Rápido)
+// BLOCO 2 — SUA EVOLUÇÃO (Gráfico + Diagnóstico)
 // ============================================
-interface StatusDiagnosisBlockProps {
-  diagnosis: AthleteDiagnosis;
+interface WeeklyEvolutionPoint {
+  week: string;
+  weekLabel: string;
+  score: number;
+  benchmarks: number;
 }
 
-export function StatusDiagnosisBlock({ diagnosis }: StatusDiagnosisBlockProps) {
-  const bgColor = diagnosis.type === 'positive' 
-    ? 'bg-emerald-500/10 border-l-emerald-500'
-    : diagnosis.type === 'attention'
-    ? 'bg-amber-500/10 border-l-amber-500'
-    : 'bg-secondary border-l-muted-foreground';
+interface EvolutionTrend {
+  direction: 'improving' | 'stable' | 'declining';
+  text: string;
+}
+
+interface EvolutionChartBlockProps {
+  data: WeeklyEvolutionPoint[];
+  diagnosticText: string;
+  trend: EvolutionTrend;
+  loading?: boolean;
+  hasData: boolean;
+  onViewEvolution?: () => void;
+}
+
+// Custom tooltip para o gráfico
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  
+  const data = payload[0].payload;
+  return (
+    <div className="bg-background/95 border border-border rounded-lg px-3 py-2 shadow-lg">
+      <p className="text-xs text-muted-foreground">Semana {data.weekLabel}</p>
+      <p className="text-sm font-medium text-foreground">Score: {data.score}</p>
+      <p className="text-xs text-muted-foreground">{data.benchmarks} benchmark(s)</p>
+    </div>
+  );
+}
+
+export function EvolutionChartBlock({
+  data,
+  diagnosticText,
+  trend,
+  loading = false,
+  hasData,
+  onViewEvolution
+}: EvolutionChartBlockProps) {
+  // Estado vazio ou carregando
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
+      >
+        <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
+          SUA EVOLUÇÃO
+        </h3>
+        <div className="h-32 flex items-center justify-center">
+          <p className="text-muted-foreground/60 text-sm">Carregando evolução...</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!hasData || data.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
+      >
+        <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
+          SUA EVOLUÇÃO
+        </h3>
+        <div className="flex flex-col items-center justify-center py-6 gap-3">
+          <AreaChart className="w-10 h-10 text-muted-foreground/30" />
+          <p className="text-muted-foreground text-sm text-center max-w-xs">
+            Lance seu primeiro simulado ou prova oficial para visualizar sua evolução.
+          </p>
+          {onViewEvolution && (
+            <button
+              onClick={onViewEvolution}
+              className="text-sm text-primary hover:text-primary/80 flex items-center gap-2 mt-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Ir para Evolução</span>
+            </button>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Cor do trend
+  const trendColor = trend.direction === 'improving' 
+    ? 'text-emerald-500' 
+    : trend.direction === 'declining' 
+    ? 'text-amber-500' 
+    : 'text-muted-foreground';
+
+  const trendIcon = trend.direction === 'improving' 
+    ? '📈' 
+    : trend.direction === 'declining' 
+    ? '📉' 
+    : '➡️';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className={`card-elevated p-6 border-l-4 ${bgColor}`}
+      className="card-elevated p-6 border-l-4 border-l-primary"
     >
-      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
-        STATUS ATUAL
-      </h3>
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{diagnosis.icon}</span>
-        <p className="text-foreground font-medium">{diagnosis.text}</p>
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="font-display text-sm text-muted-foreground tracking-wide">
+          SUA EVOLUÇÃO
+        </h3>
+        <span className={`text-xs ${trendColor} flex items-center gap-1`}>
+          <span>{trendIcon}</span>
+          <span>{trend.text}</span>
+        </span>
+      </div>
+
+      {/* Gráfico */}
+      <div className="h-28 mb-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsAreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="evolutionGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis 
+              dataKey="weekLabel" 
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis 
+              domain={[0, 100]}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+              width={30}
+            />
+            <Tooltip content={<ChartTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="score"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#evolutionGradient)"
+              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: 'hsl(var(--primary))' }}
+            />
+          </RechartsAreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Diagnóstico textual obrigatório (MANDA) */}
+      <div className="pt-3 border-t border-border/50">
+        <p className="text-foreground text-sm font-medium">{diagnosticText}</p>
       </div>
     </motion.div>
   );
 }
 
 // ============================================
-// BLOCO 3 — FOCOS DE EVOLUÇÃO
+// BLOCO 3 — FOCOS DE EVOLUÇÃO (Secundário)
 // ============================================
 interface EvolutionFocusBlockProps {
   focusPoints: EvolutionFocusPoint[];
@@ -244,9 +384,9 @@ export function EvolutionFocusBlock({
         FOCOS DE EVOLUÇÃO
       </h3>
       
-      {/* Lista de pontos */}
+      {/* Lista de pontos (máximo 2-3) */}
       <div className="space-y-3 mb-4">
-        {focusPoints.map((point, idx) => (
+        {focusPoints.map((point) => (
           <div 
             key={point.metric}
             className="flex items-start gap-3"
@@ -261,84 +401,6 @@ export function EvolutionFocusBlock({
       <p className="text-sm text-muted-foreground italic border-t border-border/50 pt-3">
         Esses pontos já estão sendo trabalhados no seu plano.
       </p>
-    </motion.div>
-  );
-}
-
-// ============================================
-// BLOCO 4 — ÚLTIMO TREINO (Continuidade)
-// ============================================
-interface LastWorkoutBlockProps {
-  lastWorkout: LastWorkoutInfo | null;
-  loading?: boolean;
-  onViewDetails?: () => void;
-}
-
-export function LastWorkoutBlock({
-  lastWorkout,
-  loading = false,
-  onViewDetails
-}: LastWorkoutBlockProps) {
-  // Estado vazio
-  if (loading || !lastWorkout) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
-      >
-        <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
-          ÚLTIMO TREINO
-        </h3>
-        <p className="text-muted-foreground/60 text-sm">
-          {loading ? 'Carregando...' : 'Nenhum treino registrado ainda'}
-        </p>
-      </motion.div>
-    );
-  }
-
-  const StatusIcon = lastWorkout.status === 'completed' ? CheckCircle2 : AlertCircle;
-  const statusColor = lastWorkout.status === 'completed' 
-    ? 'text-emerald-500' 
-    : 'text-amber-500';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="card-elevated p-6 border-l-4 border-l-muted-foreground/50"
-    >
-      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
-        ÚLTIMO TREINO
-      </h3>
-      
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-foreground font-medium">{lastWorkout.title}</p>
-          <p className="text-sm text-muted-foreground">{lastWorkout.relativeDate}</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <StatusIcon className={`w-5 h-5 ${statusColor}`} />
-          <span className={`text-sm font-medium ${statusColor}`}>
-            {lastWorkout.statusLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* CTA Secundário 
-      {onViewDetails && (
-        <button
-          onClick={onViewDetails}
-          className="mt-4 text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
-        >
-          <span>Ver detalhes</span>
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      )}
-      */}
     </motion.div>
   );
 }
