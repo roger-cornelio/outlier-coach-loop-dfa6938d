@@ -91,26 +91,6 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
           className="w-56 bg-card border border-border shadow-xl z-50"
           sideOffset={8}
         >
-          {/* Header with user info */}
-          <DropdownMenuLabel className="py-3">
-            <div className="flex flex-col gap-1">
-              <span className="font-semibold text-foreground truncate">
-                {displayName}
-              </span>
-              <span className="text-xs text-muted-foreground font-normal">
-                {profile?.email || user.email}
-              </span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                  {roleLabel}
-                </span>
-                <AthleteStatusBadge status={athleteStatus} size="sm" />
-              </div>
-            </div>
-          </DropdownMenuLabel>
-
-          <DropdownMenuSeparator />
-
           {/* Menu Options */}
           <DropdownMenuItem 
             onClick={handleProfile}
