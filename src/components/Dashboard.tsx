@@ -32,8 +32,10 @@ import {
   EvolutionChartBlock, 
   EvolutionFocusBlock 
 } from './DashboardBlocks';
+import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
+import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -85,6 +87,7 @@ export function Dashboard() {
   } = useAthletePlan();
   
   // Dashboard OUTLIER hooks
+  const diagnosticScores = useDiagnosticScores();
   const evolutionFocus = useEvolutionFocus();
   const weeklyEvolution = useWeeklyEvolution();
   
@@ -333,7 +336,18 @@ export function Dashboard() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         
         {/* ============================================
-            BLOCO 1 — SUA EVOLUÇÃO (Gráfico + Diagnóstico)
+            BLOCO 1 — DIAGNÓSTICO (Radar Chart)
+            ============================================ */}
+        <section className="mb-6">
+          <DiagnosticRadarBlock
+            scores={diagnosticScores.scores}
+            loading={diagnosticScores.loading}
+            hasData={diagnosticScores.hasData}
+          />
+        </section>
+
+        {/* ============================================
+            BLOCO 2 — SUA EVOLUÇÃO (Gráfico de Linha)
             ============================================ */}
         <section className="mb-6">
           <EvolutionChartBlock
@@ -347,7 +361,7 @@ export function Dashboard() {
         </section>
 
         {/* ============================================
-            BLOCO 2 — FOCOS DE EVOLUÇÃO
+            BLOCO 3 — FOCOS DE EVOLUÇÃO
             ============================================ */}
         <section className="mb-6">
           <EvolutionFocusBlock
@@ -359,7 +373,7 @@ export function Dashboard() {
         </section>
 
         {/* ============================================
-            BLOCO 3 — CTA ÚNICO: BORA TREINAR
+            BLOCO 4 — CTA ÚNICO: BORA TREINAR
             ============================================ */}
         <section className="mb-6">
           <motion.button
