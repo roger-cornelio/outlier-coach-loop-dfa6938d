@@ -328,30 +328,6 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Week Navigator */}
-      <div className="sticky top-[73px] z-40 bg-background border-b border-border">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="py-2">
-            <WeekNavigator
-              currentWeek={currentWeek}
-              canNavigateToPast={canNavigateToPast}
-              canNavigateToFuture={canNavigateToFuture}
-              onPreviousWeek={goToPreviousWeek}
-              onNextWeek={goToNextWeek}
-              onCurrentWeek={goToCurrentWeek}
-              isViewingHistory={isViewingHistory}
-            />
-          </div>
-          
-          {/* History Banner */}
-          {isViewingHistory && (
-            <div className="py-2 flex items-center justify-center gap-2 text-amber-500 text-sm border-t border-border/50">
-              <History className="w-4 h-4" />
-              <span>Visualizando histórico (somente leitura)</span>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Content - Dashboard OUTLIER */}
       <main className="max-w-6xl mx-auto px-6 py-8">
@@ -388,10 +364,10 @@ export function Dashboard() {
         <section className="mb-6">
           <motion.button
             onClick={handleStartWorkout}
-            disabled={!hasAnyWorkouts || isViewingHistory}
+            disabled={!hasAnyWorkouts}
             className="w-full font-display text-2xl tracking-wider px-8 py-6 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-lg"
-            whileHover={{ scale: hasAnyWorkouts && !isViewingHistory ? 1.02 : 1 }}
-            whileTap={{ scale: hasAnyWorkouts && !isViewingHistory ? 0.98 : 1 }}
+            whileHover={{ scale: hasAnyWorkouts ? 1.02 : 1 }}
+            whileTap={{ scale: hasAnyWorkouts ? 0.98 : 1 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -400,11 +376,6 @@ export function Dashboard() {
             BORA TREINAR
             <ChevronRight className="w-7 h-7" />
           </motion.button>
-          {isViewingHistory && (
-            <p className="text-center text-amber-500 text-sm mt-3">
-              Visualizando histórico — navegue para a semana atual para treinar
-            </p>
-          )}
           {!hasAnyWorkouts && !loadingPlan && (
             <p className="text-center text-muted-foreground text-sm mt-3">
               Nenhum treino programado para esta semana
@@ -420,7 +391,7 @@ export function Dashboard() {
               className="w-full py-3 px-4 rounded-lg border border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center justify-center gap-2"
             >
               <span className="font-display text-sm tracking-wide">
-                {showDetailedView ? 'OCULTAR DETALHES DA SEMANA' : 'VER DETALHES DOS TREINOS'}
+                {showDetailedView ? 'FECHAR VISÃO SEMANAL' : 'VER TREINO SEMANAL'}
               </span>
               <ChevronRight className={`w-4 h-4 transition-transform ${showDetailedView ? 'rotate-90' : ''}`} />
             </button>
@@ -436,6 +407,25 @@ export function Dashboard() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
+              {/* Week Navigator - Context for Weekly Training */}
+              <div className="mb-4 pb-4 border-b border-border">
+                <WeekNavigator
+                  currentWeek={currentWeek}
+                  canNavigateToPast={canNavigateToPast}
+                  canNavigateToFuture={canNavigateToFuture}
+                  onPreviousWeek={goToPreviousWeek}
+                  onNextWeek={goToNextWeek}
+                  onCurrentWeek={goToCurrentWeek}
+                  isViewingHistory={isViewingHistory}
+                />
+                {isViewingHistory && (
+                  <div className="mt-2 flex items-center justify-center gap-2 text-amber-500 text-sm">
+                    <History className="w-4 h-4" />
+                    <span>Visualizando histórico (somente leitura)</span>
+                  </div>
+                )}
+              </div>
+
               {/* Day Tabs */}
               <div className="flex gap-1 py-4 overflow-x-auto border-b border-border mb-6">
                 {dayTabs.map((day) => {
