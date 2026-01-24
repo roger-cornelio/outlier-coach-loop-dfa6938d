@@ -29,7 +29,6 @@ import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './D
 
 // Dashboard blocks
 import { 
-  TodayWorkoutBlock, 
   EvolutionChartBlock, 
   EvolutionFocusBlock 
 } from './DashboardBlocks';
@@ -358,21 +357,7 @@ export function Dashboard() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         
         {/* ============================================
-            BLOCO 1 — SEU TREINO DE HOJE (Prioridade Máxima)
-            ============================================ */}
-        <section className="mb-6">
-          <TodayWorkoutBlock
-            workout={currentWorkout || null}
-            estimatedTime={totalTime}
-            hasAdaptations={isShowingAdapted || hasAdaptations}
-            onStartWorkout={handleStartWorkout}
-            loading={loadingPlan}
-            isViewingHistory={isViewingHistory}
-          />
-        </section>
-
-        {/* ============================================
-            BLOCO 2 — SUA EVOLUÇÃO (Gráfico + Diagnóstico)
+            BLOCO 1 — SUA EVOLUÇÃO (Gráfico + Diagnóstico)
             ============================================ */}
         <section className="mb-6">
           <EvolutionChartBlock
@@ -386,7 +371,7 @@ export function Dashboard() {
         </section>
 
         {/* ============================================
-            BLOCO 3 — FOCOS DE EVOLUÇÃO (Secundário)
+            BLOCO 2 — FOCOS DE EVOLUÇÃO
             ============================================ */}
         <section className="mb-6">
           <EvolutionFocusBlock
@@ -395,6 +380,36 @@ export function Dashboard() {
             loading={evolutionFocus.loading}
             onViewEvolution={() => setCurrentView('benchmarks')}
           />
+        </section>
+
+        {/* ============================================
+            BLOCO 3 — CTA ÚNICO: BORA TREINAR
+            ============================================ */}
+        <section className="mb-6">
+          <motion.button
+            onClick={handleStartWorkout}
+            disabled={!hasAnyWorkouts || isViewingHistory}
+            className="w-full font-display text-2xl tracking-wider px-8 py-6 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-lg"
+            whileHover={{ scale: hasAnyWorkouts && !isViewingHistory ? 1.02 : 1 }}
+            whileTap={{ scale: hasAnyWorkouts && !isViewingHistory ? 0.98 : 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Flame className="w-7 h-7" />
+            BORA TREINAR
+            <ChevronRight className="w-7 h-7" />
+          </motion.button>
+          {isViewingHistory && (
+            <p className="text-center text-amber-500 text-sm mt-3">
+              Visualizando histórico — navegue para a semana atual para treinar
+            </p>
+          )}
+          {!hasAnyWorkouts && !loadingPlan && (
+            <p className="text-center text-muted-foreground text-sm mt-3">
+              Nenhum treino programado para esta semana
+            </p>
+          )}
         </section>
 
         {/* Day Tabs - Para visualização detalhada */}
