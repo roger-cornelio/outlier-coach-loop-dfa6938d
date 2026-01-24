@@ -20,10 +20,16 @@ import {
   Radar, 
   ResponsiveContainer 
 } from 'recharts';
-import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 interface DiagnosticRadarBlockProps {
   scores: CalculatedScore[];
@@ -109,6 +115,42 @@ function aggregateToPhysiologicalDimensions(scores: CalculatedScore[]): Physiolo
   }));
 }
 
+/**
+ * Estima VO₂ Max baseado na performance de corrida
+ * Fórmula simplificada baseada em ritmo médio de 1km
+ */
+function estimateVO2Max(scores: CalculatedScore[]): { value: number; isEstimated: boolean } {
+  const runScore = scores.find(s => s.metric === 'run_avg');
+  if (!runScore) return { value: 0, isEstimated: true };
+  
+  // Estimativa baseada no percentil de corrida (simplificado)
+  // P90 ≈ 60 ml/kg/min, P50 ≈ 45 ml/kg/min, P10 ≈ 35 ml/kg/min
+  const percentile = runScore.percentile_value;
+  const vo2 = Math.round(35 + (percentile / 100) * 30);
+  
+  return { value: vo2, isEstimated: true };
+}
+
+/**
+ * Estima Limiar de Lactato baseado no ritmo de corrida
+ * Retorna ritmo em formato mm:ss/km
+ */
+function estimateLactateThreshold(scores: CalculatedScore[]): { pace: string; percentage: number; isEstimated: boolean } {
+  const runScore = scores.find(s => s.metric === 'run_avg');
+  if (!runScore) return { pace: '--:--', percentage: 0, isEstimated: true };
+  
+  // Estima ritmo baseado no tempo raw (run_avg é média de 1km)
+  const rawTimeSec = runScore.raw_time_sec;
+  const paceMin = Math.floor(rawTimeSec / 60);
+  const paceSec = rawTimeSec % 60;
+  const paceFormatted = `${paceMin}:${paceSec.toString().padStart(2, '0')}`;
+  
+  // Percentual do VO₂ no limiar (tipicamente 75-90%)
+  const ltPercentage = Math.round(75 + (runScore.percentile_value / 100) * 15);
+  
+  return { pace: paceFormatted, percentage: ltPercentage, isEstimated: true };
+}
+
 export function DiagnosticRadarBlock({ 
   scores, 
   loading = false, 
@@ -118,6 +160,10 @@ export function DiagnosticRadarBlock({
   
   // Agregar scores em 6 valências fisiológicas
   const radarData = useMemo(() => aggregateToPhysiologicalDimensions(scores), [scores]);
+  
+  // Parâmetros fisiológicos mensuráveis
+  const vo2Max = useMemo(() => estimateVO2Max(scores), [scores]);
+  const lactateThreshold = useMemo(() => estimateLactateThreshold(scores), [scores]);
 
   // Estado carregando
   if (loading) {
@@ -208,6 +254,67 @@ export function DiagnosticRadarBlock({
       <p className="text-sm text-muted-foreground mt-2 text-center">
         Perfil fisiológico baseado na sua última prova registrada.
       </p>
+
+      {/* PARÂMETROS FISIOLÓGICOS MENSURÁVEIS */}
+      <TooltipProvider>
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          {/* VO₂ Max */}
+          <div className="flex flex-col items-center p-4 rounded-lg bg-muted/30 border border-border/30">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
+                VO₂ Max
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/60 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[200px]">
+                  <p className="text-xs">Capacidade máxima do sistema aeróbico.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className="font-display text-2xl font-semibold text-foreground">
+              {vo2Max.value > 0 ? vo2Max.value : '--'}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {vo2Max.value > 0 ? 'ml/kg/min' : ''}
+            </span>
+            {vo2Max.isEstimated && vo2Max.value > 0 && (
+              <span className="text-[10px] text-muted-foreground/70 mt-1 italic">
+                estimado
+              </span>
+            )}
+          </div>
+
+          {/* Limiar de Lactato */}
+          <div className="flex flex-col items-center p-4 rounded-lg bg-muted/30 border border-border/30">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
+                Limiar de Lactato
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/60 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[220px]">
+                  <p className="text-xs">Intensidade máxima mantida por períodos prolongados.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className="font-display text-2xl font-semibold text-foreground">
+              {lactateThreshold.pace !== '--:--' ? lactateThreshold.pace : '--'}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {lactateThreshold.pace !== '--:--' ? '/km' : ''}
+            </span>
+            {lactateThreshold.isEstimated && lactateThreshold.pace !== '--:--' && (
+              <span className="text-[10px] text-muted-foreground/70 mt-1 italic">
+                ritmo sustentável
+              </span>
+            )}
+          </div>
+        </div>
+      </TooltipProvider>
 
       {/* Toggle para Camada 2 */}
       <div className="mt-5 pt-4 border-t border-border/50">
