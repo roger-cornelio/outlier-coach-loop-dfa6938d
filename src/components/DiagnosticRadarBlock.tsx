@@ -1,10 +1,10 @@
 /**
- * DiagnosticRadarBlock - Diagnóstico em duas camadas
+ * DiagnosticRadarBlock - Diagnóstico em duas camadas (Valências Fisiológicas)
  * 
- * CAMADA 1 - Perfil do Atleta (Visão Executiva):
- * - Radar Chart com 5 dimensões agregadas
+ * CAMADA 1 - Perfil Fisiológico (Radar Principal):
+ * - 6 valências fisiológicas HYROX obrigatórias
+ * - Radar visualmente maior, estilo premium
  * - Sem números ou escala visível
- * - Estilo premium e técnico
  * 
  * CAMADA 2 - Diagnóstico por Estação (Detalhado):
  * - Barras horizontais para as 9 estações HYROX
@@ -31,47 +31,82 @@ interface DiagnosticRadarBlockProps {
   hasData: boolean;
 }
 
-// Agregação de métricas em 5 dimensões principais (Camada 1)
-interface AggregatedDimension {
+// Agregação de métricas em 6 valências fisiológicas HYROX
+interface PhysiologicalDimension {
   name: string;
+  shortName: string;
   value: number;
   fullMark: 100;
 }
 
-// Mapeia métricas HYROX para 5 dimensões agregadas
-function aggregateScores(scores: CalculatedScore[]): AggregatedDimension[] {
+/**
+ * Mapeia métricas HYROX para 6 valências fisiológicas reais
+ * 
+ * 1. Resistência Cardiovascular / Aeróbica → Run
+ * 2. Força & Resistência Muscular Local → Sled Push, Sled Pull, Farmers
+ * 3. Potência & Vigor → SkiErg, Row (power output)
+ * 4. Capacidade Anaeróbica → BBJ, Wall Balls (alta intensidade)
+ * 5. Core & Estabilidade → Sandbag Lunges
+ * 6. Coordenação & Eficiência sob Fadiga → Média geral (consistência)
+ */
+function aggregateToPhysiologicalDimensions(scores: CalculatedScore[]): PhysiologicalDimension[] {
   if (!scores || scores.length === 0) return [];
 
-  // Mapa de métricas para valores
   const scoreMap = new Map<string, number>();
   scores.forEach(s => {
     scoreMap.set(s.metric, s.percentile_value);
   });
 
-  // Agregação em 5 dimensões principais (conforme spec)
-  const dimensions: { name: string; metrics: string[] }[] = [
-    { name: 'Run', metrics: ['run_avg'] },
-    { name: 'Sled', metrics: ['sled_push', 'sled_pull'] },
-    { name: 'Carry / Grip', metrics: ['farmers', 'sandbag'] },
-    { name: 'Engine', metrics: ['ski', 'row'] },
-    { name: 'Stations', metrics: ['bbj', 'wallballs'] }
-  ];
-
-  return dimensions.map(dim => {
-    const values = dim.metrics
+  // Helper para calcular média de métricas
+  const avgMetrics = (metrics: string[]): number => {
+    const values = metrics
       .map(m => scoreMap.get(m))
       .filter((v): v is number => v !== undefined && v !== null);
-    
-    const avg = values.length > 0 
+    return values.length > 0 
       ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
-      : 50; // Default neutro
+      : 50;
+  };
 
-    return {
-      name: dim.name,
-      value: avg,
-      fullMark: 100
-    };
-  });
+  // 6 Valências Fisiológicas HYROX (obrigatórias)
+  const dimensions: { name: string; shortName: string; metrics: string[] }[] = [
+    { 
+      name: 'Resistência Cardiovascular', 
+      shortName: 'Cardio',
+      metrics: ['run_avg'] 
+    },
+    { 
+      name: 'Força & Resistência Muscular', 
+      shortName: 'Força',
+      metrics: ['sled_push', 'sled_pull', 'farmers'] 
+    },
+    { 
+      name: 'Potência & Vigor', 
+      shortName: 'Potência',
+      metrics: ['ski', 'row'] 
+    },
+    { 
+      name: 'Capacidade Anaeróbica', 
+      shortName: 'Anaeróbica',
+      metrics: ['bbj', 'wallballs'] 
+    },
+    { 
+      name: 'Core & Estabilidade', 
+      shortName: 'Core',
+      metrics: ['sandbag'] 
+    },
+    { 
+      name: 'Coordenação sob Fadiga', 
+      shortName: 'Eficiência',
+      metrics: ['run_avg', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'] 
+    }
+  ];
+
+  return dimensions.map(dim => ({
+    name: dim.name,
+    shortName: dim.shortName,
+    value: avgMetrics(dim.metrics),
+    fullMark: 100
+  }));
 }
 
 export function DiagnosticRadarBlock({ 
@@ -81,8 +116,8 @@ export function DiagnosticRadarBlock({
 }: DiagnosticRadarBlockProps) {
   const [showDetails, setShowDetails] = useState(false);
   
-  // Agregar scores em 5 dimensões para o radar
-  const radarData = useMemo(() => aggregateScores(scores), [scores]);
+  // Agregar scores em 6 valências fisiológicas
+  const radarData = useMemo(() => aggregateToPhysiologicalDimensions(scores), [scores]);
 
   // Estado carregando
   if (loading) {
@@ -93,9 +128,9 @@ export function DiagnosticRadarBlock({
         className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
       >
         <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
-          DIAGNÓSTICO
+          PERFIL FISIOLÓGICO
         </h3>
-        <div className="h-48 flex items-center justify-center">
+        <div className="h-64 flex items-center justify-center">
           <p className="text-muted-foreground/60 text-sm">Carregando diagnóstico...</p>
         </div>
       </motion.div>
@@ -111,12 +146,12 @@ export function DiagnosticRadarBlock({
         className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
       >
         <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
-          DIAGNÓSTICO
+          PERFIL FISIOLÓGICO
         </h3>
-        <div className="flex flex-col items-center justify-center py-8 gap-3">
-          <Activity className="w-10 h-10 text-muted-foreground/30" />
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <Activity className="w-12 h-12 text-muted-foreground/30" />
           <p className="text-muted-foreground text-sm text-center max-w-xs">
-            Lance seu primeiro simulado ou prova oficial para ver seu diagnóstico técnico.
+            Lance seu primeiro simulado ou prova oficial para ver seu perfil fisiológico completo.
           </p>
         </div>
       </motion.div>
@@ -129,27 +164,27 @@ export function DiagnosticRadarBlock({
       animate={{ opacity: 1, y: 0 }}
       className="card-elevated p-6 border-l-4 border-l-primary"
     >
-      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-4">
-        DIAGNÓSTICO
+      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-2">
+        PERFIL FISIOLÓGICO
       </h3>
 
-      {/* CAMADA 1 - Perfil do Atleta (Radar) */}
-      <div className="h-52 sm:h-56">
+      {/* CAMADA 1 - Perfil Fisiológico (Radar Grande) */}
+      <div className="h-72 sm:h-80 md:h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
             {/* Grid sutil sem números */}
             <PolarGrid 
               stroke="hsl(var(--border))" 
-              strokeOpacity={0.3}
+              strokeOpacity={0.25}
               gridType="polygon"
             />
             
-            {/* Labels dos eixos - sem valores numéricos */}
+            {/* Labels das valências - nomes completos */}
             <PolarAngleAxis
-              dataKey="name"
+              dataKey="shortName"
               tick={{ 
                 fill: 'hsl(var(--muted-foreground))',
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 500
               }}
               tickLine={false}
@@ -157,12 +192,12 @@ export function DiagnosticRadarBlock({
             
             {/* Área preenchida - cor OUTLIER premium */}
             <Radar
-              name="Performance"
+              name="Perfil"
               dataKey="value"
               stroke="hsl(var(--primary))"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="hsl(var(--primary))"
-              fillOpacity={0.25}
+              fillOpacity={0.2}
               dot={false}
             />
           </RadarChart>
@@ -170,12 +205,12 @@ export function DiagnosticRadarBlock({
       </div>
 
       {/* Texto explicativo obrigatório */}
-      <p className="text-sm text-muted-foreground mt-3 text-center">
-        Perfil geral baseado na sua última prova.
+      <p className="text-sm text-muted-foreground mt-2 text-center">
+        Perfil fisiológico baseado na sua última prova registrada.
       </p>
 
       {/* Toggle para Camada 2 */}
-      <div className="mt-4 pt-4 border-t border-border/50">
+      <div className="mt-5 pt-4 border-t border-border/50">
         <Button
           variant="ghost"
           size="sm"
@@ -185,12 +220,12 @@ export function DiagnosticRadarBlock({
           {showDetails ? (
             <>
               <ChevronUp className="w-4 h-4 mr-2" />
-              Ocultar detalhes por estação
+              Ocultar análise por estação
             </>
           ) : (
             <>
               <ChevronDown className="w-4 h-4 mr-2" />
-              Ver detalhes por estação
+              Ver análise detalhada por estação
             </>
           )}
         </Button>
