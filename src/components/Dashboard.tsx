@@ -280,13 +280,6 @@ export function Dashboard() {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setCurrentView('preWorkout')}
-                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                title="Voltar"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
               <div>
                 <OutlierWordmark size="sm" className="block" />
               {athleteConfig && (

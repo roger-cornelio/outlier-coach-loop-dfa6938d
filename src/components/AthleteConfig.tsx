@@ -177,10 +177,10 @@ export function AthleteConfig() {
 
     setIsSaving(false);
     
-    // SEMPRE ir para preWorkout após salvar configuração
-    // (tanto no primeiro setup quanto em edições posteriores, o preWorkout é o ritual de entrada)
-    console.log(`[NAV][AthleteConfig] from_view=config to_view=preWorkout first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=config_saved_go_to_preworkout ts=${new Date().toISOString()}`);
-    setCurrentView('preWorkout');
+    // SEMPRE ir para dashboard após salvar configuração
+    // NOTE: preWorkout foi removido como etapa intermediária
+    console.log(`[NAV][AthleteConfig] from_view=config to_view=dashboard first_setup_completed=${profile?.first_setup_completed} isFirstSetup=${isFirstSetup} coachStyle=${coachStyle} reason=config_saved_go_to_dashboard ts=${new Date().toISOString()}`);
+    setCurrentView('dashboard');
   };
 
   return (
