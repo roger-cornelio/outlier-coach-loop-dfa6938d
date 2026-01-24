@@ -1,3 +1,22 @@
+/**
+ * Dashboard V1 - OUTLIER
+ * 
+ * OBJETIVO: Mostrar ao atleta quem ele é hoje, onde evoluir e criar desejo de treinar.
+ * 
+ * ESTRUTURA VERTICAL:
+ * 1. Header - Identidade do Atleta (nome, badge, coroa)
+ * 2. Perfil Fisiológico - Radar Chart + Métricas VO2/Lactato
+ * 3. Sua Evolução - Gráfico de linha semanal
+ * 4. Focos de Evolução - Onde perde tempo na prova
+ * 5. CTA Principal - BORA TREINAR
+ * 6. Ações Secundárias - Ver Treino Semanal, Ajustar treino
+ * 
+ * PROIBIÇÕES:
+ * - Detalhes de treino diário (vive em tela dedicada)
+ * - Seletor de datas (vive em tela dedicada)
+ * - Overload de CTAs
+ */
+
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,15 +46,18 @@ import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blo
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
-// Dashboard blocks
-import { 
-  EvolutionChartBlock, 
-  EvolutionFocusBlock 
-} from './DashboardBlocks';
+// Dashboard V1 Blocks
+import { EvolutionChartBlock } from './DashboardBlocks';
 import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
+
+// Dashboard V1 Components
+import { AthleteIdentityHeader } from './dashboard/AthleteIdentityHeader';
+import { PhysiologicalMetrics } from './dashboard/PhysiologicalMetrics';
+import { EvolutionFocusWithIcons } from './dashboard/EvolutionFocusWithIcons';
+import { SecondaryActions } from './dashboard/SecondaryActions';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -272,22 +294,23 @@ export function Dashboard() {
   // Calorias totais
   const totalCalories = workoutEstimation?.totals.estimatedKcalTotal || 0;
 
+  // Handler para abrir modal de ajuste de equipamentos
+  const handleAdjustTraining = () => {
+    setIsAdaptModalOpen(true);
+  };
+
+  // Handler para ir para treino semanal
+  const handleViewWeeklyTraining = () => {
+    setShowDetailedView(!showDetailedView);
+  };
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
+      {/* Header Simplificado - apenas navegação */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <OutlierWordmark size="sm" className="block" />
-              {athleteConfig && (
-                  <p className="text-sm text-muted-foreground">
-                    Coach {athleteConfig.coachStyle}
-                  </p>
-                )}
-              </div>
-            </div>
+            <OutlierWordmark size="sm" />
             <div className="flex items-center gap-3">
               {/* Admin: Seletor de atleta para visualização */}
               {(state === 'admin' || state === 'superadmin') && (
@@ -295,61 +318,48 @@ export function Dashboard() {
               )}
               <UserHeader showLogout={true} />
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentView('benchmarks')}
-                className="p-3 rounded-lg bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-colors"
-                title="Benchmarks & Evolução"
-              >
-                <Trophy className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setCurrentView('config')}
-                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                  title={`Sair (${user.email})`}
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/auth')}
-                  className="p-3 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-                  title="Fazer login"
-                >
-                  <LogIn className="w-5 h-5" />
-                </button>
-              )}
-            </div>
           </div>
         </div>
       </header>
 
-
-      {/* Content - Dashboard OUTLIER */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      {/* ═══════════════════════════════════════════════════════════════════
+          DASHBOARD V1 - CONTEÚDO PRINCIPAL
+          Hierarquia: Identidade → Diagnóstico → Evolução → Focos → CTA
+          ═══════════════════════════════════════════════════════════════════ */}
+      <main className="max-w-4xl mx-auto px-6 py-8">
         
-        {/* ============================================
-            BLOCO 1 — DIAGNÓSTICO (Radar Chart)
-            ============================================ */}
-        <section className="mb-6">
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 1 — HEADER: IDENTIDADE DO ATLETA
+            Nome em destaque, badge competitivo, coroa, linguagem aspiracional
+            ──────────────────────────────────────────────────────────────── */}
+        <section className="mb-8">
+          <AthleteIdentityHeader />
+        </section>
+
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 2 — PERFIL FISIOLÓGICO
+            2.1 Radar Chart (grande, central) - 6 valências HYROX
+            2.2 Métricas fisiológicas (VO2 Max, Limiar Lactato)
+            ──────────────────────────────────────────────────────────────── */}
+        <section className="mb-8">
           <DiagnosticRadarBlock
             scores={diagnosticScores.scores}
             loading={diagnosticScores.loading}
             hasData={diagnosticScores.hasData}
           />
+          {/* Métricas fisiológicas abaixo do radar */}
+          <PhysiologicalMetrics
+            vo2Max={null} // TODO: calcular a partir dos dados quando disponível
+            lactatoThreshold={null} // TODO: calcular a partir dos dados quando disponível
+            loading={diagnosticScores.loading}
+          />
         </section>
 
-        {/* ============================================
-            BLOCO 2 — SUA EVOLUÇÃO (Gráfico de Linha)
-            ============================================ */}
-        <section className="mb-6">
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 3 — SUA EVOLUÇÃO
+            Gráfico de linha (evolução semanal) - histórico, não planejamento
+            ──────────────────────────────────────────────────────────────── */}
+        <section className="mb-8">
           <EvolutionChartBlock
             data={weeklyEvolution.data}
             diagnosticText={weeklyEvolution.diagnosticText}
@@ -360,11 +370,12 @@ export function Dashboard() {
           />
         </section>
 
-        {/* ============================================
-            BLOCO 3 — FOCOS DE EVOLUÇÃO
-            ============================================ */}
-        <section className="mb-6">
-          <EvolutionFocusBlock
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 4 — FOCOS DE EVOLUÇÃO
+            Onde você perde tempo na prova - ícones por estação
+            ──────────────────────────────────────────────────────────────── */}
+        <section className="mb-8">
+          <EvolutionFocusWithIcons
             focusPoints={evolutionFocus.focusPoints}
             hasData={evolutionFocus.hasData}
             loading={evolutionFocus.loading}
@@ -372,9 +383,10 @@ export function Dashboard() {
           />
         </section>
 
-        {/* ============================================
-            BLOCO 4 — CTA ÚNICO: BORA TREINAR
-            ============================================ */}
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 5 — CTA PRINCIPAL: BORA TREINAR
+            Botão grande, central, dominante - ÚNICO CTA principal
+            ──────────────────────────────────────────────────────────────── */}
         <section className="mb-6">
           <motion.button
             onClick={handleStartWorkout}
@@ -397,20 +409,22 @@ export function Dashboard() {
           )}
         </section>
 
-        {/* Day Tabs - Para visualização detalhada */}
-        {hasAnyWorkouts && (
-          <section className="mb-6">
-            <button
-              onClick={() => setShowDetailedView(!showDetailedView)}
-              className="w-full py-3 px-4 rounded-lg border border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center justify-center gap-2"
-            >
-              <span className="font-display text-sm tracking-wide">
-                {showDetailedView ? 'FECHAR VISÃO SEMANAL' : 'VER TREINO SEMANAL'}
-              </span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${showDetailedView ? 'rotate-90' : ''}`} />
-            </button>
-          </section>
-        )}
+        {/* ────────────────────────────────────────────────────────────────
+            BLOCO 6 — AÇÕES SECUNDÁRIAS (discretas)
+            Ver Treino Semanal, Ajustar treino para o meu box
+            ──────────────────────────────────────────────────────────────── */}
+        <section className="mb-8">
+          <SecondaryActions
+            onViewWeeklyTraining={handleViewWeeklyTraining}
+            onAdjustTraining={handleAdjustTraining}
+            hasWorkouts={hasAnyWorkouts}
+          />
+        </section>
+
+        {/* ────────────────────────────────────────────────────────────────
+            VISÃO DETALHADA SEMANAL (expandível)
+            Só aparece quando o atleta clica em "Ver Treino Semanal"
+            ──────────────────────────────────────────────────────────────── */}
 
         {/* Detailed View - Workout blocks */}
         <AnimatePresence>
@@ -657,32 +671,6 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Equipment Adapt Button */}
-        {hasAnyWorkouts && !isViewingHistory && (
-          <div className="mt-6">
-            <button
-              onClick={() => setIsAdaptModalOpen(true)}
-              className={`
-                w-full py-3 px-4 rounded-lg border transition-all flex items-center justify-center gap-2
-                ${hasAdaptations
-                  ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
-                  : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }
-              `}
-            >
-              <Wrench className="w-4 h-4" />
-              <span className="font-display text-sm tracking-wide">
-                {hasAdaptations 
-                  ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
-                  : 'AJUSTAR TREINO PARA O MEU BOX'
-                }
-              </span>
-            </button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
-            </p>
-          </div>
-        )}
       </main>
 
       {/* Equipment Adapt Modal */}
