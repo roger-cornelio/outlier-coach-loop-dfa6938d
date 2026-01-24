@@ -38,7 +38,6 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { DashboardIdentityHeader } from '@/components/DashboardIdentityHeader';
 import { DiagnosticRadarBlock } from '@/components/DiagnosticRadarBlock';
 import { EvolutionChartBlock, EvolutionFocusBlock } from '@/components/DashboardBlocks';
-import { DashboardSecondaryActions } from '@/components/DashboardSecondaryActions';
 import { LevelUpModal } from '@/components/LevelUpModal';
 
 export default function AthleteDashboard() {
@@ -198,10 +197,9 @@ export default function AthleteDashboard() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          6️⃣ AÇÕES SECUNDÁRIAS (discretas)
-          Ver Treino Semanal | Ajustar treino para o meu box
+          6️⃣ AÇÕES SECUNDÁRIAS
+          Removidas do Dashboard - agora disponíveis na Sidebar lateral
       ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSecondaryActions />
     </div>
   );
 }
