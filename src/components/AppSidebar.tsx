@@ -1,12 +1,14 @@
 /**
  * AppSidebar - Navegação global da OUTLIER
  * 
- * Itens:
+ * Itens de navegação:
  * 1. Dashboard
  * 2. Treino Semanal
  * 3. Ajustes de Treino
  * 4. Status do Atleta
  * 5. Configurações
+ * 
+ * Footer: Logout
  */
 
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,7 +19,9 @@ import {
   Trophy, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,6 +36,7 @@ import {
 } from '@/components/ui/sidebar';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { cn } from '@/lib/utils';
+import { useLogout } from '@/hooks/useLogout';
 
 /**
  * Navegação da sidebar mapeia para as telas RICAS existentes do produto.
@@ -74,6 +79,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { state: sidebarState } = useSidebar();
+  const { logout, isLoggingOut } = useLogout();
   const isCollapsed = sidebarState === 'collapsed';
 
   const isActive = (path: string) => {
@@ -81,6 +87,10 @@ export function AppSidebar() {
       return location.pathname === '/app';
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -146,18 +156,45 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Toggle Button */}
-      <div className="mt-auto border-t border-border p-2">
-        <SidebarTrigger className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-          {isCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <>
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-xs">Recolher</span>
-            </>
-          )}
-        </SidebarTrigger>
+      {/* Footer: Toggle + Logout */}
+      <div className="mt-auto border-t border-border">
+        {/* Logout Button */}
+        <div className="p-2">
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+              "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+              isCollapsed && "justify-center px-2"
+            )}
+          >
+            {isLoggingOut ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <LogOut className="w-5 h-5" />
+            )}
+            {!isCollapsed && (
+              <span className="text-sm font-medium">
+                {isLoggingOut ? 'Saindo...' : 'Sair'}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Toggle Button */}
+        <div className="p-2 pt-0">
+          <SidebarTrigger className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <>
+                <ChevronLeft className="w-4 h-4" />
+                <span className="text-xs">Recolher</span>
+              </>
+            )}
+          </SidebarTrigger>
+        </div>
       </div>
     </Sidebar>
   );
