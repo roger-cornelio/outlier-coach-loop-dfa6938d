@@ -23,18 +23,12 @@ import {
 import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
-import { PhysiologicalMetrics } from './PhysiologicalMetrics';
 import { Button } from './ui/button';
 
 interface DiagnosticRadarBlockProps {
   scores: CalculatedScore[];
   loading?: boolean;
   hasData: boolean;
-  // Parâmetros fisiológicos opcionais
-  vo2Max?: number | null;
-  vo2MaxSource?: 'estimated' | 'measured';
-  lactateThreshold?: number | null;
-  lactateThresholdPercent?: number | null;
 }
 
 // Agregação de métricas em 6 valências fisiológicas HYROX
@@ -118,11 +112,7 @@ function aggregateToPhysiologicalDimensions(scores: CalculatedScore[]): Physiolo
 export function DiagnosticRadarBlock({ 
   scores, 
   loading = false, 
-  hasData,
-  vo2Max = null,
-  vo2MaxSource = 'estimated',
-  lactateThreshold = null,
-  lactateThresholdPercent = null,
+  hasData 
 }: DiagnosticRadarBlockProps) {
   const [showDetails, setShowDetails] = useState(false);
   
@@ -218,14 +208,6 @@ export function DiagnosticRadarBlock({
       <p className="text-sm text-muted-foreground mt-2 text-center">
         Perfil fisiológico baseado na sua última prova registrada.
       </p>
-
-      {/* Parâmetros Fisiológicos (VO₂ Max e Limiar de Lactato) */}
-      <PhysiologicalMetrics
-        vo2Max={vo2Max}
-        vo2MaxSource={vo2MaxSource}
-        lactateThreshold={lactateThreshold}
-        lactateThresholdPercent={lactateThresholdPercent}
-      />
 
       {/* Toggle para Camada 2 */}
       <div className="mt-5 pt-4 border-t border-border/50">

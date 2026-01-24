@@ -19,15 +19,6 @@ import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 
-// Athlete app pages with sidebar - using RICH existing components
-import { AthleteLayout } from "./components/layouts/AthleteLayout";
-import AthleteDashboard from "./pages/AthleteDashboard";
-import WeeklyTrainingPage from "./pages/WeeklyTrainingPage";
-import WorkoutExecutionPage from "./pages/WorkoutExecutionPage";
-import TrainingAdjustments from "./pages/TrainingAdjustments";
-import AthleteStatus from "./pages/AthleteStatus";
-import AthleteConfigPage from "./pages/AthleteConfigPage";
-
 const queryClient = new QueryClient();
 
 const LAST_ROUTE_KEY = "outlier_last_route";
@@ -80,15 +71,8 @@ const App = () => (
           <DebugKeyboardToggle />
           <AppGate>
             <Routes>
-              {/* Main app route (protected) - with sidebar layout */}
-              <Route path="/app" element={<AthleteLayout />}>
-                <Route index element={<AthleteDashboard />} />
-                <Route path="treino" element={<WeeklyTrainingPage />} />
-                <Route path="executar" element={<WorkoutExecutionPage />} />
-                <Route path="ajustes" element={<TrainingAdjustments />} />
-                <Route path="status" element={<AthleteStatus />} />
-                <Route path="config" element={<AthleteConfigPage />} />
-              </Route>
+              {/* Main app route (protected) */}
+              <Route path="/app" element={<Index />} />
 
               {/* === LOGIN ROUTES === */}
               <Route path="/login" element={<Auth context="user" />} />

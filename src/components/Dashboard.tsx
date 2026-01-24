@@ -209,12 +209,7 @@ export function Dashboard() {
   const handleStartWorkout = () => {
     if (currentWorkout) {
       setSelectedWorkout(currentWorkout);
-      // Use route navigation when in sidebar layout, fallback to view state
-      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/app')) {
-        navigate('/app/executar');
-      } else {
-        setCurrentView('workout');
-      }
+      setCurrentView('workout');
     }
   };
 

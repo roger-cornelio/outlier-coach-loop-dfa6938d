@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
@@ -23,7 +22,6 @@ const blockTypeColors: Record<string, string> = {
 };
 
 export function WorkoutExecution() {
-  const navigate = useNavigate();
   const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
@@ -41,14 +39,8 @@ export function WorkoutExecution() {
     return adaptWorkoutForEquipment(selectedWorkout, savedUnavailableEquipment);
   }, [selectedWorkout, savedUnavailableEquipment]);
 
-  // Redirect to training page if no workout selected
   if (!selectedWorkout || !displayedWorkout) {
-    // Use route navigation when in sidebar layout, fallback to view state
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/app')) {
-      navigate('/app/treino');
-    } else {
-      setCurrentView('dashboard');
-    }
+    setCurrentView('dashboard');
     return null;
   }
 
