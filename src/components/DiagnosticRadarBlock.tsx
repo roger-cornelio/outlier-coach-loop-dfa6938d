@@ -171,7 +171,7 @@ export function DiagnosticRadarBlock({
       {/* CAMADA 1 - Perfil Fisiológico (Radar Grande) */}
       <div className="h-80 sm:h-96 md:h-[28rem]">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
             {/* Grid sutil sem números */}
             <PolarGrid 
               stroke="hsl(var(--border))" 
@@ -179,14 +179,13 @@ export function DiagnosticRadarBlock({
               gridType="polygon"
             />
             
-            {/* Labels das valências - tipografia reforçada */}
+            {/* Labels das valências - tipografia legível */}
             <PolarAngleAxis
               dataKey="shortName"
               tick={{ 
                 fill: 'hsl(var(--foreground))',
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: 'var(--font-display)'
+                fontSize: 11,
+                fontWeight: 500
               }}
               tickLine={false}
             />
