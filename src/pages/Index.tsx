@@ -33,7 +33,6 @@ import { BenchmarksScreen } from "@/components/BenchmarksScreen";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
 import { DebugPanel } from "@/components/DebugPanel";
-import { AppSidebar } from "@/components/AppSidebar";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
 import { useLevelTheme } from "@/hooks/useLevelTheme";
@@ -311,10 +310,7 @@ const Index = () => {
     return <Screen />;
   };
 
-  // Sidebar only for dashboard view
-  const showSidebar = currentView === 'dashboard' && onboardingDecision.isSetupComplete;
-
-  const content = (
+  return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
       <AnimatePresence mode="wait">
         <motion.div
@@ -347,8 +343,6 @@ const Index = () => {
       />
     </div>
   );
-
-  return showSidebar ? <AppSidebar>{content}</AppSidebar> : content;
 };
 
 export default Index;

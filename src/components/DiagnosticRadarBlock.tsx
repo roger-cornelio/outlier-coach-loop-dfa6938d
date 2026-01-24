@@ -204,56 +204,8 @@ export function DiagnosticRadarBlock({
         </ResponsiveContainer>
       </div>
 
-      {/* PARÂMETROS FISIOLÓGICOS - VO2 Max e Limiar de Lactato */}
-      <div className="mt-4 pt-4 border-t border-border/50">
-        <h4 className="font-display text-xs text-muted-foreground tracking-wide mb-3">
-          PARÂMETROS FISIOLÓGICOS
-        </h4>
-        <div className="grid grid-cols-2 gap-4">
-          {/* VO2 Max */}
-          <div className="bg-secondary/30 rounded-lg p-3">
-            <div className="flex items-baseline gap-1">
-              <span className="font-display text-xl text-foreground">
-                {hasData ? '52' : '—'}
-              </span>
-              {hasData && (
-                <span className="text-xs text-muted-foreground">ml/kg/min</span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-xs text-muted-foreground">VO₂ Max</span>
-              {hasData ? (
-                <span className="text-[10px] text-muted-foreground/60 italic">estimado</span>
-              ) : (
-                <span className="text-[10px] text-muted-foreground/60">Sem dados ainda</span>
-              )}
-            </div>
-          </div>
-
-          {/* Limiar de Lactato */}
-          <div className="bg-secondary/30 rounded-lg p-3">
-            <div className="flex items-baseline gap-1">
-              <span className="font-display text-xl text-foreground">
-                {hasData ? '4:36' : '—'}
-              </span>
-              {hasData && (
-                <span className="text-xs text-muted-foreground">/km</span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-xs text-muted-foreground">Limiar de Lactato</span>
-              {hasData ? (
-                <span className="text-[10px] text-muted-foreground/60 italic">ritmo sustentável</span>
-              ) : (
-                <span className="text-[10px] text-muted-foreground/60">Sem dados ainda</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Texto explicativo obrigatório */}
-      <p className="text-sm text-muted-foreground mt-4 text-center">
+      <p className="text-sm text-muted-foreground mt-2 text-center">
         Perfil fisiológico baseado na sua última prova registrada.
       </p>
 

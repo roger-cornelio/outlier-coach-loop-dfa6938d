@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -104,22 +105,10 @@ export function Dashboard() {
     const today = new Date().getDay();
     return days[today] || 'seg';
   });
-  // isAdaptModalOpen moved to sidebar
+  const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
   const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
-
-  // Listener para evento da sidebar que alterna visão semanal
-  useEffect(() => {
-    const handleToggleWeeklyView = (e: CustomEvent<{ show: boolean }>) => {
-      setShowDetailedView(e.detail.show);
-    };
-    
-    window.addEventListener('sidebar:toggleWeeklyView', handleToggleWeeklyView as EventListener);
-    return () => {
-      window.removeEventListener('sidebar:toggleWeeklyView', handleToggleWeeklyView as EventListener);
-    };
-  }, []);
 
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
@@ -236,7 +225,24 @@ export function Dashboard() {
     }
   };
 
-  // handleSaveEquipmentAdaptations moved to sidebar
+  const handleSaveEquipmentAdaptations = (unavailableEquipment: string[]) => {
+    // Salvar no athleteConfig via store
+    if (athleteConfig) {
+      const { setAthleteConfig } = useOutlierStore.getState();
+      setAthleteConfig({
+        ...athleteConfig,
+        unavailableEquipment,
+      });
+    }
+    
+    if (unavailableEquipment.length > 0) {
+      toast.success('Treino ajustado conforme sua realidade de hoje', { duration: 3000 });
+    } else {
+      toast.success('Adaptações removidas.', { duration: 3000 });
+    }
+  };
+
+  const hasAdaptations = savedUnavailableEquipment.length > 0;
 
   // ============================================
   // ESTIMATIVA DE TEMPO E CALORIAS
@@ -390,7 +396,21 @@ export function Dashboard() {
             </p>
           )}
         </section>
-        {/* Day Tabs - Controlled by sidebar event */}
+
+        {/* Day Tabs - Para visualização detalhada */}
+        {hasAnyWorkouts && (
+          <section className="mb-6">
+            <button
+              onClick={() => setShowDetailedView(!showDetailedView)}
+              className="w-full py-3 px-4 rounded-lg border border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center justify-center gap-2"
+            >
+              <span className="font-display text-sm tracking-wide">
+                {showDetailedView ? 'FECHAR VISÃO SEMANAL' : 'VER TREINO SEMANAL'}
+              </span>
+              <ChevronRight className={`w-4 h-4 transition-transform ${showDetailedView ? 'rotate-90' : ''}`} />
+            </button>
+          </section>
+        )}
 
         {/* Detailed View - Workout blocks */}
         <AnimatePresence>
@@ -637,11 +657,41 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Equipment Adapt Button - moved to sidebar */}
-
+        {/* Equipment Adapt Button */}
+        {hasAnyWorkouts && !isViewingHistory && (
+          <div className="mt-6">
+            <button
+              onClick={() => setIsAdaptModalOpen(true)}
+              className={`
+                w-full py-3 px-4 rounded-lg border transition-all flex items-center justify-center gap-2
+                ${hasAdaptations
+                  ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
+                  : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }
+              `}
+            >
+              <Wrench className="w-4 h-4" />
+              <span className="font-display text-sm tracking-wide">
+                {hasAdaptations 
+                  ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
+                  : 'AJUSTAR TREINO PARA O MEU BOX'
+                }
+              </span>
+            </button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
+            </p>
+          </div>
+        )}
       </main>
 
-      {/* Equipment Adapt Modal - moved to sidebar */}
+      {/* Equipment Adapt Modal */}
+      <EquipmentAdaptModal
+        isOpen={isAdaptModalOpen}
+        onClose={() => setIsAdaptModalOpen(false)}
+        onApply={handleSaveEquipmentAdaptations}
+        initialSelection={savedUnavailableEquipment}
+      />
 
       {/* Debug Bar */}
       <AthleteWeekDebugBar
