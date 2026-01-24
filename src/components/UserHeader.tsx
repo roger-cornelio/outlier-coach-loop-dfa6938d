@@ -60,29 +60,8 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
     <div className={`flex items-center gap-3 ${className}`}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card/50 border border-border/30 hover:bg-card/80 hover:border-border/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20">
-            {/* Avatar automático baseado em sexo e nível */}
-            <UserAvatar
-              name={displayName}
-              gender={athleteConfig?.sexo}
-              trainingLevel={athleteConfig?.trainingLevel}
-              athleteStatus={athleteStatus}
-              size="md"
-              showGlow
-            />
-            
-            {/* Identity Block */}
-            <div className="flex flex-col items-start text-left min-w-0">
-              <span className="font-semibold text-foreground text-sm truncate max-w-[140px]">
-                {displayName}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {roleLabel} • Nível {levelLabel}
-              </span>
-            </div>
-
-            {/* Dropdown indicator */}
-            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <button className="p-2 rounded-lg hover:bg-card/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <Settings className="w-5 h-5 text-muted-foreground" />
           </button>
         </DropdownMenuTrigger>
 
