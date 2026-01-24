@@ -33,6 +33,10 @@ import {
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { cn } from '@/lib/utils';
 
+/**
+ * Navegação da sidebar mapeia para as telas RICAS existentes do produto.
+ * Cada rota aponta para componentes já consolidados, não stubs simplificados.
+ */
 const navItems = [
   { 
     title: 'Dashboard', 
