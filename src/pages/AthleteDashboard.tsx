@@ -89,12 +89,16 @@ export default function AthleteDashboard() {
         onContinue={acknowledgeLevel}
       />
 
-      {/* BLOCO 1 — DIAGNÓSTICO (Radar Chart) */}
+      {/* BLOCO 1 — DIAGNÓSTICO (Radar Chart + Parâmetros Fisiológicos) */}
       <section className="mb-6">
         <DiagnosticRadarBlock
           scores={diagnosticScores.scores}
           loading={diagnosticScores.loading}
           hasData={diagnosticScores.hasData}
+          // Parâmetros fisiológicos estimados (placeholder para dados reais futuros)
+          vo2Max={diagnosticScores.hasData ? 52 : null}
+          vo2MaxSource="estimated"
+          lactateThreshold={diagnosticScores.hasData ? 276 : null} // 4:36 / km
         />
       </section>
 
