@@ -23,10 +23,9 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
-import { getBlockDisplayTitle, getBlockCategoryLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { MessageSquare } from 'lucide-react';
-import { StructureBadge, CommentSubBlock } from './DSLBlockRenderer';
+import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -807,75 +806,53 @@ export function Dashboard() {
                         ${block.isMainWod ? 'ring-1 ring-primary/30' : ''}
                       `}
                     >
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div>
-                          <h3 className="font-display text-xl">{getBlockDisplayTitle(block, index)}</h3>
-                          {/* MVP0: Exibir categoria como subtítulo */}
-                          <span className="text-xs text-muted-foreground">
-                            • {getBlockCategoryLabel(block)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {block.isMainWod && (
-                            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">
-                              WOD PRINCIPAL
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Conteúdo do bloco - SEM REPARSE */}
-                      {(() => {
-                        const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
-                        return (
-                          <>
-                            {/* Structure Badge (se houver) */}
-                            {structureDescription && (
-                              <div className="mb-3">
-                                <StructureBadge structure={structureDescription} />
-                              </div>
-                            )}
-                            
-                            {/* Caixa 1: TREINO - main content */}
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                                Treino
-                              </p>
-                              {exerciseLines.length > 0 ? (
-                                <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                  {exerciseLines.join('\n')}
-                                </pre>
-                              ) : (
-                                <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
-                              )}
-                            </div>
-                            
-                            {/* Caixa 2: COMENTÁRIO DO COACH - SEMPRE VISÍVEL */}
-                            <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
-                              <div className="flex items-start gap-3">
-                                <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
-                                  <MessageSquare className="w-3.5 h-3.5 text-primary/70" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
-                                    Comentário do Coach
-                                  </p>
-                                  {commentLines.length > 0 ? (
-                                    <div className="space-y-1">
-                                      {commentLines.map((comment, i) => (
-                                        <p key={i} className="text-xs text-muted-foreground leading-relaxed">
-                                          {comment}
-                                        </p>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground/50 italic">Sem comentário.</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
+                                    {/* NÍVEL 1 + 2: Header com título grande e chips */}
+                                      <div className="mb-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                          <div className="space-y-2">
+                                            <h3 className="font-display text-2xl font-bold tracking-tight uppercase">
+                                              {getBlockDisplayTitle(block, index)}
+                                            </h3>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <CategoryChip category={block.type} />
+                                              {block.isMainWod && (
+                                                <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
+                                                  WOD Principal
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* NÍVEL 3: Conteúdo do treino (exercícios) */}
+                                      {(() => {
+                                        const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
+                                        return (
+                                          <>
+                                            {/* Structure Badge (se houver) */}
+                                            {structureDescription && (
+                                              <div className="mb-4">
+                                                <StructureBadge structure={structureDescription} />
+                                              </div>
+                                            )}
+                                            
+                                            {/* Exercícios - sem label redundante */}
+                                            <div className="space-y-2">
+                                              {exerciseLines.length > 0 ? (
+                                                exerciseLines.map((line, idx) => (
+                                                  <ExerciseLine key={idx} line={line} className="text-foreground/80" />
+                                                ))
+                                              ) : (
+                                                <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
+                                              )}
+                                            </div>
+                                            
+                                            {/* NÍVEL 4: Comentário do Coach - container distinto */}
+                                            <CommentSubBlock comments={commentLines} />
+                                          </>
+                                        );
+                                      })()}
 
                       {/* Block Stats */}
                       {block.type !== 'notas' && (

@@ -9,9 +9,8 @@ import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
-import { getBlockDisplayTitle, getBlockCategoryLabel, separateBlockContent } from '@/utils/blockDisplayUtils';
-import { MessageSquare } from 'lucide-react';
-
+import { getBlockDisplayTitle, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
   conditioning: 'border-l-primary',
@@ -310,67 +309,60 @@ export function WorkoutExecution() {
                   </motion.button>
 
                   <div className="flex-1">
-                    <div className="flex items-center justify-between gap-4 mb-3">
-                      <div>
-                        <h3 className={`font-display text-xl ${isComplete ? 'line-through' : ''}`}>
-                          {getBlockDisplayTitle(block, index)}
-                        </h3>
-                        {/* MVP0: Exibir categoria como subtítulo */}
-                        <span className={`text-xs text-muted-foreground ${isComplete ? 'line-through' : ''}`}>
-                          • {getBlockCategoryLabel(block)}
-                        </span>
+                    {/* NÍVEL 1 + 2: Header com título grande e chips */}
+                    <div className="mb-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <h3 className={`font-display text-2xl font-bold tracking-tight uppercase ${isComplete ? 'line-through opacity-60' : ''}`}>
+                            {getBlockDisplayTitle(block, index)}
+                          </h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <CategoryChip category={block.type} />
+                            {block.isMainWod && (
+                              <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
+                                WOD Principal
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      {block.isMainWod && (
-                        <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold tracking-wide">
-                          WOD PRINCIPAL
-                        </span>
-                      )}
                     </div>
-                    {/* Separated Exercise Content and Coach Comments */}
+                    
+                    {/* NÍVEL 3: Conteúdo do treino (exercícios) */}
                     {(() => {
-                      const { exerciseLines, commentLines } = separateBlockContent(effectiveContent);
-                      // Logs movidos para separateBlockContent (centralizado)
+                      const { exerciseLines, commentLines, structures } = separateBlockContent(effectiveContent);
+                      // Extrair descrição legível da estrutura (remove asteriscos)
+                      const structureDescription = structures && structures.length > 0 
+                        ? structures[0].rawLine.replace(/\*\*/g, '').trim() 
+                        : null;
                       
                       return (
                         <>
-                          {/* Caixa 1: TREINO - main content */}
+                          {/* Structure Badge (se houver) */}
+                          {structureDescription && (
+                            <div className="mb-4">
+                              <StructureBadge structure={structureDescription} />
+                            </div>
+                          )}
+                          
+                          {/* Exercícios - sem label redundante */}
                           <div className="space-y-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                              Treino
-                            </p>
                             {exerciseLines.length > 0 ? (
-                              <pre className="font-body text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                {exerciseLines.join('\n')}
+                              exerciseLines.map((line, idx) => (
+                                <ExerciseLine key={idx} line={line} className="text-foreground/80" />
+                              ))
+                            ) : effectiveContent ? (
+                              // Fallback: mostrar conteúdo bruto se parser não encontrou linhas
+                              <pre className="font-body text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                                {effectiveContent}
                               </pre>
                             ) : (
-                              <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
+                              <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
                             )}
                           </div>
                           
-                          {/* Caixa 2: COMENTÁRIO DO COACH - SEMPRE VISÍVEL */}
-                          <div className="mt-4 p-4 rounded-lg bg-muted/60 border border-border/50 relative">
-                            <div className="flex items-start gap-3">
-                              <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
-                                <MessageSquare className="w-3.5 h-3.5 text-primary/70" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
-                                  Comentário do Coach
-                                </p>
-                                {commentLines.length > 0 ? (
-                                  <div className="space-y-1">
-                                    {commentLines.map((comment, i) => (
-                                      <p key={i} className="text-xs text-muted-foreground leading-relaxed">
-                                        {comment}
-                                      </p>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-muted-foreground/50 italic">Sem comentário.</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                          {/* NÍVEL 4: Comentário do Coach - container distinto */}
+                          <CommentSubBlock comments={commentLines} />
                         </>
                       );
                     })()}
