@@ -19,11 +19,34 @@ import {
   Target, 
   TrendingUp,
   History,
-  AreaChart
+  AreaChart,
+  Footprints,
+  Waves,
+  MoveHorizontal,
+  Link2,
+  ArrowUpRight,
+  Dumbbell,
+  Package,
+  CircleDot,
+  type LucideIcon
 } from 'lucide-react';
 import { Area, AreaChart as RechartsAreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import type { DayWorkout } from '@/types/outlier';
 import type { EvolutionFocusPoint } from '@/hooks/useEvolutionFocus';
+
+// Mapa de ícones por estação HYROX
+const STATION_ICONS: Record<string, LucideIcon> = {
+  run_avg: Footprints,
+  ski: Waves,
+  sled_push: MoveHorizontal,
+  sled_pull: Link2,
+  bbj: ArrowUpRight,
+  row: Waves,
+  farmers: Dumbbell,
+  sandbag: Package,
+  wallballs: CircleDot,
+  roxzone: Clock
+};
 
 // ============================================
 // BLOCO 1 — SEU TREINO DE HOJE (Decisão do Dia)
@@ -384,17 +407,27 @@ export function EvolutionFocusBlock({
         FOCOS DE EVOLUÇÃO
       </h3>
       
-      {/* Lista de pontos (máximo 2-3) */}
+      {/* Lista de pontos (máximo 2-3) com ícones por estação */}
       <div className="space-y-3 mb-4">
-        {focusPoints.map((point) => (
-          <div 
-            key={point.metric}
-            className="flex items-start gap-3"
-          >
-            <span className="text-lg">{point.emoji}</span>
-            <span className="text-foreground">{point.description}</span>
-          </div>
-        ))}
+        {focusPoints.map((point) => {
+          const IconComponent = STATION_ICONS[point.metric] || Target;
+          const isCritical = point.percentile < 25;
+          const isAttention = point.percentile < 40 && point.percentile >= 25;
+          
+          return (
+            <div 
+              key={point.metric}
+              className="flex items-start gap-3"
+            >
+              <div className={`p-1.5 rounded ${isCritical ? 'bg-red-500/20' : isAttention ? 'bg-amber-500/20' : 'bg-primary/20'}`}>
+                <IconComponent 
+                  className={`w-4 h-4 ${isCritical ? 'text-red-500' : isAttention ? 'text-amber-500' : 'text-primary'}`} 
+                />
+              </div>
+              <span className="text-foreground">{point.description}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Texto fixo obrigatório */}
