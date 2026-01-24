@@ -378,28 +378,31 @@ export function EvolutionFocusBlock({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="card-elevated p-6 border-l-4 border-l-purple-500"
+      className="card-elevated p-6 border-l-4 border-l-red-500/70"
     >
-      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-4">
+      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-1">
         FOCOS DE EVOLUÇÃO
       </h3>
+      <p className="text-xs text-muted-foreground/60 mb-4">
+        Onde você perde tempo na prova
+      </p>
       
-      {/* Lista de pontos (máximo 2-3) */}
+      {/* Lista de estações com ícones específicos */}
       <div className="space-y-3 mb-4">
         {focusPoints.map((point) => (
           <div 
             key={point.metric}
-            className="flex items-start gap-3"
+            className="flex items-start gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/20"
           >
-            <span className="text-lg">{point.emoji}</span>
-            <span className="text-foreground">{point.description}</span>
+            <span className="text-xl">{point.emoji}</span>
+            <span className="text-foreground text-sm font-medium">{point.description}</span>
           </div>
         ))}
       </div>
 
       {/* Texto fixo obrigatório */}
       <p className="text-sm text-muted-foreground italic border-t border-border/50 pt-3">
-        Esses pontos já estão sendo trabalhados no seu plano.
+        Esses pontos já estão sendo atacados no seu plano atual.
       </p>
     </motion.div>
   );

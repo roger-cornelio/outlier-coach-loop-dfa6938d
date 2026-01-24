@@ -17,23 +17,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
-// Labels amigáveis para as métricas HYROX
-const METRIC_LABELS: Record<string, string> = {
-  run_avg: 'Run',
-  roxzone: 'Roxzone',
-  ski: 'Ski Erg',
-  sled_push: 'Sled Push',
-  sled_pull: 'Sled Pull',
-  bbj: 'Burpee BJ',
-  row: 'Row',
-  farmers: 'Farmers',
-  sandbag: 'Sandbag',
-  wallballs: 'Wall Balls'
+// Labels amigáveis e emojis para as métricas HYROX
+const METRIC_CONFIG: Record<string, { label: string; emoji: string }> = {
+  run_avg: { label: 'Run', emoji: '🏃' },
+  roxzone: { label: 'Roxzone', emoji: '⏱️' },
+  ski: { label: 'Ski Erg', emoji: '⛷️' },
+  sled_push: { label: 'Sled Push', emoji: '🛷' },
+  sled_pull: { label: 'Sled Pull', emoji: '🛷' },
+  bbj: { label: 'Burpee BJ', emoji: '💥' },
+  row: { label: 'Row', emoji: '🚣' },
+  farmers: { label: 'Farmers Carry', emoji: '🏋️' },
+  sandbag: { label: 'Sandbag Lunges', emoji: '🎒' },
+  wallballs: { label: 'Wall Balls', emoji: '🏐' }
 };
 
 // Descrições baseadas no percentil
 function getWeaknessDescription(metric: string, percentile: number): string {
-  const label = METRIC_LABELS[metric] || metric;
+  const config = METRIC_CONFIG[metric];
+  const label = config?.label || metric;
   
   if (percentile < 25) {
     return `${label} — força abaixo do esperado`;
@@ -143,17 +144,14 @@ export function useEvolutionFocus(): EvolutionFocusResult {
       : weakest.slice(0, 2);
 
     return toShow.map(score => {
-      // Emoji baseado no percentil
-      let emoji = '🟡'; // Default: amarelo (atenção)
-      if (score.percentile_value < 25) {
-        emoji = '🔴'; // Vermelho: crítico
-      } else if (score.percentile_value >= 50) {
-        emoji = '🟢'; // Verde: ok
-      }
+      const config = METRIC_CONFIG[score.metric];
+      
+      // Usar emoji específico da estação HYROX
+      const emoji = config?.emoji || '🟡';
 
       return {
         metric: score.metric,
-        label: METRIC_LABELS[score.metric] || score.metric,
+        label: config?.label || score.metric,
         percentile: score.percentile_value,
         description: getWeaknessDescription(score.metric, score.percentile_value),
         emoji
