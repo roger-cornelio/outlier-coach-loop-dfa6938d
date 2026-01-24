@@ -85,8 +85,22 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CATEGORY CHIP - Chip visual para categoria do bloco
+// CATEGORY CHIP - Chip visual colorido por categoria
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cores por categoria para identidade visual distinta
+ */
+const CATEGORY_COLORS: Record<string, string> = {
+  aquecimento: 'bg-amber-500/20 text-amber-600 border-amber-500/30',
+  forca: 'bg-red-500/20 text-red-600 border-red-500/30',
+  metcon: 'bg-primary/20 text-primary border-primary/30',
+  especifico: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
+  corrida: 'bg-green-500/20 text-green-600 border-green-500/30',
+  acessorio: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
+  core: 'bg-indigo-500/20 text-indigo-600 border-indigo-500/30',
+  conditioning: 'bg-primary/20 text-primary border-primary/30',
+};
 
 interface CategoryChipProps {
   category: string | null | undefined;
@@ -98,15 +112,19 @@ export function CategoryChip({ category, className }: CategoryChipProps) {
   
   const categoryInfo = BLOCK_CATEGORIES.find(c => c.value === category);
   const label = categoryInfo?.label || category;
+  const emoji = categoryInfo?.emoji || '';
+  const colorClass = CATEGORY_COLORS[category] || 'bg-muted text-muted-foreground border-border';
   
   return (
     <Badge 
-      variant="secondary" 
+      variant="outline" 
       className={cn(
-        'text-[10px] font-medium uppercase tracking-wide px-2 py-0.5',
+        'text-xs font-semibold uppercase tracking-wide px-2.5 py-1 border gap-1.5',
+        colorClass,
         className
       )}
     >
+      {emoji && <span>{emoji}</span>}
       {label}
     </Badge>
   );
@@ -136,7 +154,7 @@ export function ExerciseLine({ line, className }: ExerciseLineProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMMENT SUB-BLOCK - Sub-bloco visual para comentários do coach
+// COMMENT SUB-BLOCK - Container visual distinto para comentários do coach
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface CommentSubBlockProps {
@@ -146,24 +164,27 @@ interface CommentSubBlockProps {
 }
 
 export function CommentSubBlock({ comments, className, showLabel = true }: CommentSubBlockProps) {
+  // REGRA: Não renderiza container se não há comentários (visual limpo)
   if (!comments || comments.length === 0) return null;
   
   return (
     <div className={cn(
-      'mt-3 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/20 rounded-r-md',
+      'mt-6 pl-4 py-3 border-l-2 border-primary/40 bg-muted/20 rounded-r-lg',
       className
     )}>
-      <div className="flex items-start gap-2">
-        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-3">
+        <div className="p-1.5 rounded-md bg-primary/10 flex-shrink-0">
+          <MessageSquare className="w-4 h-4 text-primary/70" />
+        </div>
         <div className="flex-1 min-w-0">
           {showLabel && (
-            <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide block mb-1">
-              Comentário
+            <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wide block mb-2">
+              Comentário do Coach
             </span>
           )}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {comments.map((comment, idx) => (
-              <p key={idx} className="text-xs text-muted-foreground italic leading-relaxed">
+              <p key={idx} className="text-sm text-muted-foreground italic leading-relaxed">
                 {comment}
               </p>
             ))}
@@ -205,7 +226,7 @@ export function ValidationAlert({ message, type = 'error', className }: Validati
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BLOCK HEADER - Header do bloco com título e categoria
+// BLOCK HEADER - Header do bloco com título destacado e categoria
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface BlockHeaderProps {
@@ -221,16 +242,20 @@ export function BlockHeader({ title, category, isMainWod, blockIndex, className 
   const displayTitle = normalizeBlockTitle(title) || `Bloco ${blockIndex + 1}`;
   
   return (
-    <div className={cn('flex items-center gap-2 flex-wrap', className)}>
-      <h4 className="font-semibold text-lg text-foreground">
+    <div className={cn('space-y-2', className)}>
+      {/* NÍVEL 1: Título - maior peso e tamanho */}
+      <h4 className="font-display text-2xl font-bold tracking-tight text-foreground uppercase">
         {displayTitle}
       </h4>
-      <CategoryChip category={category} />
-      {isMainWod && (
-        <Badge className="bg-primary text-primary-foreground text-[10px] font-bold uppercase px-2 py-0.5">
-          WOD Principal
-        </Badge>
-      )}
+      {/* NÍVEL 2: Chips de metadata */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <CategoryChip category={category} />
+        {isMainWod && (
+          <Badge className="bg-primary text-primary-foreground text-xs font-bold uppercase px-3 py-1">
+            WOD Principal
+          </Badge>
+        )}
+      </div>
     </div>
   );
 }
