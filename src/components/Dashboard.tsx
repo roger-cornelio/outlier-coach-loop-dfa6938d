@@ -36,6 +36,7 @@ import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
+import { AthleteHeroIdentity } from './AthleteHeroIdentity';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -63,7 +64,7 @@ export function Dashboard() {
     hasHydrated
   } = useOutlierStore();
   
-  const { user, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
+  const { user, profile, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const { state } = useAppState();
   const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
@@ -334,6 +335,16 @@ export function Dashboard() {
 
       {/* Content - Dashboard OUTLIER */}
       <main className="max-w-6xl mx-auto px-6 py-8">
+        
+        {/* ============================================
+            BLOCO 0 — IDENTIDADE HERO DO ATLETA
+            ============================================ */}
+        <section className="mb-8">
+          <AthleteHeroIdentity
+            name={profile?.name || user?.email?.split('@')[0] || 'Atleta'}
+            status={status}
+          />
+        </section>
         
         {/* ============================================
             BLOCO 1 — DIAGNÓSTICO (Radar Chart)
