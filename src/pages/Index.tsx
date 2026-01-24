@@ -122,12 +122,13 @@ const Index = () => {
         return;
       }
       
-      // REGRA: Atleta configurado vai direto para preWorkout/dashboard
+      // REGRA: Atleta configurado vai direto para dashboard
       // NUNCA ir para welcome, athleteWelcome ou config automaticamente
-      if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config') {
-        // Ir para preWorkout (treino do dia)
-        console.log(`[NAV][Index] from_view=${currentView} to_view=preWorkout first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=setup_complete_redirect_to_preworkout ts=${new Date().toISOString()}`);
-        setCurrentView('preWorkout');
+      // NOTE: preWorkout foi removido como etapa intermediária
+      if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'config' || currentView === 'preWorkout') {
+        // Ir direto para dashboard (treino do dia)
+        console.log(`[NAV][Index] from_view=${currentView} to_view=dashboard first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} reason=setup_complete_redirect_to_dashboard ts=${new Date().toISOString()}`);
+        setCurrentView('dashboard');
       }
       
       initialCheckDone.current = true;
@@ -253,14 +254,15 @@ const Index = () => {
     let effectiveView = currentView;
     
     if (setupComplete) {
-      // Se setup completo, redirecionar telas de setup para preWorkout
-      if (currentView === 'welcome' || currentView === 'athleteWelcome') {
-        effectiveView = 'preWorkout';
+      // Se setup completo, redirecionar telas de setup para dashboard
+      // NOTE: preWorkout foi removido como etapa intermediária
+      if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'preWorkout') {
+        effectiveView = 'dashboard';
       }
     } else {
-      // BLOQUEIO CRÍTICO: Se setup NÃO completo, PROIBIR preWorkout/dashboard/workout/etc
+      // BLOQUEIO CRÍTICO: Se setup NÃO completo, PROIBIR dashboard/workout/etc
       // Estas views são EXCLUSIVAS de usuários configurados
-      const protectedViews = ['preWorkout', 'dashboard', 'workout', 'result', 'feedback', 'benchmarks'];
+      const protectedViews = ['dashboard', 'workout', 'result', 'feedback', 'benchmarks'];
       if (protectedViews.includes(currentView)) {
         // Redirecionar para athleteWelcome ou welcome conforme coach_style
         const hasCoachStyle = profile?.coach_style && ['IRON', 'PULSE', 'SPARK'].includes(profile.coach_style);
@@ -294,7 +296,7 @@ const Index = () => {
           <div className="text-center p-8">
             <p className="text-destructive mb-4">View inválida: {currentView}</p>
             <button 
-              onClick={() => setCurrentView('preWorkout')}
+              onClick={() => setCurrentView('dashboard')}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
             >
               Voltar ao início
