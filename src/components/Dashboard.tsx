@@ -30,13 +30,11 @@ import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './D
 // Dashboard blocks
 import { 
   TodayWorkoutBlock, 
-  StatusDiagnosisBlock, 
-  EvolutionFocusBlock, 
-  LastWorkoutBlock 
+  EvolutionChartBlock, 
+  EvolutionFocusBlock 
 } from './DashboardBlocks';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
-import { useLastWorkout } from '@/hooks/useLastWorkout';
-import { useAthleteDiagnosis } from '@/hooks/useAthleteDiagnosis';
+import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -89,8 +87,7 @@ export function Dashboard() {
   
   // Dashboard OUTLIER hooks
   const evolutionFocus = useEvolutionFocus();
-  const lastWorkout = useLastWorkout();
-  const diagnosis = useAthleteDiagnosis();
+  const weeklyEvolution = useWeeklyEvolution();
   
   // Carregar configurações do atleta do banco (persistência)
   useAthleteProfile();
@@ -374,24 +371,22 @@ export function Dashboard() {
           />
         </section>
 
-        {/* Grid 2 colunas para blocos secundários */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* ============================================
-              BLOCO 2 — STATUS ATUAL (Diagnóstico Rápido)
-              ============================================ */}
-          <StatusDiagnosisBlock diagnosis={diagnosis} />
-
-          {/* ============================================
-              BLOCO 4 — ÚLTIMO TREINO (Continuidade)
-              ============================================ */}
-          <LastWorkoutBlock 
-            lastWorkout={lastWorkout.lastWorkout}
-            loading={lastWorkout.loading}
+        {/* ============================================
+            BLOCO 2 — SUA EVOLUÇÃO (Gráfico + Diagnóstico)
+            ============================================ */}
+        <section className="mb-6">
+          <EvolutionChartBlock
+            data={weeklyEvolution.data}
+            diagnosticText={weeklyEvolution.diagnosticText}
+            trend={weeklyEvolution.trend}
+            loading={weeklyEvolution.loading}
+            hasData={weeklyEvolution.hasData}
+            onViewEvolution={() => setCurrentView('benchmarks')}
           />
-        </div>
+        </section>
 
         {/* ============================================
-            BLOCO 3 — FOCOS DE EVOLUÇÃO
+            BLOCO 3 — FOCOS DE EVOLUÇÃO (Secundário)
             ============================================ */}
         <section className="mb-6">
           <EvolutionFocusBlock
