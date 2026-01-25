@@ -66,32 +66,60 @@ export function AthleteConfig() {
   const [displayName, setDisplayName] = useState(profile?.name || '');
   const [nameError, setNameError] = useState('');
   
-  // Use existing values as defaults
-  // MVP0: UI usa 'open'/'pro', mas internamente persiste 'performance'
-  const [uiTrainingLevel, setUITrainingLevel] = useState<UITrainingLevel>('open');
-  const [duration, setDuration] = useState<UIDuration>(60);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERSISTÊNCIA DO NÍVEL UI (OPEN/PRO)
+  // Lê do athleteConfig que agora armazena 'open' ou 'pro' diretamente
+  // O motor continua usando 'performance' internamente via uiLevelToMotorLevel
+  // ═══════════════════════════════════════════════════════════════════════════
+  const getInitialUILevel = (): UITrainingLevel => {
+    // Prioridade: athleteConfig do store (preenchido por useAthleteProfile do banco)
+    const savedLevel = athleteConfig?.trainingLevel;
+    if (savedLevel === 'open' || savedLevel === 'pro') {
+      return savedLevel;
+    }
+    // Default
+    return 'open';
+  };
+
+  const [uiTrainingLevel, setUITrainingLevel] = useState<UITrainingLevel>(getInitialUILevel);
+  const [duration, setDuration] = useState<UIDuration>(() => {
+    if (athleteConfig?.sessionDuration === 'ilimitado') return null;
+    if (athleteConfig?.sessionDuration === 60) return 60;
+    return 60;
+  });
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
 
-  // Atualizar campos quando profile ou athleteConfig mudar
+  // Flag para evitar reset após primeira inicialização
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Atualizar campos quando profile mudar
   useEffect(() => {
     if (profile?.name && !displayName) {
       setDisplayName(profile.name);
     }
   }, [profile?.name]);
 
+  // Sincronizar UI level do athleteConfig (apenas uma vez após load)
+  useEffect(() => {
+    if (hasInitialized) return;
+    
+    const savedLevel = athleteConfig?.trainingLevel;
+    if (savedLevel === 'open' || savedLevel === 'pro') {
+      setUITrainingLevel(savedLevel);
+      setHasInitialized(true);
+    }
+  }, [athleteConfig?.trainingLevel, hasInitialized]);
+
   useEffect(() => {
     if (athleteConfig) {
-      // MVP0: Não há mapeamento reverso de performance -> open/pro
-      // Mantém 'open' como default ao carregar
       if (athleteConfig.sessionDuration) {
-        // Converte valores antigos para o novo formato
         if (athleteConfig.sessionDuration === 'ilimitado' || athleteConfig.sessionDuration === null) {
           setDuration(null);
         } else if (typeof athleteConfig.sessionDuration === 'number') {
-          setDuration(athleteConfig.sessionDuration === 60 ? 60 : 60); // Normaliza para 60
+          setDuration(athleteConfig.sessionDuration === 60 ? 60 : 60);
         }
       }
       if (athleteConfig.altura) setAltura(athleteConfig.altura.toString());
@@ -125,20 +153,21 @@ export function AthleteConfig() {
     setIsSaving(true);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // MVP0: LOGS DE CONFIRMAÇÃO (OBRIGATÓRIO)
+    // PERSISTÊNCIA: Salva nível UI (open/pro) no banco para restauração
+    // Motor ainda usa 'performance' internamente
     // ═══════════════════════════════════════════════════════════════════════
     const motorLevel = uiLevelToMotorLevel(uiTrainingLevel);
-    const motorDuration = duration; // null = sem limite, 60 = até 60 min
+    const motorDuration = duration;
     
     console.info(`[AthleteConfig] Nível (UI): ${uiTrainingLevel.toUpperCase()}`);
-    console.info(`[AthleteConfig] Nível (persistido): ${motorLevel}`);
-    console.info(`[AthleteConfig] Tempo disponível (persistido): ${motorDuration}`);
+    console.info(`[AthleteConfig] Nível (banco): ${uiTrainingLevel}`); // Agora persiste open/pro
+    console.info(`[AthleteConfig] Tempo disponível: ${motorDuration}`);
 
-    // Converter para o tipo SessionDuration esperado pelo motor
     const sessionDurationForMotor: SessionDuration = motorDuration === null ? 'ilimitado' : 60;
 
     const newConfig: AthleteConfigType = {
-      trainingLevel: motorLevel, // CRÍTICO: Persiste 'performance' para o motor
+      // IMPORTANTE: Persiste 'open' ou 'pro' para UI, motor usa sempre 'performance'
+      trainingLevel: uiTrainingLevel as TrainingLevel,
       sessionDuration: sessionDurationForMotor,
       unavailableEquipment: athleteConfig?.unavailableEquipment || [],
       equipmentNotes: athleteConfig?.equipmentNotes || '',
