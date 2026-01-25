@@ -398,8 +398,9 @@ export function AthleteConfig() {
           Plano contratado com seu coach. Para alterar, fale com seu coach.
         </p>
         
-        {/* Badge do plano atual (read-only) */}
-        <div className="flex items-center gap-4">
+        {/* Badge do plano atual (read-only) + Ação condicional */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Badge do plano */}
           {(() => {
             const planInfo = PLAN_DISPLAY[currentPlan];
             const Icon = planInfo.icon;
@@ -414,15 +415,33 @@ export function AthleteConfig() {
             );
           })()}
           
-          {/* Botão para falar com coach */}
-          <button
-            onClick={() => toast.info('Entre em contato com seu coach para alterar o plano.')}
-            className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:bg-secondary transition-colors text-sm text-muted-foreground"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>Falar com coach</span>
-          </button>
+          {/* Ação condicional: Upgrade ou Downgrade */}
+          {currentPlan === 'open' ? (
+            <button
+              onClick={() => toast.info('Entre em contato com seu coach para fazer upgrade para o plano PRO.')}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-primary/50 bg-primary/5 hover:bg-primary/10 transition-colors text-sm"
+            >
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-foreground font-medium">Fazer upgrade</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => toast.info('Entre em contato com seu coach para solicitar downgrade para o plano OPEN.')}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:bg-secondary transition-colors text-sm text-muted-foreground"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Fazer downgrade</span>
+            </button>
+          )}
         </div>
+        
+        {/* Texto auxiliar */}
+        <p className="text-xs text-muted-foreground mt-3">
+          {currentPlan === 'open' 
+            ? 'Upgrade para plano Pro com seu coach' 
+            : 'Solicite downgrade para plano Open'
+          }
+        </p>
       </motion.section>
 
       {/* Duration Selection */}
