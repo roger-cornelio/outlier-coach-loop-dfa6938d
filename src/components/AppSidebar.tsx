@@ -16,7 +16,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Award
 } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
@@ -60,6 +61,11 @@ export function AppSidebar() {
       title: 'Treino Semanal', 
       view: 'weeklyTraining', 
       icon: Calendar
+    },
+    {
+      title: 'Benchmark',
+      view: 'benchmarkCertification',
+      icon: Award
     },
     { 
       title: 'Status do Atleta', 
