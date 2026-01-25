@@ -60,8 +60,16 @@ export function useAthleteProfile() {
         const hasPersistedConfig = data.training_level || data.peso || data.altura || data.idade || data.sexo;
         
         if (hasPersistedConfig) {
+          // Normalizar valores legados para open/pro
+          const normalizeLevel = (level: string | null): TrainingLevel => {
+            if (level === 'pro') return 'pro';
+            if (level === 'open') return 'open';
+            // Fallback para valores legados ou null
+            return 'open';
+          };
+          
           const loadedConfig: AthleteConfig = {
-            trainingLevel: (data.training_level as TrainingLevel) || athleteConfig?.trainingLevel || 'progressivo',
+            trainingLevel: normalizeLevel(data.training_level),
             sessionDuration: parseSessionDuration(data.session_duration) || athleteConfig?.sessionDuration || 60,
             altura: data.altura ?? athleteConfig?.altura,
             peso: data.peso ?? athleteConfig?.peso,

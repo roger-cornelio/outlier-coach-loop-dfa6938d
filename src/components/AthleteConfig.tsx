@@ -31,8 +31,8 @@ const trainingLevelOptions: { value: UITrainingLevel; label: string; description
   },
 ];
 
-// Mapeamento UI -> Motor (ambos viram 'performance' no MVP0)
-const uiLevelToMotorLevel = (uiLevel: UITrainingLevel): TrainingLevel => 'performance';
+// Nível é salvo diretamente como 'open' ou 'pro'
+// Não há mais mapeamento para valores antigos
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MVP0: Tempo apenas 60 ou null (sem limite)
@@ -153,21 +153,17 @@ export function AthleteConfig() {
     setIsSaving(true);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PERSISTÊNCIA: Salva nível UI (open/pro) no banco para restauração
-    // Motor ainda usa 'performance' internamente
+    // PERSISTÊNCIA: Salva nível UI (open/pro) diretamente no banco
     // ═══════════════════════════════════════════════════════════════════════
-    const motorLevel = uiLevelToMotorLevel(uiTrainingLevel);
     const motorDuration = duration;
     
-    console.info(`[AthleteConfig] Nível (UI): ${uiTrainingLevel.toUpperCase()}`);
-    console.info(`[AthleteConfig] Nível (banco): ${uiTrainingLevel}`); // Agora persiste open/pro
+    console.info(`[AthleteConfig] Nível: ${uiTrainingLevel.toUpperCase()}`);
     console.info(`[AthleteConfig] Tempo disponível: ${motorDuration}`);
 
     const sessionDurationForMotor: SessionDuration = motorDuration === null ? 'ilimitado' : 60;
 
     const newConfig: AthleteConfigType = {
-      // IMPORTANTE: Persiste 'open' ou 'pro' para UI, motor usa sempre 'performance'
-      trainingLevel: uiTrainingLevel as TrainingLevel,
+      trainingLevel: uiTrainingLevel, // Salva open/pro diretamente
       sessionDuration: sessionDurationForMotor,
       unavailableEquipment: athleteConfig?.unavailableEquipment || [],
       equipmentNotes: athleteConfig?.equipmentNotes || '',

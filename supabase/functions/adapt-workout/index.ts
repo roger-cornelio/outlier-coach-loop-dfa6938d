@@ -37,19 +37,14 @@ interface RequestBody {
   adaptations: AdaptationConfig;
 }
 
-// OUTLIER Training Level multipliers (base reference is always PRO)
-const TRAINING_LEVEL_MULTIPLIERS = {
-  base: {
-    volume_multiplier: 0.70,
-    load_multiplier: 0.80,
-    density_rule: "volume reduzido, mais controle, pausas ampliadas",
+// OUTLIER Training Level multipliers - open/pro usam intensidade máxima
+const TRAINING_LEVEL_MULTIPLIERS: Record<string, { volume_multiplier: number; load_multiplier: number; density_rule: string }> = {
+  open: {
+    volume_multiplier: 1.00,
+    load_multiplier: 1.00,
+    density_rule: "alta densidade, ritmos agressivos, estímulo máximo",
   },
-  progressivo: {
-    volume_multiplier: 0.90,
-    load_multiplier: 0.95,
-    density_rule: "densidade moderada, estímulo sustentável",
-  },
-  performance: {
+  pro: {
     volume_multiplier: 1.00,
     load_multiplier: 1.00,
     density_rule: "alta densidade, ritmos agressivos, estímulo máximo",
