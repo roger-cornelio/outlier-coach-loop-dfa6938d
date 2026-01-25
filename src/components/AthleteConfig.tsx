@@ -4,35 +4,30 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { type TrainingLevel, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, Zap, TrendingUp, Target, AlertCircle, Loader2, User, Check, Trophy } from 'lucide-react';
+import { type PlanTier, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
+import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2 } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MVP0: Níveis OPEN/PRO (ambos mapeiam para 'performance' internamente)
-// Isso mantém compatibilidade com o motor de adaptação existente
+// PLANO CONTRATADO (OPEN / PRO)
+// Este campo NÃO influencia o treino do dia. É apenas o tipo de assinatura.
+// O atleta não pode alterar diretamente - precisa falar com o coach.
 // ═══════════════════════════════════════════════════════════════════════════
-type UITrainingLevel = 'open' | 'pro';
 
-const trainingLevelOptions: { value: UITrainingLevel; label: string; description: string; icon: typeof Zap }[] = [
-  { 
-    value: 'open', 
-    label: 'OPEN', 
-    description: 'Treino competitivo focado em evolução contínua para provas.',
-    icon: TrendingUp
+const PLAN_DISPLAY: Record<PlanTier, { label: string; icon: typeof TrendingUp; description: string }> = {
+  open: {
+    label: 'OPEN',
+    icon: TrendingUp,
+    description: 'Plano de evolução contínua'
   },
-  { 
-    value: 'pro', 
-    label: 'PRO', 
-    description: 'Intensidade máxima para atletas de elite.',
-    icon: Trophy
-  },
-];
-
-// Nível é salvo diretamente como 'open' ou 'pro'
-// Não há mais mapeamento para valores antigos
+  pro: {
+    label: 'PRO',
+    icon: Trophy,
+    description: 'Plano para atletas de elite'
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MVP0: Tempo apenas 60 ou null (sem limite)
@@ -67,21 +62,17 @@ export function AthleteConfig() {
   const [nameError, setNameError] = useState('');
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // PERSISTÊNCIA DO NÍVEL UI (OPEN/PRO)
-  // Lê do athleteConfig que agora armazena 'open' ou 'pro' diretamente
-  // O motor continua usando 'performance' internamente via uiLevelToMotorLevel
+  // PLANO CONTRATADO (read-only)
+  // Lê do athleteConfig para exibição, mas NÃO permite alteração
   // ═══════════════════════════════════════════════════════════════════════════
-  const getInitialUILevel = (): UITrainingLevel => {
-    // Prioridade: athleteConfig do store (preenchido por useAthleteProfile do banco)
-    const savedLevel = athleteConfig?.trainingLevel;
-    if (savedLevel === 'open' || savedLevel === 'pro') {
-      return savedLevel;
-    }
-    // Default
-    return 'open';
+  const getCurrentPlanTier = (): PlanTier => {
+    const tier = athleteConfig?.planTier || athleteConfig?.trainingLevel;
+    if (tier === 'pro') return 'pro';
+    return 'open'; // Default visual
   };
+  
+  const currentPlan = getCurrentPlanTier();
 
-  const [uiTrainingLevel, setUITrainingLevel] = useState<UITrainingLevel>(getInitialUILevel);
   const [duration, setDuration] = useState<UIDuration>(() => {
     if (athleteConfig?.sessionDuration === 'ilimitado') return null;
     if (athleteConfig?.sessionDuration === 60) return 60;
@@ -92,26 +83,12 @@ export function AthleteConfig() {
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
 
-  // Flag para evitar reset após primeira inicialização
-  const [hasInitialized, setHasInitialized] = useState(false);
-
   // Atualizar campos quando profile mudar
   useEffect(() => {
     if (profile?.name && !displayName) {
       setDisplayName(profile.name);
     }
   }, [profile?.name]);
-
-  // Sincronizar UI level do athleteConfig (apenas uma vez após load)
-  useEffect(() => {
-    if (hasInitialized) return;
-    
-    const savedLevel = athleteConfig?.trainingLevel;
-    if (savedLevel === 'open' || savedLevel === 'pro') {
-      setUITrainingLevel(savedLevel);
-      setHasInitialized(true);
-    }
-  }, [athleteConfig?.trainingLevel, hasInitialized]);
 
   useEffect(() => {
     if (athleteConfig) {
@@ -153,17 +130,18 @@ export function AthleteConfig() {
     setIsSaving(true);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PERSISTÊNCIA: Salva nível UI (open/pro) diretamente no banco
+    // NOTA: PlanTier NÃO é salvo nesta tela (read-only)
+    // Apenas tempo disponível e dados biométricos são salvos
     // ═══════════════════════════════════════════════════════════════════════
     const motorDuration = duration;
-    
-    console.info(`[AthleteConfig] Nível: ${uiTrainingLevel.toUpperCase()}`);
     console.info(`[AthleteConfig] Tempo disponível: ${motorDuration}`);
 
     const sessionDurationForMotor: SessionDuration = motorDuration === null ? 'ilimitado' : 60;
 
     const newConfig: AthleteConfigType = {
-      trainingLevel: uiTrainingLevel, // Salva open/pro diretamente
+      // Mantém o planTier atual (read-only nesta tela)
+      planTier: currentPlan,
+      trainingLevel: currentPlan, // Legacy compatibility
       sessionDuration: sessionDurationForMotor,
       unavailableEquipment: athleteConfig?.unavailableEquipment || [],
       equipmentNotes: athleteConfig?.equipmentNotes || '',
@@ -364,47 +342,45 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
-      {/* Training Level Selection - NOVO SISTEMA OUTLIER */}
+      {/* Plan Tier Display (Read-Only) */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="mb-8"
       >
-        <h2 className="font-display text-2xl mb-2">NÍVEL DO TREINO</h2>
+        <h2 className="font-display text-2xl mb-2 flex items-center gap-2">
+          <Crown className="w-6 h-6 text-primary" />
+          SEU PLANO
+        </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Escolha o estímulo ideal para você hoje.
+          Plano contratado com seu coach. Para alterar, fale com seu coach.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {trainingLevelOptions.map((option) => {
-            const Icon = option.icon;
-            const isSelected = uiTrainingLevel === option.value;
-            const isPro = option.value === 'pro';
-            
+        
+        {/* Badge do plano atual (read-only) */}
+        <div className="flex items-center gap-4">
+          {(() => {
+            const planInfo = PLAN_DISPLAY[currentPlan];
+            const Icon = planInfo.icon;
             return (
-              <button
-                key={option.value}
-                onClick={() => setUITrainingLevel(option.value)}
-                className={`
-                  p-4 rounded-lg border transition-all duration-200 text-left
-                  ${isSelected
-                    ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
-                    : isPro
-                      ? 'border-primary/50 bg-card hover:border-primary hover:bg-primary/5'
-                      : 'border-border bg-card hover:border-muted-foreground/50'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {/* PRO sempre tem ícone laranja, OPEN só quando selecionado */}
-                  <Icon className={`w-5 h-5 ${isSelected || isPro ? 'text-primary' : 'text-muted-foreground'}`} />
-                  {/* Texto sempre branco/foreground, nunca laranja */}
-                  <span className="font-display text-lg">{option.label}</span>
+              <div className="flex items-center gap-3 px-5 py-3 rounded-lg border-2 border-primary bg-primary/10">
+                <Icon className="w-6 h-6 text-primary" />
+                <div>
+                  <span className="font-display text-xl text-foreground">{planInfo.label}</span>
+                  <p className="text-xs text-muted-foreground">{planInfo.description}</p>
                 </div>
-                <span className="text-xs text-muted-foreground leading-relaxed">{option.description}</span>
-              </button>
+              </div>
             );
-          })}
+          })()}
+          
+          {/* Botão para falar com coach */}
+          <button
+            onClick={() => toast.info('Entre em contato com seu coach para alterar o plano.')}
+            className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:bg-secondary transition-colors text-sm text-muted-foreground"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Falar com coach</span>
+          </button>
         </div>
       </motion.section>
 

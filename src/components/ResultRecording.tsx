@@ -16,7 +16,7 @@ export function ResultRecording() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Get effective level for workout
-  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingLevel) : 'intermediario';
 
   if (!selectedWorkout) {
     setCurrentView('dashboard');

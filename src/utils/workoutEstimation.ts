@@ -12,28 +12,16 @@ import { getActiveParams, getModalityKcal, getIntensityFactor, getLevelSpeedKmh,
 import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
 
 // ============================================
-// MULTIPLICADORES DE INTENSIDADE POR MODO
-// Aplicar apenas em blocos metabolicamente dominantes
+// NOTA: PlanTier (OPEN/PRO) NÃO influencia mais o motor de treino
+// A estimativa é fixa, baseada apenas no conteúdo do treino e biometria do atleta.
 // ============================================
 
-const INTENSITY_MULTIPLIERS: Record<TrainingLevel, number> = {
-  open: 1.12,  // Intensidade máxima
-  pro: 1.12,   // Intensidade máxima
-};
-
-// Blocos que recebem multiplicador de intensidade
-const METABOLIC_BLOCK_TYPES = ['conditioning', 'especifico', 'corrida', 'hyrox'];
-
 /**
- * Retorna o multiplicador de intensidade baseado no modo de treino
- * Aplica apenas em blocos metabolicamente dominantes
+ * @deprecated PlanTier não influencia mais estimativas
+ * Mantido para compatibilidade, sempre retorna 1.0
  */
-export function getModeIntensityMultiplier(trainingLevel: TrainingLevel | undefined, blockType?: string): number {
-  // Se não for bloco metabólico, não aplica multiplicador
-  if (blockType && !METABOLIC_BLOCK_TYPES.includes(blockType)) {
-    return 1.0;
-  }
-  return INTENSITY_MULTIPLIERS[trainingLevel || 'progressivo'] || 1.0;
+export function getModeIntensityMultiplier(_planTier?: string, _blockType?: string): number {
+  return 1.0;
 }
 // ============================================
 // TIPOS
@@ -455,7 +443,7 @@ export function estimateBlock(
 /**
  * Calcula tempo e calorias para um DayWorkout completo.
  * Recebe o treino JÁ ADAPTADO.
- * Aplica multiplicador de intensidade baseado no modo (BASE/PROGRESSIVO/PERFORMANCE).
+ * NOTA: PlanTier (OPEN/PRO) NÃO influencia mais esta função.
  */
 export function estimateWorkout(
   workoutDay: DayWorkout,
@@ -464,19 +452,9 @@ export function estimateWorkout(
 ): WorkoutEstimation {
   const biometrics = getUserBiometrics(athleteConfig);
   
-  // Multiplicador de intensidade por modo de treino
-  const intensityMultiplier = getModeIntensityMultiplier(athleteConfig?.trainingLevel);
-  
+  // PlanTier não influencia mais - multiplicador fixo
   const blocks: BlockEstimate[] = workoutDay.blocks.map(block => {
-    const estimate = estimateBlock(block, biometrics, level);
-    
-    // Aplicar multiplicador de intensidade nas calorias
-    const adjustedKcal = Math.max(0, Math.round(estimate.estimatedKcal * intensityMultiplier));
-    
-    return {
-      ...estimate,
-      estimatedKcal: adjustedKcal,
-    };
+    return estimateBlock(block, biometrics, level);
   });
   
   const totals = {
