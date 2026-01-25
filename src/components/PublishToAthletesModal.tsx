@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
+import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
 
 import {
   Dialog,
@@ -306,12 +307,15 @@ export function PublishToAthletesModal({
 
     try {
       for (const athleteUserId of selectedAthletes) {
+        // NORMALIZAÇÃO: Garantir que durationSec seja persistido
+        const normalizedWorkouts = normalizeWorkoutsForPersistence(workouts);
+        
         const payload = {
           athlete_user_id: athleteUserId,
           coach_id: profile.id,
           week_start: weekStart, // YYYY-MM-DD string (segunda-feira)
           scheduled_date: weekStart,
-          plan_json: { workouts },
+          plan_json: { workouts: normalizedWorkouts },
           title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),

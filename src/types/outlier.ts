@@ -91,7 +91,17 @@ export interface WorkoutBlock {
   isMainWod?: boolean;
   isBenchmark?: boolean;
   wodType?: WodType;
+  /** 
+   * Input humano: duração do bloco em minutos (entrada do coach)
+   * Mantido para compatibilidade com dados antigos
+   */
   durationMinutes?: number;
+  /**
+   * FONTE DE VERDADE AUDITÁVEL: duração do bloco em segundos
+   * Persistido explicitamente no JSON para rastreabilidade histórica
+   * Prioridade na leitura: durationSec > durationMinutes * 60
+   */
+  durationSec?: number;
   targetSeconds?: number;
   targetRange?: TargetTimeRange;
   levelTargetRanges?: LevelTargetRanges; // Legacy: target times per level
