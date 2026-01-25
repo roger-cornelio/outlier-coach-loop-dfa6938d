@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus, AlertCircle } from 'lucide-react';
 import { CoachApplicationModal } from '@/components/CoachApplicationModal';
 import { QAActivationModal } from '@/components/QAActivationModal';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
@@ -56,6 +56,9 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [showQAModal, setShowQAModal] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const sessionInitialized = useRef(false);
   
   // Hidden QA trigger - 5 clicks on logo
   const logoClickCount = useRef(0);
@@ -115,6 +118,8 @@ export default function Auth({ context = 'user' }: AuthProps) {
         console.log('[AUTH][Auth.tsx] PASSWORD_RECOVERY event detected - showing reset form');
         setMode('reset-password');
         setIsPasswordResetMode(true);
+        setSessionReady(true);
+        setSessionError(null);
       }
     });
 
@@ -122,6 +127,108 @@ export default function Auth({ context = 'user' }: AuthProps) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Establish session for password reset flow
+  // Supabase sends tokens via hash (#access_token=...) or code (?code=...)
+  useEffect(() => {
+    const initializeResetSession = async () => {
+      // Only run once and only for reset mode
+      if (sessionInitialized.current) return;
+      if (initialMode !== 'reset') return;
+      
+      sessionInitialized.current = true;
+      console.log('[AUTH][Auth.tsx] Initializing reset session...');
+      
+      try {
+        // First check if we already have a session
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        
+        if (existingSession) {
+          console.log('[AUTH][Auth.tsx] Session already exists - ready for password reset');
+          setSessionReady(true);
+          setSessionError(null);
+          return;
+        }
+        
+        // Check for PKCE code in URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+          console.log('[AUTH][Auth.tsx] Found code param - exchanging for session');
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('[AUTH][Auth.tsx] Code exchange failed:', error.message);
+            setSessionError('Link expirado ou inválido. Solicite um novo link de recuperação.');
+            return;
+          }
+          
+          if (data.session) {
+            console.log('[AUTH][Auth.tsx] Session established via code exchange');
+            setSessionReady(true);
+            setSessionError(null);
+            return;
+          }
+        }
+        
+        // Check for tokens in URL hash (implicit flow)
+        const hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+          console.log('[AUTH][Auth.tsx] Found tokens in hash - setting session');
+          const hashParams = new URLSearchParams(hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (error) {
+              console.error('[AUTH][Auth.tsx] setSession failed:', error.message);
+              setSessionError('Link expirado ou inválido. Solicite um novo link de recuperação.');
+              return;
+            }
+            
+            if (data.session) {
+              console.log('[AUTH][Auth.tsx] Session established via hash tokens');
+              // Clean up hash from URL
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+              setSessionReady(true);
+              setSessionError(null);
+              return;
+            }
+          }
+        }
+        
+        // Wait a bit for onAuthStateChange to fire (Supabase client handles token automatically)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Final check
+        const { data: { session: finalSession } } = await supabase.auth.getSession();
+        if (finalSession) {
+          console.log('[AUTH][Auth.tsx] Session found after wait');
+          setSessionReady(true);
+          setSessionError(null);
+          return;
+        }
+        
+        // No session established
+        console.error('[AUTH][Auth.tsx] Could not establish session for password reset');
+        setSessionError('Não foi possível validar o link. Por favor, solicite um novo link de recuperação.');
+        
+      } catch (err) {
+        console.error('[AUTH][Auth.tsx] Error initializing reset session:', err);
+        setSessionError('Erro ao validar link de recuperação. Tente novamente.');
+      }
+    };
+    
+    if (initialMode === 'reset') {
+      initializeResetSession();
+    }
+  }, [initialMode]);
 
   // Lock coach/admin login to "login" mode (no signup)
   useEffect(() => {
@@ -307,6 +414,20 @@ export default function Auth({ context = 'user' }: AuthProps) {
           });
         }
       } else if (mode === 'reset-password') {
+        // Verify session exists before updating password
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast({
+            title: 'Sessão expirada',
+            description: 'Por favor, solicite um novo link de recuperação de senha.',
+            variant: 'destructive',
+          });
+          setSessionError('Sessão expirada. Solicite um novo link de recuperação.');
+          setSessionReady(false);
+          return;
+        }
+        
         // Update password using Supabase Auth
         const { error } = await supabase.auth.updateUser({
           password: password,
@@ -631,67 +752,100 @@ export default function Auth({ context = 'user' }: AuthProps) {
                 <p className="text-muted-foreground text-xs mt-1">Digite sua nova senha abaixo</p>
               </div>
               
-              <form onSubmit={handleSubmit} className="space-y-2.5">
-                {/* New Password */}
-                <div>
-                  <div className="relative">
-                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={`w-full pl-8 pr-10 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
-                        errors.password ? 'border-destructive/50' : 'border-border/30'
-                      }`}
-                      placeholder="Nova senha"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              {/* Session Error State */}
+              {sessionError ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-destructive text-sm font-medium">Link inválido ou expirado</p>
+                      <p className="text-muted-foreground text-xs mt-1">{sessionError}</p>
+                    </div>
                   </div>
-                  {errors.password && (
-                    <p className="text-destructive text-xs mt-1">{errors.password}</p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot-password');
+                      setIsPasswordResetMode(false);
+                      setSessionError(null);
+                      navigate('/login', { replace: true });
+                    }}
+                    className="w-full py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    SOLICITAR NOVO LINK
+                  </button>
                 </div>
-
-                {/* Confirm Password */}
-                <div>
-                  <div className="relative">
-                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
-                        errors.confirmPassword ? 'border-destructive/50' : 'border-border/30'
-                      }`}
-                      placeholder="Confirmar senha"
-                    />
+              ) : !sessionReady ? (
+                /* Loading State - Establishing session */
+                <div className="text-center space-y-4 py-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                  <p className="text-muted-foreground text-sm">Validando link de recuperação...</p>
+                </div>
+              ) : (
+                /* Password Reset Form - Session Ready */
+                <form onSubmit={handleSubmit} className="space-y-2.5">
+                  {/* New Password */}
+                  <div>
+                    <div className="relative">
+                      <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`w-full pl-8 pr-10 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.password ? 'border-destructive/50' : 'border-border/30'
+                        }`}
+                        placeholder="Nova senha"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-destructive text-xs mt-1">{errors.password}</p>
+                    )}
                   </div>
-                  {errors.confirmPassword && (
-                    <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>
-                  )}
-                </div>
 
-                <p className="text-muted-foreground/60 text-xs">
-                  Mínimo de 6 caracteres
-                </p>
+                  {/* Confirm Password */}
+                  <div>
+                    <div className="relative">
+                      <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.confirmPassword ? 'border-destructive/50' : 'border-border/30'
+                        }`}
+                        placeholder="Confirmar senha"
+                      />
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>
+                    )}
+                  </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full mt-1 py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  SALVAR NOVA SENHA
-                </button>
-              </form>
+                  <p className="text-muted-foreground/60 text-xs">
+                    Mínimo de 6 caracteres
+                  </p>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !sessionReady}
+                    className="w-full mt-1 py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    SALVAR NOVA SENHA
+                  </button>
+                </form>
+              )}
             </div>
           ) : mode === 'forgot-password' && resetSent ? (
             <div className="text-center space-y-4">
