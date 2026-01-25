@@ -2,13 +2,105 @@
 // Testes automatizados para validar cálculos de tempo e calorias
 
 import { describe, it, expect } from 'vitest';
-import { sumBlocksDurationSec, resolveDisplayedTotalSec, type TimeBlock } from '../timeCalc';
+import { 
+  sumBlocksDurationSec, 
+  resolveDisplayedTotalSec, 
+  getBlockEffectiveDurationSec,
+  type TimeBlock,
+  type BlockDurationSource 
+} from '../timeCalc';
 import { 
   calculateRunningCalories, 
   calculateTotalWorkoutDurationSec,
   getBlockDurationSec 
 } from '../workoutCalculations';
 import type { WorkoutBlock } from '@/types/outlier';
+
+// ============================================
+// TESTES DA REGRA ÚNICA DETERMINÍSTICA
+// ============================================
+
+describe('getBlockEffectiveDurationSec - Regra Única Determinística', () => {
+  describe('Prioridade 1: durationSec', () => {
+    it('deve usar durationSec quando > 0', () => {
+      const block: BlockDurationSource = { durationSec: 600, durationMinutes: 15 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(600);
+    });
+
+    it('deve ignorar durationMinutes quando durationSec > 0', () => {
+      const block: BlockDurationSource = { durationSec: 300, durationMinutes: 20 };
+      // durationSec=300 tem prioridade sobre durationMinutes=20 (que seria 1200s)
+      expect(getBlockEffectiveDurationSec(block)).toBe(300);
+    });
+
+    it('deve arredondar durationSec com decimais', () => {
+      const block: BlockDurationSource = { durationSec: 600.7 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(601);
+    });
+  });
+
+  describe('Prioridade 2: durationMinutes * 60', () => {
+    it('deve usar durationMinutes quando durationSec não existe', () => {
+      const block: BlockDurationSource = { durationMinutes: 10 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(600);
+    });
+
+    it('deve usar durationMinutes quando durationSec é 0', () => {
+      const block: BlockDurationSource = { durationSec: 0, durationMinutes: 15 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(900);
+    });
+
+    it('deve usar durationMinutes quando durationSec é undefined', () => {
+      const block: BlockDurationSource = { durationSec: undefined, durationMinutes: 5 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(300);
+    });
+
+    it('deve arredondar resultado de durationMinutes * 60', () => {
+      const block: BlockDurationSource = { durationMinutes: 7.5 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(450);
+    });
+  });
+
+  describe('Fallback: retornar 0', () => {
+    it('deve retornar 0 quando ambos são undefined', () => {
+      const block: BlockDurationSource = {};
+      expect(getBlockEffectiveDurationSec(block)).toBe(0);
+    });
+
+    it('deve retornar 0 quando ambos são 0', () => {
+      const block: BlockDurationSource = { durationSec: 0, durationMinutes: 0 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(0);
+    });
+
+    it('deve retornar 0 quando durationSec é negativo e durationMinutes não existe', () => {
+      const block: BlockDurationSource = { durationSec: -100 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(0);
+    });
+
+    it('deve retornar 0 quando durationMinutes é negativo', () => {
+      const block: BlockDurationSource = { durationMinutes: -10 };
+      expect(getBlockEffectiveDurationSec(block)).toBe(0);
+    });
+  });
+
+  describe('Determinismo absoluto', () => {
+    it('deve retornar resultado idêntico em múltiplas execuções', () => {
+      const block: BlockDurationSource = { durationSec: 1234, durationMinutes: 99 };
+      
+      const result1 = getBlockEffectiveDurationSec(block);
+      const result2 = getBlockEffectiveDurationSec(block);
+      const result3 = getBlockEffectiveDurationSec(block);
+      
+      expect(result1).toBe(result2);
+      expect(result2).toBe(result3);
+      expect(result1).toBe(1234);
+    });
+  });
+});
+
+// ============================================
+// TESTES EXISTENTES (mantidos)
+// ============================================
 
 describe('sumBlocksDurationSec', () => {
   it('deve somar corretamente 3 blocos com durationSec conhecidos', () => {

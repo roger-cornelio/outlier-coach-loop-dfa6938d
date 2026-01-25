@@ -1,11 +1,62 @@
 // src/utils/timeCalc.ts
+// ============================================
+// REGRA ÚNICA DETERMINÍSTICA PARA TEMPO
+// ============================================
+// PRIORIDADE INVIOLÁVEL:
+// 1. durationSec > 0 → usar durationSec
+// 2. durationMinutes > 0 → usar durationMinutes * 60
+// 3. senão → retornar 0
+// ============================================
+// EXPLICITAMENTE PROIBIDO para cálculo de tempo:
+// - extractTimeFromContent
+// - parsing de texto em content/lines
+// - defaults por tipo de bloco
+// - heurísticas baseadas em regex
+// ============================================
 
 export type TimeBlock = {
   id: string;          // ex: "warmup", "conditioning", "finisher"
   title?: string;      // opcional
   durationSec?: number; // duração já calculada do bloco (em segundos)
-  // se você tiver durationMin no app, pode adaptar aqui também
 };
+
+/**
+ * Tipo mínimo para leitura de tempo de um bloco de treino.
+ * Contém apenas os campos necessários para a regra determinística.
+ */
+export interface BlockDurationSource {
+  durationSec?: number;
+  durationMinutes?: number;
+}
+
+/**
+ * REGRA ÚNICA DETERMINÍSTICA para obter duração de um bloco em segundos.
+ * 
+ * Esta função é a ÚNICA fonte de verdade para leitura de tempo de blocos.
+ * Não usa heurísticas, parsing de texto, ou defaults por tipo.
+ * 
+ * @param block - Objeto contendo durationSec e/ou durationMinutes
+ * @returns Duração em segundos (0 se não disponível)
+ * 
+ * PRIORIDADE:
+ * 1. durationSec > 0 → usar durationSec
+ * 2. durationMinutes > 0 → usar durationMinutes * 60
+ * 3. senão → retornar 0
+ */
+export function getBlockEffectiveDurationSec(block: BlockDurationSource): number {
+  // Prioridade 1: durationSec explícito
+  if (typeof block.durationSec === 'number' && block.durationSec > 0) {
+    return Math.round(block.durationSec);
+  }
+  
+  // Prioridade 2: durationMinutes * 60
+  if (typeof block.durationMinutes === 'number' && block.durationMinutes > 0) {
+    return Math.round(block.durationMinutes * 60);
+  }
+  
+  // Fallback: sem duração definida
+  return 0;
+}
 
 export function sumBlocksDurationSec(blocks: TimeBlock[]): {
   totalSec: number;
