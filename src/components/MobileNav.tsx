@@ -17,8 +17,7 @@ import {
   Trophy, 
   Settings, 
   LogOut,
-  Loader2,
-  Award
+  Loader2
 } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
@@ -51,11 +50,6 @@ const navItems: NavItem[] = [
     title: 'Treino Semanal', 
     view: 'weeklyTraining', 
     icon: Calendar
-  },
-  {
-    title: 'Benchmark',
-    view: 'benchmarkCertification',
-    icon: Award
   },
   { 
     title: 'Status do Atleta', 

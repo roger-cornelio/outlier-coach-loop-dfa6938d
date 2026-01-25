@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History, Award } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
@@ -371,30 +371,6 @@ export function Dashboard() {
               Nenhum treino programado para esta semana
             </p>
           )}
-        </section>
-
-        {/* ============================================
-            BLOCO 5 — CTA SECUNDÁRIO: BENCHMARK
-            ============================================ */}
-        <section className="mb-6">
-          <motion.button
-            onClick={() => setCurrentView('benchmarkCertification')}
-            className="w-full px-6 py-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-card/80 transition-all flex items-center gap-4 group"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <Award className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="font-medium text-foreground">Certificação (Benchmark)</p>
-              <p className="text-sm text-muted-foreground">
-                Certifique seu nível e atualize sua régua
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-          </motion.button>
         </section>
 
         {/* Weekly View Toggle moved to sidebar - keeping the expandable section below */}
