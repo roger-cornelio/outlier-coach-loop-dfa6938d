@@ -88,20 +88,20 @@ export function AppSidebar() {
   return (
     <aside className={cn(
       "h-screen bg-background border-r border-border/30 flex flex-col transition-all duration-300",
-      isExpanded ? "w-56" : "w-24"
+      isExpanded ? "w-80" : "w-24"
     )}>
       {/* Toggle Button */}
       <div className="flex justify-end p-3">
         <button
           onClick={toggleExpand}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
         >
-          {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+          {isExpanded ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
         </button>
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 flex flex-col items-center py-4 gap-2 px-2">
+      <nav className="flex-1 flex flex-col items-center py-4 gap-3 px-3">
         {navItems.map((item) => {
           const active = isActive(item);
           
@@ -110,19 +110,19 @@ export function AppSidebar() {
               onClick={() => handleNavClick(item)}
               className={cn(
                 "flex items-center rounded-xl transition-all duration-200",
-                isExpanded ? "w-full px-4 py-3 gap-3" : "w-16 h-16 justify-center",
+                isExpanded ? "w-full px-5 py-4 gap-4" : "w-16 h-16 justify-center",
                 active
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
             >
               <item.icon className={cn(
-                "w-7 h-7 flex-shrink-0",
+                "w-8 h-8 flex-shrink-0",
                 active ? "text-primary" : "text-muted-foreground"
               )} />
               {isExpanded && (
                 <span className={cn(
-                  "text-sm font-medium truncate",
+                  "text-base font-semibold truncate",
                   active ? "text-primary" : "text-muted-foreground"
                 )}>
                   {item.title}
@@ -149,14 +149,14 @@ export function AppSidebar() {
       </nav>
 
       {/* Logout - Fixed at bottom */}
-      <div className="py-6 flex flex-col items-center border-t border-border/30 px-2">
+      <div className="py-6 flex flex-col items-center border-t border-border/30 px-3">
         {isExpanded ? (
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-destructive hover:bg-destructive/10"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-destructive hover:bg-destructive/10"
           >
-            <LogOut className="w-7 h-7 flex-shrink-0" />
-            <span className="text-sm font-medium">Sair</span>
+            <LogOut className="w-8 h-8 flex-shrink-0" />
+            <span className="text-base font-semibold">Sair</span>
           </button>
         ) : (
           <Tooltip delayDuration={300}>
@@ -165,7 +165,7 @@ export function AppSidebar() {
                 onClick={handleLogout}
                 className="w-16 h-16 flex items-center justify-center rounded-xl transition-all duration-200 text-destructive hover:bg-destructive/10"
               >
-                <LogOut className="w-7 h-7" />
+                <LogOut className="w-8 h-8" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
