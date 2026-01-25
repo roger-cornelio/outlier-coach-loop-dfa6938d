@@ -426,10 +426,10 @@ export function MasterBenchmarksEditor() {
         <div>
           <h2 className="text-xl font-display font-bold flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            Sistema de Benchmarks com Derivação
+            Base de Referência do Sistema
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Configure a base PRO Masculino e os deltas serão aplicados automaticamente
+            Referência técnica que define o radar, a régua de estações e os níveis HYROX
           </p>
         </div>
       </div>
@@ -438,7 +438,22 @@ export function MasterBenchmarksEditor() {
       <Alert className="bg-primary/5 border-primary/20">
         <Info className="w-4 h-4 text-primary" />
         <AlertDescription className="text-sm">
-          <strong>Fórmula:</strong> Ref Final = Base PRO M + Delta Tier + Delta Gênero + Delta Idade
+          Esta base define os tempos e referências técnicas que o sistema utiliza para calcular o radar fisiológico, 
+          a régua de estações e os níveis de status. Não representa desempenho individual, mas sim o padrão técnico 
+          a partir do qual todos os deltas são aplicados.
+        </AlertDescription>
+      </Alert>
+      
+      {/* Helper Text */}
+      <p className="text-xs text-muted-foreground/70 italic">
+        Os valores definidos aqui funcionam como ponto zero de referência, ajustado por tier, gênero e idade. 
+        Esta tabela não é um ranking nem comparação direta entre atletas — todos os indicadores do sistema (radar, régua, status) são derivados desta base.
+      </p>
+      
+      {/* Formula Reference */}
+      <Alert className="bg-secondary/30 border-border/50">
+        <AlertDescription className="text-xs text-muted-foreground">
+          <strong>Fórmula de Derivação:</strong> Referência Final = Base PRO M + Delta Tier + Delta Gênero + Delta Idade
         </AlertDescription>
       </Alert>
       
@@ -469,10 +484,11 @@ export function MasterBenchmarksEditor() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Crown className="w-5 h-5 text-amber-500" />
-                Base Master: PRO Masculino
+                Base Master: Referência PRO Masculino
               </CardTitle>
               <CardDescription>
-                Tempos de referência para o atleta PRO masculino faixa 25-29. Todos os outros valores são derivados daqui.
+                Ponto zero do sistema — tempos de referência técnica para PRO masculino faixa 25-29. 
+                Todos os indicadores do Outlier (radar, régua, status) são derivados desta base.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -506,10 +522,10 @@ export function MasterBenchmarksEditor() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="w-5 h-5 text-blue-500" />
-                Deltas por Tier (segundos)
+                Ajustes por Tier (segundos)
               </CardTitle>
               <CardDescription>
-                Ajuste os segundos adicionados à base PRO M para cada tier.
+                Segundos adicionados à base de referência para cada nível HYROX. Define a escala de progressão entre níveis.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -586,10 +602,10 @@ export function MasterBenchmarksEditor() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Users className="w-5 h-5 text-pink-500" />
-                Deltas por Gênero (segundos)
+                Ajustes por Gênero (segundos)
               </CardTitle>
               <CardDescription>
-                Ajuste aplicado para atletas femininas em relação à base masculina.
+                Correção aplicada para atletas femininas em relação à base masculina. Normaliza a referência entre gêneros.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -666,10 +682,10 @@ export function MasterBenchmarksEditor() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Calendar className="w-5 h-5 text-green-500" />
-                Deltas por Faixa Etária (segundos)
+                Ajustes por Faixa Etária (segundos)
               </CardTitle>
               <CardDescription>
-                Ajustes aplicados por faixa etária oficial HYROX.
+                Correção aplicada por faixa etária oficial HYROX. Normaliza a referência para comparações justas.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -764,10 +780,10 @@ function DerivedPreview({ master, tierDeltas, genderDeltas, ageDeltas }: Derived
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <ArrowRight className="w-5 h-5 text-primary" />
-          Preview de Derivação
+          Simulador de Referência
         </CardTitle>
         <CardDescription>
-          Veja como os tempos são calculados para uma combinação específica
+          Visualize como a referência técnica é calculada para uma combinação específica de tier, gênero e idade
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

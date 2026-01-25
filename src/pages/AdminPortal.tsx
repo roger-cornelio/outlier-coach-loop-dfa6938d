@@ -61,9 +61,9 @@ const navItems: NavItem[] = [
   },
   { 
     id: "masterBenchmarks", 
-    label: "Benchmarks", 
+    label: "Base de Referência", 
     icon: <Crown className="w-5 h-5" />,
-    description: "Sistema de derivação"
+    description: "Referência técnica do sistema"
   },
   { 
     id: "athleteStatus", 
