@@ -69,23 +69,23 @@ export function AthleteHeroIdentity({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn('flex flex-col items-center text-center py-6', className)}
+      className={cn('flex flex-col items-center text-center py-10 md:py-14', className)}
     >
       {/* Nome do Atleta - Grande e Bold */}
-      <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-wide text-foreground uppercase mb-3">
+      <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-wide text-foreground uppercase mb-5">
         {name}
       </h1>
       
       {/* Badge de Status com Coroa */}
-      <div className="flex items-center gap-2 mb-1">
-        <StatusCrownPreset size="sm" colorClass={config.crownColor} />
-        <span className={cn('font-semibold text-sm sm:text-base tracking-wider', config.labelColor)}>
+      <div className="flex items-center gap-3 mb-2">
+        <StatusCrownPreset size="md" colorClass={config.crownColor} />
+        <span className={cn('font-semibold text-base sm:text-lg tracking-wider', config.labelColor)}>
           {config.label}
         </span>
       </div>
       
       {/* Sublabel - Nível */}
-      <p className="text-muted-foreground text-sm">
+      <p className="text-muted-foreground text-base">
         {config.sublabel}
       </p>
     </motion.div>
