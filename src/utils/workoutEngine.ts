@@ -221,15 +221,15 @@ function calculateInternalStatus(athlete: AthleteConfig): InternalStatusOutlier 
 }
 
 // ============================================
-// MULTIPLICADORES POR NÍVEL DE TREINO
+// MULTIPLICADORES BASEADOS NO STATUS INTERNO
+// NOTA: PlanTier (OPEN/PRO) NÃO influencia mais o motor.
 // ============================================
 
 /** 
- * Multiplicadores baseados no NÍVEL DE TREINO escolhido pelo usuário
- * A base é sempre PRO - os níveis ajustam para baixo ou mantêm
+ * Multiplicadores baseados apenas no STATUS INTERNO do atleta (calculado de benchmarks).
+ * PlanTier foi desacoplado e não afeta mais a adaptação.
  */
-export function getTrainingLevelMultipliers(level: TrainingLevel, internalStatus: InternalStatusOutlier) {
-  // Proteção baseada no status interno (nunca mostrado)
+export function getStatusMultipliers(internalStatus: InternalStatusOutlier) {
   const statusProtection = {
     baixo: { maxVolume: 0.75, maxLoad: 0.80 },
     medio: { maxVolume: 0.90, maxLoad: 0.95 },
@@ -237,20 +237,23 @@ export function getTrainingLevelMultipliers(level: TrainingLevel, internalStatus
     elite: { maxVolume: 1.10, maxLoad: 1.05 },
   }[internalStatus];
 
-  // open e pro usam a mesma intensidade máxima
   return { 
-    volume: Math.min(1.00, statusProtection.maxVolume), 
-    load: Math.min(1.00, statusProtection.maxLoad), 
-    intensity: 1.05, 
-    restMultiplier: 0.8,
-    densityRule: 'alta densidade, estímulo máximo' 
+    volume: statusProtection.maxVolume, 
+    load: statusProtection.maxLoad, 
+    intensity: 1.0, 
+    restMultiplier: 1.0,
+    densityRule: 'padrão do coach' 
   };
 }
 
-// Legacy function for compatibility
-export function getLevelMultipliers(level: string) {
-  // Todos os níveis agora mapeiam para open (referência)
-  return getTrainingLevelMultipliers('open', 'medio');
+/** @deprecated Use getStatusMultipliers - PlanTier não influencia mais */
+export function getTrainingLevelMultipliers(_level: string, internalStatus: InternalStatusOutlier) {
+  return getStatusMultipliers(internalStatus);
+}
+
+/** @deprecated PlanTier não influencia mais */
+export function getLevelMultipliers(_level: string) {
+  return getStatusMultipliers('medio');
 }
 
 /** Orçamento base por tempo escolhido (sempre soma <= timeLimit) */
@@ -261,17 +264,12 @@ export function getTimeBudget(timeLimitMin: number): Record<BlockType, number> {
   return { warmup: 12, strength: 20, conditioning: 50, core: 8, run: 0 };
 }
 
-/** Ajusta o orçamento conforme nível de treino */
-export function getTimeBudgetByLevel(timeLimitMin: number, level: TrainingLevel): Record<BlockType, number> {
-  const base = getTimeBudget(timeLimitMin);
-
-  // open/pro: puxa mais conditioning (alta intensidade)
-  const shift = Math.min(8, Math.floor(base.strength * 0.4));
-  return {
-    ...base,
-    strength: Math.max(0, base.strength - shift),
-    conditioning: base.conditioning + shift,
-  };
+/** 
+ * Retorna orçamento de tempo por tipo de bloco.
+ * NOTA: PlanTier foi desacoplado - esta função agora retorna o orçamento base.
+ */
+export function getTimeBudgetByLevel(timeLimitMin: number, _level?: string): Record<BlockType, number> {
+  return getTimeBudget(timeLimitMin);
 }
 
 /** Escala um token numérico isolado */

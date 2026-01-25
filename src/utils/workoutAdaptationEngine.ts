@@ -334,12 +334,12 @@ const TRANSITION_TIMES = {
 // ============================================
 // AJUSTES POR NÍVEL E SEXO
 // ============================================
+// NOTA: PlanTier (OPEN/PRO) NÃO influencia mais o motor de adaptação.
+// Multiplicadores são fixos e baseados apenas no conteúdo e biometria.
+// ============================================
 
-// Multiplicador de tempo por nível (intermediário = referência)
-const LEVEL_TIME_MULTIPLIER: Record<TrainingLevel, number> = {
-  open: 0.85, // Ritmo competitivo
-  pro: 0.85,  // Ritmo competitivo
-};
+// Multiplicador de tempo FIXO (PlanTier desacoplado)
+const FIXED_TIME_MULTIPLIER = 1.0;
 
 // Multiplicador de tempo por sexo
 const SEX_TIME_MULTIPLIER: Record<SexKey, number> = {
@@ -502,10 +502,9 @@ function calculateLineTime(
     category = classified.category;
   }
   
-  // Aplicar multiplicadores de nível e sexo
-  const levelMult = LEVEL_TIME_MULTIPLIER[nivel];
+  // Aplicar apenas multiplicador de sexo (PlanTier desacoplado)
   const sexMult = SEX_TIME_MULTIPLIER[sexo];
-  seconds = seconds * levelMult * sexMult;
+  seconds = seconds * FIXED_TIME_MULTIPLIER * sexMult;
   
   // Calcular transição
   let transitionSeconds = TRANSITION_TIMES.stationChange;

@@ -3,13 +3,18 @@ export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 // Status is now calculated internally (INVISIBLE to user) from benchmarks
 export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_open' | 'hyrox_pro';
 
-// Nível de treino escolhido pelo usuário - APENAS open/pro
-// Ambos usam a mesma intensidade (planilha completa)
-// Diferença é apenas conceitual/branding
-export type TrainingLevel = 'open' | 'pro';
+// ═══════════════════════════════════════════════════════════════════════════
+// PlanTier: Plano CONTRATADO pelo atleta com o coach (OPEN / PRO)
+// NÃO influencia o motor de treino, estimativas ou adaptações.
+// É apenas um atributo de assinatura/plano, não de estímulo diário.
+// ═══════════════════════════════════════════════════════════════════════════
+export type PlanTier = 'open' | 'pro';
 
-// Legacy type aliases for compatibility
-export type TrainingDifficulty = TrainingLevel;
+// Legacy alias for compatibility (deprecated - use PlanTier)
+export type TrainingLevel = PlanTier;
+export type TrainingDifficulty = PlanTier;
+
+// AthleteLevel is used for workout scaling (based on status/benchmarks)
 export type AthleteLevel = AthleteStatus;
 
 export type SessionDuration = 30 | 45 | 60 | 90 | 'ilimitado';
@@ -23,10 +28,11 @@ export interface Equipment {
 }
 
 export interface AthleteConfig {
-  // Nível de treino escolhido pelo usuário (BASE / PROGRESSIVO / PERFORMANCE)
-  trainingLevel: TrainingLevel;
-  // Legacy alias for compatibility
-  trainingDifficulty?: TrainingLevel;
+  // Plano contratado (OPEN/PRO) - NÃO influencia o treino do dia
+  // Apenas define o nível de assinatura com o coach
+  planTier?: PlanTier;
+  // Legacy alias for compatibility (deprecated)
+  trainingLevel?: PlanTier;
   sessionDuration: SessionDuration;
   equipment?: string[]; // Legacy: Equipamentos disponíveis (opcional)
   unavailableEquipment?: string[]; // Equipamentos que o atleta NÃO possui
