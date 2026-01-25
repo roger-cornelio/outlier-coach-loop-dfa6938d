@@ -4,6 +4,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale } from 'lucide-react';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
+import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
@@ -248,11 +249,15 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            // Tempo e calorias do workoutEstimation (fonte única)
+            // Calorias do workoutEstimation
             const blockEstimate = workoutEstimation?.blocks[index];
-            const estimatedMinutes = blockEstimate?.estimatedMinutes || 0;
             const estimatedKcal = blockEstimate?.estimatedKcal || 0;
-            const confidence = blockEstimate?.confidence || 'low';
+            
+            // Usar TimeMeta como fonte de verdade para tempo
+            const timeMeta = getBlockTimeMeta(block);
+            const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
+            const isEstimated = timeMeta.source !== 'CONFIRMED';
+            const isMissing = timeMeta.source === 'MISSING';
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
 
@@ -374,17 +379,17 @@ export function WorkoutExecution() {
                     {/* Block Stats */}
                     {block.type !== 'notas' && (estimatedMinutes > 0 || pseInfo || effectivePace) && (
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-border/50">
-                        {/* Tempo estimado */}
-                        {estimatedMinutes > 0 && (
+                        {/* Tempo - usando TimeMeta */}
+                        {(estimatedMinutes > 0 || isMissing) && (
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-primary" />
                             <span className="text-muted-foreground">
-                              {confidence === 'low' ? '~' : ''}
+                              {isEstimated && !isMissing ? '~' : ''}
                             </span>
                             <span className="font-medium text-foreground">
-                              {formatEstimatedTime(estimatedMinutes)}
+                              {isMissing ? '--' : formatEstimatedTime(estimatedMinutes)}
                             </span>
-                            {confidence === 'low' && (
+                            {isEstimated && !isMissing && (
                               <span className="text-xs text-muted-foreground/60">(estimado)</span>
                             )}
                           </div>

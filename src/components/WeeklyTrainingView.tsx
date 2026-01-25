@@ -21,6 +21,7 @@ import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
+import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 
@@ -217,9 +218,13 @@ export function WeeklyTrainingView() {
               }
               
               const blockEstimate = workoutEstimation?.blocks[index];
-              const estimatedMinutes = blockEstimate?.estimatedMinutes || 0;
               const estimatedKcal = blockEstimate?.estimatedKcal || 0;
-              const blockConfidence = blockEstimate?.confidence || 'low';
+              
+              // Usar TimeMeta como fonte de verdade para tempo
+              const timeMeta = getBlockTimeMeta(block);
+              const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
+              const isEstimated = timeMeta.source !== 'CONFIRMED';
+              const isMissing = timeMeta.source === 'MISSING';
 
               return (
                 <motion.div
@@ -283,12 +288,12 @@ export function WeeklyTrainingView() {
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-muted-foreground">
-                          {blockConfidence === 'low' ? '~' : ''}
+                          {isEstimated && !isMissing ? '~' : ''}
                         </span>
                         <span className="font-medium text-foreground">
-                          {formatEstimatedTime(estimatedMinutes)}
+                          {isMissing ? '--' : formatEstimatedTime(estimatedMinutes)}
                         </span>
-                        {blockConfidence === 'low' && (
+                        {isEstimated && !isMissing && (
                           <span className="text-xs text-muted-foreground/60">(estimado)</span>
                         )}
                       </div>
