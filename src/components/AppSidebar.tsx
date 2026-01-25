@@ -4,21 +4,22 @@
  * SEÇÕES:
  * - Dashboard (diagnóstico principal)
  * - Treino Semanal (agenda e plano)
- * - Ajustes de Treino (equipamentos)
  * - Status do Atleta (benchmarks)
  * - Configurações
+ * - Logout
  */
 
 import { 
   LayoutDashboard, 
   Calendar, 
-  Wrench, 
   Trophy,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useLogout } from '@/hooks/useLogout';
 import { cn } from '@/lib/utils';
 import {
   Sidebar,
@@ -40,15 +41,13 @@ interface NavItem {
   view: string;
   icon: React.ElementType;
   action?: () => void;
+  isDestructive?: boolean;
 }
 
-interface AppSidebarProps {
-  onOpenEquipmentModal?: () => void;
-}
-
-export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
+export function AppSidebar() {
   const { currentView, setCurrentView } = useOutlierStore();
   const { state: sidebarState } = useSidebar();
+  const { logout, isLoggingOut } = useLogout();
   const isCollapsed = sidebarState === 'collapsed';
 
   const navItems: NavItem[] = [
@@ -61,15 +60,6 @@ export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
       title: 'Treino Semanal', 
       view: 'weeklyTraining', 
       icon: Calendar
-    },
-    { 
-      title: 'Ajustes de Treino', 
-      view: 'equipment-adjust', 
-      icon: Wrench,
-      action: () => {
-        // Abre o modal de equipamentos diretamente
-        onOpenEquipmentModal?.();
-      }
     },
     { 
       title: 'Status do Atleta', 
@@ -92,10 +82,11 @@ export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
   };
 
   const isActive = (item: NavItem) => {
-    if (item.view === 'equipment-adjust') {
-      return false; // Never highlight - it's a modal action
-    }
     return currentView === item.view;
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -151,7 +142,22 @@ export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2 border-t border-border/30">
+      <SidebarFooter className="p-2 border-t border-border/30 space-y-2">
+        {/* Logout Button */}
+        <SidebarMenuButton
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-destructive hover:bg-destructive/10"
+          tooltip="Sair"
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!isCollapsed && (
+            <span className="font-medium text-sm tracking-wide">
+              Sair
+            </span>
+          )}
+        </SidebarMenuButton>
+
+        {/* Collapse Toggle */}
         <SidebarTrigger className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4 text-muted-foreground" />

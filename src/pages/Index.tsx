@@ -337,9 +337,7 @@ const Index = () => {
       <div className="min-h-screen flex w-full bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
         {/* Sidebar - only visible after setup complete */}
         {showSidebar && (
-          <AppSidebar 
-            onOpenEquipmentModal={() => setIsEquipmentModalOpen(true)} 
-          />
+          <AppSidebar />
         )}
         
         {/* Main content area */}
