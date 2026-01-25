@@ -88,7 +88,7 @@ export function AppSidebar() {
   return (
     <aside className={cn(
       "h-screen bg-background border-r border-border/30 flex flex-col transition-all duration-300",
-      isExpanded ? "w-80" : "w-24"
+      isExpanded ? "w-96" : "w-24"
     )}>
       {/* Toggle Button */}
       <div className="flex justify-end p-3">
