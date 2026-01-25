@@ -257,7 +257,6 @@ export function WorkoutExecution() {
             const timeMeta = getBlockTimeMeta(block);
             const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
             const isEstimated = timeMeta.source !== 'CONFIRMED';
-            const isMissing = timeMeta.source === 'MISSING';
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
 
@@ -380,16 +379,16 @@ export function WorkoutExecution() {
                     {block.type !== 'notas' && (estimatedMinutes > 0 || pseInfo || effectivePace) && (
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-border/50">
                         {/* Tempo - usando TimeMeta */}
-                        {(estimatedMinutes > 0 || isMissing) && (
+                        {estimatedMinutes > 0 && (
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-primary" />
                             <span className="text-muted-foreground">
-                              {isEstimated && !isMissing ? '~' : ''}
+                              {isEstimated ? '~' : ''}
                             </span>
                             <span className="font-medium text-foreground">
-                              {isMissing ? '--' : formatEstimatedTime(estimatedMinutes)}
+                              {formatEstimatedTime(estimatedMinutes)}
                             </span>
-                            {isEstimated && !isMissing && (
+                            {isEstimated && (
                               <span className="text-xs text-muted-foreground/60">(estimado)</span>
                             )}
                           </div>

@@ -224,7 +224,6 @@ export function WeeklyTrainingView() {
               const timeMeta = getBlockTimeMeta(block);
               const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
               const isEstimated = timeMeta.source !== 'CONFIRMED';
-              const isMissing = timeMeta.source === 'MISSING';
 
               return (
                 <motion.div
@@ -288,12 +287,12 @@ export function WeeklyTrainingView() {
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-muted-foreground">
-                          {isEstimated && !isMissing ? '~' : ''}
+                          {isEstimated ? '~' : ''}
                         </span>
                         <span className="font-medium text-foreground">
-                          {isMissing ? '--' : formatEstimatedTime(estimatedMinutes)}
+                          {formatEstimatedTime(estimatedMinutes)}
                         </span>
-                        {isEstimated && !isMissing && (
+                        {isEstimated && (
                           <span className="text-xs text-muted-foreground/60">(estimado)</span>
                         )}
                       </div>
