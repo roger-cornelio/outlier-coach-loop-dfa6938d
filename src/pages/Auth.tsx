@@ -11,7 +11,7 @@ import { CoachApplicationModal } from '@/components/CoachApplicationModal';
 import { QAActivationModal } from '@/components/QAActivationModal';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 
-type AuthMode = 'login' | 'signup' | 'forgot-password';
+type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
 type AuthContext = 'user' | 'coach' | 'admin';
 
 interface AuthProps {
@@ -33,6 +33,14 @@ const forgotSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
 });
 
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
+  confirmPassword: z.string().min(6, 'Confirme a senha'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'As senhas não coincidem',
+  path: ['confirmPassword'],
+});
+
 export default function Auth({ context = 'user' }: AuthProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
@@ -40,10 +48,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const [resetSent, setResetSent] = useState(false);
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [showQAModal, setShowQAModal] = useState(false);
   
   // Hidden QA trigger - 5 clicks on logo
@@ -88,7 +99,29 @@ export default function Auth({ context = 'user' }: AuthProps) {
     if (initialMode === 'signup') {
       setMode('signup');
     }
+    // Detect password reset mode from URL
+    if (initialMode === 'reset') {
+      setMode('reset-password');
+      setIsPasswordResetMode(true);
+    }
   }, [initialMode, context]);
+
+  // Listen for PASSWORD_RECOVERY event from Supabase
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`[AUTH][Auth.tsx] event=${event} hasSession=${!!session} ts=${new Date().toISOString()}`);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[AUTH][Auth.tsx] PASSWORD_RECOVERY event detected - showing reset form');
+        setMode('reset-password');
+        setIsPasswordResetMode(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Lock coach/admin login to "login" mode (no signup)
   useEffect(() => {
@@ -98,8 +131,15 @@ export default function Auth({ context = 'user' }: AuthProps) {
   }, [context]);
 
   // REDIRECT BASED ON CONTEXT (entry route), NOT role guessing
+  // CRITICAL: DO NOT redirect if user is in password reset mode
   useEffect(() => {
     if (!user || authLoading) return;
+    
+    // BLOCK REDIRECT if in password reset mode - user must complete reset first
+    if (isPasswordResetMode || mode === 'reset-password') {
+      console.log(`[GATE][Auth] BLOCKING redirect - user is in password reset mode ts=${new Date().toISOString()}`);
+      return;
+    }
 
     // Reset access denied state on user change
     setAccessDenied(null);
@@ -151,7 +191,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
     console.log(`[NAV][Auth] from=/login to=/app reason=athlete_authenticated_going_to_app ts=${new Date().toISOString()}`);
     setCurrentView('dashboard');
     navigate('/app');
-  }, [user, authLoading, isAdmin, isCoach, context, navigate, setCurrentView]);
+  }, [user, authLoading, isAdmin, isCoach, context, navigate, setCurrentView, isPasswordResetMode, mode]);
 
   const validateForm = () => {
     try {
@@ -159,6 +199,8 @@ export default function Auth({ context = 'user' }: AuthProps) {
         loginSchema.parse({ email, password });
       } else if (mode === 'signup') {
         signupSchema.parse({ name, email, password });
+      } else if (mode === 'reset-password') {
+        resetPasswordSchema.parse({ password, confirmPassword });
       } else {
         forgotSchema.parse({ email });
       }
@@ -166,11 +208,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return true;
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const fieldErrors: { name?: string; email?: string; password?: string } = {};
+        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string } = {};
         err.errors.forEach((error) => {
           if (error.path[0] === 'name') fieldErrors.name = error.message;
           if (error.path[0] === 'email') fieldErrors.email = error.message;
           if (error.path[0] === 'password') fieldErrors.password = error.message;
+          if (error.path[0] === 'confirmPassword') fieldErrors.confirmPassword = error.message;
         });
         setErrors(fieldErrors);
       }
@@ -263,6 +306,36 @@ export default function Auth({ context = 'user' }: AuthProps) {
             description: 'Verifique sua caixa de entrada para redefinir a senha.',
           });
         }
+      } else if (mode === 'reset-password') {
+        // Update password using Supabase Auth
+        const { error } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (error) {
+          toast({
+            title: 'Erro ao redefinir senha',
+            description: error.message,
+            variant: 'destructive',
+          });
+        } else {
+          setResetSuccess(true);
+          setIsPasswordResetMode(false);
+          toast({
+            title: 'Senha redefinida!',
+            description: 'Sua senha foi alterada com sucesso.',
+          });
+          
+          // Sign out and redirect to login after a short delay
+          setTimeout(async () => {
+            await supabase.auth.signOut();
+            setMode('login');
+            setPassword('');
+            setConfirmPassword('');
+            setResetSuccess(false);
+            navigate('/login', { replace: true });
+          }, 2000);
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -273,6 +346,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
     setMode(newMode);
     setErrors({});
     setResetSent(false);
+    setConfirmPassword('');
   };
 
   // Google OAuth sign-in with context-aware redirect
@@ -535,8 +609,91 @@ export default function Auth({ context = 'user' }: AuthProps) {
             </div>
           )}
 
-          {/* Forgot Password Success */}
-          {mode === 'forgot-password' && resetSent ? (
+          {/* Password Reset Success */}
+          {mode === 'reset-password' && resetSuccess ? (
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center">
+                <Lock className="w-8 h-8 text-green-500" />
+              </div>
+              <p className="text-foreground font-medium">Senha redefinida com sucesso!</p>
+              <p className="text-muted-foreground text-sm">
+                Redirecionando para o login...
+              </p>
+            </div>
+          ) : mode === 'reset-password' ? (
+            /* Password Reset Form */
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                  <Lock className="w-6 h-6 text-primary" />
+                </div>
+                <h2 className="text-foreground font-medium">Redefinir Senha</h2>
+                <p className="text-muted-foreground text-xs mt-1">Digite sua nova senha abaixo</p>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="space-y-2.5">
+                {/* New Password */}
+                <div>
+                  <div className="relative">
+                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`w-full pl-8 pr-10 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.password ? 'border-destructive/50' : 'border-border/30'
+                      }`}
+                      placeholder="Nova senha"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-destructive text-xs mt-1">{errors.password}</p>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <div className="relative">
+                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                        errors.confirmPassword ? 'border-destructive/50' : 'border-border/30'
+                      }`}
+                      placeholder="Confirmar senha"
+                    />
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <p className="text-muted-foreground/60 text-xs">
+                  Mínimo de 6 caracteres
+                </p>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full mt-1 py-2.5 bg-primary text-primary-foreground rounded font-display text-sm font-semibold tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  SALVAR NOVA SENHA
+                </button>
+              </form>
+            </div>
+          ) : mode === 'forgot-password' && resetSent ? (
             <div className="text-center space-y-4">
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                 <Mail className="w-8 h-8 text-primary" />

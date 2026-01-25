@@ -50,7 +50,18 @@ export function AppGate({ children }: AppGateProps) {
   // Processado ANTES de loading/state para evitar flicker
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   
+  // Check if user is in password reset flow (mode=reset in URL)
+  const searchParams = new URLSearchParams(location.search);
+  const isPasswordResetMode = searchParams.get('mode') === 'reset';
+  
   if (isPublicRoute) {
+    // CRITICAL: Never redirect if user is in password reset mode
+    // User must complete password reset before any navigation
+    if (isPasswordResetMode) {
+      console.log(`[GATE][AppGate] ALLOWING password reset flow - mode=reset detected ts=${new Date().toISOString()}`);
+      return <>{children}</>;
+    }
+    
     // Exceção: usuário já autenticado em /login → redirecionar para destino apropriado
     if (pathname === '/login' && state !== 'anon' && state !== 'loading' && !loading) {
       if (state === 'admin' || state === 'superadmin') {
