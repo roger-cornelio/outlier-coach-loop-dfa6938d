@@ -13,6 +13,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { DayWorkout, WorkoutBlock } from '@/types/outlier';
+import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
 
 export type WorkoutStatus = 'draft' | 'published' | 'archived';
 
@@ -150,11 +151,14 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
       const sanitizedWorkouts = stripBenchmarkIfNotAdmin(workoutData, isAdmin || isSuperAdmin);
       
+      // NORMALIZAÇÃO: Garantir que durationSec seja persistido
+      const normalizedWorkouts = normalizeWorkoutsForPersistence(sanitizedWorkouts);
+      
       // Cast workout_json to any to bypass strict JSON type checking
       const insertPayload: Record<string, unknown> = {
         coach_id: profile.id,
         title,
-        workout_json: JSON.parse(JSON.stringify(sanitizedWorkouts)),
+        workout_json: JSON.parse(JSON.stringify(normalizedWorkouts)),
         status,
         price,
       };
@@ -202,7 +206,9 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       if (updates.workout_json !== undefined) {
         // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
         const sanitizedWorkouts = stripBenchmarkIfNotAdmin(updates.workout_json, isAdmin || isSuperAdmin);
-        updatePayload.workout_json = sanitizedWorkouts as unknown as Record<string, unknown>;
+        // NORMALIZAÇÃO: Garantir que durationSec seja persistido
+        const normalizedWorkouts = normalizeWorkoutsForPersistence(sanitizedWorkouts);
+        updatePayload.workout_json = normalizedWorkouts as unknown as Record<string, unknown>;
       }
 
       const { error: updateError } = await supabase
