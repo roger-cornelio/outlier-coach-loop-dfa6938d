@@ -6,7 +6,7 @@ import { UserManagement } from "@/components/UserManagement";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
-import { CoachWorkoutManager } from "@/components/CoachWorkoutManager";
+
 import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
@@ -25,13 +25,13 @@ import {
   UserCog,
   Activity,
   ArrowLeft,
-  Dumbbell,
+  
   Crown,
   Medal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "workouts" | "masterBenchmarks" | "athleteStatus";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "masterBenchmarks" | "athleteStatus";
 
 interface NavItem {
   id: AdminView;
@@ -52,12 +52,6 @@ const navItems: NavItem[] = [
     label: "Solicitações", 
     icon: <UserPlus className="w-5 h-5" />,
     description: "Aprovar coaches"
-  },
-  { 
-    id: "workouts", 
-    label: "Treinos", 
-    icon: <Dumbbell className="w-5 h-5" />,
-    description: "Gerenciar treinos salvos"
   },
   { 
     id: "coachPerformance", 
@@ -175,8 +169,6 @@ const AdminPortal = () => {
         return <CoachPerformance />;
       case "coachApplications":
         return <CoachApplicationsAdmin />;
-      case "workouts":
-        return <CoachWorkoutManager />;
       case "masterBenchmarks":
         return (
           <div className="space-y-6">
