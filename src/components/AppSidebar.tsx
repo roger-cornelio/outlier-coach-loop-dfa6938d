@@ -1,12 +1,13 @@
 /**
- * AppSidebar - Navegação lateral global do aplicativo OUTLIER
+ * AppSidebar - Navegação lateral compacta do aplicativo OUTLIER
  * 
- * SEÇÕES:
+ * SIDEBAR COMPACTA (apenas ícones):
  * - Dashboard (diagnóstico principal)
  * - Treino Semanal (agenda e plano)
+ * - Ajustes de Treino (equipamentos)
  * - Status do Atleta (benchmarks)
  * - Configurações
- * - Logout
+ * - Logout (fixado na parte inferior)
  */
 
 import { 
@@ -14,41 +15,27 @@ import {
   Calendar, 
   Trophy,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  LogOut
+  LogOut,
+  Wrench
 } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
 import { cn } from '@/lib/utils';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarTrigger,
-  useSidebar,
-} from '@/components/ui/sidebar';
-import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface NavItem {
   title: string;
   view: string;
   icon: React.ElementType;
-  action?: () => void;
-  isDestructive?: boolean;
 }
 
 export function AppSidebar() {
   const { currentView, setCurrentView } = useOutlierStore();
-  const { state: sidebarState } = useSidebar();
-  const { logout, isLoggingOut } = useLogout();
-  const isCollapsed = sidebarState === 'collapsed';
+  const { logout } = useLogout();
 
   const navItems: NavItem[] = [
     { 
@@ -60,6 +47,11 @@ export function AppSidebar() {
       title: 'Treino Semanal', 
       view: 'weeklyTraining', 
       icon: Calendar
+    },
+    { 
+      title: 'Ajustes de Treino', 
+      view: 'equipmentAdjust', 
+      icon: Wrench
     },
     { 
       title: 'Status do Atleta', 
@@ -74,11 +66,7 @@ export function AppSidebar() {
   ];
 
   const handleNavClick = (item: NavItem) => {
-    if (item.action) {
-      item.action();
-    } else {
-      setCurrentView(item.view as any);
-    }
+    setCurrentView(item.view as any);
   };
 
   const isActive = (item: NavItem) => {
@@ -90,82 +78,53 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar 
-      className={cn(
-        "border-r border-border/50 bg-background/95 backdrop-blur-sm transition-all duration-300",
-        isCollapsed ? "w-28" : "w-80"
-      )}
-      collapsible="icon"
-    >
-      <SidebarHeader className="p-6 border-b border-border/30">
-        {!isCollapsed && (
-          <OutlierWordmark size="lg" className="opacity-80" />
-        )}
-      </SidebarHeader>
+    <aside className="h-screen w-24 bg-background border-r border-border/30 flex flex-col">
+      {/* Navigation Items */}
+      <nav className="flex-1 flex flex-col items-center py-8 gap-2">
+        {navItems.map((item) => {
+          const active = isActive(item);
+          return (
+            <Tooltip key={item.view} delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleNavClick(item)}
+                  className={cn(
+                    "w-16 h-16 flex items-center justify-center rounded-xl transition-all duration-200",
+                    active
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "w-8 h-8",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                {item.title}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </nav>
 
-      <SidebarContent className="py-6">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const active = isActive(item);
-                return (
-                  <SidebarMenuItem key={item.view}>
-                    <SidebarMenuButton
-                      onClick={() => handleNavClick(item)}
-                      className={cn(
-                        "w-full flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200",
-                        active
-                          ? "bg-primary/10 text-primary border-l-3 border-primary"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )}
-                      tooltip={item.title}
-                    >
-                      <item.icon className={cn(
-                        "w-7 h-7 flex-shrink-0",
-                        active ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      {!isCollapsed && (
-                        <span className={cn(
-                          "font-medium text-lg tracking-wide",
-                          active ? "text-primary" : ""
-                        )}>
-                          {item.title}
-                        </span>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="p-3 border-t border-border/30 space-y-3">
-        {/* Logout Button */}
-        <SidebarMenuButton
-          onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200 text-destructive hover:bg-destructive/10"
-          tooltip="Sair"
-        >
-          <LogOut className="w-7 h-7 flex-shrink-0" />
-          {!isCollapsed && (
-            <span className="font-medium text-lg tracking-wide">
-              Sair
-            </span>
-          )}
-        </SidebarMenuButton>
-
-        {/* Collapse Toggle */}
-        <SidebarTrigger className="w-full flex items-center justify-center p-3 rounded-lg hover:bg-muted/50 transition-colors">
-          {isCollapsed ? (
-            <ChevronRight className="w-6 h-6 text-muted-foreground" />
-          ) : (
-            <ChevronLeft className="w-6 h-6 text-muted-foreground" />
-          )}
-        </SidebarTrigger>
-      </SidebarFooter>
-    </Sidebar>
+      {/* Logout - Fixed at bottom */}
+      <div className="py-6 flex flex-col items-center border-t border-border/30">
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleLogout}
+              className="w-16 h-16 flex items-center justify-center rounded-xl transition-all duration-200 text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-8 h-8" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            Sair
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </aside>
   );
 }
