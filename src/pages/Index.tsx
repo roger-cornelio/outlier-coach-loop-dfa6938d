@@ -30,6 +30,7 @@ import { ResultRecording } from "@/components/ResultRecording";
 import { PerformanceFeedback } from "@/components/PerformanceFeedback";
 import { AdminSpreadsheet } from "@/components/AdminSpreadsheet";
 import { BenchmarksScreen } from "@/components/BenchmarksScreen";
+import { BenchmarkCertificationScreen } from "@/components/BenchmarkCertificationScreen";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
 import { WeeklyTrainingView } from "@/components/WeeklyTrainingView";
@@ -250,6 +251,7 @@ const Index = () => {
     feedback: PerformanceFeedback,
     admin: AdminSpreadsheet,
     benchmarks: BenchmarksScreen,
+    benchmarkCertification: BenchmarkCertificationScreen,
     coachPerformance: CoachPerformance,
     coachApplication: CoachApplicationPage,
   } as const;

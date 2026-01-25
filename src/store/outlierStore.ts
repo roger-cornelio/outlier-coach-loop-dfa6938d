@@ -39,7 +39,7 @@ interface OutlierState {
   // Legacy: mantido para compatibilidade
   weeklyWorkouts: DayWorkout[];
   
-  currentView: 'welcome' | 'athleteWelcome' | 'config' | 'dashboard' | 'preWorkout' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks' | 'params' | 'coachPerformance' | 'coachApplication' | 'coachApplicationsAdmin';
+  currentView: 'welcome' | 'athleteWelcome' | 'config' | 'dashboard' | 'preWorkout' | 'workout' | 'result' | 'feedback' | 'admin' | 'users' | 'userManagement' | 'benchmarks' | 'benchmarkCertification' | 'weeklyTraining' | 'params' | 'coachPerformance' | 'coachApplication' | 'coachApplicationsAdmin';
   selectedDay: string | null;
   selectedWorkout: DayWorkout | null;
   externalResultsRefreshKey: number;
