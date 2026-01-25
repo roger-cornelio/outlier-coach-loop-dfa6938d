@@ -276,15 +276,8 @@ export function Dashboard() {
   const workoutEstimation = useMemo(() => {
     if (!currentWorkout) return null;
     
-    // Mapear trainingLevel para AthleteLevel
-    const levelMap: Record<string, string> = {
-      'base': 'iniciante',
-      'progressivo': 'intermediario',
-      'performance': 'avancado',
-    };
-    const level = levelMap[athleteConfig?.trainingLevel || 'progressivo'] || effectiveLevel;
-    
-    return estimateWorkout(currentWorkout, athleteConfig, level as any);
+    // open/pro usam o effectiveLevel do status do atleta
+    return estimateWorkout(currentWorkout, athleteConfig, effectiveLevel);
   }, [currentWorkout, athleteConfig, effectiveLevel]);
   
   // Verificar se peso está configurado

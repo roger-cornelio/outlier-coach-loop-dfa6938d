@@ -337,11 +337,8 @@ const TRANSITION_TIMES = {
 
 // Multiplicador de tempo por nível (intermediário = referência)
 const LEVEL_TIME_MULTIPLIER: Record<TrainingLevel, number> = {
-  base: 1.25, // 25% mais lento que intermediário
-  progressivo: 1.0, // referência
-  performance: 0.85, // 15% mais rápido que intermediário
-  open: 0.85, // mesmo que performance
-  pro: 0.85, // mesmo que performance
+  open: 0.85, // Ritmo competitivo
+  pro: 0.85,  // Ritmo competitivo
 };
 
 // Multiplicador de tempo por sexo
@@ -977,18 +974,15 @@ function applyLevelSexVolumes(
   nivel: TrainingLevel,
   sexo: SexKey
 ): WorkoutBlock {
-  // Performance M = referência, não altera
-  if (nivel === 'performance' && sexo === 'M') {
+  // open/pro M = referência, não altera
+  if ((nivel === 'open' || nivel === 'pro') && sexo === 'M') {
     return block;
   }
   
   // Multiplicadores de volume
   const levelMult: Record<TrainingLevel, number> = {
-    base: 0.65,
-    progressivo: 0.85,
-    performance: 1.0,
-    open: 1.0, // mesmo que performance
-    pro: 1.0, // mesmo que performance
+    open: 1.0,  // Volume integral
+    pro: 1.0,   // Volume integral
   };
   
   const sexMult: Record<SexKey, number> = {

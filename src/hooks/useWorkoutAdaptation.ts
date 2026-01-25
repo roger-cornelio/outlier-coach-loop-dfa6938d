@@ -87,8 +87,8 @@ export function validateAthleteParams(params: Partial<MandatoryAthleteParams>): 
 
   if (!params.level) {
     errors.push('Nível do treino é obrigatório');
-  } else if (!['base', 'progressivo', 'performance'].includes(params.level)) {
-    errors.push('Nível inválido (use: base, progressivo, performance)');
+  } else if (!['open', 'pro'].includes(params.level)) {
+    errors.push('Nível inválido (use: open, pro)');
   }
 
   if (!params.gender) {

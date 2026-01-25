@@ -7,7 +7,7 @@
 // 4. O treino deve ser difícil, mas executável
 // ============================================
 
-export type TrainingLevel = 'base' | 'progressivo' | 'performance';
+export type TrainingLevel = 'open' | 'pro';
 export type BlockType = 'warmup' | 'strength' | 'conditioning' | 'core' | 'run';
 
 // Status Outlier (INTERNO - INVISÍVEL ao usuário)
@@ -237,48 +237,20 @@ export function getTrainingLevelMultipliers(level: TrainingLevel, internalStatus
     elite: { maxVolume: 1.10, maxLoad: 1.05 },
   }[internalStatus];
 
-  switch (level) {
-    case 'base':
-      // Reduz volume, cargas, simplifica movimentos, mais pausas
-      return { 
-        volume: Math.min(0.70, statusProtection.maxVolume), 
-        load: Math.min(0.80, statusProtection.maxLoad), 
-        intensity: 0.85, 
-        restMultiplier: 1.3,
-        densityRule: 'mais controle, pausas ampliadas' 
-      };
-    case 'progressivo':
-      // Volume e cargas compatíveis com status interno, ritmo consistente
-      return { 
-        volume: Math.min(0.90, statusProtection.maxVolume), 
-        load: Math.min(0.95, statusProtection.maxLoad), 
-        intensity: 0.95, 
-        restMultiplier: 1.0,
-        densityRule: 'densidade moderada, estímulo sustentável' 
-      };
-    case 'performance':
-      // Alta densidade, ritmos agressivos, poucas pausas
-      return { 
-        volume: Math.min(1.00, statusProtection.maxVolume), 
-        load: Math.min(1.00, statusProtection.maxLoad), 
-        intensity: 1.05, 
-        restMultiplier: 0.8,
-        densityRule: 'alta densidade, estímulo máximo' 
-      };
-  }
+  // open e pro usam a mesma intensidade máxima
+  return { 
+    volume: Math.min(1.00, statusProtection.maxVolume), 
+    load: Math.min(1.00, statusProtection.maxLoad), 
+    intensity: 1.05, 
+    restMultiplier: 0.8,
+    densityRule: 'alta densidade, estímulo máximo' 
+  };
 }
 
 // Legacy function for compatibility
 export function getLevelMultipliers(level: string) {
-  // Map old level names to new training levels
-  const levelMap: Record<string, TrainingLevel> = {
-    'INICIANTE': 'base',
-    'INTERMEDIARIO': 'progressivo',
-    'AVANCADO': 'performance',
-    'HYROX_PRO': 'performance',
-  };
-  const trainingLevel = levelMap[level] || 'progressivo';
-  return getTrainingLevelMultipliers(trainingLevel, 'medio');
+  // Todos os níveis agora mapeiam para open (referência)
+  return getTrainingLevelMultipliers('open', 'medio');
 }
 
 /** Orçamento base por tempo escolhido (sempre soma <= timeLimit) */
@@ -293,28 +265,13 @@ export function getTimeBudget(timeLimitMin: number): Record<BlockType, number> {
 export function getTimeBudgetByLevel(timeLimitMin: number, level: TrainingLevel): Record<BlockType, number> {
   const base = getTimeBudget(timeLimitMin);
 
-  if (level === 'performance') {
-    // Performance puxa mais conditioning
-    const shift = Math.min(8, Math.floor(base.strength * 0.4));
-    return {
-      ...base,
-      strength: Math.max(0, base.strength - shift),
-      conditioning: base.conditioning + shift,
-    };
-  }
-
-  if (level === 'base') {
-    // Base puxa mais aquecimento e técnica
-    const shift = Math.min(6, Math.floor(base.conditioning * 0.2));
-    return {
-      ...base,
-      warmup: base.warmup + 2,
-      strength: base.strength + Math.max(0, shift - 2),
-      conditioning: Math.max(0, base.conditioning - shift),
-    };
-  }
-
-  return base; // progressivo
+  // open/pro: puxa mais conditioning (alta intensidade)
+  const shift = Math.min(8, Math.floor(base.strength * 0.4));
+  return {
+    ...base,
+    strength: Math.max(0, base.strength - shift),
+    conditioning: base.conditioning + shift,
+  };
 }
 
 /** Escala um token numérico isolado */
@@ -370,15 +327,9 @@ export function applyTrainingLevelScaling(blocks: WorkoutBlock[], athlete: Athle
 
 // Legacy alias
 export function applyLevelScaling(blocks: WorkoutBlock[], level: string) {
-  const levelMap: Record<string, TrainingLevel> = {
-    'INICIANTE': 'base',
-    'INTERMEDIARIO': 'progressivo', 
-    'AVANCADO': 'performance',
-    'HYROX_PRO': 'performance',
-  };
   const athlete: AthleteConfig = {
     weightKg: 70,
-    trainingLevel: levelMap[level] || 'progressivo',
+    trainingLevel: 'open', // Todos usam intensidade máxima agora
     timeLimitMin: 60,
   };
   return applyTrainingLevelScaling(blocks, athlete);
@@ -404,9 +355,8 @@ function applyCondenseMode(
   const volumeRatio = clamp(ratioRaw, 0.50, 0.80);
 
   // Load: mantém e pode subir levemente para manter estímulo
-  const loadBoost = trainingLevel === 'performance' 
-    ? clamp(1 + (1 - ratioRaw) * 0.15, 1.00, 1.10) 
-    : 1.0;
+  // open/pro usam alta intensidade
+  const loadBoost = clamp(1 + (1 - ratioRaw) * 0.15, 1.00, 1.10);
 
   // Densidade (MET): sobe para manter intensidade relativa
   const metDensityMult = clamp(1 + (1 - ratioRaw) * 0.25, 1.00, 1.15);
@@ -629,17 +579,9 @@ export function normalizeTimeLimit(input: any): number {
 
 /** Mapeia o nível do app para o nível de treino do engine */
 export function mapAppLevelToEngine(level: string): TrainingLevel {
-  switch (level) {
-    case 'iniciante': return 'base';
-    case 'intermediario': return 'progressivo';
-    case 'avancado': return 'performance';
-    case 'hyrox_pro': return 'performance';
-    case 'hyrox_open': return 'progressivo';
-    case 'base': return 'base';
-    case 'progressivo': return 'progressivo';
-    case 'performance': return 'performance';
-    default: return 'progressivo';
-  }
+  // Todos os níveis agora mapeiam para open ou pro
+  if (level === 'pro') return 'pro';
+  return 'open';
 }
 
 /** Mapeia o tipo de bloco do app para o tipo do engine */

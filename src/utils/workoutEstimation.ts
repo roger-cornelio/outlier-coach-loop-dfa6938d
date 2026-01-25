@@ -17,11 +17,8 @@ import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants
 // ============================================
 
 const INTENSITY_MULTIPLIERS: Record<TrainingLevel, number> = {
-  base: 1.00,        // Sem redução no modo base
-  progressivo: 1.05, // +5% para progressivo
-  performance: 1.12, // +12% para performance
-  open: 1.12,        // mesmo que performance
-  pro: 1.12,         // mesmo que performance
+  open: 1.12,  // Intensidade máxima
+  pro: 1.12,   // Intensidade máxima
 };
 
 // Blocos que recebem multiplicador de intensidade

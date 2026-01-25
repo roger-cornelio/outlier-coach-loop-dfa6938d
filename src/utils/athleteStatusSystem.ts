@@ -684,16 +684,9 @@ export function getEffectiveLevel(
   status: AthleteStatus,
   trainingLevel: TrainingDifficulty
 ): AthleteStatus {
-  const currentIndex = STATUS_ORDER.indexOf(status);
-  
-  // Mapeia os novos níveis de treino para offsets
-  let offset = 0;
-  if (trainingLevel === 'base') offset = -1;
-  if (trainingLevel === 'performance') offset = 1;
-  // 'progressivo' = 0 (mantém o status atual)
-  
-  const newIndex = Math.max(0, Math.min(STATUS_ORDER.length - 1, currentIndex + offset));
-  return STATUS_ORDER[newIndex];
+  // Com open/pro, não há offset - ambos usam o status atual
+  // A função é mantida para compatibilidade mas não altera mais o status
+  return status;
 }
 
 // ============================================================

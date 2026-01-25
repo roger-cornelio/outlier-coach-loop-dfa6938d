@@ -31,10 +31,9 @@ interface GenerateOptions {
 
 // Mapear level do app para TrainingLevel
 function mapLevel(level: string): TrainingLevel {
-  const upper = level?.toUpperCase();
-  if (upper === 'BASE') return 'base';
-  if (upper === 'PROGRESSIVO') return 'progressivo';
-  return 'performance';
+  const lower = level?.toLowerCase();
+  if (lower === 'pro') return 'pro';
+  return 'open'; // Default para open
 }
 
 // Normalizar tempo para minutos
