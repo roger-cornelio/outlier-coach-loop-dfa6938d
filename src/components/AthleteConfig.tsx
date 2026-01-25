@@ -6,7 +6,7 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { type PlanTier, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users, RefreshCw } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
@@ -332,15 +332,31 @@ export function AthleteConfig() {
           </p>
           
           {/* Coach vinculado */}
-          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="w-4 h-4" />
-            {coachLoading ? (
-              <span>Coach: <span className="text-muted-foreground/60">carregando...</span></span>
-            ) : coachName ? (
-              <span>Coach: <span className="text-foreground font-medium">{coachName}</span></span>
-            ) : (
-              <span>Coach: <span className="text-muted-foreground/60">não vinculado</span></span>
-            )}
+          <div className="mt-6 p-4 rounded-lg bg-secondary/50 border border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Coach</span>
+                  {coachLoading ? (
+                    <p className="text-base font-medium text-foreground/60">Carregando...</p>
+                  ) : coachName ? (
+                    <p className="text-base font-semibold text-foreground">{coachName}</p>
+                  ) : (
+                    <p className="text-base font-medium text-muted-foreground">Não vinculado</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => toast.info('Para trocar de coach, fale com nosso suporte ou solicite ao seu coach atual.')}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Trocar coach</span>
+              </button>
+            </div>
           </div>
         </div>
       </motion.section>
