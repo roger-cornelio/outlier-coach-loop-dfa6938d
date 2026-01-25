@@ -59,14 +59,8 @@ export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
     },
     { 
       title: 'Treino Semanal', 
-      view: 'weekly-training', 
-      icon: Calendar,
-      action: () => {
-        // Abre o dashboard e expande a visão semanal
-        setCurrentView('dashboard');
-        // Disparar evento customizado para expandir a visão semanal
-        window.dispatchEvent(new CustomEvent('outlier:expand-weekly-view'));
-      }
+      view: 'weeklyTraining', 
+      icon: Calendar
     },
     { 
       title: 'Ajustes de Treino', 
@@ -98,9 +92,6 @@ export function AppSidebar({ onOpenEquipmentModal }: AppSidebarProps) {
   };
 
   const isActive = (item: NavItem) => {
-    if (item.view === 'weekly-training') {
-      return currentView === 'dashboard'; // Highlight when on dashboard
-    }
     if (item.view === 'equipment-adjust') {
       return false; // Never highlight - it's a modal action
     }

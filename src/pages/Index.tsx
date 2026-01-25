@@ -32,6 +32,7 @@ import { AdminSpreadsheet } from "@/components/AdminSpreadsheet";
 import { BenchmarksScreen } from "@/components/BenchmarksScreen";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
+import { WeeklyTrainingView } from "@/components/WeeklyTrainingView";
 import { DebugPanel } from "@/components/DebugPanel";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
@@ -242,6 +243,7 @@ const Index = () => {
     config: AthleteConfig,
     preWorkout: PreWorkoutScreen,
     dashboard: Dashboard,
+    weeklyTraining: WeeklyTrainingView,
     workout: WorkoutExecution,
     result: ResultRecording,
     feedback: PerformanceFeedback,
