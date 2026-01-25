@@ -10,6 +10,7 @@ import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown,
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
+import { getCoachDisplayName } from '@/utils/displayName';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLANO CONTRATADO (OPEN / PRO)
@@ -134,8 +135,9 @@ export function AthleteConfig() {
         if (coachError) {
           console.warn('[AthleteConfig] Não foi possível buscar perfil do coach:', coachError.message);
           setCoachName(null);
-        } else if (coachProfile?.name) {
-          setCoachName(coachProfile.name);
+        } else if (coachProfile) {
+          // Usar função utilitária para extrair nome de exibição (não email)
+          setCoachName(getCoachDisplayName(coachProfile));
         } else {
           setCoachName(null);
         }
