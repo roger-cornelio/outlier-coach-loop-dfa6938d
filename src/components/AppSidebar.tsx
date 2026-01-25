@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Apple
+  Apple,
+  Stethoscope
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -69,6 +70,11 @@ export function AppSidebar() {
       title: 'Nutrição', 
       route: '/nutricao', 
       icon: Apple
+    },
+    { 
+      title: 'Medicina do Esporte', 
+      route: '/medicina-do-esporte', 
+      icon: Stethoscope
     },
     { 
       title: 'Status do Atleta', 
@@ -124,7 +130,7 @@ export function AppSidebar() {
               {navItems.map((item) => {
                 const active = isActive(item);
                 return (
-                  <SidebarMenuItem key={item.view}>
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       onClick={() => handleNavClick(item)}
                       className={cn(

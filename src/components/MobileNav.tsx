@@ -18,7 +18,8 @@ import {
   Settings, 
   LogOut,
   Loader2,
-  Apple
+  Apple,
+  Stethoscope
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -58,6 +59,11 @@ const navItems: NavItem[] = [
     title: 'Nutrição', 
     route: '/nutricao', 
     icon: Apple
+  },
+  { 
+    title: 'Medicina do Esporte', 
+    route: '/medicina-do-esporte', 
+    icon: Stethoscope
   },
   { 
     title: 'Status do Atleta', 
