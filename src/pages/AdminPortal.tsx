@@ -5,7 +5,7 @@ import { AdminParamsEditor } from "@/components/AdminParamsEditor";
 import { UserManagement } from "@/components/UserManagement";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
-import { AdminAllowlistManager } from "@/components/AdminAllowlistManager";
+
 
 import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
@@ -22,7 +22,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  UserCog,
+  
   Activity,
   ArrowLeft,
   
@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "allowlist" | "masterBenchmarks" | "athleteStatus";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus";
 
 interface NavItem {
   id: AdminView;
@@ -70,12 +70,6 @@ const navItems: NavItem[] = [
     label: "Status Atleta", 
     icon: <Medal className="w-5 h-5" />,
     description: "Regras de nível"
-  },
-  { 
-    id: "allowlist", 
-    label: "Admins", 
-    icon: <UserCog className="w-5 h-5" />,
-    description: "Lista de admins"
   },
   { 
     id: "params", 
@@ -178,9 +172,9 @@ const AdminPortal = () => {
         );
       case "athleteStatus":
         return <AthleteStatusAdmin />;
-      case "allowlist":
+      case "athleteStatus":
       default:
-        return <AdminAllowlistManager />;
+        return <AthleteStatusAdmin />;
     }
   };
 
