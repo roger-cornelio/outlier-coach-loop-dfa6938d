@@ -93,17 +93,17 @@ export function AppSidebar() {
     <Sidebar 
       className={cn(
         "border-r border-border/50 bg-background/95 backdrop-blur-sm transition-all duration-300",
-        isCollapsed ? "w-16" : "w-72"
+        isCollapsed ? "w-20" : "w-80"
       )}
       collapsible="icon"
     >
-      <SidebarHeader className="p-5 border-b border-border/30">
+      <SidebarHeader className="p-6 border-b border-border/30">
         {!isCollapsed && (
-          <OutlierWordmark size="md" className="opacity-80" />
+          <OutlierWordmark size="lg" className="opacity-80" />
         )}
       </SidebarHeader>
 
-      <SidebarContent className="py-4">
+      <SidebarContent className="py-6">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -114,20 +114,20 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => handleNavClick(item)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
+                        "w-full flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200",
                         active
-                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          ? "bg-primary/10 text-primary border-l-3 border-primary"
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       )}
                       tooltip={item.title}
                     >
                       <item.icon className={cn(
-                        "w-5 h-5 flex-shrink-0",
+                        "w-7 h-7 flex-shrink-0",
                         active ? "text-primary" : "text-muted-foreground"
                       )} />
                       {!isCollapsed && (
                         <span className={cn(
-                          "font-medium text-base tracking-wide",
+                          "font-medium text-lg tracking-wide",
                           active ? "text-primary" : ""
                         )}>
                           {item.title}
@@ -142,27 +142,27 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2 border-t border-border/30 space-y-2">
+      <SidebarFooter className="p-3 border-t border-border/30 space-y-3">
         {/* Logout Button */}
         <SidebarMenuButton
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-destructive hover:bg-destructive/10"
+          className="w-full flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200 text-destructive hover:bg-destructive/10"
           tooltip="Sair"
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <LogOut className="w-7 h-7 flex-shrink-0" />
           {!isCollapsed && (
-            <span className="font-medium text-base tracking-wide">
+            <span className="font-medium text-lg tracking-wide">
               Sair
             </span>
           )}
         </SidebarMenuButton>
 
         {/* Collapse Toggle */}
-        <SidebarTrigger className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
+        <SidebarTrigger className="w-full flex items-center justify-center p-3 rounded-lg hover:bg-muted/50 transition-colors">
           {isCollapsed ? (
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <ChevronRight className="w-6 h-6 text-muted-foreground" />
           ) : (
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            <ChevronLeft className="w-6 h-6 text-muted-foreground" />
           )}
         </SidebarTrigger>
       </SidebarFooter>
