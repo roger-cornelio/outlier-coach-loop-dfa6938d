@@ -171,18 +171,6 @@ export function Dashboard() {
   // Get effective level for workout prescription
   const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingDifficulty) : 'intermediario';
   
-  // Determinar o dia atual da semana para o botão BORA TREINAR
-  const todayDay = useMemo(() => {
-    const days: Record<number, string> = {
-      0: 'dom', 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex', 6: 'sab'
-    };
-    const today = new Date().getDay();
-    return days[today] || 'seg';
-  }, []);
-  
-  // Treino do dia atual (para o botão BORA TREINAR)
-  const todayWorkout = displayWorkouts.find((w) => w.day === todayDay);
-  
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
@@ -232,9 +220,8 @@ export function Dashboard() {
   };
 
   const handleStartWorkout = () => {
-    // Usa o treino do dia atual, não o activeDay selecionado
-    if (todayWorkout) {
-      setSelectedWorkout(todayWorkout);
+    if (currentWorkout) {
+      setSelectedWorkout(currentWorkout);
       setCurrentView('workout');
     }
   };
@@ -356,10 +343,10 @@ export function Dashboard() {
         <section className="mb-6">
           <motion.button
             onClick={handleStartWorkout}
-            disabled={!todayWorkout}
+            disabled={!hasAnyWorkouts}
             className="w-full font-display text-2xl tracking-wider px-8 py-6 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-lg"
-            whileHover={{ scale: todayWorkout ? 1.02 : 1 }}
-            whileTap={{ scale: todayWorkout ? 0.98 : 1 }}
+            whileHover={{ scale: hasAnyWorkouts ? 1.02 : 1 }}
+            whileTap={{ scale: hasAnyWorkouts ? 0.98 : 1 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -368,9 +355,9 @@ export function Dashboard() {
             BORA TREINAR
             <ChevronRight className="w-7 h-7" />
           </motion.button>
-          {!todayWorkout && !loadingPlan && (
+          {!hasAnyWorkouts && !loadingPlan && (
             <p className="text-center text-muted-foreground text-sm mt-3">
-              Não há treino previsto para esse dia
+              Nenhum treino programado para esta semana
             </p>
           )}
         </section>
