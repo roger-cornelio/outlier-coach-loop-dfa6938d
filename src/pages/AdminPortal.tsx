@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminParamsEditor } from "@/components/AdminParamsEditor";
 import { UserManagement } from "@/components/UserManagement";
-import { CoachPerformance } from "@/components/CoachPerformance";
+import { ServiceQualityDashboard } from "@/components/admin/ServiceQualityDashboard";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 
 
@@ -55,9 +55,9 @@ const navItems: NavItem[] = [
   },
   { 
     id: "coachPerformance", 
-    label: "Performance", 
+    label: "Qualidade", 
     icon: <Activity className="w-5 h-5" />,
-    description: "Métricas de atletas"
+    description: "Atendimento dos coaches"
   },
   { 
     id: "masterBenchmarks", 
@@ -160,7 +160,7 @@ const AdminPortal = () => {
       case "users":
         return <UserManagement />;
       case "coachPerformance":
-        return <CoachPerformance />;
+        return <ServiceQualityDashboard />;
       case "coachApplications":
         return <CoachApplicationsAdmin />;
       case "masterBenchmarks":
