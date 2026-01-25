@@ -287,66 +287,8 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <OutlierWordmark size="sm" className="block" />
-              {athleteConfig && (
-                  <p className="text-sm text-muted-foreground">
-                    Coach {athleteConfig.coachStyle}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Admin: Seletor de atleta para visualização */}
-              {(state === 'admin' || state === 'superadmin') && (
-                <AthleteViewSelector />
-              )}
-              <UserHeader showLogout={true} />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentView('benchmarks')}
-                className="p-3 rounded-lg bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-colors"
-                title="Benchmarks & Evolução"
-              >
-                <Trophy className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setCurrentView('config')}
-                className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                  title={`Sair (${user.email})`}
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/auth')}
-                  className="p-3 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-                  title="Fazer login"
-                >
-                  <LogIn className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-
       {/* Content - Dashboard OUTLIER */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-6">
         
         {/* ============================================
             BLOCO 0 — IDENTIDADE HERO DO ATLETA
