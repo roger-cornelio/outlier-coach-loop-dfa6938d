@@ -4,7 +4,8 @@ export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_open' | 'hyrox_pro';
 
 // NOVO: Nível de treino escolhido pelo usuário (define a intenção do treino de hoje)
-export type TrainingLevel = 'base' | 'progressivo' | 'performance';
+// 'open' e 'pro' são os valores UI persistidos; motor mapeia ambos para 'performance'
+export type TrainingLevel = 'base' | 'progressivo' | 'performance' | 'open' | 'pro';
 
 // Legacy type alias for compatibility
 export type TrainingDifficulty = TrainingLevel; // Backward compatibility
@@ -185,6 +186,8 @@ export const TRAINING_LEVEL_NAMES: Record<TrainingLevel, string> = {
   base: 'Base',
   progressivo: 'Progressivo',
   performance: 'Performance',
+  open: 'OPEN',
+  pro: 'PRO',
 };
 
 // Legacy alias

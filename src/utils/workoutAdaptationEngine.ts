@@ -340,6 +340,8 @@ const LEVEL_TIME_MULTIPLIER: Record<TrainingLevel, number> = {
   base: 1.25, // 25% mais lento que intermediário
   progressivo: 1.0, // referência
   performance: 0.85, // 15% mais rápido que intermediário
+  open: 0.85, // mesmo que performance
+  pro: 0.85, // mesmo que performance
 };
 
 // Multiplicador de tempo por sexo
@@ -985,6 +987,8 @@ function applyLevelSexVolumes(
     base: 0.65,
     progressivo: 0.85,
     performance: 1.0,
+    open: 1.0, // mesmo que performance
+    pro: 1.0, // mesmo que performance
   };
   
   const sexMult: Record<SexKey, number> = {
