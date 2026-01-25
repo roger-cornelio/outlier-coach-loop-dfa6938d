@@ -315,7 +315,90 @@ export function EvolutionChartBlock({
 
 // ============================================
 // BLOCO 3 — FOCOS DE EVOLUÇÃO (Secundário)
+// Ícones monocromáticos por estação HYROX
 // ============================================
+
+// Ícones SVG monocromáticos para cada estação HYROX
+function StationIcon({ metric, className = "" }: { metric: string; className?: string }) {
+  const iconClass = `w-5 h-5 ${className}`;
+  
+  switch (metric) {
+    case 'sled_push':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M3 17h14l4-4V7h-6l-2 4H5l-2 6z" />
+          <path d="M17 17l4-4" />
+        </svg>
+      );
+    case 'sled_pull':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M21 17H7l-4-4V7h6l2 4h8l2 6z" />
+          <path d="M7 17l-4-4" />
+        </svg>
+      );
+    case 'farmers':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <rect x="3" y="8" width="6" height="10" rx="1" />
+          <rect x="15" y="8" width="6" height="10" rx="1" />
+          <path d="M9 12h6" />
+        </svg>
+      );
+    case 'sandbag':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M6 8h12l2 12H4L6 8z" />
+          <path d="M8 8V6a4 4 0 0 1 8 0v2" />
+          <path d="M8 14h8" />
+        </svg>
+      );
+    case 'wallballs':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 4v4M12 16v4M4 12h4M16 12h4" />
+        </svg>
+      );
+    case 'bbj':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M4 16h4l4-8 4 8h4" />
+          <path d="M8 16v4M16 16v4" />
+        </svg>
+      );
+    case 'row':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M4 16l6-4 4 2 6-6" />
+          <path d="M4 12h4l2-2h6l4 2h2" />
+        </svg>
+      );
+    case 'ski':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <path d="M12 4v16" />
+          <path d="M8 8l4-4 4 4" />
+          <path d="M6 20l6-4 6 4" />
+        </svg>
+      );
+    case 'run_avg':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <circle cx="12" cy="5" r="2" />
+          <path d="M7 21l3-9 3 3 5-7" />
+          <path d="M10 12l-3 3" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={iconClass}>
+          <circle cx="12" cy="12" r="8" />
+        </svg>
+      );
+  }
+}
+
 interface EvolutionFocusBlockProps {
   focusPoints: EvolutionFocusPoint[];
   hasData: boolean;
@@ -378,21 +461,40 @@ export function EvolutionFocusBlock({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="card-elevated p-6 border-l-4 border-l-purple-500"
+      className="card-elevated p-6 border-l-4 border-l-primary"
     >
       <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-4">
         FOCOS DE EVOLUÇÃO
       </h3>
       
       {/* Lista de pontos (máximo 2-3) */}
-      <div className="space-y-3 mb-4">
+      <div className="space-y-4 mb-4">
         {focusPoints.map((point) => (
           <div 
             key={point.metric}
             className="flex items-start gap-3"
           >
-            <span className="text-lg">{point.emoji}</span>
-            <span className="text-foreground">{point.description}</span>
+            {/* Ícone monocromático da estação */}
+            <div className="flex-shrink-0 mt-0.5">
+              <StationIcon 
+                metric={point.metric} 
+                className="text-primary/70" 
+              />
+            </div>
+            
+            {/* Conteúdo */}
+            <div className="flex flex-col">
+              <span className="font-display text-sm text-foreground tracking-wide">
+                {point.label}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {point.percentile < 25 
+                  ? 'força abaixo do esperado' 
+                  : point.percentile < 40 
+                  ? 'espaço para melhoria' 
+                  : 'foco em consistência'}
+              </span>
+            </div>
           </div>
         ))}
       </div>

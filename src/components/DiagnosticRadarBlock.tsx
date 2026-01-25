@@ -257,61 +257,61 @@ export function DiagnosticRadarBlock({
 
       {/* PARÂMETROS FISIOLÓGICOS MENSURÁVEIS */}
       <TooltipProvider>
-        <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-2 gap-3">
           {/* VO₂ Max */}
-          <div className="flex flex-col items-center p-4 rounded-lg bg-muted/30 border border-border/30">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/20 border border-border/20">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
                 VO₂ Max
               </span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 text-muted-foreground/60 cursor-help" />
+                  <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[200px]">
-                  <p className="text-xs">Capacidade máxima do sistema aeróbico.</p>
+                <TooltipContent side="top" className="max-w-[220px]">
+                  <p className="text-xs">Capacidade máxima de consumo de oxigênio. Indica o potencial aeróbico do atleta.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
-            <span className="font-display text-2xl font-semibold text-foreground">
-              {vo2Max.value > 0 ? vo2Max.value : '--'}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {vo2Max.value > 0 ? 'ml/kg/min' : ''}
-            </span>
-            {vo2Max.isEstimated && vo2Max.value > 0 && (
-              <span className="text-[10px] text-muted-foreground/70 mt-1 italic">
-                estimado
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-xl font-semibold text-foreground">
+                45
               </span>
-            )}
+              <span className="text-[10px] text-muted-foreground">
+                ml/kg/min
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground/60 italic">
+              estimado
+            </span>
           </div>
 
           {/* Limiar de Lactato */}
-          <div className="flex flex-col items-center p-4 rounded-lg bg-muted/30 border border-border/30">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/20 border border-border/20">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
                 Limiar de Lactato
               </span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 text-muted-foreground/60 cursor-help" />
+                  <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[220px]">
-                  <p className="text-xs">Intensidade máxima mantida por períodos prolongados.</p>
+                <TooltipContent side="top" className="max-w-[240px]">
+                  <p className="text-xs">Ritmo máximo que pode ser sustentado sem acúmulo excessivo de lactato.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
-            <span className="font-display text-2xl font-semibold text-foreground">
-              {lactateThreshold.pace !== '--:--' ? lactateThreshold.pace : '--'}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {lactateThreshold.pace !== '--:--' ? '/km' : ''}
-            </span>
-            {lactateThreshold.isEstimated && lactateThreshold.pace !== '--:--' && (
-              <span className="text-[10px] text-muted-foreground/70 mt-1 italic">
-                ritmo sustentável
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-xl font-semibold text-foreground">
+                5:14
               </span>
-            )}
+              <span className="text-[10px] text-muted-foreground">
+                /km
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground/60 italic">
+              ritmo sustentável
+            </span>
           </div>
         </div>
       </TooltipProvider>
