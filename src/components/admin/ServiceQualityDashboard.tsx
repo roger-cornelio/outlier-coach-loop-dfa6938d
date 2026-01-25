@@ -55,7 +55,7 @@ export function ServiceQualityDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch coaches and their metrics
+  // Fetch coaches and their metrics using the SAME data source as UserManagement
   useEffect(() => {
     async function fetchData() {
       if (authLoading) return;
@@ -64,7 +64,19 @@ export function ServiceQualityDashboard() {
         setLoading(true);
         setError(null);
 
-        // Get all coaches (users with coach role)
+        // 1. Get all coach-athlete links from coach_athletes table (source of truth)
+        const { data: coachAthleteLinks, error: linksError } = await supabase
+          .from('coach_athletes')
+          .select('*');
+
+        if (linksError) {
+          console.error('Error fetching coach_athletes:', linksError);
+          setError('Erro ao carregar vínculos coach-atleta.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. Get all coaches (users with coach role)
         const { data: coachRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('user_id')
@@ -85,7 +97,7 @@ export function ServiceQualityDashboard() {
 
         const coachUserIds = coachRoles.map(r => r.user_id);
 
-        // Get coach profiles
+        // 3. Get coach profiles
         const { data: coachProfiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, user_id, name, email')
@@ -98,37 +110,59 @@ export function ServiceQualityDashboard() {
           return;
         }
 
-        // For each coach, get their athletes and calculate metrics
-        const coachDataPromises = (coachProfiles || []).map(async (coach) => {
-          // Get athletes linked to this coach
-          const { data: athletes } = await supabase
+        // 4. Get all athlete profiles for metrics calculation
+        const allAthleteIds = [...new Set((coachAthleteLinks || []).map(link => link.athlete_id))];
+        
+        let athleteProfiles: { id: string; user_id: string; name: string | null; email: string }[] = [];
+        if (allAthleteIds.length > 0) {
+          const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, user_id')
-            .eq('coach_id', coach.id);
+            .select('id, user_id, name, email')
+            .in('user_id', allAthleteIds);
+          athleteProfiles = profiles || [];
+        }
 
-          const athleteCount = athletes?.length || 0;
+        // 5. Get all benchmark results for athletes
+        let allBenchmarkResults: { id: string; user_id: string; completed: boolean }[] = [];
+        if (allAthleteIds.length > 0) {
+          const { data: results } = await supabase
+            .from('benchmark_results')
+            .select('id, user_id, completed')
+            .in('user_id', allAthleteIds);
+          allBenchmarkResults = results || [];
+        }
 
-          // Get benchmark results for these athletes to calculate consistency
+        // 6. Build coach data using coach_athletes links (same logic as UserManagement)
+        const coachData: CoachData[] = (coachProfiles || []).map((coach) => {
+          // Get athletes linked to this coach via coach_athletes table
+          // Note: coach_athletes uses coach_id = user_id (auth.uid), not profile.id
+          const linkedAthleteIds = (coachAthleteLinks || [])
+            .filter(link => link.coach_id === coach.user_id)
+            .map(link => link.athlete_id);
+
+          const athleteCount = linkedAthleteIds.length;
+
+          // Calculate consistency from benchmark results
           let consistency = 0;
-          if (athletes && athletes.length > 0) {
-            const athleteUserIds = athletes.map(a => a.user_id);
-            const { data: results } = await supabase
-              .from('benchmark_results')
-              .select('id, completed')
-              .in('user_id', athleteUserIds);
+          if (linkedAthleteIds.length > 0) {
+            const athleteResults = allBenchmarkResults.filter(r => 
+              linkedAthleteIds.includes(r.user_id)
+            );
 
-            if (results && results.length > 0) {
-              const completedCount = results.filter(r => r.completed).length;
-              consistency = Math.round((completedCount / results.length) * 100);
+            if (athleteResults.length > 0) {
+              const completedCount = athleteResults.filter(r => r.completed).length;
+              consistency = Math.round((completedCount / athleteResults.length) * 100);
             }
           }
 
           // Calculate status based on consistency and athlete count
-          // For now, using simulated rating (no rating system yet)
+          // Rating is derived from consistency until a rating system exists
           const avgRating = athleteCount > 0 ? 4.0 + (consistency / 100) * 1 : 0;
           
           let status: 'excellent' | 'attention' | 'critical' = 'excellent';
-          if (consistency < 50 || avgRating < 3) {
+          if (athleteCount === 0) {
+            status = 'attention';
+          } else if (consistency < 50 || avgRating < 3) {
             status = 'critical';
           } else if (consistency < 70 || avgRating < 4) {
             status = 'attention';
@@ -145,8 +179,8 @@ export function ServiceQualityDashboard() {
           };
         });
 
-        const coachData = await Promise.all(coachDataPromises);
-        setCoaches(coachData.filter(c => c.athleteCount > 0)); // Only show coaches with athletes
+        // Only show coaches with athletes linked via coach_athletes
+        setCoaches(coachData.filter(c => c.athleteCount > 0));
 
       } catch (err) {
         console.error('Error in fetchData:', err);
