@@ -222,10 +222,10 @@ export function BenchmarkOverridesEditor() {
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Pencil className="w-5 h-5 text-orange-500" />
-              Overrides Manuais
+              Correções Manuais de Referência
             </CardTitle>
             <CardDescription>
-              Sobrescreva valores derivados para combinações específicas. Overrides têm prioridade máxima.
+              Sobrescreva valores derivados para combinações específicas. Correções manuais têm prioridade sobre a derivação automática.
             </CardDescription>
           </div>
           <Button 
@@ -234,7 +234,7 @@ export function BenchmarkOverridesEditor() {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            Novo Override
+            Nova Correção
           </Button>
         </div>
       </CardHeader>
@@ -242,7 +242,7 @@ export function BenchmarkOverridesEditor() {
         {/* Add Form */}
         {showAddForm && (
           <div className="p-4 rounded-lg bg-secondary/30 border border-border/50 space-y-4">
-            <h4 className="text-sm font-medium">Adicionar Override</h4>
+            <h4 className="text-sm font-medium">Adicionar Correção de Referência</h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Tier</label>
@@ -328,7 +328,7 @@ export function BenchmarkOverridesEditor() {
           <Alert className="bg-secondary/30">
             <AlertTriangle className="w-4 h-4" />
             <AlertDescription>
-              Nenhum override configurado. Todos os valores são derivados automaticamente.
+              Nenhuma correção configurada. Todos os valores de referência são derivados automaticamente da base técnica.
             </AlertDescription>
           </Alert>
         ) : (
@@ -367,9 +367,9 @@ export function BenchmarkOverridesEditor() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Remover override?</AlertDialogTitle>
+                            <AlertDialogTitle>Remover correção?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              O valor passará a ser calculado automaticamente pela derivação.
+                              O valor passará a ser calculado automaticamente pela derivação da base técnica.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
