@@ -4,8 +4,9 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { supabase } from '@/integrations/supabase/client';
 import { type PlanTier, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2 } from 'lucide-react';
+import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
@@ -82,6 +83,38 @@ export function AthleteConfig() {
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
+
+  // Nome do coach vinculado
+  const [coachName, setCoachName] = useState<string | null>(null);
+
+  // Buscar nome do coach vinculado
+  useEffect(() => {
+    const fetchCoachName = async () => {
+      if (!profile?.coach_id) {
+        setCoachName(null);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', profile.coach_id)
+          .maybeSingle();
+        
+        if (!error && data?.name) {
+          setCoachName(data.name);
+        } else {
+          setCoachName(null);
+        }
+      } catch (err) {
+        console.error('[AthleteConfig] Error fetching coach name:', err);
+        setCoachName(null);
+      }
+    };
+    
+    fetchCoachName();
+  }, [profile?.coach_id]);
 
   // Atualizar campos quando profile mudar
   useEffect(() => {
@@ -263,6 +296,14 @@ export function AthleteConfig() {
           <p className="text-xs text-muted-foreground mt-2">
             Este nome aparecerá no app e para seu coach.
           </p>
+          
+          {/* Coach vinculado */}
+          {coachName && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>Coach: <span className="text-foreground font-medium">{coachName}</span></span>
+            </div>
+          )}
         </div>
       </motion.section>
 
