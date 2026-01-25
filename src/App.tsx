@@ -18,6 +18,7 @@ import CoachRequest from "./pages/CoachRequest";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import Nutricao from "./pages/Nutricao";
+import MedicinaDoEsporte from "./pages/MedicinaDoEsporte";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App = () => (
               {/* === PROTECTED DASHBOARDS === */}
               <Route path="/painel-admin" element={<AdminPortal />} />
               <Route path="/nutricao" element={<Nutricao />} />
+              <Route path="/medicina-do-esporte" element={<MedicinaDoEsporte />} />
 
               {/* === REDIRECTS === */}
               <Route path="/" element={<Navigate to="/login" replace />} />
