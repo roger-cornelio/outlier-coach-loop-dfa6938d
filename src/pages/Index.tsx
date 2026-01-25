@@ -13,7 +13,7 @@
  * - Only redirects when: authenticated AND profileLoaded AND shouldShowOnboarding
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useOutlierStore } from "@/store/outlierStore";
 import { useAppState } from "@/hooks/useAppState";
@@ -37,6 +37,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
 import { useLevelTheme } from "@/hooks/useLevelTheme";
 import { Loader2 } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { EquipmentAdaptModal } from "@/components/EquipmentAdaptModal";
 
 const LAST_ROUTE_KEY = "outlier_last_route";
 
@@ -49,8 +52,11 @@ function loadLastRoute(): string | null {
 }
 
 const Index = () => {
-  const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig } = useOutlierStore();
+  const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig, setAthleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
+  
+  // State for equipment modal (triggered from sidebar)
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -310,38 +316,72 @@ const Index = () => {
     return <Screen />;
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="min-h-screen pb-20"
-        >
-          {renderView()}
-        </motion.div>
-      </AnimatePresence>
+  // Handler for saving equipment adaptations from sidebar modal
+  const handleSaveEquipmentAdaptations = (unavailableEquipment: string[]) => {
+    if (athleteConfig) {
+      setAthleteConfig({
+        ...athleteConfig,
+        unavailableEquipment,
+      });
+    }
+  };
 
-      {/* Debug Panel - only in development */}
-      <DebugPanel
-        state={{
-          authStatus: onboardingDecision.authStatus,
-          userId: onboardingDecision.userId,
-          profileLoaded: onboardingDecision.profileLoaded,
-          profileCoachStyle: onboardingDecision.profileCoachStyle,
-          firstSetupCompleted: onboardingDecision.firstSetupCompleted,
-          isSetupComplete: onboardingDecision.isSetupComplete,
-          localCoachStyle: onboardingDecision.localCoachStyle,
-          shouldShowOnboarding: onboardingDecision.shouldShowOnboarding,
-          currentRoute: '/app',
-          currentView: currentView,
-          lastRedirectReason: onboardingDecision.lastRedirectReason,
-        }}
-      />
-    </div>
+  // Determine if sidebar should be visible (only for main app views, not onboarding)
+  const showSidebar = onboardingDecision.isSetupComplete && 
+    !['welcome', 'athleteWelcome', 'config'].includes(currentView);
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
+        {/* Sidebar - only visible after setup complete */}
+        {showSidebar && (
+          <AppSidebar 
+            onOpenEquipmentModal={() => setIsEquipmentModalOpen(true)} 
+          />
+        )}
+        
+        {/* Main content area */}
+        <div className="flex-1 min-h-screen">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="min-h-screen pb-20"
+            >
+              {renderView()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Equipment Adapt Modal - triggered from sidebar */}
+        <EquipmentAdaptModal
+          isOpen={isEquipmentModalOpen}
+          onClose={() => setIsEquipmentModalOpen(false)}
+          onApply={handleSaveEquipmentAdaptations}
+          initialSelection={athleteConfig?.unavailableEquipment || []}
+        />
+
+        {/* Debug Panel - only in development */}
+        <DebugPanel
+          state={{
+            authStatus: onboardingDecision.authStatus,
+            userId: onboardingDecision.userId,
+            profileLoaded: onboardingDecision.profileLoaded,
+            profileCoachStyle: onboardingDecision.profileCoachStyle,
+            firstSetupCompleted: onboardingDecision.firstSetupCompleted,
+            isSetupComplete: onboardingDecision.isSetupComplete,
+            localCoachStyle: onboardingDecision.localCoachStyle,
+            shouldShowOnboarding: onboardingDecision.shouldShowOnboarding,
+            currentRoute: '/app',
+            currentView: currentView,
+            lastRedirectReason: onboardingDecision.lastRedirectReason,
+          }}
+        />
+      </div>
+    </SidebarProvider>
   );
 };
 

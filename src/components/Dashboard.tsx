@@ -111,6 +111,18 @@ export function Dashboard() {
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
 
+  // Listen for sidebar event to expand weekly view
+  useEffect(() => {
+    const handleExpandWeeklyView = () => {
+      setShowDetailedView(true);
+    };
+    
+    window.addEventListener('outlier:expand-weekly-view', handleExpandWeeklyView);
+    return () => {
+      window.removeEventListener('outlier:expand-weekly-view', handleExpandWeeklyView);
+    };
+  }, []);
+
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
   // Guard: aguardar hydration do Zustand para evitar loops
@@ -408,20 +420,7 @@ export function Dashboard() {
           )}
         </section>
 
-        {/* Day Tabs - Para visualização detalhada */}
-        {hasAnyWorkouts && (
-          <section className="mb-6">
-            <button
-              onClick={() => setShowDetailedView(!showDetailedView)}
-              className="w-full py-3 px-4 rounded-lg border border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center justify-center gap-2"
-            >
-              <span className="font-display text-sm tracking-wide">
-                {showDetailedView ? 'FECHAR VISÃO SEMANAL' : 'VER TREINO SEMANAL'}
-              </span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${showDetailedView ? 'rotate-90' : ''}`} />
-            </button>
-          </section>
-        )}
+        {/* Weekly View Toggle moved to sidebar - keeping the expandable section below */}
 
         {/* Detailed View - Workout blocks */}
         <AnimatePresence>
@@ -668,32 +667,7 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Equipment Adapt Button */}
-        {hasAnyWorkouts && !isViewingHistory && (
-          <div className="mt-6">
-            <button
-              onClick={() => setIsAdaptModalOpen(true)}
-              className={`
-                w-full py-3 px-4 rounded-lg border transition-all flex items-center justify-center gap-2
-                ${hasAdaptations
-                  ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
-                  : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }
-              `}
-            >
-              <Wrench className="w-4 h-4" />
-              <span className="font-display text-sm tracking-wide">
-                {hasAdaptations 
-                  ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
-                  : 'AJUSTAR TREINO PARA O MEU BOX'
-                }
-              </span>
-            </button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
-            </p>
-          </div>
-        )}
+        {/* Equipment Adapt Button moved to sidebar */}
       </main>
 
       {/* Equipment Adapt Modal */}
