@@ -118,11 +118,11 @@ const HYROX_PATTERNS: Record<HyroxExerciseKey, RegExp[]> = {
   SKIERG: [/\bskierg\b/i, /\bski erg\b/i, /\bski\b/i],
   ROW: [/\brow\b/i, /\bremo\b/i, /\brower\b/i, /\berg\b.*\bremo/i],
   BURPEE: [/\bburpee\b/i, /\bburpees\b/i, /\bbbj\b/i, /\bburpee broad jump\b/i],
-  WALLBALL: [/\bwall\s*ball\b/i, /\bwallball\b/i, /\bwb\b/i],
-  SITUP: [/\bsit[\s-]*up\b/i, /\bsitup\b/i, /\babdominal\b/i],
+  WALLBALL: [/\bwall[\s-]*balls?\b/i, /\bwallballs?\b/i, /\bwb\b/i],
+  SITUP: [/\bsit[\s-]*ups?\b/i, /\bsitups?\b/i, /\babdominal\b/i],
   SLED_PUSH: [/\bsled\s*push\b/i, /\bpush\s*sled\b/i],
   SLED_PULL: [/\bsled\s*pull\b/i, /\bpull\s*sled\b/i],
-  LUNGE: [/\blunge\b/i, /\blunges\b/i, /\bafundo\b/i],
+  LUNGE: [/\blunges?\b/i, /\bafundo\b/i],
   FARMER: [/\bfarmer\b/i, /\bfarmers?\s*carry\b/i, /\bcarry\b/i],
   SANDBAG: [/\bsandbag\b/i, /\bsand\s*bag\b/i],
 };
@@ -134,7 +134,7 @@ const FALLBACK_PATTERNS: Record<FallbackArchetypeKey, RegExp[]> = {
   STRENGTH_BAR: [/\bbench\s*press\b/i, /\bsupino\b/i, /\bbarbell\b/i, /\bdeadlift\b/i, /\bsquat\b/i, /\bback\s*squat\b/i, /\bfront\s*squat\b/i, /\bpress\b/i],
   STRENGTH_DUMB: [/\bdumbbell\b/i, /\bhalter\b/i, /\bdb\s/i, /\bdb$/i],
   STRENGTH_MACHINE: [/\bmachine\b/i, /\bcable\b/i, /\bpulley\b/i, /\bleg\s*press\b/i],
-  BODYWEIGHT: [/\bpush[\s-]*up\b/i, /\bpull[\s-]*up\b/i, /\bdip\b/i, /\bair\s*squat\b/i, /\bflexão\b/i],
+  BODYWEIGHT: [/\bpush[\s-]*ups?\b/i, /\bpull[\s-]*ups?\b/i, /\bdips?\b/i, /\bair\s*squats?\b/i, /\bflexão\b/i, /\bflexões\b/i],
   CORE: [/\bplank\b/i, /\bprancha\b/i, /\bcrunch\b/i, /\bab\b/i, /\bhollow\b/i, /\brussian\s*twist\b/i],
   MIXED_UNKNOWN: [],
 };
@@ -482,19 +482,28 @@ export function calculateWorkoutKcalWarnings(
 ): string[] {
   const warnings: string[] = [];
   
-  // Calcular tempo total e tempo em fallback
-  let totalFallbackPercent = 0;
+  if (blocksMeta.length === 0) {
+    return warnings;
+  }
+  
+  // Calcular tempo total ponderado por fallback
+  // fallbackPercentage = 0 significa 100% HYROX
+  // fallbackPercentage = 100 significa 100% fallback
+  let totalFallbackWeight = 0;
   let validBlocks = 0;
   
   for (const meta of blocksMeta) {
-    if (meta.fallbackPercentage !== undefined) {
-      totalFallbackPercent += meta.fallbackPercentage;
-      validBlocks++;
+    // Bloco que usa fallback tem usedFallback=true
+    if (meta.usedFallback) {
+      totalFallbackWeight += 100; // 100% deste bloco é fallback
+    } else if (meta.fallbackPercentage !== undefined && meta.fallbackPercentage > 0) {
+      totalFallbackWeight += meta.fallbackPercentage;
     }
+    validBlocks++;
   }
   
   if (validBlocks > 0) {
-    const avgFallbackPercent = totalFallbackPercent / validBlocks;
+    const avgFallbackPercent = totalFallbackWeight / validBlocks;
     
     // Threshold: >30% do tempo em fallback
     if (avgFallbackPercent > 30) {
