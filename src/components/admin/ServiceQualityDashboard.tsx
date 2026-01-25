@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getCoachDisplayName } from '@/utils/displayName';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -170,7 +171,7 @@ export function ServiceQualityDashboard() {
 
           return {
             id: coach.id,
-            name: coach.name || coach.email?.split('@')[0] || 'Coach',
+            name: getCoachDisplayName(coach),
             email: coach.email || '',
             athleteCount,
             consistency,

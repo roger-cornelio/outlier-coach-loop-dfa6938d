@@ -6,6 +6,7 @@ import { LogOut, Settings, UserCircle, ChevronDown, Loader2 } from 'lucide-react
 import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
 import { UserAvatar } from './UserAvatar';
 import { AthleteStatusBadge } from './AthleteStatusAvatar';
+import { getDisplayName } from '@/utils/displayName';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +53,7 @@ export function UserHeader({ showLogout = true, className = '' }: UserHeaderProp
     setCurrentView('config');
   };
 
-  const displayName = profile?.name || profile?.email?.split('@')[0] || 'Usuário';
+  const displayName = getDisplayName(profile);
   const roleLabel = roleLabels[role] || 'Atleta';
   const levelLabel = getLevelName(athleteStatus);
 

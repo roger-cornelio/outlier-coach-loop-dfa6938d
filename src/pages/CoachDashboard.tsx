@@ -37,6 +37,7 @@ import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
 import { useToast } from '@/hooks/use-toast';
 import { AthleteStatus, LEVEL_NAMES } from '@/types/outlier';
 import { calculateAthleteStatus, type AthleteGender } from '@/utils/athleteStatusSystem';
+import { getDisplayName, getCoachDisplayName } from '@/utils/displayName';
 
 interface LinkedAthlete {
   id: string;
@@ -495,7 +496,7 @@ export default function CoachDashboard() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground truncate">
-                              {athlete.name || athlete.email}
+                              {getDisplayName(athlete)}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                               {athlete.name && (
@@ -582,7 +583,7 @@ export default function CoachDashboard() {
                 Painel do Coach
               </h1>
               <p className="text-sm text-muted-foreground">
-                {profile?.name || profile?.email}
+                {getCoachDisplayName(profile)}
               </p>
             </div>
             <Button
