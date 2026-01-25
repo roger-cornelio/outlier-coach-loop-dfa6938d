@@ -5,15 +5,28 @@
  * usando dados biométricos do atleta e o treino JÁ ADAPTADO.
  * 
  * REGRA: Este arquivo é a fonte única para estimativas de tempo/calorias.
+ * 
+ * MOTOR DETERMINÍSTICO HYROX (v2):
+ * - Usa tabela de fatores como única fonte de verdade
+ * - Sem MET, FC, ritmo ou heurísticas
+ * - Corrida: kcal = peso_kg × distância_km × fator
+ * - Estações: kcal = peso_kg × time_min × fator
  */
 
-import type { AthleteConfig, WorkoutBlock, DayWorkout, AthleteLevel, TrainingLevel } from '@/types/outlier';
-import { getActiveParams, getModalityKcal, getIntensityFactor, getLevelSpeedKmh, getNumericParam } from '@/config/outlierParams';
+import type { AthleteConfig, WorkoutBlock, DayWorkout, AthleteLevel } from '@/types/outlier';
+import { getActiveParams, getLevelSpeedKmh, getNumericParam } from '@/config/outlierParams';
 import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
+import { 
+  calculateBlockCaloriesHyrox, 
+  type CalorieCalculationMeta,
+  createCalorieMeta 
+} from '@/utils/hyroxCalorieEngine';
 
 // ============================================
-// NOTA: PlanTier (OPEN/PRO) NÃO influencia mais o motor de treino
-// A estimativa é fixa, baseada apenas no conteúdo do treino e biometria do atleta.
+// NOTA: MOTOR DETERMINÍSTICO HYROX
+// - Tabela de fatores = única fonte de verdade
+// - Removido: ageFactor, sexFactor, weightFactor, PSE principal
+// - PSE aplica apenas no fallback (movimentos fora da tabela HYROX)
 // ============================================
 
 /**
@@ -23,6 +36,7 @@ import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants
 export function getModeIntensityMultiplier(_planTier?: string, _blockType?: string): number {
   return 1.0;
 }
+
 // ============================================
 // TIPOS
 // ============================================
@@ -44,6 +58,8 @@ export interface BlockEstimate {
   estimatedKcal: number;
   confidence: 'high' | 'medium' | 'low';
   items?: string[];
+  /** Metadados do motor de calorias (rastreabilidade) */
+  kcalMeta?: CalorieCalculationMeta;
 }
 
 export interface WorkoutEstimation {
@@ -55,52 +71,6 @@ export interface WorkoutEstimation {
   biometricsValid: boolean;
   missingWeight: boolean;
 }
-
-// ============================================
-// MAPEAMENTO MET POR TIPO DE EXERCÍCIO
-// ============================================
-
-// ============================================
-// MAPEAMENTO MET CORRIGIDO - Valores mais realistas
-// Baseado em literatura científica + contexto CrossFit/HYROX
-// ============================================
-
-const MET_VALUES = {
-  // Aeróbio/erg (valores corrigidos para WOD intensity)
-  run: 10.0,       // Corrida em WOD (ritmo forte)
-  row: 10.0,       // Remo em WOD (intenso)
-  ski: 10.0,       // SkiErg em WOD
-  bike: 10.0,      // Assault Bike (intervalado/forte)
-  
-  // Movimentos funcionais (corrigidos para contexto conditioning)
-  burpee: 10.0,           // Burpee comum em WOD
-  burpee_broad_jump: 11.0, // Burpee Broad Jump (mais intenso)
-  thruster: 10.5,
-  wallball: 9.5,
-  kettlebell: 9.5,
-  boxjump: 10.0,
-  
-  // Carry/Sled (mantidos, já estavam bons)
-  farmer: 10.0,
-  sled: 11.0,
-  sandbag: 10.0,
-  lunge: 9.5,
-  
-  // Força (levemente ajustados)
-  strength: 6.5,
-  deadlift: 6.5,
-  squat: 6.5,
-  press: 6.0,
-  
-  // Tipos de bloco
-  conditioning: 10.5,  // Conditioning geral (era 8.0)
-  especifico: 12.0,    // HYROX específico (era 9.0)
-  aquecimento: 5.0,    // Mantido
-  core: 5.0,           // Mantido
-  
-  // Default
-  default: 8.0,
-};
 
 // ============================================
 // HELPER: getUserBiometrics
@@ -138,60 +108,8 @@ export function getUserBiometrics(athleteConfig: AthleteConfig | null): UserBiom
 // HELPERS DE CÁLCULO
 // ============================================
 
-/**
- * Fórmula MET para calorias:
- * kcal = MET × 3.5 × weight_kg / 200 × minutes
- */
-function calculateKcalFromMET(met: number, weightKg: number, minutes: number): number {
-  return Math.round((met * 3.5 * weightKg / 200) * minutes);
-}
-
-/**
- * Detecta o MET predominante do conteúdo do bloco
- * CORRIGIDO: Prioriza padrões específicos e usa valores atualizados
- */
-function detectMETFromContent(content: string, blockType: string): number {
-  const lower = content.toLowerCase();
-  
-  // PRIORIDADE 1: Burpee Broad Jump (deve vir ANTES de burpee comum)
-  if (
-    lower.includes('burpee broad jump') || 
-    lower.includes('burpee broad-jump') || 
-    lower.includes('broad jump burpee') ||
-    lower.includes('bbj') ||
-    lower.includes('burpee + broad jump')
-  ) {
-    return MET_VALUES.burpee_broad_jump; // 11.0
-  }
-  
-  // PRIORIDADE 2: Padrões específicos de exercício
-  if (lower.includes('run') || lower.includes('corr')) return MET_VALUES.run;
-  if (lower.includes('row') || lower.includes('remo')) return MET_VALUES.row;
-  if (lower.includes('ski')) return MET_VALUES.ski;
-  if (lower.includes('bike') || lower.includes('assault')) return MET_VALUES.bike;
-  if (lower.includes('burpee')) return MET_VALUES.burpee; // Burpee comum
-  if (lower.includes('thruster')) return MET_VALUES.thruster;
-  if (lower.includes('wall ball') || lower.includes('wallball')) return MET_VALUES.wallball;
-  if (lower.includes('kettlebell') || lower.includes('kb ') || lower.includes('swing')) return MET_VALUES.kettlebell;
-  if (lower.includes('box jump')) return MET_VALUES.boxjump;
-  if (lower.includes('farmer') || lower.includes('carry')) return MET_VALUES.farmer;
-  if (lower.includes('sled') || lower.includes('push') || lower.includes('pull')) return MET_VALUES.sled;
-  if (lower.includes('sandbag')) return MET_VALUES.sandbag;
-  if (lower.includes('lunge') || lower.includes('afundo')) return MET_VALUES.lunge;
-  if (lower.includes('deadlift') || lower.includes('levantamento')) return MET_VALUES.deadlift;
-  if (lower.includes('squat') || lower.includes('agachamento')) return MET_VALUES.squat;
-  if (lower.includes('press') || lower.includes('supino')) return MET_VALUES.press;
-  
-  // PRIORIDADE 3: Por tipo de bloco (valores corrigidos)
-  if (blockType === 'corrida') return MET_VALUES.run;           // 10.0
-  if (blockType === 'forca') return MET_VALUES.strength;        // 6.5
-  if (blockType === 'conditioning') return MET_VALUES.conditioning; // 10.5
-  if (blockType === 'especifico') return MET_VALUES.especifico; // 12.0
-  if (blockType === 'aquecimento') return MET_VALUES.aquecimento; // 5.0
-  if (blockType === 'core') return MET_VALUES.core;             // 5.0
-  
-  return MET_VALUES.default; // 8.0
-}
+// REMOVIDO: calculateKcalFromMET - substituído pelo motor determinístico HYROX
+// REMOVIDO: detectMETFromContent - substituído pelo parser do motor HYROX
 
 /**
  * Extrai tempo do conteúdo (AMRAP X min, EMOM X, CAP X, etc.)
@@ -379,47 +297,27 @@ export function estimateBlock(
     estimatedMinutes = Math.round(estimatedMinutes * 1.15);
   }
   
-  // 2. Calcular calorias
+  // 2. Calcular calorias usando Motor Determinístico HYROX
   let estimatedKcal = 0;
+  let kcalMeta: CalorieCalculationMeta | undefined;
   
   if (biometrics.isValid && biometrics.weightKg && estimatedMinutes > 0 && block.type !== 'notas') {
-    // Caso especial: corrida com distância
-    if (block.type === 'corrida') {
-      const distance = extractDistanceKm(block.content);
-      if (distance && distance > 0) {
-        // Fórmula simples: peso × km × fator
-        const factor = getNumericParam(params.exerciseMets.runningKcalFactor, 1.0, 'runningKcalFactor');
-        estimatedKcal = Math.round(biometrics.weightKg * distance * factor);
-      } else {
-        // Estimar distância pelo tempo
-        const speedKmh = getLevelSpeedKmh(level);
-        const estimatedKm = (estimatedMinutes / 60) * speedKmh;
-        const factor = getNumericParam(params.exerciseMets.runningKcalFactor, 1.0, 'runningKcalFactor');
-        estimatedKcal = Math.round(biometrics.weightKg * estimatedKm * factor);
-      }
+    // Usar motor determinístico HYROX
+    const durationSec = estimatedMinutes * 60;
+    const blockWithDuration = { ...block, durationSec };
+    
+    const calorieResult = calculateBlockCaloriesHyrox(
+      blockWithDuration,
+      biometrics.weightKg,
+      level
+    );
+    
+    if (calorieResult.resolution !== 'error') {
+      estimatedKcal = calorieResult.kcal;
+      kcalMeta = createCalorieMeta(calorieResult);
     } else {
-      // Fórmula MET padrão
-      const met = detectMETFromContent(block.content, block.type);
-      
-      // Ajustar MET por PSE se disponível
-      const pse = getEffectivePSE(block, level) || 5;
-      const pseFactor = getIntensityFactor(pse);
-      const adjustedMet = met * pseFactor;
-      
-      // Ajustar por idade
-      let ageFactor = 1.0;
-      if (biometrics.age) {
-        if (biometrics.age < 30) ageFactor = 1.05;
-        else if (biometrics.age < 40) ageFactor = 1.0;
-        else if (biometrics.age < 50) ageFactor = 0.95;
-        else ageFactor = 0.90;
-      }
-      
-      // Ajustar por sexo
-      const sexFactor = biometrics.sex === 'masculino' ? 1.1 : 1.0;
-      
-      estimatedKcal = calculateKcalFromMET(adjustedMet, biometrics.weightKg, estimatedMinutes);
-      estimatedKcal = Math.round(estimatedKcal * ageFactor * sexFactor);
+      // Log do erro mas não falha (calorias ficam 0)
+      console.warn('[estimateBlock] Erro no motor HYROX:', calorieResult.error);
     }
   }
   
@@ -433,6 +331,7 @@ export function estimateBlock(
     estimatedMinutes: Math.max(0, estimatedMinutes),
     estimatedKcal,
     confidence,
+    kcalMeta,
   };
 }
 

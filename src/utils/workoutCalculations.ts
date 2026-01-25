@@ -3,16 +3,23 @@ import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants
 import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
 import { 
   getActiveParams, 
-  getModalityKcal, 
-  getIntensityFactor, 
   getLevelSpeedKmh,
   getNumericParam 
 } from '@/config/outlierParams';
+import { 
+  calculateBlockCaloriesHyrox, 
+  HYROX_FACTORS,
+  type CalorieCalculationResult 
+} from '@/utils/hyroxCalorieEngine';
 
 // ============================================
+// MOTOR DETERMINÍSTICO HYROX (v2)
+// ============================================
 // REGRA INVIOLÁVEL:
-// Tempo total exibido = soma real dos blocos
-// Tempo do card de cada bloco = durationSec daquele bloco
+// - Tabela de fatores é a ÚNICA fonte de verdade
+// - Removido: ageFactor, sexFactor, weightFactor, PSE principal
+// - Corrida: kcal = peso_kg × distância_km × fator
+// - Estações: kcal = peso_kg × time_min × fator
 // ============================================
 
 /**
@@ -173,15 +180,13 @@ function estimateFromContent(block: WorkoutBlock): number | null {
 
 /**
  * Calcula calorias para corrida baseado em distância
- * Fórmula: peso_kg * km * RUNNING_KCAL_FACTOR (do config)
+ * Fórmula: peso_kg * km * HYROX_FACTORS.RUN
  */
 export function calculateRunningCalories(
   weightKg: number,
   distanceKm: number
 ): number {
-  const params = getActiveParams();
-  const factor = getNumericParam(params.exerciseMets.runningKcalFactor, 1.0, 'runningKcalFactor');
-  return Math.round(weightKg * distanceKm * factor);
+  return Math.round(weightKg * distanceKm * HYROX_FACTORS.RUN);
 }
 
 /**
@@ -197,39 +202,23 @@ export function calculateRunningCaloriesByTime(
   return calculateRunningCalories(weightKg, estimatedKm);
 }
 
-/**
- * Obtém fator de idade do config
- */
-function getAgeFactor(idade?: number): number {
-  if (!idade) return 1.0;
-  
-  const params = getActiveParams();
-  const ageRules = params.exerciseMets.ageFactorRules;
-  
-  if (idade < 30) return getNumericParam(ageRules.under30, 1.05, 'ageFactor.under30');
-  if (idade < 40) return getNumericParam(ageRules.under40, 1.0, 'ageFactor.under40');
-  if (idade < 50) return getNumericParam(ageRules.under50, 0.95, 'ageFactor.under50');
-  return getNumericParam(ageRules.over50, 0.90, 'ageFactor.over50');
-}
+// ============================================
+// MOTOR DETERMINÍSTICO HYROX
+// Removido: ageFactor, sexFactor, weightFactor, PSE principal, baseKcal genérico
+// Mantido: peso, distância (run), tempo e fator (tabela/arquetipo)
+// ============================================
 
 /**
- * Obtém fator de sexo do config
- */
-function getSexFactor(sexo?: 'masculino' | 'feminino'): number {
-  const params = getActiveParams();
-  const sexRules = params.exerciseMets.sexFactorRules;
-  
-  if (sexo === 'masculino') return getNumericParam(sexRules.masculino, 1.1, 'sexFactor.masculino');
-  return getNumericParam(sexRules.feminino, 1.0, 'sexFactor.feminino');
-}
-
-/**
- * Calculate calories using ONLY block duration
- * Formula: duration_min × base_kcal_per_min × pse_factor × weight_factor × age_factor × sex_factor
+ * Calculate calories using Motor Determinístico HYROX
  * 
- * REGRA ESPECIAL PARA CORRIDA:
- * - Se houver distância explícita: peso_kg * km * fator
- * - Se não houver: estimar km por velocidade padrão conforme nível
+ * FÓRMULAS:
+ * - Corrida: kcal = peso_kg × distância_km × fator
+ * - Estações: kcal = peso_kg × time_min × fator
+ * 
+ * REMOVIDO DO MOTOR ANTIGO:
+ * - ageFactor, sexFactor, weightFactor como multiplicadores globais
+ * - PSE do cálculo principal
+ * - baseKcal genérico por modalidade
  */
 export function calculateCalories(
   block: WorkoutBlock,
@@ -238,66 +227,32 @@ export function calculateCalories(
 ): number | null {
   if (!athleteConfig) return null;
   
-  const params = getActiveParams();
   const effectiveLevel = level || 'intermediario';
   const weight = athleteConfig.peso;
   if (!weight) return null;
 
-  // REGRA ESPECIAL PARA CORRIDA
-  if (block.type === 'corrida') {
-    const distanceKm = extractDistanceKm(block.content);
-    
-    if (distanceKm && distanceKm > 0) {
-      // Usa fórmula por distância: peso_kg * km * fator
-      return calculateRunningCalories(weight, distanceKm);
-    }
-    
-    // Fallback: estimar distância pelo tempo e velocidade do nível
-    const duration = getBlockDuration(block, effectiveLevel);
-    if (duration && duration > 0) {
-      return calculateRunningCaloriesByTime(weight, duration, effectiveLevel);
-    }
-    
+  // Obter duração do bloco em segundos
+  const durationMin = getBlockDuration(block, effectiveLevel);
+  const durationSec = durationMin ? durationMin * 60 : 0;
+  
+  if (durationSec <= 0 && block.type !== 'corrida') {
     return null;
   }
 
-  // CÁLCULO PADRÃO PARA OUTROS TIPOS DE BLOCO
-  const duration = getBlockDuration(block, effectiveLevel);
-  if (!duration || duration <= 0) return null;
-
-  // Base kcal per minute for this block type (do config)
-  const baseKcal = getModalityKcal(block.type);
-  
-  // PSE factor (default to PSE 5 = factor 1.0)
-  const pse = getEffectivePSE(block, effectiveLevel) || 5;
-  const pseFactor = getIntensityFactor(pse);
-  
-  // Weight factor (normalized to baseline from config)
-  const baselineKg = getNumericParam(
-    params.exerciseMets.weightFactorRules.baselineKg, 
-    70, 
-    'weightBaseline'
+  // Usar Motor Determinístico HYROX
+  const blockWithDuration = { ...block, durationSec };
+  const result: CalorieCalculationResult = calculateBlockCaloriesHyrox(
+    blockWithDuration,
+    weight,
+    effectiveLevel
   );
-  const weightFactor = weight / baselineKg;
   
-  // Age factor (from config)
-  const ageFactor = getAgeFactor(athleteConfig.idade);
-
-  // Sex factor (from config)
-  const sexFactor = getSexFactor(athleteConfig.sexo);
-
-  // Final calculation
-  const calories = duration * baseKcal * pseFactor * weightFactor * ageFactor * sexFactor;
-  
-  // Garantir que nunca retorne NaN
-  if (isNaN(calories)) {
-    console.warn('[workoutCalculations] Cálculo de calorias resultou em NaN', {
-      duration, baseKcal, pseFactor, weightFactor, ageFactor, sexFactor
-    });
+  if (result.resolution === 'error') {
+    console.warn('[calculateCalories] Motor HYROX retornou erro:', result.error);
     return null;
   }
   
-  return Math.round(calories);
+  return result.kcal;
 }
 
 /**
