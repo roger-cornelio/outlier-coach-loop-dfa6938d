@@ -40,6 +40,7 @@ import { useLevelTheme } from "@/hooks/useLevelTheme";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MobileNav } from "@/components/MobileNav";
 import { EquipmentAdaptModal } from "@/components/EquipmentAdaptModal";
 
 const LAST_ROUTE_KEY = "outlier_last_route";
@@ -335,9 +336,14 @@ const Index = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]">
-        {/* Sidebar - only visible after setup complete */}
+        {/* Sidebar - only visible after setup complete (desktop only) */}
         {showSidebar && (
           <AppSidebar />
+        )}
+        
+        {/* Mobile Nav - hamburger menu for mobile (only after setup complete) */}
+        {showSidebar && (
+          <MobileNav />
         )}
         
         {/* Main content area */}
