@@ -86,35 +86,69 @@ export function AthleteConfig() {
 
   // Nome do coach vinculado
   const [coachName, setCoachName] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Buscar nome do coach vinculado
+  // Buscar nome do coach vinculado via tabela coach_athletes
   useEffect(() => {
     const fetchCoachName = async () => {
-      if (!profile?.coach_id) {
+      if (!user?.id) {
+        setCoachLoading(false);
         setCoachName(null);
         return;
       }
       
+      setCoachLoading(true);
+      
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', profile.coach_id)
+        // Buscar vínculo na tabela coach_athletes (fonte de verdade)
+        // coach_athletes usa user_id (auth ID) para athlete_id e coach_id
+        const { data: linkData, error: linkError } = await supabase
+          .from('coach_athletes')
+          .select('coach_id')
+          .eq('athlete_id', user.id)
           .maybeSingle();
         
-        if (!error && data?.name) {
-          setCoachName(data.name);
+        if (linkError) {
+          // RLS pode estar bloqueando - atletas talvez não tenham permissão para ler coach_athletes
+          console.warn('[AthleteConfig] Não foi possível buscar vínculo:', linkError.message);
+          setCoachName(null);
+          setCoachLoading(false);
+          return;
+        }
+        
+        if (!linkData?.coach_id) {
+          // Atleta não está vinculado a nenhum coach
+          setCoachName(null);
+          setCoachLoading(false);
+          return;
+        }
+        
+        // Buscar nome do coach (coach_id é um user_id)
+        const { data: coachProfile, error: coachError } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('user_id', linkData.coach_id)
+          .maybeSingle();
+        
+        if (coachError) {
+          console.warn('[AthleteConfig] Não foi possível buscar perfil do coach:', coachError.message);
+          setCoachName(null);
+        } else if (coachProfile?.name) {
+          setCoachName(coachProfile.name);
         } else {
           setCoachName(null);
         }
       } catch (err) {
-        console.error('[AthleteConfig] Error fetching coach name:', err);
+        console.error('[AthleteConfig] Erro ao buscar coach:', err);
         setCoachName(null);
+      } finally {
+        setCoachLoading(false);
       }
     };
     
     fetchCoachName();
-  }, [profile?.coach_id]);
+  }, [user?.id]);
 
   // Atualizar campos quando profile mudar
   useEffect(() => {
@@ -298,12 +332,16 @@ export function AthleteConfig() {
           </p>
           
           {/* Coach vinculado */}
-          {coachName && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="w-4 h-4" />
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="w-4 h-4" />
+            {coachLoading ? (
+              <span>Coach: <span className="text-muted-foreground/60">carregando...</span></span>
+            ) : coachName ? (
               <span>Coach: <span className="text-foreground font-medium">{coachName}</span></span>
-            </div>
-          )}
+            ) : (
+              <span>Coach: <span className="text-muted-foreground/60">não vinculado</span></span>
+            )}
+          </div>
         </div>
       </motion.section>
 
