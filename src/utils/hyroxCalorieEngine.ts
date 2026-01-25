@@ -64,21 +64,46 @@ export type FallbackArchetypeKey = keyof typeof FALLBACK_ARCHETYPES;
 // TIPOS E INTERFACES
 // ============================================
 
+/** Tipo de resolução do cálculo */
+export type CalorieResolution = 'EXACT_TABLE' | 'ARCHETYPE_FALLBACK' | 'error';
+
+/** Snapshot detalhado por exercício calculado */
+export interface ExerciseSnapshot {
+  exerciseLine: string;
+  factorKey: string;
+  factorUsed: number;
+  kcalContribution: number;
+  archetypeKey?: string;
+  pseUsed?: number;
+  multiplierUsed?: number;
+  resolution: 'EXACT_TABLE' | 'ARCHETYPE_FALLBACK';
+}
+
 export interface CalorieCalculationResult {
   kcal: number;
-  resolution: 'hyrox' | 'fallback' | 'error';
+  resolution: CalorieResolution;
   keysUsed: string[];
   usedFallback: boolean;
   warnings: string[];
   error?: string;
+  /** Snapshots detalhados por exercício */
+  exerciseSnapshots: ExerciseSnapshot[];
+  /** Tempo em fallback vs total (para cálculo de HIGH_FALLBACK_USAGE) */
+  fallbackTimeMin: number;
+  totalTimeMin: number;
 }
 
+/** Metadados completos para rastreabilidade (salvo junto com kcal) */
 export interface CalorieCalculationMeta {
-  resolution: 'hyrox' | 'fallback' | 'error';
+  resolution: CalorieResolution;
   keysUsed: string[];
   usedFallback: boolean;
   warnings: string[];
-  factorSnapshot?: Record<string, number>;
+  factorSnapshot: Record<string, number>;
+  /** Snapshots detalhados por exercício */
+  exerciseSnapshots: ExerciseSnapshot[];
+  /** Percentual do tempo calculado via fallback */
+  fallbackPercentage: number;
 }
 
 // ============================================
@@ -244,11 +269,17 @@ export interface CalculateCaloriesInput {
 /**
  * MOTOR DETERMINÍSTICO HYROX
  * Calcula calorias de um bloco usando a tabela de fatores
+ * Retorna snapshots detalhados para rastreabilidade
  */
 export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCalculationResult {
   const { weightKg, durationSec, content, lines, pse } = input;
   const warnings: string[] = [];
   const keysUsed: string[] = [];
+  const exerciseSnapshots: ExerciseSnapshot[] = [];
+  
+  // Tracking de tempo para cálculo de fallback percentage
+  let fallbackTimeMin = 0;
+  const totalTimeMin = durationSec ? durationSec / 60 : 0;
   
   // Validação: peso obrigatório
   if (!weightKg || weightKg <= 0) {
@@ -259,6 +290,9 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
       usedFallback: false,
       warnings: [],
       error: 'Peso do atleta é obrigatório',
+      exerciseSnapshots: [],
+      fallbackTimeMin: 0,
+      totalTimeMin: 0,
     };
   }
   
@@ -278,6 +312,9 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
       usedFallback: false,
       warnings: [],
       error: 'Nenhuma linha de exercício encontrada',
+      exerciseSnapshots: [],
+      fallbackTimeMin: 0,
+      totalTimeMin: 0,
     };
   }
   
@@ -285,6 +322,9 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
   let usedFallback = false;
   let hasAmbiguity = false;
   let hasHyroxExercise = false;
+  
+  // Dividir tempo entre as linhas de exercício válidas
+  const timePerLineMin = exerciseLines.length > 0 ? totalTimeMin / exerciseLines.length : 0;
   
   for (const line of exerciseLines) {
     const classification = classifyExercise(line);
@@ -308,6 +348,15 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
           const factor = HYROX_FACTORS.RUN;
           const kcal = weightKg * distanceKm * factor;
           totalKcal += kcal;
+          
+          // Snapshot detalhado
+          exerciseSnapshots.push({
+            exerciseLine: line.substring(0, 80),
+            factorKey: 'RUN',
+            factorUsed: factor,
+            kcalContribution: Math.round(kcal),
+            resolution: 'EXACT_TABLE',
+          });
         } else {
           warnings.push('Corrida sem distância detectável - não contabilizada');
         }
@@ -323,6 +372,15 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
         const factor = HYROX_FACTORS[classification.key as HyroxExerciseKey];
         const kcal = weightKg * timeMin * factor;
         totalKcal += kcal;
+        
+        // Snapshot detalhado
+        exerciseSnapshots.push({
+          exerciseLine: line.substring(0, 80),
+          factorKey: classification.key,
+          factorUsed: factor,
+          kcalContribution: Math.round(kcal),
+          resolution: 'EXACT_TABLE',
+        });
       }
     } else if (classification.type === 'fallback') {
       usedFallback = true;
@@ -335,6 +393,9 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
         continue;
       }
       
+      // Acumular tempo em fallback
+      fallbackTimeMin += timePerLineMin;
+      
       const baseFactor = FALLBACK_ARCHETYPES[classification.key as FallbackArchetypeKey];
       
       // Aplicar PSE apenas no fallback
@@ -343,6 +404,18 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
       
       const kcal = weightKg * timeMin * baseFactor * pseMultiplier;
       totalKcal += kcal;
+      
+      // Snapshot detalhado com arquétipo
+      exerciseSnapshots.push({
+        exerciseLine: line.substring(0, 80),
+        factorKey: classification.key,
+        factorUsed: baseFactor * pseMultiplier,
+        kcalContribution: Math.round(kcal),
+        archetypeKey: classification.key,
+        pseUsed: effectivePse ?? undefined,
+        multiplierUsed: pseMultiplier !== 1.0 ? pseMultiplier : undefined,
+        resolution: 'ARCHETYPE_FALLBACK',
+      });
     }
   }
   
@@ -355,29 +428,81 @@ export function calculateHyroxCalories(input: CalculateCaloriesInput): CalorieCa
       usedFallback: false,
       warnings,
       error: 'Bloco contém linhas ambíguas. Divida os exercícios em linhas separadas.',
+      exerciseSnapshots: [],
+      fallbackTimeMin: 0,
+      totalTimeMin,
     };
   }
   
+  // Determinar resolução principal
+  const resolution: CalorieResolution = usedFallback 
+    ? 'ARCHETYPE_FALLBACK' 
+    : (hasHyroxExercise ? 'EXACT_TABLE' : 'ARCHETYPE_FALLBACK');
+  
   return {
     kcal: Math.round(totalKcal),
-    resolution: usedFallback ? 'fallback' : (hasHyroxExercise ? 'hyrox' : 'fallback'),
+    resolution,
     keysUsed: [...new Set(keysUsed)],
     usedFallback,
     warnings,
+    exerciseSnapshots,
+    fallbackTimeMin,
+    totalTimeMin,
   };
 }
 
 /**
- * Cria metadados para rastreabilidade
+ * Cria metadados completos para rastreabilidade
+ * Salvo junto com kcal no WorkoutBlock
  */
 export function createCalorieMeta(result: CalorieCalculationResult): CalorieCalculationMeta {
+  // Calcular percentual de tempo em fallback
+  const fallbackPercentage = result.totalTimeMin > 0 
+    ? Math.round((result.fallbackTimeMin / result.totalTimeMin) * 100) 
+    : 0;
+  
   return {
     resolution: result.resolution,
     keysUsed: result.keysUsed,
     usedFallback: result.usedFallback,
     warnings: result.warnings,
     factorSnapshot: { ...HYROX_FACTORS, ...FALLBACK_ARCHETYPES },
+    exerciseSnapshots: result.exerciseSnapshots,
+    fallbackPercentage,
   };
+}
+
+/**
+ * Verifica se um treino deve ter warning HIGH_FALLBACK_USAGE
+ * @param blocksMeta Array de CalorieCalculationMeta de todos os blocos
+ * @returns Array de warnings no nível do treino
+ */
+export function calculateWorkoutKcalWarnings(
+  blocksMeta: CalorieCalculationMeta[]
+): string[] {
+  const warnings: string[] = [];
+  
+  // Calcular tempo total e tempo em fallback
+  let totalFallbackPercent = 0;
+  let validBlocks = 0;
+  
+  for (const meta of blocksMeta) {
+    if (meta.fallbackPercentage !== undefined) {
+      totalFallbackPercent += meta.fallbackPercentage;
+      validBlocks++;
+    }
+  }
+  
+  if (validBlocks > 0) {
+    const avgFallbackPercent = totalFallbackPercent / validBlocks;
+    
+    // Threshold: >30% do tempo em fallback
+    if (avgFallbackPercent > 30) {
+      warnings.push('HIGH_FALLBACK_USAGE');
+    }
+  }
+  
+  return warnings;
 }
 
 // ============================================

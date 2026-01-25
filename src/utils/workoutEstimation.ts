@@ -19,7 +19,8 @@ import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants
 import { 
   calculateBlockCaloriesHyrox, 
   type CalorieCalculationMeta,
-  createCalorieMeta 
+  createCalorieMeta,
+  calculateWorkoutKcalWarnings,
 } from '@/utils/hyroxCalorieEngine';
 
 // ============================================
@@ -70,6 +71,8 @@ export interface WorkoutEstimation {
   };
   biometricsValid: boolean;
   missingWeight: boolean;
+  /** Warnings no nível do treino (e.g., HIGH_FALLBACK_USAGE) */
+  kcalWarnings?: string[];
 }
 
 // ============================================
@@ -361,11 +364,19 @@ export function estimateWorkout(
     estimatedKcalTotal: Math.max(0, blocks.reduce((sum, b) => sum + b.estimatedKcal, 0)),
   };
   
+  // Calcular warnings no nível do treino
+  const blocksMeta = blocks
+    .map(b => b.kcalMeta)
+    .filter((meta): meta is CalorieCalculationMeta => meta !== undefined);
+  
+  const kcalWarnings = calculateWorkoutKcalWarnings(blocksMeta);
+  
   return {
     blocks,
     totals,
     biometricsValid: biometrics.isValid,
     missingWeight: biometrics.missingWeight,
+    kcalWarnings: kcalWarnings.length > 0 ? kcalWarnings : undefined,
   };
 }
 
