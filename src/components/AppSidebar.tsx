@@ -93,13 +93,13 @@ export function AppSidebar() {
     <Sidebar 
       className={cn(
         "border-r border-border/50 bg-background/95 backdrop-blur-sm transition-all duration-300",
-        isCollapsed ? "w-14" : "w-56"
+        isCollapsed ? "w-16" : "w-72"
       )}
       collapsible="icon"
     >
-      <SidebarHeader className="p-4 border-b border-border/30">
+      <SidebarHeader className="p-5 border-b border-border/30">
         {!isCollapsed && (
-          <OutlierWordmark size="sm" className="opacity-80" />
+          <OutlierWordmark size="md" className="opacity-80" />
         )}
       </SidebarHeader>
 
@@ -127,7 +127,7 @@ export function AppSidebar() {
                       )} />
                       {!isCollapsed && (
                         <span className={cn(
-                          "font-medium text-sm tracking-wide",
+                          "font-medium text-base tracking-wide",
                           active ? "text-primary" : ""
                         )}>
                           {item.title}
@@ -151,7 +151,7 @@ export function AppSidebar() {
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && (
-            <span className="font-medium text-sm tracking-wide">
+            <span className="font-medium text-base tracking-wide">
               Sair
             </span>
           )}
