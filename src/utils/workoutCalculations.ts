@@ -1,6 +1,11 @@
 import type { AthleteConfig, WorkoutBlock, AthleteLevel } from '@/types/outlier';
 import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
-import { sumBlocksDurationSec, type TimeBlock } from '@/utils/timeCalc';
+import { 
+  sumBlocksDurationSec, 
+  getBlockEffectiveDurationSec,
+  type TimeBlock,
+  type BlockDurationSource,
+} from '@/utils/timeCalc';
 import { 
   getActiveParams, 
   getLevelSpeedKmh,
@@ -60,22 +65,32 @@ export function getBlockDuration(block: WorkoutBlock, level?: AthleteLevel): num
 }
 
 /**
- * Get block duration in SECONDS
- * Returns durationSec if available, otherwise converts durationMinutes
+ * Get block duration in SECONDS using the SINGLE DETERMINISTIC RULE.
+ * 
+ * REGRA ÚNICA (delegada para getBlockEffectiveDurationSec):
+ * 1. durationSec > 0 → usar durationSec
+ * 2. durationMinutes > 0 → usar durationMinutes * 60
+ * 3. senão → retornar 0
+ * 
+ * NOTA: Esta função considera levelVariants para obter durationMinutes efetivo.
+ * 
+ * EXPLICITAMENTE PROIBIDO:
+ * - extractTimeFromContent
+ * - parsing de texto
+ * - defaults por tipo de bloco
+ * - heurísticas baseadas em regex
  */
 export function getBlockDurationSec(block: WorkoutBlock & { durationSec?: number }, level?: AthleteLevel): number {
-  // Prioridade: durationSec explícito
-  if (typeof block.durationSec === 'number' && block.durationSec > 0) {
-    return Math.round(block.durationSec);
-  }
+  // Construir fonte de duração considerando levelVariants
+  const effectiveDurationMinutes = getEffectiveDuration(block, level);
   
-  // Fallback: converter de minutos
-  const minutes = getBlockDuration(block, level);
-  if (minutes && minutes > 0) {
-    return Math.round(minutes * 60);
-  }
+  const durationSource: BlockDurationSource = {
+    durationSec: block.durationSec,
+    durationMinutes: effectiveDurationMinutes,
+  };
   
-  return 0;
+  // Delegar para a regra única determinística
+  return getBlockEffectiveDurationSec(durationSource);
 }
 
 /**
