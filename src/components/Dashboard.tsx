@@ -17,7 +17,7 @@ import { AthleteViewSelector } from './AthleteViewSelector';
 import { useAppState } from '@/hooks/useAppState';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
-import { getCoachCopy } from '@/config/coachCopy';
+import { getCoachCopy, getWorkoutFocusCopy } from '@/config/coachCopy';
 import { WeekNavigator } from './WeekNavigator';
 import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
@@ -100,12 +100,14 @@ export function Dashboard() {
   
   const navigate = useNavigate();
   
-  const [activeDay, setActiveDay] = useState<DayOfWeek>(() => {
-    // Inicializar com o dia atual da semana
+  // Dia atual para buscar treino do dia
+  const todayDay = useMemo<DayOfWeek>(() => {
     const days: DayOfWeek[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
     const today = new Date().getDay();
     return days[today] || 'seg';
-  });
+  }, []);
+  
+  const [activeDay, setActiveDay] = useState<DayOfWeek>(todayDay);
   const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
   const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
@@ -172,7 +174,16 @@ export function Dashboard() {
   const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingLevel) : 'intermediario';
   
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+  const todayWorkout = displayWorkouts.find((w) => w.day === todayDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
+  const hasTodayWorkout = !!todayWorkout && !todayWorkout.isRestDay;
+  
+  // Copy dinâmica baseada no treino do dia e estilo do coach
+  const workoutFocusCopy = useMemo(() => {
+    if (loadingPlan) return null;
+    const blocks = todayWorkout?.blocks || [];
+    return getWorkoutFocusCopy(athleteConfig?.coachStyle, blocks, hasTodayWorkout);
+  }, [todayWorkout, athleteConfig?.coachStyle, hasTodayWorkout, loadingPlan]);
 
 
   // ============================================
@@ -360,15 +371,12 @@ export function Dashboard() {
             <ChevronRight className="w-7 h-7" />
           </motion.button>
           
-          {/* Texto motivacional sobre o foco do treino */}
-          <p className="text-center text-muted-foreground text-sm mt-4">
-            {hasAnyWorkouts 
-              ? "Hoje o foco será em resistência e força funcional. Bora evoluir! 💪"
-              : !loadingPlan 
-                ? "Nenhum treino programado para esta semana"
-                : null
-            }
-          </p>
+          {/* Copy dinâmica sobre o foco do treino do dia */}
+          {workoutFocusCopy && (
+            <p className="text-center text-muted-foreground text-sm mt-4">
+              {workoutFocusCopy}
+            </p>
+          )}
         </section>
 
         {/* Equipment Adapt Button moved to sidebar */}
