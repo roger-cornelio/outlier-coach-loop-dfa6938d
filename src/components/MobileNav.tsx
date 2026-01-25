@@ -17,8 +17,10 @@ import {
   Trophy, 
   Settings, 
   LogOut,
-  Loader2
+  Loader2,
+  Apple
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,7 +37,8 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 
 interface NavItem {
   title: string;
-  view: string;
+  view?: string;
+  route?: string;
   icon: React.ElementType;
 }
 
@@ -50,6 +53,11 @@ const navItems: NavItem[] = [
     title: 'Treino Semanal', 
     view: 'weeklyTraining', 
     icon: Calendar
+  },
+  { 
+    title: 'Nutrição', 
+    route: '/nutricao', 
+    icon: Apple
   },
   { 
     title: 'Status do Atleta', 
@@ -68,13 +76,18 @@ export function MobileNav() {
   const isMobile = useIsMobile();
   const { currentView, setCurrentView } = useOutlierStore();
   const { logout, isLoggingOut } = useLogout();
+  const navigate = useNavigate();
 
   // Só renderiza em mobile
   if (!isMobile) return null;
 
-  const handleNavClick = (view: string) => {
-    setCurrentView(view as any);
-    setIsOpen(false); // Fecha o menu após navegar
+  const handleNavClick = (item: NavItem) => {
+    if (item.route) {
+      navigate(item.route);
+    } else if (item.view) {
+      setCurrentView(item.view as any);
+    }
+    setIsOpen(false);
   };
 
   const handleLogout = async () => {
@@ -82,7 +95,12 @@ export function MobileNav() {
     await logout();
   };
 
-  const isActive = (view: string) => currentView === view;
+  const isActive = (item: NavItem) => {
+    if (item.route) {
+      return window.location.pathname === item.route;
+    }
+    return currentView === item.view;
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -113,11 +131,11 @@ export function MobileNav() {
         <nav className="flex-1 py-4 px-3">
           <ul className="space-y-1">
             {navItems.map((item) => {
-              const active = isActive(item.view);
+              const active = isActive(item);
               return (
-                <li key={item.view}>
+                <li key={item.title}>
                   <button
-                    onClick={() => handleNavClick(item.view)}
+                    onClick={() => handleNavClick(item)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
                       active

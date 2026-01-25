@@ -16,8 +16,10 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Apple
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
 import { cn } from '@/lib/utils';
@@ -38,7 +40,8 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 
 interface NavItem {
   title: string;
-  view: string;
+  view?: string;
+  route?: string;
   icon: React.ElementType;
   action?: () => void;
   isDestructive?: boolean;
@@ -48,6 +51,7 @@ export function AppSidebar() {
   const { currentView, setCurrentView } = useOutlierStore();
   const { state: sidebarState } = useSidebar();
   const { logout, isLoggingOut } = useLogout();
+  const navigate = useNavigate();
   const isCollapsed = sidebarState === 'collapsed';
 
   const navItems: NavItem[] = [
@@ -60,6 +64,11 @@ export function AppSidebar() {
       title: 'Treino Semanal', 
       view: 'weeklyTraining', 
       icon: Calendar
+    },
+    { 
+      title: 'Nutrição', 
+      route: '/nutricao', 
+      icon: Apple
     },
     { 
       title: 'Status do Atleta', 
@@ -76,12 +85,17 @@ export function AppSidebar() {
   const handleNavClick = (item: NavItem) => {
     if (item.action) {
       item.action();
-    } else {
+    } else if (item.route) {
+      navigate(item.route);
+    } else if (item.view) {
       setCurrentView(item.view as any);
     }
   };
 
   const isActive = (item: NavItem) => {
+    if (item.route) {
+      return window.location.pathname === item.route;
+    }
     return currentView === item.view;
   };
 
