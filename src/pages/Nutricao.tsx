@@ -5,9 +5,11 @@
  * que será implementado no futuro.
  */
 
-import { Apple, ClipboardList, TrendingUp, Clock, Utensils } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Apple, ClipboardList, TrendingUp, Clock, Utensils, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 const steps = [
   {
@@ -28,9 +30,22 @@ const steps = [
 ];
 
 export default function Nutricao() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background p-6 md:p-8">
       <div className="max-w-3xl mx-auto space-y-8">
+        {/* Botão Voltar */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(-1)}
+          className="text-muted-foreground hover:text-foreground -ml-2"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+
         {/* Header */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
