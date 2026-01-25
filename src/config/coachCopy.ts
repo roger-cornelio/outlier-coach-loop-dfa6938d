@@ -424,3 +424,209 @@ export function getBucketFeedbackCategory(bucket: string): keyof CoachCopySet['f
       return 'goodButMore';
   }
 }
+
+// ============================================================================
+// WORKOUT FOCUS COPY GENERATOR
+// ============================================================================
+
+type BlockType = 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
+
+interface WorkoutBlock {
+  type: BlockType;
+  isMainWod?: boolean;
+  wodType?: string;
+  title?: string;
+}
+
+/**
+ * Analisa o tipo de bloco e retorna o foco dominante
+ */
+function getBlockFocus(block: WorkoutBlock): string {
+  const type = block.type;
+  const wodType = block.wodType;
+  
+  if (wodType === 'hyrox') return 'simulado HYROX';
+  if (wodType === 'benchmark') return 'benchmark';
+  if (wodType === 'strength') return 'força';
+  if (wodType === 'engine') return 'resistência';
+  if (wodType === 'skill') return 'técnica';
+  
+  switch (type) {
+    case 'forca': return 'força';
+    case 'conditioning': return 'condicionamento';
+    case 'corrida': return 'corrida';
+    case 'core': return 'core e estabilidade';
+    case 'especifico': return 'trabalho específico';
+    default: return 'condicionamento geral';
+  }
+}
+
+/**
+ * Copys dinâmicas por estilo de coach e foco do treino
+ */
+const FOCUS_COPY: Record<CoachStyle, Record<string, string[]>> = {
+  IRON: {
+    'força': [
+      'Hoje é dia de carga. Sem desculpa.',
+      'Força no foco. Execução perfeita.',
+      'Dia de construir potência. Entrega total.',
+    ],
+    'resistência': [
+      'Resistência no foco. Aguenta firme.',
+      'Hoje o motor vai trabalhar. Sem parar.',
+      'Prepara o fôlego. Vai precisar.',
+    ],
+    'condicionamento': [
+      'Condicionamento pesado hoje. Foco.',
+      'Trabalho de base. Sem atalhos.',
+      'Capacidade geral no foco. Entrega.',
+    ],
+    'corrida': [
+      'Hoje a corrida cobra. Responde.',
+      'Pernas no trabalho. Ritmo constante.',
+      'Run day. Cada metro conta.',
+    ],
+    'core e estabilidade': [
+      'Core no foco. Fundação primeiro.',
+      'Estabilidade em dia. Sem pular etapa.',
+    ],
+    'trabalho específico': [
+      'Trabalho específico. Precisão máxima.',
+      'Foco técnico. Detalhes importam.',
+    ],
+    'simulado HYROX': [
+      'Simulado HYROX. Trata como prova.',
+      'Race day mode. Sem piedade.',
+    ],
+    'benchmark': [
+      'Benchmark hoje. É hora de medir.',
+      'Teste de referência. Dá tudo.',
+    ],
+    'condicionamento geral': [
+      'Trabalho geral hoje. Constância.',
+      'Dia de treinar. Sem drama.',
+    ],
+  },
+  PULSE: {
+    'força': [
+      'Hoje trabalhamos força com presença.',
+      'Dia de construir. Cada rep conta.',
+      'Força no foco. Qualidade antes de tudo.',
+    ],
+    'resistência': [
+      'Resistência no programa. Ritmo sustentável.',
+      'Hoje é sobre durar. Respira e continua.',
+      'Motor em construção. Consistência.',
+    ],
+    'condicionamento': [
+      'Condicionamento em foco. Você aguenta.',
+      'Trabalho de base hoje. Importante.',
+      'Capacidade geral. Passo a passo.',
+    ],
+    'corrida': [
+      'Corrida no programa. Mantém o ritmo.',
+      'Hoje é dia de correr. Com consciência.',
+      'Pernas trabalhando. Cada passo importa.',
+    ],
+    'core e estabilidade': [
+      'Core e estabilidade hoje. Base sólida.',
+      'Fundação em dia. Isso sustenta tudo.',
+    ],
+    'trabalho específico': [
+      'Trabalho específico hoje. Atenção aos detalhes.',
+      'Foco técnico. Qualidade acima de volume.',
+    ],
+    'simulado HYROX': [
+      'Simulado HYROX hoje. Trate com seriedade.',
+      'Dia de testar o sistema. Confie no processo.',
+    ],
+    'benchmark': [
+      'Benchmark hoje. Oportunidade de medir.',
+      'Teste de referência. Faça o seu melhor.',
+    ],
+    'condicionamento geral': [
+      'Treino geral hoje. Mantenha a consistência.',
+      'Dia de aparecer e entregar. Simples assim.',
+    ],
+  },
+  SPARK: {
+    'força': [
+      'Dia de FORÇA! 💪 Bora ficar mais forte!',
+      'Hoje é pesado e é incrível! Vamo! 🔥',
+      'Força no menu! Prepara que vai ser bom!',
+    ],
+    'resistência': [
+      'Resistência ON! 🔥 Bora testar o motor!',
+      'Hoje é aguenta firme e brilha! ⚡',
+      'Engine day! Prepara o fôlego! 🚀',
+    ],
+    'condicionamento': [
+      'Condicionamento pesado e eu amo! 💪',
+      'Bora construir capacidade! Você consegue!',
+      'Hoje o corpo agradece! Vamo! 🔥',
+    ],
+    'corrida': [
+      'Run day! 🏃 Bora voar!',
+      'Hoje é correr e curtir! ⚡',
+      'Pernas no trabalho! Vamo que vamo! 🔥',
+    ],
+    'core e estabilidade': [
+      'Core day! 💪 Barriga de aço vindo aí!',
+      'Estabilidade em foco! Fundação forte! ✨',
+    ],
+    'trabalho específico': [
+      'Trabalho específico! 🎯 Foco total!',
+      'Detalhes importam! Bora refinar! ⚡',
+    ],
+    'simulado HYROX': [
+      'SIMULADO HYROX! 🔥 É dia de prova!',
+      'Race mode ON! Trata como se fosse de verdade! 🚀',
+    ],
+    'benchmark': [
+      'BENCHMARK! 🎯 Hora de medir sua evolução!',
+      'Teste hoje! Bora bater recorde! 🔥',
+    ],
+    'condicionamento geral': [
+      'Treino geral e eu amo! 💪 Bora!',
+      'Hoje é dia de evoluir! Vamo! 🔥',
+    ],
+  },
+};
+
+/**
+ * Gera a copy dinâmica para o treino do dia baseada no WOD principal
+ */
+export function getWorkoutFocusCopy(
+  coachStyle: CoachStyle | string | undefined,
+  todayWorkout: WorkoutBlock[] | null | undefined,
+  hasWorkout: boolean
+): string {
+  // Se não tem treino
+  if (!hasWorkout || !todayWorkout || todayWorkout.length === 0) {
+    return 'Nenhum treino programado para hoje.';
+  }
+  
+  // Encontrar o WOD principal
+  const mainWod = todayWorkout.find(block => block.isMainWod);
+  const targetBlock = mainWod || todayWorkout.find(block => 
+    block.type !== 'aquecimento' && block.type !== 'notas'
+  ) || todayWorkout[0];
+  
+  if (!targetBlock) {
+    return 'Nenhum treino programado para hoje.';
+  }
+  
+  // Obter o foco do treino
+  const focus = getBlockFocus(targetBlock);
+  
+  // Obter o estilo normalizado
+  const style = (coachStyle?.toUpperCase() as CoachStyle) || 'PULSE';
+  const validStyle = ['IRON', 'PULSE', 'SPARK'].includes(style) ? style : 'PULSE';
+  
+  // Obter as copys para o estilo e foco
+  const styleCopys = FOCUS_COPY[validStyle as CoachStyle];
+  const focusCopys = styleCopys[focus] || styleCopys['condicionamento geral'];
+  
+  // Retornar uma copy aleatória
+  return focusCopys[Math.floor(Math.random() * focusCopys.length)];
+}
