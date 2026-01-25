@@ -236,16 +236,15 @@ export function DiagnosticRadarBlock({
               tickLine={false}
             />
             
-            {/* Área preenchida - cor HYROX PRO (amarelo/dourado) */}
+            {/* Área preenchida - cor OUTLIER premium */}
             <Radar
               name="Perfil"
               dataKey="value"
-              stroke="#FBBF24"
-              strokeWidth={3}
-              fill="#FBBF24"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2.5}
+              fill="hsl(var(--primary))"
               fillOpacity={0.2}
               dot={false}
-              style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.4))' }}
             />
           </RadarChart>
         </ResponsiveContainer>

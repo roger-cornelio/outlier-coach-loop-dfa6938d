@@ -244,7 +244,6 @@ const Index = () => {
     preWorkout: PreWorkoutScreen,
     dashboard: Dashboard,
     weeklyTraining: WeeklyTrainingView,
-    equipmentAdjust: AthleteConfig, // Redireciona para config (ajustes de treino)
     workout: WorkoutExecution,
     result: ResultRecording,
     feedback: PerformanceFeedback,
