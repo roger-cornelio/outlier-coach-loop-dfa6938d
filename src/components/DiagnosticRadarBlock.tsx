@@ -17,24 +17,12 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  Radar, 
-  ResponsiveContainer 
-} from 'recharts';
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip';
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 interface DiagnosticRadarBlockProps {
   scores: CalculatedScore[];
   loading?: boolean;
@@ -57,44 +45,37 @@ interface PhysiologicalDimension {
 // CONSTANTS - 6 Valências Fisiológicas + Mapeamento de Impacto
 // ============================================
 
-const PHYSIOLOGICAL_DIMENSIONS = [
-  { 
-    name: 'Resistência Cardiovascular', 
-    shortName: 'Cardio',
-    metrics: ['run_avg'],
-    stationImpact: ['Corrida', 'SkiErg'] as const
-  },
-  { 
-    name: 'Força & Resistência Muscular', 
-    shortName: 'Força',
-    metrics: ['sled_push', 'sled_pull', 'farmers'],
-    stationImpact: ['Sled Push', 'Sled Pull', 'Farmers'] as const
-  },
-  { 
-    name: 'Potência & Vigor', 
-    shortName: 'Potência',
-    metrics: ['ski', 'row'],
-    stationImpact: ['SkiErg', 'Remo'] as const
-  },
-  { 
-    name: 'Capacidade Anaeróbica', 
-    shortName: 'Anaeróbica',
-    metrics: ['bbj', 'wallballs'],
-    stationImpact: ['Burpee BJ', 'Wall Balls'] as const
-  },
-  { 
-    name: 'Core & Estabilidade', 
-    shortName: 'Core',
-    metrics: ['sandbag'],
-    stationImpact: ['Sandbag Lunges', 'Wall Balls'] as const
-  },
-  { 
-    name: 'Coordenação sob Fadiga', 
-    shortName: 'Eficiência',
-    metrics: ['run_avg', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'],
-    stationImpact: ['Todas as estações'] as const
-  }
-] as const;
+const PHYSIOLOGICAL_DIMENSIONS = [{
+  name: 'Resistência Cardiovascular',
+  shortName: 'Cardio',
+  metrics: ['run_avg'],
+  stationImpact: ['Corrida', 'SkiErg'] as const
+}, {
+  name: 'Força & Resistência Muscular',
+  shortName: 'Força',
+  metrics: ['sled_push', 'sled_pull', 'farmers'],
+  stationImpact: ['Sled Push', 'Sled Pull', 'Farmers'] as const
+}, {
+  name: 'Potência & Vigor',
+  shortName: 'Potência',
+  metrics: ['ski', 'row'],
+  stationImpact: ['SkiErg', 'Remo'] as const
+}, {
+  name: 'Capacidade Anaeróbica',
+  shortName: 'Anaeróbica',
+  metrics: ['bbj', 'wallballs'],
+  stationImpact: ['Burpee BJ', 'Wall Balls'] as const
+}, {
+  name: 'Core & Estabilidade',
+  shortName: 'Core',
+  metrics: ['sandbag'],
+  stationImpact: ['Sandbag Lunges', 'Wall Balls'] as const
+}, {
+  name: 'Coordenação sob Fadiga',
+  shortName: 'Eficiência',
+  metrics: ['run_avg', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'],
+  stationImpact: ['Todas as estações'] as const
+}] as const;
 
 // ============================================
 // DATA PROCESSING
@@ -102,21 +83,14 @@ const PHYSIOLOGICAL_DIMENSIONS = [
 
 function aggregateToPhysiologicalDimensions(scores: CalculatedScore[]): PhysiologicalDimension[] {
   if (!scores || scores.length === 0) return [];
-
   const scoreMap = new Map<string, number>();
   scores.forEach(s => {
     scoreMap.set(s.metric, s.percentile_value);
   });
-
   const avgMetrics = (metrics: readonly string[]): number => {
-    const values = metrics
-      .map(m => scoreMap.get(m))
-      .filter((v): v is number => v !== undefined && v !== null);
-    return values.length > 0 
-      ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
-      : 50;
+    const values = metrics.map(m => scoreMap.get(m)).filter((v): v is number => v !== undefined && v !== null);
+    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 50;
   };
-
   return PHYSIOLOGICAL_DIMENSIONS.map(dim => ({
     name: dim.name,
     shortName: dim.shortName,
@@ -134,10 +108,7 @@ interface InterpretationResult {
   headline: string;
   insight: string;
 }
-
-function generateInterpretation(
-  physiologicalData: PhysiologicalDimension[]
-): InterpretationResult {
+function generateInterpretation(physiologicalData: PhysiologicalDimension[]): InterpretationResult {
   if (physiologicalData.length === 0) {
     return {
       headline: 'Leitura rápida',
@@ -151,9 +122,7 @@ function generateInterpretation(
   const strongestPhysio = sorted[sorted.length - 1];
 
   // Calculate average
-  const avgPhysiological = Math.round(
-    physiologicalData.reduce((sum, d) => sum + d.value, 0) / physiologicalData.length
-  );
+  const avgPhysiological = Math.round(physiologicalData.reduce((sum, d) => sum + d.value, 0) / physiologicalData.length);
 
   // Get station impact for weakest dimension
   const impactedStations = weakestPhysio.stationImpact.slice(0, 2).join(' e ');
@@ -192,80 +161,93 @@ function generateInterpretation(
 // PHYSIOLOGICAL ESTIMATES
 // ============================================
 
-function estimateVO2Max(scores: CalculatedScore[]): { value: number; isEstimated: boolean } {
+function estimateVO2Max(scores: CalculatedScore[]): {
+  value: number;
+  isEstimated: boolean;
+} {
   const runScore = scores.find(s => s.metric === 'run_avg');
-  if (!runScore) return { value: 0, isEstimated: true };
-  
+  if (!runScore) return {
+    value: 0,
+    isEstimated: true
+  };
   const percentile = runScore.percentile_value;
-  const vo2 = Math.round(35 + (percentile / 100) * 30);
-  
-  return { value: vo2, isEstimated: true };
+  const vo2 = Math.round(35 + percentile / 100 * 30);
+  return {
+    value: vo2,
+    isEstimated: true
+  };
 }
-
-function estimateLactateThreshold(scores: CalculatedScore[]): { pace: string; percentage: number; isEstimated: boolean } {
+function estimateLactateThreshold(scores: CalculatedScore[]): {
+  pace: string;
+  percentage: number;
+  isEstimated: boolean;
+} {
   const runScore = scores.find(s => s.metric === 'run_avg');
-  if (!runScore) return { pace: '--:--', percentage: 0, isEstimated: true };
-  
+  if (!runScore) return {
+    pace: '--:--',
+    percentage: 0,
+    isEstimated: true
+  };
   const rawTimeSec = runScore.raw_time_sec;
   const paceMin = Math.floor(rawTimeSec / 60);
   const paceSec = rawTimeSec % 60;
   const paceFormatted = `${paceMin}:${paceSec.toString().padStart(2, '0')}`;
-  
-  const ltPercentage = Math.round(75 + (runScore.percentile_value / 100) * 15);
-  
-  return { pace: paceFormatted, percentage: ltPercentage, isEstimated: true };
+  const ltPercentage = Math.round(75 + runScore.percentile_value / 100 * 15);
+  return {
+    pace: paceFormatted,
+    percentage: ltPercentage,
+    isEstimated: true
+  };
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function DiagnosticRadarBlock({ 
-  scores, 
-  loading = false, 
-  hasData 
+export function DiagnosticRadarBlock({
+  scores,
+  loading = false,
+  hasData
 }: DiagnosticRadarBlockProps) {
   const [showDetails, setShowDetails] = useState(false);
-  
+
   // Agregar scores em 6 valências fisiológicas
   const radarData = useMemo(() => aggregateToPhysiologicalDimensions(scores), [scores]);
-  
+
   // Parâmetros fisiológicos mensuráveis
   const vo2Max = useMemo(() => estimateVO2Max(scores), [scores]);
   const lactateThreshold = useMemo(() => estimateLactateThreshold(scores), [scores]);
-  
+
   // Texto interpretativo automático (com foco em impacto nas estações)
-  const interpretation = useMemo(
-    () => generateInterpretation(radarData),
-    [radarData]
-  );
+  const interpretation = useMemo(() => generateInterpretation(radarData), [radarData]);
 
   // Estado carregando
   if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
-      >
+    return <motion.div initial={{
+      opacity: 0,
+      y: 20
+    }} animate={{
+      opacity: 1,
+      y: 0
+    }} className="card-elevated p-6 border-l-4 border-l-muted-foreground/30">
         <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
           PERFIL FISIOLÓGICO
         </h3>
         <div className="h-64 flex items-center justify-center">
           <p className="text-muted-foreground/60 text-sm">Carregando diagnóstico...</p>
         </div>
-      </motion.div>
-    );
+      </motion.div>;
   }
 
   // Estado vazio
   if (!hasData || radarData.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
-      >
+    return <motion.div initial={{
+      opacity: 0,
+      y: 20
+    }} animate={{
+      opacity: 1,
+      y: 0
+    }} className="card-elevated p-6 border-l-4 border-l-muted-foreground/30">
         <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">
           PERFIL FISIOLÓGICO
         </h3>
@@ -275,19 +257,16 @@ export function DiagnosticRadarBlock({
             Lance seu primeiro simulado ou prova oficial para ver seu perfil fisiológico completo.
           </p>
         </div>
-      </motion.div>
-    );
+      </motion.div>;
   }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="card-elevated p-6 border-l-4 border-l-primary"
-    >
-      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-2">
-        PERFIL FISIOLÓGICO
-      </h3>
+  return <motion.div initial={{
+    opacity: 0,
+    y: 20
+  }} animate={{
+    opacity: 1,
+    y: 0
+  }} className="card-elevated p-6 border-l-4 border-l-primary">
+      <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-2">PERFIL DO ATLETA</h3>
 
       {/* ============================================
           RADAR ÚNICO CIRCULAR - SOMENTE PERFIL FISIOLÓGICO
@@ -296,34 +275,17 @@ export function DiagnosticRadarBlock({
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="84%" data={radarData}>
             {/* Grid circular com linhas mais visíveis */}
-            <PolarGrid 
-              stroke="hsl(var(--foreground))" 
-              strokeOpacity={0.15}
-              gridType="circle"
-              radialLines={true}
-            />
+            <PolarGrid stroke="hsl(var(--foreground))" strokeOpacity={0.15} gridType="circle" radialLines={true} />
             
             {/* Labels das valências - tipografia legível */}
-            <PolarAngleAxis
-              dataKey="shortName"
-              tick={{ 
-                fill: 'hsl(var(--foreground))',
-                fontSize: 12,
-                fontWeight: 600
-              }}
-              tickLine={false}
-            />
+            <PolarAngleAxis dataKey="shortName" tick={{
+            fill: 'hsl(var(--foreground))',
+            fontSize: 12,
+            fontWeight: 600
+          }} tickLine={false} />
             
             {/* Área preenchida - cor OUTLIER laranja, dominante */}
-            <Radar
-              name="Perfil Fisiológico"
-              dataKey="value"
-              stroke="hsl(var(--primary))"
-              strokeWidth={3}
-              fill="hsl(var(--primary))"
-              fillOpacity={0.65}
-              dot={false}
-            />
+            <Radar name="Perfil Fisiológico" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={3} fill="hsl(var(--primary))" fillOpacity={0.65} dot={false} />
           </RadarChart>
         </ResponsiveContainer>
       </div>
@@ -409,40 +371,33 @@ export function DiagnosticRadarBlock({
 
       {/* Toggle para barras de estação (detalhes extras) */}
       <div className="mt-5 pt-4 border-t border-border/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground hover:text-foreground"
-          onClick={() => setShowDetails(!showDetails)}
-        >
-          {showDetails ? (
-            <>
+        <Button variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-foreground" onClick={() => setShowDetails(!showDetails)}>
+          {showDetails ? <>
               <ChevronUp className="w-4 h-4 mr-2" />
               Ocultar análise por estação
-            </>
-          ) : (
-            <>
+            </> : <>
               <ChevronDown className="w-4 h-4 mr-2" />
               Ver análise detalhada por estação
-            </>
-          )}
+            </>}
         </Button>
       </div>
 
       {/* Barras de estação (opcional, para análise detalhada) */}
       <AnimatePresence>
-        {showDetails && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-4 overflow-hidden"
-          >
+        {showDetails && <motion.div initial={{
+        opacity: 0,
+        height: 0
+      }} animate={{
+        opacity: 1,
+        height: 'auto'
+      }} exit={{
+        opacity: 0,
+        height: 0
+      }} transition={{
+        duration: 0.3
+      }} className="mt-4 overflow-hidden">
             <DiagnosticStationsBars scores={scores} />
-          </motion.div>
-        )}
+          </motion.div>}
       </AnimatePresence>
-    </motion.div>
-  );
+    </motion.div>;
 }
