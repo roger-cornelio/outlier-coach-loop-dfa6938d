@@ -271,7 +271,7 @@ export function DiagnosticRadarBlock({
       {/* ============================================
           RADAR ÚNICO CIRCULAR - SOMENTE PERFIL FISIOLÓGICO
           ============================================ */}
-      <div className="h-80 sm:h-96 md:h-[28rem] relative">
+      <div className="h-[22.5rem] sm:h-[27rem] md:h-[31.5rem] relative">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
             {/* Grid circular com linhas mais visíveis */}
