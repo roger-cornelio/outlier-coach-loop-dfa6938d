@@ -294,7 +294,7 @@ export function DiagnosticRadarBlock({
           ============================================ */}
       <div className="h-80 sm:h-96 md:h-[28rem] relative">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="84%" data={radarData}>
             {/* Grid circular com linhas mais visíveis */}
             <PolarGrid 
               stroke="hsl(var(--foreground))" 
