@@ -290,16 +290,17 @@ export function DiagnosticRadarBlock({
       </h3>
 
       {/* ============================================
-          RADAR ÚNICO - SOMENTE PERFIL FISIOLÓGICO
+          RADAR ÚNICO CIRCULAR - SOMENTE PERFIL FISIOLÓGICO
           ============================================ */}
       <div className="h-80 sm:h-96 md:h-[28rem] relative">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-            {/* Grid sutil sem números */}
+            {/* Grid circular com linhas mais visíveis */}
             <PolarGrid 
-              stroke="hsl(var(--border))" 
-              strokeOpacity={0.25}
-              gridType="polygon"
+              stroke="hsl(var(--foreground))" 
+              strokeOpacity={0.15}
+              gridType="circle"
+              radialLines={true}
             />
             
             {/* Labels das valências - tipografia legível */}
