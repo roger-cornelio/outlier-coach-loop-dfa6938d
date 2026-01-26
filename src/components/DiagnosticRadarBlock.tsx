@@ -1,19 +1,18 @@
 /**
- * DiagnosticRadarBlock - Diagnóstico fisiológico de duas camadas (OUTLIER)
+ * DiagnosticRadarBlock - Diagnóstico fisiológico OUTLIER (Radar Limpo)
  * 
- * CAMADA 1 (Principal) - Perfil Fisiológico:
- * - 6 valências: Cardio, Força, Potência, Anaeróbica, Core, Eficiência
- * - Cor laranja OUTLIER, preenchimento ativo (~65%), linha espessa
- * - Elemento visual dominante
+ * ARQUITETURA VISUAL:
+ * - Radar único com 6 valências fisiológicas (o "motor" do atleta)
+ * - Texto interpretativo como camada explicativa principal
+ * - Barras de estação detalhadas no expandível
  * 
- * CAMADA 2 (Secundária) - Performance na Prova:
- * - 9 métricas: 8 estações HYROX + Corrida
- * - Linha fina, sem preenchimento, cor neutra (~25-30% opacidade)
- * - Função explicativa e secundária
+ * REGRA DE PRODUTO:
+ * - Radar = capacidade fisiológica
+ * - Estação = consequência (nunca no mesmo plano geométrico)
  * 
  * UX RULE: Usuário entende em <3s:
- * - Camada 1 = "O que eu sou fisicamente"
- * - Camada 2 = "Onde isso aparece na prova"
+ * - "O que eu sou fisicamente" (radar)
+ * - "Onde isso impacta" (texto + barras)
  */
 
 import { useMemo, useState } from 'react';
@@ -51,62 +50,50 @@ interface PhysiologicalDimension {
   shortName: string;
   value: number;
   fullMark: 100;
-}
-
-interface StationPerformance {
-  shortName: string;
-  fullName: string;
-  value: number;
+  stationImpact: readonly string[];
 }
 
 // ============================================
-// CONSTANTS - 6 Valências Fisiológicas
+// CONSTANTS - 6 Valências Fisiológicas + Mapeamento de Impacto
 // ============================================
 
 const PHYSIOLOGICAL_DIMENSIONS = [
   { 
     name: 'Resistência Cardiovascular', 
     shortName: 'Cardio',
-    metrics: ['run_avg'] 
+    metrics: ['run_avg'],
+    stationImpact: ['Corrida', 'SkiErg'] as const
   },
   { 
     name: 'Força & Resistência Muscular', 
     shortName: 'Força',
-    metrics: ['sled_push', 'sled_pull', 'farmers'] 
+    metrics: ['sled_push', 'sled_pull', 'farmers'],
+    stationImpact: ['Sled Push', 'Sled Pull', 'Farmers'] as const
   },
   { 
     name: 'Potência & Vigor', 
     shortName: 'Potência',
-    metrics: ['ski', 'row'] 
+    metrics: ['ski', 'row'],
+    stationImpact: ['SkiErg', 'Remo'] as const
   },
   { 
     name: 'Capacidade Anaeróbica', 
     shortName: 'Anaeróbica',
-    metrics: ['bbj', 'wallballs'] 
+    metrics: ['bbj', 'wallballs'],
+    stationImpact: ['Burpee BJ', 'Wall Balls'] as const
   },
   { 
     name: 'Core & Estabilidade', 
     shortName: 'Core',
-    metrics: ['sandbag'] 
+    metrics: ['sandbag'],
+    stationImpact: ['Sandbag Lunges', 'Wall Balls'] as const
   },
   { 
     name: 'Coordenação sob Fadiga', 
     shortName: 'Eficiência',
-    metrics: ['run_avg', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'] 
+    metrics: ['run_avg', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'],
+    stationImpact: ['Todas as estações'] as const
   }
-] as const;
-
-// 9 estações HYROX para Camada 2
-const STATION_METRICS = [
-  { key: 'run_avg', shortName: 'Run', fullName: 'Corrida' },
-  { key: 'ski', shortName: 'Ski', fullName: 'SkiErg' },
-  { key: 'sled_push', shortName: 'Push', fullName: 'Sled Push' },
-  { key: 'sled_pull', shortName: 'Pull', fullName: 'Sled Pull' },
-  { key: 'bbj', shortName: 'BBJ', fullName: 'Burpee BJ' },
-  { key: 'row', shortName: 'Row', fullName: 'Remo' },
-  { key: 'farmers', shortName: 'Farm', fullName: 'Farmers' },
-  { key: 'sandbag', shortName: 'Bag', fullName: 'Sandbag' },
-  { key: 'wallballs', shortName: 'WB', fullName: 'Wall Balls' }
 ] as const;
 
 // ============================================
@@ -134,27 +121,13 @@ function aggregateToPhysiologicalDimensions(scores: CalculatedScore[]): Physiolo
     name: dim.name,
     shortName: dim.shortName,
     value: avgMetrics(dim.metrics),
-    fullMark: 100
-  }));
-}
-
-function extractStationPerformance(scores: CalculatedScore[]): StationPerformance[] {
-  if (!scores || scores.length === 0) return [];
-
-  const scoreMap = new Map<string, number>();
-  scores.forEach(s => {
-    scoreMap.set(s.metric, s.percentile_value);
-  });
-
-  return STATION_METRICS.map(station => ({
-    shortName: station.shortName,
-    fullName: station.fullName,
-    value: scoreMap.get(station.key) ?? 0
+    fullMark: 100 as const,
+    stationImpact: dim.stationImpact
   }));
 }
 
 // ============================================
-// INTERPRETIVE TEXT GENERATION
+// INTERPRETIVE TEXT GENERATION (FOCUS ON STATION IMPACT)
 // ============================================
 
 interface InterpretationResult {
@@ -163,65 +136,54 @@ interface InterpretationResult {
 }
 
 function generateInterpretation(
-  physiologicalData: PhysiologicalDimension[],
-  stationData: StationPerformance[]
+  physiologicalData: PhysiologicalDimension[]
 ): InterpretationResult {
-  if (physiologicalData.length === 0 || stationData.length === 0) {
+  if (physiologicalData.length === 0) {
     return {
       headline: 'Leitura rápida',
       insight: 'Complete uma prova ou simulado para obter sua análise personalizada.'
     };
   }
 
-  // Calculate averages
+  // Find weakest/strongest physiological areas
+  const sorted = [...physiologicalData].sort((a, b) => a.value - b.value);
+  const weakestPhysio = sorted[0];
+  const strongestPhysio = sorted[sorted.length - 1];
+
+  // Calculate average
   const avgPhysiological = Math.round(
     physiologicalData.reduce((sum, d) => sum + d.value, 0) / physiologicalData.length
   );
-  const avgPerformance = Math.round(
-    stationData.reduce((sum, s) => sum + s.value, 0) / stationData.length
-  );
 
-  // Find weakest/strongest physiological areas
-  const weakestPhysio = [...physiologicalData].sort((a, b) => a.value - b.value)[0];
-  const strongestPhysio = [...physiologicalData].sort((a, b) => b.value - a.value)[0];
+  // Get station impact for weakest dimension
+  const impactedStations = weakestPhysio.stationImpact.slice(0, 2).join(' e ');
 
-  // Find stations below expected (lower than avg physiological)
-  const underperformingStations = stationData.filter(s => s.value < avgPhysiological - 10);
-
-  // Gap analysis: performance vs capability
-  const gap = avgPhysiological - avgPerformance;
-
-  // Generate dynamic insight based on data
-  if (gap > 15) {
-    const stationNames = underperformingStations.slice(0, 2).map(s => s.fullName).join(' e ');
+  // Generate dynamic insight based on data - ALWAYS mention station impact
+  if (weakestPhysio.value < 35) {
     return {
       headline: 'Leitura rápida',
-      insight: `Seu desempenho em ${stationNames || 'algumas estações'} está abaixo do esperado para o nível fisiológico atual, indicando um possível limitador de eficiência ou estratégia sob fadiga.`
+      insight: `Seu principal limitador fisiológico atual é ${weakestPhysio.name} (percentil ${weakestPhysio.value}), o que impacta diretamente estações como ${impactedStations}.`
     };
-  } else if (gap < -10) {
+  } else if (weakestPhysio.value < 50) {
     return {
       headline: 'Leitura rápida',
-      insight: `Você está maximizando seu potencial atual. Sua estratégia de prova e eficiência técnica compensam bem suas características fisiológicas.`
+      insight: `${weakestPhysio.name} é sua maior oportunidade de evolução (percentil ${weakestPhysio.value}). Ganhos nessa valência refletirão em ${impactedStations}.`
     };
-  } else if (weakestPhysio.value < 40) {
+  } else if (strongestPhysio.value > 75 && weakestPhysio.value > 55) {
+    const strongImpact = strongestPhysio.stationImpact.slice(0, 2).join(' e ');
     return {
       headline: 'Leitura rápida',
-      insight: `${weakestPhysio.name} é seu maior limitador atual (percentil ${weakestPhysio.value}). Focar nessa valência pode destravar ganhos significativos nas estações relacionadas.`
+      insight: `Perfil equilibrado com ${strongestPhysio.name} como ponto forte (percentil ${strongestPhysio.value}). Isso se traduz em vantagem competitiva em ${strongImpact}.`
     };
-  } else if (strongestPhysio.value > 75 && weakestPhysio.value > 50) {
+  } else if (avgPhysiological < 45) {
     return {
       headline: 'Leitura rápida',
-      insight: `Perfil equilibrado com ${strongestPhysio.name} como ponto forte (percentil ${strongestPhysio.value}). Mantenha consistência e refine estratégia de prova para otimizar resultados.`
-    };
-  } else if (underperformingStations.length >= 3) {
-    return {
-      headline: 'Leitura rápida',
-      insight: `Múltiplas estações apresentam desempenho abaixo do seu potencial. Revise estratégia de pacing e distribuição de esforço ao longo da prova.`
+      insight: `Perfil em desenvolvimento. Foco em ${weakestPhysio.name} trará ganhos rápidos em ${impactedStations} e elevará seu desempenho geral.`
     };
   } else {
     return {
       headline: 'Leitura rápida',
-      insight: `Seu perfil mostra ${strongestPhysio.name} como destaque e oportunidade de evolução em ${weakestPhysio.name}. O equilíbrio entre capacidade e execução está alinhado.`
+      insight: `Seu perfil mostra ${strongestPhysio.name} como destaque e oportunidade de evolução em ${weakestPhysio.name}, que impacta ${impactedStations}.`
     };
   }
 }
@@ -265,20 +227,17 @@ export function DiagnosticRadarBlock({
 }: DiagnosticRadarBlockProps) {
   const [showDetails, setShowDetails] = useState(false);
   
-  // Agregar scores em 6 valências fisiológicas (Camada 1)
+  // Agregar scores em 6 valências fisiológicas
   const radarData = useMemo(() => aggregateToPhysiologicalDimensions(scores), [scores]);
-  
-  // Extrair performance por estação (Camada 2)
-  const stationData = useMemo(() => extractStationPerformance(scores), [scores]);
   
   // Parâmetros fisiológicos mensuráveis
   const vo2Max = useMemo(() => estimateVO2Max(scores), [scores]);
   const lactateThreshold = useMemo(() => estimateLactateThreshold(scores), [scores]);
   
-  // Texto interpretativo automático
+  // Texto interpretativo automático (com foco em impacto nas estações)
   const interpretation = useMemo(
-    () => generateInterpretation(radarData, stationData),
-    [radarData, stationData]
+    () => generateInterpretation(radarData),
+    [radarData]
   );
 
   // Estado carregando
@@ -331,10 +290,9 @@ export function DiagnosticRadarBlock({
       </h3>
 
       {/* ============================================
-          RADAR DE DUAS CAMADAS
+          RADAR ÚNICO - SOMENTE PERFIL FISIOLÓGICO
           ============================================ */}
       <div className="h-80 sm:h-96 md:h-[28rem] relative">
-        {/* CAMADA 1: Perfil Fisiológico (Principal - Laranja) */}
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
             {/* Grid sutil sem números */}
@@ -355,7 +313,7 @@ export function DiagnosticRadarBlock({
               tickLine={false}
             />
             
-            {/* CAMADA 1: Área preenchida - cor OUTLIER laranja, dominante */}
+            {/* Área preenchida - cor OUTLIER laranja, dominante */}
             <Radar
               name="Perfil Fisiológico"
               dataKey="value"
@@ -367,66 +325,16 @@ export function DiagnosticRadarBlock({
             />
           </RadarChart>
         </ResponsiveContainer>
-
-        {/* CAMADA 2: Performance na Prova (Secundária - Linha neutra) */}
-        <div className="absolute inset-0 pointer-events-none">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={stationData}>
-              {/* Sem grid para overlay */}
-              <PolarGrid stroke="transparent" />
-              
-              {/* Labels das estações - sutis */}
-              <PolarAngleAxis
-                dataKey="shortName"
-                tick={{ 
-                  fill: 'hsl(var(--muted-foreground))',
-                  fontSize: 9,
-                  fontWeight: 400
-                }}
-                tickLine={false}
-              />
-              
-              {/* CAMADA 2: Linha fina, sem preenchimento, opacidade baixa */}
-              <Radar
-                name="Performance na Prova"
-                dataKey="value"
-                stroke="hsl(var(--foreground) / 0.3)"
-                strokeWidth={1.5}
-                strokeDasharray="4 2"
-                fill="transparent"
-                fillOpacity={0}
-                dot={false}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Legenda visual */}
-      <div className="flex justify-center gap-6 mt-2 mb-3">
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-4 h-3 rounded-sm bg-primary"
-            style={{ opacity: 0.65 }}
-          />
-          <span className="text-xs text-muted-foreground">Perfil Fisiológico</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-4 h-px bg-foreground/30"
-            style={{ borderTop: '2px dashed hsl(var(--foreground) / 0.3)' }}
-          />
-          <span className="text-xs text-muted-foreground">Estações na Prova</span>
-        </div>
       </div>
 
       {/* Texto explicativo obrigatório */}
-      <p className="text-sm text-muted-foreground text-center">
+      <p className="text-sm text-muted-foreground text-center mt-2">
         Perfil fisiológico baseado na sua última prova registrada.
       </p>
 
       {/* ============================================
           LEITURA INTERPRETATIVA AUTOMÁTICA
+          (Camada explicativa principal para estações)
           ============================================ */}
       <div className="mt-5 pt-4 border-t border-border/50">
         <p className="text-xs text-muted-foreground font-medium tracking-wider uppercase mb-2">
@@ -498,7 +406,7 @@ export function DiagnosticRadarBlock({
         </div>
       </TooltipProvider>
 
-      {/* Toggle para Camada 2 em barras (detalhes extras) */}
+      {/* Toggle para barras de estação (detalhes extras) */}
       <div className="mt-5 pt-4 border-t border-border/50">
         <Button
           variant="ghost"
