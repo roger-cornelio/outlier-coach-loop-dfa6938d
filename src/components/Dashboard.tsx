@@ -33,7 +33,6 @@ import {
   EvolutionFocusBlock 
 } from './DashboardBlocks';
 import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
-import { SeasonRacesSection } from './SeasonRacesSection';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
@@ -379,11 +378,6 @@ export function Dashboard() {
             </p>
           )}
         </section>
-
-        {/* ============================================
-            BLOCO 5 — PROVAS DA TEMPORADA
-            ============================================ */}
-        <SeasonRacesSection />
 
         {/* Equipment Adapt Button moved to sidebar */}
       </main>
