@@ -19,7 +19,8 @@ import {
   LogOut,
   Loader2,
   Apple,
-  Stethoscope
+  Stethoscope,
+  Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -54,6 +55,11 @@ const navItems: NavItem[] = [
     title: 'Treino Semanal', 
     view: 'weeklyTraining', 
     icon: Calendar
+  },
+  {
+    title: 'Prova Alvo',
+    route: '/prova-alvo',
+    icon: Target
   },
   { 
     title: 'Nutrição', 

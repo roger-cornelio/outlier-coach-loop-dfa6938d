@@ -19,6 +19,7 @@ import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import Nutricao from "./pages/Nutricao";
 import MedicinaDoEsporte from "./pages/MedicinaDoEsporte";
+import ProvaAlvo from "./pages/ProvaAlvo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,7 @@ const App = () => (
               <Route path="/painel-admin" element={<AdminPortal />} />
               <Route path="/nutricao" element={<Nutricao />} />
               <Route path="/medicina-do-esporte" element={<MedicinaDoEsporte />} />
+              <Route path="/prova-alvo" element={<ProvaAlvo />} />
 
               {/* === REDIRECTS === */}
               <Route path="/" element={<Navigate to="/login" replace />} />
