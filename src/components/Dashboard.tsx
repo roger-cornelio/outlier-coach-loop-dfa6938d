@@ -305,18 +305,11 @@ export function Dashboard() {
       {/* Content - Dashboard OUTLIER */}
       <main className="max-w-6xl mx-auto px-6 py-6">
         
-        {/* ============================================
-            BLOCO 0 — IDENTIDADE HERO DO ATLETA
-            ============================================ */}
-        <section className="mb-8">
-          <AthleteHeroIdentity
-            name={profile?.name || user?.email?.split('@')[0] || 'Atleta'}
-            status={status}
-          />
-        </section>
+        {/* Header removido - agora está dentro do DiagnosticRadarBlock */}
         
         {/* ============================================
-            BLOCO 1 — DIAGNÓSTICO (Radar Chart)
+            BLOCO 1 — PERFIL DE PERFORMANCE COMPLETO
+            (Diagnóstico + Limitador + Impacto + Projeção + CTA)
             ============================================ */}
         <section className="mb-6">
           <DiagnosticRadarBlock
@@ -326,58 +319,7 @@ export function Dashboard() {
           />
         </section>
 
-        {/* ============================================
-            BLOCO 2 — SUA EVOLUÇÃO (Gráfico de Linha)
-            ============================================ */}
-        <section className="mb-6">
-          <EvolutionChartBlock
-            data={weeklyEvolution.data}
-            diagnosticText={weeklyEvolution.diagnosticText}
-            trend={weeklyEvolution.trend}
-            loading={weeklyEvolution.loading}
-            hasData={weeklyEvolution.hasData}
-            onViewEvolution={() => setCurrentView('benchmarks')}
-          />
-        </section>
-
-        {/* ============================================
-            BLOCO 3 — FOCOS DE EVOLUÇÃO
-            ============================================ */}
-        <section className="mb-6">
-          <EvolutionFocusBlock
-            focusPoints={evolutionFocus.focusPoints}
-            hasData={evolutionFocus.hasData}
-            loading={evolutionFocus.loading}
-            onViewEvolution={() => setCurrentView('benchmarks')}
-          />
-        </section>
-
-        {/* ============================================
-            BLOCO 4 — CTA ÚNICO: BORA TREINAR
-            ============================================ */}
-        <section className="mb-6">
-          <motion.button
-            onClick={handleStartWorkout}
-            disabled={!hasAnyWorkouts}
-            className="w-full font-display text-2xl tracking-wider px-8 py-6 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-lg"
-            whileHover={{ scale: hasAnyWorkouts ? 1.02 : 1 }}
-            whileTap={{ scale: hasAnyWorkouts ? 0.98 : 1 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Flame className="w-7 h-7" />
-            BORA TREINAR
-            <ChevronRight className="w-7 h-7" />
-          </motion.button>
-          
-          {/* Copy dinâmica sobre o foco do treino do dia */}
-          {workoutFocusCopy && (
-            <p className="text-center text-muted-foreground text-sm mt-4">
-              {workoutFocusCopy}
-            </p>
-          )}
-        </section>
+        {/* Blocos de Evolução movidos para outra view */}
 
         {/* Equipment Adapt Button moved to sidebar */}
       </main>
