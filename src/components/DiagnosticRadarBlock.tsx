@@ -31,7 +31,8 @@ const MOCK_ATHLETE = {
 const MOCK_DIAGNOSTIC = {
   status: {
     label: 'INTERMEDIÁRIO',
-    summary: 'Seu desempenho atual apresenta um limitador fisiológico claro que impacta sua consistência em prova.',
+    // Valorization text - no mention of failures or limitations
+    summary: 'Você compete em um nível consistente dentro da sua categoria.',
   },
   mainLimiter: {
     name: 'Core & Estabilidade',
@@ -249,13 +250,74 @@ export function DiagnosticRadarBlock({
       </motion.div>
 
       {/* ============================================
-          BLOCO 4: IMPACTO DIRETO NA PROVA
-          Top 2 estações visíveis, resto colapsável
+          BLOCO 4: PROJEÇÃO COMPETITIVA (SOLUÇÃO IMEDIATA)
+          Movido para logo após o diagnóstico
+          Transforma diagnóstico em direção/motivação
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
+        className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden"
+      >
+        <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
+          <div className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  <p className="text-xs font-semibold text-foreground">
+                    Projeção
+                  </p>
+                </div>
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  {MOCK_DIAGNOSTIC.projection.keyPhrase}
+                </p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
+                  {isProjectionExpanded ? (
+                    <>
+                      Menos
+                      <ChevronUp className="w-3 h-3" />
+                    </>
+                  ) : (
+                    <>
+                      Entender
+                      <ChevronDown className="w-3 h-3" />
+                    </>
+                  )}
+                </button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+          
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
+            >
+              <p className="text-sm text-foreground/90 leading-relaxed">
+                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {MOCK_ATHLETE.category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento.
+              </p>
+              <p className="text-muted-foreground text-xs italic mt-2">
+                A projeção considera correção consistente deste fator específico.
+              </p>
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
+      </motion.div>
+
+      {/* ============================================
+          BLOCO 5: IMPACTO DIRETO NA PROVA
+          Contexto prático após a projeção
+          Reforça "o que muda se eu corrigir"
+          ============================================ */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="card-elevated border-l-4 border-l-amber-500 overflow-hidden"
       >
         <Collapsible open={isImpactExpanded} onOpenChange={setIsImpactExpanded}>
@@ -338,65 +400,6 @@ export function DiagnosticRadarBlock({
               {/* Explanation text - only when expanded */}
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {MOCK_DIAGNOSTIC.impactExplanation}
-              </p>
-            </motion.div>
-          </CollapsibleContent>
-        </Collapsible>
-      </motion.div>
-
-      {/* ============================================
-          BLOCO 5: PROJEÇÃO COMPETITIVA
-          1 frase visível, resto colapsável
-          ============================================ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden"
-      >
-        <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
-          <div className="px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                  <p className="text-xs font-semibold text-foreground">
-                    Projeção
-                  </p>
-                </div>
-                <p className="text-xs text-foreground/80 leading-relaxed">
-                  {MOCK_DIAGNOSTIC.projection.keyPhrase}
-                </p>
-              </div>
-              <CollapsibleTrigger asChild>
-                <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
-                  {isProjectionExpanded ? (
-                    <>
-                      Menos
-                      <ChevronUp className="w-3 h-3" />
-                    </>
-                  ) : (
-                    <>
-                      Entender
-                      <ChevronDown className="w-3 h-3" />
-                    </>
-                  )}
-                </button>
-              </CollapsibleTrigger>
-            </div>
-          </div>
-          
-          <CollapsibleContent>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
-            >
-              <p className="text-sm text-foreground/90 leading-relaxed">
-                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {MOCK_ATHLETE.category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento.
-              </p>
-              <p className="text-muted-foreground text-xs italic mt-2">
-                A projeção considera correção consistente deste fator específico.
               </p>
             </motion.div>
           </CollapsibleContent>
