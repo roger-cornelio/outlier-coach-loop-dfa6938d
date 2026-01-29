@@ -531,61 +531,73 @@ export function DiagnosticRadarBlock({
 
       {/* ============================================
           BLOCO 7: INDICADORES FISIOLÓGICOS DE SUPORTE
-          Sempre visível, visual SECUNDÁRIO (menor contraste)
+          Cards individuais com hierarquia visual clara
+          Visual secundário (suporte técnico)
           ============================================ */}
       <TooltipProvider>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-muted/5 border border-border/20 rounded-lg px-3 py-2"
+          className="space-y-3"
         >
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-2">
-            Indicadores de suporte
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {/* VO₂ Max */}
-            <div className="flex items-center gap-2 p-2 rounded bg-background/30">
-              <div className="flex items-center gap-1">
-                <span className="text-[9px] text-muted-foreground/70 uppercase">
-                  VO₂
+          {/* Cards Container - Centralized */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* VO₂ Max Card */}
+            <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                  VO₂ máx (estimado)
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-2.5 h-2.5 text-muted-foreground/40 cursor-help" />
+                    <Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[200px]">
                     <p className="text-xs">Capacidade máxima de consumo de oxigênio.</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <span className="font-display text-sm font-medium text-foreground/70">
-                {MOCK_DIAGNOSTIC.vo2max}
-                <span className="text-[9px] text-muted-foreground/50 ml-0.5">ml/kg</span>
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-display text-xl font-semibold text-foreground/85">
+                  {MOCK_DIAGNOSTIC.vo2max}
+                </span>
+                <span className="text-xs text-muted-foreground/60 font-medium">
+                  ml/kg/min
+                </span>
+              </div>
             </div>
 
-            {/* Limiar de Lactato */}
-            <div className="flex items-center gap-2 p-2 rounded bg-background/30">
-              <div className="flex items-center gap-1">
-                <span className="text-[9px] text-muted-foreground/70 uppercase">
-                  Lactato
+            {/* Limiar de Lactato Card */}
+            <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                  Limiar de lactato
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-2.5 h-2.5 text-muted-foreground/40 cursor-help" />
+                    <Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[200px]">
                     <p className="text-xs">Ritmo máximo sustentável sem acúmulo de lactato.</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <span className="font-display text-sm font-medium text-foreground/70">
-                {MOCK_DIAGNOSTIC.lactateThreshold}
-                <span className="text-[9px] text-muted-foreground/50 ml-0.5">/km</span>
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-display text-xl font-semibold text-foreground/85">
+                  {MOCK_DIAGNOSTIC.lactateThreshold}
+                </span>
+                <span className="text-xs text-muted-foreground/60 font-medium">
+                  /km
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Explanatory Note - Below cards, lower visual weight */}
+          <p className="text-[11px] text-muted-foreground/50 text-center leading-relaxed px-2">
+            Esses indicadores sustentam seu desempenho aeróbico, mas não são o principal fator limitante no cenário atual.
+          </p>
         </motion.div>
       </TooltipProvider>
 
