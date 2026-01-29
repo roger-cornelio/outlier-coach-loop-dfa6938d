@@ -6,10 +6,10 @@
  * - Profundidade sob demanda (collapsibles)
  * - Visual premium, não relatório
  * 
- * ⚠️ Layout-only: usa dados mockados, sem lógica real
+ * Conectado a dados reais via props (scores) e hooks (useAuth, useAthleteStatus)
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight } from 'lucide-react';
@@ -18,54 +18,53 @@ import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { useAuth } from '@/hooks/useAuth';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useOutlierStore } from '@/store/outlierStore';
 
 // ============================================
-// MOCK DATA — Layout only, sem lógica real
+// MAPAS DE MÉTRICAS → LABELS E ANÁLISE
 // ============================================
 
-const MOCK_ATHLETE = {
-  name: 'LUCAS MOREIRA',
-  category: 'HYROX PRO MEN',
+const METRIC_LABELS: Record<string, string> = {
+  run_avg: 'Corrida',
+  roxzone: 'Roxzone',
+  ski: 'Ski Erg',
+  sled_push: 'Sled Push',
+  sled_pull: 'Sled Pull',
+  bbj: 'Burpee Broad Jump',
+  row: 'Remo',
+  farmers: 'Farmer\'s Carry',
+  sandbag: 'Sandbag Lunges',
+  wallballs: 'Wall Balls',
 };
 
-const MOCK_DIAGNOSTIC = {
-  status: {
-    label: 'INTERMEDIÁRIO',
-    // Valorization text - no mention of failures or limitations
-    summary: 'Você compete em um nível consistente dentro da sua categoria.',
-  },
-  mainLimiter: {
-    name: 'Core & Estabilidade',
-    relativePerformance: 68,
-    shortImpact: 'Limitador direto nas Roxzones sob fadiga.',
-    fullAnalysis: [
-      'Este fator foi um limitador direto da sua performance nas Roxzones, onde a exigência de sustentação de força sob fadiga é determinante.',
-      'Nessa variável específica, você performou abaixo de {relativePerformance}% dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.',
-      'Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.',
-    ],
-  },
-  affectedStations: [
-    { name: 'Sled Push', impactLevel: 'Alto' },
-    { name: 'Sandbag Lunges', impactLevel: 'Alto' },
-    { name: 'Wall Balls', impactLevel: 'Moderado' },
-  ],
-  impactExplanation: 'Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.',
-  projection: {
-    keyPhrase: 'Correção deste limitador desloca sua performance para a zona competitiva superior.',
-    fullText: 'Ao corrigir este limitador, sua performance tende a se deslocar para a zona competitiva superior da categoria {category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento. A projeção considera correção consistente deste fator específico.',
-  },
-  vo2max: 48,
-  lactateThreshold: '5:14',
-  trainingFocus: 'O foco do próximo ciclo será estabilidade central sob fadiga, visando maior consistência nas estações finais da prova.',
+const STATUS_LABELS: Record<string, string> = {
+  iniciante: 'INICIANTE',
+  intermediario: 'INTERMEDIÁRIO',
+  avancado: 'AVANÇADO',
+  hyrox_open: 'HYROX OPEN',
+  hyrox_pro: 'HYROX PRO',
+  elite: 'ELITE',
 };
 
-const MOCK_RADAR_DATA = [
-  { name: 'Resistência Cardiovascular', shortName: 'Cardio', value: 72, fullMark: 100 },
-  { name: 'Força & Resistência Muscular', shortName: 'Força', value: 65, fullMark: 100 },
-  { name: 'Potência & Vigor', shortName: 'Potência', value: 58, fullMark: 100 },
-  { name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica', value: 61, fullMark: 100 },
-  { name: 'Core & Estabilidade', shortName: 'Core', value: 32, fullMark: 100 },
-  { name: 'Coordenação sob Fadiga', shortName: 'Eficiência', value: 55, fullMark: 100 },
+const STATUS_SUMMARY: Record<string, string> = {
+  iniciante: 'Você está construindo as bases para competir. Continue evoluindo.',
+  intermediario: 'Você compete em um nível consistente dentro da sua categoria.',
+  avancado: 'Seu nível de performance te coloca entre os atletas mais preparados.',
+  hyrox_open: 'Você compete no nível OPEN com resultados validados em prova.',
+  hyrox_pro: 'Você compete no nível PRO com resultados validados em prova.',
+  elite: 'Você está entre os atletas de elite da modalidade.',
+};
+
+// Radar axes mapping from scores
+const RADAR_AXES = [
+  { key: 'run_avg', name: 'Resistência Cardiovascular', shortName: 'Cardio' },
+  { key: 'sled_push', name: 'Força & Resistência Muscular', shortName: 'Força' },
+  { key: 'ski', name: 'Potência & Vigor', shortName: 'Potência' },
+  { key: 'row', name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
+  { key: 'roxzone', name: 'Core & Estabilidade', shortName: 'Core' },
+  { key: 'wallballs', name: 'Coordenação sob Fadiga', shortName: 'Eficiência' },
 ];
 
 // ============================================
@@ -87,9 +86,14 @@ export function DiagnosticRadarBlock({
   loading = false,
   hasData: hasDataProp
 }: DiagnosticRadarBlockProps) {
-  // TEMP: Force hasData to true to preview full layout with mock data
-  // TODO: Remove this when connecting to real data
-  const hasData = true; // hasDataProp;
+  // Real data from hooks
+  const { profile } = useAuth();
+  const { status, outlierScore } = useAthleteStatus();
+  const { athleteConfig } = useOutlierStore();
+  
+  // Use real hasData prop
+  const hasData = hasDataProp && scores.length > 0;
+  
   // Collapsible states
   const [isLimiterExpanded, setIsLimiterExpanded] = useState(false);
   const [isImpactExpanded, setIsImpactExpanded] = useState(false);
@@ -97,9 +101,93 @@ export function DiagnosticRadarBlock({
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [showStationDetails, setShowStationDetails] = useState(false);
 
-  // Top 2 stations for compact view
-  const topStations = MOCK_DIAGNOSTIC.affectedStations.slice(0, 2);
-  const hasMoreStations = MOCK_DIAGNOSTIC.affectedStations.length > 2;
+  // ============================================
+  // DERIVED DATA FROM REAL SCORES
+  // ============================================
+  
+  // Athlete identity from real data
+  const athleteName = profile?.name?.toUpperCase() || 'ATLETA';
+  const athleteCategory = useMemo(() => {
+    const gender = athleteConfig?.sexo === 'feminino' ? 'WOMEN' : 'MEN';
+    const level = status === 'hyrox_pro' ? 'PRO' : 'OPEN';
+    return `HYROX ${level} ${gender}`;
+  }, [athleteConfig?.sexo, status]);
+  
+  // Status info from real data
+  const statusLabel = STATUS_LABELS[status] || 'INTERMEDIÁRIO';
+  const statusSummary = STATUS_SUMMARY[status] || STATUS_SUMMARY.intermediario;
+  
+  // Find the main limiter (lowest percentile station)
+  const mainLimiter = useMemo(() => {
+    if (!scores.length) return null;
+    
+    const sorted = [...scores].sort((a, b) => a.percentile_value - b.percentile_value);
+    const weakest = sorted[0];
+    
+    return {
+      metric: weakest.metric,
+      name: METRIC_LABELS[weakest.metric] || weakest.metric,
+      percentile: weakest.percentile_value,
+      relativePerformance: 100 - weakest.percentile_value, // % of athletes you're below
+    };
+  }, [scores]);
+  
+  // Affected stations (stations with percentile < 50)
+  const affectedStations = useMemo(() => {
+    return scores
+      .filter(s => s.percentile_value < 50)
+      .sort((a, b) => a.percentile_value - b.percentile_value)
+      .slice(0, 5)
+      .map(s => ({
+        name: METRIC_LABELS[s.metric] || s.metric,
+        percentile: s.percentile_value,
+        impactLevel: s.percentile_value < 25 ? 'Alto' : 'Moderado',
+      }));
+  }, [scores]);
+  
+  const topStations = affectedStations.slice(0, 2);
+  const hasMoreStations = affectedStations.length > 2;
+  
+  // Radar data from real scores
+  const radarData = useMemo(() => {
+    return RADAR_AXES.map(axis => {
+      const score = scores.find(s => s.metric === axis.key);
+      return {
+        name: axis.name,
+        shortName: axis.shortName,
+        value: score?.percentile_value || 50,
+        fullMark: 100,
+      };
+    });
+  }, [scores]);
+  
+  // VO2max and lactate estimation from run performance
+  const vo2maxEstimate = useMemo(() => {
+    const runScore = scores.find(s => s.metric === 'run_avg');
+    if (!runScore) return null;
+    // Rough estimate: percentile 50 = 45 ml/kg/min, +/- 0.3 per percentile point
+    const base = 45;
+    const delta = (runScore.percentile_value - 50) * 0.3;
+    return Math.round(base + delta);
+  }, [scores]);
+  
+  const lactateThresholdEstimate = useMemo(() => {
+    const runScore = scores.find(s => s.metric === 'run_avg');
+    if (!runScore) return null;
+    // Rough estimate: percentile 50 = 5:30/km, improving with higher percentile
+    const baseSeconds = 330; // 5:30
+    const delta = (runScore.percentile_value - 50) * 2; // ~2 sec per percentile
+    const totalSeconds = Math.max(baseSeconds - delta, 180); // min 3:00
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.round(totalSeconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, [scores]);
+  
+  // Training focus based on limiter
+  const trainingFocus = useMemo(() => {
+    if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
+    return `O foco do próximo ciclo será ${mainLimiter.name.toLowerCase()}, visando maior consistência nas estações onde hoje ocorre a maior perda de rendimento.`;
+  }, [mainLimiter]);
 
   // Estado carregando
   if (loading) {
@@ -153,12 +241,12 @@ export function DiagnosticRadarBlock({
         className="text-center py-3"
       >
         <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-wide text-foreground uppercase mb-1">
-          {MOCK_ATHLETE.name}
+          {athleteName}
         </h1>
         <div className="flex items-center justify-center gap-2">
           <Crown className="w-4 h-4 text-amber-400" />
           <span className="text-xs font-semibold text-amber-400 tracking-wider">
-            {MOCK_ATHLETE.category}
+            {athleteCategory}
           </span>
         </div>
       </motion.div>
@@ -179,12 +267,12 @@ export function DiagnosticRadarBlock({
               Status competitivo
             </p>
             <h2 className="font-display text-lg sm:text-xl font-bold text-primary">
-              {MOCK_DIAGNOSTIC.status.label}
+              {statusLabel}
             </h2>
           </div>
         </div>
         <p className="text-xs text-foreground/70 mt-1 line-clamp-1">
-          {MOCK_DIAGNOSTIC.status.summary}
+          {statusSummary}
         </p>
       </motion.div>
 
@@ -203,10 +291,10 @@ export function DiagnosticRadarBlock({
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
-                  {MOCK_DIAGNOSTIC.mainLimiter.name}
+                  {mainLimiter?.name || 'Análise não disponível'}
                 </h3>
                 <p className="text-xs text-foreground/70 mt-0.5 line-clamp-1">
-                  {MOCK_DIAGNOSTIC.mainLimiter.shortImpact}
+                  {mainLimiter ? `Limitador direto identificado com base nos seus resultados.` : 'Registre uma prova para ver seu limitador.'}
                 </p>
               </div>
               <CollapsibleTrigger asChild>
@@ -235,13 +323,13 @@ export function DiagnosticRadarBlock({
             >
               <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
                 <p>
-                  {MOCK_DIAGNOSTIC.mainLimiter.fullAnalysis[0]}
+                  {mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.
                 </p>
                 <p>
-                  Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{MOCK_DIAGNOSTIC.mainLimiter.relativePerformance}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
+                  Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
                 </p>
                 <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">
-                  {MOCK_DIAGNOSTIC.mainLimiter.fullAnalysis[2]}
+                  Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.
                 </p>
               </div>
             </motion.div>
@@ -271,7 +359,7 @@ export function DiagnosticRadarBlock({
                   </p>
                 </div>
                 <p className="text-xs text-foreground/80 leading-relaxed">
-                  {MOCK_DIAGNOSTIC.projection.keyPhrase}
+                  Correção deste limitador desloca sua performance para a zona competitiva superior.
                 </p>
               </div>
               <CollapsibleTrigger asChild>
@@ -299,7 +387,7 @@ export function DiagnosticRadarBlock({
               className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
             >
               <p className="text-sm text-foreground/90 leading-relaxed">
-                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {MOCK_ATHLETE.category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento.
+                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}, especialmente nas estações onde hoje ocorre a maior perda de rendimento.
               </p>
               <p className="text-muted-foreground text-xs italic mt-2">
                 A projeção considera correção consistente deste fator específico.
@@ -378,7 +466,7 @@ export function DiagnosticRadarBlock({
             >
               {/* Remaining stations */}
               <div className="flex flex-wrap gap-2 mb-3">
-                {MOCK_DIAGNOSTIC.affectedStations.slice(2).map((station, index) => (
+                {affectedStations.slice(2).map((station, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
@@ -399,7 +487,7 @@ export function DiagnosticRadarBlock({
               
               {/* Explanation text - only when expanded */}
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {MOCK_DIAGNOSTIC.impactExplanation}
+                Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.
               </p>
             </motion.div>
           </CollapsibleContent>
@@ -463,7 +551,7 @@ export function DiagnosticRadarBlock({
               {/* Radar Chart */}
               <div className="h-48 sm:h-56 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={MOCK_RADAR_DATA}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                     <PolarGrid 
                       stroke="hsl(var(--foreground))" 
                       strokeOpacity={0.12} 
@@ -563,7 +651,7 @@ export function DiagnosticRadarBlock({
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-display text-xl font-semibold text-foreground/85">
-                  {MOCK_DIAGNOSTIC.vo2max}
+                  {vo2maxEstimate || '—'}
                 </span>
                 <span className="text-xs text-muted-foreground/60 font-medium">
                   ml/kg/min
@@ -588,7 +676,7 @@ export function DiagnosticRadarBlock({
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-display text-xl font-semibold text-foreground/85">
-                  {MOCK_DIAGNOSTIC.lactateThreshold}
+                  {lactateThresholdEstimate || '—'}
                 </span>
                 <span className="text-xs text-muted-foreground/60 font-medium">
                   /km
@@ -618,7 +706,7 @@ export function DiagnosticRadarBlock({
           Direcionamento
         </p>
         <p className="text-xs text-foreground/90 leading-relaxed">
-          {MOCK_DIAGNOSTIC.trainingFocus}
+          {trainingFocus}
         </p>
       </motion.div>
 
