@@ -1,15 +1,10 @@
 /**
  * DiagnosticRadarBlock - Perfil de Performance do Atleta OUTLIER
  * 
- * HIERARQUIA VISUAL (Layout Final):
- * 1. Header Identidade (nome + categoria + coroa)
- * 2. Status Competitivo Atual (macro - 3s)
- * 3. Principal Limitador (BLOCO PRINCIPAL)
- * 4. Impacto Direto na Prova (estações afetadas)
- * 5. Projeção Competitiva (condicional)
- * 6. Perfil Fisiológico (radar colapsável)
- * 7. Indicadores de Suporte (VO₂/Lactato)
- * 8. Direcionamento do Treino
+ * HIERARQUIA VISUAL (Dashboard Executivo):
+ * - Scan rápido em 5 segundos
+ * - Profundidade sob demanda (collapsibles)
+ * - Visual premium, não relatório
  * 
  * ⚠️ Layout-only: usa dados mockados, sem lógica real
  */
@@ -41,6 +36,12 @@ const MOCK_DIAGNOSTIC = {
   mainLimiter: {
     name: 'Core & Estabilidade',
     relativePerformance: 68,
+    shortImpact: 'Limitador direto nas Roxzones sob fadiga.',
+    fullAnalysis: [
+      'Este fator foi um limitador direto da sua performance nas Roxzones, onde a exigência de sustentação de força sob fadiga é determinante.',
+      'Nessa variável específica, você performou abaixo de {relativePerformance}% dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.',
+      'Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.',
+    ],
   },
   affectedStations: [
     { name: 'Sled Push', impactLevel: 'Alto' },
@@ -48,6 +49,10 @@ const MOCK_DIAGNOSTIC = {
     { name: 'Wall Balls', impactLevel: 'Moderado' },
   ],
   impactExplanation: 'Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.',
+  projection: {
+    keyPhrase: 'Correção deste limitador desloca sua performance para a zona competitiva superior.',
+    fullText: 'Ao corrigir este limitador, sua performance tende a se deslocar para a zona competitiva superior da categoria {category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento. A projeção considera correção consistente deste fator específico.',
+  },
   vo2max: 48,
   lactateThreshold: '5:14',
   trainingFocus: 'O foco do próximo ciclo será estabilidade central sob fadiga, visando maior consistência nas estações finais da prova.',
@@ -81,8 +86,16 @@ export function DiagnosticRadarBlock({
   loading = false,
   hasData
 }: DiagnosticRadarBlockProps) {
+  // Collapsible states
+  const [isLimiterExpanded, setIsLimiterExpanded] = useState(false);
+  const [isImpactExpanded, setIsImpactExpanded] = useState(false);
+  const [isProjectionExpanded, setIsProjectionExpanded] = useState(false);
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [showStationDetails, setShowStationDetails] = useState(false);
+
+  // Top 2 stations for compact view
+  const topStations = MOCK_DIAGNOSTIC.affectedStations.slice(0, 2);
+  const hasMoreStations = MOCK_DIAGNOSTIC.affectedStations.length > 2;
 
   // Estado carregando
   if (loading) {
@@ -124,208 +137,330 @@ export function DiagnosticRadarBlock({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       
       {/* ============================================
           BLOCO 1: HEADER — IDENTIDADE
-          Nome + Categoria + Coroa
+          Sempre visível, compacto
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center py-4"
+        className="text-center py-3"
       >
-        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-wide text-foreground uppercase mb-2">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-wide text-foreground uppercase mb-1">
           {MOCK_ATHLETE.name}
         </h1>
         <div className="flex items-center justify-center gap-2">
-          <Crown className="w-5 h-5 text-amber-400" />
-          <span className="text-sm font-semibold text-amber-400 tracking-wider">
+          <Crown className="w-4 h-4 text-amber-400" />
+          <span className="text-xs font-semibold text-amber-400 tracking-wider">
             {MOCK_ATHLETE.category}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">
-          Nível competitivo global
-        </p>
       </motion.div>
 
       {/* ============================================
           BLOCO 2: STATUS COMPETITIVO ATUAL
-          Macro - leitura em 3 segundos
-          Alto contraste - define o tom da tela
+          Sempre visível, NÃO expansível
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-l-4 border-l-primary rounded-lg p-6"
+        className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border-l-4 border-l-primary rounded-lg px-4 py-3"
       >
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-          Status competitivo atual
-        </p>
-        <h2 className="font-display text-2xl sm:text-3xl font-bold text-primary mb-2">
-          {MOCK_DIAGNOSTIC.status.label}
-        </h2>
-        <p className="text-sm text-foreground/80 leading-relaxed">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+              Status competitivo
+            </p>
+            <h2 className="font-display text-lg sm:text-xl font-bold text-primary">
+              {MOCK_DIAGNOSTIC.status.label}
+            </h2>
+          </div>
+        </div>
+        <p className="text-xs text-foreground/70 mt-1 line-clamp-1">
           {MOCK_DIAGNOSTIC.status.summary}
         </p>
       </motion.div>
 
       {/* ============================================
           BLOCO 3: PRINCIPAL LIMITADOR ATUAL
-          🚨 BLOCO PRINCIPAL DA TELA
-          Visual dominante - maior destaque
+          Compacto por padrão, expandível
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="card-elevated p-6 border-l-4 border-l-destructive bg-destructive/5"
+        className="card-elevated border-l-4 border-l-destructive bg-destructive/5 overflow-hidden"
       >
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground mb-4">
-          {MOCK_DIAGNOSTIC.mainLimiter.name}
-        </h3>
-        
-        <div className="space-y-4 text-sm text-foreground/90 leading-relaxed">
-          <p>
-            Este fator foi um limitador direto da sua performance nas Roxzones, onde a exigência de sustentação de força sob fadiga é determinante.
-          </p>
-          <p>
-            Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{MOCK_DIAGNOSTIC.mainLimiter.relativePerformance}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
-          </p>
-          <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">
-            Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.
-          </p>
-        </div>
+        <Collapsible open={isLimiterExpanded} onOpenChange={setIsLimiterExpanded}>
+          <div className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
+                  {MOCK_DIAGNOSTIC.mainLimiter.name}
+                </h3>
+                <p className="text-xs text-foreground/70 mt-0.5 line-clamp-1">
+                  {MOCK_DIAGNOSTIC.mainLimiter.shortImpact}
+                </p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <button className="text-xs text-destructive hover:text-destructive/80 font-medium flex items-center gap-1 shrink-0 transition-colors">
+                  {isLimiterExpanded ? (
+                    <>
+                      Ocultar
+                      <ChevronUp className="w-3 h-3" />
+                    </>
+                  ) : (
+                    <>
+                      Ver análise
+                      <ChevronDown className="w-3 h-3" />
+                    </>
+                  )}
+                </button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+          
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-4 pb-4 pt-1 border-t border-destructive/10"
+            >
+              <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
+                <p>
+                  {MOCK_DIAGNOSTIC.mainLimiter.fullAnalysis[0]}
+                </p>
+                <p>
+                  Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{MOCK_DIAGNOSTIC.mainLimiter.relativePerformance}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
+                </p>
+                <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">
+                  {MOCK_DIAGNOSTIC.mainLimiter.fullAnalysis[2]}
+                </p>
+              </div>
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
       </motion.div>
 
       {/* ============================================
           BLOCO 4: IMPACTO DIRETO NA PROVA
-          Lista escaneável de estações afetadas
+          Top 2 estações visíveis, resto colapsável
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="card-elevated p-5 border-l-4 border-l-amber-500"
+        className="card-elevated border-l-4 border-l-amber-500 overflow-hidden"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <Target className="w-4 h-4 text-amber-500" />
-          <p className="text-sm font-semibold text-foreground">
-            Onde isso mais te custa performance
-          </p>
-        </div>
-        
-        {/* Lista de estações */}
-        <div className="space-y-2 mb-4">
-          {MOCK_DIAGNOSTIC.affectedStations.map((station, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between py-2 px-3 rounded-lg bg-background/50 border border-border/20"
-            >
-              <span className="text-sm font-medium text-foreground">
-                {station.name}
-              </span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                station.impactLevel === 'Alto' 
-                  ? 'bg-destructive/15 text-destructive' 
-                  : 'bg-amber-500/15 text-amber-500'
-              }`}>
-                {station.impactLevel}
-              </span>
+        <Collapsible open={isImpactExpanded} onOpenChange={setIsImpactExpanded}>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Target className="w-3.5 h-3.5 text-amber-500" />
+                <p className="text-xs font-semibold text-foreground">
+                  Impacto na prova
+                </p>
+              </div>
+              {hasMoreStations && (
+                <CollapsibleTrigger asChild>
+                  <button className="text-xs text-amber-500 hover:text-amber-400 font-medium flex items-center gap-1 transition-colors">
+                    {isImpactExpanded ? (
+                      <>
+                        Menos
+                        <ChevronUp className="w-3 h-3" />
+                      </>
+                    ) : (
+                      <>
+                        Ver todas
+                        <ChevronDown className="w-3 h-3" />
+                      </>
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+              )}
             </div>
-          ))}
-        </div>
-        
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {MOCK_DIAGNOSTIC.impactExplanation}
-        </p>
+            
+            {/* Top 2 stations always visible */}
+            <div className="flex flex-wrap gap-2">
+              {topStations.map((station, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                >
+                  <span className="text-xs font-medium text-foreground">
+                    {station.name}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    station.impactLevel === 'Alto' 
+                      ? 'bg-destructive/15 text-destructive' 
+                      : 'bg-amber-500/15 text-amber-500'
+                  }`}>
+                    {station.impactLevel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-4 pb-3 pt-1"
+            >
+              {/* Remaining stations */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {MOCK_DIAGNOSTIC.affectedStations.slice(2).map((station, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                  >
+                    <span className="text-xs font-medium text-foreground">
+                      {station.name}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      station.impactLevel === 'Alto' 
+                        ? 'bg-destructive/15 text-destructive' 
+                        : 'bg-amber-500/15 text-amber-500'
+                    }`}>
+                      {station.impactLevel}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Explanation text - only when expanded */}
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {MOCK_DIAGNOSTIC.impactExplanation}
+              </p>
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
       </motion.div>
 
       {/* ============================================
           BLOCO 5: PROJEÇÃO COMPETITIVA
-          Condicional - fala em zona, não ranking
+          1 frase visível, resto colapsável
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="card-elevated p-5 border-l-4 border-l-emerald-500 bg-emerald-500/5"
+        className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden"
       >
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-emerald-500" />
-          <p className="text-sm font-semibold text-foreground">
-            Projeção de performance
-          </p>
-        </div>
-        
-        <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
-          <p>
-            Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {MOCK_ATHLETE.category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento.
-          </p>
-          <p className="text-muted-foreground text-xs italic">
-            A projeção considera correção consistente deste fator específico.
-          </p>
-        </div>
+        <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
+          <div className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  <p className="text-xs font-semibold text-foreground">
+                    Projeção
+                  </p>
+                </div>
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  {MOCK_DIAGNOSTIC.projection.keyPhrase}
+                </p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
+                  {isProjectionExpanded ? (
+                    <>
+                      Menos
+                      <ChevronUp className="w-3 h-3" />
+                    </>
+                  ) : (
+                    <>
+                      Entender
+                      <ChevronDown className="w-3 h-3" />
+                    </>
+                  )}
+                </button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+          
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
+            >
+              <p className="text-sm text-foreground/90 leading-relaxed">
+                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {MOCK_ATHLETE.category}, especialmente nas Roxzones finais, onde hoje ocorre a maior perda de rendimento.
+              </p>
+              <p className="text-muted-foreground text-xs italic mt-2">
+                A projeção considera correção consistente deste fator específico.
+              </p>
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
       </motion.div>
 
       {/* ============================================
           BLOCO 6: PERFIL FISIOLÓGICO COMPETITIVO
-          Radar colapsado por padrão
-          Visual premium - evidência, não protagonista
+          Radar colapsado por padrão (como já estava)
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="card-elevated p-6 border-l-4 border-l-muted-foreground/30"
+        className="card-elevated border-l-4 border-l-muted-foreground/20 overflow-hidden"
       >
-        <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-1">
-          PERFIL FISIOLÓGICO COMPETITIVO
-        </h3>
-        <p className="text-xs text-muted-foreground/70 mb-4">
-          Baseado na sua última prova registrada
-        </p>
-
         <Collapsible open={isRadarOpen} onOpenChange={setIsRadarOpen}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-muted-foreground hover:text-foreground"
-            >
-              {isRadarOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4 mr-2" />
-                  Ocultar perfil fisiológico
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                  Ver perfil fisiológico completo
-                </>
-              )}
-            </Button>
-          </CollapsibleTrigger>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-xs text-muted-foreground tracking-wide">
+                  PERFIL FISIOLÓGICO
+                </h3>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  Baseado na última prova registrada
+                </p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-foreground h-7 px-2"
+                >
+                  {isRadarOpen ? (
+                    <>
+                      Ocultar
+                      <ChevronUp className="w-3 h-3 ml-1" />
+                    </>
+                  ) : (
+                    <>
+                      Ver perfil
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
           
           <CollapsibleContent>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="mt-4"
+              className="px-4 pb-4"
             >
-              <p className="text-xs text-muted-foreground mb-4 text-center">
+              <p className="text-xs text-muted-foreground mb-3 text-center">
                 Este gráfico mostra como seus sistemas fisiológicos contribuem para o diagnóstico acima.
               </p>
               
               {/* Radar Chart */}
-              <div className="h-56 sm:h-64 relative">
+              <div className="h-48 sm:h-56 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={MOCK_RADAR_DATA}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={MOCK_RADAR_DATA}>
                     <PolarGrid 
                       stroke="hsl(var(--foreground))" 
-                      strokeOpacity={0.15} 
+                      strokeOpacity={0.12} 
                       gridType="circle" 
                       radialLines={true} 
                     />
@@ -333,7 +468,7 @@ export function DiagnosticRadarBlock({
                       dataKey="shortName" 
                       tick={{
                         fill: 'hsl(var(--foreground))',
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: 500
                       }} 
                       tickLine={false} 
@@ -344,44 +479,43 @@ export function DiagnosticRadarBlock({
                       stroke="hsl(var(--primary))" 
                       strokeWidth={2} 
                       fill="hsl(var(--primary))" 
-                      fillOpacity={0.5} 
+                      fillOpacity={0.4} 
                       dot={false} 
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Toggle para barras de estação (detalhes extras) */}
-              <div className="mt-4 pt-4 border-t border-border/50">
+              {/* Toggle para barras de estação */}
+              <div className="mt-3 pt-3 border-t border-border/30">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-muted-foreground hover:text-foreground"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground h-7"
                   onClick={() => setShowStationDetails(!showStationDetails)}
                 >
                   {showStationDetails ? (
                     <>
-                      <ChevronUp className="w-4 h-4 mr-2" />
-                      Ocultar análise por estação
+                      <ChevronUp className="w-3 h-3 mr-1" />
+                      Ocultar estações
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="w-4 h-4 mr-2" />
-                      Ver análise detalhada por estação
+                      <ChevronDown className="w-3 h-3 mr-1" />
+                      Análise por estação
                     </>
                   )}
                 </Button>
               </div>
 
-              {/* Barras de estação (opcional, para análise detalhada) */}
               <AnimatePresence>
                 {showStationDetails && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-4 overflow-hidden"
+                    transition={{ duration: 0.2 }}
+                    className="mt-3 overflow-hidden"
                   >
                     <DiagnosticStationsBars scores={scores} />
                   </motion.div>
@@ -394,96 +528,78 @@ export function DiagnosticRadarBlock({
 
       {/* ============================================
           BLOCO 7: INDICADORES FISIOLÓGICOS DE SUPORTE
-          Visualmente secundário - referência técnica
+          Sempre visível, visual SECUNDÁRIO (menor contraste)
           ============================================ */}
       <TooltipProvider>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-muted/10 border border-border/30 rounded-lg p-4"
+          className="bg-muted/5 border border-border/20 rounded-lg px-3 py-2"
         >
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
-            Indicadores fisiológicos de suporte
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-2">
+            Indicadores de suporte
           </p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-2">
             {/* VO₂ Max */}
-            <div className="flex flex-col items-center p-3 rounded-lg bg-background/50 border border-border/20">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                  VO₂ Max
+            <div className="flex items-center gap-2 p-2 rounded bg-background/30">
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-muted-foreground/70 uppercase">
+                  VO₂
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+                    <Info className="w-2.5 h-2.5 text-muted-foreground/40 cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[220px]">
-                    <p className="text-xs">Capacidade máxima de consumo de oxigênio. Indica o potencial aeróbico do atleta.</p>
+                  <TooltipContent side="top" className="max-w-[200px]">
+                    <p className="text-xs">Capacidade máxima de consumo de oxigênio.</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-xl font-semibold text-foreground">
-                  {MOCK_DIAGNOSTIC.vo2max}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  ml/kg/min
-                </span>
-              </div>
-              <span className="text-[9px] text-muted-foreground/60 italic">
-                estimado
+              <span className="font-display text-sm font-medium text-foreground/70">
+                {MOCK_DIAGNOSTIC.vo2max}
+                <span className="text-[9px] text-muted-foreground/50 ml-0.5">ml/kg</span>
               </span>
             </div>
 
             {/* Limiar de Lactato */}
-            <div className="flex flex-col items-center p-3 rounded-lg bg-background/50 border border-border/20">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                  Limiar de Lactato
+            <div className="flex items-center gap-2 p-2 rounded bg-background/30">
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-muted-foreground/70 uppercase">
+                  Lactato
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+                    <Info className="w-2.5 h-2.5 text-muted-foreground/40 cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px]">
-                    <p className="text-xs">Ritmo máximo que pode ser sustentado sem acúmulo excessivo de lactato.</p>
+                  <TooltipContent side="top" className="max-w-[200px]">
+                    <p className="text-xs">Ritmo máximo sustentável sem acúmulo de lactato.</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-xl font-semibold text-foreground">
-                  {MOCK_DIAGNOSTIC.lactateThreshold}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  /km
-                </span>
-              </div>
-              <span className="text-[9px] text-muted-foreground/60 italic">
-                ritmo sustentável
+              <span className="font-display text-sm font-medium text-foreground/70">
+                {MOCK_DIAGNOSTIC.lactateThreshold}
+                <span className="text-[9px] text-muted-foreground/50 ml-0.5">/km</span>
               </span>
             </div>
           </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            Esses indicadores sustentam seu desempenho aeróbico, mas não são o principal fator limitante no cenário atual.
-          </p>
         </motion.div>
       </TooltipProvider>
 
       {/* ============================================
           BLOCO 8: DIRECIONAMENTO DO TREINO
-          Fecha a narrativa: diagnóstico → impacto → direção
+          Sempre visível (fecha a narrativa)
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
-        className="card-elevated p-5 border-l-4 border-l-primary bg-primary/5"
+        className="bg-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-3"
       >
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-          Direcionamento atual
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+          Direcionamento
         </p>
-        <p className="text-sm text-foreground/90 leading-relaxed">
+        <p className="text-xs text-foreground/90 leading-relaxed">
           {MOCK_DIAGNOSTIC.trainingFocus}
         </p>
       </motion.div>
@@ -495,18 +611,18 @@ export function DiagnosticRadarBlock({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="text-center pt-2"
+        className="pt-1"
       >
         <Button
           size="lg"
-          className="w-full font-display text-xl tracking-wider px-8 py-6 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-3 shadow-lg"
+          className="w-full font-display text-lg tracking-wider px-6 py-5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg"
         >
-          <Flame className="w-6 h-6" />
+          <Flame className="w-5 h-5" />
           BORA TREINAR
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5" />
         </Button>
         
-        <p className="text-muted-foreground text-sm mt-3">
+        <p className="text-muted-foreground/60 text-xs text-center mt-2">
           Treinar certo muda o jogo.
         </p>
       </motion.div>
