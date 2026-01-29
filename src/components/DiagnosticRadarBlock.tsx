@@ -84,8 +84,11 @@ interface DiagnosticRadarBlockProps {
 export function DiagnosticRadarBlock({
   scores,
   loading = false,
-  hasData
+  hasData: hasDataProp
 }: DiagnosticRadarBlockProps) {
+  // TEMP: Force hasData to true to preview full layout with mock data
+  // TODO: Remove this when connecting to real data
+  const hasData = true; // hasDataProp;
   // Collapsible states
   const [isLimiterExpanded, setIsLimiterExpanded] = useState(false);
   const [isImpactExpanded, setIsImpactExpanded] = useState(false);
