@@ -9,10 +9,11 @@
  * Conectado a dados reais via props (scores) e hooks (useAuth, useAthleteStatus)
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock } from 'lucide-react';
+import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
@@ -79,6 +80,36 @@ interface DiagnosticRadarBlockProps {
 }
 
 // ============================================
+// ANIMATED COUNTER COMPONENT
+// ============================================
+
+function AnimatedCounter({ target, duration = 1000 }: { target: number; duration?: number }) {
+  const [value, setValue] = useState(0);
+  const ref = useRef<number | null>(null);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (target === 0) { setValue(0); return; }
+    startRef.current = null;
+    
+    const animate = (timestamp: number) => {
+      if (!startRef.current) startRef.current = timestamp;
+      const elapsed = timestamp - startRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      setValue(Math.round(progress * target));
+      if (progress < 1) {
+        ref.current = requestAnimationFrame(animate);
+      }
+    };
+    
+    ref.current = requestAnimationFrame(animate);
+    return () => { if (ref.current) cancelAnimationFrame(ref.current); };
+  }, [target, duration]);
+
+  return <>{value}</>;
+}
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -100,7 +131,7 @@ export function DiagnosticRadarBlock({
   const [isLimiterExpanded, setIsLimiterExpanded] = useState(false);
   const [isImpactExpanded, setIsImpactExpanded] = useState(false);
   const [isProjectionExpanded, setIsProjectionExpanded] = useState(false);
-  const [isRadarOpen, setIsRadarOpen] = useState(false);
+  const [isRadarOpen, setIsRadarOpen] = useState(true);
   const [showStationDetails, setShowStationDetails] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
@@ -297,6 +328,27 @@ export function DiagnosticRadarBlock({
           .sort((a, b) => a.percentile_value - b.percentile_value)
           .slice(0, 2);
 
+        // Outlier Score display (0-1000 scale)
+        const displayScore = Math.round(outlierScore.score * 10);
+        const scoreLabel = getScoreDescription(outlierScore.score);
+        const scoreColorClass = getScoreColorClass(outlierScore.score);
+
+        // Star rating helper
+        const percentileToStars = (p: number) => {
+          if (p >= 80) return { count: 5, colorClass: 'text-green-500' };
+          if (p >= 60) return { count: 4, colorClass: 'text-blue-500' };
+          if (p >= 40) return { count: 3, colorClass: 'text-yellow-500' };
+          if (p >= 20) return { count: 2, colorClass: 'text-orange-500' };
+          return { count: 1, colorClass: 'text-red-500' };
+        };
+
+        // Milestone markers for the progress bar
+        const milestones = [
+          { position: 25, icon: Target, label: '25%' },
+          { position: 50, icon: TrendingUp, label: '50%' },
+          { position: 75, icon: Crown, label: '75%' },
+        ];
+
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -318,6 +370,42 @@ export function DiagnosticRadarBlock({
                 </span>
               </div>
 
+              {/* ── OUTLIER SCORE BLOCK ── */}
+              <div className="bg-background/60 border border-border/30 rounded-xl p-3 mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                    Outlier Score
+                  </span>
+                  {outlierScore.isProvisional && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      Provisório
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`font-display text-3xl font-bold ${scoreColorClass}`}
+                  >
+                    <AnimatedCounter target={displayScore} duration={1200} />
+                  </motion.span>
+                  <span className="text-sm text-muted-foreground font-medium">/ 1000</span>
+                  <span className={`text-xs font-semibold ml-auto ${scoreColorClass}`}>
+                    {scoreLabel}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${outlierScore.score}%` }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60"
+                  />
+                </div>
+              </div>
+
               {/* ELITE state */}
               {isAtTop ? (
                 <div className="text-center py-4">
@@ -327,19 +415,41 @@ export function DiagnosticRadarBlock({
                 </div>
               ) : (
                 <>
-                  {/* Progress bar */}
+                  {/* ── PROGRESS BAR WITH MILESTONES ── */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs text-muted-foreground">Progresso</span>
-                      <span className="text-sm font-bold text-foreground">{progressToTarget}%</span>
+                      <span className="text-2xl font-bold text-foreground font-display">{progressToTarget}%</span>
                     </div>
-                    <div className="relative h-2.5 w-full rounded-full bg-secondary overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progressToTarget}%` }}
-                        transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                        className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
-                      />
+                    <div className="relative h-4 w-full rounded-full bg-secondary overflow-visible">
+                      <div className="absolute inset-0 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressToTarget}%` }}
+                          transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                          className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
+                        />
+                      </div>
+                      {/* Milestone markers */}
+                      {milestones.map((ms) => {
+                        const Icon = ms.icon;
+                        const reached = progressToTarget >= ms.position;
+                        return (
+                          <div
+                            key={ms.position}
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                            style={{ left: `${ms.position}%` }}
+                          >
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 ${
+                              reached
+                                ? 'bg-primary border-primary text-primary-foreground'
+                                : 'bg-muted border-border text-muted-foreground'
+                            }`}>
+                              <Icon className="w-2.5 h-2.5" />
+                            </div>
+                          </div>
+                        );
+                      })}
                       {isCapped && (
                         <div 
                           className="absolute top-0 h-full w-px bg-destructive"
@@ -348,21 +458,21 @@ export function DiagnosticRadarBlock({
                       )}
                     </div>
                     {isCapped && (
-                      <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
-                        <Info className="w-3 h-3" />
+                      <p className="text-[10px] text-destructive mt-1.5 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
                         Travado em {journey.capPercent}% sem prova oficial
                       </p>
                     )}
                   </div>
 
-                  {/* Mini barras de Benchmarks e Treinos */}
+                  {/* ── MINI BARS WITH ANIMATED COUNTERS ── */}
                   <div className="space-y-2 mb-3">
                     {/* Benchmarks */}
                     <div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-[10px] text-muted-foreground">Benchmarks</span>
                         <span className="text-[10px] font-mono text-muted-foreground">
-                          {targetLevel.benchmarksCompleted}/{targetLevel.benchmarksRequired}
+                          <AnimatedCounter target={targetLevel.benchmarksCompleted} duration={800} />/{targetLevel.benchmarksRequired}
                         </span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -379,7 +489,7 @@ export function DiagnosticRadarBlock({
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-[10px] text-muted-foreground">Treinos</span>
                         <span className="text-[10px] font-mono text-muted-foreground">
-                          {targetLevel.trainingSessions}/{targetLevel.trainingRequired}
+                          <AnimatedCounter target={targetLevel.trainingSessions} duration={800} />/{targetLevel.trainingRequired}
                         </span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -393,26 +503,48 @@ export function DiagnosticRadarBlock({
                     </div>
                   </div>
 
-                  {/* Último Marco */}
-                  <div className="bg-background/50 rounded-lg px-3 py-2 mb-3 border border-border/20">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">📌 Último Marco Atingido</p>
-                    <p className="text-xs font-medium text-foreground">
-                      Nível atual: <span className="font-bold text-primary">{currentLevelLabel}</span>
-                    </p>
+                  {/* ── ÚLTIMO MARCO — ACHIEVEMENT CARD ── */}
+                  <div className="bg-gradient-to-r from-amber-500/10 to-transparent border-l-4 border-l-amber-500 rounded-lg px-3 py-2.5 mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-amber-500/80 uppercase tracking-wider font-semibold mb-0.5">Último Marco</p>
+                        <p className="text-xs font-medium text-foreground">
+                          Nível alcançado: <span className="font-bold text-primary">{currentLevelLabel}</span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Requisitos faltantes */}
+                  {/* ── REQUISITOS FALTANTES WITH STARS ── */}
                   <div>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
                       🎯 Para chegar em {targetLevelLabel} faltam:
                     </p>
                     <ul className="space-y-1.5">
-                      {worstMetrics.map((m, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
-                          <span>Melhorar <span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span> (percentil {m.percentile_value})</span>
-                        </li>
-                      ))}
+                      {worstMetrics.map((m, i) => {
+                        const stars = percentileToStars(m.percentile_value);
+                        return (
+                          <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
+                            <ChevronRight className="w-3 h-3 text-orange-500 shrink-0" />
+                            <span className="flex-1">
+                              Melhorar <span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
+                            </span>
+                            <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
+                              {Array.from({ length: 5 }).map((_, si) => (
+                                <Star
+                                  key={si}
+                                  className="w-3 h-3"
+                                  fill={si < stars.count ? 'currentColor' : 'none'}
+                                  strokeWidth={si < stars.count ? 0 : 1.5}
+                                />
+                              ))}
+                            </span>
+                          </li>
+                        );
+                      })}
                       {missingBenchmarks > 0 && (
                         <li className="flex items-start gap-2 text-xs text-foreground/80">
                           <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
@@ -733,23 +865,25 @@ export function DiagnosticRadarBlock({
                     
                     {/* Top 2 stations always visible */}
                     <div className="flex flex-wrap gap-2">
-                      {topStations.map((station, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
-                        >
-                          <span className="text-xs font-medium text-foreground">
-                            {station.name}
-                          </span>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                            station.impactLevel === 'Alto' 
-                              ? 'bg-destructive/15 text-destructive' 
-                              : 'bg-amber-500/15 text-amber-500'
-                          }`}>
-                            {station.impactLevel}
-                          </span>
-                        </div>
-                      ))}
+                      {topStations.map((station, index) => {
+                        const stationStars = station.percentile < 20 ? 1 : station.percentile < 40 ? 2 : 3;
+                        const starColor = station.impactLevel === 'Alto' ? 'text-destructive' : 'text-amber-500';
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                          >
+                            <span className="text-xs font-medium text-foreground">
+                              {station.name}
+                            </span>
+                            <span className={`flex items-center gap-0.5 ${starColor}`}>
+                              {Array.from({ length: 5 }).map((_, si) => (
+                                <Star key={si} className="w-2.5 h-2.5" fill={si < stationStars ? 'currentColor' : 'none'} strokeWidth={si < stationStars ? 0 : 1.5} />
+                              ))}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   
@@ -761,23 +895,25 @@ export function DiagnosticRadarBlock({
                     >
                       {/* Remaining stations */}
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {affectedStations.slice(2).map((station, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
-                          >
-                            <span className="text-xs font-medium text-foreground">
-                              {station.name}
-                            </span>
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                              station.impactLevel === 'Alto' 
-                                ? 'bg-destructive/15 text-destructive' 
-                                : 'bg-amber-500/15 text-amber-500'
-                            }`}>
-                              {station.impactLevel}
-                            </span>
-                          </div>
-                        ))}
+                        {affectedStations.slice(2).map((station, index) => {
+                          const stationStars = station.percentile < 20 ? 1 : station.percentile < 40 ? 2 : 3;
+                          const starColor = station.impactLevel === 'Alto' ? 'text-destructive' : 'text-amber-500';
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                            >
+                              <span className="text-xs font-medium text-foreground">
+                                {station.name}
+                              </span>
+                              <span className={`flex items-center gap-0.5 ${starColor}`}>
+                                {Array.from({ length: 5 }).map((_, si) => (
+                                  <Star key={si} className="w-2.5 h-2.5" fill={si < stationStars ? 'currentColor' : 'none'} strokeWidth={si < stationStars ? 0 : 1.5} />
+                                ))}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                       
                       {/* Explanation text - only when expanded */}
