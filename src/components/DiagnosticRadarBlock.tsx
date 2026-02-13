@@ -371,7 +371,7 @@ export function DiagnosticRadarBlock({
               </div>
 
               {/* ── OUTLIER SCORE BLOCK ── */}
-              <div className="bg-background/60 border border-border/30 rounded-xl p-3 mb-3">
+              <div className="bg-gradient-to-br from-background/80 to-muted/20 border border-border/30 rounded-xl p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                     Outlier Score
@@ -387,7 +387,7 @@ export function DiagnosticRadarBlock({
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={`font-display text-3xl font-bold ${scoreColorClass}`}
+                    className={`font-display text-4xl font-bold ${scoreColorClass}`}
                   >
                     <AnimatedCounter target={displayScore} duration={1200} />
                   </motion.span>
@@ -396,7 +396,14 @@ export function DiagnosticRadarBlock({
                     {scoreLabel}
                   </span>
                 </div>
-                <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                {/* Context line: Top X% */}
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Top {Math.max(1, Math.round(100 - outlierScore.score))}% — <span className="font-semibold text-foreground/80">{athleteCategory}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  Baseado em provas + benchmarks + consistência
+                </p>
+                <div className="mt-2.5 h-1.5 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${outlierScore.score}%` }}
@@ -416,10 +423,11 @@ export function DiagnosticRadarBlock({
               ) : (
                 <>
                   {/* ── PROGRESS BAR WITH MILESTONES ── */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-muted-foreground">Progresso</span>
-                      <span className="text-2xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
+                      <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
                     </div>
                     <div className="relative h-4 w-full rounded-full bg-secondary overflow-visible">
                       <div className="absolute inset-0 rounded-full overflow-hidden">
@@ -466,7 +474,7 @@ export function DiagnosticRadarBlock({
                   </div>
 
                   {/* ── MINI BARS WITH ANIMATED COUNTERS ── */}
-                  <div className="space-y-2 mb-3">
+                  <div className="space-y-2 mb-4">
                     {/* Benchmarks */}
                     <div>
                       <div className="flex items-center gap-1 mb-0.5">
@@ -505,67 +513,96 @@ export function DiagnosticRadarBlock({
                     </div>
                   </div>
 
-                  {/* ── ÚLTIMO MARCO — ACHIEVEMENT CARD ── */}
-                  <div className="bg-gradient-to-r from-amber-500/10 to-transparent border-l-4 border-l-amber-500 rounded-lg px-3 py-2.5 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
-                        <Trophy className="w-4 h-4 text-amber-500" />
+                  {/* ── MARCO DESBLOQUEADO — ACHIEVEMENT CARD ── */}
+                  <div className="bg-gradient-to-r from-amber-500/10 to-transparent border-l-4 border-l-amber-500 rounded-lg px-4 py-3.5 mb-4 shadow-amber-500/20 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <Trophy className="w-5 h-5 text-amber-500" />
                       </div>
-                      <div>
-                        <p className="text-[10px] text-amber-500/80 uppercase tracking-wider font-semibold mb-0.5">Último Marco</p>
-                        <p className="text-xs font-medium text-foreground">
-                          Nível alcançado: <span className="font-bold text-primary">{currentLevelLabel}</span>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-amber-500 uppercase tracking-wider font-bold mb-0.5">🏆 Marco Desbloqueado</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          Nível <span className="font-bold text-primary">{currentLevelLabel}</span>
                         </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2.5 pt-2 border-t border-amber-500/10">
+                      <div className="text-center flex-1">
+                        <p className="text-lg font-bold text-foreground font-display">---</p>
+                        <p className="text-[9px] text-muted-foreground uppercase">dias</p>
+                      </div>
+                      <div className="w-px h-6 bg-border/30" />
+                      <div className="text-center flex-1">
+                        <p className="text-lg font-bold text-foreground font-display">---</p>
+                        <p className="text-[9px] text-muted-foreground uppercase">performance</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* ── REQUISITOS FALTANTES WITH STARS ── */}
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
-                      🎯 Para chegar em {targetLevelLabel} faltam:
-                    </p>
-                    <ul className="space-y-1.5">
-                      {worstMetrics.map((m, i) => {
-                        const stars = percentileToStars(m.percentile_value);
-                        return (
-                          <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
-                            <ChevronRight className="w-3 h-3 text-orange-500 shrink-0" />
-                            <span className="flex-1">
-                              Melhorar <span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-                            </span>
-                            <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                              {Array.from({ length: 5 }).map((_, si) => (
-                                <Star
-                                  key={si}
-                                  className="w-3 h-3"
-                                  fill={si < stars.count ? 'currentColor' : 'none'}
-                                  strokeWidth={si < stars.count ? 0 : 1.5}
-                                />
-                              ))}
-                            </span>
-                          </li>
-                        );
-                      })}
-                      {missingBenchmarks > 0 && (
-                        <li className="flex items-start gap-2 text-xs text-foreground/80">
-                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
-                          <span>Completar mais {missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} (tem {targetLevel.benchmarksCompleted})</span>
-                        </li>
-                      )}
-                      {missingSessions > 0 && (
-                        <li className="flex items-start gap-2 text-xs text-foreground/80">
-                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
-                          <span>Completar mais {missingSessions} sessões de treino</span>
-                        </li>
-                      )}
-                      {targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace && (
-                        <li className="flex items-start gap-2 text-xs text-foreground/80">
-                          <ChevronRight className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
-                          <span className="font-semibold text-destructive">Completar uma prova oficial HYROX</span>
-                        </li>
-                      )}
-                    </ul>
+                  {/* ── REQUISITOS FALTANTES — CATEGORIZED ── */}
+                  <div className="space-y-3">
+                    {/* Grupo 1: Gargalos de Performance */}
+                    {worstMetrics.length > 0 && (
+                      <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Target className="w-3.5 h-3.5 text-red-500" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos de Performance</span>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {worstMetrics.map((m, i) => {
+                            const stars = percentileToStars(m.percentile_value);
+                            return (
+                              <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
+                                <ChevronRight className="w-3 h-3 text-red-500 shrink-0" />
+                                <span className="flex-1">
+                                  <span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
+                                </span>
+                                <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
+                                  {Array.from({ length: 5 }).map((_, si) => (
+                                    <Star
+                                      key={si}
+                                      className="w-3 h-3"
+                                      fill={si < stars.count ? 'currentColor' : 'none'}
+                                      strokeWidth={si < stars.count ? 0 : 1.5}
+                                    />
+                                  ))}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Grupo 2: Volume */}
+                    {(missingBenchmarks > 0 || missingSessions > 0 || (targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace)) && (
+                      <div className="bg-yellow-500/5 rounded-lg p-3 border border-yellow-500/10">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Activity className="w-3.5 h-3.5 text-yellow-600" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-600">Volume</span>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {missingBenchmarks > 0 && (
+                            <li className="flex items-start gap-2 text-xs text-foreground/80">
+                              <ChevronRight className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
+                              <span>{missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} restante{missingBenchmarks > 1 ? 's' : ''}</span>
+                            </li>
+                          )}
+                          {missingSessions > 0 && (
+                            <li className="flex items-start gap-2 text-xs text-foreground/80">
+                              <ChevronRight className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
+                              <span>{missingSessions} sessões de treino restantes</span>
+                            </li>
+                          )}
+                          {targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace && (
+                            <li className="flex items-start gap-2 text-xs text-foreground/80">
+                              <ChevronRight className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
+                              <span className="font-semibold text-destructive">Completar uma prova oficial HYROX</span>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -625,7 +662,7 @@ export function DiagnosticRadarBlock({
               className="px-4 pb-4"
             >
               <p className="text-xs text-muted-foreground mb-3 text-center">
-                Este gráfico mostra como seus sistemas fisiológicos contribuem para o diagnóstico acima.
+                Seus pontos fortes e fracos impactam diretamente seu Outlier Score.
               </p>
               
               {/* Radar Chart */}
