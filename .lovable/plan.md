@@ -1,129 +1,89 @@
 
 
-# Upgrade Visual da Jornada Outlier -- 6 Melhorias
+# Upgrade Visual da Jornada Outlier -- Rodada 2
 
 ## Resumo
 
-Seis melhorias visuais e funcionais no bloco "Jornada Outlier" dentro de `src/components/DiagnosticRadarBlock.tsx`, usando exclusivamente dados que ja existem no frontend (hooks `useAthleteStatus` e `useJourneyProgress`, utils `outlierScoring.ts`). Nenhuma tabela nova, nenhum endpoint novo.
+Aplicar as 6 melhorias sugeridas pelo usuario no bloco "Jornada Outlier" em `src/components/DiagnosticRadarBlock.tsx`, elevando contexto, hierarquia visual e engajamento.
 
 ---
 
-## 1. Outlier Score visivel no topo da Jornada
+## 1. Score com contexto (linha ~374-407)
 
-Adicionar um bloco destacado no inicio da Jornada mostrando o score existente (`outlierScore.score`, 0-100) escalado para 0-1000, com label descritivo (`getScoreDescription`) e cor dinamica (`getScoreColorClass`).
-
-```text
-+------------------------------------------+
-| OUTLIER SCORE                            |
-| 742 / 1000          "Forte"              |
-| [barra fina animada]                     |
-| Provisorio (sem prova oficial)  <- tag   |
-+------------------------------------------+
-```
-
-**Fonte dos dados**: `outlierScore` ja vem de `useAthleteStatus()` (linha 92 do componente). Funcoes `getScoreDescription` e `getScoreColorClass` ja existem em `outlierScoring.ts`.
-
-**Calculo**: `displayScore = Math.round(outlierScore.score * 10)` para escala 0-1000.
+Atualmente mostra apenas "742 / 1000 - Elite". Adicionar:
+- Linha de contexto: **"Top X% -- {athleteCategory}"** abaixo do score
+- Linha descritiva: **"Baseado em provas + benchmarks + consistencia"**
+- Calcular ranking aproximado: `rankPercent = 100 - outlierScore.score` (percentil invertido)
+- Aplicar leve gradiente no fundo do bloco score (`bg-gradient-to-br from-background/80 to-muted/20`)
+- Melhorar contraste: score em tamanho `text-4xl` (de `text-3xl`)
 
 ---
 
-## 2. Sistema de estrelas (1-5) nos gargalos
+## 2. Barra de progresso com labels de nivel (linha ~418-466)
 
-Substituir os percentis numericos nos "requisitos faltantes" e no bloco de impacto por estrelas visuais (lucide `Star` icon).
-
-**Mapeamento**:
-- percentil >= 80: 5 estrelas (preenchidas, cor verde)
-- percentil >= 60: 4 estrelas (cor azul)
-- percentil >= 40: 3 estrelas (cor amarela)
-- percentil >= 20: 2 estrelas (cor laranja)
-- abaixo: 1 estrela (cor vermelha)
-
-Funcao helper `percentileToStars(p: number): { count: number; color: string }` criada inline no componente.
-
-Aplicado em:
-- Lista "Para chegar em X faltam" (worstMetrics, linhas 410-414)
-- Blocos de impacto na prova (linhas 736-752)
+Transformar barra "morta" em "regua com checkpoints":
+- Adicionar label do nivel atual a esquerda e nivel alvo a direita da barra
+- Formato: `PRO ─────●──────── ELITE` com labels nas pontas
+- Percentual em `text-3xl` (de `text-2xl`) para maior destaque
+- Manter milestones icons existentes
 
 ---
 
-## 3. Barra de progresso mais espessa com simbolos de milestone
+## 3. Separar gargalos em categorias (linhas ~523-569)
 
-- Aumentar a barra principal de `h-2.5` para `h-4`
-- Percentual ao lado em `text-2xl font-bold`
-- Adicionar marcadores de milestone (icones pequenos) posicionados na barra nos pontos 25%, 50%, 75%
-- Cada milestone usa um icone diferente: `Target` (25%), `TrendingUp` (50%), `Crown` (75%)
-- Milestones ja atingidos ficam coloridos (primary), os futuros ficam em muted
+Dividir a lista "Para chegar em X faltam" em dois grupos visuais:
 
----
+**Grupo 1 -- Gargalos de Performance** (com estrelas, fundo vermelho sutil)
+- worstMetrics com estrelas (ja existente, adicionar header e fundo)
 
-## 4. Contadores animados nos Benchmarks e Treinos
+**Grupo 2 -- Volume** (fundo amarelo sutil)
+- Benchmarks restantes
+- Sessoes de treino restantes
+- Prova oficial (se necessaria)
 
-Criar um hook inline `useAnimatedCounter(target, duration)` que anima de 0 ate o valor alvo usando `requestAnimationFrame`.
-
-Aplicar nos contadores:
-- `{targetLevel.benchmarksCompleted}/{targetLevel.benchmarksRequired}` 
-- `{targetLevel.trainingSessions}/{targetLevel.trainingRequired}`
-
-A animacao ocorre uma unica vez no mount (sem re-trigger em re-renders).
+Cada grupo com header proprio e icone diferenciado.
 
 ---
 
-## 5. Ultimo Marco em formato medalha/conquista
+## 4. Ultimo Marco mais destacado (linhas ~508-521)
 
-Transformar o bloco atual (linhas 397-402) de um simples texto em um card visualmente destacado:
-
-```text
-+------------------------------------------+
-|  [Trophy icon]   ULTIMO MARCO            |
-|                                          |
-|  INTERMEDIATE -> PRO                     |
-|  87 dias   |   +12% melhoria             |
-+------------------------------------------+
-```
-
-- Fundo com gradiente sutil (`bg-gradient-to-r from-amber-500/10 to-transparent`)
-- Borda lateral dourada (`border-l-amber-500`)
-- Icone `Trophy` do lucide em cor amber
-- Transicao de nivel mostrando `currentLevelLabel`
-- Como nao temos dados historicos de "dias" e "% melhoria" no hook atual, mostrar apenas o nivel atual com visual de conquista. Dados de dias e melhoria ficam como "---" ate implementacao futura.
+- Aumentar padding e tamanho do icone Trophy
+- Adicionar glow sutil laranja via `shadow-amber-500/20`
+- Texto "MARCO DESBLOQUEADO" em vez de "Ultimo Marco"
+- Adicionar dados placeholder para dias e melhoria (mostrar "---" ate dados reais)
+- Layout em 2 colunas para `87 dias | +12% performance`
 
 ---
 
-## 6. Radar sempre aberto com opcao de ocultar
+## 5. Radar conversa com score (nao mudar calculo, apenas visual)
 
-- Mudar `isRadarOpen` de `useState(false)` para `useState(true)` (linha 103)
-- Manter o botao de toggle para o usuario ocultar manualmente
-- Alterar texto do botao: "Ocultar" quando aberto (ja esta), "Ver perfil" quando fechado (ja esta)
-- Nenhuma outra mudanca no radar
+- Adicionar texto de conexao sob o radar: "Seus pontos fortes e fracos impactam diretamente seu Outlier Score"
+- Nao alterar logica de calculo (item futuro)
+- Apenas comunicar visualmente que o radar tem relacao com o score
 
 ---
 
-## Arquivos alterados
+## 6. Micro UI
 
-Apenas **1 arquivo**: `src/components/DiagnosticRadarBlock.tsx`
+- Espacamento vertical entre Score, Progresso e Gargalos: `mb-4` (de `mb-3`)
+- Score block com gradiente leve no fundo
+- Percentual do progresso em `text-3xl font-bold`
+- Melhor hierarquia tipografica nos headers de secao
 
-Nenhum hook novo, nenhuma tabela nova, nenhum endpoint novo.
+---
+
+## Arquivo alterado
+
+Apenas `src/components/DiagnosticRadarBlock.tsx`
 
 ## Detalhes tecnicos
 
-### Imports adicionais
-- `Star, Trophy` do `lucide-react`
-- `getScoreDescription, getScoreColorClass` do `@/utils/outlierScoring`
-- `useRef, useEffect` (para o animated counter)
+### Dados usados
+- `outlierScore.score` (ja existe) para ranking percent
+- `athleteCategory` (ja existe) para contexto do score
+- `worstMetrics` (ja existe) para gargalos de performance
+- `missingBenchmarks`, `missingSessions` (ja existem) para volume
 
-### Funcoes helper (inline no componente)
-1. `percentileToStars(p: number)` -- retorna `{ count: number; colorClass: string }`
-2. `useAnimatedCounter(target: number, duration: number)` -- hook simples com requestAnimationFrame
-
-### Ordem dos blocos na Jornada (apos mudancas)
-1. Outlier Score (NOVO)
-2. Barra principal de progresso (espessa, com milestones)
-3. Mini barras Benchmarks/Treinos (com contadores animados)
-4. Ultimo Marco (visual medalha)
-5. Requisitos faltantes (com estrelas)
-
-### Performance
-- Contadores usam `useRef` + `useEffect` com cleanup, sem re-renders desnecessarios
-- Animacoes de barra usam framer-motion (ja presente)
-- Nenhuma query adicional ao backend
+### Nenhum dado novo necessario
+Todas as informacoes ja estao disponiveis no componente. As mudancas sao puramente visuais e de organizacao.
 
