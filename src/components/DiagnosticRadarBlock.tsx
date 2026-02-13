@@ -102,6 +102,7 @@ export function DiagnosticRadarBlock({
   const [isProjectionExpanded, setIsProjectionExpanded] = useState(false);
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [showStationDetails, setShowStationDetails] = useState(false);
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
   // ============================================
   // DERIVED DATA FROM REAL SCORES
@@ -402,231 +403,13 @@ export function DiagnosticRadarBlock({
       })()}
 
       {/* ============================================
-          BLOCO 3: PRINCIPAL LIMITADOR ATUAL
-          Compacto por padrão, expandível
-          ============================================ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="card-elevated border-l-4 border-l-destructive bg-destructive/5 overflow-hidden"
-      >
-        <Collapsible open={isLimiterExpanded} onOpenChange={setIsLimiterExpanded}>
-          <div className="px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
-                  {mainLimiter?.name || 'Análise não disponível'}
-                </h3>
-                <p className="text-xs text-foreground/70 mt-0.5 line-clamp-1">
-                  {mainLimiter ? `Limitador direto identificado com base nos seus resultados.` : 'Registre uma prova para ver seu limitador.'}
-                </p>
-              </div>
-              <CollapsibleTrigger asChild>
-                <button className="text-xs text-destructive hover:text-destructive/80 font-medium flex items-center gap-1 shrink-0 transition-colors">
-                  {isLimiterExpanded ? (
-                    <>
-                      Ocultar
-                      <ChevronUp className="w-3 h-3" />
-                    </>
-                  ) : (
-                    <>
-                      Ver análise
-                      <ChevronDown className="w-3 h-3" />
-                    </>
-                  )}
-                </button>
-              </CollapsibleTrigger>
-            </div>
-          </div>
-          
-          <CollapsibleContent>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-4 pb-4 pt-1 border-t border-destructive/10"
-            >
-              <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
-                <p>
-                  {mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.
-                </p>
-                <p>
-                  Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
-                </p>
-                <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">
-                  Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.
-                </p>
-              </div>
-            </motion.div>
-          </CollapsibleContent>
-        </Collapsible>
-      </motion.div>
-
-      {/* ============================================
-          BLOCO 4: PROJEÇÃO COMPETITIVA (SOLUÇÃO IMEDIATA)
-          Movido para logo após o diagnóstico
-          Transforma diagnóstico em direção/motivação
-          ============================================ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden"
-      >
-        <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
-          <div className="px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                  <p className="text-xs font-semibold text-foreground">
-                    Projeção
-                  </p>
-                </div>
-                <p className="text-xs text-foreground/80 leading-relaxed">
-                  Correção deste limitador desloca sua performance para a zona competitiva superior.
-                </p>
-              </div>
-              <CollapsibleTrigger asChild>
-                <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
-                  {isProjectionExpanded ? (
-                    <>
-                      Menos
-                      <ChevronUp className="w-3 h-3" />
-                    </>
-                  ) : (
-                    <>
-                      Entender
-                      <ChevronDown className="w-3 h-3" />
-                    </>
-                  )}
-                </button>
-              </CollapsibleTrigger>
-            </div>
-          </div>
-          
-          <CollapsibleContent>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
-            >
-              <p className="text-sm text-foreground/90 leading-relaxed">
-                Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}, especialmente nas estações onde hoje ocorre a maior perda de rendimento.
-              </p>
-              <p className="text-muted-foreground text-xs italic mt-2">
-                A projeção considera correção consistente deste fator específico.
-              </p>
-            </motion.div>
-          </CollapsibleContent>
-        </Collapsible>
-      </motion.div>
-
-      {/* ============================================
-          BLOCO 5: IMPACTO DIRETO NA PROVA
-          Contexto prático após a projeção
-          Reforça "o que muda se eu corrigir"
-          ============================================ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="card-elevated border-l-4 border-l-amber-500 overflow-hidden"
-      >
-        <Collapsible open={isImpactExpanded} onOpenChange={setIsImpactExpanded}>
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Target className="w-3.5 h-3.5 text-amber-500" />
-                <p className="text-xs font-semibold text-foreground">
-                  Impacto na prova
-                </p>
-              </div>
-              {hasMoreStations && (
-                <CollapsibleTrigger asChild>
-                  <button className="text-xs text-amber-500 hover:text-amber-400 font-medium flex items-center gap-1 transition-colors">
-                    {isImpactExpanded ? (
-                      <>
-                        Menos
-                        <ChevronUp className="w-3 h-3" />
-                      </>
-                    ) : (
-                      <>
-                        Ver todas
-                        <ChevronDown className="w-3 h-3" />
-                      </>
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-              )}
-            </div>
-            
-            {/* Top 2 stations always visible */}
-            <div className="flex flex-wrap gap-2">
-              {topStations.map((station, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
-                >
-                  <span className="text-xs font-medium text-foreground">
-                    {station.name}
-                  </span>
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                    station.impactLevel === 'Alto' 
-                      ? 'bg-destructive/15 text-destructive' 
-                      : 'bg-amber-500/15 text-amber-500'
-                  }`}>
-                    {station.impactLevel}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <CollapsibleContent>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-4 pb-3 pt-1"
-            >
-              {/* Remaining stations */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {affectedStations.slice(2).map((station, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
-                  >
-                    <span className="text-xs font-medium text-foreground">
-                      {station.name}
-                    </span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                      station.impactLevel === 'Alto' 
-                        ? 'bg-destructive/15 text-destructive' 
-                        : 'bg-amber-500/15 text-amber-500'
-                    }`}>
-                      {station.impactLevel}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Explanation text - only when expanded */}
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.
-              </p>
-            </motion.div>
-          </CollapsibleContent>
-        </Collapsible>
-      </motion.div>
-
-      {/* ============================================
           BLOCO 6: PERFIL FISIOLÓGICO COMPETITIVO
           Radar colapsado por padrão (como já estava)
           ============================================ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
+        transition={{ delay: 0.1 }}
         className="card-elevated border-l-4 border-l-muted-foreground/20 overflow-hidden"
       >
         <Collapsible open={isRadarOpen} onOpenChange={setIsRadarOpen}>
@@ -744,6 +527,234 @@ export function DiagnosticRadarBlock({
           </CollapsibleContent>
         </Collapsible>
       </motion.div>
+
+      {/* ============================================
+          BLOCO ANÁLISE ÚLTIMA PROVA
+          Concentra Limitador + Projeção + Impacto
+          ============================================ */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="card-elevated overflow-hidden"
+      >
+        <Collapsible open={isAnalysisOpen} onOpenChange={setIsAnalysisOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Análise última prova</span>
+              </div>
+              {isAnalysisOpen ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-2 pb-3 space-y-3"
+            >
+              {/* LIMITADOR */}
+              <div className="card-elevated border-l-4 border-l-destructive bg-destructive/5 overflow-hidden">
+                <Collapsible open={isLimiterExpanded} onOpenChange={setIsLimiterExpanded}>
+                  <div className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
+                          {mainLimiter?.name || 'Análise não disponível'}
+                        </h3>
+                        <p className="text-xs text-foreground/70 mt-0.5 line-clamp-1">
+                          {mainLimiter ? `Limitador direto identificado com base nos seus resultados.` : 'Registre uma prova para ver seu limitador.'}
+                        </p>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                        <button className="text-xs text-destructive hover:text-destructive/80 font-medium flex items-center gap-1 shrink-0 transition-colors">
+                          {isLimiterExpanded ? (
+                            <>
+                              Ocultar
+                              <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              Ver análise
+                              <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      </CollapsibleTrigger>
+                    </div>
+                  </div>
+                  
+                  <CollapsibleContent>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="px-4 pb-4 pt-1 border-t border-destructive/10"
+                    >
+                      <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
+                        <p>
+                          {mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.
+                        </p>
+                        <p>
+                          Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.
+                        </p>
+                        <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">
+                          Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.
+                        </p>
+                      </div>
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              {/* PROJEÇÃO */}
+              <div className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden">
+                <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
+                  <div className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                          <p className="text-xs font-semibold text-foreground">
+                            Projeção
+                          </p>
+                        </div>
+                        <p className="text-xs text-foreground/80 leading-relaxed">
+                          Correção deste limitador desloca sua performance para a zona competitiva superior.
+                        </p>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                        <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
+                          {isProjectionExpanded ? (
+                            <>
+                              Menos
+                              <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              Entender
+                              <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      </CollapsibleTrigger>
+                    </div>
+                  </div>
+                  
+                  <CollapsibleContent>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="px-4 pb-3 pt-1 border-t border-emerald-500/10"
+                    >
+                      <p className="text-sm text-foreground/90 leading-relaxed">
+                        Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}, especialmente nas estações onde hoje ocorre a maior perda de rendimento.
+                      </p>
+                      <p className="text-muted-foreground text-xs italic mt-2">
+                        A projeção considera correção consistente deste fator específico.
+                      </p>
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              {/* IMPACTO NA PROVA */}
+              <div className="card-elevated border-l-4 border-l-amber-500 overflow-hidden">
+                <Collapsible open={isImpactExpanded} onOpenChange={setIsImpactExpanded}>
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-3.5 h-3.5 text-amber-500" />
+                        <p className="text-xs font-semibold text-foreground">
+                          Impacto na prova
+                        </p>
+                      </div>
+                      {hasMoreStations && (
+                        <CollapsibleTrigger asChild>
+                          <button className="text-xs text-amber-500 hover:text-amber-400 font-medium flex items-center gap-1 transition-colors">
+                            {isImpactExpanded ? (
+                              <>
+                                Menos
+                                <ChevronUp className="w-3 h-3" />
+                              </>
+                            ) : (
+                              <>
+                                Ver todas
+                                <ChevronDown className="w-3 h-3" />
+                              </>
+                            )}
+                          </button>
+                        </CollapsibleTrigger>
+                      )}
+                    </div>
+                    
+                    {/* Top 2 stations always visible */}
+                    <div className="flex flex-wrap gap-2">
+                      {topStations.map((station, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                        >
+                          <span className="text-xs font-medium text-foreground">
+                            {station.name}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                            station.impactLevel === 'Alto' 
+                              ? 'bg-destructive/15 text-destructive' 
+                              : 'bg-amber-500/15 text-amber-500'
+                          }`}>
+                            {station.impactLevel}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <CollapsibleContent>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="px-4 pb-3 pt-1"
+                    >
+                      {/* Remaining stations */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {affectedStations.slice(2).map((station, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20"
+                          >
+                            <span className="text-xs font-medium text-foreground">
+                              {station.name}
+                            </span>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              station.impactLevel === 'Alto' 
+                                ? 'bg-destructive/15 text-destructive' 
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}>
+                              {station.impactLevel}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Explanation text - only when expanded */}
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.
+                      </p>
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
+      </motion.div>
+
 
       {/* ============================================
           BLOCO 7: INDICADORES FISIOLÓGICOS DE SUPORTE
