@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collap
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useJourneyProgress } from '@/hooks/useJourneyProgress';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
@@ -90,6 +91,7 @@ export function DiagnosticRadarBlock({
   const { profile } = useAuth();
   const { status, outlierScore } = useAthleteStatus();
   const { athleteConfig } = useOutlierStore();
+  const journeyData = useJourneyProgress();
   
   // Use real hasData prop
   const hasData = hasDataProp && scores.length > 0;
@@ -275,6 +277,129 @@ export function DiagnosticRadarBlock({
           {statusSummary}
         </p>
       </motion.div>
+
+      {/* ============================================
+          BLOCO 2.5: JORNADA OUTLIER
+          Progresso rumo ao próximo nível
+          Sempre visível, não colapsável
+          ============================================ */}
+      {(() => {
+        const journey = journeyData;
+        if (journey.loading || journey.allLevels.length === 0) return null;
+
+        const { targetLevel, currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journey;
+        const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
+        const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
+
+        // 2 worst metrics from scores
+        const worstMetrics = [...scores]
+          .sort((a, b) => a.percentile_value - b.percentile_value)
+          .slice(0, 2);
+
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.075 }}
+            className="card-elevated rounded-2xl overflow-hidden"
+          >
+            <div className="px-4 py-3">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">
+                    Jornada Outlier
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold font-display uppercase tracking-wide text-foreground/70">
+                  {currentLevelLabel} → {targetLevelLabel}
+                </span>
+              </div>
+
+              {/* ELITE state */}
+              {isAtTop ? (
+                <div className="text-center py-4">
+                  <Crown className="w-6 h-6 text-amber-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-foreground">Você está no topo</p>
+                  <p className="text-xs text-muted-foreground mt-1">Modo manutenção — mantenha sua consistência.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Progress bar */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-muted-foreground">Progresso</span>
+                      <span className="text-sm font-bold text-foreground">{progressToTarget}%</span>
+                    </div>
+                    <div className="relative h-2.5 w-full rounded-full bg-secondary overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressToTarget}%` }}
+                        transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                        className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
+                      />
+                      {isCapped && (
+                        <div 
+                          className="absolute top-0 h-full w-px bg-destructive"
+                          style={{ left: `${journey.capPercent}%` }}
+                        />
+                      )}
+                    </div>
+                    {isCapped && (
+                      <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        Travado em {journey.capPercent}% sem prova oficial
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Último Marco */}
+                  <div className="bg-background/50 rounded-lg px-3 py-2 mb-3 border border-border/20">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">📌 Último Marco Atingido</p>
+                    <p className="text-xs font-medium text-foreground">
+                      Nível atual: <span className="font-bold text-primary">{currentLevelLabel}</span>
+                    </p>
+                  </div>
+
+                  {/* Requisitos faltantes */}
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+                      🎯 Para chegar em {targetLevelLabel} faltam:
+                    </p>
+                    <ul className="space-y-1.5">
+                      {worstMetrics.map((m, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
+                          <span>Melhorar <span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span> (percentil {m.percentile_value})</span>
+                        </li>
+                      ))}
+                      {missingBenchmarks > 0 && (
+                        <li className="flex items-start gap-2 text-xs text-foreground/80">
+                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
+                          <span>Completar mais {missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} (tem {targetLevel.benchmarksCompleted})</span>
+                        </li>
+                      )}
+                      {missingSessions > 0 && (
+                        <li className="flex items-start gap-2 text-xs text-foreground/80">
+                          <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
+                          <span>Completar mais {missingSessions} sessões de treino</span>
+                        </li>
+                      )}
+                      {targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace && (
+                        <li className="flex items-start gap-2 text-xs text-foreground/80">
+                          <ChevronRight className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
+                          <span className="font-semibold text-destructive">Completar uma prova oficial HYROX</span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* ============================================
           BLOCO 3: PRINCIPAL LIMITADOR ATUAL
