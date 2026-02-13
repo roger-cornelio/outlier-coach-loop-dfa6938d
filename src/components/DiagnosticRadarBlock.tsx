@@ -469,7 +469,8 @@ export function DiagnosticRadarBlock({
                   <div className="space-y-2 mb-3">
                     {/* Benchmarks */}
                     <div>
-                      <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Activity className="w-3 h-3 text-blue-500" />
                         <span className="text-[10px] text-muted-foreground">Benchmarks</span>
                         <span className="text-[10px] font-mono text-muted-foreground">
                           <AnimatedCounter target={targetLevel.benchmarksCompleted} duration={800} />/{targetLevel.benchmarksRequired}
@@ -486,7 +487,8 @@ export function DiagnosticRadarBlock({
                     </div>
                     {/* Treinos */}
                     <div>
-                      <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Flame className="w-3 h-3 text-emerald-500" />
                         <span className="text-[10px] text-muted-foreground">Treinos</span>
                         <span className="text-[10px] font-mono text-muted-foreground">
                           <AnimatedCounter target={targetLevel.trainingSessions} duration={800} />/{targetLevel.trainingRequired}
