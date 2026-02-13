@@ -355,6 +355,44 @@ export function DiagnosticRadarBlock({
                     )}
                   </div>
 
+                  {/* Mini barras de Benchmarks e Treinos */}
+                  <div className="space-y-2 mb-3">
+                    {/* Benchmarks */}
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-muted-foreground">Benchmarks</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {targetLevel.benchmarksCompleted}/{targetLevel.benchmarksRequired}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${targetLevel.benchmarksRequired > 0 ? Math.min(100, (targetLevel.benchmarksCompleted / targetLevel.benchmarksRequired) * 100) : 100}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.5 }}
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
+                        />
+                      </div>
+                    </div>
+                    {/* Treinos */}
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-muted-foreground">Treinos</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {targetLevel.trainingSessions}/{targetLevel.trainingRequired}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${targetLevel.trainingRequired > 0 ? Math.min(100, (targetLevel.trainingSessions / targetLevel.trainingRequired) * 100) : 100}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.7 }}
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Último Marco */}
                   <div className="bg-background/50 rounded-lg px-3 py-2 mb-3 border border-border/20">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">📌 Último Marco Atingido</p>
