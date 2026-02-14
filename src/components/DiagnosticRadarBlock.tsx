@@ -8,7 +8,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3 } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar } from 'lucide-react';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { formatOfficialTime } from '@/utils/athleteStatusSystem';
@@ -377,6 +377,18 @@ function MobileNextStepBlock({
           </p>
         )}
       </div>
+
+      {/* Ciclo semanal */}
+      <div className="mt-3 pt-2 border-t border-border/30 space-y-1 text-xs text-foreground/70">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="w-3 h-3 text-muted-foreground" />
+          <span>Ciclo atual: <span className="font-semibold text-foreground">---</span></span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Flame className="w-3 h-3 text-muted-foreground" />
+          <span>Sessões da semana: <span className="font-semibold text-foreground">---</span></span>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -489,31 +501,23 @@ function MobileAdvancedDataSection({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 space-y-3 px-1">
-          {/* Mini bars */}
-          <div className="space-y-2 card-elevated rounded-xl p-3">
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
-                <Activity className="w-3 h-3 text-blue-500" />
-                <span className="text-[10px] text-muted-foreground">Benchmarks</span>
-                <span className="text-[10px] font-mono text-muted-foreground">
-                  <AnimatedCounter target={targetLevel.benchmarksCompleted} duration={800} />/{targetLevel.benchmarksRequired}
-                </span>
-              </div>
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${targetLevel.benchmarksRequired > 0 ? Math.min(100, (targetLevel.benchmarksCompleted / targetLevel.benchmarksRequired) * 100) : 100}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
-              </div>
+          {/* Volume checklist (no bars) */}
+          <div className="card-elevated rounded-xl p-3 space-y-1.5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Activity className="w-3.5 h-3.5 text-amber-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Volume</span>
             </div>
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
-                <Flame className="w-3 h-3 text-emerald-500" />
-                <span className="text-[10px] text-muted-foreground">Treinos</span>
-                <span className="text-[10px] font-mono text-muted-foreground">
-                  <AnimatedCounter target={targetLevel.trainingSessions} duration={800} />/{targetLevel.trainingRequired}
-                </span>
-              </div>
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${targetLevel.trainingRequired > 0 ? Math.min(100, (targetLevel.trainingSessions / targetLevel.trainingRequired) * 100) : 100}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
-              </div>
+            <div className="flex items-center gap-2 text-xs text-foreground/80">
+              {targetLevel.benchmarksCompleted >= targetLevel.benchmarksRequired
+                ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+              <span>Benchmarks: {targetLevel.benchmarksCompleted}/{targetLevel.benchmarksRequired}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-foreground/80">
+              {targetLevel.trainingSessions >= targetLevel.trainingRequired
+                ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+              <span>Treinos: {targetLevel.trainingSessions}/{targetLevel.trainingRequired}</span>
             </div>
           </div>
 
@@ -902,88 +906,71 @@ export function DiagnosticRadarBlock({
                     )}
                   </div>
 
-                  {/* MINI BARS */}
-                  <div className="space-y-2 mb-4">
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <Activity className="w-3 h-3 text-blue-500" />
-                        <span className="text-[10px] text-muted-foreground">Benchmarks</span>
-                        <span className="text-[10px] font-mono text-muted-foreground"><AnimatedCounter target={targetLevel.benchmarksCompleted} duration={800} />/{targetLevel.benchmarksRequired}</span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${targetLevel.benchmarksRequired > 0 ? Math.min(100, (targetLevel.benchmarksCompleted / targetLevel.benchmarksRequired) * 100) : 100}%` }} transition={{ duration: 0.8, ease: 'easeOut', delay: 0.5 }} className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
-                      </div>
+
+
+
+                  {/* REQUISITOS PARA {targetLevel} — UNIFIED CHECKLIST */}
+                  <div className="rounded-lg border border-border/30 p-3">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Target className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <Flame className="w-3 h-3 text-emerald-500" />
-                        <span className="text-[10px] text-muted-foreground">Treinos</span>
-                        <span className="text-[10px] font-mono text-muted-foreground"><AnimatedCounter target={targetLevel.trainingSessions} duration={800} />/{targetLevel.trainingRequired}</span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${targetLevel.trainingRequired > 0 ? Math.min(100, (targetLevel.trainingSessions / targetLevel.trainingRequired) * 100) : 100}%` }} transition={{ duration: 0.8, ease: 'easeOut', delay: 0.7 }} className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
-                      </div>
-                    </div>
-                  </div>
-
-
-
-
-                  {/* REQUISITOS FALTANTES — CATEGORIZED */}
-                  <div className="space-y-3">
-                    {worstMetrics.length > 0 && (
-                      <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Target className="w-3.5 h-3.5 text-red-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos de Performance</span>
-                        </div>
-                        <ul className="space-y-1.5">
-                          {worstMetrics.map((m, i) => {
-                            const stars = percentileToStars(m.percentile_value);
-                            return (
-                              <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
-                                <ChevronRight className="w-3 h-3 text-red-500 shrink-0" />
-                                <span className="flex-1"><span className="font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span></span>
-                                <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                                  {Array.from({ length: 5 }).map((_, si) => (
-                                    <Star key={si} className="w-3 h-3" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                                  ))}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    )}
-
-                    {(missingBenchmarks > 0 || missingSessions > 0 || (targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace)) && (
-                      <div className="bg-yellow-500/5 rounded-lg p-3 border border-yellow-500/10">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Activity className="w-3.5 h-3.5 text-yellow-600" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-600">Volume</span>
-                        </div>
-                        <ul className="space-y-1.5">
-                          {missingBenchmarks > 0 && (
-                            <li className="flex items-start gap-2 text-xs text-foreground/80">
-                              <ChevronRight className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
-                              <span>{missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} restante{missingBenchmarks > 1 ? 's' : ''}</span>
-                            </li>
-                          )}
-                          {missingSessions > 0 && (
-                            <li className="flex items-start gap-2 text-xs text-foreground/80">
-                              <ChevronRight className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
-                              <span>{missingSessions} sessões de treino restantes</span>
-                            </li>
-                          )}
-                          {targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace && (
-                            <li className="flex items-start gap-2 text-xs text-foreground/80">
-                              <ChevronRight className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
-                              <span className="font-semibold text-destructive">Completar uma prova oficial HYROX</span>
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
+                    <ul className="space-y-2">
+                      {/* Performance gaps (red X + stars) */}
+                      {worstMetrics.map((m, i) => {
+                        const stars = percentileToStars(m.percentile_value);
+                        const isCompleted = m.percentile_value >= 60;
+                        return (
+                          <li key={`perf-${i}`} className="flex items-center gap-2 text-xs">
+                            {isCompleted
+                              ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              : <X className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                            <span className={`flex-1 font-semibold ${isCompleted ? 'text-foreground/60' : 'text-foreground'}`}>
+                              {METRIC_LABELS[m.metric] || m.metric} nota A
+                            </span>
+                            <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
+                              {Array.from({ length: 5 }).map((_, si) => (
+                                <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
+                              ))}
+                            </span>
+                          </li>
+                        );
+                      })}
+                      {/* Volume items (orange X) */}
+                      {missingBenchmarks > 0 ? (
+                        <li className="flex items-center gap-2 text-xs">
+                          <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="text-foreground">{missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} faltando</span>
+                        </li>
+                      ) : (
+                        <li className="flex items-center gap-2 text-xs">
+                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span className="text-foreground/60">Benchmarks completos</span>
+                        </li>
+                      )}
+                      {missingSessions > 0 ? (
+                        <li className="flex items-center gap-2 text-xs">
+                          <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="text-foreground">{missingSessions} sessões restantes</span>
+                        </li>
+                      ) : (
+                        <li className="flex items-center gap-2 text-xs">
+                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span className="text-foreground/60">Sessões completas</span>
+                        </li>
+                      )}
+                      {/* Official race */}
+                      {targetLevel.officialRaceRequired && (
+                        <li className="flex items-center gap-2 text-xs">
+                          {targetLevel.hasOfficialRace
+                            ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            : <X className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                          <span className={targetLevel.hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
+                            Prova oficial HYROX
+                          </span>
+                        </li>
+                      )}
+                    </ul>
                   </div>
                 </>
               )}
