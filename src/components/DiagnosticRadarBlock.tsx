@@ -543,17 +543,17 @@ function MobileAdvancedDataSection({
 
           {/* Performance bottlenecks */}
           {worstMetrics.length > 0 && (
-            <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
+            <div className="bg-amber-500/5 rounded-lg p-3 border border-amber-500/10">
               <div className="flex items-center gap-1.5 mb-2">
-                <Target className="w-3.5 h-3.5 text-red-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos</span>
+                <Target className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos</span>
               </div>
               <ul className="space-y-1.5">
                 {worstMetrics.map((m, i) => {
                   const stars = percentileToStars(m.percentile_value);
                   return (
                     <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
-                      <ChevronRight className="w-3 h-3 text-red-500 shrink-0" />
+                      <ChevronRight className="w-3 h-3 text-amber-500 shrink-0" />
                       <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
                       <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
                         {Array.from({ length: 5 }).map((_, si) => (
@@ -599,7 +599,7 @@ function MobileAdvancedDataSection({
 
           {/* Limitador */}
           {mainLimiter && (
-            <div className="card-elevated border-l-4 border-l-destructive bg-destructive/5 rounded-lg p-3">
+            <div className="card-elevated border-l-4 border-l-amber-500 bg-amber-500/5 rounded-lg p-3">
               <p className="text-xs font-semibold text-foreground mb-1">Principal limitador: {mainLimiter.name}</p>
               <p className="text-[11px] text-foreground/70">
                 Abaixo de {mainLimiter.relativePerformance}% dos atletas da categoria.
