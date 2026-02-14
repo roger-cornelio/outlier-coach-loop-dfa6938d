@@ -871,11 +871,6 @@ export function DiagnosticRadarBlock({
                 </div>
               ) : (
                 <>
-                  {/* MISSÃO — progress toward next level */}
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Target className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[10px] font-bold tracking-wider uppercase text-primary">Missão</span>
-                  </div>
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
@@ -916,26 +911,6 @@ export function DiagnosticRadarBlock({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
                     </div>
                     <ul className="space-y-2">
-                      {/* Performance gaps (red X + stars) */}
-                      {worstMetrics.map((m, i) => {
-                        const stars = percentileToStars(m.percentile_value);
-                        const isCompleted = m.percentile_value >= 60;
-                        return (
-                          <li key={`perf-${i}`} className="flex items-center gap-2 text-xs">
-                            {isCompleted
-                              ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              : <X className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                            <span className={`flex-1 font-semibold ${isCompleted ? 'text-foreground/60' : 'text-foreground'}`}>
-                              {METRIC_LABELS[m.metric] || m.metric} nota A
-                            </span>
-                            <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                              {Array.from({ length: 5 }).map((_, si) => (
-                                <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                              ))}
-                            </span>
-                          </li>
-                        );
-                      })}
                       {/* Volume items (orange X) */}
                       {missingBenchmarks > 0 ? (
                         <li className="flex items-center gap-2 text-xs">
