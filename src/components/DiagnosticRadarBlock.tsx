@@ -140,9 +140,11 @@ function MobilePathToEliteCard({
   hasTodayWorkout?: boolean;
   onStartWorkout?: () => void;
 }) {
-  const { currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journeyData;
+  const { currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped, targetLevel } = journeyData;
 
-  const xpForNext = Math.max(0, 100 - progressToTarget);
+  const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
+  const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
+  const needsOfficialRace = targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace;
 
   const worstMetrics = useMemo(() => 
     [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 2),
@@ -165,7 +167,7 @@ function MobilePathToEliteCard({
             <p className="text-xs text-emerald-400 font-semibold mt-0.5">Nível máximo alcançado 🏆</p>
           ) : (
             <p className="text-xs text-amber-400 font-semibold mt-0.5">
-              {currentLevelLabel} → {targetLevelLabel} — Faltam {xpForNext} XP
+              {currentLevelLabel} → {targetLevelLabel} — {progressToTarget}% do caminho
             </p>
           )}
         </div>
@@ -203,28 +205,30 @@ function MobilePathToEliteCard({
           </div>
         )}
 
-        {/* Top 2 Bottlenecks */}
-        {worstMetrics.length > 0 && !isAtTop && (
-          <div className="mb-4">
+        {/* Checklist: o que falta */}
+        {!isAtTop && (
+          <div className="mb-4 space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2">
-              Próximo nível:
+              O que falta para {targetLevelLabel}
             </p>
-            <ul className="space-y-1.5">
-              {worstMetrics.map((m, i) => {
-                const stars = percentileToStars(m.percentile_value);
-                return (
-                  <li key={i} className="flex items-center gap-2 text-xs text-foreground/90">
-                    <ChevronRight className="w-3 h-3 text-amber-500 shrink-0" />
-                    <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-                    <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                      {Array.from({ length: 5 }).map((_, si) => (
-                        <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                      ))}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="flex items-center gap-2 text-xs text-foreground/90">
+              {missingBenchmarks <= 0
+                ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+              <span>{missingBenchmarks <= 0 ? 'Benchmarks completos' : `${missingBenchmarks} benchmark${missingBenchmarks > 1 ? 's' : ''} restante${missingBenchmarks > 1 ? 's' : ''}`}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-foreground/90">
+              {missingSessions <= 0
+                ? <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+              <span>{missingSessions <= 0 ? 'Sessões completas' : `${missingSessions} sessão${missingSessions > 1 ? 'ões' : ''} de treino restante${missingSessions > 1 ? 's' : ''}`}</span>
+            </div>
+            {needsOfficialRace && (
+              <div className="flex items-center gap-2 text-xs text-foreground/90">
+                <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Prova oficial pendente</span>
+              </div>
+            )}
           </div>
         )}
 
