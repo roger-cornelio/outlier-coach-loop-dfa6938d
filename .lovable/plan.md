@@ -1,73 +1,97 @@
 
 
-# Eliminar Redundância do "Status Competitivo"
+# Separar Score (Status) de Progresso (Missao)
 
 ## Problema
 
-O nível (ex: "HYROX PRO") aparece em 3 lugares: header da identidade, bloco "Status competitivo", e na barra da Jornada. Isso gera repetição sem valor.
+O bloco "Jornada Outlier" no desktop mistura duas coisas: o Outlier Score (metrica de status/ranking) e a barra de progressao (missao para o proximo nivel). Sao dados distintos apresentados juntos.
 
-## Solução
+## Solucao
 
-### 1. Remover bloco "Status competitivo" separado
+Dividir em 2 blocos visuais separados dentro do mesmo card.
 
-No desktop (linhas ~689-698 do `DiagnosticRadarBlock.tsx`), o bloco que mostra "Status competitivo / HYROX PRO / frase de resumo" sera removido por completo.
+---
 
-No mobile (linhas ~189-193 do `MobileDecisionCard`), o mini bloco "Status competitivo / HYROX PRO" tambem sera removido.
+## Bloco 1: OUTLIER SCORE (metrica de status)
 
-### 2. Substituir por dados uteis no header da identidade
-
-O header da identidade (desktop linhas ~680-687, mobile linhas ~167-177) ja mostra nome + categoria. Adicionar logo abaixo:
-
-- **Tempo ultima prova**: `formatOfficialTime(validatingCompetition.time_in_seconds)` (se existir)
-- **Ranking categoria**: `Top X%` (ja calculado como `100 - outlierScore.score`)
-- **Evolucao**: placeholder "---" por enquanto (dado nao calculado hoje)
-
-Se nao houver prova oficial, mostrar "Sem prova oficial registrada" em texto sutil.
-
-Formato:
+Formato compacto, sem barra longa de 0-1000. Foco em ranking relativo.
 
 ```text
-ATLETA NOME
-HYROX PRO WOMEN
-
-Ultima prova: 1h19m57  |  Top 41%  |  Evolucao: ---
+OUTLIER SCORE
+Top 18% da categoria
++12% desde ultima prova (ou "---" se nao disponivel)
 ```
 
-### 3. Na Jornada, remover label "HYROX PRO" repetido
+### Mudancas tecnicas
 
-Na barra de progresso da Jornada (desktop linhas ~768-771), ja temos `currentLevelLabel -> targetLevelLabel`. O `currentLevelLabel` vem de `journeyData` e mostra ex: "PRO".
+No desktop (`DiagnosticRadarBlock.tsx`, linhas ~734-758):
+- Remover o bloco grande com `AnimatedCounter target={displayScore}`, a barra de progresso do score, e o texto "/ 1000"
+- Substituir por layout compacto:
+  - Titulo: "OUTLIER SCORE"
+  - Linha principal: "Top {rank}% da categoria" (usando `Math.max(1, Math.round(100 - outlierScore.score))`)
+  - Linha secundaria: "Evolucao: ---" (placeholder, dado nao disponivel hoje)
+  - Badge "Provisorio" mantido se `outlierScore.isProvisional`
+- Manter o label descritivo (Elite, Forte, etc.) como badge lateral
 
-Manter apenas `PRO -> ELITE  78%` na barra. Nenhum outro lugar dentro da Jornada mostrara o nome do nivel.
+No mobile (`MobileDecisionCard`, linhas ~203-207):
+- O score relativo "X/100 para ELITE" ja existe e esta bom
+- Adicionar abaixo: "Top {rank}% da categoria" em texto pequeno
 
-## Dados disponiveis (sem mudancas de backend)
+---
 
-- `validatingCompetition.time_in_seconds` — tempo da ultima prova oficial
-- `validatingCompetition.event_date` — data da prova
-- `formatOfficialTime()` — funcao ja existente em `athleteStatusSystem.ts`
-- `outlierScore.score` — para calcular ranking (Top X%)
-- Evolucao desde ultima prova: dado nao disponivel hoje, usar placeholder "---"
+## Bloco 2: PROGRESSAO (missao)
 
-## Arquivo alterado
+Formato com barra + checklist de requisitos. Ja existe mas sera isolado visualmente.
 
-Apenas `src/components/DiagnosticRadarBlock.tsx`
+```text
+PRO -> ELITE   ██████░░ 78%
 
-## Detalhes tecnicos
+Faltam:
+- Sled Pull ★★☆☆☆
+- Lunges ★☆☆☆☆
+- 3 benchmarks
+- 5 treinos
+```
 
-### Mudancas no desktop (layout completo)
+### Mudancas tecnicas
 
-1. **Remover** bloco "Status competitivo" (linhas ~689-698)
-2. **Expandir** bloco identidade (linhas ~680-687) para incluir linha de dados competitivos:
-   - Import `formatOfficialTime` de `@/utils/athleteStatusSystem`
-   - Usar `validatingCompetition` do `useAthleteStatus()` (ja chamado na linha 505)
-   - Linha: `Ultima prova: {tempo} | Top {rank}% | Evolucao: ---`
-   - Se sem prova: "Sem prova oficial registrada" em cor `text-muted-foreground/50`
+No desktop (linhas ~760-870):
+- Manter a barra de progresso com milestones como esta
+- Manter mini barras de Benchmarks e Treinos
+- Manter gargalos de performance
+- Separar visualmente do Outlier Score com divisor ou card proprio
+- Remover referencia ao Outlier Score deste bloco (evitar mistura)
 
-### Mudancas no mobile (MobileDecisionCard)
+No mobile:
+- Ja esta separado no Card de Decisao (barra + gargalos). Sem mudanca.
 
-1. **Remover** bloco "Status competitivo" (linhas ~189-193)
-2. **Adicionar** mesma linha de dados competitivos abaixo de `athleteCategory` (linha ~177)
-3. Formato compacto para mobile: empilhar verticalmente se necessario
+---
 
-### Na Jornada (ambos layouts)
+## Resumo de mudancas
 
-Nenhuma mudanca necessaria — a barra ja mostra `PRO -> ELITE` sem repetir "HYROX PRO". O bloco duplicado era o "Status competitivo" que sera removido.
+### Arquivo: `src/components/DiagnosticRadarBlock.tsx`
+
+**Desktop - Bloco Outlier Score (linhas ~734-758):**
+1. Remover `AnimatedCounter` com valor absoluto (742/1000)
+2. Remover barra de progresso do score
+3. Remover texto "/ 1000"
+4. Novo layout compacto: "Top X% da categoria" + badge de nivel + evolucao placeholder
+
+**Desktop - Bloco Progressao (linhas ~760-870):**
+5. Separar visualmente como secao propria dentro do card
+6. Adicionar header "Progressao" ou "Missao" para diferenciar do Score
+7. Nenhuma mudanca funcional nos dados
+
+**Mobile - MobileDecisionCard (linhas ~190-207):**
+8. Adicionar "Top X% da categoria" abaixo do score relativo
+9. Manter o resto como esta
+
+---
+
+## Dados utilizados (sem backend)
+
+- `outlierScore.score` -- para calcular ranking (Top X%)
+- `outlierScore.isProvisional` -- badge provisorio
+- `getScoreDescription()` / `getScoreColorClass()` -- label descritivo
+- `journeyData.*` -- progressao, benchmarks, treinos (ja usado)
+- Evolucao: placeholder "---" (dado nao disponivel)
