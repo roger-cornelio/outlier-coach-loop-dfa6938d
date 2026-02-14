@@ -204,6 +204,9 @@ function MobileDecisionCard({
         <div className="text-center mb-4">
           <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}</span>
           <span className="text-sm text-muted-foreground font-medium">/100 para {targetLevelLabel}</span>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            Top {Math.max(1, Math.round(100 - outlierScore.score))}% da categoria
+          </p>
         </div>
 
         {/* Progress Bar */}
@@ -709,7 +712,7 @@ export function DiagnosticRadarBlock({
         const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
         const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
         const worstMetrics = [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 2);
-        const displayScore = Math.round(outlierScore.score * 10);
+        // Score is now shown as ranking (Top X%), no longer as absolute number
         const scoreLabel = getScoreDescription(outlierScore.score);
         const scoreColorClass = getScoreColorClass(outlierScore.score);
 
@@ -731,29 +734,26 @@ export function DiagnosticRadarBlock({
                 <span className="text-[10px] font-bold font-display uppercase tracking-wide text-foreground/70">{currentLevelLabel} → {targetLevelLabel}</span>
               </div>
 
-              {/* OUTLIER SCORE BLOCK */}
+              {/* OUTLIER SCORE — compact ranking metric */}
               <div className="bg-gradient-to-br from-background/80 to-muted/20 border border-border/30 rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Outlier Score</span>
-                  {outlierScore.isProvisional && (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5" />Provisório
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`font-display text-4xl font-bold ${scoreColorClass}`}>
-                    <AnimatedCounter target={displayScore} duration={1200} />
-                  </motion.span>
-                  <span className="text-sm text-muted-foreground font-medium">/ 1000</span>
-                  <span className={`text-xs font-semibold ml-auto ${scoreColorClass}`}>{scoreLabel}</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1.5">
-                  Top {Math.max(1, Math.round(100 - outlierScore.score))}% — <span className="font-semibold text-foreground/80">{athleteCategory}</span>
-                </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Baseado em provas + benchmarks + consistência</p>
-                <div className="mt-2.5 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${outlierScore.score}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }} className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60" />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Outlier Score</span>
+                      {outlierScore.isProvisional && (
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 flex items-center gap-1">
+                          <Lock className="w-2.5 h-2.5" />Provisório
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-lg font-bold font-display ${scoreColorClass}`}>
+                      Top {Math.max(1, Math.round(100 - outlierScore.score))}% <span className="text-xs font-medium text-muted-foreground">da categoria</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/60">Evolução: <span className="text-muted-foreground">---</span></p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full border ${scoreColorClass} border-current/20`}>{scoreLabel}</span>
+                  </div>
                 </div>
               </div>
 
@@ -766,7 +766,11 @@ export function DiagnosticRadarBlock({
                 </div>
               ) : (
                 <>
-                  {/* PROGRESS BAR WITH MILESTONES */}
+                  {/* MISSÃO — progress toward next level */}
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Target className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-primary">Missão</span>
+                  </div>
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
