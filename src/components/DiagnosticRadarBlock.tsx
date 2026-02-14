@@ -11,6 +11,7 @@ import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } fro
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3 } from 'lucide-react';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
+import { formatOfficialTime } from '@/utils/athleteStatusSystem';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -127,9 +128,9 @@ function percentileToStars(p: number) {
 function MobileDecisionCard({
   athleteName,
   athleteCategory,
-  statusLabel,
   journeyData,
   outlierScore,
+  validatingCompetition,
   scores,
   todayWorkoutLabel,
   hasTodayWorkout,
@@ -139,9 +140,9 @@ function MobileDecisionCard({
 }: {
   athleteName: string;
   athleteCategory: string;
-  statusLabel: string;
   journeyData: ReturnType<typeof useJourneyProgress>;
   outlierScore: { score: number; isProvisional: boolean };
+  validatingCompetition: { time_in_seconds: number; open_equivalent_seconds: number; event_date?: string | null; event_name?: string | null } | null;
   scores: CalculatedScore[];
   todayWorkoutLabel?: string;
   hasTodayWorkout?: boolean;
@@ -186,10 +187,17 @@ function MobileDecisionCard({
           </div>
         </div>
 
-        {/* Status Label */}
-        <div className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent rounded-lg px-3 py-2 mt-3 mb-4">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Status competitivo</p>
-          <h2 className="font-display text-lg font-bold text-primary">{statusLabel}</h2>
+        {/* Competitive Data Line */}
+        <div className="mt-3 mb-4 space-y-0.5">
+          {validatingCompetition?.time_in_seconds ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground/70">
+              <span>Última prova: <span className="font-semibold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span></span>
+              <span>Top <span className="font-semibold text-foreground">{Math.round(100 - outlierScore.score * 10)}%</span></span>
+              <span>Evolução: <span className="text-muted-foreground">---</span></span>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground/50">Sem prova oficial registrada</p>
+          )}
         </div>
 
         {/* Relative Score */}
@@ -502,7 +510,7 @@ export function DiagnosticRadarBlock({
   onStartWorkout,
 }: DiagnosticRadarBlockProps) {
   const { profile } = useAuth();
-  const { status, outlierScore } = useAthleteStatus();
+  const { status, outlierScore, validatingCompetition } = useAthleteStatus();
   const { athleteConfig } = useOutlierStore();
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
@@ -632,9 +640,9 @@ export function DiagnosticRadarBlock({
         <MobileDecisionCard
           athleteName={athleteName}
           athleteCategory={athleteCategory}
-          statusLabel={statusLabel}
           journeyData={journeyData}
           outlierScore={outlierScore}
+          validatingCompetition={validatingCompetition}
           scores={scores}
           todayWorkoutLabel={todayWorkoutLabel}
           hasTodayWorkout={hasTodayWorkout}
@@ -677,24 +685,24 @@ export function DiagnosticRadarBlock({
         </div>
       )}
 
-      {/* BLOCO 1: HEADER — IDENTIDADE */}
+      {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-3">
         <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-wide text-foreground uppercase mb-1">{athleteName}</h1>
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 mb-2">
           <Crown className="w-4 h-4 text-amber-400" />
           <span className="text-xs font-semibold text-amber-400 tracking-wider">{athleteCategory}</span>
         </div>
-      </motion.div>
-
-      {/* BLOCO 2: STATUS COMPETITIVO */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border-l-4 border-l-primary rounded-lg px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Status competitivo</p>
-            <h2 className="font-display text-lg sm:text-xl font-bold text-primary">{statusLabel}</h2>
+        {validatingCompetition?.time_in_seconds ? (
+          <div className="flex items-center justify-center gap-3 text-xs text-foreground/70">
+            <span>Última prova: <span className="font-semibold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span></span>
+            <span className="text-muted-foreground/30">|</span>
+            <span>Top <span className="font-semibold text-foreground">{Math.round(100 - outlierScore.score * 10)}%</span></span>
+            <span className="text-muted-foreground/30">|</span>
+            <span>Evolução: <span className="text-muted-foreground">---</span></span>
           </div>
-        </div>
-        <p className="text-xs text-foreground/70 mt-1 line-clamp-1">{statusSummary}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>
+        )}
       </motion.div>
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
