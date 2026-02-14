@@ -1,97 +1,113 @@
 
 
-# Separar Score (Status) de Progresso (Missao)
+# Reorganizar Dashboard Mobile OUTLIER
 
-## Problema
+## Estrutura atual (mobile)
 
-O bloco "Jornada Outlier" no desktop mistura duas coisas: o Outlier Score (metrica de status/ranking) e a barra de progressao (missao para o proximo nivel). Sao dados distintos apresentados juntos.
+Hoje o mobile mostra um unico `MobileDecisionCard` grande com tudo misturado (nome, score, barra, gargalos, CTA), seguido de 2 collapsibles (Perfil fisiologico, Dados avancados).
 
-## Solucao
+## Nova estrutura proposta (5 blocos)
 
-Dividir em 2 blocos visuais separados dentro do mesmo card.
+### BLOCO 1 -- CAMINHO PARA ELITE (card principal, 60-70% da tela)
 
----
+Card com fundo destaque (laranja escuro / `bg-gradient-to-r from-orange-950 to-amber-950`).
 
-## Bloco 1: OUTLIER SCORE (metrica de status)
+Conteudo:
+- Header compacto: nome do atleta + `PRO -- XP para ELITE` (sem repetir nivel em outros cards)
+- Barra de progresso GROSSA (`h-6`) com `PRO -> ELITE XX%`
+- Lista "Faltam:" com gargalos de performance (top 2 piores metricas com estrelas)
+- Treino de hoje: label do workout
+- Botao "BORA TREINAR" 100% largura, grande
 
-Formato compacto, sem barra longa de 0-1000. Foco em ranking relativo.
+Dados: `journeyData`, `worstMetrics`, `todayWorkoutLabel`, `onStartWorkout`
+
+### BLOCO 2 -- STATUS DO ATLETA (card menor)
+
+Card simples, sem barra. 3 linhas:
+- `Top X% da categoria`
+- `Ultima prova: 1h19m57`
+- `Evolucao: ---`
+
+Dados: `outlierScore.score`, `validatingCompetition`, placeholder evolucao
+
+### BLOCO 3 -- GARGALOS (lista simples)
+
+Lista com todos os gargalos (metricas abaixo de 50%), cada um com estrelas. Sem repetir nivel. Titulo: "Gargalos de performance".
+
+Dados: `scores` filtrados por `percentile_value < 50`
+
+### BLOCO 4 -- PROXIMO PASSO
+
+Substituir volume ("250 sessoes restantes") por:
+- `Proximo benchmark sugerido: {next_benchmark}`
+- Se tiver prova oficial pendente: mostrar isso
+
+Volume total (benchmarks X/Y, treinos X/Y) vai para modo avancado.
+
+Dados: `targetLevel` do `journeyData`
+
+### BLOCO 5 -- PERFIL FISIOLOGICO (colapsado)
+
+Botao que abre modal com radar + VO2 + lactato. Ja existe como `MobilePhysiologicalModal` -- manter como esta.
+
+## O que sera REMOVIDO do primeiro scroll mobile
+
+- Outlier Score com barra longa (movido para Bloco 2 como "Top X%")
+- "HYROX PRO" repetido em multiplos lugares
+- Volume total de treinos e benchmarks (vai para modo avancado)
+- Benchmarks totais como mini-barras (vai para modo avancado)
+- Radar aberto (fica colapsado no Bloco 5)
+- Score relativo grande "78/100 para ELITE" (substituido pela barra no Bloco 1)
+
+## Header do Bloco 1
 
 ```text
-OUTLIER SCORE
-Top 18% da categoria
-+12% desde ultima prova (ou "---" se nao disponivel)
+LAIS MORAIS
+PRO -- 22 XP para ELITE
 ```
 
-### Mudancas tecnicas
+Sem Crown icon, sem "HYROX PRO WOMEN" -- nivel aparece apenas na barra.
 
-No desktop (`DiagnosticRadarBlock.tsx`, linhas ~734-758):
-- Remover o bloco grande com `AnimatedCounter target={displayScore}`, a barra de progresso do score, e o texto "/ 1000"
-- Substituir por layout compacto:
-  - Titulo: "OUTLIER SCORE"
-  - Linha principal: "Top {rank}% da categoria" (usando `Math.max(1, Math.round(100 - outlierScore.score))`)
-  - Linha secundaria: "Evolucao: ---" (placeholder, dado nao disponivel hoje)
-  - Badge "Provisorio" mantido se `outlierScore.isProvisional`
-- Manter o label descritivo (Elite, Forte, etc.) como badge lateral
-
-No mobile (`MobileDecisionCard`, linhas ~203-207):
-- O score relativo "X/100 para ELITE" ja existe e esta bom
-- Adicionar abaixo: "Top {rank}% da categoria" em texto pequeno
-
----
-
-## Bloco 2: PROGRESSAO (missao)
-
-Formato com barra + checklist de requisitos. Ja existe mas sera isolado visualmente.
-
-```text
-PRO -> ELITE   ██████░░ 78%
-
-Faltam:
-- Sled Pull ★★☆☆☆
-- Lunges ★☆☆☆☆
-- 3 benchmarks
-- 5 treinos
-```
-
-### Mudancas tecnicas
-
-No desktop (linhas ~760-870):
-- Manter a barra de progresso com milestones como esta
-- Manter mini barras de Benchmarks e Treinos
-- Manter gargalos de performance
-- Separar visualmente do Outlier Score com divisor ou card proprio
-- Remover referencia ao Outlier Score deste bloco (evitar mistura)
-
-No mobile:
-- Ja esta separado no Card de Decisao (barra + gargalos). Sem mudanca.
-
----
-
-## Resumo de mudancas
+## Mudancas tecnicas
 
 ### Arquivo: `src/components/DiagnosticRadarBlock.tsx`
 
-**Desktop - Bloco Outlier Score (linhas ~734-758):**
-1. Remover `AnimatedCounter` com valor absoluto (742/1000)
-2. Remover barra de progresso do score
-3. Remover texto "/ 1000"
-4. Novo layout compacto: "Top X% da categoria" + badge de nivel + evolucao placeholder
+**1. Reescrever `MobileDecisionCard` (linhas 128-289)**
 
-**Desktop - Bloco Progressao (linhas ~760-870):**
-5. Separar visualmente como secao propria dentro do card
-6. Adicionar header "Progressao" ou "Missao" para diferenciar do Score
-7. Nenhuma mudanca funcional nos dados
+Transformar no Bloco 1 com:
+- Fundo laranja escuro: `bg-gradient-to-r from-orange-950/90 to-amber-950/80 border-orange-800/30`
+- Header: nome + `{currentLevelLabel} -- {XP} para {targetLevelLabel}`
+- Barra grossa `h-6` com labels inline
+- Gargalos: top 2 `worstMetrics` com estrelas
+- Treino de hoje com `Flame` icon
+- CTA botao grande
 
-**Mobile - MobileDecisionCard (linhas ~190-207):**
-8. Adicionar "Top X% da categoria" abaixo do score relativo
-9. Manter o resto como esta
+**2. Criar novos componentes inline para Blocos 2-4**
 
----
+- `MobileStatusBlock`: card com Top X%, ultima prova, evolucao
+- `MobileBottlenecksBlock`: lista completa de gargalos com estrelas
+- `MobileNextStepBlock`: proximo benchmark sugerido (derivado do gargalo mais fraco)
 
-## Dados utilizados (sem backend)
+**3. Alterar o render mobile (linhas 634-669)**
 
-- `outlierScore.score` -- para calcular ranking (Top X%)
-- `outlierScore.isProvisional` -- badge provisorio
-- `getScoreDescription()` / `getScoreColorClass()` -- label descritivo
-- `journeyData.*` -- progressao, benchmarks, treinos (ja usado)
-- Evolucao: placeholder "---" (dado nao disponivel)
+Layout mobile simplificado passa a ser:
+```
+Bloco 1: MobileDecisionCard (reescrito)
+Bloco 2: MobileStatusBlock (novo)
+Bloco 3: MobileBottlenecksBlock (novo)
+Bloco 4: MobileNextStepBlock (novo)
+Bloco 5: MobilePhysiologicalModal (existente)
+```
+
+Modo avancado: quando ativado, mostra `MobileAdvancedDataSection` com mini-barras de volume e limitador detalhado (existente, sem mudanca).
+
+**4. Remover do MobileDecisionCard**
+
+- Score relativo "78/100 para ELITE"
+- Dados competitivos inline (movidos para Bloco 2)
+- Toggle avancado (mover para apos Bloco 5)
+
+### Desktop: sem mudancas
+
+O layout desktop (linhas 675-1128) permanece inalterado. Apenas o branch `isMobile && !advancedMode` muda.
+
