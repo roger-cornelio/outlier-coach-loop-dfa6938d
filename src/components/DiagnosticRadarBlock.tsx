@@ -622,9 +622,7 @@ export function DiagnosticRadarBlock({
   const hasData = hasDataProp && scores.length > 0;
   
   // Collapsible states (desktop)
-  const [isLimiterExpanded, setIsLimiterExpanded] = useState(false);
-  const [isImpactExpanded, setIsImpactExpanded] = useState(false);
-  const [isProjectionExpanded, setIsProjectionExpanded] = useState(false);
+  const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [isRadarOpen, setIsRadarOpen] = useState(true);
   const [showStationDetails, setShowStationDetails] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
@@ -1013,119 +1011,77 @@ export function DiagnosticRadarBlock({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-3">
-              {/* LIMITADOR */}
-              <div className="card-elevated border-l-4 border-l-destructive bg-destructive/5 overflow-hidden">
-                <Collapsible open={isLimiterExpanded} onOpenChange={setIsLimiterExpanded}>
-                  <div className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-display text-base sm:text-lg font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</h3>
-                        <p className="text-xs text-foreground/70 mt-0.5 line-clamp-1">{mainLimiter ? 'Limitador direto identificado com base nos seus resultados.' : 'Registre uma prova para ver seu limitador.'}</p>
-                      </div>
-                      <CollapsibleTrigger asChild>
-                        <button className="text-xs text-destructive hover:text-destructive/80 font-medium flex items-center gap-1 shrink-0 transition-colors">
-                          {isLimiterExpanded ? (<>Ocultar<ChevronUp className="w-3 h-3" /></>) : (<>Ver análise<ChevronDown className="w-3 h-3" /></>)}
-                        </button>
-                      </CollapsibleTrigger>
-                    </div>
-                  </div>
-                  <CollapsibleContent>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 pb-4 pt-1 border-t border-destructive/10">
-                      <div className="space-y-3 text-sm text-foreground/90 leading-relaxed">
-                        <p>{mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.</p>
-                        <p>Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados devido à perda de estabilidade e eficiência mecânica sob fadiga.</p>
-                        <p className="text-muted-foreground text-xs italic border-l-2 border-muted-foreground/30 pl-3">Este diagnóstico se refere exclusivamente a esta variável e não representa seu desempenho global como atleta.</p>
-                      </div>
-                    </motion.div>
-                  </CollapsibleContent>
-                </Collapsible>
+              {/* CARD 1 — LIMITADOR */}
+              <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
+                <p className="text-base font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
+                {mainLimiter ? (
+                  <p className="text-xs text-foreground/70 mt-1">Abaixo de {mainLimiter.relativePerformance}% da categoria</p>
+                ) : (
+                  <p className="text-xs text-foreground/70 mt-1">Registre uma prova para ver seu limitador.</p>
+                )}
               </div>
 
-              {/* PROJEÇÃO */}
-              <div className="card-elevated border-l-4 border-l-emerald-500 bg-emerald-500/5 overflow-hidden">
-                <Collapsible open={isProjectionExpanded} onOpenChange={setIsProjectionExpanded}>
-                  <div className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                          <p className="text-xs font-semibold text-foreground">Projeção</p>
-                        </div>
-                        <p className="text-xs text-foreground/80 leading-relaxed">Correção deste limitador desloca sua performance para a zona competitiva superior.</p>
-                      </div>
-                      <CollapsibleTrigger asChild>
-                        <button className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 shrink-0 transition-colors">
-                          {isProjectionExpanded ? (<>Menos<ChevronUp className="w-3 h-3" /></>) : (<>Entender<ChevronDown className="w-3 h-3" /></>)}
-                        </button>
-                      </CollapsibleTrigger>
-                    </div>
-                  </div>
-                  <CollapsibleContent>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 pb-3 pt-1 border-t border-emerald-500/10">
-                      <p className="text-sm text-foreground/90 leading-relaxed">Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}, especialmente nas estações onde hoje ocorre a maior perda de rendimento.</p>
-                      <p className="text-muted-foreground text-xs italic mt-2">A projeção considera correção consistente deste fator específico.</p>
-                    </motion.div>
-                  </CollapsibleContent>
-                </Collapsible>
+              {/* CARD 2 — GANHO POTENCIAL */}
+              <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
+                {mainLimiter ? (
+                  <>
+                    <p className="text-sm text-foreground">Corrigindo {mainLimiter.name} →</p>
+                    <p className="text-xs text-foreground/70 mt-1">Zona competitiva superior da categoria</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
+                )}
               </div>
 
-              {/* IMPACTO NA PROVA */}
-              <div className="card-elevated border-l-4 border-l-amber-500 overflow-hidden">
-                <Collapsible open={isImpactExpanded} onOpenChange={setIsImpactExpanded}>
-                  <div className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Target className="w-3.5 h-3.5 text-amber-500" />
-                        <p className="text-xs font-semibold text-foreground">Impacto na prova</p>
-                      </div>
-                      {hasMoreStations && (
-                        <CollapsibleTrigger asChild>
-                          <button className="text-xs text-amber-500 hover:text-amber-400 font-medium flex items-center gap-1 transition-colors">
-                            {isImpactExpanded ? (<>Menos<ChevronUp className="w-3 h-3" /></>) : (<>Ver todas<ChevronDown className="w-3 h-3" /></>)}
-                          </button>
-                        </CollapsibleTrigger>
-                      )}
-                    </div>
+              {/* CARD 3 — PRÓXIMO PASSO */}
+              <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
+                <ul className="space-y-1 mb-4">
+                  {topStations.map((station, index) => (
+                    <li key={index} className="text-sm text-foreground">• {station.name}</li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={onStartWorkout}
+                  disabled={!hasTodayWorkout}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold tracking-wide"
+                >
+                  BORA TREINAR
+                </Button>
+              </div>
+
+              {/* Ver análise detalhada */}
+              <button
+                onClick={() => setShowDetailedAnalysis(!showDetailedAnalysis)}
+                className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-2 text-center"
+              >
+                {showDetailedAnalysis ? 'Ocultar detalhes ▾' : 'Ver análise detalhada ▸'}
+              </button>
+
+              {showDetailedAnalysis && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 text-sm text-foreground/90 leading-relaxed">
+                  <div className="border-l-2 border-red-800/50 pl-3 space-y-2">
+                    <p className="font-semibold text-red-400 text-xs uppercase">Limitador — Análise completa</p>
+                    <p>{mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.</p>
+                    <p>Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados.</p>
+                  </div>
+                  <div className="border-l-2 border-emerald-800/50 pl-3 space-y-2">
+                    <p className="font-semibold text-emerald-400 text-xs uppercase">Projeção</p>
+                    <p>Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}.</p>
+                  </div>
+                  <div className="border-l-2 border-amber-800/50 pl-3 space-y-2">
+                    <p className="font-semibold text-amber-400 text-xs uppercase">Impacto na prova</p>
                     <div className="flex flex-wrap gap-2">
-                      {topStations.map((station, index) => {
-                        const stationStars = station.percentile < 20 ? 1 : station.percentile < 40 ? 2 : 3;
-                        const starColor = station.impactLevel === 'Alto' ? 'text-destructive' : 'text-amber-500';
-                        return (
-                          <div key={index} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20">
-                            <span className="text-xs font-medium text-foreground">{station.name}</span>
-                            <span className={`flex items-center gap-0.5 ${starColor}`}>
-                              {Array.from({ length: 5 }).map((_, si) => (
-                                <Star key={si} className="w-2.5 h-2.5" fill={si < stationStars ? 'currentColor' : 'none'} strokeWidth={si < stationStars ? 0 : 1.5} />
-                              ))}
-                            </span>
-                          </div>
-                        );
-                      })}
+                      {affectedStations.map((station, index) => (
+                        <span key={index} className="text-xs px-2 py-1 rounded bg-background/50 border border-border/20">{station.name}</span>
+                      ))}
                     </div>
+                    <p className="text-xs text-muted-foreground">Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência.</p>
                   </div>
-                  <CollapsibleContent>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 pb-3 pt-1">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {affectedStations.slice(2).map((station, index) => {
-                          const stationStars = station.percentile < 20 ? 1 : station.percentile < 40 ? 2 : 3;
-                          const starColor = station.impactLevel === 'Alto' ? 'text-destructive' : 'text-amber-500';
-                          return (
-                            <div key={index} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-background/50 border border-border/20">
-                              <span className="text-xs font-medium text-foreground">{station.name}</span>
-                              <span className={`flex items-center gap-0.5 ${starColor}`}>
-                                {Array.from({ length: 5 }).map((_, si) => (
-                                  <Star key={si} className="w-2.5 h-2.5" fill={si < stationStars ? 'currentColor' : 'none'} strokeWidth={si < stationStars ? 0 : 1.5} />
-                                ))}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência devido à instabilidade central.</p>
-                    </motion.div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
+                </motion.div>
+              )}
             </motion.div>
           </CollapsibleContent>
         </Collapsible>
