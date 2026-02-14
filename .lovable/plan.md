@@ -1,113 +1,83 @@
 
 
-# Reorganizar Dashboard Mobile OUTLIER
+# Consolidar Barras em Checklist Acionavel
 
-## Estrutura atual (mobile)
+## Problema
 
-Hoje o mobile mostra um unico `MobileDecisionCard` grande com tudo misturado (nome, score, barra, gargalos, CTA), seguido de 2 collapsibles (Perfil fisiologico, Dados avancados).
+O desktop tem 4 barras visuais:
+1. Regua PRO->ELITE (linha 881)
+2. Mini-bar Benchmarks (linhas 907-915)
+3. Mini-bar Treinos (linhas 917-926)
+4. Outlier Score (ja foi simplificado para "Top X%")
 
-## Nova estrutura proposta (5 blocos)
+As mini-bars de Benchmarks e Treinos competem visualmente com a regua principal.
 
-### BLOCO 1 -- CAMINHO PARA ELITE (card principal, 60-70% da tela)
-
-Card com fundo destaque (laranja escuro / `bg-gradient-to-r from-orange-950 to-amber-950`).
-
-Conteudo:
-- Header compacto: nome do atleta + `PRO -- XP para ELITE` (sem repetir nivel em outros cards)
-- Barra de progresso GROSSA (`h-6`) com `PRO -> ELITE XX%`
-- Lista "Faltam:" com gargalos de performance (top 2 piores metricas com estrelas)
-- Treino de hoje: label do workout
-- Botao "BORA TREINAR" 100% largura, grande
-
-Dados: `journeyData`, `worstMetrics`, `todayWorkoutLabel`, `onStartWorkout`
-
-### BLOCO 2 -- STATUS DO ATLETA (card menor)
-
-Card simples, sem barra. 3 linhas:
-- `Top X% da categoria`
-- `Ultima prova: 1h19m57`
-- `Evolucao: ---`
-
-Dados: `outlierScore.score`, `validatingCompetition`, placeholder evolucao
-
-### BLOCO 3 -- GARGALOS (lista simples)
-
-Lista com todos os gargalos (metricas abaixo de 50%), cada um com estrelas. Sem repetir nivel. Titulo: "Gargalos de performance".
-
-Dados: `scores` filtrados por `percentile_value < 50`
-
-### BLOCO 4 -- PROXIMO PASSO
-
-Substituir volume ("250 sessoes restantes") por:
-- `Proximo benchmark sugerido: {next_benchmark}`
-- Se tiver prova oficial pendente: mostrar isso
-
-Volume total (benchmarks X/Y, treinos X/Y) vai para modo avancado.
-
-Dados: `targetLevel` do `journeyData`
-
-### BLOCO 5 -- PERFIL FISIOLOGICO (colapsado)
-
-Botao que abre modal com radar + VO2 + lactato. Ja existe como `MobilePhysiologicalModal` -- manter como esta.
-
-## O que sera REMOVIDO do primeiro scroll mobile
-
-- Outlier Score com barra longa (movido para Bloco 2 como "Top X%")
-- "HYROX PRO" repetido em multiplos lugares
-- Volume total de treinos e benchmarks (vai para modo avancado)
-- Benchmarks totais como mini-barras (vai para modo avancado)
-- Radar aberto (fica colapsado no Bloco 5)
-- Score relativo grande "78/100 para ELITE" (substituido pela barra no Bloco 1)
-
-## Header do Bloco 1
-
-```text
-LAIS MORAIS
-PRO -- 22 XP para ELITE
-```
-
-Sem Crown icon, sem "HYROX PRO WOMEN" -- nivel aparece apenas na barra.
-
-## Mudancas tecnicas
+## Mudancas
 
 ### Arquivo: `src/components/DiagnosticRadarBlock.tsx`
 
-**1. Reescrever `MobileDecisionCard` (linhas 128-289)**
+**1. Remover mini-bars de Benchmarks e Treinos no desktop (linhas 905-927)**
 
-Transformar no Bloco 1 com:
-- Fundo laranja escuro: `bg-gradient-to-r from-orange-950/90 to-amber-950/80 border-orange-800/30`
-- Header: nome + `{currentLevelLabel} -- {XP} para {targetLevelLabel}`
-- Barra grossa `h-6` com labels inline
-- Gargalos: top 2 `worstMetrics` com estrelas
-- Treino de hoje com `Flame` icon
-- CTA botao grande
+Deletar todo o bloco `space-y-2 mb-4` que contem as duas mini-bars com `AnimatedCounter`.
 
-**2. Criar novos componentes inline para Blocos 2-4**
+**2. Criar card "REQUISITOS PARA {targetLevel}" unificado (substituir linhas 932-987)**
 
-- `MobileStatusBlock`: card com Top X%, ultima prova, evolucao
-- `MobileBottlenecksBlock`: lista completa de gargalos com estrelas
-- `MobileNextStepBlock`: proximo benchmark sugerido (derivado do gargalo mais fraco)
+Unificar os blocos "Gargalos de Performance" e "Volume" num unico card com checklist visual:
 
-**3. Alterar o render mobile (linhas 634-669)**
+```text
+REQUISITOS PARA ELITE
 
-Layout mobile simplificado passa a ser:
-```
-Bloco 1: MobileDecisionCard (reescrito)
-Bloco 2: MobileStatusBlock (novo)
-Bloco 3: MobileBottlenecksBlock (novo)
-Bloco 4: MobileNextStepBlock (novo)
-Bloco 5: MobilePhysiologicalModal (existente)
+[check verde] Sled Push nota A
+[x vermelho] Sled Pull nota A
+[x vermelho] Lunges -18s
+[x laranja]  3 benchmarks faltando
+[x laranja]  250 sessoes restantes
+[x vermelho] Prova oficial HYROX
 ```
 
-Modo avancado: quando ativado, mostra `MobileAdvancedDataSection` com mini-barras de volume e limitador detalhado (existente, sem mudanca).
+Regras:
+- Items de performance (gargalos): icone X vermelho, estrelas ao lado
+- Items de volume (benchmarks/treinos): icone X laranja
+- Items concluidos: icone check verde
+- Prova oficial: icone X vermelho se ausente
+- Ordenados: performance primeiro, volume depois, concluidos por ultimo
 
-**4. Remover do MobileDecisionCard**
+**3. Transformar volume em "Ciclo semanal" no card Proximo Passo (mobile bloco 4, linhas 339-381)**
 
-- Score relativo "78/100 para ELITE"
-- Dados competitivos inline (movidos para Bloco 2)
-- Toggle avancado (mover para apos Bloco 5)
+Adicionar ao `MobileNextStepBlock`:
+- "Ciclo atual: Semana X / Y" (placeholder, dado nao disponivel — usar "---")
+- "Sessoes da semana: X / 6" (placeholder)
 
-### Desktop: sem mudancas
+Remover "250 sessoes restantes" de qualquer lugar visivel no scroll principal.
 
-O layout desktop (linhas 675-1128) permanece inalterado. Apenas o branch `isMobile && !advancedMode` muda.
+**4. Remover mini-bars do MobileAdvancedDataSection (linhas 492-518)**
+
+Substituir as mini-bars de Benchmarks e Treinos por itens de checklist simples (mesmo formato do desktop), mantendo dentro do modo avancado.
+
+**5. Manter a regua PRO->ELITE como unica barra**
+
+A barra principal (linhas 875-903) permanece inalterada. Essa e a unica regua visual na tela.
+
+---
+
+## Componente novo inline: `RequirementsChecklist`
+
+Props:
+- `scores`: para gargalos de performance
+- `targetLevel`: para benchmarks/treinos/prova
+- `targetLevelLabel`: para titulo "REQUISITOS PARA {label}"
+
+Renderiza lista unica com icones de status (check/x) e estrelas para metricas.
+
+---
+
+## Desktop: sem mudanca estrutural
+
+O layout do card "Jornada Outlier" (linhas 826-993) mantem a mesma estrutura, apenas:
+- Remove mini-bars
+- Substitui blocos separados de Gargalos + Volume por checklist unico
+
+## Mobile: sem mudanca no Bloco 1
+
+O `MobilePathToEliteCard` (linhas 128-246) nao muda. Apenas o `MobileNextStepBlock` ganha info de ciclo semanal e o `MobileAdvancedDataSection` perde as mini-bars.
 
