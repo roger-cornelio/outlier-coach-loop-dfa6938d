@@ -316,6 +316,9 @@ export function Dashboard() {
             scores={diagnosticScores.scores}
             loading={diagnosticScores.loading}
             hasData={diagnosticScores.hasData}
+            todayWorkoutLabel={workoutFocusCopy || undefined}
+            hasTodayWorkout={hasTodayWorkout}
+            onStartWorkout={handleStartWorkout}
           />
         </section>
 
