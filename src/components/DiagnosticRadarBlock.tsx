@@ -123,34 +123,26 @@ function percentileToStars(p: number) {
 }
 
 // ============================================
-// MOBILE DECISION CARD
+// MOBILE BLOCK 1 — CAMINHO PARA ELITE (CARD PRINCIPAL)
 // ============================================
-function MobileDecisionCard({
+function MobilePathToEliteCard({
   athleteName,
-  athleteCategory,
   journeyData,
-  outlierScore,
-  validatingCompetition,
   scores,
   todayWorkoutLabel,
   hasTodayWorkout,
   onStartWorkout,
-  advancedMode,
-  setAdvancedMode,
 }: {
   athleteName: string;
-  athleteCategory: string;
   journeyData: ReturnType<typeof useJourneyProgress>;
-  outlierScore: { score: number; isProvisional: boolean };
-  validatingCompetition: { time_in_seconds: number; open_equivalent_seconds: number; event_date?: string | null; event_name?: string | null } | null;
   scores: CalculatedScore[];
   todayWorkoutLabel?: string;
   hasTodayWorkout?: boolean;
   onStartWorkout?: () => void;
-  advancedMode: boolean;
-  setAdvancedMode: (v: boolean) => void;
 }) {
-  const { targetLevel, currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journeyData;
+  const { currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journeyData;
+
+  const xpForNext = Math.max(0, 100 - progressToTarget);
 
   const worstMetrics = useMemo(() => 
     [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 2),
@@ -161,110 +153,75 @@ function MobileDecisionCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card-elevated rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden border border-orange-800/30 bg-gradient-to-r from-orange-950/90 to-amber-950/80"
     >
-      <div className="px-4 py-4">
-        {/* Header: Name + Toggle */}
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <h1 className="font-display text-xl font-bold tracking-wide text-foreground uppercase">
-              {athleteName}
-            </h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[10px] font-semibold text-amber-400 tracking-wider">
-                {athleteCategory}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Avançado</span>
-            <Switch
-              checked={advancedMode}
-              onCheckedChange={setAdvancedMode}
-              className="scale-75"
-            />
-          </div>
-        </div>
-
-        {/* Competitive Data Line */}
-        <div className="mt-3 mb-4 space-y-0.5">
-          {validatingCompetition?.time_in_seconds ? (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground/70">
-              <span>Última prova: <span className="font-semibold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span></span>
-              <span>Top <span className="font-semibold text-foreground">{Math.round(100 - outlierScore.score * 10)}%</span></span>
-              <span>Evolução: <span className="text-muted-foreground">---</span></span>
-            </div>
-          ) : (
-            <p className="text-[11px] text-muted-foreground/50">Sem prova oficial registrada</p>
-          )}
-        </div>
-
-        {/* Relative Score */}
-        <div className="text-center mb-4">
-          <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}</span>
-          <span className="text-sm text-muted-foreground font-medium">/100 para {targetLevelLabel}</span>
-          <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Top {Math.max(1, Math.round(100 - outlierScore.score))}% da categoria
+      <div className="px-4 py-5">
+        {/* Header: Name + Level */}
+        <div className="mb-4">
+          <h1 className="font-display text-xl font-bold tracking-wide text-foreground uppercase">
+            {athleteName}
+          </h1>
+          <p className="text-xs text-amber-400 font-semibold mt-0.5">
+            {currentLevelLabel} — {xpForNext} XP para {targetLevelLabel}
           </p>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar (thick) */}
         {!isAtTop && (
-          <>
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
-              </div>
-              <div className="relative h-5 w-full rounded-full bg-secondary overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressToTarget}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                  className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
-                />
-              </div>
-              {isCapped && (
-                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  Travado em {journeyData.capPercent}% sem prova oficial
-                </p>
-              )}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{currentLevelLabel}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{targetLevelLabel}</span>
             </div>
-
-            {/* Top 2 Bottlenecks */}
-            {worstMetrics.length > 0 && (
-              <div className="mb-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  Faltam para {targetLevelLabel}:
-                </p>
-                <ul className="space-y-1.5">
-                  {worstMetrics.map((m, i) => {
-                    const stars = percentileToStars(m.percentile_value);
-                    return (
-                      <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
-                        <ChevronRight className="w-3 h-3 text-red-500 shrink-0" />
-                        <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-                        <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                          {Array.from({ length: 5 }).map((_, si) => (
-                            <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                          ))}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+            <div className="relative h-6 w-full rounded-full bg-black/40 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressToTarget}%` }}
+                transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-sm">
+                {progressToTarget}%
+              </span>
+            </div>
+            {isCapped && (
+              <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Travado em {journeyData.capPercent}% sem prova oficial
+              </p>
             )}
-          </>
+          </div>
         )}
 
+        {/* Top 2 Bottlenecks */}
+        {worstMetrics.length > 0 && !isAtTop && (
+          <div className="mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2">
+              Faltam:
+            </p>
+            <ul className="space-y-1.5">
+              {worstMetrics.map((m, i) => {
+                const stars = percentileToStars(m.percentile_value);
+                return (
+                  <li key={i} className="flex items-center gap-2 text-xs text-foreground/90">
+                    <ChevronRight className="w-3 h-3 text-red-400 shrink-0" />
+                    <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
+                    <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
+                      {Array.from({ length: 5 }).map((_, si) => (
+                        <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
+                      ))}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* Today's Workout */}
         {hasTodayWorkout && todayWorkoutLabel && (
-          <div className="flex items-center gap-2 mb-4 text-xs text-foreground/70">
-            <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+          <div className="flex items-center gap-2 mb-4 text-xs text-foreground/80">
+            <Flame className="w-4 h-4 text-orange-400 shrink-0" />
             <span>Treino de hoje: <span className="font-semibold text-foreground">{todayWorkoutLabel}</span></span>
           </div>
         )}
@@ -274,7 +231,7 @@ function MobileDecisionCard({
           size="lg"
           disabled={!hasTodayWorkout}
           onClick={onStartWorkout}
-          className="w-full font-display text-lg tracking-wider rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg min-h-[30vh]"
+          className="w-full font-display text-lg tracking-wider rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg h-14"
         >
           <Flame className="w-6 h-6" />
           {hasTodayWorkout ? (
@@ -283,6 +240,142 @@ function MobileDecisionCard({
             'Sem treino hoje'
           )}
         </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// MOBILE BLOCK 2 — STATUS DO ATLETA
+// ============================================
+function MobileStatusBlock({
+  outlierScore,
+  validatingCompetition,
+}: {
+  outlierScore: { score: number; isProvisional: boolean };
+  validatingCompetition: { time_in_seconds: number; open_equivalent_seconds: number; event_date?: string | null; event_name?: string | null } | null;
+}) {
+  const rank = Math.max(1, Math.round(100 - outlierScore.score));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 }}
+      className="card-elevated rounded-xl px-4 py-3"
+    >
+      <div className="space-y-1 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Top</span>
+          <span className="font-bold text-foreground">{rank}% da categoria</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Última prova</span>
+          <span className="font-semibold text-foreground">
+            {validatingCompetition?.time_in_seconds 
+              ? formatOfficialTime(validatingCompetition.time_in_seconds) 
+              : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Evolução</span>
+          <span className="text-muted-foreground">---</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// MOBILE BLOCK 3 — GARGALOS DE PERFORMANCE
+// ============================================
+function MobileBottlenecksBlock({
+  scores,
+}: {
+  scores: CalculatedScore[];
+}) {
+  const bottlenecks = useMemo(() => 
+    [...scores]
+      .filter(s => s.percentile_value < 50)
+      .sort((a, b) => a.percentile_value - b.percentile_value),
+    [scores]
+  );
+
+  if (bottlenecks.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="card-elevated rounded-xl px-4 py-3"
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        <Target className="w-3.5 h-3.5 text-red-500" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos de performance</span>
+      </div>
+      <ul className="space-y-1.5">
+        {bottlenecks.map((m, i) => {
+          const stars = percentileToStars(m.percentile_value);
+          return (
+            <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
+              <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
+              <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
+                {Array.from({ length: 5 }).map((_, si) => (
+                  <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
+                ))}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </motion.div>
+  );
+}
+
+// ============================================
+// MOBILE BLOCK 4 — PRÓXIMO PASSO
+// ============================================
+function MobileNextStepBlock({
+  scores,
+  journeyData,
+}: {
+  scores: CalculatedScore[];
+  journeyData: ReturnType<typeof useJourneyProgress>;
+}) {
+  const { targetLevel } = journeyData;
+
+  const nextBenchmark = useMemo(() => {
+    if (!scores.length) return null;
+    const sorted = [...scores].sort((a, b) => a.percentile_value - b.percentile_value);
+    return METRIC_LABELS[sorted[0].metric] || sorted[0].metric;
+  }, [scores]);
+
+  const needsOfficialRace = targetLevel.officialRaceRequired && !targetLevel.hasOfficialRace;
+
+  if (!nextBenchmark && !needsOfficialRace) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.35 }}
+      className="card-elevated rounded-xl px-4 py-3"
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        <TrendingUp className="w-3.5 h-3.5 text-primary" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Próximo passo</span>
+      </div>
+      <div className="space-y-1.5 text-xs text-foreground/80">
+        {nextBenchmark && (
+          <p>Próximo benchmark sugerido: <span className="font-semibold text-foreground">{nextBenchmark}</span></p>
+        )}
+        {needsOfficialRace && (
+          <p className="text-destructive font-semibold flex items-center gap-1">
+            <Trophy className="w-3 h-3" />
+            Completar prova oficial HYROX
+          </p>
+        )}
       </div>
     </motion.div>
   );
@@ -634,22 +727,29 @@ export function DiagnosticRadarBlock({
   if (isMobile && !advancedMode) {
     return (
       <div className="space-y-3">
-        {/* Card de Decisão */}
-        <MobileDecisionCard
+        {/* Bloco 1: Caminho para Elite */}
+        <MobilePathToEliteCard
           athleteName={athleteName}
-          athleteCategory={athleteCategory}
           journeyData={journeyData}
-          outlierScore={outlierScore}
-          validatingCompetition={validatingCompetition}
           scores={scores}
           todayWorkoutLabel={todayWorkoutLabel}
           hasTodayWorkout={hasTodayWorkout}
           onStartWorkout={onStartWorkout}
-          advancedMode={advancedMode}
-          setAdvancedMode={setAdvancedMode}
         />
 
-        {/* Collapsible: Perfil Fisiológico */}
+        {/* Bloco 2: Status do Atleta */}
+        <MobileStatusBlock
+          outlierScore={outlierScore}
+          validatingCompetition={validatingCompetition}
+        />
+
+        {/* Bloco 3: Gargalos */}
+        <MobileBottlenecksBlock scores={scores} />
+
+        {/* Bloco 4: Próximo Passo */}
+        <MobileNextStepBlock scores={scores} journeyData={journeyData} />
+
+        {/* Bloco 5: Perfil Fisiológico (colapsado) */}
         <MobilePhysiologicalModal
           scores={scores}
           radarData={radarData}
@@ -657,14 +757,15 @@ export function DiagnosticRadarBlock({
           lactateThresholdEstimate={lactateThresholdEstimate}
         />
 
-        {/* Collapsible: Dados Avançados */}
-        <MobileAdvancedDataSection
-          journeyData={journeyData}
-          scores={scores}
-          mainLimiter={mainLimiter}
-          affectedStations={affectedStations}
-          athleteCategory={athleteCategory}
-        />
+        {/* Dados avançados (toggle) */}
+        <div className="flex items-center justify-end gap-2 px-1">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Avançado</span>
+          <Switch
+            checked={advancedMode}
+            onCheckedChange={setAdvancedMode}
+            className="scale-75"
+          />
+        </div>
       </div>
     );
   }
