@@ -1043,13 +1043,6 @@ export function DiagnosticRadarBlock({
                     <li key={index} className="text-sm text-foreground">• {station.name}</li>
                   ))}
                 </ul>
-                <Button
-                  onClick={onStartWorkout}
-                  disabled={!hasTodayWorkout}
-                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold tracking-wide"
-                >
-                  BORA TREINAR
-                </Button>
               </div>
 
               {/* Ver análise detalhada */}
