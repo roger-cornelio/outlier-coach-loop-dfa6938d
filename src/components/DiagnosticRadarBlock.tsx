@@ -257,11 +257,6 @@ function MobileDecisionCard({
           </>
         )}
 
-        {/* Last Milestone (compact) */}
-        <div className="flex items-center gap-2 mb-4 text-xs text-foreground/70">
-          <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Último marco: Nível <span className="font-semibold text-primary">{currentLevelLabel}</span></span>
-        </div>
 
         {/* Today's Workout */}
         {hasTodayWorkout && todayWorkoutLabel && (
@@ -826,29 +821,8 @@ export function DiagnosticRadarBlock({
                     </div>
                   </div>
 
-                  {/* MARCO DESBLOQUEADO */}
-                  <div className="bg-gradient-to-r from-amber-500/10 to-transparent border-l-4 border-l-amber-500 rounded-lg px-4 py-3.5 mb-4 shadow-amber-500/20 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-                        <Trophy className="w-5 h-5 text-amber-500" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] text-amber-500 uppercase tracking-wider font-bold mb-0.5">🏆 Marco Desbloqueado</p>
-                        <p className="text-sm font-semibold text-foreground">Nível <span className="font-bold text-primary">{currentLevelLabel}</span></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 mt-2.5 pt-2 border-t border-amber-500/10">
-                      <div className="text-center flex-1">
-                        <p className="text-lg font-bold text-foreground font-display">---</p>
-                        <p className="text-[9px] text-muted-foreground uppercase">dias</p>
-                      </div>
-                      <div className="w-px h-6 bg-border/30" />
-                      <div className="text-center flex-1">
-                        <p className="text-lg font-bold text-foreground font-display">---</p>
-                        <p className="text-[9px] text-muted-foreground uppercase">performance</p>
-                      </div>
-                    </div>
-                  </div>
+
+
 
                   {/* REQUISITOS FALTANTES — CATEGORIZED */}
                   <div className="space-y-3">
