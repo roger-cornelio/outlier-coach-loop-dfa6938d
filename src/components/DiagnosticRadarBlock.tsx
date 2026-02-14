@@ -153,7 +153,7 @@ function MobilePathToEliteCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl overflow-hidden border border-orange-800/30 bg-gradient-to-r from-orange-950/90 to-amber-950/80"
+      className="rounded-2xl overflow-hidden border border-amber-800/20 bg-gradient-to-br from-neutral-900/95 to-amber-950/60"
     >
       <div className="px-4 py-5">
         {/* Header: Name + Level */}
@@ -199,7 +199,7 @@ function MobilePathToEliteCard({
 
         {!isAtTop && progressToTarget === 0 && (
           <div className="mb-4">
-            <p className="text-[10px] text-muted-foreground italic">Progresso disponível após 1 prova + 1 benchmark</p>
+            <p className="text-[10px] text-muted-foreground italic">Faça 1 prova + 1 benchmark para liberar progresso</p>
           </div>
         )}
 
@@ -207,14 +207,14 @@ function MobilePathToEliteCard({
         {worstMetrics.length > 0 && !isAtTop && (
           <div className="mb-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2">
-              Faltam:
+              Próximo nível:
             </p>
             <ul className="space-y-1.5">
               {worstMetrics.map((m, i) => {
                 const stars = percentileToStars(m.percentile_value);
                 return (
                   <li key={i} className="flex items-center gap-2 text-xs text-foreground/90">
-                    <ChevronRight className="w-3 h-3 text-red-400 shrink-0" />
+                    <ChevronRight className="w-3 h-3 text-amber-500 shrink-0" />
                     <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
                     <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
                       {Array.from({ length: 5 }).map((_, si) => (
