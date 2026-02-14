@@ -953,6 +953,7 @@ export function DiagnosticRadarBlock({
       })()}
 
       {/* BLOCO 6: PERFIL FISIOLÓGICO */}
+      <TooltipProvider>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card-elevated border-l-4 border-l-muted-foreground/20 overflow-hidden">
         <Collapsible open={isRadarOpen} onOpenChange={setIsRadarOpen}>
           <div className="px-4 py-3">
@@ -969,7 +970,36 @@ export function DiagnosticRadarBlock({
             </div>
           </div>
           <CollapsibleContent>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="px-4 pb-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="px-4 pb-4 space-y-4">
+              {/* VO₂ máx e Limiar de Lactato — topo do perfil */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">VO₂ máx (estimado)</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Capacidade máxima de consumo de oxigênio.</p></TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-display text-xl font-semibold text-foreground/85">{vo2maxEstimate || '—'}</span>
+                    <span className="text-xs text-muted-foreground/60 font-medium">ml/kg/min</span>
+                  </div>
+                </div>
+                <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Limiar de lactato</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Ritmo máximo sustentável sem acúmulo de lactato.</p></TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-display text-xl font-semibold text-foreground/85">{lactateThresholdEstimate || '—'}</span>
+                    <span className="text-xs text-muted-foreground/60 font-medium">/km</span>
+                  </div>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground mb-3 text-center">Seus pontos fortes e fracos impactam diretamente seu Outlier Score.</p>
               <div className="h-48 sm:h-56 relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -996,6 +1026,7 @@ export function DiagnosticRadarBlock({
           </CollapsibleContent>
         </Collapsible>
       </motion.div>
+      </TooltipProvider>
 
       {/* BLOCO ANÁLISE ÚLTIMA PROVA */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="card-elevated overflow-hidden">
@@ -1080,40 +1111,6 @@ export function DiagnosticRadarBlock({
         </Collapsible>
       </motion.div>
 
-      {/* BLOCO 7: INDICADORES FISIOLÓGICOS */}
-      <TooltipProvider>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">VO₂ máx (estimado)</span>
-                <Tooltip>
-                  <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Capacidade máxima de consumo de oxigênio.</p></TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-xl font-semibold text-foreground/85">{vo2maxEstimate || '—'}</span>
-                <span className="text-xs text-muted-foreground/60 font-medium">ml/kg/min</span>
-              </div>
-            </div>
-            <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Limiar de lactato</span>
-                <Tooltip>
-                  <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Ritmo máximo sustentável sem acúmulo de lactato.</p></TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-xl font-semibold text-foreground/85">{lactateThresholdEstimate || '—'}</span>
-                <span className="text-xs text-muted-foreground/60 font-medium">/km</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-[11px] text-muted-foreground/50 text-center leading-relaxed px-2">Esses indicadores sustentam seu desempenho aeróbico, mas não são o principal fator limitante no cenário atual.</p>
-        </motion.div>
-      </TooltipProvider>
 
       {/* BLOCO 8: DIRECIONAMENTO DO TREINO */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-3">
