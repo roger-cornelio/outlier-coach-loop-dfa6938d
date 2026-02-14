@@ -1,89 +1,193 @@
 
 
-# Upgrade Visual da Jornada Outlier -- Rodada 2
+# Refatoracao Mobile-First do Dashboard -- Card de Decisao
 
 ## Resumo
 
-Aplicar as 6 melhorias sugeridas pelo usuario no bloco "Jornada Outlier" em `src/components/DiagnosticRadarBlock.tsx`, elevando contexto, hierarquia visual e engajamento.
+Reorganizar visualmente o Dashboard na rota `/app` para mobile, consolidando 6 blocos separados em um unico "Card de Decisao" acima do fold. No desktop, manter layout atual. Nenhuma alteracao de banco ou calculo.
 
 ---
 
-## 1. Score com contexto (linha ~374-407)
+## Arquivos alterados
 
-Atualmente mostra apenas "742 / 1000 - Elite". Adicionar:
-- Linha de contexto: **"Top X% -- {athleteCategory}"** abaixo do score
-- Linha descritiva: **"Baseado em provas + benchmarks + consistencia"**
-- Calcular ranking aproximado: `rankPercent = 100 - outlierScore.score` (percentil invertido)
-- Aplicar leve gradiente no fundo do bloco score (`bg-gradient-to-br from-background/80 to-muted/20`)
-- Melhorar contraste: score em tamanho `text-4xl` (de `text-3xl`)
+1. `src/components/DiagnosticRadarBlock.tsx` -- refatoracao principal
+2. `src/components/Dashboard.tsx` -- passar dados de treino do dia como props
 
 ---
 
-## 2. Barra de progresso com labels de nivel (linha ~418-466)
+## 1. Card de Decisao (mobile-first, acima do fold)
 
-Transformar barra "morta" em "regua com checkpoints":
-- Adicionar label do nivel atual a esquerda e nivel alvo a direita da barra
-- Formato: `PRO ─────●──────── ELITE` com labels nas pontas
-- Percentual em `text-3xl` (de `text-2xl`) para maior destaque
-- Manter milestones icons existentes
+Substituir visualmente no mobile (< 768px) os blocos atuais: Identidade, Status Competitivo, Jornada Outlier (score, progresso, marco, gargalos, volume) por um unico card compacto.
 
----
+### Estrutura do Card
 
-## 3. Separar gargalos em categorias (linhas ~523-569)
+```text
++------------------------------------------+
+| [Nome]                    [Toggle avancado]|
+| HYROX PRO WOMEN                          |
+|                                          |
+| PRO ─────────●──────── ELITE             |
+|              78%                         |
+|                                          |
+| Faltam para ELITE:                       |
+| - Sled Pull (delta -18s)     **          |
+| - Sandbag (delta -12s)       ***         |
+|                                          |
+| Ultimo marco: Nivel PRO alcancado        |
+|                                          |
+| Treino de hoje: Forca + Condicionamento  |
+|                                          |
+| +--------------------------------------+ |
+| |     BORA TREINAR > Forca             | |
+| |     (botao alto, ~30% viewport)      | |
+| +--------------------------------------+ |
++------------------------------------------+
+```
 
-Dividir a lista "Para chegar em X faltam" em dois grupos visuais:
+### Detalhes tecnicos
 
-**Grupo 1 -- Gargalos de Performance** (com estrelas, fundo vermelho sutil)
-- worstMetrics com estrelas (ja existente, adicionar header e fundo)
-
-**Grupo 2 -- Volume** (fundo amarelo sutil)
-- Benchmarks restantes
-- Sessoes de treino restantes
-- Prova oficial (se necessaria)
-
-Cada grupo com header proprio e icone diferenciado.
-
----
-
-## 4. Ultimo Marco mais destacado (linhas ~508-521)
-
-- Aumentar padding e tamanho do icone Trophy
-- Adicionar glow sutil laranja via `shadow-amber-500/20`
-- Texto "MARCO DESBLOQUEADO" em vez de "Ultimo Marco"
-- Adicionar dados placeholder para dias e melhoria (mostrar "---" ate dados reais)
-- Layout em 2 colunas para `87 dias | +12% performance`
-
----
-
-## 5. Radar conversa com score (nao mudar calculo, apenas visual)
-
-- Adicionar texto de conexao sob o radar: "Seus pontos fortes e fracos impactam diretamente seu Outlier Score"
-- Nao alterar logica de calculo (item futuro)
-- Apenas comunicar visualmente que o radar tem relacao com o score
+- Usar `useIsMobile()` do hook existente (`src/hooks/use-mobile.tsx`) para detectar mobile
+- No mobile: renderizar o Card de Decisao compacto
+- No desktop: manter layout atual (todos os blocos expandidos como hoje)
+- O Card consolida dados de: `useAthleteStatus`, `useJourneyProgress`, `outlierScore`, `scores` (props), e novos props de treino do dia
 
 ---
 
-## 6. Micro UI
+## 2. Score relativo (nao absoluto)
 
-- Espacamento vertical entre Score, Progresso e Gargalos: `mb-4` (de `mb-3`)
-- Score block com gradiente leve no fundo
-- Percentual do progresso em `text-3xl font-bold`
-- Melhor hierarquia tipografica nos headers de secao
+Remover exibicao "742 / 1000" no mobile.
+
+Substituir por: **"{progressToTarget}/100 para {targetLevelLabel}"**
+
+Dados ja existem em `journeyData.progressToTarget` e `journeyData.targetLevelLabel`.
+
+No desktop, manter o score absoluto como esta.
 
 ---
 
-## Arquivo alterado
+## 3. Perfil Fisiologico colapsado no mobile
 
-Apenas `src/components/DiagnosticRadarBlock.tsx`
+No mobile: substituir o bloco do radar por um botao colapsado:
 
-## Detalhes tecnicos
+"Perfil fisiologico >"
 
-### Dados usados
-- `outlierScore.score` (ja existe) para ranking percent
-- `athleteCategory` (ja existe) para contexto do score
-- `worstMetrics` (ja existe) para gargalos de performance
-- `missingBenchmarks`, `missingSessions` (ja existem) para volume
+Ao clicar: abrir um Dialog (modal full-screen no mobile) contendo:
+- Radar chart
+- VO2 Max
+- Limiar de lactato
+- Analise por estacao
+- Texto de conexao com score
 
-### Nenhum dado novo necessario
-Todas as informacoes ja estao disponiveis no componente. As mudancas sao puramente visuais e de organizacao.
+No desktop: manter radar inline como hoje (expandido por padrao).
+
+Usar o componente `Dialog` ja existente (`src/components/ui/dialog.tsx`).
+
+---
+
+## 4. Dados Avancados colapsados
+
+No mobile: mover para uma secao colapsada "Dados avancados >" abaixo do Card de Decisao:
+- Mini barras de Benchmarks e Treinos (com contadores animados)
+- Gargalos de Performance (com estrelas)
+- Volume (benchmarks/treinos restantes)
+- Analise ultima prova (Limitador + Projecao + Impacto)
+- Indicadores fisiologicos (VO2, Lactato)
+
+No desktop: manter tudo visivel como hoje.
+
+---
+
+## 5. Toggle "Modo Avancado"
+
+Adicionar um Switch (componente ja existe em `src/components/ui/switch.tsx`) no canto superior direito do card mobile.
+
+Estado persistido em `localStorage` via key `outlier-advanced-mode`.
+
+Quando ativado:
+- Mostrar radar inline
+- Mostrar VO2 e Lactato inline
+- Mostrar benchmarks e gargalos inline
+- Essencialmente volta ao layout completo atual
+
+Quando desativado (padrao):
+- Layout simplificado do Card de Decisao
+
+Visivel apenas no mobile. No desktop, ignorar (sempre modo completo).
+
+---
+
+## 6. Integracao "Treino de hoje" no Card
+
+### Mudanca em `Dashboard.tsx`
+
+Passar novas props para `DiagnosticRadarBlock`:
+- `todayWorkoutLabel`: string com nome/foco do treino (derivado de `workoutFocusCopy` ou `todayWorkout.blocks`)
+- `hasTodayWorkout`: boolean
+- `onStartWorkout`: callback para `handleStartWorkout()`
+
+### Mudanca em `DiagnosticRadarBlock.tsx`
+
+Aceitar novas props opcionais:
+```typescript
+interface DiagnosticRadarBlockProps {
+  scores: CalculatedScore[];
+  loading?: boolean;
+  hasData: boolean;
+  // Novas props para treino do dia
+  todayWorkoutLabel?: string;
+  hasTodayWorkout?: boolean;
+  onStartWorkout?: () => void;
+}
+```
+
+O CTA "BORA TREINAR" no Card de Decisao mobile tera:
+- Altura de ~30vh (usando `min-h-[30vh]`)
+- Texto: "BORA TREINAR > {foco_do_treino}"
+- Chama `onStartWorkout` ao clicar
+- Se nao ha treino: "Sem treino hoje" (botao desabilitado)
+
+---
+
+## 7. Gargalos no Card (top 2 com delta)
+
+No Card de Decisao, mostrar apenas os 2 piores gargalos (ja calculados como `worstMetrics`).
+
+Para cada gargalo, exibir:
+- Nome da estacao (ja existe via `METRIC_LABELS`)
+- Estrelas (ja existe via `percentileToStars`)
+- O delta de tempo nao esta disponivel nos dados atuais (scores tem apenas percentil, nao tempo). Mostrar estrelas como proxy de gravidade.
+
+---
+
+## Fluxo de dados (sem mudancas de backend)
+
+```text
+Dashboard.tsx
+  |-- useAthletePlan() --> todayWorkout, workoutFocusCopy
+  |-- useDiagnosticScores() --> scores
+  |-- handleStartWorkout()
+  |
+  v
+DiagnosticRadarBlock (props: scores, todayWorkoutLabel, onStartWorkout)
+  |-- useIsMobile() --> isMobile
+  |-- useAthleteStatus() --> status, outlierScore
+  |-- useJourneyProgress() --> progressToTarget, currentLevelLabel, targetLevelLabel
+  |-- useState('outlier-advanced-mode') --> advancedMode
+  |
+  |-- if mobile && !advancedMode: Card de Decisao compacto
+  |-- if mobile && advancedMode: layout completo atual
+  |-- if desktop: layout completo atual (sempre)
+```
+
+---
+
+## Regras respeitadas
+
+- Nenhuma tabela alterada
+- Nenhum calculo alterado
+- Dados apenas reorganizados visualmente
+- Mobile-first responsivo
+- Desktop nao quebra (mantido identico)
+- Dados reais existentes (sem mocks)
+- useIsMobile() ja existe no projeto
 
