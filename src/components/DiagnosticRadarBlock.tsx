@@ -968,38 +968,26 @@ export function DiagnosticRadarBlock({
                 </Button>
               </CollapsibleTrigger>
             </div>
+            {/* VO₂ máx e Limiar de Lactato — sempre visíveis */}
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-card/60 border border-border/30 rounded-xl p-3 shadow-sm text-center">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">VO₂ máx (estimado)</span>
+                <div className="flex items-baseline justify-center gap-1 mt-1">
+                  <span className="font-display text-xl font-semibold text-foreground/85">{vo2maxEstimate || '—'}</span>
+                  <span className="text-xs text-muted-foreground/60 font-medium">ml/kg/min</span>
+                </div>
+              </div>
+              <div className="bg-card/60 border border-border/30 rounded-xl p-3 shadow-sm text-center">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Limiar de lactato</span>
+                <div className="flex items-baseline justify-center gap-1 mt-1">
+                  <span className="font-display text-xl font-semibold text-foreground/85">{lactateThresholdEstimate || '—'}</span>
+                  <span className="text-xs text-muted-foreground/60 font-medium">/km</span>
+                </div>
+              </div>
+            </div>
           </div>
           <CollapsibleContent>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="px-4 pb-4 space-y-4">
-              {/* VO₂ máx e Limiar de Lactato — topo do perfil */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">VO₂ máx (estimado)</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Capacidade máxima de consumo de oxigênio.</p></TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-xl font-semibold text-foreground/85">{vo2maxEstimate || '—'}</span>
-                    <span className="text-xs text-muted-foreground/60 font-medium">ml/kg/min</span>
-                  </div>
-                </div>
-                <div className="bg-card/60 border border-border/30 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Limiar de lactato</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild><Info className="w-3 h-3 text-muted-foreground/50 cursor-help hover:text-muted-foreground/70 transition-colors" /></TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Ritmo máximo sustentável sem acúmulo de lactato.</p></TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-xl font-semibold text-foreground/85">{lactateThresholdEstimate || '—'}</span>
-                    <span className="text-xs text-muted-foreground/60 font-medium">/km</span>
-                  </div>
-                </div>
-              </div>
               <p className="text-xs text-muted-foreground mb-3 text-center">Seus pontos fortes e fracos impactam diretamente seu Outlier Score.</p>
               <div className="h-48 sm:h-56 relative">
                 <ResponsiveContainer width="100%" height="100%">
