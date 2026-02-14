@@ -161,13 +161,17 @@ function MobilePathToEliteCard({
           <h1 className="font-display text-xl font-bold tracking-wide text-foreground uppercase">
             {athleteName}
           </h1>
-          <p className="text-xs text-amber-400 font-semibold mt-0.5">
-            {currentLevelLabel} — {xpForNext} XP para {targetLevelLabel}
-          </p>
+          {isAtTop ? (
+            <p className="text-xs text-emerald-400 font-semibold mt-0.5">Nível máximo alcançado 🏆</p>
+          ) : (
+            <p className="text-xs text-amber-400 font-semibold mt-0.5">
+              {currentLevelLabel} → {targetLevelLabel} — Faltam {xpForNext} XP
+            </p>
+          )}
         </div>
 
         {/* Progress Bar (thick) */}
-        {!isAtTop && (
+        {!isAtTop && progressToTarget > 0 && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{currentLevelLabel}</span>
@@ -190,6 +194,12 @@ function MobilePathToEliteCard({
                 Travado em {journeyData.capPercent}% sem prova oficial
               </p>
             )}
+          </div>
+        )}
+
+        {!isAtTop && progressToTarget === 0 && (
+          <div className="mb-4">
+            <p className="text-[10px] text-muted-foreground italic">Progresso disponível após 1 prova + 1 benchmark</p>
           </div>
         )}
 
@@ -229,17 +239,14 @@ function MobilePathToEliteCard({
         {/* CTA Button */}
         <Button
           size="lg"
-          disabled={!hasTodayWorkout}
           onClick={onStartWorkout}
           className="w-full font-display text-lg tracking-wider rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg h-14"
         >
           <Flame className="w-6 h-6" />
-          {hasTodayWorkout ? (
-            <>BORA TREINAR<ChevronRight className="w-5 h-5" /></>
-          ) : (
-            'Sem treino hoje'
-          )}
+          BORA TREINAR
+          <ChevronRight className="w-5 h-5" />
         </Button>
+        <p className="text-muted-foreground/60 text-[10px] text-center mt-1.5">Veja seu treino do dia</p>
       </div>
     </motion.div>
   );
@@ -294,6 +301,8 @@ function MobileBottlenecksBlock({
 }: {
   scores: CalculatedScore[];
 }) {
+  const [showAll, setShowAll] = useState(false);
+  
   const bottlenecks = useMemo(() => 
     [...scores]
       .filter(s => s.percentile_value < 50)
@@ -302,6 +311,9 @@ function MobileBottlenecksBlock({
   );
 
   if (bottlenecks.length === 0) return null;
+
+  const visibleBottlenecks = showAll ? bottlenecks : bottlenecks.slice(0, 3);
+  const hasMore = bottlenecks.length > 3;
 
   return (
     <motion.div
@@ -315,7 +327,7 @@ function MobileBottlenecksBlock({
         <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos de performance</span>
       </div>
       <ul className="space-y-1.5">
-        {bottlenecks.map((m, i) => {
+        {visibleBottlenecks.map((m, i) => {
           const stars = percentileToStars(m.percentile_value);
           return (
             <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
@@ -329,6 +341,14 @@ function MobileBottlenecksBlock({
           );
         })}
       </ul>
+      {hasMore && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-2 pt-2 border-t border-border/20 text-center"
+        >
+          {showAll ? 'Mostrar menos ▴' : `Ver todos (${bottlenecks.length}) ▾`}
+        </button>
+      )}
     </motion.div>
   );
 }
@@ -1110,7 +1130,6 @@ export function DiagnosticRadarBlock({
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="pt-1">
         <Button
           size="lg"
-          disabled={onStartWorkout ? !hasTodayWorkout : false}
           onClick={onStartWorkout}
           className="w-full font-display text-lg tracking-wider px-6 py-5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg"
         >
@@ -1118,7 +1137,7 @@ export function DiagnosticRadarBlock({
           BORA TREINAR
           <ChevronRight className="w-5 h-5" />
         </Button>
-        <p className="text-muted-foreground/60 text-xs text-center mt-2">Treinar certo muda o jogo.</p>
+        <p className="text-muted-foreground/60 text-xs text-center mt-2">Veja seu treino do dia</p>
       </motion.div>
     </div>
   );
