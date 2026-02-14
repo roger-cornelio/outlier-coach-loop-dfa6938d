@@ -231,21 +231,7 @@ export function Dashboard() {
   };
 
   const handleStartWorkout = () => {
-    // Determinar o dia atual da semana (seg, ter, qua, etc.)
-    const days: DayOfWeek[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-    const todayDayOfWeek = days[new Date().getDay()];
-    
-    // Buscar treino do dia ATUAL (não do dia selecionado na aba)
-    const todayWorkout = displayWorkouts.find((w) => w.day === todayDayOfWeek);
-    
-    if (todayWorkout && !todayWorkout.isRestDay) {
-      setSelectedWorkout(todayWorkout);
-      setCurrentView('workout');
-    } else {
-      toast.info('Não há treino previsto para esse dia.', {
-        duration: 3000,
-      });
-    }
+    setCurrentView('weeklyTraining');
   };
 
   const handleGenerateAdaptation = () => {
