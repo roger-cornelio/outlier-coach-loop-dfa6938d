@@ -172,36 +172,38 @@ function MobilePathToEliteCard({
           }
         </div>
 
-        {/* Progress Bar (thick) */}
-        {!isAtTop && progressToTarget > 0 &&
+        {/* Progress Bar (thick) — always rendered when not at top */}
+        {!isAtTop &&
         <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{currentLevelLabel}</span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{targetLevelLabel}</span>
             </div>
             <div className="relative h-6 w-full rounded-full bg-black/40 overflow-hidden">
-              <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressToTarget}%` }}
-              transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
-
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-sm">
-                {progressToTarget}%
-              </span>
+              {progressToTarget > 0 ? (
+                <>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressToTarget}%` }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-sm">
+                    {progressToTarget}%
+                  </span>
+                </>
+              ) : (
+                <div className="h-full w-full rounded-full bg-muted/30" />
+              )}
             </div>
-            {isCapped &&
+            {progressToTarget === 0 && (
+              <p className="text-[10px] text-muted-foreground italic mt-1">Progresso em cálculo</p>
+            )}
+            {isCapped && progressToTarget > 0 &&
           <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
                 <Lock className="w-3 h-3" />
                 Travado em {journeyData.capPercent}% sem prova oficial
               </p>
           }
-          </div>
-        }
-
-        {!isAtTop && progressToTarget === 0 &&
-        <div className="mb-4">
-            <p className="text-[10px] text-muted-foreground italic">Faça 1 prova + 1 benchmark para liberar progresso</p>
           </div>
         }
 
@@ -327,8 +329,8 @@ function MobileBottlenecksBlock({
       className="card-elevated rounded-xl px-4 py-3">
 
       <div className="flex items-center gap-1.5 mb-2">
-        <Target className="w-3.5 h-3.5 text-red-500" />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Gargalos de performance</span>
+        <Target className="w-3.5 h-3.5 text-amber-500" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos de performance</span>
       </div>
       <ul className="space-y-1.5">
         {visibleBottlenecks.map((m, i) => {
