@@ -121,19 +121,32 @@ export function ProgressRuler() {
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="relative h-3 bg-secondary/50 rounded-full overflow-hidden mx-auto max-w-xs">
+        {/* Progress bar — grossa com preenchimento sólido */}
+        <div className="relative h-6 bg-secondary/60 rounded-full overflow-hidden mx-auto max-w-xs shadow-inner">
+          {/* Inner shadow para profundidade */}
+          <div className="absolute inset-0 rounded-full" style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.35)' }} />
           {/* Threshold marker */}
           <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-foreground/30 z-10"
+            className="absolute top-0 bottom-0 w-0.5 bg-foreground/20 z-10"
             style={{ left: '100%' }}
           />
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(progressData.progressToNextLevel, 100)}%` }}
             transition={{ duration: 1, ease: 'easeOut' }}
-            className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProgressGradient(progressData.rulerScore)} rounded-full`}
-          />
+            className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProgressGradient(progressData.rulerScore)} rounded-full shadow-lg`}
+          >
+            {/* Shine strip */}
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-white/25 rounded-t-full" />
+          </motion.div>
+          {/* Percentage label inside bar when wide enough */}
+          {progressData.progressToNextLevel > 15 && (
+            <div className="absolute inset-0 flex items-center pl-3 z-20">
+              <span className="text-[10px] font-bold text-white/90 drop-shadow">
+                {Math.round(progressData.progressToNextLevel)}%
+              </span>
+            </div>
+          )}
         </div>
         
         {/* Ruler explanation */}

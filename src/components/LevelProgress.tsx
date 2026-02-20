@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Star, Zap, Flame, Lock, 
   TrendingUp, Target, Sparkles, Shield, Swords,
-  Crown, CheckCircle2, AlertTriangle
+  Crown, CheckCircle2, AlertTriangle, Diamond
 } from 'lucide-react';
 import { useState } from 'react';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 interface LevelVisualConfig {
   icon: React.ReactNode;
   heroIcon: React.ReactNode;
+  nodeIcon: React.ReactNode;
   gradient: string;
   textGradient: string;
   bgPattern: string;
@@ -31,10 +32,36 @@ interface LevelVisualConfig {
   iconAnimation: string;
 }
 
+// ─── Ícones diferenciados por categoria ─────────────────────────────────────
+// OPEN  → Troféu (competidor, mérito de chegar)
+// PRO   → Coroa  (elite competitiva, liderança)
+// ELITE → Diamante + Raio (raridade absoluta, topo)
+
+const OpenHeroIcon = () => (
+  <div className="relative">
+    <Trophy className="w-24 h-24" />
+  </div>
+);
+
+const ProHeroIcon = () => (
+  <div className="relative">
+    <Crown className="w-24 h-24" />
+    <Sparkles className="w-8 h-8 absolute -top-2 -right-2 text-yellow-300 opacity-80" />
+  </div>
+);
+
+const EliteHeroIcon = () => (
+  <div className="relative">
+    <Diamond className="w-20 h-20" />
+    <Zap className="w-10 h-10 absolute -top-3 -right-3 text-yellow-200" />
+  </div>
+);
+
 const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   OPEN: {
     icon: <Trophy className="w-5 h-5" />,
-    heroIcon: <Trophy className="w-28 h-28" />,
+    heroIcon: <OpenHeroIcon />,
+    nodeIcon: <Trophy className="w-5 h-5 text-white" />,
     gradient: 'from-purple-500 via-violet-500 to-fuchsia-500',
     textGradient: 'from-purple-400 to-fuchsia-400',
     bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%)',
@@ -47,8 +74,9 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     iconAnimation: '',
   },
   PRO: {
-    icon: <StatusCrownPreset size="sm" />,
-    heroIcon: <StatusCrownPreset size="hero" />,
+    icon: <Crown className="w-5 h-5" />,
+    heroIcon: <ProHeroIcon />,
+    nodeIcon: <Crown className="w-5 h-5 text-white" />,
     gradient: 'from-amber-400 via-yellow-400 to-orange-400',
     textGradient: 'from-amber-300 to-yellow-300',
     bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%)',
@@ -61,8 +89,14 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     iconAnimation: 'animate-crown-float',
   },
   ELITE: {
-    icon: <Crown className="w-5 h-5" />,
-    heroIcon: <Crown className="w-32 h-32" />,
+    icon: <Diamond className="w-5 h-5" />,
+    heroIcon: <EliteHeroIcon />,
+    nodeIcon: (
+      <div className="relative flex items-center justify-center">
+        <Diamond className="w-5 h-5 text-white" />
+        <Zap className="w-3 h-3 text-yellow-200 absolute -top-1 -right-1" />
+      </div>
+    ),
     gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
     textGradient: 'from-yellow-200 to-amber-200',
     bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
@@ -75,6 +109,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     iconAnimation: 'animate-crown-float',
   },
 };
+
 
 const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
@@ -450,18 +485,24 @@ export function LevelProgress() {
           Jornada de Evolução
         </h3>
         
-        <div className="relative flex items-center justify-between py-4 px-2">
-          {/* Track line (background) */}
-          <div className="absolute top-1/2 left-8 right-8 h-2 bg-secondary/50 rounded-full -translate-y-1/2" />
+        <div className="relative flex items-center justify-between py-6 px-2">
+          {/* Track line (background) — grossa e sólida */}
+          <div className="absolute top-1/2 left-8 right-8 h-5 bg-secondary/60 rounded-full -translate-y-1/2 overflow-hidden">
+            {/* Inner shadow para profundidade */}
+            <div className="absolute inset-0 rounded-full shadow-inner" style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4)' }} />
+          </div>
           
-          {/* Filled track line (progress) */}
+          {/* Filled track — preenchimento sólido com gradiente */}
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${fillPercentage}%` }}
             transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
-            className={`absolute top-1/2 left-8 h-2 bg-gradient-to-r ${currentConfig.gradient} rounded-full -translate-y-1/2`}
+            className={`absolute top-1/2 left-8 h-5 bg-gradient-to-r ${currentConfig.gradient} rounded-full -translate-y-1/2 shadow-lg`}
             style={{ maxWidth: 'calc(100% - 4rem)' }}
-          />
+          >
+            {/* Shine overlay */}
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20 rounded-t-full" />
+          </motion.div>
 
           {/* Level Nodes */}
           {LEVELS_ORDER.map((levelKey, index) => {
@@ -509,7 +550,7 @@ export function LevelProgress() {
                   ) : isCompleted ? (
                     <CheckCircle2 className="w-5 h-5 text-white/90" />
                   ) : (
-                    <span className="text-white drop-shadow-lg">{config.icon}</span>
+                    <span className="text-white drop-shadow-lg">{config.nodeIcon}</span>
                   )}
                   
                   {/* Current level pulse */}
