@@ -25,56 +25,43 @@ export type StatusSource = 'prova_oficial' | 'estimado';
  * Base: faixa 30-34 anos.
  */
 const STATUS_TIME_THRESHOLDS: Record<AthleteGender, {
-  pro: number;      // < pro = HYROX PRO
-  open: number;     // < open = HYROX OPEN
-  avancado: number; // < avancado = AVANÇADO
-  inter: number;    // < inter = INTERMEDIÁRIO
-  // >= inter = INICIANTE
+  elite: number;    // < elite = ELITE
+  pro: number;      // < pro = PRO
+  // >= pro = OPEN
 }> = {
-  masculino: { pro: 80, open: 95, avancado: 110, inter: 125 },
-  feminino: { pro: 85, open: 100, avancado: 115, inter: 130 },
+  masculino: { elite: 70, pro: 90 },
+  feminino: { elite: 75, pro: 95 },
 };
 
 /**
- * Limiares de TOPO do nível (em minutos) - quando o atleta está no 95-100 do score.
- * Representa "pronto para subir de nível" ou "topo real daquele nível".
- * Base: faixa 30-34 anos.
+ * Limiares de TOPO do nível (em minutos)
  */
 const LEVEL_TOP_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
   masculino: {
-    iniciante: 95,      // ≤1h35 = topo iniciante (pronto para inter)
-    intermediario: 80,  // ≤1h20 = topo inter (pronto para avançado)
-    avancado: 70,       // ≤1h10 = topo avançado (pronto para OPEN)
-    hyrox_open: 66,     // ≤1h06 = topo OPEN (top nacional)
-    hyrox_pro: 66,      // ≤1h06 = pódio nacional (usa régua PRO separada)
+    open: 90,    // ≤1h30 = topo open
+    pro: 70,     // ≤1h10 = topo pro
+    elite: 60,   // ≤1h00 = topo elite
   },
   feminino: {
-    iniciante: 100,     // ≤1h40 = topo iniciante
-    intermediario: 85,  // ≤1h25 = topo inter
-    avancado: 75,       // ≤1h15 = topo avançado
-    hyrox_open: 70,     // ≤1h10 = topo OPEN
-    hyrox_pro: 70,      // ≤1h10 = pódio nacional
+    open: 95,    // ≤1h35 = topo open
+    pro: 75,     // ≤1h15 = topo pro
+    elite: 65,   // ≤1h05 = topo elite
   },
 };
 
 /**
- * Limiares de BASE do nível (em minutos) - quando o atleta está no score ~0-10 do nível.
- * Representa "acabou de entrar no nível".
+ * Limiares de BASE do nível (em minutos)
  */
 const LEVEL_BASE_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
   masculino: {
-    iniciante: 150,     // >2h30 = base iniciante
-    intermediario: 125, // ~2h05 = base inter
-    avancado: 110,      // ~1h50 = base avançado
-    hyrox_open: 95,     // ~1h35 = base OPEN
-    hyrox_pro: 85,      // ~1h25 = base PRO (entry level)
+    open: 130,   // ~2h10 = base open
+    pro: 90,     // ~1h30 = base pro
+    elite: 70,   // ~1h10 = base elite
   },
   feminino: {
-    iniciante: 155,     // >2h35 = base iniciante
-    intermediario: 130, // ~2h10 = base inter
-    avancado: 115,      // ~1h55 = base avançado
-    hyrox_open: 100,    // ~1h40 = base OPEN
-    hyrox_pro: 92,      // ~1h32 = base PRO
+    open: 135,   // ~2h15 = base open
+    pro: 95,     // ~1h35 = base pro
+    elite: 75,   // ~1h15 = base elite
   },
 };
 
@@ -219,15 +206,13 @@ export function toOpenEquivalentSeconds(
 export function getAdjustedStatusThresholds(
   gender: AthleteGender,
   ageBracket: HyroxAgeBracket
-): { pro: number; open: number; avancado: number; inter: number } {
+): { elite: number; pro: number } {
   const base = STATUS_TIME_THRESHOLDS[gender];
   const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
   
   return {
+    elite: base.elite + tolerance,
     pro: base.pro + tolerance,
-    open: base.open + tolerance,
-    avancado: base.avancado + tolerance,
-    inter: base.inter + tolerance,
   };
 }
 
@@ -271,22 +256,20 @@ export function getStatusFromOfficialTime(
   const ageBracket = ageAtRace !== undefined ? getAgeBracket(ageAtRace) : '30-34';
   const t = getAdjustedStatusThresholds(gender, ageBracket);
   
-  // Determina status pelo tempo
+  // Determina status pelo tempo (3 níveis: open, pro, elite)
   let status: AthleteStatus;
-  if (openEqMin < t.pro) status = 'hyrox_pro';
-  else if (openEqMin < t.open) status = 'hyrox_open';
-  else if (openEqMin < t.avancado) status = 'avancado';
-  else if (openEqMin < t.inter) status = 'intermediario';
-  else status = 'iniciante';
+  if (openEqMin < t.elite) status = 'elite';
+  else if (openEqMin < t.pro) status = 'pro';
+  else status = 'open';
   
-  // Regra especial: 60+ não podem ser PRO
+  // Regra especial: 60+ não podem ser ELITE
   let cappedFromPro = false;
   let cappedReason: string | undefined;
   
-  if (ageAtRace !== undefined && ageAtRace >= 60 && status === 'hyrox_pro') {
-    status = 'hyrox_open';
+  if (ageAtRace !== undefined && ageAtRace >= 60 && status === 'elite') {
+    status = 'pro';
     cappedFromPro = true;
-    cappedReason = `Atletas 60+ são classificados como HYROX OPEN (tempo seria PRO)`;
+    cappedReason = `Atletas 60+ são classificados como PRO (tempo seria ELITE)`;
   }
   
   // Calcula o score DENTRO do nível
@@ -525,7 +508,7 @@ function getConfidence(benchmarkCount: number): StatusConfidence {
 // FUNÇÕES DE NAVEGAÇÃO DE STATUS
 // ============================================================
 
-const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
+const STATUS_ORDER: AthleteStatus[] = ['open', 'pro', 'elite'];
 
 function getNextStatus(current: AthleteStatus): AthleteStatus | null {
   const index = STATUS_ORDER.indexOf(current);
@@ -538,12 +521,9 @@ function getPrevStatus(current: AthleteStatus): AthleteStatus | null {
 }
 
 function getStatusFromBenchmarkScore(score: number): AthleteStatus {
-  // Benchmarks estimam status com limiares conservadores
-  if (score >= 90) return 'hyrox_pro';
-  if (score >= 75) return 'hyrox_open';
-  if (score >= 55) return 'avancado';
-  if (score >= 35) return 'intermediario';
-  return 'iniciante';
+  if (score >= 80) return 'elite';
+  if (score >= 50) return 'pro';
+  return 'open';
 }
 
 // ============================================================
@@ -598,7 +578,7 @@ export function calculateAthleteStatus(
   // CASO 2: Sem prova oficial - usar benchmarks (estimativa)
   // ================================================================
   if (benchmarksUsed === 0) {
-    const status = previousStatus || 'iniciante';
+    const status = previousStatus || 'open';
     return {
       status,
       rulerScore: 0,
@@ -737,7 +717,6 @@ export function getLevelScoreDescription(score: number): string {
 export function getAdjustedThresholds(
   gender: AthleteGender,
   ageBracket: HyroxAgeBracket
-): { pro: number; open: number; adv: number; inter: number } {
-  const t = getAdjustedStatusThresholds(gender, ageBracket);
-  return { pro: t.pro, open: t.open, adv: t.avancado, inter: t.inter };
+): { elite: number; pro: number } {
+  return getAdjustedStatusThresholds(gender, ageBracket);
 }

@@ -147,7 +147,7 @@ export function useAthleteStatus() {
     
     // Determine category from status
     const category: ScoreCategory = 
-      calculatedStatus.status === 'hyrox_pro' ? 'PRO' : 'OPEN';
+      calculatedStatus.status === 'elite' ? 'PRO' : calculatedStatus.status === 'pro' ? 'PRO' : 'OPEN';
     
     // Get best official result percentile
     let officialPercentile: number | null = null;

@@ -24,36 +24,24 @@ interface NextLevelModalProps {
 
 // Level labels and colors
 const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
-  BEGINNER: 'Iniciante',
-  INTERMEDIATE: 'Intermediário',
-  ADVANCED: 'Avançado',
-  OPEN: 'HYROX OPEN',
-  PRO: 'HYROX PRO',
-  ELITE: 'HYROX ELITE',
+  OPEN: 'OPEN',
+  PRO: 'PRO',
+  ELITE: 'ELITE',
 };
 
 const LEVEL_GRADIENTS: Record<ExtendedLevelKey, string> = {
-  BEGINNER: 'from-cyan-500 to-blue-500',
-  INTERMEDIATE: 'from-emerald-500 to-green-500',
-  ADVANCED: 'from-orange-500 to-amber-500',
   OPEN: 'from-purple-500 to-fuchsia-500',
   PRO: 'from-amber-400 to-yellow-400',
   ELITE: 'from-yellow-300 to-amber-300',
 };
 
 const LEVEL_TEXT_COLORS: Record<ExtendedLevelKey, string> = {
-  BEGINNER: 'text-cyan-400',
-  INTERMEDIATE: 'text-green-400',
-  ADVANCED: 'text-orange-400',
   OPEN: 'text-purple-400',
   PRO: 'text-amber-400',
   ELITE: 'text-yellow-300',
 };
 
 const LEVEL_BG: Record<ExtendedLevelKey, string> = {
-  BEGINNER: 'bg-cyan-500/10 border-cyan-500/20',
-  INTERMEDIATE: 'bg-green-500/10 border-green-500/20',
-  ADVANCED: 'bg-orange-500/10 border-orange-500/20',
   OPEN: 'bg-purple-500/10 border-purple-500/20',
   PRO: 'bg-amber-500/10 border-amber-500/20',
   ELITE: 'bg-yellow-500/10 border-yellow-500/20',

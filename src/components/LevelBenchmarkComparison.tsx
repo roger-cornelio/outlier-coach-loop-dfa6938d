@@ -58,17 +58,13 @@ function formatDifference(diffSeconds: number): string {
 
 function mapStatusToTier(status: AthleteStatus): string {
   switch (status) {
-    case 'hyrox_pro':
-      return 'hyrox_pro';
-    case 'hyrox_open':
-      return 'hyrox_open';
-    case 'avancado':
-      return 'avancado';
-    case 'intermediario':
-      return 'intermediario';
-    case 'iniciante':
+    case 'elite':
+      return 'elite';
+    case 'pro':
+      return 'pro';
+    case 'open':
     default:
-      return 'iniciante';
+      return 'open';
   }
 }
 
