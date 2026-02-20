@@ -17,9 +17,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Progress } from '@/components/ui/progress';
 
 // ─── Ícones temáticos HYROX por categoria ───────────────────────────────────
-// OPEN  → Corredor (atleta em movimento, corrida)
-// PRO   → Atleta com Kettlebell/Sled (força + velocidade)
-// ELITE → Pódio com raio (topo absoluto da competição)
+// OPEN  → Pessoa correndo (corrida é base do HYROX)
+// PRO   → Pessoa carregando peso / fazendo movimento funcional
+// ELITE → Raio / energia máxima (velocidade + força no limite)
 
 interface LevelVisualConfig {
   icon: React.ReactNode;
@@ -38,70 +38,67 @@ interface LevelVisualConfig {
   accentColor: string;
 }
 
-// OPEN: Corredor em movimento (HYROX é uma prova de corrida + funcionais)
+// OPEN: Corredor em movimento
 const OpenIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
     {/* Cabeça */}
-    <circle cx="14" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
-    {/* Corpo em movimento de corrida */}
-    <path d="M12 6l-2 3 3 2-1.5 4" />
-    {/* Braços */}
-    <path d="M10 9l-2.5 1.5M14 11l2 -2" />
-    {/* Pernas */}
-    <path d="M10.5 15l-2 3M12.5 15l2.5 2.5" />
-    {/* Rastro de movimento */}
-    <path d="M4 8.5h2.5M3.5 11h2M4.5 13.5h1.5" opacity="0.4" strokeWidth="1.2" />
+    <circle cx="14.5" cy="3" r="1.8" />
+    {/* Tronco inclinado para frente */}
+    <path d="M11 7.5 C10 9 9.5 10.5 10 12 L12.5 12 L14 8.5 Z" />
+    {/* Braço para frente */}
+    <path d="M10 9 L7.5 7.5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
+    {/* Braço para trás */}
+    <path d="M14 9 L16.5 10.5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
+    {/* Perna para frente */}
+    <path d="M12.5 12 L10 17 L12 18" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Perna para trás */}
+    <path d="M12.5 12 L15 16 L13.5 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-// PRO: Atleta com kettlebell (força funcional — sled, farmers, etc.)
+// PRO: Atleta levantando kettlebell (exercício funcional HYROX)
 const ProIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
     {/* Cabeça */}
-    <circle cx="12" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
-    {/* Tronco atlético */}
-    <path d="M12 5.5v5" />
-    {/* Braços levantando peso */}
-    <path d="M8 8l4 2.5 4-2.5" />
-    <path d="M8 8l-1-2M16 8l1-2" />
-    {/* Kettlebell/peso */}
-    <rect x="5.5" y="4" width="3" height="2.5" rx="0.8" fill="currentColor" stroke="none" opacity="0.9" />
-    <rect x="15.5" y="4" width="3" height="2.5" rx="0.8" fill="currentColor" stroke="none" opacity="0.9" />
-    <path d="M5.5 4.5h-1M19.5 4.5h1" strokeWidth="2" />
-    {/* Pernas em posição de força */}
-    <path d="M10.5 10.5l-1.5 5M13.5 10.5l1.5 5" />
-    <path d="M9 15.5l-1 2M15 15.5l1 2" />
+    <circle cx="12" cy="3.5" r="1.8" />
+    {/* Corpo em posição de press */}
+    <path d="M12 5.5 L12 11" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" />
+    {/* Braços estendidos levantando */}
+    <path d="M12 7.5 L7 5 M12 7.5 L17 5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
+    {/* Kettlebell esquerdo */}
+    <rect x="4.5" y="2.5" width="4" height="3" rx="1" />
+    <path d="M5.5 5.5 L7.5 7" strokeWidth="1.5" stroke="currentColor" fill="none" />
+    {/* Kettlebell direito */}
+    <rect x="15.5" y="2.5" width="4" height="3" rx="1" />
+    <path d="M18.5 5.5 L16.5 7" strokeWidth="1.5" stroke="currentColor" fill="none" />
+    {/* Pernas levemente afastadas */}
+    <path d="M12 11 L9.5 16 L8 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 11 L14.5 16 L16 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-// ELITE: Pódio com raio (topo absoluto, performance máxima)
+// ELITE: Raio de energia (velocidade máxima, potência absoluta)
 const EliteIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    {/* Raio central (velocidade, energia máxima) */}
-    <path d="M13 2l-5 8h4l-2 12 9-12h-5l3-8z" fill="currentColor" stroke="none" opacity="0.95" />
-    {/* Estrelas ao redor */}
-    <path d="M3 5l1 2-2 1 2 1-1 2 2-1 1 2 1-2 2 1-1-2 2-1-2-1 1-2-2 1z" fill="currentColor" stroke="none" opacity="0.5" transform="scale(0.5) translate(1, 3)" />
-    <circle cx="4" cy="10" r="0.8" fill="currentColor" stroke="none" opacity="0.4" />
-    <circle cx="20" cy="14" r="0.8" fill="currentColor" stroke="none" opacity="0.4" />
-    <circle cx="19" cy="5" r="1" fill="currentColor" stroke="none" opacity="0.3" />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M13 2 L6 13 H11 L9 22 L18 9 H13 L15 2 Z" />
   </svg>
 );
 
 const OpenHeroIcon = () => (
   <div className="relative flex items-center justify-center">
-    <OpenIcon size={72} className="opacity-95" />
+    <OpenIcon size={80} className="opacity-95" />
   </div>
 );
 
 const ProHeroIcon = () => (
   <div className="relative flex items-center justify-center">
-    <ProIcon size={72} className="opacity-95" />
+    <ProIcon size={80} className="opacity-95" />
   </div>
 );
 
 const EliteHeroIcon = () => (
   <div className="relative flex items-center justify-center">
-    <EliteIcon size={72} className="opacity-95" />
+    <EliteIcon size={80} className="opacity-95" />
     <motion.div
       className="absolute inset-0 rounded-full opacity-30"
       animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
@@ -839,11 +836,16 @@ export function LevelProgress() {
                   >
                     {isLocked ? (
                       <div className="relative">
-                        <Lock className="w-4 h-4 text-muted-foreground/50" />
-                        {isRaceLocked && <Trophy className="w-3 h-3 text-amber-400/60 absolute -bottom-1 -right-1" />}
+                        <div className="opacity-30">{config.nodeIcon}</div>
+                        {isRaceLocked && <div className="w-3 h-3 text-amber-400/60 absolute -bottom-1 -right-1"><EliteIcon size={12} /></div>}
                       </div>
                     ) : isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-white/90" />
+                      <div className="relative">
+                        {config.nodeIcon}
+                        <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full w-3 h-3 flex items-center justify-center">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      </div>
                     ) : (
                       <span className="text-white drop-shadow-lg">{config.nodeIcon}</span>
                     )}
