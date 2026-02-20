@@ -117,15 +117,70 @@ function AnimatedCounter({ target, duration = 1000 }: {target: number;duration?:
 // ============================================
 // REQUIREMENTS CHECKLIST — progressive counters
 // ============================================
-function progressIcon(current: number, total: number): {icon: React.ReactNode;color: string;} {
-  if (total === 0) return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
-  const pct = current / total;
-  if (pct >= 1) return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
-  if (pct >= 0.75) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
-  if (pct >= 0.25) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-amber-400' };
-  return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-red-400' };
+// MINI PIE PROGRESS — SVG conic-gradient
+// ============================================
+interface MiniPieProgressProps {
+  value: number;
+  total: number;
+  size?: number;
 }
 
+function MiniPieProgress({ value, total, size = 22 }: MiniPieProgressProps) {
+  const progress = total > 0 ? Math.min(value / total, 1) : 0;
+  const isComplete = progress >= 1;
+
+  if (isComplete) {
+    return (
+      <span className="inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+        <Check className="text-emerald-400" style={{ width: size * 0.7, height: size * 0.7 }} />
+      </span>
+    );
+  }
+
+  const r = (size - 2) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="shrink-0"
+      style={{ transform: 'rotate(-90deg)' }}
+    >
+      {/* Background track */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke="hsl(var(--muted))"
+        strokeWidth="3"
+        opacity="0.4"
+      />
+      {/* Progress arc */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke="#f97316"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={strokeDashoffset}
+        style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+      />
+    </svg>
+  );
+}
+
+// ============================================
+// REQUIREMENTS CHECKLIST — mini pizza + fração
+// ============================================
 interface RequirementsChecklistProps {
   journeyData: ReturnType<typeof useJourneyProgress>;
   compact?: boolean;
@@ -141,60 +196,49 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
     officialRaceRequired, hasOfficialRace
   } = targetLevel;
 
-  const bMissing = Math.max(0, benchmarksRequired - benchmarksCompleted);
-  const sMissing = Math.max(0, trainingRequired - trainingSessions);
-
-  const bIcon = progressIcon(benchmarksCompleted, benchmarksRequired);
-  const sIcon = progressIcon(trainingSessions, trainingRequired);
-
   const rowCls = `flex items-center gap-2 text-xs w-full text-left`;
   const labelCls = 'flex-1 font-medium text-foreground/90';
-  const counterCls = 'font-mono font-bold tabular-nums text-foreground';
-  const missingCls = 'text-muted-foreground/70 ml-1';
+  const fractionCls = 'font-mono font-bold tabular-nums text-foreground';
 
   return (
     <ul className="space-y-1.5">
       {/* Prova oficial — check simples */}
       {officialRaceRequired &&
-      <li className="flex items-center gap-2 text-xs">
+        <li className="flex items-center gap-2 text-xs">
           {hasOfficialRace ?
-        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> :
-        <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> :
+            <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
           <span className={hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
             Prova oficial HYROX
           </span>
         </li>
       }
 
-      {/* Benchmarks — X / total | faltam Y */}
+      {/* Benchmarks — pizza + X / total */}
       <li>
         <button
           onClick={onBenchmarksClick}
           className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
           type="button">
-
-          <span className={`${bIcon.color} shrink-0`}>{bIcon.icon}</span>
+          <MiniPieProgress value={benchmarksCompleted} total={benchmarksRequired} />
           <span className={labelCls}>Benchmarks</span>
-          <span className={counterCls}>{benchmarksCompleted} / {benchmarksRequired}</span>
-          {bMissing > 0 && <span className={missingCls}>faltam {bMissing}</span>}
+          <span className={fractionCls}>{benchmarksCompleted} / {benchmarksRequired}</span>
         </button>
       </li>
 
-      {/* Sessões — X / total | faltam Y */}
+      {/* Sessões — pizza + X / total */}
       <li>
         <button
           onClick={onSessionsClick}
           className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
           type="button">
-
-          <span className={`${sIcon.color} shrink-0`}>{sIcon.icon}</span>
+          <MiniPieProgress value={trainingSessions} total={trainingRequired} />
           <span className={labelCls}>Sessões</span>
-          <span className={counterCls}>{trainingSessions} / {trainingRequired}</span>
-          {sMissing > 0 && <span className={missingCls}>faltam {sMissing}</span>}
+          <span className={fractionCls}>{trainingSessions} / {trainingRequired}</span>
         </button>
       </li>
-    </ul>);
-
+    </ul>
+  );
 }
 
 // ============================================
