@@ -154,8 +154,8 @@ export function WorkoutExecution() {
   // ESTIMATIVA DE TEMPO E CALORIAS
   // Fonte única: estimateWorkout()
   // ============================================
-  // open/pro usam nível 'avancado' como referência
-  const effectiveLevel: AthleteLevel = 'avancado';
+  // usa nível 'pro' como referência padrão
+  const effectiveLevel: AthleteLevel = 'pro';
   
   const workoutEstimation = useMemo(() => {
     if (!displayedWorkout) return null;

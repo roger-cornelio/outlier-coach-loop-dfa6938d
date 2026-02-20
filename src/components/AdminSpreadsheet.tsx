@@ -1068,7 +1068,7 @@ export function AdminSpreadsheet() {
                                   
                                   {/* Level-based target ranges */}
                                   <div className="grid gap-3 ml-6">
-                                    {(['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as AthleteLevel[]).map((level) => {
+                                    {(['open', 'pro', 'elite'] as AthleteLevel[]).map((level) => {
                                       const levelRange = block.levelTargetRanges?.[level];
                                       return (
                                         <div key={level} className="flex flex-wrap items-center gap-3 p-2 rounded bg-secondary/50">

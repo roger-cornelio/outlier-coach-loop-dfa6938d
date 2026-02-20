@@ -73,8 +73,8 @@ export function WeeklyTrainingView() {
   // Estimativa de tempo e calorias
   const workoutEstimation = useMemo(() => {
     if (!currentWorkout) return null;
-    // open/pro usam nível 'avancado' como referência
-    return estimateWorkout(currentWorkout, athleteConfig, 'avancado');
+    // usa nível 'pro' como referência padrão
+    return estimateWorkout(currentWorkout, athleteConfig, 'pro');
   }, [currentWorkout, athleteConfig]);
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);

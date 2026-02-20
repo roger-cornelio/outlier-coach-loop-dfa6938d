@@ -177,7 +177,7 @@ export function generateBenchmarkTimeRanges(block: WorkoutBlock, overrideParams?
   const result: LevelTargetRanges = {};
   
   // Gerar para cada nível (do config)
-  const levels = params.labels.athleteLevels.filter(l => l !== 'hyrox_open') as AthleteLevel[];
+  const levels: AthleteLevel[] = ['open', 'pro', 'elite'];
   
   for (const level of levels) {
     // Buscar multiplicador de nível dos params

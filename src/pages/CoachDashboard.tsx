@@ -467,16 +467,12 @@ export default function CoachDashboard() {
                       // Cores baseadas no status real
                       const getStatusColors = (status: AthleteStatus | null | undefined) => {
                         switch (status) {
-                          case 'hyrox_pro':
+                          case 'elite':
                             return 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/30';
-                          case 'hyrox_open':
+                          case 'pro':
                             return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-                          case 'avancado':
+                          case 'open':
                             return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-                          case 'intermediario':
-                            return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-                          case 'iniciante':
-                            return 'bg-slate-500/10 text-slate-400 border-slate-500/30';
                           default:
                             return 'bg-muted text-muted-foreground border-border';
                         }
