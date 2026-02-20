@@ -744,18 +744,81 @@ export function DiagnosticRadarBlock({
           onStartWorkout={onStartWorkout} />
 
 
-        {/* Bloco 2: Status de Performance — prova, meta, evolução */}
-        <PerformanceStatusCard
-          outlierScore={outlierScore}
-          statusLabel={statusLabel}
-          athleteCategory={athleteCategory}
-          validatingCompetition={validatingCompetition}
-          previousCompetition={previousCompetition}
-          eliteTargetSeconds={eliteTarget?.targetSeconds ?? null}
-          eliteTargetLabel={eliteTarget?.targetLabel ?? null}
-          raceCount={raceCount}
-          hideStatusChip
-        />
+        {/* Linha inline: Última prova · Meta · Evolução — abaixo do card principal */}
+        {validatingCompetition?.time_in_seconds && (() => {
+          const lastTime = validatingCompetition.time_in_seconds;
+          const targetSec = eliteTarget?.targetSeconds;
+          const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
+          const prevTime = previousCompetition?.time_in_seconds;
+
+          const parts: React.ReactNode[] = [];
+
+          // Última prova
+          parts.push(
+            <span key="last" className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Última prova</span>
+              <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
+            </span>
+          );
+
+          // Meta próximo nível
+          if (targetSec) {
+            const delta = lastTime - targetSec;
+            if (delta <= 0) {
+              parts.push(
+                <span key="meta" className="flex items-center gap-1.5">
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Meta {targetLabel}</span>
+                  <span className="font-bold text-emerald-400">atingida ✔</span>
+                </span>
+              );
+            } else {
+              const m = Math.floor(delta / 60);
+              const s = Math.round(delta % 60);
+              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
+              parts.push(
+                <span key="meta" className="flex items-center gap-1.5">
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Meta {targetLabel}</span>
+                  <span className="font-bold text-amber-400">faltam {fmt}</span>
+                </span>
+              );
+            }
+          }
+
+          // Evolução
+          if (prevTime) {
+            const diff = lastTime - prevTime;
+            if (Math.abs(diff) >= 30) {
+              const abs = Math.abs(diff);
+              const m = Math.floor(abs / 60);
+              const s = Math.round(abs % 60);
+              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
+              parts.push(
+                <span key="evol" className="flex items-center gap-1.5">
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Evolução</span>
+                  <span className={`font-bold ${diff < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
+                  </span>
+                </span>
+              );
+            }
+          } else {
+            parts.push(
+              <span key="evol-cta" className="flex items-center gap-1.5">
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground/60 text-[11px] italic">Evolução disponível após próxima prova</span>
+              </span>
+            );
+          }
+
+          return (
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs px-4 pb-3 pt-1">
+              {parts}
+            </div>
+          );
+        })()}
 
 
         {/* Bloco 3: Gargalos */}
@@ -806,39 +869,88 @@ export function DiagnosticRadarBlock({
           <Crown className="w-6 h-6 text-amber-400 shrink-0" />
           <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
         </div>
-        {/* Linha compacta: última prova + ranking — sem card separado */}
-        {validatingCompetition?.time_in_seconds ? (
-          <div className="flex items-center justify-center gap-3 text-sm">
-            <span className="text-muted-foreground">Última prova</span>
-            <span className="font-bold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span>
-            {(() => {
-              const top = Math.round(100 - outlierScore.score);
-              if (top >= 1 && top <= 99) return (
+
+        {/* Linha inline: Última prova · Meta Elite · Evolução */}
+        {(() => {
+          const lastTime = validatingCompetition?.time_in_seconds;
+          const targetSec = eliteTarget?.targetSeconds;
+          const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
+
+          // Meta elite chip
+          let metaChip: React.ReactNode = null;
+          if (lastTime && targetSec) {
+            const delta = lastTime - targetSec;
+            if (delta <= 0) {
+              metaChip = (
                 <>
-                  <span className="text-border">·</span>
-                  <span className="text-muted-foreground">Top <span className="font-bold text-foreground">{top}%</span></span>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Meta {targetLabel}</span>
+                  <span className="font-bold text-emerald-400">atingida ✔</span>
                 </>
               );
-              return null;
-            })()}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>
-        )}
-      </motion.div>
+            } else {
+              const m = Math.floor(delta / 60);
+              const s = Math.round(delta % 60);
+              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
+              metaChip = (
+                <>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Meta {targetLabel}</span>
+                  <span className="font-bold text-amber-400">faltam {fmt}</span>
+                </>
+              );
+            }
+          }
 
-      {/* BLOCO 2: Status de Performance (desktop) */}
-      <PerformanceStatusCard
-        outlierScore={outlierScore}
-        statusLabel={statusLabel}
-        athleteCategory={athleteCategory}
-        validatingCompetition={validatingCompetition}
-        previousCompetition={previousCompetition}
-        eliteTargetSeconds={eliteTarget?.targetSeconds ?? null}
-        eliteTargetLabel={eliteTarget?.targetLabel ?? null}
-        raceCount={raceCount}
-        hideStatusChip
-      />
+          // Evolução chip
+          let evolChip: React.ReactNode = null;
+          if (lastTime && previousCompetition?.time_in_seconds) {
+            const diff = lastTime - previousCompetition.time_in_seconds;
+            if (Math.abs(diff) >= 30) {
+              const abs = Math.abs(diff);
+              const m = Math.floor(abs / 60);
+              const s = Math.round(abs % 60);
+              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
+              evolChip = (
+                <>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Evolução</span>
+                  <span className={`font-bold ${diff < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
+                  </span>
+                </>
+              );
+            }
+          } else if (lastTime && !previousCompetition?.time_in_seconds) {
+            evolChip = (
+              <>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground/60 text-xs italic">Evolução disponível após próxima prova</span>
+              </>
+            );
+          }
+
+          if (!lastTime) {
+            return <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>;
+          }
+
+          const top = Math.round(100 - outlierScore.score);
+          return (
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
+              <span className="text-muted-foreground">Última prova</span>
+              <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
+              {top >= 1 && top <= 99 && (
+                <>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Top <span className="font-bold text-foreground">{top}%</span></span>
+                </>
+              )}
+              {metaChip}
+              {evolChip}
+            </div>
+          );
+        })()}
+      </motion.div>
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
       {(() => {
