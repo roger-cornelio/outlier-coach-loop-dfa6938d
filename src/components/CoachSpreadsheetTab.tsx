@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
@@ -150,9 +151,11 @@ interface LinkedAthlete {
 interface CoachSpreadsheetTabProps {
   linkedAthletes: LinkedAthlete[];
   loadingAthletes?: boolean;
+  initialWorkout?: CoachWorkout | null;
+  onClearInitialWorkout?: () => void;
 }
 
-export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }: CoachSpreadsheetTabProps) {
+export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
   const { saveWorkout: saveToDb } = useCoachWorkouts();
   
@@ -394,6 +397,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false }:
       <TabsContent value="import" className="space-y-6">
         <TextModelImporter
           isSaving={isSavingToDb}
+          initialWorkout={initialWorkout}
+          onClearInitialWorkout={onClearInitialWorkout}
           onSaveAndGoToPrograms={async (workouts, title, weekStart) => {
             setIsSavingToDb(true);
             try {

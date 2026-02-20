@@ -70,6 +70,7 @@ interface LinkedAthlete {
 interface CoachProgramsTabProps {
   linkedAthletes: LinkedAthlete[];
   loadingAthletes?: boolean;
+  onEditWorkout?: (workout: CoachWorkout) => void;
 }
 
 const DAY_NAMES: Record<DayOfWeek, string> = {
@@ -276,7 +277,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
   );
 }
 
-export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: CoachProgramsTabProps) {
+export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEditWorkout }: CoachProgramsTabProps) {
   const { workouts, loading, error, archiveWorkout, deleteWorkout, duplicateAsDraft, refetch } = useCoachWorkouts();
   const { toast } = useToast();
   const [selectedWorkout, setSelectedWorkout] = useState<CoachWorkout | null>(null);
@@ -529,6 +530,19 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false }: Co
                             {/* 🟡 RASCUNHO: ✏️ Editar, 🚀 Publicar, 🗑️ Excluir */}
                             {workout.status === 'draft' && (
                               <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => onEditWorkout?.(workout)}
+                                      className="h-8 w-8 p-0 text-amber-500 hover:bg-amber-500/10"
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar programação</TooltipContent>
+                                </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button

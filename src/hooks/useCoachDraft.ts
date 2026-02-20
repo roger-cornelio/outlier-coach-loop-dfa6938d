@@ -369,6 +369,7 @@ export function useCoachDraft() {
     setRestDays,
     setProgramName,
     setMode,
+    patchDraft,
 
     // Navegação entre telas
     goToEdit,
