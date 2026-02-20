@@ -16,10 +16,10 @@ import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
 
-// ─── Ícones diferenciados por categoria ─────────────────────────────────────
-// OPEN  → Troféu (competidor, mérito de chegar)
-// PRO   → Coroa  (elite competitiva, liderança)
-// ELITE → Diamante + Raio (raridade absoluta, topo)
+// ─── Ícones temáticos HYROX por categoria ───────────────────────────────────
+// OPEN  → Corredor (atleta em movimento, corrida)
+// PRO   → Atleta com Kettlebell/Sled (força + velocidade)
+// ELITE → Pódio com raio (topo absoluto da competição)
 
 interface LevelVisualConfig {
   icon: React.ReactNode;
@@ -38,31 +38,83 @@ interface LevelVisualConfig {
   accentColor: string;
 }
 
+// OPEN: Corredor em movimento (HYROX é uma prova de corrida + funcionais)
+const OpenIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {/* Cabeça */}
+    <circle cx="14" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
+    {/* Corpo em movimento de corrida */}
+    <path d="M12 6l-2 3 3 2-1.5 4" />
+    {/* Braços */}
+    <path d="M10 9l-2.5 1.5M14 11l2 -2" />
+    {/* Pernas */}
+    <path d="M10.5 15l-2 3M12.5 15l2.5 2.5" />
+    {/* Rastro de movimento */}
+    <path d="M4 8.5h2.5M3.5 11h2M4.5 13.5h1.5" opacity="0.4" strokeWidth="1.2" />
+  </svg>
+);
+
+// PRO: Atleta com kettlebell (força funcional — sled, farmers, etc.)
+const ProIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {/* Cabeça */}
+    <circle cx="12" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
+    {/* Tronco atlético */}
+    <path d="M12 5.5v5" />
+    {/* Braços levantando peso */}
+    <path d="M8 8l4 2.5 4-2.5" />
+    <path d="M8 8l-1-2M16 8l1-2" />
+    {/* Kettlebell/peso */}
+    <rect x="5.5" y="4" width="3" height="2.5" rx="0.8" fill="currentColor" stroke="none" opacity="0.9" />
+    <rect x="15.5" y="4" width="3" height="2.5" rx="0.8" fill="currentColor" stroke="none" opacity="0.9" />
+    <path d="M5.5 4.5h-1M19.5 4.5h1" strokeWidth="2" />
+    {/* Pernas em posição de força */}
+    <path d="M10.5 10.5l-1.5 5M13.5 10.5l1.5 5" />
+    <path d="M9 15.5l-1 2M15 15.5l1 2" />
+  </svg>
+);
+
+// ELITE: Pódio com raio (topo absoluto, performance máxima)
+const EliteIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {/* Raio central (velocidade, energia máxima) */}
+    <path d="M13 2l-5 8h4l-2 12 9-12h-5l3-8z" fill="currentColor" stroke="none" opacity="0.95" />
+    {/* Estrelas ao redor */}
+    <path d="M3 5l1 2-2 1 2 1-1 2 2-1 1 2 1-2 2 1-1-2 2-1-2-1 1-2-2 1z" fill="currentColor" stroke="none" opacity="0.5" transform="scale(0.5) translate(1, 3)" />
+    <circle cx="4" cy="10" r="0.8" fill="currentColor" stroke="none" opacity="0.4" />
+    <circle cx="20" cy="14" r="0.8" fill="currentColor" stroke="none" opacity="0.4" />
+    <circle cx="19" cy="5" r="1" fill="currentColor" stroke="none" opacity="0.3" />
+  </svg>
+);
+
 const OpenHeroIcon = () => (
-  <div className="relative">
-    <Trophy className="w-20 h-20" />
+  <div className="relative flex items-center justify-center">
+    <OpenIcon size={72} className="opacity-95" />
   </div>
 );
 
 const ProHeroIcon = () => (
-  <div className="relative">
-    <Crown className="w-20 h-20" />
-    <Sparkles className="w-7 h-7 absolute -top-2 -right-2 opacity-80" style={{ color: '#fde047' }} />
+  <div className="relative flex items-center justify-center">
+    <ProIcon size={72} className="opacity-95" />
   </div>
 );
 
 const EliteHeroIcon = () => (
-  <div className="relative">
-    <Diamond className="w-18 h-18" style={{ width: 72, height: 72 }} />
-    <Zap className="w-9 h-9 absolute -top-3 -right-3" style={{ color: '#fef08a' }} />
+  <div className="relative flex items-center justify-center">
+    <EliteIcon size={72} className="opacity-95" />
+    <motion.div
+      className="absolute inset-0 rounded-full opacity-30"
+      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+    />
   </div>
 );
 
 const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   OPEN: {
-    icon: <Trophy className="w-5 h-5" />,
+    icon: <OpenIcon size={20} />,
     heroIcon: <OpenHeroIcon />,
-    nodeIcon: <Trophy className="w-5 h-5 text-white" />,
+    nodeIcon: <OpenIcon size={20} className="text-white" />,
     gradient: 'from-purple-500 via-violet-500 to-fuchsia-500',
     textGradient: 'from-purple-400 to-fuchsia-400',
     bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%)',
@@ -76,9 +128,9 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     accentColor: '#a855f7',
   },
   PRO: {
-    icon: <Crown className="w-5 h-5" />,
+    icon: <ProIcon size={20} />,
     heroIcon: <ProHeroIcon />,
-    nodeIcon: <Crown className="w-5 h-5 text-white" />,
+    nodeIcon: <ProIcon size={20} className="text-white" />,
     gradient: 'from-amber-400 via-yellow-400 to-orange-400',
     textGradient: 'from-amber-300 to-yellow-300',
     bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%)',
@@ -92,14 +144,9 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     accentColor: '#f59e0b',
   },
   ELITE: {
-    icon: <Diamond className="w-5 h-5" />,
+    icon: <EliteIcon size={20} />,
     heroIcon: <EliteHeroIcon />,
-    nodeIcon: (
-      <div className="relative flex items-center justify-center">
-        <Diamond className="w-5 h-5 text-white" />
-        <Zap className="w-3 h-3 absolute -top-1 -right-1" style={{ color: '#fef08a' }} />
-      </div>
-    ),
+    nodeIcon: <EliteIcon size={20} className="text-white" />,
     gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
     textGradient: 'from-yellow-200 to-amber-200',
     bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
