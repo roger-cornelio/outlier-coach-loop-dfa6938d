@@ -41,6 +41,8 @@ interface PerformanceStatusCardProps {
   eliteTargetSeconds?: number | null;
   /** Extra class name */
   className?: string;
+  /** If true, omit the "Status OUTLIER" chip (already shown in header) */
+  hideStatusChip?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ export function PerformanceStatusCard({
   previousCompetition,
   eliteTargetSeconds,
   className,
+  hideStatusChip = false,
 }: PerformanceStatusCardProps) {
   const topPercent = safeTopPercent(outlierScore.score);
   const scoreColorClass = getScoreColorClass(outlierScore.score);
@@ -116,7 +119,6 @@ export function PerformanceStatusCard({
   const eliteDelta = useMemo(() => {
     if (!eliteTargetSeconds || !validatingCompetition?.time_in_seconds) return null;
     const delta = validatingCompetition.time_in_seconds - eliteTargetSeconds;
-    // Sanity: ignore insane deltas (> 2h or < -1h)
     if (Math.abs(delta) > 7200) return null;
     return delta;
   }, [eliteTargetSeconds, validatingCompetition]);
@@ -130,7 +132,6 @@ export function PerformanceStatusCard({
   const evolutionDelta = useMemo(() => {
     if (!validatingCompetition?.time_in_seconds || !previousCompetition?.time_in_seconds) return null;
     const delta = validatingCompetition.time_in_seconds - previousCompetition.time_in_seconds;
-    // Negative delta = improvement (faster). Skip huge outliers.
     if (Math.abs(delta) > 3600) return null;
     return delta;
   }, [validatingCompetition, previousCompetition]);
@@ -143,21 +144,13 @@ export function PerformanceStatusCard({
     valueClass?: string;
   }> = [];
 
-  // A. Status OUTLIER
-  if (topPercent !== null) {
+  // A. Status OUTLIER — skip if the header already shows it
+  if (!hideStatusChip) {
     chips.push({
       id: 'status',
       icon: Award,
       label: 'Status OUTLIER',
-      value: `${statusLabel} · Top ${topPercent}%`,
-      valueClass: scoreColorClass,
-    });
-  } else {
-    chips.push({
-      id: 'status',
-      icon: Award,
-      label: 'Status OUTLIER',
-      value: statusLabel,
+      value: topPercent !== null ? `${statusLabel} · Top ${topPercent}%` : statusLabel,
       valueClass: scoreColorClass,
     });
   }

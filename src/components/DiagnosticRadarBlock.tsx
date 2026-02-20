@@ -766,12 +766,13 @@ export function DiagnosticRadarBlock({
           onStartWorkout={onStartWorkout} />
 
 
-        {/* Bloco 2: Status de Performance */}
+        {/* Bloco 2: Status de Performance — só última prova + ranking (nome/nível já no Bloco 1) */}
         <PerformanceStatusCard
           outlierScore={outlierScore}
           statusLabel={statusLabel}
           athleteCategory={athleteCategory}
           validatingCompetition={validatingCompetition}
+          hideStatusChip
         />
 
 
@@ -817,20 +818,31 @@ export function DiagnosticRadarBlock({
       }
 
       {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-3">
-        <h1 className="font-display text-2xl font-bold tracking-wide text-foreground uppercase mb-1 sm:text-4xl">{athleteName}</h1>
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Crown className="w-4 text-amber-400 border h-[20px]" />
-          <span className="font-semibold text-amber-400 tracking-wider text-xl">{athleteCategory}</span>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
+        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-wide text-foreground uppercase mb-2">{athleteName}</h1>
+        <div className="flex items-center justify-center gap-2.5 mb-3">
+          <Crown className="w-6 h-6 text-amber-400 shrink-0" />
+          <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
         </div>
-      {/* PerformanceStatusCard — replaces old "Última prova / Top % / Evolução" row */}
-      <PerformanceStatusCard
-        outlierScore={outlierScore}
-        statusLabel={statusLabel}
-        athleteCategory={athleteCategory}
-        validatingCompetition={validatingCompetition}
-        className="mt-2"
-      />
+        {/* Linha compacta: última prova + ranking — sem card separado */}
+        {validatingCompetition?.time_in_seconds ? (
+          <div className="flex items-center justify-center gap-3 text-sm">
+            <span className="text-muted-foreground">Última prova</span>
+            <span className="font-bold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span>
+            {(() => {
+              const top = Math.round(100 - outlierScore.score);
+              if (top >= 1 && top <= 99) return (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="text-muted-foreground">Top <span className="font-bold text-foreground">{top}%</span></span>
+                </>
+              );
+              return null;
+            })()}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>
+        )}
       </motion.div>
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
@@ -841,10 +853,6 @@ export function DiagnosticRadarBlock({
         const { targetLevel, currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journey;
         const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
         const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
-        const worstMetrics = [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 2);
-        // Score is now shown as ranking (Top X%), no longer as absolute number
-        const scoreLabel = getScoreDescription(outlierScore.score);
-        const scoreColorClass = getScoreColorClass(outlierScore.score);
 
         const milestones = [
         { position: 25, icon: Target, label: '25%' },
@@ -864,28 +872,6 @@ export function DiagnosticRadarBlock({
                 <span className="text-[10px] font-bold font-display uppercase tracking-wide text-foreground/70">{currentLevelLabel} → {targetLevelLabel}</span>
               </div>
 
-              {/* OUTLIER SCORE — compact ranking metric */}
-              <div className="bg-gradient-to-br from-background/80 to-muted/20 border border-border/30 rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Outlier Score</span>
-                      {outlierScore.isProvisional &&
-                      <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 flex items-center gap-1">
-                          <Lock className="w-2.5 h-2.5" />Provisório
-                        </span>
-                      }
-                    </div>
-                    <p className={`text-lg font-bold font-display ${scoreColorClass}`}>
-                      Top {Math.max(1, Math.round(100 - outlierScore.score))}% <span className="text-xs font-medium text-muted-foreground">da categoria</span>
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/60">Evolução: <span className="text-muted-foreground">---</span></p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full border ${scoreColorClass} border-current/20`}>{scoreLabel}</span>
-                  </div>
-                </div>
-              </div>
 
               {/* ELITE state */}
               {isAtTop ?
