@@ -24,6 +24,8 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useJourneyProgress } from '@/hooks/useJourneyProgress';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
+import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
@@ -254,47 +256,6 @@ function MobilePathToEliteCard({
           <ChevronRight className="w-5 h-5" />
         </Button>
         <p className="text-muted-foreground/60 text-[10px] text-center mt-1.5">Veja seu treino do dia</p>
-      </div>
-    </motion.div>);
-
-}
-
-// ============================================
-// MOBILE BLOCK 2 — STATUS DO ATLETA
-// ============================================
-function MobileStatusBlock({
-  outlierScore,
-  validatingCompetition
-
-
-
-}: {outlierScore: {score: number;isProvisional: boolean;};validatingCompetition: {time_in_seconds: number;open_equivalent_seconds: number;event_date?: string | null;event_name?: string | null;} | null;}) {
-  const rank = Math.max(1, Math.round(100 - outlierScore.score));
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15 }}
-      className="card-elevated rounded-xl px-4 py-3">
-
-      <div className="space-y-1 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Top</span>
-          <span className="font-bold text-foreground">{rank}% da categoria</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Última prova</span>
-          <span className="font-semibold text-foreground">
-            {validatingCompetition?.time_in_seconds ?
-            formatOfficialTime(validatingCompetition.time_in_seconds) :
-            '—'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Evolução</span>
-          <span className="text-muted-foreground">---</span>
-        </div>
       </div>
     </motion.div>);
 
@@ -636,6 +597,23 @@ export function DiagnosticRadarBlock({
   const { athleteConfig } = useOutlierStore();
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
+  const { getOfficialCompetitions } = useBenchmarkResults();
+
+  // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
+  const officialCompetitions = useMemo(() => getOfficialCompetitions(), [getOfficialCompetitions]);
+  const raceCount = officialCompetitions.length;
+  // previousCompetition: segunda prova mais recente com tempo válido
+  const previousCompetition = useMemo(() => {
+    const withTime = officialCompetitions.filter(c => typeof c.time_in_seconds === 'number' && c.time_in_seconds > 0);
+    if (withTime.length < 2) return null;
+    const p = withTime[1];
+    return { time_in_seconds: p.time_in_seconds as number };
+  }, [officialCompetitions]);
+
+  const eliteTarget = useMemo(() => {
+    const gender = athleteConfig?.sexo || 'masculino';
+    return getEliteTargetSeconds(status, gender);
+  }, [status, athleteConfig?.sexo]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
@@ -766,12 +744,16 @@ export function DiagnosticRadarBlock({
           onStartWorkout={onStartWorkout} />
 
 
-        {/* Bloco 2: Status de Performance — só última prova + ranking (nome/nível já no Bloco 1) */}
+        {/* Bloco 2: Status de Performance — prova, meta, evolução */}
         <PerformanceStatusCard
           outlierScore={outlierScore}
           statusLabel={statusLabel}
           athleteCategory={athleteCategory}
           validatingCompetition={validatingCompetition}
+          previousCompetition={previousCompetition}
+          eliteTargetSeconds={eliteTarget?.targetSeconds ?? null}
+          eliteTargetLabel={eliteTarget?.targetLabel ?? null}
+          raceCount={raceCount}
           hideStatusChip
         />
 
@@ -844,6 +826,19 @@ export function DiagnosticRadarBlock({
           <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>
         )}
       </motion.div>
+
+      {/* BLOCO 2: Status de Performance (desktop) */}
+      <PerformanceStatusCard
+        outlierScore={outlierScore}
+        statusLabel={statusLabel}
+        athleteCategory={athleteCategory}
+        validatingCompetition={validatingCompetition}
+        previousCompetition={previousCompetition}
+        eliteTargetSeconds={eliteTarget?.targetSeconds ?? null}
+        eliteTargetLabel={eliteTarget?.targetLabel ?? null}
+        raceCount={raceCount}
+        hideStatusChip
+      />
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
       {(() => {

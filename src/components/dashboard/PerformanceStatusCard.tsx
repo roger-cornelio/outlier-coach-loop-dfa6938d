@@ -7,54 +7,64 @@
  * - Nunca exibe percentuais negativos ou > 100
  * - Esconde campos sem dados (nunca mostra "---" no UI final)
  * - Nunca inventa dados de backend
+ * - Evolução: só exibe se diff >= 30s; caso contrário mostra CTA
  */
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Timer, TrendingUp, Award, Target } from 'lucide-react';
+import { Flame, Timer, TrendingUp, Award, Target, ChevronRight } from 'lucide-react';
 import { formatOfficialTime } from '@/utils/athleteStatusSystem';
 import type { ScoreResult } from '@/utils/outlierScoring';
 import { getScoreColorClass } from '@/utils/outlierScoring';
 import { cn } from '@/lib/utils';
-
-// ─── Props ───────────────────────────────────────────────────────────────────
-
-interface PerformanceStatusCardProps {
-  /** Calculated Outlier score (0-10) + isProvisional flag */
-  outlierScore: ScoreResult;
-  /** Athlete status label, e.g. "HYROX PRO" */
-  statusLabel: string;
-  /** Category label, e.g. "HYROX PRO WOMEN" */
-  athleteCategory: string;
-  /** Most recent validating competition */
-  validatingCompetition: {
-    time_in_seconds: number;
-    open_equivalent_seconds: number;
-    event_date?: string | null;
-    event_name?: string | null;
-  } | null;
-  /** Previous validating competition for delta (optional) */
-  previousCompetition?: {
-    time_in_seconds: number;
-  } | null;
-  /** Elite target time in seconds (optional) */
-  eliteTargetSeconds?: number | null;
-  /** Extra class name */
-  className?: string;
-  /** If true, omit the "Status OUTLIER" chip (already shown in header) */
-  hideStatusChip?: boolean;
-}
+import type { AthleteStatus } from '@/types/outlier';
+import type { AthleteGender } from '@/utils/athleteStatusSystem';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Format a time delta in seconds to "+4m57s" or "−2m10s" */
-function formatTimeDelta(deltaSec: number): { text: string; positive: boolean } {
-  const abs = Math.abs(deltaSec);
+/** Formata segundos como "XmYs" (sem horas visíveis, ex: 72m15s) */
+export function formatSecondsToXmYs(seconds: number): string {
+  const abs = Math.abs(Math.round(seconds));
   const m = Math.floor(abs / 60);
-  const s = Math.round(abs % 60);
-  const sign = deltaSec > 0 ? '+' : '−';
-  const text = m > 0 ? `${sign}${m}m${s.toString().padStart(2, '0')}s` : `${sign}${s}s`;
-  return { text, positive: deltaSec > 0 };
+  const s = abs % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m${s.toString().padStart(2, '0')}s`;
+}
+
+/** Parse de tempo (string "HH:MM:SS" ou "MM:SS" ou number) → segundos | null */
+export function parseTimeToSeconds(input: string | number): number | null {
+  if (typeof input === 'number') return Number.isFinite(input) && input > 0 ? input : null;
+  if (typeof input !== 'string') return null;
+  const parts = input.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
+}
+
+/**
+ * Retorna o tempo alvo em segundos para o próximo nível acima do status atual.
+ * Usa LEVEL_TOP_THRESHOLDS de athleteStatusSystem (em minutos).
+ * Sem chamadas de rede.
+ */
+export function getEliteTargetSeconds(
+  status: AthleteStatus | string,
+  gender: AthleteGender | string
+): { targetSeconds: number; targetLabel: string } | null {
+  // Mapa status → próximo nível e threshold (minutos)
+  const NEXT_LEVEL: Record<string, { label: string; minutesMasc: number; minutesFem: number }> = {
+    iniciante:      { label: 'INTERMEDIÁRIO', minutesMasc: 95,  minutesFem: 100 },
+    intermediario:  { label: 'AVANÇADO',      minutesMasc: 80,  minutesFem: 85  },
+    avancado:       { label: 'OPEN',          minutesMasc: 70,  minutesFem: 75  },
+    hyrox_open:     { label: 'PRO',           minutesMasc: 66,  minutesFem: 70  },
+    hyrox_pro:      { label: 'ELITE',         minutesMasc: 66,  minutesFem: 70  },
+  };
+
+  const entry = NEXT_LEVEL[status as string];
+  if (!entry) return null;
+
+  const minutes = gender === 'feminino' ? entry.minutesFem : entry.minutesMasc;
+  return { targetSeconds: minutes * 60, targetLabel: entry.label };
 }
 
 /** Safe top-percent: returns null if value is outside 1–99 */
@@ -64,7 +74,28 @@ function safeTopPercent(score: number): number | null {
   return top;
 }
 
-// ─── Chip Row ─────────────────────────────────────────────────────────────────
+// ─── Props ───────────────────────────────────────────────────────────────────
+
+interface PerformanceStatusCardProps {
+  outlierScore: ScoreResult;
+  statusLabel: string;
+  athleteCategory: string;
+  validatingCompetition: {
+    time_in_seconds: number;
+    open_equivalent_seconds: number;
+    event_date?: string | null;
+    event_name?: string | null;
+  } | null;
+  previousCompetition?: { time_in_seconds: number } | null;
+  eliteTargetSeconds?: number | null;
+  eliteTargetLabel?: string | null;
+  raceCount?: number;
+  className?: string;
+  hideStatusChip?: boolean;
+  onImportRace?: () => void;
+}
+
+// ─── Chip ─────────────────────────────────────────────────────────────────────
 
 function Chip({
   icon: Icon,
@@ -95,6 +126,37 @@ function Chip({
   );
 }
 
+// ─── CTA Chip ────────────────────────────────────────────────────────────────
+
+function CtaChip({
+  label,
+  ctaText,
+  delay = 0,
+  onClick,
+}: {
+  label: string;
+  ctaText: string;
+  delay?: number;
+  onClick?: () => void;
+}) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay }}
+      onClick={onClick}
+      className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-muted/10 border border-border/20 w-full text-left hover:bg-muted/30 transition-colors group"
+    >
+      <TrendingUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+      <span className="text-[11px] text-muted-foreground shrink-0 leading-tight">{label}</span>
+      <span className="ml-auto text-[11px] font-semibold text-primary flex items-center gap-0.5 group-hover:gap-1 transition-all whitespace-nowrap">
+        {ctaText}
+        <ChevronRight className="w-3 h-3" />
+      </span>
+    </motion.button>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function PerformanceStatusCard({
@@ -104,8 +166,11 @@ export function PerformanceStatusCard({
   validatingCompetition,
   previousCompetition,
   eliteTargetSeconds,
+  eliteTargetLabel,
+  raceCount = 0,
   className,
   hideStatusChip = false,
+  onImportRace,
 }: PerformanceStatusCardProps) {
   const topPercent = safeTopPercent(outlierScore.score);
   const scoreColorClass = getScoreColorClass(outlierScore.score);
@@ -115,11 +180,11 @@ export function PerformanceStatusCard({
     return formatOfficialTime(validatingCompetition.time_in_seconds);
   }, [validatingCompetition]);
 
-  /** Delta vs elite target — only show if meaningful */
+  /** Delta vs elite target */
   const eliteDelta = useMemo(() => {
     if (!eliteTargetSeconds || !validatingCompetition?.time_in_seconds) return null;
     const delta = validatingCompetition.time_in_seconds - eliteTargetSeconds;
-    if (Math.abs(delta) > 7200) return null;
+    if (!Number.isFinite(delta) || Math.abs(delta) > 7200) return null;
     return delta;
   }, [eliteTargetSeconds, validatingCompetition]);
 
@@ -128,69 +193,107 @@ export function PerformanceStatusCard({
     return formatOfficialTime(eliteTargetSeconds);
   }, [eliteTargetSeconds]);
 
-  /** Evolution delta vs previous race */
+  /** Evolution delta vs previous race — only if |diff| >= 30s */
   const evolutionDelta = useMemo(() => {
     if (!validatingCompetition?.time_in_seconds || !previousCompetition?.time_in_seconds) return null;
     const delta = validatingCompetition.time_in_seconds - previousCompetition.time_in_seconds;
-    if (Math.abs(delta) > 3600) return null;
+    if (!Number.isFinite(delta) || Math.abs(delta) > 3600) return null;
+    if (Math.abs(delta) < 30) return null; // Diferença insignificante — não exibir
     return delta;
   }, [validatingCompetition, previousCompetition]);
 
-  const chips: Array<{
-    id: string;
-    icon: React.ElementType;
-    label: string;
-    value: string;
-    valueClass?: string;
-  }> = [];
+  /** Decide if we should show the CTA instead */
+  const showEvolutionCta = useMemo(() => {
+    if (!validatingCompetition?.time_in_seconds) return false;
+    if (previousCompetition?.time_in_seconds) return false; // Temos histórico
+    return true; // Sem prova anterior → mostrar CTA
+  }, [validatingCompetition, previousCompetition]);
 
-  // A. Status OUTLIER — skip if the header already shows it
-  if (!hideStatusChip) {
-    chips.push({
-      id: 'status',
-      icon: Award,
-      label: 'Status OUTLIER',
-      value: topPercent !== null ? `${statusLabel} · Top ${topPercent}%` : statusLabel,
-      valueClass: scoreColorClass,
-    });
-  }
+  // ─── Build chips list ──────────────────────────────────────────────────────
 
-  // B. Última prova
-  if (lastRaceFormatted) {
-    chips.push({
-      id: 'lastRace',
-      icon: Timer,
-      label: 'Última prova',
-      value: lastRaceFormatted,
-    });
-  }
+  type ChipDef =
+    | { kind: 'chip'; id: string; icon: React.ElementType; label: string; value: string; valueClass?: string }
+    | { kind: 'cta'; id: string; label: string; ctaText: string };
 
-  // C. Meta Elite (apenas se existir e delta calculável)
-  if (eliteTargetFormatted && eliteDelta !== null) {
-    const { text, positive } = formatTimeDelta(eliteDelta);
-    chips.push({
-      id: 'elite',
-      icon: Target,
-      label: `Meta Elite: ${eliteTargetFormatted}`,
-      value: positive ? `faltam ${text}` : `${text} abaixo do corte`,
-      valueClass: positive ? 'text-amber-400' : 'text-emerald-400',
-    });
-  }
+  const items = useMemo<ChipDef[]>(() => {
+    const list: ChipDef[] = [];
 
-  // D. Evolução desde a última
-  if (evolutionDelta !== null) {
-    const { text, positive } = formatTimeDelta(evolutionDelta);
-    chips.push({
-      id: 'evolution',
-      icon: TrendingUp,
-      label: 'Evolução',
-      value: positive ? `${text} acima da última` : `${text} vs última prova`,
-      valueClass: positive ? 'text-amber-400' : 'text-emerald-400',
-    });
-  }
+    // A. Status OUTLIER
+    if (!hideStatusChip) {
+      list.push({
+        kind: 'chip',
+        id: 'status',
+        icon: Award,
+        label: 'Status OUTLIER',
+        value: topPercent !== null ? `${statusLabel} · Top ${topPercent}%` : statusLabel,
+        valueClass: scoreColorClass,
+      });
+    }
 
-  // Guard: se não há absolutamente nada a mostrar, não renderizar
-  if (chips.length === 0) return null;
+    // B. Última prova
+    if (lastRaceFormatted) {
+      list.push({ kind: 'chip', id: 'lastRace', icon: Timer, label: 'Última prova', value: lastRaceFormatted });
+    }
+
+    // C. Meta Elite (só se calculável)
+    if (eliteTargetFormatted && eliteDelta !== null) {
+      const nextLabel = eliteTargetLabel || 'ELITE';
+      if (eliteDelta <= 0) {
+        list.push({
+          kind: 'chip',
+          id: 'elite',
+          icon: Target,
+          label: `Meta ${nextLabel}`,
+          value: `Meta ${nextLabel} atingida ✔`,
+          valueClass: 'text-emerald-400',
+        });
+      } else {
+        const remaining = formatSecondsToXmYs(eliteDelta);
+        list.push({
+          kind: 'chip',
+          id: 'elite',
+          icon: Target,
+          label: `Meta ${nextLabel}: ${eliteTargetFormatted}`,
+          value: `Faltam ${remaining}`,
+          valueClass: 'text-amber-400',
+        });
+      }
+    }
+
+    // D. Evolução (com regra de 30s)
+    if (evolutionDelta !== null) {
+      const improved = evolutionDelta < 0; // delta negativo = ficou mais rápido
+      const absFormatted = formatSecondsToXmYs(Math.abs(evolutionDelta));
+      list.push({
+        kind: 'chip',
+        id: 'evolution',
+        icon: TrendingUp,
+        label: 'Evolução',
+        value: improved ? `↓ ${absFormatted} vs última prova` : `↑ ${absFormatted} vs última prova`,
+        valueClass: improved ? 'text-emerald-400' : 'text-amber-400',
+      });
+    } else if (showEvolutionCta) {
+      // E. CTA — sem histórico de provas
+      const ctaLabel =
+        raceCount <= 1
+          ? 'Evolução disponível após próxima prova'
+          : 'Compare sua evolução';
+      list.push({
+        kind: 'cta',
+        id: 'evolution-cta',
+        label: ctaLabel,
+        ctaText: 'Importar prova anterior',
+      });
+    }
+
+    return list;
+  }, [
+    hideStatusChip, topPercent, statusLabel, scoreColorClass,
+    lastRaceFormatted, eliteTargetFormatted, eliteDelta, eliteTargetLabel,
+    evolutionDelta, showEvolutionCta, raceCount,
+  ]);
+
+  if (items.length === 0) return null;
 
   return (
     <motion.div
@@ -215,16 +318,29 @@ export function PerformanceStatusCard({
 
       {/* Chips Grid — 1col mobile, 2col desktop */}
       <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-        {chips.map((chip, i) => (
-          <Chip
-            key={chip.id}
-            icon={chip.icon}
-            label={chip.label}
-            value={chip.value}
-            valueClass={chip.valueClass}
-            delay={0.05 * i}
-          />
-        ))}
+        {items.map((item, i) => {
+          if (item.kind === 'cta') {
+            return (
+              <CtaChip
+                key={item.id}
+                label={item.label}
+                ctaText={item.ctaText}
+                delay={0.05 * i}
+                onClick={onImportRace}
+              />
+            );
+          }
+          return (
+            <Chip
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              value={item.value}
+              valueClass={item.valueClass}
+              delay={0.05 * i}
+            />
+          );
+        })}
       </div>
     </motion.div>
   );
