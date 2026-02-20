@@ -761,26 +761,24 @@ export function DiagnosticRadarBlock({
             </span>
           );
 
-          // Meta próximo nível
+          // Meta próximo nível — mostra o tempo alvo, não o delta
           if (targetSec) {
             const delta = lastTime - targetSec;
+            const targetFmt = formatOfficialTime(targetSec);
             if (delta <= 0) {
               parts.push(
                 <span key="meta" className="flex items-center gap-1.5">
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">atingida ✔</span>
+                  <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
                 </span>
               );
             } else {
-              const m = Math.floor(delta / 60);
-              const s = Math.round(delta % 60);
-              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
               parts.push(
                 <span key="meta" className="flex items-center gap-1.5">
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">faltam {fmt}</span>
+                  <span className="font-bold text-amber-400">{targetFmt}</span>
                 </span>
               );
             }
@@ -876,27 +874,25 @@ export function DiagnosticRadarBlock({
           const targetSec = eliteTarget?.targetSeconds;
           const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
 
-          // Meta elite chip
+          // Meta elite chip — mostra o tempo alvo, não o delta
           let metaChip: React.ReactNode = null;
           if (lastTime && targetSec) {
             const delta = lastTime - targetSec;
+            const targetFmt = formatOfficialTime(targetSec);
             if (delta <= 0) {
               metaChip = (
                 <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">atingida ✔</span>
+                  <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
                 </>
               );
             } else {
-              const m = Math.floor(delta / 60);
-              const s = Math.round(delta % 60);
-              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
               metaChip = (
                 <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">faltam {fmt}</span>
+                  <span className="font-bold text-amber-400">{targetFmt}</span>
                 </>
               );
             }
