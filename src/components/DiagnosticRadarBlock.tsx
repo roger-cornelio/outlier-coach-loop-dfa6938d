@@ -9,6 +9,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar } from 'lucide-react';
+import { PerformanceStatusCard } from './dashboard/PerformanceStatusCard';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import { formatOfficialTime } from '@/utils/athleteStatusSystem';
@@ -765,10 +766,13 @@ export function DiagnosticRadarBlock({
           onStartWorkout={onStartWorkout} />
 
 
-        {/* Bloco 2: Status do Atleta */}
-        <MobileStatusBlock
+        {/* Bloco 2: Status de Performance */}
+        <PerformanceStatusCard
           outlierScore={outlierScore}
-          validatingCompetition={validatingCompetition} />
+          statusLabel={statusLabel}
+          athleteCategory={athleteCategory}
+          validatingCompetition={validatingCompetition}
+        />
 
 
         {/* Bloco 3: Gargalos */}
@@ -819,17 +823,14 @@ export function DiagnosticRadarBlock({
           <Crown className="w-4 text-amber-400 border h-[20px]" />
           <span className="font-semibold text-amber-400 tracking-wider text-xl">{athleteCategory}</span>
         </div>
-        {validatingCompetition?.time_in_seconds ?
-        <div className="text-xs text-foreground/70 gap-[18px] flex items-center justify-center">
-            <span>Última prova: <span className="font-semibold text-foreground">{formatOfficialTime(validatingCompetition.time_in_seconds)}</span></span>
-            <span className="text-muted-foreground/30">|</span>
-            <span>Top <span className="font-semibold text-foreground">{Math.round(100 - outlierScore.score * 10)}%</span></span>
-            <span className="text-muted-foreground/30">|</span>
-            <span>Evolução: <span className="text-muted-foreground">---</span></span>
-          </div> :
-
-        <p className="text-xs text-muted-foreground/50">Sem prova oficial registrada</p>
-        }
+      {/* PerformanceStatusCard — replaces old "Última prova / Top % / Evolução" row */}
+      <PerformanceStatusCard
+        outlierScore={outlierScore}
+        statusLabel={statusLabel}
+        athleteCategory={athleteCategory}
+        validatingCompetition={validatingCompetition}
+        className="mt-2"
+      />
       </motion.div>
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
