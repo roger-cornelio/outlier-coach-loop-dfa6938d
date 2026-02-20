@@ -117,10 +117,10 @@ function AnimatedCounter({ target, duration = 1000 }: {target: number;duration?:
 // ============================================
 // REQUIREMENTS CHECKLIST — progressive counters
 // ============================================
-function progressIcon(current: number, total: number): { icon: React.ReactNode; color: string } {
+function progressIcon(current: number, total: number): {icon: React.ReactNode;color: string;} {
   if (total === 0) return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
   const pct = current / total;
-  if (pct >= 1)    return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
+  if (pct >= 1) return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
   if (pct >= 0.75) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
   if (pct >= 0.25) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-amber-400' };
   return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-red-400' };
@@ -138,7 +138,7 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
   const {
     benchmarksCompleted, benchmarksRequired,
     trainingSessions, trainingRequired,
-    officialRaceRequired, hasOfficialRace,
+    officialRaceRequired, hasOfficialRace
   } = targetLevel;
 
   const bMissing = Math.max(0, benchmarksRequired - benchmarksCompleted);
@@ -155,24 +155,24 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
   return (
     <ul className="space-y-1.5">
       {/* Prova oficial — check simples */}
-      {officialRaceRequired && (
-        <li className="flex items-center gap-2 text-xs">
-          {hasOfficialRace
-            ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            : <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+      {officialRaceRequired &&
+      <li className="flex items-center gap-2 text-xs">
+          {hasOfficialRace ?
+        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> :
+        <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
           <span className={hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
             Prova oficial HYROX
           </span>
         </li>
-      )}
+      }
 
       {/* Benchmarks — X / total | faltam Y */}
       <li>
         <button
           onClick={onBenchmarksClick}
           className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
-          type="button"
-        >
+          type="button">
+
           <span className={`${bIcon.color} shrink-0`}>{bIcon.icon}</span>
           <span className={labelCls}>Benchmarks</span>
           <span className={counterCls}>{benchmarksCompleted} / {benchmarksRequired}</span>
@@ -185,16 +185,16 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
         <button
           onClick={onSessionsClick}
           className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
-          type="button"
-        >
+          type="button">
+
           <span className={`${sIcon.color} shrink-0`}>{sIcon.icon}</span>
           <span className={labelCls}>Sessões</span>
           <span className={counterCls}>{trainingSessions} / {trainingRequired}</span>
           {sMissing > 0 && <span className={missingCls}>faltam {sMissing}</span>}
         </button>
       </li>
-    </ul>
-  );
+    </ul>);
+
 }
 
 // ============================================
@@ -266,24 +266,24 @@ function MobilePathToEliteCard({
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70">{targetLevelLabel}</span>
             </div>
             <div className="relative h-6 w-full rounded-full bg-black/40 overflow-hidden">
-              {progressToTarget > 0 ? (
-                <>
+              {progressToTarget > 0 ?
+            <>
                   <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressToTarget}%` }}
-                    transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                initial={{ width: 0 }}
+                animate={{ width: `${progressToTarget}%` }}
+                transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
                   <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-sm">
                     {progressToTarget}%
                   </span>
-                </>
-              ) : (
-                <div className="h-full w-full rounded-full bg-muted/30" />
-              )}
+                </> :
+
+            <div className="h-full w-full rounded-full bg-muted/30" />
+            }
             </div>
-            {progressToTarget === 0 && (
-              <p className="text-[10px] text-muted-foreground italic mt-1">Progresso em cálculo</p>
-            )}
+            {progressToTarget === 0 &&
+          <p className="text-[10px] text-muted-foreground italic mt-1">Progresso em cálculo</p>
+          }
             {isCapped && progressToTarget > 0 &&
           <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
                 <Lock className="w-3 h-3" />
@@ -300,11 +300,11 @@ function MobilePathToEliteCard({
               Requisitos para {targetLevelLabel}
             </p>
             <RequirementsChecklist
-              journeyData={journeyData}
-              compact
-              onBenchmarksClick={onStartWorkout}
-              onSessionsClick={onStartWorkout}
-            />
+            journeyData={journeyData}
+            compact
+            onBenchmarksClick={onStartWorkout}
+            onSessionsClick={onStartWorkout} />
+
           </div>
         }
 
@@ -675,7 +675,7 @@ export function DiagnosticRadarBlock({
   const raceCount = officialCompetitions.length;
   // previousCompetition: segunda prova mais recente com tempo válido
   const previousCompetition = useMemo(() => {
-    const withTime = officialCompetitions.filter(c => typeof c.time_in_seconds === 'number' && c.time_in_seconds > 0);
+    const withTime = officialCompetitions.filter((c) => typeof c.time_in_seconds === 'number' && c.time_in_seconds > 0);
     if (withTime.length < 2) return null;
     const p = withTime[1];
     return { time_in_seconds: p.time_in_seconds as number };
@@ -885,8 +885,8 @@ export function DiagnosticRadarBlock({
           return (
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs px-4 pb-3 pt-1">
               {parts}
-            </div>
-          );
+            </div>);
+
         })()}
 
 
@@ -951,21 +951,21 @@ export function DiagnosticRadarBlock({
             const delta = lastTime - targetSec;
             const targetFmt = formatOfficialTime(targetSec);
             if (delta <= 0) {
-              metaChip = (
-                <>
+              metaChip =
+              <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
                   <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
-                </>
-              );
+                </>;
+
             } else {
-              metaChip = (
-                <>
+              metaChip =
+              <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
                   <span className="font-bold text-amber-400">{targetFmt}</span>
-                </>
-              );
+                </>;
+
             }
           }
 
@@ -978,23 +978,23 @@ export function DiagnosticRadarBlock({
               const m = Math.floor(abs / 60);
               const s = Math.round(abs % 60);
               const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
-              evolChip = (
-                <>
+              evolChip =
+              <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Evolução</span>
                   <span className={`font-bold ${diff < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
                   </span>
-                </>
-              );
+                </>;
+
             }
           } else if (lastTime && !previousCompetition?.time_in_seconds) {
-            evolChip = (
-              <>
+            evolChip =
+            <>
                 <span className="text-border/40">·</span>
                 <span className="text-muted-foreground/60 text-xs italic">Evolução disponível após próxima prova</span>
-              </>
-            );
+              </>;
+
           }
 
           if (!lastTime) {
@@ -1006,16 +1006,16 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
               <span className="text-muted-foreground">Última prova</span>
               <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
-              {top >= 1 && top <= 99 && (
-                <>
+              {top >= 1 && top <= 99 &&
+              <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Top <span className="font-bold text-foreground">{top}%</span></span>
                 </>
-              )}
+              }
               {metaChip}
               {evolChip}
-            </div>
-          );
+            </div>);
+
         })()}
       </motion.div>
 
@@ -1043,7 +1043,7 @@ export function DiagnosticRadarBlock({
                   <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
                   <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">Jornada Outlier</span>
                 </div>
-                <span className="text-[10px] font-bold font-display uppercase tracking-wide text-foreground/70">{currentLevelLabel} → {targetLevelLabel}</span>
+                
               </div>
 
 
@@ -1096,10 +1096,10 @@ export function DiagnosticRadarBlock({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
                     </div>
                     <RequirementsChecklist
-                      journeyData={journeyData}
-                      onBenchmarksClick={onStartWorkout}
-                      onSessionsClick={onStartWorkout}
-                    />
+                    journeyData={journeyData}
+                    onBenchmarksClick={onStartWorkout}
+                    onSessionsClick={onStartWorkout} />
+
                   </div>
                 </>
               }
