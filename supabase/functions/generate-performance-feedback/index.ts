@@ -263,15 +263,17 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error("[generate-performance-feedback] Auth error:", userError);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("[generate-performance-feedback] Auth error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Unauthorized - Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    console.log("[generate-performance-feedback] Authenticated user:", user.id);
+    const userId = claimsData.claims.sub;
+    console.log("[generate-performance-feedback] Authenticated user:", userId);
     // ========== END AUTHENTICATION ==========
 
     const body: RequestBody = await req.json();
