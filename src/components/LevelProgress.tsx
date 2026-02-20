@@ -41,43 +41,29 @@ interface LevelVisualConfig {
 // OPEN: Corredor em movimento
 const OpenIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    {/* Cabeça */}
     <circle cx="14.5" cy="3" r="1.8" />
-    {/* Tronco inclinado para frente */}
     <path d="M11 7.5 C10 9 9.5 10.5 10 12 L12.5 12 L14 8.5 Z" />
-    {/* Braço para frente */}
     <path d="M10 9 L7.5 7.5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
-    {/* Braço para trás */}
     <path d="M14 9 L16.5 10.5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
-    {/* Perna para frente */}
     <path d="M12.5 12 L10 17 L12 18" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    {/* Perna para trás */}
     <path d="M12.5 12 L15 16 L13.5 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-// PRO: Atleta levantando kettlebell (exercício funcional HYROX)
+// PRO: Atleta levantando kettlebell
 const ProIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    {/* Cabeça */}
     <circle cx="12" cy="3.5" r="1.8" />
-    {/* Corpo em posição de press */}
     <path d="M12 5.5 L12 11" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" />
-    {/* Braços estendidos levantando */}
     <path d="M12 7.5 L7 5 M12 7.5 L17 5" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" />
-    {/* Kettlebell esquerdo */}
     <rect x="4.5" y="2.5" width="4" height="3" rx="1" />
-    <path d="M5.5 5.5 L7.5 7" strokeWidth="1.5" stroke="currentColor" fill="none" />
-    {/* Kettlebell direito */}
     <rect x="15.5" y="2.5" width="4" height="3" rx="1" />
-    <path d="M18.5 5.5 L16.5 7" strokeWidth="1.5" stroke="currentColor" fill="none" />
-    {/* Pernas levemente afastadas */}
     <path d="M12 11 L9.5 16 L8 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M12 11 L14.5 16 L16 19" strokeWidth="1.8" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-// ELITE: Raio de energia (velocidade máxima, potência absoluta)
+// ELITE: Raio de energia
 const EliteIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M13 2 L6 13 H11 L9 22 L18 9 H13 L15 2 Z" />
@@ -146,7 +132,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     nodeIcon: <EliteIcon size={20} className="text-white" />,
     gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
     textGradient: 'from-yellow-200 to-amber-200',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
+    bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%)',
     particleColor: 'bg-yellow-300',
     title: 'ELITE',
     subtitle: 'Lenda absoluta',
@@ -175,12 +161,8 @@ const LevelUpBurst = ({ color }: { color: string }) => (
       return (
         <motion.div
           key={i}
-          className={`absolute w-2 h-2 rounded-full`}
-          style={{
-            backgroundColor: color,
-            left: '50%',
-            top: '50%',
-          }}
+          className="absolute w-2 h-2 rounded-full"
+          style={{ backgroundColor: color, left: '50%', top: '50%' }}
           initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
           animate={{
             x: Math.cos((angle * Math.PI) / 180) * distance,
@@ -202,9 +184,9 @@ const Particles = ({ color, count = 6 }: { color: string; count?: number }) => (
       <motion.div
         key={i}
         className={`absolute w-2 h-2 rounded-full ${color} opacity-60`}
-        initial={{ x: Math.random() * 100 + '%', y: '100%', scale: Math.random() * 0.5 + 0.5 }}
-        animate={{ y: '-20%', opacity: [0.6, 0.8, 0], scale: [1, 0.5, 0] }}
-        transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2, ease: 'easeOut' }}
+        style={{ left: `${10 + (i * 15) % 80}%`, top: `${20 + (i * 20) % 60}%` }}
+        animate={{ y: [-10, 10, -10], opacity: [0.3, 0.7, 0.3] }}
+        transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
       />
     ))}
   </div>
@@ -223,18 +205,13 @@ function RulerBar({
   return (
     <div className="relative">
       {/* Track */}
-      <div
-        className="relative h-6 rounded-full overflow-hidden"
-        style={{ boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.45)', background: 'hsl(var(--secondary)/0.6)' }}
-      >
-        {/* Fill */}
+      <div className="relative h-6 rounded-full bg-secondary/60 shadow-inner overflow-hidden border border-border/20">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${fillPercentage}%` }}
           transition={{ duration: 1.5, ease: 'easeOut', delay: 0.4 }}
           className={`absolute inset-y-0 left-0 bg-gradient-to-r ${gradient} rounded-full shadow-lg`}
         >
-          {/* Shine */}
           <div className="absolute inset-x-0 top-0 h-1/2 bg-white/25 rounded-t-full" />
           {/* % label */}
           {fillPercentage > 12 && (
@@ -250,18 +227,9 @@ function RulerBar({
         {segmentPercents.map((pct, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 w-px bg-white/20 z-10"
+            className="absolute top-0 bottom-0 w-px bg-background/40"
             style={{ left: `${pct}%` }}
           />
-        ))}
-      </div>
-
-      {/* Level labels below bar */}
-      <div className="flex justify-between mt-1 px-0">
-        {LEVELS_ORDER.map((key) => (
-          <span key={key} className="text-[9px] font-semibold text-muted-foreground/60 tracking-wider">
-            {key}
-          </span>
         ))}
       </div>
     </div>
@@ -274,73 +242,32 @@ function MetricCard({
   label,
   value,
   total,
-  detail,
-  progress,
-  accentColor,
-  delay,
   highlight,
+  delay = 0,
 }: {
   icon: React.ElementType;
   label: string;
-  value: number | string;
-  total?: number;
-  detail?: string;
-  progress?: number; // 0–100
-  accentColor: string;
-  delay: number;
+  value: number;
+  total: number;
   highlight?: boolean;
+  delay?: number;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
-      className={`relative rounded-2xl p-4 border overflow-hidden ${
+      transition={{ delay, duration: 0.35 }}
+      className={`p-3 rounded-xl border text-center ${
         highlight
-          ? 'bg-primary/10 border-primary/30'
-          : 'bg-secondary/30 border-border/40'
+          ? 'bg-green-500/10 border-green-500/25'
+          : 'bg-secondary/40 border-border/30'
       }`}
     >
-      {/* Icon row */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4" style={{ color: accentColor }} />
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        </div>
-        {highlight && (
-          <Star className="w-3 h-3" style={{ color: accentColor }} fill={accentColor} />
-        )}
-      </div>
-
-      {/* Value */}
-      <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-2xl font-display font-bold" style={{ color: accentColor }}>
-          {value}
-        </span>
-        {total !== undefined && (
-          <span className="text-sm text-muted-foreground">/ {total}</span>
-        )}
-      </div>
-
-      {/* Progress bar */}
-      {progress !== undefined && (
-        <div className="h-2 bg-secondary/60 rounded-full overflow-hidden mb-1" style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(progress, 100)}%` }}
-            transition={{ duration: 1, ease: 'easeOut', delay: delay + 0.3 }}
-            className="h-full rounded-full"
-            style={{ background: accentColor }}
-          >
-            <div className="absolute inset-x-0 top-0 h-1/2 bg-white/25 rounded-t-full" />
-          </motion.div>
-        </div>
-      )}
-
-      {/* Detail */}
-      {detail && (
-        <p className="text-[10px] text-muted-foreground/70 leading-tight">{detail}</p>
-      )}
+      <Icon className={`w-4 h-4 mx-auto mb-1.5 ${highlight ? 'text-green-400' : 'text-muted-foreground'}`} />
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-sm font-bold tabular-nums ${highlight ? 'text-green-400' : 'text-foreground'}`}>
+        {value}<span className="text-muted-foreground font-normal text-xs">/{total}</span>
+      </p>
     </motion.div>
   );
 }
@@ -356,12 +283,11 @@ function NextMilestone({
   const tl = journeyProgress.targetLevel;
   if (!tl) return null;
 
-  // Determinar o que falta mais
   const benchmarksMissing = Math.max(0, tl.benchmarksRequired - tl.benchmarksCompleted);
-  const sessionsMissing = Math.max(0, tl.trainingRequired - tl.trainingSessions);
+  const sessionsMissing = Math.max(0, tl.trainingMinSessions - tl.trainingSessions);
 
   let milestoneText = '';
-  let milestoneIcon = Target;
+  let milestoneIcon: React.ElementType = TrendingUp;
 
   if (benchmarksMissing > 0 && sessionsMissing > 0) {
     if (benchmarksMissing <= sessionsMissing / 4) {
@@ -378,24 +304,27 @@ function NextMilestone({
     milestoneText = `${sessionsMissing} treino${sessionsMissing > 1 ? 's' : ''} para atingir ${journeyProgress.targetLevelLabel}`;
     milestoneIcon = Activity;
   } else if (tl.officialRaceRequired && !tl.hasOfficialRace) {
-    milestoneText = 'Registre uma prova oficial para avançar';
+    milestoneText = `Prova oficial obrigatória para ${journeyProgress.targetLevelLabel}`;
     milestoneIcon = Trophy;
   } else {
-    milestoneText = 'Continue treinando — você está no caminho certo!';
-    milestoneIcon = Sparkles;
+    milestoneText = `Continue evoluindo rumo ao ${journeyProgress.targetLevelLabel}`;
+    milestoneIcon = Star;
   }
 
   const Icon = milestoneIcon;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.6 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-secondary/20 border border-border/30"
+      transition={{ delay: 0.2 }}
+      className="flex items-center gap-2.5 bg-secondary/30 border border-border/30 rounded-xl px-3 py-2.5"
     >
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: accentColor + '22' }}>
-        <Icon className="w-4 h-4" style={{ color: accentColor }} />
+      <div
+        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+        style={{ backgroundColor: `${accentColor}20`, border: `1px solid ${accentColor}40` }}
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color: accentColor }} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
@@ -405,7 +334,7 @@ function NextMilestone({
           {milestoneText}
         </p>
       </div>
-      <ArrowRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
     </motion.div>
   );
 }
@@ -433,29 +362,28 @@ function EliteGapBadge({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.55 }}
-      className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-      style={{ background: '#eab30811', borderColor: '#eab30830' }}
+      transition={{ delay: 0.3 }}
+      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/8 border border-yellow-500/20"
     >
-      <Diamond className="w-4 h-4 shrink-0" style={{ color: '#eab308' }} />
-      <p className="text-xs text-muted-foreground flex-1">
-        <span className="font-semibold" style={{ color: '#eab308' }}>Falta para ELITE: </span>
+      <EliteIcon size={14} className="text-yellow-400 shrink-0" />
+      <p className="text-xs text-yellow-300/80">
+        <span className="font-semibold text-yellow-300">Diferença para ELITE: </span>
         {benchmarkGap > 0 && <span>{benchmarkGap} bench{benchmarkGap > 1 ? 's' : ''}</span>}
-        {benchmarkGap > 0 && sessionGap > 0 && <span className="text-muted-foreground/50 mx-1">·</span>}
-        {sessionGap > 0 && <span>{sessionGap} treinos</span>}
+        {benchmarkGap > 0 && sessionGap > 0 && <span> · </span>}
+        {sessionGap > 0 && <span>{sessionGap} treino{sessionGap > 1 ? 's' : ''}</span>}
       </p>
     </motion.div>
   );
 }
 
-// ─── Level Node Sheet ────────────────────────────────────────────────────────
-function LevelNodeSheet({ 
-  levelKey, 
-  isOpen, 
-  onClose, 
+// ─── Componente: Sheet de detalhes de um nível ──────────────────────────────
+function LevelDetailSheet({
+  levelKey,
+  isOpen,
+  onClose,
   allLevels,
-  journeyProgress 
-}: { 
+  journeyProgress,
+}: {
   levelKey: ExtendedLevelKey;
   isOpen: boolean;
   onClose: () => void;
@@ -474,83 +402,55 @@ function LevelNodeSheet({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="bottom" className="h-auto max-h-[60vh] rounded-t-3xl">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white`}>
-              {config.icon}
-            </div>
-            <span className={`bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`}>
-              {levelRule.label}
-            </span>
-            {isCurrent && (
-              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">Seu nível</span>
-            )}
-            {isTarget && !isCurrent && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Objetivo</span>
-            )}
+        <SheetHeader className="mb-4">
+          <SheetTitle className={`bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`}>
+            {config.title} — {config.subtitle}
           </SheetTitle>
         </SheetHeader>
-        
-        <div className="space-y-4 pb-6">
-          <div className="grid gap-3">
-            <div className="p-3 bg-secondary/30 rounded-xl">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Treinos
-                </span>
-                <span className="text-sm font-semibold">
-                  {progressData ? `${progressData.trainingSessions}/` : ''}{levelRule.training_min_sessions}
-                </span>
-              </div>
-              {progressData && <Progress value={progressData.trainingProgress * 100} className="h-1.5" />}
-              <p className="text-xs text-muted-foreground mt-1">nos últimos {levelRule.training_window_days} dias</p>
+
+        <div className="space-y-3 pb-6">
+          <div className={`p-3 rounded-xl flex items-center justify-between bg-secondary/40`}>
+            <span className="text-sm text-muted-foreground">Treinos</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">
+                {progressData ? `${progressData.trainingSessions}/` : ''}{levelRule.training_min_sessions}
+              </span>
             </div>
-            
-            <div className="p-3 bg-secondary/30 rounded-xl">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Benchmarks OUTLIER
-                </span>
-                <span className="text-sm font-semibold">
-                  {progressData ? `${progressData.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
-                </span>
-              </div>
-              {progressData && <Progress value={progressData.benchmarkProgress * 100} className="h-1.5" />}
-            </div>
-            
-            {levelRule.official_race_required && (
-              <div className={`p-3 rounded-xl flex items-center justify-between ${
-                journeyProgress.hasOfficialRace
-                  ? 'bg-green-500/10 border border-green-500/20'
-                  : 'bg-amber-500/10 border border-amber-500/20'
-              }`}>
-                <span className="text-sm flex items-center gap-2">
-                  <Trophy className="w-4 h-4" />
-                  Prova oficial
-                </span>
-                {journeyProgress.hasOfficialRace ? (
-                  <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" />OK
-                  </span>
-                ) : (
-                  <span className="text-amber-400 text-sm font-semibold">Pendente</span>
-                )}
-              </div>
-            )}
           </div>
+          {progressData && <Progress value={progressData.trainingProgress * 100} className="h-1.5" />}
+          
+          <div className={`p-3 rounded-xl flex items-center justify-between bg-secondary/40`}>
+            <span className="text-sm text-muted-foreground">Benchmarks</span>
+            <span className="text-sm font-semibold">
+              {progressData ? `${progressData.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
+            </span>
+          </div>
+          {progressData && <Progress value={progressData.benchmarkProgress * 100} className="h-1.5" />}
+          
+          {levelRule.official_race_required && (
+            <div className={`p-3 rounded-xl flex items-center justify-between ${
+              journeyProgress.hasOfficialRace
+                ? 'bg-green-500/10 border border-green-500/20'
+                : 'bg-amber-500/10 border border-amber-500/20'
+            }`}>
+              <span className="text-sm text-muted-foreground">Prova oficial</span>
+              {journeyProgress.hasOfficialRace ? (
+                <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />OK
+                </span>
+              ) : (
+                <span className="text-amber-400 text-sm font-semibold">Pendente</span>
+              )}
+            </div>
+          )}
           
           {isTarget && journeyProgress.isCapped && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-300 font-medium">
-                    Progresso limitado a {levelRule.cap_without_official_race_percent}%
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Complete uma prova oficial para desbloquear.</p>
-                </div>
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-300">
+                  Sem prova oficial, o progresso é limitado a {Math.round((levelRule.cap_without_official_race_percent || 0.89) * 100)}%.
+                </p>
               </div>
             </div>
           )}
@@ -565,385 +465,281 @@ export function LevelProgress() {
   const athleteStatus = useAthleteStatus();
   const journeyProgress = useJourneyProgress();
   const { results: benchmarkResults } = useBenchmarkResults();
+  const [showDetails, setShowDetails] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<ExtendedLevelKey | null>(null);
   const [showLevelUpBurst, setShowLevelUpBurst] = useState(false);
   const prevLevelKey = useRef<ExtendedLevelKey | null>(null);
   
   const { 
-    status, 
-    rulerScore, 
-    confidence, 
-    progressToNextStatus, 
-    nextStatus,
-    eligibleForPromotion,
-    benchmarksUsed,
-    weeksWithGoodPerformance,
+    status: athleteStatusValue,
+    loading: statusLoading 
   } = athleteStatus;
-  
+
   const currentLevelKey = journeyProgress.currentLevelKey;
-  const targetLevelKey = journeyProgress.targetLevelKey;
   const currentConfig = LEVEL_CONFIG[currentLevelKey];
   const isElite = currentLevelKey === 'ELITE';
-  const isPro = currentLevelKey === 'PRO';
   const isAtTop = journeyProgress.isAtTop;
 
   // Micro-animação ao subir de nível
   useEffect(() => {
     if (prevLevelKey.current && prevLevelKey.current !== currentLevelKey) {
       setShowLevelUpBurst(true);
-      setTimeout(() => setShowLevelUpBurst(false), 1200);
+      setTimeout(() => setShowLevelUpBurst(false), 1000);
     }
     prevLevelKey.current = currentLevelKey;
   }, [currentLevelKey]);
 
-  // % real na barra OPEN→PRO→ELITE
-  // Cada segmento ocupa 33.33% da barra
-  const totalLevels = 3;
+  // Barra contínua 0-100%
   const fillPercentage = journeyProgress.loading
     ? 0
     : Math.min(100, (journeyProgress.continuousPosition * 100));
 
-  const segmentPercents = [33.33, 66.66]; // divisores entre OPEN|PRO e PRO|ELITE
+  const segmentPercents = [33.33, 66.66];
 
-  // Métricas de nível
+  // Métricas detalhadas (para o sheet)
   const tl = journeyProgress.targetLevel;
-  const benchmarkProgress = tl ? Math.round(tl.benchmarkProgress * 100) : 0;
-  const trainingProgress = tl ? Math.round(tl.trainingProgress * 100) : 0;
+  const benchmarksCompleted = tl?.benchmarksCompleted ?? 0;
+  const benchmarksRequired = tl?.benchmarksRequired ?? 0;
+  const sessionsCompleted = tl?.trainingSessions ?? 0;
+  const sessionsRequired = tl?.trainingRequired ?? 0;
 
-  // Consistência: semanas com STRONG+
-  const consistencyPct = weeksWithGoodPerformance > 0
-    ? Math.min(100, Math.round((weeksWithGoodPerformance / 8) * 100))
-    : 0;
-
-  // Melhor resultado: bucket com maior score
-  const bestResult = benchmarkResults
-    .filter((r) => r.completed && r.bucket)
-    .sort((a, b) => {
-      const order: Record<string, number> = { ELITE: 5, STRONG: 4, OK: 3, TOUGH: 2, DNF: 1 };
-      return (order[b.bucket || ''] || 0) - (order[a.bucket || ''] || 0);
-    })[0];
-
-  const bucketLabels: Record<string, string> = {
-    ELITE: '🏅 ELITE', STRONG: '💪 STRONG', OK: '✅ OK', TOUGH: '⚠️ TOUGH', DNF: '❌ DNF',
-  };
+  if (statusLoading || journeyProgress.loading) {
+    return (
+      <div className="animate-pulse rounded-2xl bg-secondary/40 h-44" />
+    );
+  }
 
   return (
-    <div className="space-y-5">
-      {/* ─── HERO CARD ─────────────────────────────────────────────────── */}
+    <div className="space-y-3">
+      {/* ─── CARD PRINCIPAL: status + barra + próximo marco ─────────────── */}
       <motion.div
         key={currentLevelKey}
-        initial={{ opacity: 0, scale: 0.92, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className={`relative overflow-hidden rounded-3xl ${currentConfig.cardStyle} border ${currentConfig.borderStyle}`}
-        style={{ backgroundImage: currentConfig.bgPattern }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className={`relative overflow-hidden rounded-2xl border p-4 ${currentConfig.cardStyle} ${currentConfig.borderStyle}`}
       >
-        {/* Level-up burst */}
         <AnimatePresence>
-          {showLevelUpBurst && (
-            <LevelUpBurst color={currentConfig.accentColor} />
-          )}
+          {showLevelUpBurst && <LevelUpBurst color={currentConfig.accentColor} />}
         </AnimatePresence>
 
-        {/* Particles */}
-        {(isPro || isElite) && (
-          <Particles color={currentConfig.particleColor} count={isElite ? 12 : 7} />
-        )}
-
-        {/* Ambient glow */}
-        <div className={`absolute -top-32 -right-32 w-64 h-64 bg-gradient-to-br ${currentConfig.gradient} rounded-full blur-3xl opacity-20`} />
-
-        <div className="relative z-10 p-5 md:p-7">
-          {/* Header: status + ícone */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <motion.p
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1 flex items-center gap-2"
-              >
+        {/* ── 1. Status atual ──────────────────────────────────────────── */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${currentConfig.gradient} shadow-lg`}
+              style={{ boxShadow: `0 0 20px ${currentConfig.accentColor}40` }}
+            >
+              <span className="text-white">{currentConfig.nodeIcon}</span>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground leading-none mb-0.5">
                 Seu Status
-                <StatusExplainerModal />
-              </motion.p>
-              <motion.h1
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.25 }}
-                className={`font-display text-4xl md:text-5xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight`}
-              >
+              </p>
+              <p className={`text-xl font-bold leading-none bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent`}>
                 {currentConfig.title}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.35 }}
-                className="text-muted-foreground text-sm mt-0.5"
-              >
-                {currentConfig.subtitle}
-              </motion.p>
+              </p>
             </div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0, rotate: -180 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ delay: 0.25, type: 'spring', stiffness: 220 }}
-              className={`text-white relative ${currentConfig.iconAnimation}`}
-            >
-              {currentConfig.heroIcon}
-              <div className={`absolute inset-0 bg-gradient-to-br ${currentConfig.gradient} blur-2xl opacity-25 -z-10`} />
-            </motion.div>
           </div>
-
-          {/* Score + destino */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-4"
+          <button
+            onClick={() => setShowDetails(true)}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
           >
-            <div className="flex items-baseline gap-2">
-              <span className={`font-display text-6xl md:text-7xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent`}>
-                {journeyProgress.progressToTarget}
-              </span>
-              <span className="text-xl text-muted-foreground">/100</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {isAtTop ? 'manutenção do status ELITE' : (
-                <>rumo ao <span className="font-semibold text-foreground">{journeyProgress.targetLevelLabel}</span></>
-              )}
-              {journeyProgress.isCapped && (
-                <span className="text-amber-400 ml-1">(cap {journeyProgress.capPercent}%)</span>
-              )}
-            </p>
-          </motion.div>
-
-          {/* Gap para ELITE */}
-          {!isAtTop && (
-            <EliteGapBadge journeyProgress={journeyProgress} accentColor={currentConfig.accentColor} />
-          )}
-
-          {/* Melhor resultado */}
-          {bestResult && bestResult.bucket && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-3 flex items-center gap-2"
-            >
-              <Star className="w-3 h-3 text-amber-400" fill="#f59e0b" />
-              <span className="text-xs text-muted-foreground">
-                Melhor resultado: <span className="font-semibold text-foreground">{bucketLabels[bestResult.bucket] || bestResult.bucket}</span>
-              </span>
-            </motion.div>
-          )}
-
-          {/* Cap Warning */}
-          <AnimatePresence>
-            {journeyProgress.isCapped && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3"
-              >
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <p className="text-xs text-amber-300">
-                  Progresso limitado a {journeyProgress.capPercent}% — registre uma prova oficial para avançar.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Promotion Alert */}
-          <AnimatePresence>
-            {eligibleForPromotion && nextStatus && (
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 flex items-center gap-3"
-              >
-                <motion.div animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}>
-                  <Sparkles className="w-5 h-5 text-green-400" />
-                </motion.div>
-                <div>
-                  <p className="font-bold text-green-300 text-sm">Promoção disponível!</p>
-                  <p className="text-xs text-green-300/80">Pronto para {LEVEL_NAMES[nextStatus]}</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Motivation */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="mt-4 text-xs italic text-muted-foreground border-l-2 border-current pl-3 opacity-60"
-          >
-            "{currentConfig.motivation}"
-          </motion.p>
+            Ver detalhes
+            <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
-      </motion.div>
 
-      {/* ─── RÉGUA OPEN → PRO → ELITE com % real ────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="space-y-4"
-      >
-        <h3 className="font-display text-lg flex items-center gap-2">
-          <Swords className="w-4 h-4 text-primary" />
-          Jornada de Evolução
-        </h3>
-
-        {/* Nodes + Bar */}
-        <div>
-          {/* Nodes row */}
-          <div className="flex items-end justify-between mb-3 px-1">
-            {LEVELS_ORDER.map((levelKey, index) => {
-              const config = LEVEL_CONFIG[levelKey];
-              const isCompleted = index < journeyProgress.currentLevelIndex;
-              const isCurrent = index === journeyProgress.currentLevelIndex;
-              const isLocked = index > journeyProgress.currentLevelIndex;
-              const levelRule = journeyProgress.allLevels.find((l: any) => l.level_key === levelKey);
-              const requiresRace = levelRule?.official_race_required || false;
-              const isRaceLocked = requiresRace && !journeyProgress.hasOfficialRace && index > journeyProgress.currentLevelIndex;
-
-              return (
-                <motion.div
-                  key={levelKey}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.35 + index * 0.08, type: 'spring' }}
-                  className="relative flex flex-col items-center cursor-pointer"
-                  onClick={() => setSelectedLevel(levelKey)}
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.94 }}
-                    className={`
-                      relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300
-                      ${isCurrent
-                        ? `bg-gradient-to-br ${config.gradient} shadow-lg ring-2 ring-white/40`
-                        : isCompleted
-                          ? `bg-gradient-to-br ${config.gradient} opacity-75`
-                          : 'bg-secondary/70 border-2 border-border/40'
-                      }
-                    `}
-                  >
-                    {isLocked ? (
-                      <div className="relative">
-                        <div className="opacity-30">{config.nodeIcon}</div>
-                        {isRaceLocked && <div className="w-3 h-3 text-amber-400/60 absolute -bottom-1 -right-1"><EliteIcon size={12} /></div>}
-                      </div>
-                    ) : isCompleted ? (
-                      <div className="relative">
-                        {config.nodeIcon}
-                        <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full w-3 h-3 flex items-center justify-center">
-                          <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-white drop-shadow-lg">{config.nodeIcon}</span>
-                    )}
-
-                    {/* Pulse do nível atual */}
-                    {isCurrent && (
-                      <motion.div
-                        animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${config.gradient}`}
-                      />
-                    )}
-                  </motion.div>
-
-                  <p className={`mt-1.5 text-[9px] font-bold tracking-wider uppercase text-center ${
-                    isCurrent
-                      ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`
-                      : isLocked
-                        ? 'text-muted-foreground/35'
-                        : 'text-muted-foreground/70'
-                  }`}>
-                    {levelKey}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Barra com % real */}
+        {/* ── 2. Barra OPEN → PRO → ELITE com % ───────────────────────── */}
+        <div className="mb-3">
           <RulerBar
             fillPercentage={fillPercentage}
             gradient={currentConfig.gradient}
             segmentPercents={segmentPercents}
           />
+          <div className="flex justify-between mt-1.5 px-0.5">
+            {LEVELS_ORDER.map((lk) => {
+              const lConfig = LEVEL_CONFIG[lk];
+              const isCurrentLabel = lk === currentLevelKey;
+              return (
+                <span
+                  key={lk}
+                  className={`text-[9px] uppercase tracking-wider font-semibold transition-colors ${
+                    isCurrentLabel
+                      ? `bg-gradient-to-r ${lConfig.textGradient} bg-clip-text text-transparent`
+                      : 'text-muted-foreground/40'
+                  }`}
+                >
+                  {lk}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Race notice */}
-        {!journeyProgress.hasOfficialRace && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-[10px] text-muted-foreground">
-            🏆 OPEN, PRO e ELITE exigem prova oficial
-          </motion.p>
+        {/* ── 3. Próximo marco ─────────────────────────────────────────── */}
+        {!isAtTop ? (
+          <NextMilestone
+            journeyProgress={journeyProgress}
+            accentColor={currentConfig.accentColor}
+          />
+        ) : (
+          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2">
+            <EliteIcon size={14} className="text-yellow-300 shrink-0" />
+            <p className="text-xs text-yellow-300 font-medium">Status ELITE atingido — manutenção em andamento</p>
+          </div>
         )}
       </motion.div>
 
-      {/* ─── PRÓXIMO MARCO ─────────────────────────────────────────────── */}
-      {!isAtTop && (
-        <NextMilestone journeyProgress={journeyProgress} accentColor={currentConfig.accentColor} />
-      )}
+      {/* ─── SHEET DE DETALHES ───────────────────────────────────────────── */}
+      <Sheet open={showDetails} onOpenChange={setShowDetails}>
+        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <span className={`bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent font-bold`}>
+                {currentConfig.title}
+              </span>
+              <span className="text-muted-foreground font-normal text-sm">— {currentConfig.subtitle}</span>
+            </SheetTitle>
+          </SheetHeader>
 
-      {/* ─── MÉTRICAS QUE IMPACTAM NÍVEL ───────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45 }}
-        className="space-y-3"
-      >
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Métricas que impactam seu nível
-        </p>
+          {/* Frase motivacional */}
+          <p className="text-sm italic text-muted-foreground border-l-2 border-primary/40 pl-3 mb-5 opacity-80">
+            "{currentConfig.motivation}"
+          </p>
 
-        <div className="grid grid-cols-3 gap-2">
-          <MetricCard
-            icon={TrendingUp}
-            label="Benchmarks"
-            value={tl?.benchmarksCompleted ?? 0}
-            total={tl?.benchmarksRequired}
-            progress={benchmarkProgress}
-            detail={`${benchmarkProgress}% do exigido`}
-            accentColor={currentConfig.accentColor}
-            delay={0.5}
-          />
-          <MetricCard
-            icon={Activity}
-            label="Sessões"
-            value={tl?.trainingSessions ?? 0}
-            total={tl?.trainingRequired}
-            progress={trainingProgress}
-            detail={`${tl?.trainingWindowDays ?? 180}d`}
-            accentColor={currentConfig.accentColor}
-            delay={0.55}
-          />
-          <MetricCard
-            icon={Flame}
-            label="Consist."
-            value={weeksWithGoodPerformance}
-            total={8}
-            progress={consistencyPct}
-            detail="sem. STRONG+"
-            accentColor={currentConfig.accentColor}
-            delay={0.6}
-            highlight={weeksWithGoodPerformance >= 4}
-          />
-        </div>
-      </motion.div>
+          {/* Jornada de Evolução */}
+          <div className="mb-5">
+            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+              <Swords className="w-4 h-4 text-primary" />
+              Jornada de Evolução
+            </h4>
+            <div className="flex items-end justify-between mb-3 px-1">
+              {LEVELS_ORDER.map((levelKey, index) => {
+                const config = LEVEL_CONFIG[levelKey];
+                const isCompleted = index < journeyProgress.currentLevelIndex;
+                const isCurrent = index === journeyProgress.currentLevelIndex;
+                const isLocked = index > journeyProgress.currentLevelIndex;
+                const levelRule = journeyProgress.allLevels.find((l: any) => l.level_key === levelKey);
+                const requiresRace = levelRule?.official_race_required || false;
+                const isRaceLocked = requiresRace && !journeyProgress.hasOfficialRace && index > journeyProgress.currentLevelIndex;
+
+                return (
+                  <motion.div
+                    key={levelKey}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.08 }}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer"
+                    onClick={() => setSelectedLevel(levelKey)}
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.08 }}
+                      className={`
+                        w-12 h-12 rounded-2xl flex items-center justify-center relative
+                        ${isCurrent
+                          ? `bg-gradient-to-br ${config.gradient} shadow-lg ring-2 ring-white/40`
+                          : isCompleted
+                            ? `bg-gradient-to-br ${config.gradient} opacity-75`
+                            : 'bg-secondary/70 border-2 border-border/40'
+                        }
+                      `}
+                    >
+                      {isLocked ? (
+                        <div className="relative">
+                          <div className="opacity-30">{config.nodeIcon}</div>
+                          {isRaceLocked && <div className="absolute -bottom-1 -right-1"><EliteIcon size={10} className="text-amber-400/60" /></div>}
+                        </div>
+                      ) : isCompleted ? (
+                        <div className="relative">
+                          {config.nodeIcon}
+                          <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full w-3 h-3 flex items-center justify-center">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-white drop-shadow-lg">{config.nodeIcon}</span>
+                      )}
+                      {isCurrent && (
+                        <motion.div
+                          className={`absolute -inset-1 rounded-2xl bg-gradient-to-br ${config.gradient} opacity-30 -z-10 blur-sm`}
+                          animate={{ opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                    </motion.div>
+                    <span className={`text-[9px] font-semibold uppercase tracking-wider ${
+                      isCurrent
+                        ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`
+                        : isLocked
+                          ? 'text-muted-foreground/35'
+                          : 'text-muted-foreground/70'
+                    }`}>
+                      {levelKey}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </div>
+            <RulerBar
+              fillPercentage={fillPercentage}
+              gradient={currentConfig.gradient}
+              segmentPercents={segmentPercents}
+            />
+          </div>
+
+          {/* Métricas de impacto */}
+          <div className="mb-5">
+            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Métricas que impactam seu nível
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              <MetricCard
+                icon={TrendingUp}
+                label="Benchmarks"
+                value={benchmarksCompleted}
+                total={benchmarksRequired}
+                highlight={benchmarksCompleted >= benchmarksRequired}
+                delay={0.1}
+              />
+              <MetricCard
+                icon={Activity}
+                label="Sessões"
+                value={sessionsCompleted}
+                total={sessionsRequired}
+                highlight={sessionsCompleted >= sessionsRequired}
+                delay={0.15}
+              />
+              <MetricCard
+                icon={Flame}
+                label="Consist."
+                value={Math.min(sessionsCompleted, 4)}
+                total={4}
+                highlight={sessionsCompleted >= sessionsRequired}
+                delay={0.2}
+              />
+            </div>
+          </div>
+
+          {/* Gap para Elite */}
+          {!isAtTop && (
+            <div className="mb-4">
+              <EliteGapBadge journeyProgress={journeyProgress} accentColor={currentConfig.accentColor} />
+            </div>
+          )}
+
+          {/* Links de explicação */}
+          <div className="flex items-center justify-between pt-3 border-t border-border/40">
+            <StatusExplainerModal />
+            <NextLevelModal journeyProgress={journeyProgress} />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Level Node Sheet */}
       {selectedLevel && (
-        <LevelNodeSheet
+        <LevelDetailSheet
           levelKey={selectedLevel}
           isOpen={!!selectedLevel}
           onClose={() => setSelectedLevel(null)}
@@ -951,15 +747,6 @@ export function LevelProgress() {
           journeyProgress={journeyProgress}
         />
       )}
-
-      {/* Next Level Button + Modal */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.65 }}
-      >
-        <NextLevelModal journeyProgress={journeyProgress} />
-      </motion.div>
     </div>
   );
 }
