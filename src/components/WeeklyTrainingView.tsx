@@ -1,16 +1,8 @@
 /**
  * WeeklyTrainingView - Página dedicada para visualização do treino semanal
- * 
- * Contém:
- * - WeekNavigator (navegação entre semanas)
- * - Day Tabs (SEG-DOM)
- * - Blocos de treino completos
- * - Botão INICIAR TREINO
- * 
- * Esta é uma VIEW dedicada, acessível via sidebar "Treino Semanal"
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
@@ -37,6 +29,12 @@ const blockTypeColors: Record<string, string> = {
   corrida: 'border-l-green-500',
   notas: 'border-l-muted-foreground',
 };
+
+function formatRegisteredTime(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
 
 export function WeeklyTrainingView() {
   const {
@@ -68,6 +66,11 @@ export function WeeklyTrainingView() {
     return days[today] || 'seg';
   });
 
+  // Dados de conclusão do dia ativo
+  const dayCompletion = completions.get(activeDay);
+  const dayIsCompleted = !!dayCompletion?.completed;
+  const dayTimeInSeconds = dayCompletion?.timeInSeconds;
+
   // Usar adaptedWorkouts quando existir, senão baseWorkouts
   const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
@@ -76,7 +79,6 @@ export function WeeklyTrainingView() {
   // Estimativa de tempo e calorias
   const workoutEstimation = useMemo(() => {
     if (!currentWorkout) return null;
-    // usa nível 'pro' como referência padrão
     return estimateWorkout(currentWorkout, athleteConfig, 'pro');
   }, [currentWorkout, athleteConfig]);
 
@@ -145,17 +147,13 @@ export function WeeklyTrainingView() {
             const hasWorkout = displayWorkouts.some((w) => w.day === day);
             const completion = completions.get(day);
             const isCompleted = !!completion?.completed;
-            const hasTime = completion?.timeInSeconds && completion.timeInSeconds > 0;
-            const mins = hasTime ? Math.floor(completion!.timeInSeconds! / 60) : 0;
-            const secs = hasTime ? completion!.timeInSeconds! % 60 : 0;
-            const timeLabel = hasTime ? `${mins}:${String(secs).padStart(2, '0')}` : null;
 
             return (
               <button
                 key={day}
                 onClick={() => setActiveDay(day)}
                 className={`
-                  flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap relative min-w-[52px]
+                  flex items-center gap-1 px-3 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap relative min-w-[52px]
                   ${activeDay === day
                     ? 'bg-primary text-primary-foreground'
                     : isCompleted
@@ -167,16 +165,9 @@ export function WeeklyTrainingView() {
                   ${isViewingHistory ? 'opacity-80' : ''}
                 `}
               >
-                <span className="flex items-center gap-1">
-                  {DAY_NAMES[day].slice(0, 3).toUpperCase()}
-                  {isCompleted && (
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${activeDay === day ? 'text-primary-foreground' : 'text-primary'}`} />
-                  )}
-                </span>
-                {timeLabel && (
-                  <span className={`text-[10px] font-mono leading-none ${activeDay === day ? 'text-primary-foreground/80' : 'text-primary/80'}`}>
-                    {timeLabel}
-                  </span>
+                {DAY_NAMES[day].slice(0, 3).toUpperCase()}
+                {isCompleted && (
+                  <CheckCircle2 className={`w-3.5 h-3.5 ${activeDay === day ? 'text-primary-foreground' : 'text-primary'}`} />
                 )}
                 {hasWorkout && !isCompleted && activeDay !== day && (
                   <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isViewingHistory ? 'bg-amber-500' : 'bg-primary'}`} />
@@ -248,6 +239,10 @@ export function WeeklyTrainingView() {
               const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
               const isEstimated = timeMeta.source !== 'CONFIRMED';
 
+              // Tempo registrado disponível no WOD principal
+              const isMainWod = block.isMainWod;
+              const hasRegisteredTime = isMainWod && dayIsCompleted && dayTimeInSeconds && dayTimeInSeconds > 0;
+
               return (
                 <motion.div
                   key={block.id}
@@ -256,25 +251,34 @@ export function WeeklyTrainingView() {
                   transition={{ delay: (index + 1) * 0.1 }}
                   className={`
                     card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
-                    ${block.isMainWod ? 'ring-1 ring-primary/30' : ''}
+                    ${isMainWod ? 'ring-1 ring-primary/30' : ''}
                   `}
                 >
                   {/* Header */}
                   <div className="mb-4">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2 flex-1">
                         <h3 className="font-display text-2xl font-bold tracking-tight uppercase">
                           {getBlockDisplayTitle(block, index)}
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap">
                           <CategoryChip category={block.type} />
-                          {block.isMainWod && (
+                          {isMainWod && (
                             <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
                               WOD Principal
                             </span>
                           )}
                         </div>
                       </div>
+                      {/* Check badge se o dia foi concluído */}
+                      {dayIsCompleted && (
+                        <div className="flex-shrink-0 mt-1">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                            <CheckCircle2 className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-bold text-primary tracking-wide uppercase">Feito</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -304,9 +308,26 @@ export function WeeklyTrainingView() {
                     );
                   })()}
 
+                  {/* Tempo registrado em destaque - apenas no WOD Principal */}
+                  {hasRegisteredTime && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                        <span className="text-sm font-medium text-primary">Tempo registrado</span>
+                      </div>
+                      <span className="font-display text-3xl font-bold text-primary tracking-wider">
+                        {formatRegisteredTime(dayTimeInSeconds!)}
+                      </span>
+                    </motion.div>
+                  )}
+
                   {/* Block Stats */}
                   {block.type !== 'notas' && (
-                    <div className="flex items-center gap-4 pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-muted-foreground">
