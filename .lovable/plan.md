@@ -1,112 +1,45 @@
 
-# Simplificar "Analise ultima prova" em 3 Cards Curtos
 
-## Problema atual
+# Restaurar Regua + Info Clara -- Analise de Conflitos e Ajustes
 
-O bloco "Analise ultima prova" (linhas 1002-1132) e um Collapsible que ao abrir mostra 3 sub-collapsibles aninhados (Limitador, Projecao, Impacto), cada um com paragrafos longos e tecnicos. O atleta precisa clicar multiplas vezes e ler texto academico para entender o diagnostico.
+## O que ja esta implementado (sem conflito)
 
-## Nova estrutura: 3 cards visiveis ao abrir
+- Regua PRO -> ELITE com barra grossa (h-6) e % central
+- Checklist "O que falta" com benchmarks, sessoes e prova oficial
+- Botao BORA TREINAR no final do card, largura 100%, navegando para Treino Semanal
+- Subtexto "Veja seu treino do dia"
+- Gargalos separados em card proprio (MobileBottlenecksBlock)
 
-Ao abrir "Analise ultima prova", em vez de collapsibles aninhados, mostrar 3 cards curtos e diretos, sempre visiveis (sem collapsible interno):
+## Conflitos identificados (3 ajustes necessarios)
 
-### CARD 1 -- LIMITADOR (vermelho escuro)
-- Fundo: `bg-red-950/80 border-red-800/30`
-- Header: "LIMITADOR" em caps
-- Linha 1: nome da estacao (ex: "Sled Pull")
-- Linha 2: "Abaixo de {relativePerformance}% da categoria"
-- Sem paragrafos tecnicos, sem disclaimers
+### 1. Regua escondida quando progresso = 0%
 
-### CARD 2 -- GANHO POTENCIAL (verde)
-- Fundo: `bg-emerald-950/80 border-emerald-800/30`
-- Header: "GANHO POTENCIAL" em caps
-- Linha 1: "Corrigindo {station_name} ->"
-- Linha 2: "Zona competitiva superior da categoria"
-- Se nao houver dados: "Ganhos estimados disponiveis apos 2 provas."
+**Atual:** Quando `progressToTarget === 0`, a regua desaparece completamente e mostra apenas texto.
+**Prompt pede:** Mostrar barra neutra (cinza) sem % com texto "Progresso em calculo" -- nunca esconder a regua.
 
-### CARD 3 -- PROXIMO PASSO (amarelo/laranja)
-- Fundo: `bg-amber-950/80 border-amber-800/30`
-- Header: "PROXIMO PASSO"
-- Lista curta: top 2-3 estacoes afetadas como foco de treino
-- Botao "BORA TREINAR" 100% largura no final
+**Ajuste:** Trocar o bloco condicional (linhas 176-206) para sempre mostrar a regua. Quando progresso = 0, exibir barra cinza sem animacao e sem percentual, com texto "Progresso em calculo" abaixo.
 
-### BOTAO "Ver analise detalhada"
-- Apos os 3 cards, um botao ghost/link
-- Ao clicar, expande os textos completos originais (paragrafos tecnicos, disclaimers)
-- Usa um state `showDetailedAnalysis` para toggle
+### 2. Regra de seguranca para atleta PRO com 0%
 
-## Mudancas tecnicas
+**Atual:** Mostra "0% do caminho" se progressToTarget > 0 (ok), mas se for exatamente 0 mostra fallback generico.
+**Prompt pede:** Se atleta ja e PRO e progresso vem 0, nunca mostrar "0%". Usar fallback "Progresso em calculo".
 
-### Arquivo: `src/components/DiagnosticRadarBlock.tsx`
+**Ajuste:** Adicionar condicional: se `currentLevelKey` >= PRO e `progressToTarget === 0`, mostrar barra neutra + "Progresso em calculo" em vez de "Faça 1 prova + 1 benchmark...".
 
-**1. Remover collapsibles internos (linhas 1016-1129)**
+### 3. Gargalos no card de gargalos -- titulo vermelho residual
 
-Substituir os 3 `Collapsible` aninhados (Limitador, Projecao, Impacto) por 3 cards simples sem collapsible.
+**Atual:** O MobileBottlenecksBlock ainda usa `text-red-500` no titulo e icone (linha 330-331).
+**Prompt:** Nao especifica, mas a regra anterior era "vermelho so para risco grave". Isso ja foi pedido antes mas permanece no codigo.
 
-Remover states nao mais usados:
-- `isLimiterExpanded` (linha 625)
-- `isProjectionExpanded` (linha 627)
-- `isImpactExpanded` (linha 626)
+**Ajuste:** Trocar `text-red-500` para `text-amber-500` no titulo e icone do card de gargalos, mantendo as estrelas individuais com suas cores por rating.
 
-Substituir por um unico state: `const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false)`
+## Resumo de alteracoes
 
-**2. Card 1 -- LIMITADOR**
-```
-<div className="rounded-lg bg-red-950/80 border border-red-800/30 p-4">
-  <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
-  <p className="text-base font-bold text-foreground">{mainLimiter?.name}</p>
-  <p className="text-xs text-foreground/70">Abaixo de {mainLimiter?.relativePerformance}% da categoria</p>
-</div>
-```
+Arquivo unico: `src/components/DiagnosticRadarBlock.tsx`
 
-**3. Card 2 -- GANHO POTENCIAL**
-```
-<div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-4">
-  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
-  {mainLimiter ? (
-    <>
-      <p className="text-sm text-foreground">Corrigindo {mainLimiter.name} →</p>
-      <p className="text-xs text-foreground/70">Zona competitiva superior da categoria</p>
-    </>
-  ) : (
-    <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
-  )}
-</div>
-```
+1. Linhas 176-206: Sempre renderizar a regua. Se progresso = 0, barra cinza + "Progresso em calculo". Se progresso > 0, barra laranja animada com %.
+2. Linhas 202-206: Ajustar fallback para atletas PRO+ (trocar texto).
+3. Linhas 330-331: Trocar cores do titulo "Gargalos de performance" de vermelho para amber.
 
-**4. Card 3 -- PROXIMO PASSO + CTA**
-```
-<div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
-  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
-  <ul className="space-y-1 mb-4">
-    {topStations.map(...) => <li>• {station.name}</li>}
-  </ul>
-  <Button onClick={onStartWorkout} disabled={!hasTodayWorkout} className="w-full ...">
-    BORA TREINAR
-  </Button>
-</div>
-```
+Nenhuma alteracao de backend, tabelas ou policies.
 
-**5. Botao "Ver analise detalhada" + conteudo expandido**
-
-Apos os 3 cards, dentro do mesmo `CollapsibleContent`:
-```
-<button onClick={() => setShowDetailedAnalysis(!showDetailedAnalysis)}>
-  {showDetailedAnalysis ? 'Ocultar detalhes' : 'Ver análise detalhada ▸'}
-</button>
-
-{showDetailedAnalysis && (
-  // Texto completo original: paragrafos do limitador, projecao, impacto
-)}
-```
-
-**6. Manter o Collapsible externo**
-
-O `Collapsible` principal "Analise ultima prova" (linhas 1003-1131) continua existindo -- ao clicar mostra os 3 cards. Apenas os collapsibles internos sao removidos.
-
-## O que NAO muda
-
-- Backend, tabelas, scores
-- Mobile Blocos 1-5 (MobilePathToEliteCard, etc.)
-- Regua PRO->ELITE
-- Radar e indicadores fisiologicos
-- Logica de mainLimiter, affectedStations
