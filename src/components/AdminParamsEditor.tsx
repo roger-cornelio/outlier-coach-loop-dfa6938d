@@ -115,7 +115,7 @@ function generateDiff(oldParams: OutlierParamsConfig, newParams: OutlierParamsCo
   // Compare level multipliers
   const oldMult = oldParams.estimation.levelMultipliers;
   const newMult = newParams.estimation.levelMultipliers;
-  for (const level of ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'] as AthleteLevel[]) {
+  for (const level of ['open', 'pro', 'elite'] as AthleteLevel[]) {
     if (oldMult[level] !== newMult[level]) {
       diffs.push({
         path: `levelMultipliers.${LEVEL_LABELS[level]}`,
@@ -711,7 +711,7 @@ export function AdminParamsEditor() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3 pt-2">
-                      {(['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'] as AthleteLevel[]).map((level) => (
+                      {(['open', 'pro', 'elite'] as AthleteLevel[]).map((level) => (
                         <div key={level} className="grid grid-cols-2 gap-2 items-center">
                           <Label className="text-xs">{LEVEL_LABELS[level]}</Label>
                           <Input

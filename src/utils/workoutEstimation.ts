@@ -350,7 +350,7 @@ export function estimateBlock(
 export function estimateWorkout(
   workoutDay: DayWorkout,
   athleteConfig: AthleteConfig | null,
-  level: AthleteLevel = 'intermediario'
+  level: AthleteLevel = 'open'
 ): WorkoutEstimation {
   const biometrics = getUserBiometrics(athleteConfig);
   

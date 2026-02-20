@@ -171,7 +171,7 @@ export function Dashboard() {
   const isShowingAdapted = adaptedWorkouts.length > 0;
   
   // Get effective level for workout prescription
-  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingLevel) : 'intermediario';
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.planTier ?? 'open') : 'open';
   
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const todayWorkout = displayWorkouts.find((w) => w.day === todayDay);

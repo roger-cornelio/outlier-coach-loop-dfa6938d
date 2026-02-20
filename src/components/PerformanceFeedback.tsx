@@ -45,7 +45,7 @@ export function PerformanceFeedback() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Get effective level from calculated status
-  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.trainingLevel) : 'intermediario';
+  const effectiveLevel = athleteConfig ? getEffectiveLevelForWorkout(athleteConfig.planTier ?? 'open') : 'open';
 
   const resultData = useMemo(() => {
     if (!selectedWorkout || !athleteConfig) return null;

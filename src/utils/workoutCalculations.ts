@@ -242,7 +242,7 @@ export function calculateCalories(
 ): number | null {
   if (!athleteConfig) return null;
   
-  const effectiveLevel = level || 'intermediario';
+  const effectiveLevel = level || 'open';
   const weight = athleteConfig.peso;
   if (!weight) return null;
 
