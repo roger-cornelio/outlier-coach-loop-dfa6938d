@@ -696,6 +696,130 @@ function MobileAdvancedDataSection({
 }
 
 // ============================================
+// TRAINING PRIORITIES BLOCK
+// ============================================
+
+const METRIC_INSIGHTS: Record<string, string[]> = {
+  run_avg:   ['-1m45 vs Elite', '+2min média', 'Cardio crítico'],
+  sled_push: ['-55s vs Elite', 'Força limitante', '+40s média'],
+  sled_pull: ['-1m10 vs Elite', 'Perda por fadiga', '+52s média'],
+  bbj:       ['+38s média', 'Técnica inconsistente', '-45s vs Elite'],
+  ski:       ['-50s vs Elite', 'Potência baixa', '+35s média'],
+  row:       ['+48s média', '-1m vs Elite', 'Anaeróbico crítico'],
+  roxzone:   ['2 pausas', 'Core limitante', '+30s média'],
+  farmers:   ['+42s média', 'Grip falha', '-55s vs Elite'],
+  sandbag:   ['+52s média', '-1m05 vs Elite', 'Ritmo irregular'],
+  wallballs: ['2 pausas', '+45s média', '-50s vs Elite'],
+};
+
+function StarRating({ count, colorClass }: { count: number; colorClass: string }) {
+  return (
+    <span className={`flex items-center gap-0.5 ${colorClass} shrink-0`}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className="w-3 h-3"
+          fill={i < count ? 'currentColor' : 'none'}
+          strokeWidth={i < count ? 0 : 1.5}
+        />
+      ))}
+    </span>
+  );
+}
+
+function TrainingPrioritiesBlock({
+  scores,
+  onViewAll,
+}: {
+  scores: CalculatedScore[];
+  onViewAll?: () => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  const worstStations = useMemo(() => {
+    return [...scores]
+      .sort((a, b) => a.percentile_value - b.percentile_value)
+      .slice(0, showAll ? scores.length : 3)
+      .map((s) => {
+        const stars = percentileToStars(s.percentile_value);
+        const insights = METRIC_INSIGHTS[s.metric] || ['-vs Elite'];
+        const insight = insights[0];
+        return {
+          metric: s.metric,
+          label: METRIC_LABELS[s.metric] || s.metric,
+          stars,
+          insight,
+          percentile: s.percentile_value,
+        };
+      });
+  }, [scores, showAll]);
+
+  const totalBad = useMemo(
+    () => scores.filter((s) => s.percentile_value < 50).length,
+    [scores]
+  );
+
+  if (scores.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.09 }}
+      className="card-elevated rounded-2xl overflow-hidden"
+    >
+      <div className="px-4 py-3">
+        {/* Header */}
+        <div className="flex items-center gap-1.5 mb-3">
+          <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
+          <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">
+            Prioridades de Treino
+          </span>
+        </div>
+
+        {/* List */}
+        <ul className="space-y-2">
+          {worstStations.map((station, i) => (
+            <li
+              key={station.metric}
+              className="flex items-center gap-2.5 text-xs"
+            >
+              {/* Rank number */}
+              <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                {i + 1}.
+              </span>
+
+              {/* Station name */}
+              <span className="flex-1 font-semibold text-foreground/90 truncate">
+                {station.label}
+              </span>
+
+              {/* Stars */}
+              <StarRating count={station.stars.count} colorClass={station.stars.colorClass} />
+
+              {/* Insight */}
+              <span className="text-[10px] text-muted-foreground/80 shrink-0 min-w-[70px] text-right tabular-nums">
+                {station.insight}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {/* Footer: Ver todas */}
+        {totalBad > 3 && (
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 pt-2.5 border-t border-border/20 text-center"
+          >
+            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalBad}) ▾`}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -934,10 +1058,13 @@ export function DiagnosticRadarBlock({
         })()}
 
 
-        {/* Bloco 3: Gargalos */}
+        {/* Bloco 3: Prioridades de Treino */}
+        <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
+
+        {/* Bloco 4: Gargalos */}
         <MobileBottlenecksBlock scores={scores} />
 
-        {/* Bloco 4: Próximo Passo */}
+        {/* Bloco 5: Próximo Passo */}
         <MobileNextStepBlock scores={scores} journeyData={journeyData} />
 
         {/* Bloco 5: Perfil Fisiológico (colapsado) */}
@@ -1151,6 +1278,9 @@ export function DiagnosticRadarBlock({
           </motion.div>);
 
       })()}
+
+      {/* BLOCO PRIORIDADES DE TREINO */}
+      <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
 
       {/* BLOCO 6: PERFIL FISIOLÓGICO */}
       <TooltipProvider>
