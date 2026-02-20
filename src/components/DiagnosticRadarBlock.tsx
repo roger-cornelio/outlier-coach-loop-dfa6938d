@@ -115,6 +115,89 @@ function AnimatedCounter({ target, duration = 1000 }: {target: number;duration?:
 }
 
 // ============================================
+// REQUIREMENTS CHECKLIST — progressive counters
+// ============================================
+function progressIcon(current: number, total: number): { icon: React.ReactNode; color: string } {
+  if (total === 0) return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
+  const pct = current / total;
+  if (pct >= 1)    return { icon: <Check className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
+  if (pct >= 0.75) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-emerald-400' };
+  if (pct >= 0.25) return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-amber-400' };
+  return { icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-red-400' };
+}
+
+interface RequirementsChecklistProps {
+  journeyData: ReturnType<typeof useJourneyProgress>;
+  compact?: boolean;
+  onBenchmarksClick?: () => void;
+  onSessionsClick?: () => void;
+}
+
+function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSessionsClick }: RequirementsChecklistProps) {
+  const { targetLevel } = journeyData;
+  const {
+    benchmarksCompleted, benchmarksRequired,
+    trainingSessions, trainingRequired,
+    officialRaceRequired, hasOfficialRace,
+  } = targetLevel;
+
+  const bMissing = Math.max(0, benchmarksRequired - benchmarksCompleted);
+  const sMissing = Math.max(0, trainingRequired - trainingSessions);
+
+  const bIcon = progressIcon(benchmarksCompleted, benchmarksRequired);
+  const sIcon = progressIcon(trainingSessions, trainingRequired);
+
+  const rowCls = `flex items-center gap-2 text-xs w-full text-left`;
+  const labelCls = 'flex-1 font-medium text-foreground/90';
+  const counterCls = 'font-mono font-bold tabular-nums text-foreground';
+  const missingCls = 'text-muted-foreground/70 ml-1';
+
+  return (
+    <ul className="space-y-1.5">
+      {/* Prova oficial — check simples */}
+      {officialRaceRequired && (
+        <li className="flex items-center gap-2 text-xs">
+          {hasOfficialRace
+            ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            : <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+          <span className={hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
+            Prova oficial HYROX
+          </span>
+        </li>
+      )}
+
+      {/* Benchmarks — X / total | faltam Y */}
+      <li>
+        <button
+          onClick={onBenchmarksClick}
+          className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
+          type="button"
+        >
+          <span className={`${bIcon.color} shrink-0`}>{bIcon.icon}</span>
+          <span className={labelCls}>Benchmarks</span>
+          <span className={counterCls}>{benchmarksCompleted} / {benchmarksRequired}</span>
+          {bMissing > 0 && <span className={missingCls}>faltam {bMissing}</span>}
+        </button>
+      </li>
+
+      {/* Sessões — X / total | faltam Y */}
+      <li>
+        <button
+          onClick={onSessionsClick}
+          className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
+          type="button"
+        >
+          <span className={`${sIcon.color} shrink-0`}>{sIcon.icon}</span>
+          <span className={labelCls}>Sessões</span>
+          <span className={counterCls}>{trainingSessions} / {trainingRequired}</span>
+          {sMissing > 0 && <span className={missingCls}>faltam {sMissing}</span>}
+        </button>
+      </li>
+    </ul>
+  );
+}
+
+// ============================================
 // HELPER: percentileToStars
 // ============================================
 function percentileToStars(p: number) {
@@ -210,30 +293,18 @@ function MobilePathToEliteCard({
           </div>
         }
 
-        {/* Checklist: o que falta */}
+        {/* Checklist: contadores progressivos */}
         {!isAtTop &&
         <div className="mb-4 space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2">
-              O que falta para {targetLevelLabel}
+              Requisitos para {targetLevelLabel}
             </p>
-            <div className="flex items-center gap-2 text-xs text-foreground/90">
-              {missingBenchmarks <= 0 ?
-            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> :
-            <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-              <span>{missingBenchmarks <= 0 ? 'Benchmarks completos' : `${missingBenchmarks} benchmark${missingBenchmarks > 1 ? 's' : ''} restante${missingBenchmarks > 1 ? 's' : ''}`}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-foreground/90">
-              {missingSessions <= 0 ?
-            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> :
-            <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-              <span>{missingSessions <= 0 ? 'Sessões completas' : `${missingSessions} sessão${missingSessions > 1 ? 'ões' : ''} de treino restante${missingSessions > 1 ? 's' : ''}`}</span>
-            </div>
-            {needsOfficialRace &&
-          <div className="flex items-center gap-2 text-xs text-foreground/90">
-                <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Prova oficial pendente</span>
-              </div>
-          }
+            <RequirementsChecklist
+              journeyData={journeyData}
+              compact
+              onBenchmarksClick={onStartWorkout}
+              onSessionsClick={onStartWorkout}
+            />
           </div>
         }
 
@@ -1024,42 +1095,11 @@ export function DiagnosticRadarBlock({
                       <Target className="w-3.5 h-3.5 text-primary" />
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
                     </div>
-                    <ul className="space-y-2">
-                      {/* Volume items (orange X) */}
-                      {missingBenchmarks > 0 ?
-                    <li className="flex items-center gap-2 text-xs">
-                          <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          <span className="text-foreground">{missingBenchmarks} benchmark{missingBenchmarks > 1 ? 's' : ''} faltando</span>
-                        </li> :
-
-                    <li className="flex items-center gap-2 text-xs">
-                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                          <span className="text-foreground/60">Benchmarks completos</span>
-                        </li>
-                    }
-                      {missingSessions > 0 ?
-                    <li className="flex items-center gap-2 text-xs">
-                          <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          <span className="text-foreground">{missingSessions} sessões restantes</span>
-                        </li> :
-
-                    <li className="flex items-center gap-2 text-xs">
-                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                          <span className="text-foreground/60">Sessões completas</span>
-                        </li>
-                    }
-                      {/* Official race */}
-                      {targetLevel.officialRaceRequired &&
-                    <li className="flex items-center gap-2 text-xs">
-                          {targetLevel.hasOfficialRace ?
-                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> :
-                      <X className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                          <span className={targetLevel.hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
-                            Prova oficial HYROX
-                          </span>
-                        </li>
-                    }
-                    </ul>
+                    <RequirementsChecklist
+                      journeyData={journeyData}
+                      onBenchmarksClick={onStartWorkout}
+                      onSessionsClick={onStartWorkout}
+                    />
                   </div>
                 </>
               }
