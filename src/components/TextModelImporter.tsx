@@ -23,6 +23,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
@@ -78,6 +79,8 @@ import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
 interface TextModelImporterProps {
   onSaveAndGoToPrograms?: (workouts: DayWorkout[], title: string, weekStart: string | null) => Promise<boolean>;
   isSaving?: boolean;
+  initialWorkout?: CoachWorkout | null;
+  onClearInitialWorkout?: () => void;
 }
 
 const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
@@ -85,7 +88,19 @@ const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
   label: cat.label,
 }));
 
-export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: TextModelImporterProps) {
+function deriveWeekPeriod(weekStart: string): WeekPeriod {
+  const monday = new Date(weekStart + 'T12:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return {
+    startDate: weekStart,
+    endDate: sunday.toISOString().split('T')[0],
+    label: `${fmt(monday)} → ${fmt(sunday)}`,
+  };
+}
+
+export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, initialWorkout, onClearInitialWorkout }: TextModelImporterProps) {
   // ═══════════════════════════════════════════════════════════════════════════
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -113,6 +128,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
     goBackToImport,
     goBackToEditing,
     clearDraft,
+    patchDraft,
   } = useCoachDraft();
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -133,6 +149,47 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false }: T
   const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LOAD WORKOUT FOR EDIT (from Programações tab)
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!initialWorkout) return;
+
+    const workoutDays = initialWorkout.workout_json as DayWorkout[];
+
+    // Cast to any to avoid structural mismatch between ParsedDay and DayWorkout
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const syntheticParseResult = {
+      success: true,
+      days: [] as any[], // not used for rendering — effectiveDays comes from parsedDays
+      structureIssues: [],
+      rawText: '',
+      warnings: [],
+      errors: [],
+      alerts: [],
+      needsDaySelection: false,
+    } as any;
+
+    const weekPeriod = initialWorkout.week_start
+      ? deriveWeekPeriod(initialWorkout.week_start)
+      : null;
+
+    patchDraft({
+      parsedDays: workoutDays,
+      editedDays: null,
+      weekId: weekPeriod,
+      programName: initialWorkout.title,
+      mode: 'edit',
+      parseResult: syntheticParseResult,
+      rawText: '',
+      isDirty: false,
+      restDays: {},
+    });
+
+    onClearInitialWorkout?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWorkout]);
 
   const summarizeDraft = (d: any) => {
     const days = (d?.editedDays || d?.parsedDays) as DayWorkout[] | null;

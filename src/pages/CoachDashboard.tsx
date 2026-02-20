@@ -11,7 +11,7 @@
  * - IMPORTAR = preview local; PROGRAMAÇÕES = dados persistidos
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/useLogout';
 import { useLinkDebug } from '@/hooks/useLinkDebug';
@@ -32,6 +32,7 @@ import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
+import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
 import { useToast } from '@/hooks/use-toast';
@@ -73,6 +74,7 @@ export default function CoachDashboard() {
   
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState('importar');
+  const [editingWorkout, setEditingWorkout] = useState<CoachWorkout | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
     linksCount: null,
     joinCount: null,
@@ -334,6 +336,11 @@ export default function CoachDashboard() {
     logout();
   };
 
+  const handleEditWorkout = useCallback((workout: CoachWorkout) => {
+    setEditingWorkout(workout);
+    setActiveTab('importar');
+  }, []);
+
   // Renderizar conteúdo baseado na tab selecionada
   const renderTabContent = () => {
     switch (activeTab) {
@@ -554,10 +561,23 @@ export default function CoachDashboard() {
         );
 
       case 'importar':
-        return <CoachSpreadsheetTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
+        return (
+          <CoachSpreadsheetTab
+            linkedAthletes={linkedAthletes}
+            loadingAthletes={loadingAthletes}
+            initialWorkout={editingWorkout}
+            onClearInitialWorkout={() => setEditingWorkout(null)}
+          />
+        );
 
       case 'programacoes':
-        return <CoachProgramsTab linkedAthletes={linkedAthletes} loadingAthletes={loadingAthletes} />;
+        return (
+          <CoachProgramsTab
+            linkedAthletes={linkedAthletes}
+            loadingAthletes={loadingAthletes}
+            onEditWorkout={handleEditWorkout}
+          />
+        );
 
       case 'parametros':
         return <AdminParamsEditor />;
