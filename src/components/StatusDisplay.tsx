@@ -17,11 +17,9 @@ import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 
 // Gradient colors based on status
 const STATUS_GRADIENTS: Record<AthleteStatus, string> = {
-  iniciante: 'from-blue-500 to-cyan-400',
-  intermediario: 'from-green-500 to-emerald-400',
-  avancado: 'from-orange-500 to-amber-400',
-  hyrox_open: 'from-purple-500 to-pink-400',
-  hyrox_pro: 'from-amber-500 to-yellow-400',
+  open: 'from-purple-500 to-violet-400',
+  pro: 'from-amber-500 to-yellow-400',
+  elite: 'from-yellow-300 to-amber-300',
 };
 
 function getPromotionBlockerMessage(

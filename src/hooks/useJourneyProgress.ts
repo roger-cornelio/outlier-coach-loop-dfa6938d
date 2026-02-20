@@ -26,31 +26,26 @@ interface JumpRule {
 }
 
 // Extended level type to include ELITE
-export type ExtendedLevelKey = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'OPEN' | 'PRO' | 'ELITE';
+export type ExtendedLevelKey = 'OPEN' | 'PRO' | 'ELITE';
 
-// Map AthleteStatus to level key
+// Map AthleteStatus to level key (now 1:1)
 export function statusToLevelKey(status: AthleteStatus): ExtendedLevelKey {
   const map: Record<AthleteStatus, ExtendedLevelKey> = {
-    iniciante: 'BEGINNER',
-    intermediario: 'INTERMEDIATE',
-    avancado: 'ADVANCED',
-    hyrox_open: 'OPEN',
-    hyrox_pro: 'PRO',
+    open: 'OPEN',
+    pro: 'PRO',
+    elite: 'ELITE',
   };
-  return map[status] || 'BEGINNER';
+  return map[status] || 'OPEN';
 }
 
-// Map level key to AthleteStatus (for display compatibility)
-export function levelKeyToStatus(key: ExtendedLevelKey): AthleteStatus | 'elite' {
-  const map: Record<ExtendedLevelKey, AthleteStatus | 'elite'> = {
-    BEGINNER: 'iniciante',
-    INTERMEDIATE: 'intermediario',
-    ADVANCED: 'avancado',
-    OPEN: 'hyrox_open',
-    PRO: 'hyrox_pro',
+// Map level key to AthleteStatus
+export function levelKeyToStatus(key: ExtendedLevelKey): AthleteStatus {
+  const map: Record<ExtendedLevelKey, AthleteStatus> = {
+    OPEN: 'open',
+    PRO: 'pro',
     ELITE: 'elite',
   };
-  return map[key] || 'iniciante';
+  return map[key] || 'open';
 }
 
 export interface TargetLevelProgress {
@@ -112,7 +107,7 @@ export interface JourneyPosition {
   } | null;
 }
 
-const LEVELS_ORDER: ExtendedLevelKey[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'OPEN', 'PRO', 'ELITE'];
+const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
 export function useJourneyProgress(): JourneyPosition {
   const [levelRules, setLevelRules] = useState<LevelRule[]>([]);
@@ -145,9 +140,9 @@ export function useJourneyProgress(): JourneyPosition {
   
   const journeyPosition = useMemo<JourneyPosition>(() => {
     const defaultTarget: TargetLevelProgress = {
-      levelKey: 'INTERMEDIATE',
+      levelKey: 'PRO',
       levelOrder: 2,
-      label: 'Intermediário',
+      label: 'PRO',
       trainingProgress: 0,
       benchmarkProgress: 0,
       overallProgress: 0,
@@ -168,10 +163,10 @@ export function useJourneyProgress(): JourneyPosition {
         currentLevelIndex: 0,
         targetLevelIndex: 1,
         progressToTarget: 0,
-        currentLevelKey: 'BEGINNER',
-        currentLevelLabel: 'Iniciante',
-        targetLevelKey: 'INTERMEDIATE',
-        targetLevelLabel: 'Intermediário',
+        currentLevelKey: 'OPEN',
+        currentLevelLabel: 'OPEN',
+        targetLevelKey: 'PRO',
+        targetLevelLabel: 'PRO',
         isAtTop: false,
         targetLevel: defaultTarget,
         allLevels: [],
@@ -226,17 +221,7 @@ export function useJourneyProgress(): JourneyPosition {
     if (absoluteLevelFromRace) {
       currentLevelKey = absoluteLevelFromRace;
     } else {
-      const currentStatusLevel = statusToLevelKey(athleteStatus.status);
-      const currentLevelRule = levelRules.find(l => l.level_key === currentStatusLevel);
-      const advancedRule = levelRules.find(l => l.level_key === 'ADVANCED');
-      
-      if (currentLevelRule && advancedRule) {
-        currentLevelKey = currentLevelRule.level_order <= advancedRule.level_order 
-          ? currentStatusLevel 
-          : 'ADVANCED';
-      } else {
-        currentLevelKey = currentStatusLevel;
-      }
+      currentLevelKey = statusToLevelKey(athleteStatus.status);
     }
     
     const currentLevelRule = levelRules.find(l => l.level_key === currentLevelKey);

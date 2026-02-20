@@ -19,11 +19,9 @@ interface LevelUpHistory {
 
 // Ordem hierárquica dos níveis
 const STATUS_ORDER: AthleteStatus[] = [
-  'iniciante',
-  'intermediario',
-  'avancado',
-  'hyrox_open',
-  'hyrox_pro',
+  'open',
+  'pro',
+  'elite',
 ];
 
 function loadHistory(): LevelUpHistory {

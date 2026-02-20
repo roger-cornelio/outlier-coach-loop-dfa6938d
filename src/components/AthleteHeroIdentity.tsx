@@ -25,34 +25,22 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   crownColor: string;
   sublabel: string;
 }> = {
-  iniciante: {
-    label: 'INICIANTE',
-    labelColor: 'text-slate-400',
-    crownColor: 'text-slate-400',
-    sublabel: 'Nível base',
-  },
-  intermediario: {
-    label: 'INTERMEDIÁRIO',
-    labelColor: 'text-emerald-400',
-    crownColor: 'text-emerald-400',
-    sublabel: 'Nível intermediário',
-  },
-  avancado: {
-    label: 'AVANÇADO',
-    labelColor: 'text-orange-400',
-    crownColor: 'text-orange-400',
-    sublabel: 'Nível avançado',
-  },
-  hyrox_open: {
-    label: 'HYROX OPEN',
+  open: {
+    label: 'OPEN',
     labelColor: 'text-purple-400',
     crownColor: 'text-purple-400',
     sublabel: 'Nível competitivo',
   },
-  hyrox_pro: {
-    label: 'HYROX PRO',
+  pro: {
+    label: 'PRO',
     labelColor: 'text-amber-400',
     crownColor: 'text-amber-400',
+    sublabel: 'Nível profissional',
+  },
+  elite: {
+    label: 'ELITE',
+    labelColor: 'text-yellow-300',
+    crownColor: 'text-yellow-300',
     sublabel: 'Nível mundial',
   },
 };

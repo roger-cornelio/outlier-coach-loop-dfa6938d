@@ -63,13 +63,11 @@ const LEVEL_BG_COLORS: Record<string, string> = {
 // Map athlete status to level key
 function statusToLevelKey(status: AthleteStatus): string {
   const map: Record<AthleteStatus, string> = {
-    iniciante: 'BEGINNER',
-    intermediario: 'INTERMEDIATE',
-    avancado: 'ADVANCED',
-    hyrox_open: 'OPEN',
-    hyrox_pro: 'PRO',
+    open: 'OPEN',
+    pro: 'PRO',
+    elite: 'ELITE',
   };
-  return map[status] || 'BEGINNER';
+  return map[status] || 'OPEN';
 }
 
 export function StatusExplainerModal() {

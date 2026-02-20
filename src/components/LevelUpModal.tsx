@@ -25,25 +25,17 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
   accentHsl: string; // HSL para glow
 }> = {
-  iniciante: {
-    label: 'INICIANTE',
-    accentHsl: '215 16% 47%',
-  },
-  intermediario: {
-    label: 'INTERMEDIÁRIO',
-    accentHsl: '160 84% 39%',
-  },
-  avancado: {
-    label: 'AVANÇADO',
-    accentHsl: '25 95% 53%',
-  },
-  hyrox_open: {
-    label: 'HYROX OPEN',
+  open: {
+    label: 'OPEN',
     accentHsl: '271 81% 56%',
   },
-  hyrox_pro: {
-    label: 'HYROX PRO',
-    accentHsl: '45 93% 58%', // Amarelo HYROX PRO
+  pro: {
+    label: 'PRO',
+    accentHsl: '45 93% 58%',
+  },
+  elite: {
+    label: 'ELITE',
+    accentHsl: '50 95% 65%',
   },
 };
 

@@ -197,10 +197,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
   benchmark: {
     enabledOnlyForBenchmark: true,
     defaultTimeRangesByLevel: {
-      iniciante: { min: 18 * 60, max: 25 * 60 },       // 18:00 - 25:00
-      intermediario: { min: 14 * 60, max: 20 * 60 },   // 14:00 - 20:00
-      avancado: { min: 12 * 60, max: 16 * 60 },        // 12:00 - 16:00
-      hyrox_pro: { min: 10 * 60, max: 14 * 60 },       // 10:00 - 14:00
+      open: { min: 14 * 60, max: 25 * 60 },       // 14:00 - 25:00 (amplo range para iniciantes)
+      pro: { min: 12 * 60, max: 18 * 60 },        // 12:00 - 18:00 (intermediário-avançado)
+      elite: { min: 10 * 60, max: 14 * 60 },      // 10:00 - 14:00 (elite)
     },
     scoringBuckets: {
       elite: 100,
@@ -231,11 +230,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       default: { baseMinutes: 15, variancePercent: 0.18 },
     },
     levelMultipliers: {
-      iniciante: 1.35,
-      intermediario: 1.15,
-      avancado: 1.0,
-      hyrox_open: 0.95,
-      hyrox_pro: 0.85,
+      open: 1.25,     // Mais lento (iniciantes/intermediário)
+      pro: 1.0,       // Base (avançado/open)
+      elite: 0.85,    // Mais rápido (pro/elite)
     },
     defaultSessionCapMinutes: 60,
     formatMultipliers: {
@@ -297,11 +294,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     },
     runningKcalFactor: 1.0, // kcal = peso_kg * km * fator
     levelSpeedKmh: {
-      iniciante: 8.0,       // 7:30/km
-      intermediario: 10.0,  // 6:00/km
-      avancado: 12.0,       // 5:00/km
-      hyrox_open: 13.0,     // 4:37/km
-      hyrox_pro: 14.0,      // 4:17/km
+      open: 9.0,      // 6:40/km (iniciante/intermediário)
+      pro: 12.0,      // 5:00/km (avançado/open)
+      elite: 14.0,    // 4:17/km (pro/elite)
     },
     fallbackKcalPerMin: 10.0, // Ajustado de 8.0 para 10.0
   },
@@ -325,7 +320,7 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
 
   // E) LABELS E NÍVEIS
   labels: {
-    athleteLevels: ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'],
+    athleteLevels: ['open', 'pro', 'elite'],
     wodTypes: ['engine', 'strength', 'skill', 'mixed', 'hyrox', 'benchmark'],
     wodFormats: ['for_time', 'amrap', 'emom', 'chipper', 'interval'],
     modalityTags: ['engine', 'strength', 'mixed', 'skill', 'hyrox'],
@@ -335,11 +330,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
   // F) PROGRESSION (sistema de evolução)
   progression: {
     levelThresholds: {
-      iniciante: 35,
-      intermediario: 55,
-      avancado: 75,
-      hyrox_open: 90,
-      hyrox_pro: 100,
+      open: 40,
+      pro: 70,
+      elite: 90,
     },
     consistencyValidation: {
       minStrongWeeks: 2,

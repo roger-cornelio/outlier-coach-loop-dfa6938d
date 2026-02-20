@@ -1,7 +1,8 @@
 export type CoachStyle = 'IRON' | 'PULSE' | 'SPARK';
 
 // Status is now calculated internally (INVISIBLE to user) from benchmarks
-export type AthleteStatus = 'iniciante' | 'intermediario' | 'avancado' | 'hyrox_open' | 'hyrox_pro';
+// 3 levels: open (entry), pro (competitive), elite (top)
+export type AthleteStatus = 'open' | 'pro' | 'elite';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PlanTier: Plano CONTRATADO pelo atleta com o coach (OPEN / PRO)
@@ -66,18 +67,16 @@ export interface LevelVariant {
 }
 
 export interface LevelVariants {
-  iniciante?: LevelVariant;
-  intermediario?: LevelVariant;
-  avancado?: LevelVariant;
-  hyrox_pro?: LevelVariant;
+  open?: LevelVariant;
+  pro?: LevelVariant;
+  elite?: LevelVariant;
 }
 
 // Legacy support for target ranges only
 export interface LevelTargetRanges {
-  iniciante?: TargetTimeRange;
-  intermediario?: TargetTimeRange;
-  avancado?: TargetTimeRange;
-  hyrox_pro?: TargetTimeRange;
+  open?: TargetTimeRange;
+  pro?: TargetTimeRange;
+  elite?: TargetTimeRange;
 }
 
 export interface WorkoutBlock {
@@ -115,10 +114,9 @@ export interface WorkoutBlock {
   benchmarkDirection?: BenchmarkDirection; // lower_is_better or higher_is_better
   benchmarkWeight?: number; // Weight for composite scoring (default 1.0)
   referenceTime?: {
-    iniciante: number;
-    intermediario: number;
-    avancado: number;
-    hyrox_pro: number;
+    open: number;
+    pro: number;
+    elite: number;
   };
   // Versioning for params preservation
   paramsVersionUsed?: string; // Version of outlierParams when benchmark was created
@@ -191,11 +189,9 @@ export const DAY_NAMES: Record<DayOfWeek, string> = {
 };
 
 export const LEVEL_NAMES: Record<AthleteStatus, string> = {
-  iniciante: 'Iniciante',
-  intermediario: 'Intermediário',
-  avancado: 'Avançado',
-  hyrox_open: 'HYROX OPEN',
-  hyrox_pro: 'HYROX PRO',
+  open: 'OPEN',
+  pro: 'PRO',
+  elite: 'ELITE',
 };
 
 // Nomes dos níveis de treino (escolha do usuário)
@@ -207,4 +203,4 @@ export const TRAINING_LEVEL_NAMES: Record<TrainingLevel, string> = {
 // Legacy alias
 export const DIFFICULTY_NAMES = TRAINING_LEVEL_NAMES;
 
-export const STATUS_ORDER: AthleteStatus[] = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'];
+export const STATUS_ORDER: AthleteStatus[] = ['open', 'pro', 'elite'];

@@ -36,41 +36,8 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   crownColor: string;
   animate: boolean;
 }> = {
-  iniciante: {
-    label: 'INICIANTE',
-    gradient: 'from-slate-500 to-slate-600',
-    glow: 'rgba(100, 116, 139, 0.4)',
-    glowIntensity: '0 0 20px',
-    border: 'border-slate-400/60',
-    text: 'text-slate-300',
-    badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-    crownColor: 'text-slate-300',
-    animate: false,
-  },
-  intermediario: {
-    label: 'INTERMEDIÁRIO',
-    gradient: 'from-emerald-500 to-green-600',
-    glow: 'rgba(16, 185, 129, 0.5)',
-    glowIntensity: '0 0 30px',
-    border: 'border-emerald-400/70',
-    text: 'text-emerald-400',
-    badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    crownColor: 'text-emerald-300',
-    animate: false,
-  },
-  avancado: {
-    label: 'AVANÇADO',
-    gradient: 'from-orange-500 to-red-600',
-    glow: 'rgba(249, 115, 22, 0.5)',
-    glowIntensity: '0 0 40px',
-    border: 'border-orange-400/80',
-    text: 'text-orange-400',
-    badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    crownColor: 'text-white/90',
-    animate: false,
-  },
-  hyrox_open: {
-    label: 'HYROX OPEN',
+  open: {
+    label: 'OPEN',
     gradient: 'from-purple-500 to-pink-600',
     glow: 'rgba(168, 85, 247, 0.6)',
     glowIntensity: '0 0 50px',
@@ -78,10 +45,10 @@ const STATUS_CONFIG: Record<AthleteStatus, {
     text: 'text-purple-400',
     badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     crownColor: 'text-white',
-    animate: true,
+    animate: false,
   },
-  hyrox_pro: {
-    label: 'HYROX PRO',
+  pro: {
+    label: 'PRO',
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     glow: 'rgba(251, 191, 36, 0.7)',
     glowIntensity: '0 0 60px, 0 0 100px',
@@ -89,6 +56,17 @@ const STATUS_CONFIG: Record<AthleteStatus, {
     text: 'text-amber-400',
     badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     crownColor: 'text-amber-900',
+    animate: true,
+  },
+  elite: {
+    label: 'ELITE',
+    gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
+    glow: 'rgba(253, 224, 71, 0.8)',
+    glowIntensity: '0 0 80px, 0 0 120px',
+    border: 'border-yellow-300',
+    text: 'text-yellow-300',
+    badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    crownColor: 'text-yellow-900',
     animate: true,
   },
 };

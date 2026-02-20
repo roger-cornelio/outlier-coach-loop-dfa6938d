@@ -13,11 +13,9 @@ import {
 import type { AthleteLevel } from '@/types/outlier';
 
 const LEVEL_DISPLAY: Record<AthleteLevel, string> = {
-  iniciante: 'Iniciante',
-  intermediario: 'Intermediário',
-  avancado: 'Avançado',
-  hyrox_open: 'HYROX OPEN',
-  hyrox_pro: 'HYROX PRO',
+  open: 'OPEN',
+  pro: 'PRO',
+  elite: 'ELITE',
 };
 
 interface ValidationStatus {

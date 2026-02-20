@@ -35,44 +35,28 @@ const STATUS_VISUAL: Record<AthleteStatus, {
   iconColor: string;
   animate: boolean;
 }> = {
-  iniciante: {
-    gradient: 'from-slate-500 to-slate-600',
-    border: 'border-slate-400/60',
-    glow: 'rgba(100, 116, 139, 0.3)',
-    glowIntensity: '0 0 12px',
-    iconColor: 'text-slate-100',
-    animate: false,
-  },
-  intermediario: {
-    gradient: 'from-emerald-500 to-green-600',
-    border: 'border-emerald-400/70',
-    glow: 'rgba(16, 185, 129, 0.4)',
-    glowIntensity: '0 0 16px',
-    iconColor: 'text-emerald-100',
-    animate: false,
-  },
-  avancado: {
-    gradient: 'from-orange-500 to-red-600',
-    border: 'border-orange-400/80',
-    glow: 'rgba(249, 115, 22, 0.5)',
-    glowIntensity: '0 0 20px',
-    iconColor: 'text-orange-100',
-    animate: false,
-  },
-  hyrox_open: {
+  open: {
     gradient: 'from-purple-500 to-pink-600',
     border: 'border-purple-400/80',
     glow: 'rgba(168, 85, 247, 0.5)',
     glowIntensity: '0 0 24px',
     iconColor: 'text-purple-100',
-    animate: true,
+    animate: false,
   },
-  hyrox_pro: {
+  pro: {
     gradient: 'from-amber-400 via-yellow-500 to-amber-600',
     border: 'border-amber-400',
     glow: 'rgba(251, 191, 36, 0.6)',
     glowIntensity: '0 0 28px, 0 0 40px',
     iconColor: 'text-amber-100',
+    animate: true,
+  },
+  elite: {
+    gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
+    border: 'border-yellow-300',
+    glow: 'rgba(253, 224, 71, 0.7)',
+    glowIntensity: '0 0 40px, 0 0 60px',
+    iconColor: 'text-yellow-900',
     animate: true,
   },
 };

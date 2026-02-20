@@ -32,48 +32,6 @@ interface LevelVisualConfig {
 }
 
 const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
-  BEGINNER: {
-    icon: <Star className="w-5 h-5" />,
-    heroIcon: <Star className="w-16 h-16" />,
-    gradient: 'from-cyan-500 via-blue-500 to-cyan-400',
-    textGradient: 'from-cyan-400 to-blue-400',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(199 50% 15% / 0.5), transparent 50%)',
-    particleColor: 'bg-cyan-400',
-    title: 'INICIANTE',
-    subtitle: 'O começo de uma jornada',
-    motivation: 'Cada treino te aproxima do próximo nível',
-    borderStyle: 'border-cyan-500/30',
-    cardStyle: 'bg-gradient-to-br from-cyan-950/50 to-blue-950/30',
-    iconAnimation: '',
-  },
-  INTERMEDIATE: {
-    icon: <Zap className="w-5 h-5" />,
-    heroIcon: <Zap className="w-20 h-20" />,
-    gradient: 'from-emerald-500 via-green-500 to-teal-400',
-    textGradient: 'from-emerald-400 to-green-400',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(142 40% 15% / 0.6), transparent 50%)',
-    particleColor: 'bg-green-400',
-    title: 'INTERMEDIÁRIO',
-    subtitle: 'Força em construção',
-    motivation: 'Você já superou muitos. Continue subindo.',
-    borderStyle: 'border-green-500/30',
-    cardStyle: 'bg-gradient-to-br from-emerald-950/50 to-green-950/30',
-    iconAnimation: '',
-  },
-  ADVANCED: {
-    icon: <Flame className="w-5 h-5" />,
-    heroIcon: <Flame className="w-24 h-24" />,
-    gradient: 'from-orange-500 via-amber-500 to-red-500',
-    textGradient: 'from-orange-400 to-amber-400',
-    bgPattern: 'radial-gradient(ellipse at top, hsl(25 50% 18% / 0.7), transparent 50%)',
-    particleColor: 'bg-orange-400',
-    title: 'AVANÇADO',
-    subtitle: 'Fogo interior aceso',
-    motivation: 'A elite está ao seu alcance. Não pare.',
-    borderStyle: 'border-orange-500/40',
-    cardStyle: 'bg-gradient-to-br from-orange-950/60 to-amber-950/40',
-    iconAnimation: 'animate-fire-flicker',
-  },
   OPEN: {
     icon: <Trophy className="w-5 h-5" />,
     heroIcon: <Trophy className="w-28 h-28" />,
@@ -81,9 +39,9 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     textGradient: 'from-purple-400 to-fuchsia-400',
     bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%)',
     particleColor: 'bg-purple-400',
-    title: 'HYROX OPEN',
-    subtitle: 'Competidor oficial',
-    motivation: 'Você está entre os melhores. Prove no campo.',
+    title: 'OPEN',
+    subtitle: 'Competidor HYROX',
+    motivation: 'Você está no campo de batalha. Evolua para o topo.',
     borderStyle: 'border-purple-500/40',
     cardStyle: 'bg-gradient-to-br from-purple-950/60 to-violet-950/40',
     iconAnimation: '',
@@ -95,7 +53,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     textGradient: 'from-amber-300 to-yellow-300',
     bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%)',
     particleColor: 'bg-amber-400',
-    title: 'HYROX PRO',
+    title: 'PRO',
     subtitle: 'Elite competitiva',
     motivation: 'Você é a referência. Mantenha a coroa.',
     borderStyle: 'border-amber-400/50 shadow-[0_0_20px_hsl(45_93%_47%/0.2)]',
@@ -109,7 +67,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     textGradient: 'from-yellow-200 to-amber-200',
     bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
     particleColor: 'bg-yellow-300',
-    title: 'HYROX ELITE',
+    title: 'ELITE',
     subtitle: 'Lenda absoluta',
     motivation: 'O topo é seu. Inspire gerações.',
     borderStyle: 'border-yellow-300/60 shadow-[0_0_40px_hsl(50_93%_60%/0.4)]',
@@ -118,15 +76,12 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
-const LEVELS_ORDER: ExtendedLevelKey[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'OPEN', 'PRO', 'ELITE'];
+const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
 const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
-  BEGINNER: 'Iniciante',
-  INTERMEDIATE: 'Intermediário',
-  ADVANCED: 'Avançado',
-  OPEN: 'HYROX OPEN',
-  PRO: 'HYROX PRO',
-  ELITE: 'HYROX ELITE',
+  OPEN: 'OPEN',
+  PRO: 'PRO',
+  ELITE: 'ELITE',
 };
 
 // Particle effect component
@@ -339,7 +294,7 @@ export function LevelProgress() {
         style={{ backgroundImage: currentConfig.bgPattern }}
       >
         {/* Particles for higher levels */}
-        {(currentLevelKey === 'ADVANCED' || isHyrox) && (
+        {isHyrox && (
           <Particles color={currentConfig.particleColor} count={isElite ? 12 : 8} />
         )}
 
