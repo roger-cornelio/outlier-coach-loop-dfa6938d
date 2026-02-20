@@ -14,7 +14,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
@@ -24,6 +24,7 @@ import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiome
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
+import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -58,6 +59,8 @@ export function WeeklyTrainingView() {
     goToCurrentWeek,
     isViewingHistory,
   } = useAthletePlan();
+
+  const completions = useWeekWorkoutCompletions(currentWeek.start);
 
   const [activeDay, setActiveDay] = useState<DayOfWeek>(() => {
     const days: DayOfWeek[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -140,29 +143,49 @@ export function WeeklyTrainingView() {
         <div className="flex gap-1 py-4 overflow-x-auto border-b border-border mb-6">
           {dayTabs.map((day) => {
             const hasWorkout = displayWorkouts.some((w) => w.day === day);
+            const completion = completions.get(day);
+            const isCompleted = !!completion?.completed;
+            const hasTime = completion?.timeInSeconds && completion.timeInSeconds > 0;
+            const mins = hasTime ? Math.floor(completion!.timeInSeconds! / 60) : 0;
+            const secs = hasTime ? completion!.timeInSeconds! % 60 : 0;
+            const timeLabel = hasTime ? `${mins}:${String(secs).padStart(2, '0')}` : null;
+
             return (
               <button
                 key={day}
                 onClick={() => setActiveDay(day)}
                 className={`
-                  px-4 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap relative
+                  flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg font-display text-lg tracking-wide transition-all duration-200 whitespace-nowrap relative min-w-[52px]
                   ${activeDay === day
                     ? 'bg-primary text-primary-foreground'
-                    : hasWorkout
-                      ? 'text-foreground hover:bg-secondary'
-                      : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary'
+                    : isCompleted
+                      ? 'text-foreground bg-primary/10 hover:bg-primary/20'
+                      : hasWorkout
+                        ? 'text-foreground hover:bg-secondary'
+                        : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary'
                   }
                   ${isViewingHistory ? 'opacity-80' : ''}
                 `}
               >
-                {DAY_NAMES[day].slice(0, 3).toUpperCase()}
-                {hasWorkout && activeDay !== day && (
+                <span className="flex items-center gap-1">
+                  {DAY_NAMES[day].slice(0, 3).toUpperCase()}
+                  {isCompleted && (
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${activeDay === day ? 'text-primary-foreground' : 'text-primary'}`} />
+                  )}
+                </span>
+                {timeLabel && (
+                  <span className={`text-[10px] font-mono leading-none ${activeDay === day ? 'text-primary-foreground/80' : 'text-primary/80'}`}>
+                    {timeLabel}
+                  </span>
+                )}
+                {hasWorkout && !isCompleted && activeDay !== day && (
                   <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isViewingHistory ? 'bg-amber-500' : 'bg-primary'}`} />
                 )}
               </button>
             );
           })}
         </div>
+
 
         {/* Loading State */}
         {loadingPlan && (
