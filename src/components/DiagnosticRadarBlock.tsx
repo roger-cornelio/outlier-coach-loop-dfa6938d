@@ -231,18 +231,18 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
             style={{ transition: 'stroke-dashoffset 0.6s ease' }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center">
           {isComplete ? (
             <Check className="w-6 h-6 text-emerald-400" />
           ) : (
-            <>
-              <span className="font-mono font-bold text-lg leading-none text-foreground">{value}</span>
-              <span className="text-[9px] text-muted-foreground leading-none mt-0.5">de {total}</span>
-            </>
+            <span className="font-mono font-bold text-lg text-foreground">{value}</span>
           )}
         </div>
       </div>
-      <span className="text-xs font-medium text-foreground/80">{label}</span>
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-medium text-foreground/80">{label}</span>
+        {!isComplete && <span className="text-[10px] text-muted-foreground">de {total}</span>}
+      </div>
     </button>
   );
 }
