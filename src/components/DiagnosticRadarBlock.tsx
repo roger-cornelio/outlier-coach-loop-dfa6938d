@@ -239,10 +239,7 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
           )}
         </div>
       </div>
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-medium text-foreground/80">{label}</span>
-        {!isComplete && <span className="text-[10px] text-muted-foreground">de {total}</span>}
-      </div>
+      <span className="text-xs font-medium text-foreground/80">{total} {label}</span>
     </button>
   );
 }
