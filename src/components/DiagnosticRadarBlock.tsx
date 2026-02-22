@@ -253,20 +253,32 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
 
   return (
     <div className="space-y-3">
-      {/* Prova oficial — check simples */}
-      {officialRaceRequired &&
-        <div className="flex items-center gap-2 text-xs">
-          {hasOfficialRace ?
-            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> :
-            <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-          <span className={hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
-            Prova oficial HYROX
-          </span>
-        </div>
-      }
-
-      {/* Benchmarks + Sessões — large circles side by side */}
-      <div className="flex items-center justify-center gap-8">
+      {/* All three circles side by side */}
+      <div className="flex items-center justify-center gap-6">
+        {officialRaceRequired && (
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative" style={{ width: 72, height: 72 }}>
+              <svg width={72} height={72} viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={36} cy={36} r={33.5} fill="none" stroke="hsl(var(--muted))" strokeWidth={5} opacity={0.3} />
+                <circle cx={36} cy={36} r={33.5} fill="none"
+                  stroke={hasOfficialRace ? '#10b981' : 'hsl(var(--muted))'}
+                  strokeWidth={5} strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 33.5}
+                  strokeDashoffset={hasOfficialRace ? 0 : 2 * Math.PI * 33.5}
+                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                {hasOfficialRace ? (
+                  <Check className="w-6 h-6 text-emerald-400" />
+                ) : (
+                  <X className="w-5 h-5 text-muted-foreground/60" />
+                )}
+              </div>
+            </div>
+            <span className="text-xs font-medium text-foreground/80">Prova Oficial</span>
+          </div>
+        )}
         <LargeCircleProgress
           value={benchmarksCompleted}
           total={benchmarksRequired}
