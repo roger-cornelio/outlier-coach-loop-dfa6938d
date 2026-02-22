@@ -1011,15 +1011,30 @@ export function DiagnosticRadarBlock({
   // Empty state
   if (!hasData) {
     return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-elevated p-6 border-l-4 border-l-muted-foreground/30">
-        <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">PERFIL DE PERFORMANCE</h3>
-        <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <Activity className="w-12 h-12 text-muted-foreground/30" />
-          <p className="text-muted-foreground text-sm text-center max-w-xs">
-            Lance seu primeiro simulado ou prova oficial para ver seu perfil de performance completo.
-          </p>
-        </div>
-      </motion.div>);
+      <div className="space-y-3">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-elevated p-6 border-l-4 border-l-muted-foreground/30">
+          <h3 className="font-display text-sm text-muted-foreground tracking-wide mb-3">PERFIL DE PERFORMANCE</h3>
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Activity className="w-12 h-12 text-muted-foreground/30" />
+            <p className="text-muted-foreground text-sm text-center max-w-xs">
+              Lance seu primeiro simulado ou prova oficial para ver seu perfil de performance completo.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* CTA Button — always visible even without data */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Button
+            size="lg"
+            onClick={onStartWorkout}
+            className="w-full font-display text-lg tracking-wider rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg h-14">
+            <Flame className="w-6 h-6" />
+            BORA TREINAR
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+          <p className="text-muted-foreground/60 text-[10px] text-center mt-1.5">Veja seu treino do dia</p>
+        </motion.div>
+      </div>);
 
   }
 
