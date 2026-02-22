@@ -188,6 +188,61 @@ interface RequirementsChecklistProps {
   onSessionsClick?: () => void;
 }
 
+function LargeCircleProgress({ value, total, label, onClick }: { value: number; total: number; label: string; onClick?: () => void }) {
+  const size = 72;
+  const strokeWidth = 5;
+  const progress = total > 0 ? Math.min(value / total, 1) : 0;
+  const isComplete = progress >= 1;
+  const r = (size - strokeWidth) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+      type="button"
+    >
+      <div className="relative">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth={strokeWidth}
+            opacity="0.3"
+          />
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={isComplete ? '#10b981' : '#f97316'}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          {isComplete ? (
+            <Check className="w-6 h-6 text-emerald-400" />
+          ) : (
+            <span className="font-mono font-bold text-sm text-foreground">{value}/{total}</span>
+          )}
+        </div>
+      </div>
+      <span className="text-xs font-medium text-foreground/80">{label}</span>
+    </button>
+  );
+}
+
 function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSessionsClick }: RequirementsChecklistProps) {
   const { targetLevel } = journeyData;
   const {
@@ -196,48 +251,36 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
     officialRaceRequired, hasOfficialRace
   } = targetLevel;
 
-  const rowCls = `flex items-center gap-2 text-xs w-full text-left`;
-  const labelCls = 'flex-1 font-medium text-foreground/90';
-  const fractionCls = 'font-mono font-bold tabular-nums text-foreground';
-
   return (
-    <ul className="space-y-1.5">
+    <div className="space-y-3">
       {/* Prova oficial — check simples */}
       {officialRaceRequired &&
-        <li className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs">
           {hasOfficialRace ?
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> :
             <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
           <span className={hasOfficialRace ? 'text-foreground/60' : 'text-foreground font-semibold'}>
             Prova oficial HYROX
           </span>
-        </li>
+        </div>
       }
 
-      {/* Benchmarks — pizza + X / total */}
-      <li>
-        <button
+      {/* Benchmarks + Sessões — large circles side by side */}
+      <div className="flex items-center justify-center gap-8">
+        <LargeCircleProgress
+          value={benchmarksCompleted}
+          total={benchmarksRequired}
+          label="Benchmarks"
           onClick={onBenchmarksClick}
-          className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
-          type="button">
-          <MiniPieProgress value={benchmarksCompleted} total={benchmarksRequired} />
-          <span className={labelCls}>Benchmarks</span>
-          <span className={fractionCls}>{benchmarksCompleted} / {benchmarksRequired}</span>
-        </button>
-      </li>
-
-      {/* Sessões — pizza + X / total */}
-      <li>
-        <button
+        />
+        <LargeCircleProgress
+          value={trainingSessions}
+          total={trainingRequired}
+          label="Sessões"
           onClick={onSessionsClick}
-          className={`${rowCls} hover:opacity-80 transition-opacity cursor-pointer`}
-          type="button">
-          <MiniPieProgress value={trainingSessions} total={trainingRequired} />
-          <span className={labelCls}>Sessões</span>
-          <span className={fractionCls}>{trainingSessions} / {trainingRequired}</span>
-        </button>
-      </li>
-    </ul>
+        />
+      </div>
+    </div>
   );
 }
 
