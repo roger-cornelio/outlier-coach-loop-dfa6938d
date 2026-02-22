@@ -215,10 +215,9 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
           <circle
             cx={cx} cy={cy} r={r}
             fill="none"
-            stroke="hsl(var(--muted))"
+            stroke="hsl(var(--muted-foreground))"
             strokeWidth={strokeWidth}
-            opacity="0.5"
-            filter="drop-shadow(0 1px 3px rgba(0,0,0,0.15))"
+            opacity="0.25"
           />
           <circle
             cx={cx} cy={cy} r={r}
