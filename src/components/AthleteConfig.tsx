@@ -20,14 +20,14 @@ import { getCoachDisplayName } from '@/utils/displayName';
 
 const PLAN_DISPLAY: Record<PlanTier, { label: string; icon: typeof TrendingUp; description: string }> = {
   open: {
-    label: 'OPEN',
+    label: 'ESSENCIAL',
     icon: TrendingUp,
     description: 'Plano de evolução contínua'
   },
   pro: {
-    label: 'PRO',
+    label: 'PERFORMANCE',
     icon: Trophy,
-    description: 'Plano para atletas de elite'
+    description: 'Plano para alta performance'
   }
 };
 
@@ -454,50 +454,44 @@ export function AthleteConfig() {
           Plano contratado com seu coach. Para alterar, fale com seu coach.
         </p>
         
-        {/* Badge do plano atual (read-only) + Ação condicional */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Badge do plano */}
-          {(() => {
-            const planInfo = PLAN_DISPLAY[currentPlan];
-            const Icon = planInfo.icon;
+        {/* Dois botões de plano lado a lado */}
+        <div className="grid grid-cols-2 gap-3">
+          {(['open', 'pro'] as PlanTier[]).map((tier) => {
+            const info = PLAN_DISPLAY[tier];
+            const Icon = info.icon;
+            const isCurrent = currentPlan === tier;
+            const otherTier = tier === 'open' ? 'pro' : 'open';
+            const isUpgrade = tier === 'pro' && currentPlan === 'open';
+            
             return (
-              <div className="flex items-center gap-3 px-5 py-3 rounded-lg border-2 border-primary bg-primary/10">
-                <Icon className="w-6 h-6 text-primary" />
-                <div>
-                  <span className="font-display text-xl text-foreground">{planInfo.label}</span>
-                  <p className="text-xs text-muted-foreground">{planInfo.description}</p>
-                </div>
-              </div>
+              <button
+                key={tier}
+                onClick={() => {
+                  if (!isCurrent) {
+                    toast.info(
+                      isUpgrade
+                        ? 'Entre em contato com seu coach para fazer upgrade para o plano Performance.'
+                        : 'Entre em contato com seu coach para solicitar downgrade para o plano Essencial.'
+                    );
+                  }
+                }}
+                className={`flex flex-col items-center gap-2 px-4 py-4 rounded-lg border-2 transition-all duration-200 ${
+                  isCurrent
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border bg-card hover:bg-secondary'
+                }`}
+              >
+                <Icon className={`w-6 h-6 ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className={`font-display text-lg ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {info.label}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {isCurrent ? 'Plano atual' : 'Fazer upgrade'}
+                </span>
+              </button>
             );
-          })()}
-          
-          {/* Ação condicional: Upgrade ou Downgrade */}
-          {currentPlan === 'open' ? (
-            <button
-              onClick={() => toast.info('Entre em contato com seu coach para fazer upgrade para o plano PRO.')}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-primary/50 bg-primary/5 hover:bg-primary/10 transition-colors text-sm"
-            >
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span className="text-foreground font-medium">Fazer upgrade</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => toast.info('Entre em contato com seu coach para solicitar downgrade para o plano OPEN.')}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:bg-secondary transition-colors text-sm text-muted-foreground"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Fazer downgrade</span>
-            </button>
-          )}
+          })}
         </div>
-        
-        {/* Texto auxiliar */}
-        <p className="text-xs text-muted-foreground mt-3">
-          {currentPlan === 'open' 
-            ? 'Upgrade para plano Pro com seu coach' 
-            : 'Solicite downgrade para plano Open'
-          }
-        </p>
       </motion.section>
 
       {/* Duration Selection */}
