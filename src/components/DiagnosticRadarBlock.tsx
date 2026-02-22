@@ -217,7 +217,8 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
             fill="none"
             stroke="hsl(var(--muted))"
             strokeWidth={strokeWidth}
-            opacity="0.3"
+            opacity="0.5"
+            filter="drop-shadow(0 1px 3px rgba(0,0,0,0.15))"
           />
           <circle
             cx={cx} cy={cy} r={r}
@@ -259,7 +260,8 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
           <div className="flex flex-col items-center gap-2">
             <div className="relative" style={{ width: 72, height: 72 }}>
               <svg width={72} height={72} viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={36} cy={36} r={33.5} fill="none" stroke="hsl(var(--muted))" strokeWidth={5} opacity={0.3} />
+                <circle cx={36} cy={36} r={33.5} fill="none" stroke="hsl(var(--muted))" strokeWidth={5} opacity={0.5} filter="url(#shadow-official)" />
+                <defs><filter id="shadow-official"><feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.15" /></filter></defs>
                 <circle cx={36} cy={36} r={33.5} fill="none"
                   stroke={hasOfficialRace ? '#10b981' : 'hsl(var(--muted))'}
                   strokeWidth={5} strokeLinecap="round"
@@ -1288,7 +1290,7 @@ export function DiagnosticRadarBlock({
                       <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
                     </div>
-                    <div className="relative h-4 w-full rounded-full bg-secondary overflow-visible">
+                    <div className="relative h-8 w-full rounded-full bg-secondary overflow-visible">
                       <div className="absolute inset-0 rounded-full overflow-hidden">
                         <motion.div initial={{ width: 0 }} animate={{ width: `${progressToTarget}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }} className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
                       </div>
@@ -1297,8 +1299,8 @@ export function DiagnosticRadarBlock({
                       const reached = progressToTarget >= ms.position;
                       return (
                         <div key={ms.position} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: `${ms.position}%` }}>
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 ${reached ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
-                              <Icon className="w-2.5 h-2.5" />
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${reached ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
+                              <Icon className="w-3.5 h-3.5" />
                             </div>
                           </div>);
 
