@@ -239,12 +239,29 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     return updateWorkout(id, { status: 'archived' });
   }, [updateWorkout]);
 
-  // Delete workout
+  // Delete workout (also removes associated athlete_plans)
   const deleteWorkout = useCallback(async (id: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
     try {
+      // Find workout to get coach_id and week_start for cascade cleanup
+      const workout = workouts.find(w => w.id === id);
+      
+      // If published, also delete athlete_plans for this coach+week
+      if (workout && workout.status === 'published' && workout.week_start && profile?.id) {
+        const { error: plansDeleteError } = await supabase
+          .from('athlete_plans')
+          .delete()
+          .eq('coach_id', profile.id)
+          .eq('week_start', workout.week_start);
+
+        if (plansDeleteError) {
+          console.error('[useCoachWorkouts] Error deleting athlete_plans:', plansDeleteError);
+          // Continue with workout deletion even if plans cleanup fails
+        }
+      }
+
       const { error: deleteError } = await supabase
         .from('workouts')
         .delete()
@@ -261,7 +278,7 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     } finally {
       setLoading(false);
     }
-  }, [fetchCoachWorkouts]);
+  }, [fetchCoachWorkouts, workouts, profile?.id]);
 
   // Fetch available workouts for athletes (published + free)
   const fetchAvailableWorkouts = useCallback(async (): Promise<DayWorkout[]> => {
