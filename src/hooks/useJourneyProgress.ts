@@ -216,9 +216,9 @@ export function useJourneyProgress(): JourneyPosition {
         targetLevelIndex: 0,
         progressToTarget: 0,
         currentLevelKey: 'OPEN',
-        currentLevelLabel: 'OPEN',
+        currentLevelLabel: 'OUTLIER OPEN',
         targetLevelKey: 'OPEN',
-        targetLevelLabel: 'OPEN',
+        targetLevelLabel: 'OUTLIER OPEN',
         isAtTop: false,
         targetLevel: defaultTarget,
         allLevels: [],
@@ -268,7 +268,7 @@ export function useJourneyProgress(): JourneyPosition {
     const currentLevelKey = outlierLevel || statusToLevelKey(athleteStatus.status);
     const currentLevelIndex = Math.max(0, levelRules.findIndex(l => l.level_key === currentLevelKey));
     const currentLevelRule = levelRules.find(l => l.level_key === currentLevelKey);
-    const currentLevelLabel = currentLevelRule?.label || currentLevelKey;
+    const currentLevelLabel = `OUTLIER ${currentLevelRule?.label || currentLevelKey}`;
     
     // STEP 3: Determine target level (next above current)
     const isAtTop = currentLevelKey === 'ELITE';
@@ -284,7 +284,7 @@ export function useJourneyProgress(): JourneyPosition {
     }
     
     const targetLevelRule = levelRules.find(l => l.level_key === targetLevelKey);
-    const targetLevelLabel = targetLevelRule?.label || targetLevelKey;
+    const targetLevelLabel = `OUTLIER ${targetLevelRule?.label || targetLevelKey}`;
     
     // STEP 4: Calculate progress towards target level
     const targetTrainingReq = targetLevelRule?.training_min_sessions || 120;
