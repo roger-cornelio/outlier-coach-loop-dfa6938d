@@ -23,7 +23,7 @@ const blockTypeColors: Record<string, string> = {
 };
 
 export function WorkoutExecution() {
-  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig } = useOutlierStore();
+  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig, addWorkoutResult } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
@@ -165,6 +165,16 @@ export function WorkoutExecution() {
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   const handleFinishWorkout = () => {
+    // SEMPRE registrar sessão de treino no store para a Jornada progredir
+    const sessionResult = {
+      workoutId: selectedWorkout.day,
+      blockId: mainWod?.id || `session-${selectedWorkout.day}-${Date.now()}`,
+      completed: true,
+      date: new Date().toISOString(),
+    };
+    addWorkoutResult(sessionResult);
+    console.log('[JOURNEY] Training session registered:', sessionResult);
+
     if (mainWod) {
       setCurrentView('result');
     } else {
