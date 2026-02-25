@@ -256,9 +256,10 @@ export function LevelProgress() {
   const isAtTop = journeyProgress.isAtTop;
 
   // Calculate fill percentage for the continuous ruler
+  const rawFill = journeyProgress.continuousPosition * 100;
   const fillPercentage = journeyProgress.loading 
     ? 0 
-    : (journeyProgress.continuousPosition * 100);
+    : (rawFill > 0 ? Math.max(2, rawFill) : 0);
 
   return (
     <div className="space-y-6">
@@ -356,7 +357,7 @@ export function LevelProgress() {
                   {journeyProgress.trainingSessions} / {journeyProgress.targetLevel.trainingRequired}
                 </span>
               </div>
-              <Progress value={journeyProgress.targetLevel.trainingProgress * 100} className="h-2" />
+              <Progress value={Math.max(journeyProgress.targetLevel.trainingProgress > 0 ? 2 : 0, journeyProgress.targetLevel.trainingProgress * 100)} className="h-2" />
             </div>
             
             {/* Benchmarks counter */}
