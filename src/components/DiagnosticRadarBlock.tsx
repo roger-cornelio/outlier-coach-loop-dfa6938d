@@ -844,7 +844,7 @@ function TrainingPrioritiesBlock({
             <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
             <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">Prioridades de Treino</span>
           </div>
-          <p className="text-xs text-muted-foreground text-center py-4">Lance 2 simulados para identificar suas prioridades de treino</p>
+          <p className="text-xs text-muted-foreground text-center py-4">Aguardando registro de resultados</p>
         </div>
       </motion.div>
     );
@@ -1378,7 +1378,7 @@ export function DiagnosticRadarBlock({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-display text-xs text-muted-foreground tracking-wide">PERFIL FISIOLÓGICO</h3>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{hasData ? 'Baseado na última prova registrada' : 'Lance seu primeiro simulado para gerar seu perfil'}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{hasData ? 'Baseado na última prova registrada' : 'Aguardando registro de resultados'}</p>
               </div>
               {hasData && (
                 <CollapsibleTrigger asChild>
@@ -1508,7 +1508,7 @@ export function DiagnosticRadarBlock({
               </motion.div>
             ) : (
               <div className="px-4 pb-4">
-                <p className="text-xs text-muted-foreground text-center py-4">Lance um simulado ou registre uma prova oficial para ver sua análise completa</p>
+                <p className="text-xs text-muted-foreground text-center py-4">Aguardando registro de resultados</p>
               </div>
             )}
           </CollapsibleContent>
