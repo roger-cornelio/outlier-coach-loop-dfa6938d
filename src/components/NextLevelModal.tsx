@@ -7,10 +7,8 @@ import {
   Dumbbell, 
   CheckCircle2, 
   XCircle,
-  AlertTriangle,
   Crown,
   Sparkles,
-  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -22,7 +20,6 @@ interface NextLevelModalProps {
   journeyProgress: JourneyPosition;
 }
 
-// Level labels and colors
 const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
   OPEN: 'OPEN',
   PRO: 'PRO',
@@ -55,17 +52,16 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
     targetLevelLabel, 
     targetLevel, 
     isAtTop, 
-    hasOfficialRace, 
-    isCapped, 
-    loading 
+    loading,
+    isOutlier,
+    outlierTitle,
+    nextRequirements,
   } = journeyProgress;
   
   if (loading) return null;
   
-  // Calculate what's missing
-  const trainingMissing = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
-  const benchmarksMissing = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
-  const requiresRace = targetLevel.officialRaceRequired;
+  const { treinosRestantes, benchmarksRestantes, provaNecessaria } = nextRequirements;
+  const allMet = treinosRestantes === 0 && benchmarksRestantes === 0 && !provaNecessaria;
   
   // Determine status
   let status: 'close' | 'blocked' | 'working' | 'top';
@@ -74,13 +70,13 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
   
   if (isAtTop) {
     status = 'top';
-    statusText = 'Topo alcançado!';
+    statusText = isOutlier ? 'ATLETA OUTLIER — ELITE' : 'Topo alcançado!';
     statusColor = 'text-yellow-300';
-  } else if (requiresRace && !hasOfficialRace) {
+  } else if (provaNecessaria) {
     status = 'blocked';
-    statusText = 'Bloqueado por prova';
+    statusText = 'Prova oficial pendente';
     statusColor = 'text-amber-400';
-  } else if (trainingMissing <= 10 && benchmarksMissing <= 2) {
+  } else if (treinosRestantes <= 10 && benchmarksRestantes <= 1) {
     status = 'close';
     statusText = 'Falta pouco!';
     statusColor = 'text-green-400';
@@ -93,20 +89,16 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
   // Generate summary text
   const summaryParts: string[] = [];
   if (!isAtTop) {
-    if (trainingMissing > 0) {
-      summaryParts.push(`${trainingMissing} treino${trainingMissing > 1 ? 's' : ''}`);
-    }
-    if (benchmarksMissing > 0) {
-      summaryParts.push(`${benchmarksMissing} benchmark${benchmarksMissing > 1 ? 's' : ''}`);
-    }
-    if (requiresRace && !hasOfficialRace) {
-      summaryParts.push('prova oficial');
-    }
+    if (treinosRestantes > 0) summaryParts.push(`${treinosRestantes} treino${treinosRestantes > 1 ? 's' : ''}`);
+    if (benchmarksRestantes > 0) summaryParts.push(`${benchmarksRestantes} benchmark${benchmarksRestantes > 1 ? 's' : ''}`);
+    if (provaNecessaria) summaryParts.push('prova oficial');
   }
   
   const summaryText = summaryParts.length > 0 
-    ? `Falta${summaryParts.length > 1 || (trainingMissing + benchmarksMissing) > 1 ? 'm' : ''}: ${summaryParts.join(', ')}`
-    : isAtTop ? 'Mantenha a consistência!' : 'Todos os requisitos cumpridos!';
+    ? `Faltam: ${summaryParts.join(', ')}`
+    : isAtTop 
+      ? (isOutlier ? 'Mantenha a consistência!' : 'Mantenha a consistência!')
+      : 'Todos os requisitos cumpridos!';
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -122,7 +114,9 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
           {isAtTop ? (
             <>
               <Crown className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-300">Você está no topo!</span>
+              <span className="text-yellow-300">
+                {isOutlier ? 'ATLETA OUTLIER — ELITE' : 'Você está no topo!'}
+              </span>
             </>
           ) : (
             <>
@@ -145,7 +139,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                   <Crown className="w-5 h-5 text-black" />
                 </div>
                 <span className="bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">
-                  Topo Alcançado!
+                  {isOutlier ? outlierTitle : 'Topo Alcançado!'}
                 </span>
               </>
             ) : (
@@ -156,7 +150,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                 <div>
                   <span className="text-sm text-muted-foreground">Próximo nível</span>
                   <p className={`font-semibold ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
-                    {targetLevelLabel}
+                    OUTLIER {targetLevelLabel}
                   </p>
                 </div>
               </>
@@ -166,7 +160,6 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
         
         <div className="py-6 space-y-5 overflow-y-auto">
           {isAtTop ? (
-            // Elite message
             <div className="space-y-4">
               <motion.div
                 initial={{ scale: 0 }}
@@ -188,10 +181,13 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
               
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">
-                  HYROX ELITE
+                  {isOutlier ? outlierTitle : 'ELITE'}
                 </h3>
                 <p className="text-muted-foreground">
-                  Você alcançou o nível máximo. Agora é manter a consistência para sustentar sua posição.
+                  {isOutlier 
+                    ? 'Você conquistou o título máximo. Continue treinando para manter sua posição.'
+                    : 'Você alcançou o nível máximo. Complete os requisitos para se tornar ATLETA OUTLIER.'
+                  }
                 </p>
               </div>
               
@@ -201,14 +197,13 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                   <div>
                     <p className="font-medium text-yellow-300">Mantenha o ritmo</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Continue treinando e completando benchmarks para manter seu status de elite.
+                      Continue treinando e completando benchmarks para manter seu status.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            // Next level requirements
             <div className="space-y-5">
               {/* Status Badge */}
               <div className={`p-4 rounded-xl border ${
@@ -220,7 +215,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
               }`}>
                 <div className="flex items-center gap-3">
                   {status === 'blocked' ? (
-                    <Lock className="w-5 h-5 text-amber-400" />
+                    <Trophy className="w-5 h-5 text-amber-400" />
                   ) : status === 'close' ? (
                     <Sparkles className="w-5 h-5 text-green-400" />
                   ) : (
@@ -240,72 +235,75 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
               {/* Checklist */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Requisitos para {targetLevelLabel}
+                  Requisitos para OUTLIER {targetLevelLabel}
                 </h4>
                 
                 {/* Training */}
                 <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
                   <div className="flex items-center justify-between mb-2">
                     <span className="flex items-center gap-2 text-sm font-medium">
-                      <Dumbbell className="w-4 h-4" />
+                      {treinosRestantes === 0 
+                        ? <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        : <Dumbbell className="w-4 h-4" />
+                      }
                       Treinos
                     </span>
                     <span className={`text-sm font-bold ${
-                      trainingMissing === 0 ? 'text-green-400' : ''
+                      treinosRestantes === 0 ? 'text-green-400' : ''
                     }`}>
                       {targetLevel.trainingSessions} / {targetLevel.trainingRequired}
                     </span>
                   </div>
                   <Progress value={targetLevel.trainingProgress * 100} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    nos últimos {targetLevel.trainingWindowDays} dias
-                    {trainingMissing > 0 && (
-                      <span className="text-amber-400 ml-2">
-                        (faltam {trainingMissing})
-                      </span>
-                    )}
-                  </p>
+                  {treinosRestantes > 0 && (
+                    <p className="text-xs text-amber-400 mt-2">
+                      faltam {treinosRestantes}
+                    </p>
+                  )}
                 </div>
                 
                 {/* Benchmarks */}
                 <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
                   <div className="flex items-center justify-between mb-2">
                     <span className="flex items-center gap-2 text-sm font-medium">
-                      <Target className="w-4 h-4" />
+                      {benchmarksRestantes === 0 
+                        ? <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        : <Target className="w-4 h-4" />
+                      }
                       Benchmarks OUTLIER
                     </span>
                     <span className={`text-sm font-bold ${
-                      benchmarksMissing === 0 ? 'text-green-400' : ''
+                      benchmarksRestantes === 0 ? 'text-green-400' : ''
                     }`}>
                       {targetLevel.benchmarksCompleted} / {targetLevel.benchmarksRequired}
                     </span>
                   </div>
                   <Progress value={targetLevel.benchmarkProgress * 100} className="h-2" />
-                  {benchmarksMissing > 0 && (
+                  {benchmarksRestantes > 0 && (
                     <p className="text-xs text-amber-400 mt-2">
-                      faltam {benchmarksMissing}
+                      faltam {benchmarksRestantes}
                     </p>
                   )}
                 </div>
                 
                 {/* Official Race */}
                 <div className={`p-4 rounded-xl border ${
-                  !requiresRace
+                  !targetLevel.officialRaceRequired
                     ? 'bg-secondary/30 border-border/50'
-                    : hasOfficialRace
+                    : !provaNecessaria
                       ? 'bg-green-500/10 border-green-500/20'
                       : 'bg-amber-500/10 border-amber-500/20'
                 }`}>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm font-medium">
                       <Trophy className="w-4 h-4" />
-                      Prova oficial
+                      Prova oficial {targetLevelLabel}
                     </span>
-                    {!requiresRace ? (
+                    {!targetLevel.officialRaceRequired ? (
                       <span className="text-sm text-muted-foreground">
                         Não obrigatória
                       </span>
-                    ) : hasOfficialRace ? (
+                    ) : !provaNecessaria ? (
                       <span className="flex items-center gap-1 text-green-400 text-sm font-semibold">
                         <CheckCircle2 className="w-4 h-4" />
                         OK
@@ -317,43 +315,32 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       </span>
                     )}
                   </div>
-                  {requiresRace && !hasOfficialRace && (
+                  {provaNecessaria && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      Para atingir {targetLevelLabel}, você precisa de uma prova oficial válida.
+                      Para atingir OUTLIER {targetLevelLabel}, você precisa de uma prova oficial com resultado {targetLevelLabel}.
                     </p>
                   )}
                 </div>
               </div>
               
-              {/* Contextual tip */}
-              {status === 'blocked' && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
-                    <p className="text-sm text-amber-300">
-                      <strong>Prova oficial é obrigatória</strong> para atingir níveis HYROX (OPEN, PRO, ELITE).
-                    </p>
-                  </div>
-                </div>
-              )}
-              
+              {/* Contextual tips */}
               {status === 'close' && (
                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-green-400 mt-0.5" />
                     <p className="text-sm text-green-300">
-                      <strong>Você está quase lá!</strong> Continue treinando para subir de nível.
+                      <strong>Você está quase lá!</strong> Continue treinando para se tornar ATLETA OUTLIER.
                     </p>
                   </div>
                 </div>
               )}
               
-              {isCapped && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              {allMet && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
                   <div className="flex items-start gap-2">
-                    <Lock className="w-4 h-4 text-amber-400 mt-0.5" />
-                    <p className="text-sm text-amber-300">
-                      <strong>Progresso limitado</strong> a {journeyProgress.capPercent}% sem prova oficial.
+                    <Sparkles className="w-4 h-4 text-green-400 mt-0.5" />
+                    <p className="text-sm text-green-300">
+                      <strong>Todos os requisitos cumpridos!</strong> Você é ATLETA OUTLIER — {targetLevelLabel}!
                     </p>
                   </div>
                 </div>

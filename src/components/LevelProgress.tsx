@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Star, Zap, Flame, Lock, 
   TrendingUp, Target, Sparkles, Shield, Swords,
-  Crown, CheckCircle2, AlertTriangle
+  Crown, CheckCircle2, AlertTriangle, Dumbbell, XCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
@@ -10,9 +10,7 @@ import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 import { NextLevelModal } from '@/components/NextLevelModal';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useJourneyProgress, type ExtendedLevelKey } from '@/hooks/useJourneyProgress';
-import { LEVEL_NAMES, type AthleteStatus } from '@/types/outlier';
-import { CONFIDENCE_LABELS } from '@/utils/athleteStatusSystem';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
 
 // Extended level configuration with ELITE
@@ -133,8 +131,15 @@ function LevelNodeSheet({
   
   if (!levelRule) return null;
   
-  // Use target level data when viewing target level
   const progressData = isTarget ? journeyProgress.targetLevel : null;
+  const needsRace = levelRule.official_race_required && levelKey !== 'OPEN';
+  
+  // Checklist for this level
+  const trainingMet = journeyProgress.trainingSessions >= levelRule.training_min_sessions;
+  const benchmarksMet = (progressData?.benchmarksCompleted || 0) >= levelRule.benchmarks_required;
+  const categoryIdx = LEVELS_ORDER.indexOf(journeyProgress.category);
+  const levelIdx = LEVELS_ORDER.indexOf(levelKey);
+  const raceMet = !needsRace || (journeyProgress.hasOfficialRace && categoryIdx >= levelIdx);
   
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -161,37 +166,36 @@ function LevelNodeSheet({
         </SheetHeader>
         
         <div className="space-y-4 pb-6">
-          {/* Requirements */}
+          {/* Checklist de requisitos */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-muted-foreground">Requisitos</h4>
+            <h4 className="text-sm font-medium text-muted-foreground">Requisitos para OUTLIER {levelKey}</h4>
             
             <div className="grid gap-3">
+              {/* Treinos */}
               <div className="p-3 bg-secondary/30 rounded-xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm flex items-center gap-2">
-                    <Target className="w-4 h-4" />
+                    {trainingMet ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Dumbbell className="w-4 h-4" />}
                     Treinos
                   </span>
-                  <span className="text-sm font-semibold">
-                    {progressData ? `${progressData.trainingSessions}/` : ''}{levelRule.training_min_sessions}
+                  <span className={`text-sm font-semibold ${trainingMet ? 'text-green-400' : ''}`}>
+                    {journeyProgress.trainingSessions} / {levelRule.training_min_sessions}
                   </span>
                 </div>
                 {progressData && (
                   <Progress value={progressData.trainingProgress * 100} className="h-1.5" />
                 )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  nos últimos {levelRule.training_window_days} dias
-                </p>
               </div>
               
+              {/* Benchmarks */}
               <div className="p-3 bg-secondary/30 rounded-xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
+                    {benchmarksMet ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Target className="w-4 h-4" />}
                     Benchmarks OUTLIER
                   </span>
-                  <span className="text-sm font-semibold">
-                    {progressData ? `${progressData.benchmarksCompleted}/` : ''}{levelRule.benchmarks_required}
+                  <span className={`text-sm font-semibold ${benchmarksMet ? 'text-green-400' : ''}`}>
+                    {progressData ? `${progressData.benchmarksCompleted} / ` : ''}{levelRule.benchmarks_required}
                   </span>
                 </div>
                 {progressData && (
@@ -199,47 +203,37 @@ function LevelNodeSheet({
                 )}
               </div>
               
-              {levelRule.official_race_required && (
+              {/* Prova oficial */}
+              {needsRace && (
                 <div className={`p-3 rounded-xl flex items-center justify-between ${
-                  journeyProgress.hasOfficialRace
+                  raceMet
                     ? 'bg-green-500/10 border border-green-500/20'
                     : 'bg-amber-500/10 border border-amber-500/20'
                 }`}>
                   <span className="text-sm flex items-center gap-2">
-                    <Trophy className="w-4 h-4" />
+                    {raceMet ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-amber-400" />}
+                    Prova oficial {levelKey}
+                  </span>
+                  {raceMet ? (
+                    <span className="text-green-400 text-sm font-semibold">OK</span>
+                  ) : (
+                    <span className="text-amber-400 text-sm font-semibold">Pendente</span>
+                  )}
+                </div>
+              )}
+              
+              {/* OPEN doesn't need race */}
+              {!needsRace && (
+                <div className="p-3 bg-secondary/30 rounded-xl flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
                     Prova oficial
                   </span>
-                  {journeyProgress.hasOfficialRace ? (
-                    <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                      OK
-                    </span>
-                  ) : (
-                    <span className="text-amber-400 text-sm font-semibold">
-                      Pendente
-                    </span>
-                  )}
+                  <span className="text-sm text-muted-foreground">Não obrigatória</span>
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Cap warning */}
-          {isTarget && journeyProgress.isCapped && (
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-300 font-medium">
-                    Progresso limitado a {levelRule.cap_without_official_race_percent}%
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Complete uma prova oficial para desbloquear.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -250,17 +244,6 @@ export function LevelProgress() {
   const athleteStatus = useAthleteStatus();
   const journeyProgress = useJourneyProgress();
   const [selectedLevel, setSelectedLevel] = useState<ExtendedLevelKey | null>(null);
-  
-  const { 
-    status, 
-    rulerScore, 
-    confidence, 
-    progressToNextStatus, 
-    nextStatus,
-    eligibleForPromotion,
-    benchmarksUsed,
-    weeksWithGoodPerformance,
-  } = athleteStatus;
   
   // Map current status to extended level key for visual config
   const currentLevelKey = journeyProgress.currentLevelKey;
@@ -314,7 +297,7 @@ export function LevelProgress() {
                 transition={{ delay: 0.2 }}
                 className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2 flex items-center gap-2"
               >
-                Seu Status
+                {journeyProgress.isOutlier ? 'ATLETA OUTLIER' : 'Sua Categoria'}
                 <StatusExplainerModal />
               </motion.p>
               <motion.h1
@@ -323,7 +306,7 @@ export function LevelProgress() {
                 transition={{ delay: 0.3 }}
                 className={`font-display text-4xl md:text-5xl lg:text-6xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight`}
               >
-                {currentConfig.title}
+                {journeyProgress.isOutlier ? 'OUTLIER' : currentConfig.title}
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0 }}
@@ -331,7 +314,10 @@ export function LevelProgress() {
                 transition={{ delay: 0.4 }}
                 className="text-muted-foreground mt-1 text-sm md:text-base"
               >
-                {currentConfig.subtitle}
+                {journeyProgress.isOutlier 
+                  ? `Categoria ${journeyProgress.category}`
+                  : currentConfig.subtitle
+                }
               </motion.p>
             </div>
 
@@ -345,82 +331,102 @@ export function LevelProgress() {
               <div className={`text-white`}>
                 {currentConfig.heroIcon}
               </div>
-              {/* Glow behind icon */}
               <div className={`absolute inset-0 bg-gradient-to-br ${currentConfig.gradient} blur-2xl opacity-30 -z-10`} />
             </motion.div>
           </div>
 
-          {/* Score Section - Progress towards TARGET level */}
+          {/* Counters Section - Treinos & Benchmarks */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mb-6"
+            className="mb-6 space-y-3"
           >
-            <div className="flex items-baseline gap-2">
-              <span className={`font-display text-7xl md:text-8xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent`}>
-                {journeyProgress.progressToTarget}
-              </span>
-              <span className="text-2xl text-muted-foreground">/100</span>
+            {/* Treinos counter */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <Dumbbell className="w-4 h-4" />
+                  Treinos
+                </span>
+                <span className={`font-display text-lg ${
+                  journeyProgress.trainingSessions >= (journeyProgress.targetLevel.trainingRequired)
+                    ? 'text-green-400' : ''
+                }`}>
+                  {journeyProgress.trainingSessions} / {journeyProgress.targetLevel.trainingRequired}
+                </span>
+              </div>
+              <Progress value={journeyProgress.targetLevel.trainingProgress * 100} className="h-2" />
             </div>
+            
+            {/* Benchmarks counter */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <Target className="w-4 h-4" />
+                  Benchmarks
+                </span>
+                <span className={`font-display text-lg ${
+                  journeyProgress.targetLevel.benchmarksCompleted >= journeyProgress.targetLevel.benchmarksRequired
+                    ? 'text-green-400' : ''
+                }`}>
+                  {journeyProgress.targetLevel.benchmarksCompleted} / {journeyProgress.targetLevel.benchmarksRequired}
+                </span>
+              </div>
+              <Progress value={journeyProgress.targetLevel.benchmarkProgress * 100} className="h-2" />
+            </div>
+
+            {/* Target level label */}
             <p className="text-sm text-muted-foreground mt-1">
               {isAtTop ? (
                 'manutenção do status'
               ) : (
                 <>
-                  rumo ao <span className={`font-semibold ${LEVEL_CONFIG[targetLevelKey].textGradient.includes('yellow') ? 'text-yellow-300' : LEVEL_CONFIG[targetLevelKey].textGradient.includes('amber') ? 'text-amber-400' : LEVEL_CONFIG[targetLevelKey].textGradient.includes('purple') ? 'text-purple-400' : 'text-green-400'}`}>{journeyProgress.targetLevelLabel}</span>
+                  rumo ao <span className={`font-semibold ${LEVEL_CONFIG[targetLevelKey].textGradient.includes('yellow') ? 'text-yellow-300' : LEVEL_CONFIG[targetLevelKey].textGradient.includes('amber') ? 'text-amber-400' : 'text-purple-400'}`}>{journeyProgress.targetLevelLabel}</span>
                 </>
-              )}
-              {journeyProgress.isCapped && (
-                <span className="text-amber-400 ml-2">
-                  (cap: {journeyProgress.capPercent}%)
-                </span>
               )}
             </p>
           </motion.div>
 
-          {/* Cap Warning */}
+          {/* Missing requirements checklist */}
           <AnimatePresence>
-            {journeyProgress.isCapped && (
+            {journeyProgress.missingRequirements.length > 0 && !isAtTop && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3"
+                className="mb-4 p-3 bg-secondary/30 border border-border/30 rounded-xl"
               >
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
-                <div>
-                  <p className="text-sm text-amber-300 font-medium">
-                    Prova oficial pendente
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Seu progresso está limitado a {journeyProgress.capPercent}% sem prova válida.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Promotion Alert */}
-          <AnimatePresence>
-            {eligibleForPromotion && nextStatus && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className={`mb-4 p-4 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30`}
-              >
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                    transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-                  >
-                    <Sparkles className="w-6 h-6 text-green-400" />
-                  </motion.div>
-                  <div>
-                    <p className="font-bold text-green-300">Promoção disponível!</p>
-                    <p className="text-sm text-green-300/80">Pronto para {LEVEL_NAMES[nextStatus]}</p>
+                <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">
+                  Para virar {journeyProgress.targetLevelKey}:
+                </p>
+                <div className="space-y-1">
+                  {/* Training check */}
+                  <div className="flex items-center gap-2 text-sm">
+                    {journeyProgress.nextRequirements.treinosRestantes === 0 
+                      ? <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      : <XCircle className="w-4 h-4 text-amber-400" />
+                    }
+                    <span>{journeyProgress.targetLevel.trainingRequired} treinos</span>
                   </div>
+                  {/* Benchmark check */}
+                  <div className="flex items-center gap-2 text-sm">
+                    {journeyProgress.nextRequirements.benchmarksRestantes === 0 
+                      ? <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      : <XCircle className="w-4 h-4 text-amber-400" />
+                    }
+                    <span>{journeyProgress.targetLevel.benchmarksRequired} benchmarks</span>
+                  </div>
+                  {/* Race check (if needed) */}
+                  {journeyProgress.targetLevel.officialRaceRequired && (
+                    <div className="flex items-center gap-2 text-sm">
+                      {journeyProgress.nextRequirements.provaNecessaria 
+                        ? <XCircle className="w-4 h-4 text-amber-400" />
+                        : <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      }
+                      <span>Prova oficial {journeyProgress.targetLevelKey}</span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -438,7 +444,7 @@ export function LevelProgress() {
         </div>
       </motion.div>
 
-      {/* Level Journey Track - 6 LEVELS */}
+      {/* Level Journey Track - 3 LEVELS */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -470,9 +476,8 @@ export function LevelProgress() {
             const isCurrent = index === journeyProgress.currentLevelIndex;
             const isLocked = index > journeyProgress.currentLevelIndex;
             const levelRule = journeyProgress.allLevels.find((l: any) => l.level_key === levelKey);
-            const requiresRace = levelRule?.official_race_required || false;
+            const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
             
-            // Check if this level requires race but athlete doesn't have one
             const isRaceLocked = requiresRace && !journeyProgress.hasOfficialRace && index > journeyProgress.currentLevelIndex;
             const isTarget = index === journeyProgress.targetLevelIndex;
 
@@ -521,7 +526,7 @@ export function LevelProgress() {
                     />
                   )}
                   
-                  {/* Progress indicator within current level (towards next) */}
+                  {/* Progress indicator within current level */}
                   {isCurrent && !isAtTop && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-black/30 rounded-full overflow-hidden">
                       <motion.div
@@ -552,13 +557,13 @@ export function LevelProgress() {
         </div>
         
         {/* Race requirement notice */}
-        {!journeyProgress.hasOfficialRace && journeyProgress.currentLevelIndex < 3 && (
+        {!journeyProgress.hasOfficialRace && !isAtTop && (
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center text-xs text-muted-foreground mt-2"
           >
-            🏆 OPEN, PRO e ELITE exigem prova oficial
+            🏆 PRO e ELITE exigem prova oficial
           </motion.p>
         )}
       </motion.div>
@@ -574,12 +579,11 @@ export function LevelProgress() {
         />
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Stats Grid - Treinos & Benchmarks */}
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { Icon: TrendingUp, value: benchmarksUsed, label: 'Benchmarks', delay: 0.4 },
-          { Icon: Flame, value: weeksWithGoodPerformance, label: 'Semanas STRONG+', delay: 0.5 },
-          { Icon: Shield, value: CONFIDENCE_LABELS[confidence], label: 'Confiança', delay: 0.6 },
+          { Icon: Dumbbell, value: journeyProgress.trainingSessions, label: 'Treinos', delay: 0.4 },
+          { Icon: Target, value: journeyProgress.targetLevel.benchmarksCompleted, label: 'Benchmarks', delay: 0.5 },
         ].map((stat) => (
           <motion.div
             key={stat.label}
