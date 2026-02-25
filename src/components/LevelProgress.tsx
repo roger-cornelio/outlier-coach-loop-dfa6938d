@@ -5,12 +5,6 @@ import {
   Crown, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { useState } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { StatusExplainerModal } from '@/components/StatusExplainerModal';
 import { NextLevelModal } from '@/components/NextLevelModal';
@@ -35,9 +29,6 @@ interface LevelVisualConfig {
   borderStyle: string;
   cardStyle: string;
   iconAnimation: string;
-  symbol: string;
-  symbolName: string;
-  symbolMessage: string;
 }
 
 const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
@@ -54,9 +45,6 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     borderStyle: 'border-purple-500/40',
     cardStyle: 'bg-gradient-to-br from-purple-950/60 to-violet-950/40',
     iconAnimation: '',
-    symbol: '🛡️',
-    symbolName: 'Escudo',
-    symbolMessage: 'Estou em formação',
   },
   PRO: {
     icon: <StatusCrownPreset size="sm" />,
@@ -71,9 +59,6 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     borderStyle: 'border-amber-400/50 shadow-[0_0_20px_hsl(45_93%_47%/0.2)]',
     cardStyle: 'bg-gradient-to-br from-amber-950/70 to-yellow-950/50',
     iconAnimation: 'animate-crown-float',
-    symbol: '⚔️',
-    symbolName: 'Espadas cruzadas',
-    symbolMessage: 'Competidor sério',
   },
   ELITE: {
     icon: <Crown className="w-5 h-5" />,
@@ -88,9 +73,6 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
     borderStyle: 'border-yellow-300/60 shadow-[0_0_40px_hsl(50_93%_60%/0.4)]',
     cardStyle: 'bg-gradient-to-br from-yellow-950/80 to-amber-950/60',
     iconAnimation: 'animate-crown-float',
-    symbol: '👑',
-    symbolName: 'Coroa',
-    symbolMessage: 'Top 5%',
   },
 };
 
@@ -339,21 +321,8 @@ export function LevelProgress() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className={`font-display text-4xl md:text-5xl lg:text-6xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight flex items-center gap-3`}
+                className={`font-display text-4xl md:text-5xl lg:text-6xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight`}
               >
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-4xl md:text-5xl lg:text-6xl cursor-default" style={{ WebkitTextFillColor: 'unset' }}>
-                        {currentConfig.symbol}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-card border border-border shadow-xl">
-                      <p className="font-semibold">{currentConfig.symbolName}</p>
-                      <p className="text-xs text-muted-foreground italic">"{currentConfig.symbolMessage}"</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
                 {currentConfig.title}
               </motion.h1>
               <motion.p
@@ -565,31 +534,18 @@ export function LevelProgress() {
                   )}
                 </motion.div>
 
-                {/* Level label with symbol */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`mt-2 text-center cursor-default ${
-                        isCurrent 
-                          ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` 
-                          : isLocked 
-                            ? 'text-muted-foreground/40' 
-                            : 'text-muted-foreground'
-                      }`}>
-                        <span className="text-lg md:text-xl block" style={{ WebkitTextFillColor: 'unset' }}>
-                          {config.symbol}
-                        </span>
-                        <p className="text-[10px] md:text-xs font-semibold leading-tight">
-                          {LEVEL_LABELS[levelKey]}
-                        </p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-card border border-border shadow-xl">
-                      <p className="font-semibold">{config.symbolName}</p>
-                      <p className="text-xs text-muted-foreground italic">"{config.symbolMessage}"</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {/* Level label */}
+                <p className={`mt-2 text-[10px] md:text-xs font-semibold text-center leading-tight ${
+                  isCurrent 
+                    ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` 
+                    : isLocked 
+                      ? 'text-muted-foreground/40' 
+                      : 'text-muted-foreground'
+                }`}>
+                  {LEVEL_LABELS[levelKey].split(' ').map((word, i) => (
+                    <span key={i} className="block">{word}</span>
+                  ))}
+                </p>
               </motion.div>
             );
           })}
