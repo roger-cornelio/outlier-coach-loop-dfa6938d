@@ -341,21 +341,27 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     }));
     
     console.debug('[TextModelImporter] handleParse → days=', result.days.length);
-    setParsedResult(result, workouts);
-    
     
     // Log de resultado da validação
     console.log('[VALIDATE_RESULT] success=' + result.success);
     
     // ═══════════════════════════════════════════════════════════════════════════
     // REGRA MVP0: Validar texto → ir DIRETO para EDIT
-    // - Parser só interpreta TEXTO
-    // - Semana, nome, publicação = metadados (escolhidos na Tela 2 - EDIÇÃO)
-    // - Parser NUNCA depende de semana
+    // CRITICAL: setParsedResult + goToEdit devem ser uma ÚNICA chamada patchDraft
+    // para evitar race condition onde o segundo patchDraft sobrescreve o primeiro.
     // ═══════════════════════════════════════════════════════════════════════════
     if (result.success && result.days.length > 0) {
       console.log('[MODE_CHANGE] import → edit (reason=validate_success)');
-      goToEdit();
+      patchDraft({
+        parseResult: result,
+        parsedDays: workouts,
+        editedDays: null,
+        restDays: {},
+        mode: 'edit',
+      });
+    } else {
+      // Parse falhou - salvar resultado para mostrar erros, sem mudar de tela
+      setParsedResult(result, workouts);
     }
   };
 
