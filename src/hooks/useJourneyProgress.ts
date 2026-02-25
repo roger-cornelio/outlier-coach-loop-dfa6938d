@@ -126,7 +126,14 @@ export function useJourneyProgress(): JourneyPosition {
           supabase.from('status_jump_rules').select('*').eq('is_enabled', true),
         ]);
         
-        if (levelsRes.data) setLevelRules(levelsRes.data);
+        if (levelsRes.data) {
+          const activeLevelKeys = ['OPEN', 'PRO', 'ELITE'];
+          setLevelRules(
+            levelsRes.data
+              .filter(l => activeLevelKeys.includes(l.level_key))
+              .sort((a, b) => a.level_order - b.level_order)
+          );
+        }
         if (jumpsRes.data) setJumpRules(jumpsRes.data);
       } catch (error) {
         console.error('Error fetching status rules:', error);
@@ -225,7 +232,7 @@ export function useJourneyProgress(): JourneyPosition {
     }
     
     const currentLevelRule = levelRules.find(l => l.level_key === currentLevelKey);
-    const currentLevelIndex = currentLevelRule ? currentLevelRule.level_order - 1 : 0;
+    const currentLevelIndex = Math.max(0, levelRules.findIndex(l => l.level_key === currentLevelKey));
     const currentLevelLabel = currentLevelRule?.label || 'Iniciante';
     
     // STEP 3: Determine target level (NEXT level above current)
@@ -236,7 +243,7 @@ export function useJourneyProgress(): JourneyPosition {
     if (isAtTop) {
       // ELITE: maintenance mode - target is self
       targetLevelKey = 'ELITE';
-      targetLevelIndex = 5;
+      targetLevelIndex = levelRules.length - 1;
     } else {
       // Get next level
       targetLevelIndex = currentLevelIndex + 1;
