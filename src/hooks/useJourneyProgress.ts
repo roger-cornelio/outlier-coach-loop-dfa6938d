@@ -343,7 +343,7 @@ export function useJourneyProgress(): JourneyPosition {
       continuousPosition,
       currentLevelIndex,
       targetLevelIndex,
-      progressToTarget: Math.round(overallProgress * 100),
+      progressToTarget: overallProgress > 0 ? Math.max(1, Math.round(overallProgress * 100)) : 0,
       currentLevelKey,
       currentLevelLabel,
       targetLevelKey,
