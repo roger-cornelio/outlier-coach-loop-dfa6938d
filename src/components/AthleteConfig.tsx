@@ -486,7 +486,7 @@ export function AthleteConfig() {
                   {info.label}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {isCurrent ? 'Plano atual' : 'Fazer upgrade'}
+                  {isCurrent ? 'Plano atual' : isUpgrade ? 'Fazer upgrade' : 'Fazer downgrade'}
                 </span>
               </button>
             );
