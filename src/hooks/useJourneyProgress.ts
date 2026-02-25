@@ -216,7 +216,7 @@ export function useJourneyProgress(): JourneyPosition {
         targetLevelIndex: 0,
         progressToTarget: 0,
         currentLevelKey: 'OPEN',
-        currentLevelLabel: 'OUTLIER OPEN',
+        currentLevelLabel: 'OPEN',
         targetLevelKey: 'OPEN',
         targetLevelLabel: 'OUTLIER OPEN',
         isAtTop: false,
@@ -239,89 +239,98 @@ export function useJourneyProgress(): JourneyPosition {
       };
     }
     
-    // STEP 1: Find the highest OUTLIER level the athlete has achieved
-    // For each level, check: training + benchmarks + race (if required, except OPEN)
-    let outlierLevel: ExtendedLevelKey | null = null;
+    // STEP 1: Determine current category from official race results
+    // Category only changes with a race of the corresponding level
+    // Without race → OPEN. PRO race → PRO. ELITE race → ELITE.
+    const currentCategory = category; // Already determined from race results
+    const currentCategoryRule = levelRules.find(l => l.level_key === currentCategory);
     
-    for (const levelKey of LEVELS_ORDER) {
-      const rule = levelRules.find(l => l.level_key === levelKey);
-      if (!rule) continue;
-      
-      const hasEnoughTraining = trainingSessions >= rule.training_min_sessions;
-      const hasEnoughBenchmarks = benchmarksCompleted >= rule.benchmarks_required;
-      
-      // OPEN doesn't need a race. PRO/ELITE need race AND category >= level
-      const needsRace = rule.official_race_required && levelKey !== 'OPEN';
-      const categoryIndex = LEVELS_ORDER.indexOf(category);
-      const levelIndex = LEVELS_ORDER.indexOf(levelKey);
-      const hasRequiredRace = !needsRace || (hasOfficialRace && categoryIndex >= levelIndex);
-      
-      if (hasEnoughTraining && hasEnoughBenchmarks && hasRequiredRace) {
-        outlierLevel = levelKey;
-      }
-    }
+    // STEP 2: Check if athlete has achieved OUTLIER status at current category
+    const hasEnoughTraining = trainingSessions >= (currentCategoryRule?.training_min_sessions || 200);
+    const hasEnoughBenchmarks = benchmarksCompleted >= (currentCategoryRule?.benchmarks_required || 5);
+    const isOutlierAtCategory = hasEnoughTraining && hasEnoughBenchmarks;
     
-    const isOutlier = outlierLevel !== null;
-    const outlierTitle = isOutlier ? `ATLETA OUTLIER — ${outlierLevel}` : null;
+    const isOutlier = isOutlierAtCategory;
+    const outlierLevel = isOutlier ? currentCategory : null;
+    const outlierTitle = isOutlier ? `ATLETA OUTLIER — ${currentCategory}` : null;
     
-    // STEP 2: Determine the "current" displayed level = outlier level or category-based
-    const currentLevelKey = outlierLevel || statusToLevelKey(athleteStatus.status);
-    const currentLevelIndex = Math.max(0, levelRules.findIndex(l => l.level_key === currentLevelKey));
-    const currentLevelRule = levelRules.find(l => l.level_key === currentLevelKey);
-    const currentLevelLabel = `OUTLIER ${currentLevelRule?.label || currentLevelKey}`;
+    // STEP 3: Determine labels based on outlier status
+    // Not yet outlier: "OPEN" → "OUTLIER OPEN" (working towards outlier at current category)
+    // Already outlier: "OUTLIER OPEN" → "OUTLIER PRO" (needs PRO race to change category)
+    const currentLevelKey = currentCategory;
+    const currentLevelIndex = Math.max(0, levelRules.findIndex(l => l.level_key === currentCategory));
     
-    // STEP 3: Determine target level (next above current)
-    const isAtTop = currentLevelKey === 'ELITE';
+    let currentLevelLabel: string;
     let targetLevelKey: ExtendedLevelKey;
+    let targetLevelLabel: string;
     let targetLevelIndex: number;
+    let isAtTop = false;
     
-    if (isAtTop) {
+    if (!isOutlierAtCategory) {
+      // Working towards OUTLIER at current category
+      currentLevelLabel = currentCategory;
+      targetLevelKey = currentCategory;
+      targetLevelLabel = `OUTLIER ${currentCategory}`;
+      targetLevelIndex = currentLevelIndex;
+    } else if (currentCategory === 'ELITE') {
+      // At top - maintenance mode
+      currentLevelLabel = `OUTLIER ${currentCategory}`;
       targetLevelKey = 'ELITE';
+      targetLevelLabel = `OUTLIER ELITE`;
       targetLevelIndex = levelRules.length - 1;
+      isAtTop = true;
     } else {
-      targetLevelIndex = Math.min(currentLevelIndex + 1, levelRules.length - 1);
-      targetLevelKey = (levelRules[targetLevelIndex]?.level_key || 'ELITE') as ExtendedLevelKey;
+      // Already outlier, working towards next category (needs race)
+      currentLevelLabel = `OUTLIER ${currentCategory}`;
+      const nextCategoryIdx = Math.min(currentLevelIndex + 1, levelRules.length - 1);
+      targetLevelKey = (levelRules[nextCategoryIdx]?.level_key || 'ELITE') as ExtendedLevelKey;
+      targetLevelLabel = `OUTLIER ${targetLevelKey}`;
+      targetLevelIndex = nextCategoryIdx;
     }
     
-    const targetLevelRule = levelRules.find(l => l.level_key === targetLevelKey);
-    const targetLevelLabel = `OUTLIER ${targetLevelRule?.label || targetLevelKey}`;
+    // STEP 4: Calculate progress
+    // If not yet outlier: progress towards current category requirements
+    // If already outlier: progress towards next category requirements (but blocked by race)
+    const targetRule = isOutlierAtCategory && !isAtTop
+      ? levelRules[Math.min(currentLevelIndex + 1, levelRules.length - 1)]
+      : currentCategoryRule;
     
-    // STEP 4: Calculate progress towards target level
-    const targetTrainingReq = targetLevelRule?.training_min_sessions || 120;
-    const targetBenchmarksReq = targetLevelRule?.benchmarks_required || 3;
-    const targetNeedsRace = (targetLevelRule?.official_race_required || false) && targetLevelKey !== 'OPEN';
+    const targetTrainingReq = targetRule?.training_min_sessions || 200;
+    const targetBenchmarksReq = targetRule?.benchmarks_required || 5;
+    const targetNeedsRace = !isOutlierAtCategory ? false : true; // Next category always needs race
     
     const trainingProgress = Math.min(1, trainingSessions / targetTrainingReq);
     const benchmarkProgress = Math.min(1, benchmarksCompleted / targetBenchmarksReq);
+    const overallProgress = isAtTop ? 1 : (trainingProgress + benchmarkProgress) / 2;
     
-    // Simple average of training + benchmarks (race is boolean requirement, not progress)
-    const overallProgress = (trainingProgress + benchmarkProgress) / 2;
-    
-    // Missing requirements for target level
+    // Missing requirements
     const missingRequirements: string[] = [];
     const treinosRestantes = Math.max(0, targetTrainingReq - trainingSessions);
     const benchmarksRestantes = Math.max(0, targetBenchmarksReq - benchmarksCompleted);
+    
+    // Race requirement: only for next category (when already outlier)
+    const nextCategoryKey = isOutlierAtCategory && !isAtTop ? targetLevelKey : null;
     const categoryIdx = LEVELS_ORDER.indexOf(category);
-    const targetIdx = LEVELS_ORDER.indexOf(targetLevelKey);
-    const provaNecessaria = targetNeedsRace && (!hasOfficialRace || categoryIdx < targetIdx);
+    const targetIdx = nextCategoryKey ? LEVELS_ORDER.indexOf(nextCategoryKey) : -1;
+    const provaNecessaria = isOutlierAtCategory && !isAtTop && categoryIdx < targetIdx;
     
     if (treinosRestantes > 0) missingRequirements.push(`${treinosRestantes} treinos`);
     if (benchmarksRestantes > 0) missingRequirements.push(`${benchmarksRestantes} benchmarks`);
     if (provaNecessaria) missingRequirements.push(`Prova oficial ${targetLevelKey}`);
     
-    // STEP 5: Continuous position for ruler
+    // Continuous position for ruler
     const continuousPosition = (currentLevelIndex + overallProgress) / levelRules.length;
     
     const targetLevel: TargetLevelProgress = {
       levelKey: targetLevelKey,
-      levelOrder: targetLevelRule?.level_order || 0,
+      levelOrder: targetRule?.level_order || 0,
       label: targetLevelLabel,
       trainingProgress,
       benchmarkProgress,
       overallProgress,
-      isCapped: false, // No more CAP system
+      isCapped: false,
       capPercent: 100,
-      officialRaceRequired: targetNeedsRace,
+      officialRaceRequired: provaNecessaria,
       hasOfficialRace,
       trainingSessions,
       trainingRequired: targetTrainingReq,
