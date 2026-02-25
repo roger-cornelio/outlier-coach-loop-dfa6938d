@@ -901,11 +901,20 @@ BLOCO: DESCANSO
   // ═══════════════════════════════════════════════════════════════════════════
   
   if (mode === 'edit') {
-    // Se não tem parseResult, voltar para import
+    // Se não tem parseResult, renderizar tela de import em vez de chamar goBackToImport()
+    // CRITICAL: Chamar goBackToImport() aqui causava setState durante render → loop infinito
     if (!parseResult || !parseResult.success) {
-      console.log('[UI_DIAG] mode=edit mas sem parseResult, voltando para import');
-      goBackToImport();
-      return null;
+      console.log('[UI_DIAG] mode=edit mas sem parseResult, forçando mode=import via effect');
+      // Usar useEffect seria ideal, mas como fallback seguro: renderizar null e agendar correção
+      setTimeout(() => goBackToImport(), 0);
+      return (
+        <Card>
+          <CardContent className="p-8 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
+          </CardContent>
+        </Card>
+      );
     }
 
     return (
