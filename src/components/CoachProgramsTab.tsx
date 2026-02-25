@@ -619,23 +619,21 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
                               </Tooltip>
                             )}
                             
-                            {/* 🗑️ EXCLUIR - Só para rascunhos e arquivados */}
-                            {workout.status !== 'published' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setDeleteTarget(workout)}
-                                    disabled={isProcessing}
-                                    className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Excluir</TooltipContent>
-                              </Tooltip>
-                            )}
+                            {/* 🗑️ EXCLUIR - Disponível para TODOS os status */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteTarget(workout)}
+                                  disabled={isProcessing}
+                                  className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir</TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       </motion.div>
@@ -662,6 +660,11 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
             <AlertDialogTitle>Excluir programação?</AlertDialogTitle>
             <AlertDialogDescription>
               Essa ação não pode ser desfeita. A programação "{deleteTarget?.title}" será removida permanentemente.
+              {deleteTarget?.status === 'published' && (
+                <span className="block mt-2 font-medium text-destructive">
+                  ⚠️ Este treino está publicado. Ao excluir, ele também será removido do painel dos atletas.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
