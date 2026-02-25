@@ -72,7 +72,7 @@ const navItems: NavItem[] = [
     icon: Stethoscope
   },
   { 
-    title: 'Status do Atleta', 
+    title: 'Evolução', 
     view: 'benchmarks', 
     icon: Trophy 
   },
