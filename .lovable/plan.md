@@ -1,60 +1,33 @@
 
+## Fix: Journey Ruler Showing False Progress
 
-## Renomear Planos: OPEN/PRO para ESSENCIAL/PERFORMANCE
+### Problem
+The `useJourneyProgress` hook fetches all 6 level rules from the database (BEGINNER, INTERMEDIATE, ADVANCED, OPEN, PRO, ELITE), but the UI only uses 3 levels (OPEN, PRO, ELITE). An OPEN athlete gets `level_order=4`, which translates to `currentLevelIndex=3`, making `continuousPosition = 3/6 = 50%` -- showing the ruler half-filled with zero benchmarks or sessions.
 
-### O que muda
+### Solution
+Filter the database level rules to only include the 3 active levels (OPEN, PRO, ELITE) and recalculate indices based on the filtered set.
 
-A nomenclatura dos planos contratados será atualizada apenas na **camada visual** (UI):
+### Technical Changes
 
-| Antes | Depois |
-|-------|--------|
-| OPEN | ESSENCIAL |
-| PRO | PERFORMANCE |
+**File: `src/hooks/useJourneyProgress.ts`**
 
-Os valores no banco de dados (`open` / `pro`) permanecem inalterados.
+1. After fetching `status_level_rules`, filter to only keep levels matching the 3-tier system:
+   ```typescript
+   const activeLevelKeys = ['OPEN', 'PRO', 'ELITE'];
+   const activeLevels = levelsRes.data.filter(l => activeLevelKeys.includes(l.level_key));
+   ```
 
-### Layout novo (baseado na imagem de referência)
+2. Use `activeLevels` instead of all `levelRules` throughout the hook. This way:
+   - OPEN gets `level_order` remapped to index 0
+   - PRO to index 1  
+   - ELITE to index 2
+   - `continuousPosition = (0 + 0) / 3 = 0` for an OPEN athlete with no progress
 
-Dois botoes do mesmo tamanho, lado a lado:
-- O plano **atual** aparece com borda laranja e fundo `primary/10` (destaque)
-- O **outro** plano aparece com borda normal e o texto "Fazer upgrade" ou "Fazer downgrade"
-- Texto auxiliar abaixo dos botoes removido (reduz ruido visual)
+3. Recalculate `currentLevelIndex` using the position within the filtered array rather than raw `level_order - 1`:
+   ```typescript
+   const currentLevelIndex = activeLevels.findIndex(l => l.level_key === currentLevelKey);
+   ```
 
-### Arquivo a alterar
+4. Fix `totalLevels` to use `activeLevels.length` (3) instead of `levelRules.length` (6).
 
-**`src/components/AthleteConfig.tsx`**
-
-1. Atualizar o objeto `PLAN_DISPLAY` (linhas 21-32):
-
-```ts
-const PLAN_DISPLAY: Record<PlanTier, { label: string; icon: typeof TrendingUp; description: string }> = {
-  open: {
-    label: 'ESSENCIAL',
-    icon: TrendingUp,
-    description: 'Plano de evolucao continua'
-  },
-  pro: {
-    label: 'PERFORMANCE',
-    icon: Trophy,
-    description: 'Plano para alta performance'
-  }
-};
-```
-
-2. Substituir o bloco de UI do "SEU PLANO" (linhas 458-500) por dois botoes de tamanho igual em grid:
-
-- `grid grid-cols-2 gap-3` para garantir tamanho igual
-- Botao do plano atual: borda laranja, icone + nome do plano + descricao
-- Botao do outro plano: borda neutra, icone + "Fazer upgrade" (ou "Fazer downgrade")
-- Ao clicar no botao do outro plano, exibe toast orientando falar com o coach
-- Remover o texto auxiliar de baixo ("Upgrade para plano Pro com seu coach")
-
-3. Atualizar as mensagens de toast (linhas 477, 485):
-- "Entre em contato com seu coach para fazer upgrade para o plano **Performance**."
-- "Entre em contato com seu coach para solicitar downgrade para o plano **Essencial**."
-
-### Escopo
-
-- Apenas renomeacao visual e layout do componente `AthleteConfig`
-- Nenhuma mudanca no banco de dados, tipos TypeScript (`PlanTier` continua `'open' | 'pro'`), ou logica de negocio
-- Nenhuma biblioteca nova
+This single change corrects the `continuousPosition`, `currentLevelIndex`, `targetLevelIndex`, and all derived progress values, ensuring the ruler starts at 0% for a fresh OPEN athlete.
