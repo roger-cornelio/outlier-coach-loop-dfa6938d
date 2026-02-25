@@ -184,11 +184,9 @@ function MiniPieProgress({ value, total, size = 22 }: MiniPieProgressProps) {
 interface RequirementsChecklistProps {
   journeyData: ReturnType<typeof useJourneyProgress>;
   compact?: boolean;
-  onBenchmarksClick?: () => void;
-  onSessionsClick?: () => void;
 }
 
-function LargeCircleProgress({ value, total, label, onClick }: { value: number; total: number; label: string; onClick?: () => void }) {
+function LargeCircleProgress({ value, total, label }: { value: number; total: number; label: string }) {
   const size = 72;
   const strokeWidth = 5;
   const progress = total > 0 ? Math.min(value / total, 1) : 0;
@@ -200,11 +198,7 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
   const strokeDashoffset = circumference * (1 - progress);
 
   return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-      type="button"
-    >
+    <div className="flex flex-col items-center gap-2">
       <div className="relative">
         <svg
           width={size}
@@ -239,11 +233,11 @@ function LargeCircleProgress({ value, total, label, onClick }: { value: number; 
         </div>
       </div>
       <span className="text-xs font-medium text-foreground/80">{total} {label}</span>
-    </button>
+    </div>
   );
 }
 
-function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSessionsClick }: RequirementsChecklistProps) {
+function RequirementsChecklist({ journeyData, compact }: RequirementsChecklistProps) {
   const { targetLevel } = journeyData;
   const {
     benchmarksCompleted, benchmarksRequired,
@@ -253,14 +247,23 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
 
   return (
     <div className="space-y-3">
-      {/* All three circles side by side */}
+      {/* All circles side by side — Sessões first, then Benchmarks */}
       <div className="flex items-center justify-center gap-6">
+        <LargeCircleProgress
+          value={trainingSessions}
+          total={trainingRequired}
+          label="Sessões"
+        />
+        <LargeCircleProgress
+          value={benchmarksCompleted}
+          total={benchmarksRequired}
+          label="Benchmarks"
+        />
         {officialRaceRequired && (
           <div className="flex flex-col items-center gap-2">
             <div className="relative" style={{ width: 72, height: 72 }}>
               <svg width={72} height={72} viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={36} cy={36} r={33.5} fill="none" stroke="hsl(var(--muted))" strokeWidth={5} opacity={0.5} filter="url(#shadow-official)" />
-                <defs><filter id="shadow-official"><feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.15" /></filter></defs>
+                <circle cx={36} cy={36} r={33.5} fill="none" stroke="hsl(var(--muted))" strokeWidth={5} opacity={0.5} />
                 <circle cx={36} cy={36} r={33.5} fill="none"
                   stroke={hasOfficialRace ? '#10b981' : 'hsl(var(--muted))'}
                   strokeWidth={5} strokeLinecap="round"
@@ -280,18 +283,6 @@ function RequirementsChecklist({ journeyData, compact, onBenchmarksClick, onSess
             <span className="text-xs font-medium text-foreground/80">Prova Oficial</span>
           </div>
         )}
-        <LargeCircleProgress
-          value={benchmarksCompleted}
-          total={benchmarksRequired}
-          label="Benchmarks"
-          onClick={onBenchmarksClick}
-        />
-        <LargeCircleProgress
-          value={trainingSessions}
-          total={trainingRequired}
-          label="Sessões"
-          onClick={onSessionsClick}
-        />
       </div>
     </div>
   );
@@ -400,10 +391,9 @@ function MobilePathToEliteCard({
               Requisitos para {targetLevelLabel}
             </p>
             <RequirementsChecklist
-            journeyData={journeyData}
-            compact
-            onBenchmarksClick={onStartWorkout}
-            onSessionsClick={onStartWorkout} />
+              journeyData={journeyData}
+              compact
+            />
 
           </div>
         }
@@ -1354,9 +1344,8 @@ export function DiagnosticRadarBlock({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
                     </div>
                     <RequirementsChecklist
-                    journeyData={journeyData}
-                    onBenchmarksClick={onStartWorkout}
-                    onSessionsClick={onStartWorkout} />
+                      journeyData={journeyData}
+                    />
 
                   </div>
                 </>
