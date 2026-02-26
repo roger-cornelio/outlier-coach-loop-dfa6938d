@@ -74,6 +74,84 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
+// Heraldic shield SVG shapes per level
+function ShieldCrest({ level, active, className }: { level: ExtendedLevelKey; active: boolean; className?: string }) {
+  const configs: Record<ExtendedLevelKey, { path: string; inner: React.ReactNode; gradient: [string, string] }> = {
+    OPEN: {
+      // Classic pointed shield
+      path: 'M50 2 L95 20 L95 55 Q95 85 50 98 Q5 85 5 55 L5 20 Z',
+      inner: (
+        <g>
+          <path d="M50 30 L58 46 L76 46 L62 56 L67 72 L50 62 L33 72 L38 56 L24 46 L42 46 Z" 
+            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.9 : 0.3} />
+        </g>
+      ),
+      gradient: ['#a855f7', '#7c3aed'],
+    },
+    PRO: {
+      // Ornate shield with top crest
+      path: 'M50 0 L55 8 L65 4 L62 14 L72 14 L66 22 L78 26 L95 30 L95 58 Q95 85 50 98 Q5 85 5 58 L5 30 L22 26 L34 22 L28 14 L38 14 L35 4 L45 8 Z',
+      inner: (
+        <g>
+          <path d="M38 40 L50 32 L62 40 L62 60 L50 68 L38 60 Z" 
+            fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2" opacity={active ? 0.9 : 0.3} />
+          <path d="M50 44 L54 50 L50 56 L46 50 Z" 
+            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.8 : 0.2} />
+        </g>
+      ),
+      gradient: ['#f59e0b', '#d97706'],
+    },
+    ELITE: {
+      // Royal shield with crown top
+      path: 'M30 0 L34 10 L42 6 L44 14 L50 8 L56 14 L58 6 L66 10 L70 0 L80 8 L95 22 L95 58 Q95 88 50 98 Q5 88 5 58 L5 22 L20 8 Z',
+      inner: (
+        <g>
+          {/* Crown */}
+          <path d="M35 34 L40 42 L45 36 L50 44 L55 36 L60 42 L65 34 L65 46 L35 46 Z" 
+            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.9 : 0.3} />
+          {/* Diamond below */}
+          <path d="M50 50 L58 58 L50 70 L42 58 Z" 
+            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.7 : 0.2} />
+        </g>
+      ),
+      gradient: ['#facc15', '#eab308'],
+    },
+  };
+
+  const c = configs[level];
+  const id = `shield-grad-${level}`;
+
+  return (
+    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={active ? c.gradient[0] : 'hsl(var(--muted-foreground))'} stopOpacity={active ? 1 : 0.15} />
+          <stop offset="100%" stopColor={active ? c.gradient[1] : 'hsl(var(--muted-foreground))'} stopOpacity={active ? 0.8 : 0.08} />
+        </linearGradient>
+        {active && (
+          <filter id={`glow-${level}`}>
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        )}
+      </defs>
+      {/* Shield shape */}
+      <path 
+        d={c.path} 
+        fill={`url(#${id})`} 
+        stroke={active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.05)'}
+        strokeWidth="1.5"
+        filter={active ? `url(#glow-${level})` : undefined}
+      />
+      {/* Inner emblem */}
+      {c.inner}
+    </svg>
+  );
+}
+
 const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
 const LEVEL_LABELS: Record<ExtendedLevelKey, string> = {
@@ -481,68 +559,57 @@ export function LevelProgress() {
                 transition={{ delay: 0.4 + index * 0.1, type: 'spring', stiffness: 200 }}
                 className="flex flex-col items-center"
               >
-                {/* Shield */}
+                {/* Heraldic Shield Crest */}
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedLevel(isExpanded ? null : levelKey)}
-                  className={`
-                    relative w-full aspect-square max-w-[120px] rounded-2xl flex flex-col items-center justify-center
-                    transition-all duration-500 border-2 overflow-hidden
-                    ${isCurrent 
-                      ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-xl ring-1 ring-white/20` 
-                      : isCompleted 
-                        ? `bg-gradient-to-br ${config.gradient} border-white/20 opacity-90` 
-                        : 'bg-secondary/30 border-border/30 opacity-40'
-                    }
-                  `}
+                  className="relative w-full max-w-[110px] md:max-w-[130px] transition-all duration-500 bg-transparent border-none"
                 >
-                  {/* Background glow for active */}
-                  {(isCurrent || isCompleted) && (
-                    <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient} opacity-20 blur-xl`} />
+                  <ShieldCrest 
+                    level={levelKey} 
+                    active={isCurrent || isCompleted} 
+                    className={`w-full h-auto drop-shadow-lg ${isLocked ? 'opacity-40' : ''} ${
+                      isCurrent ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]' : ''
+                    }`}
+                  />
+                  
+                  {/* Lock overlay for locked levels */}
+                  {isLocked && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-muted-foreground/50" />
+                    </div>
                   )}
-                  
-                  {/* Shield icon */}
-                  <div className={`relative z-10 ${isLocked ? 'text-muted-foreground/40' : 'text-white'}`}>
-                    {isLocked ? (
-                      <Lock className="w-8 h-8 md:w-10 md:h-10" />
-                    ) : isCompleted ? (
-                      <div className="relative">
-                        <span className="text-white">{config.icon}</span>
-                        <CheckCircle2 className="w-4 h-4 text-white absolute -bottom-1 -right-2" />
-                      </div>
-                    ) : (
-                      <span className={`${config.iconAnimation}`}>{config.icon}</span>
-                    )}
-                  </div>
-                  
-                  {/* Level name inside shield */}
-                  <p className={`relative z-10 mt-2 text-xs md:text-sm font-display font-bold tracking-wide ${
-                    isLocked ? 'text-muted-foreground/40' : 'text-white/90'
-                  }`}>
-                    {levelKey}
-                  </p>
 
-                  {/* Current pulse ring */}
+                  {/* Current pulse */}
                   {isCurrent && (
                     <motion.div
-                      animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0, 0.3] }}
+                      animate={{ opacity: [0.4, 0, 0.4] }}
                       transition={{ duration: 2.5, repeat: Infinity }}
-                      className={`absolute inset-0 rounded-2xl border-2 border-white/40`}
-                    />
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <ShieldCrest level={levelKey} active={true} className="w-full h-auto opacity-30 blur-sm" />
+                    </motion.div>
                   )}
                 </motion.button>
 
-                {/* Category label below */}
-                <p className={`mt-2 text-[10px] uppercase tracking-widest ${
-                  isCurrent 
-                    ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent font-bold` 
-                    : isCompleted
-                      ? 'text-muted-foreground'
-                      : 'text-muted-foreground/40'
-                }`}>
-                  {isCurrent && journeyProgress.isOutlier ? 'OUTLIER' : isCurrent ? 'ATUAL' : isCompleted ? '✓' : ''}
-                </p>
+                {/* Level name + status label */}
+                <div className="mt-1 text-center">
+                  <p className={`text-sm md:text-base font-display font-bold tracking-wider ${
+                    isCurrent 
+                      ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` 
+                      : isCompleted
+                        ? 'text-muted-foreground'
+                        : 'text-muted-foreground/30'
+                  }`}>
+                    {levelKey}
+                  </p>
+                  <p className={`text-[9px] uppercase tracking-widest mt-0.5 ${
+                    isCurrent ? 'text-muted-foreground' : 'text-muted-foreground/30'
+                  }`}>
+                    {isCurrent && journeyProgress.isOutlier ? 'OUTLIER' : isCurrent ? 'ATUAL' : isCompleted ? 'CONQUISTADO' : 'BLOQUEADO'}
+                  </p>
+                </div>
 
                 {/* Expandable requirements inside */}
                 <AnimatePresence>
