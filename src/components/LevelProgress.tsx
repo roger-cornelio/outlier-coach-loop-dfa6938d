@@ -74,41 +74,50 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
-// Heraldic shield SVG shapes per level — premium design with depth, details and texture
-function ShieldCrest({ level, active, className }: { level: ExtendedLevelKey; active: boolean; className?: string }) {
+// Heraldic shield SVG shapes per level — premium design with depth, radial glow, and metallic textures
+function ShieldCrest({ level, active, isCurrent, className }: { level: ExtendedLevelKey; active: boolean; isCurrent?: boolean; className?: string }) {
   const id = `shield-${level}-${active ? 'on' : 'off'}`;
+  const borderGlow = isCurrent ? 0.6 : active ? 0.35 : 0.05;
 
   if (level === 'OPEN') {
     return (
       <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={active ? '#c084fc' : '#888'} stopOpacity={active ? 1 : 0.12} />
-            <stop offset="100%" stopColor={active ? '#7c3aed' : '#666'} stopOpacity={active ? 0.9 : 0.06} />
+          <radialGradient id={`${id}-radial`} cx="50%" cy="30%" r="70%">
+            <stop offset="0%" stopColor={active ? '#d8b4fe' : '#888'} stopOpacity={active ? 0.6 : 0.06} />
+            <stop offset="100%" stopColor={active ? '#581c87' : '#444'} stopOpacity={active ? 0.9 : 0.04} />
+          </radialGradient>
+          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.15" y2="1">
+            <stop offset="0%" stopColor={active ? '#c084fc' : '#666'} stopOpacity={active ? 1 : 0.1} />
+            <stop offset="50%" stopColor={active ? '#9333ea' : '#555'} stopOpacity={active ? 0.95 : 0.07} />
+            <stop offset="100%" stopColor={active ? '#581c87' : '#444'} stopOpacity={active ? 0.85 : 0.05} />
           </linearGradient>
-          <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={active ? '#e9d5ff' : '#aaa'} stopOpacity={active ? 0.5 : 0.08} />
-            <stop offset="100%" stopColor={active ? '#a855f7' : '#888'} stopOpacity={active ? 0.3 : 0.04} />
-          </linearGradient>
-          {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
+          {active && (
+            <filter id={`${id}-glow`}>
+              <feGaussianBlur stdDeviation={isCurrent ? '3.5' : '2'} result="b"/>
+              <feComposite in="b" in2="SourceGraphic" operator="over"/>
+            </filter>
+          )}
         </defs>
-        {/* Shield body — classic kite shape */}
-        <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z" 
-          fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.04)'} strokeWidth="2"
+        {/* Shield body */}
+        <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z"
+          fill={`url(#${id}-bg)`}
+          stroke={active ? `rgba(192,132,252,${borderGlow})` : 'rgba(255,255,255,0.03)'}
+          strokeWidth={isCurrent ? '2.5' : '1.5'}
           filter={active ? `url(#${id}-glow)` : undefined} />
-        {/* Inner border */}
+        {/* Inner radial overlay */}
         <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
-        {/* Inner panel */}
-        <path d="M50 20 L76 33 L76 56 Q76 81 50 98 Q24 81 24 56 L24 33 Z"
-          fill={`url(#${id}-inner)`} />
+          fill={`url(#${id}-radial)`} />
+        {/* Inner trim */}
+        <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
+          fill="none" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.8" strokeDasharray="3 4" />
         {/* Star emblem */}
-        <path d="M50 36 L54.5 48 L67 48 L57 56 L61 68 L50 60 L39 68 L43 56 L33 48 L45.5 48 Z" 
-          fill={active ? 'white' : '#999'} opacity={active ? 0.85 : 0.15}
-          stroke={active ? 'rgba(255,255,255,0.4)' : 'none'} strokeWidth="0.5" />
-        {/* Horizontal divider lines */}
-        <line x1="30" y1="78" x2="70" y2="78" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="0.8" />
-        <line x1="35" y1="84" x2="65" y2="84" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.6" />
+        <path d="M50 34 L55 47 L69 47 L58 55.5 L62.5 68 L50 60 L37.5 68 L42 55.5 L31 47 L45 47 Z"
+          fill={active ? 'white' : '#777'} opacity={active ? 0.8 : 0.1}
+          stroke={active ? 'rgba(255,255,255,0.3)' : 'none'} strokeWidth="0.6" />
+        {/* Accent lines */}
+        <line x1="28" y1="80" x2="72" y2="80" stroke={active ? 'rgba(192,132,252,0.25)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.7" />
+        <line x1="34" y1="86" x2="66" y2="86" stroke={active ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.01)'} strokeWidth="0.5" />
       </svg>
     );
   }
@@ -117,42 +126,54 @@ function ShieldCrest({ level, active, className }: { level: ExtendedLevelKey; ac
     return (
       <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.3" y2="1">
-            <stop offset="0%" stopColor={active ? '#fbbf24' : '#888'} stopOpacity={active ? 1 : 0.12} />
-            <stop offset="50%" stopColor={active ? '#f59e0b' : '#777'} stopOpacity={active ? 0.95 : 0.08} />
-            <stop offset="100%" stopColor={active ? '#b45309' : '#666'} stopOpacity={active ? 0.85 : 0.06} />
+          <radialGradient id={`${id}-radial`} cx="50%" cy="35%" r="65%">
+            <stop offset="0%" stopColor={active ? '#fef3c7' : '#888'} stopOpacity={active ? 0.5 : 0.05} />
+            <stop offset="100%" stopColor={active ? '#78350f' : '#444'} stopOpacity={active ? 0.7 : 0.03} />
+          </radialGradient>
+          <linearGradient id={`${id}-bg`} x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop offset="0%" stopColor={active ? '#fcd34d' : '#666'} stopOpacity={active ? 1 : 0.1} />
+            <stop offset="30%" stopColor={active ? '#f59e0b' : '#555'} stopOpacity={active ? 0.95 : 0.08} />
+            <stop offset="70%" stopColor={active ? '#d97706' : '#555'} stopOpacity={active ? 0.9 : 0.06} />
+            <stop offset="100%" stopColor={active ? '#92400e' : '#444'} stopOpacity={active ? 0.8 : 0.05} />
           </linearGradient>
-          <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={active ? '#fef3c7' : '#aaa'} stopOpacity={active ? 0.4 : 0.06} />
-            <stop offset="100%" stopColor={active ? '#d97706' : '#888'} stopOpacity={active ? 0.25 : 0.03} />
-          </linearGradient>
-          {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
+          {active && (
+            <filter id={`${id}-glow`}>
+              <feGaussianBlur stdDeviation={isCurrent ? '4' : '2.5'} result="b"/>
+              <feComposite in="b" in2="SourceGraphic" operator="over"/>
+            </filter>
+          )}
         </defs>
-        {/* Wings / flourish at top */}
-        <path d="M50 12 L62 6 L58 16 L72 10 L66 22 L80 20 L72 28 L50 24 L28 28 L20 20 L34 22 L28 10 L42 16 L38 6 Z"
-          fill={active ? '#f59e0b' : '#888'} opacity={active ? 0.5 : 0.06} />
+        {/* Ornamental wings */}
+        <path d="M50 14 L60 7 L57 16 L70 11 L65 22 L78 20 L70 28 L50 24 L30 28 L22 20 L35 22 L30 11 L43 16 L40 7 Z"
+          fill={active ? '#b45309' : '#555'} opacity={active ? 0.45 : 0.05}
+          stroke={active ? 'rgba(251,191,36,0.2)' : 'none'} strokeWidth="0.5" />
         {/* Shield body */}
         <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
-          fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.04)'} strokeWidth="2"
+          fill={`url(#${id}-bg)`}
+          stroke={active ? `rgba(251,191,36,${borderGlow})` : 'rgba(255,255,255,0.03)'}
+          strokeWidth={isCurrent ? '2.5' : '1.5'}
           filter={active ? `url(#${id}-glow)` : undefined} />
-        {/* Inner border */}
+        {/* Metallic radial */}
         <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1.2" />
-        {/* Inner panel */}
-        <path d="M50 24 L74 37 L74 58 Q74 82 50 98 Q26 82 26 58 L26 37 Z"
-          fill={`url(#${id}-inner)`} />
+          fill={`url(#${id}-radial)`} />
+        {/* Inner trim */}
+        <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
+          fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.02)'} strokeWidth="1" />
         {/* Hexagonal emblem */}
-        <path d="M50 36 L62 43 L62 57 L50 64 L38 57 L38 43 Z"
-          fill="none" stroke={active ? 'white' : '#999'} strokeWidth="1.8" opacity={active ? 0.7 : 0.12} />
+        <path d="M50 36 L63 43.5 L63 58.5 L50 66 L37 58.5 L37 43.5 Z"
+          fill="none" stroke={active ? 'rgba(255,255,255,0.55)' : '#777'} strokeWidth="2" opacity={active ? 1 : 0.08} />
         {/* Diamond core */}
-        <path d="M50 42 L56 50 L50 58 L44 50 Z"
-          fill={active ? 'white' : '#999'} opacity={active ? 0.8 : 0.1} />
-        {/* Side bars */}
-        <line x1="32" y1="72" x2="68" y2="72" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
-        <line x1="36" y1="80" x2="64" y2="80" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.7" />
-        {/* Corner dots */}
-        <circle cx="30" cy="42" r="2" fill={active ? 'white' : '#999'} opacity={active ? 0.3 : 0.05} />
-        <circle cx="70" cy="42" r="2" fill={active ? 'white' : '#999'} opacity={active ? 0.3 : 0.05} />
+        <path d="M50 42 L57 50 L50 58 L43 50 Z"
+          fill={active ? 'white' : '#777'} opacity={active ? 0.75 : 0.08} />
+        {/* Cross marks inside hex */}
+        <line x1="50" y1="38" x2="50" y2="44" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
+        <line x1="50" y1="56" x2="50" y2="64" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
+        {/* Accent bars */}
+        <line x1="30" y1="74" x2="70" y2="74" stroke={active ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.8" />
+        <line x1="35" y1="82" x2="65" y2="82" stroke={active ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.01)'} strokeWidth="0.5" />
+        {/* Corner studs */}
+        <circle cx="28" cy="42" r="2" fill={active ? 'rgba(251,191,36,0.4)' : 'transparent'} />
+        <circle cx="72" cy="42" r="2" fill={active ? 'rgba(251,191,36,0.4)' : 'transparent'} />
       </svg>
     );
   }
@@ -161,53 +182,63 @@ function ShieldCrest({ level, active, className }: { level: ExtendedLevelKey; ac
   return (
     <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.2" y2="1">
-          <stop offset="0%" stopColor={active ? '#fde047' : '#888'} stopOpacity={active ? 1 : 0.12} />
-          <stop offset="40%" stopColor={active ? '#facc15' : '#777'} stopOpacity={active ? 0.95 : 0.08} />
-          <stop offset="100%" stopColor={active ? '#a16207' : '#666'} stopOpacity={active ? 0.8 : 0.06} />
-        </linearGradient>
-        <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={active ? '#fefce8' : '#aaa'} stopOpacity={active ? 0.45 : 0.06} />
-          <stop offset="100%" stopColor={active ? '#ca8a04' : '#888'} stopOpacity={active ? 0.2 : 0.03} />
+        <radialGradient id={`${id}-radial`} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor={active ? '#fefce8' : '#888'} stopOpacity={active ? 0.4 : 0.04} />
+          <stop offset="100%" stopColor={active ? '#713f12' : '#444'} stopOpacity={active ? 0.6 : 0.03} />
+        </radialGradient>
+        <linearGradient id={`${id}-bg`} x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stopColor={active ? '#fef08a' : '#555'} stopOpacity={active ? 1 : 0.1} />
+          <stop offset="35%" stopColor={active ? '#facc15' : '#505050'} stopOpacity={active ? 0.95 : 0.08} />
+          <stop offset="70%" stopColor={active ? '#ca8a04' : '#484848'} stopOpacity={active ? 0.85 : 0.06} />
+          <stop offset="100%" stopColor={active ? '#713f12' : '#404040'} stopOpacity={active ? 0.75 : 0.05} />
         </linearGradient>
         <linearGradient id={`${id}-crown`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={active ? '#fef9c3' : '#aaa'} stopOpacity={active ? 0.9 : 0.1} />
-          <stop offset="100%" stopColor={active ? '#eab308' : '#888'} stopOpacity={active ? 0.7 : 0.06} />
+          <stop offset="0%" stopColor={active ? '#fef9c3' : '#555'} stopOpacity={active ? 0.85 : 0.08} />
+          <stop offset="100%" stopColor={active ? '#a16207' : '#444'} stopOpacity={active ? 0.6 : 0.04} />
         </linearGradient>
-        {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
+        {active && (
+          <filter id={`${id}-glow`}>
+            <feGaussianBlur stdDeviation={isCurrent ? '5' : '3'} result="b"/>
+            <feComposite in="b" in2="SourceGraphic" operator="over"/>
+          </filter>
+        )}
       </defs>
-      {/* Crown atop the shield */}
+      {/* Crown */}
       <path d="M28 18 L34 8 L40 16 L46 4 L50 0 L54 4 L60 16 L66 8 L72 18 L72 28 L28 28 Z"
-        fill={`url(#${id}-crown)`} stroke={active ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
+        fill={`url(#${id}-crown)`}
+        stroke={active ? `rgba(250,204,21,${borderGlow * 0.8})` : 'rgba(255,255,255,0.03)'}
+        strokeWidth="1.2" />
       {/* Crown jewels */}
-      <circle cx="40" cy="20" r="2.5" fill={active ? '#fff' : '#999'} opacity={active ? 0.6 : 0.08} />
-      <circle cx="50" cy="16" r="3" fill={active ? '#fff' : '#999'} opacity={active ? 0.7 : 0.08} />
-      <circle cx="60" cy="20" r="2.5" fill={active ? '#fff' : '#999'} opacity={active ? 0.6 : 0.08} />
+      <circle cx="40" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
+      <circle cx="50" cy="15" r="3.2" fill={active ? '#fefce8' : '#666'} opacity={active ? 0.8 : 0.06} />
+      <circle cx="60" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
       {/* Shield body */}
       <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
-        fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.04)'} strokeWidth="2.5"
+        fill={`url(#${id}-bg)`}
+        stroke={active ? `rgba(250,204,21,${borderGlow})` : 'rgba(100,100,100,0.08)'}
+        strokeWidth={isCurrent ? '3' : '2'}
         filter={active ? `url(#${id}-glow)` : undefined} />
-      {/* Double inner border */}
+      {/* Inner radial */}
       <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
-        fill="none" stroke={active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.03)'} strokeWidth="1.5" />
+        fill={`url(#${id}-radial)`} />
+      {/* Double border */}
+      <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
+        fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(100,100,100,0.04)'} strokeWidth="1.2" />
       <path d="M50 32 L76 42 L76 60 Q76 84 50 98 Q24 84 24 60 L24 42 Z"
-        fill={`url(#${id}-inner)`} stroke={active ? 'rgba(255,255,255,0.1)' : 'none'} strokeWidth="0.8" />
-      {/* Central eagle/phoenix silhouette */}
-      <g opacity={active ? 0.85 : 0.1} transform="translate(50,62) scale(0.9)">
-        {/* Wings spread */}
-        <path d="M0 -14 L-18 -6 L-22 2 L-14 0 L-8 4 L0 -4 L8 4 L14 0 L22 2 L18 -6 Z"
-          fill={active ? 'white' : '#999'} />
-        {/* Body */}
-        <path d="M-4 -4 L0 -10 L4 -4 L4 8 L0 14 L-4 8 Z"
-          fill={active ? 'white' : '#999'} opacity="0.9" />
-        {/* Tail feathers */}
-        <path d="M-6 10 L0 18 L6 10" fill="none" stroke={active ? 'white' : '#999'} strokeWidth="1.2" opacity="0.6" />
+        fill="none" stroke={active ? 'rgba(255,255,255,0.08)' : 'rgba(100,100,100,0.02)'} strokeWidth="0.8" strokeDasharray="2 3" />
+      {/* Eagle silhouette */}
+      <g opacity={active ? 0.8 : 0.07} transform="translate(50,62) scale(1)">
+        <path d="M0 -16 L-20 -7 L-24 2 L-16 -1 L-9 4 L0 -5 L9 4 L16 -1 L24 2 L20 -7 Z"
+          fill={active ? 'white' : '#777'} />
+        <path d="M-4.5 -5 L0 -12 L4.5 -5 L4.5 8 L0 15 L-4.5 8 Z"
+          fill={active ? 'white' : '#777'} opacity="0.85" />
+        <path d="M-7 10 L0 20 L7 10" fill="none" stroke={active ? 'white' : '#777'} strokeWidth="1.2" opacity="0.5" />
       </g>
-      {/* Bottom divider */}
-      <line x1="32" y1="86" x2="68" y2="86" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
-      {/* Corner laurels */}
-      <path d="M20 50 Q14 56 18 64" fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="1.5" />
-      <path d="M80 50 Q86 56 82 64" fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="1.5" />
+      {/* Bottom bar */}
+      <line x1="30" y1="88" x2="70" y2="88" stroke={active ? 'rgba(250,204,21,0.2)' : 'rgba(100,100,100,0.03)'} strokeWidth="0.8" />
+      {/* Laurel curves */}
+      <path d="M18 50 Q12 58 16 66" fill="none" stroke={active ? 'rgba(250,204,21,0.18)' : 'rgba(100,100,100,0.02)'} strokeWidth="1.5" />
+      <path d="M82 50 Q88 58 84 66" fill="none" stroke={active ? 'rgba(250,204,21,0.18)' : 'rgba(100,100,100,0.02)'} strokeWidth="1.5" />
     </svg>
   );
 }
@@ -591,7 +622,7 @@ export function LevelProgress() {
           Jornada de Evolução
         </h3>
         
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {LEVELS_ORDER.map((levelKey, index) => {
             const config = LEVEL_CONFIG[levelKey];
             const isCompleted = index < journeyProgress.currentLevelIndex;
@@ -616,58 +647,65 @@ export function LevelProgress() {
                 key={levelKey}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1, type: 'spring', stiffness: 200 }}
+                transition={{ delay: 0.4 + index * 0.12, type: 'spring', stiffness: 180 }}
                 className="flex flex-col items-center"
               >
                 {/* Heraldic Shield Crest */}
                 <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.04, filter: isCurrent || isCompleted ? 'brightness(1.15)' : 'brightness(1.05)' }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setSelectedLevel(isExpanded ? null : levelKey)}
-                  className="relative w-full max-w-[110px] md:max-w-[130px] transition-all duration-500 bg-transparent border-none"
+                  className="relative w-full max-w-[120px] md:max-w-[145px] transition-all duration-300 bg-transparent border-none cursor-pointer"
                 >
                   <ShieldCrest 
                     level={levelKey} 
-                    active={isCurrent || isCompleted} 
-                    className={`w-full h-auto drop-shadow-lg ${isLocked ? 'opacity-40' : ''} ${
-                      isCurrent ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]' : ''
+                    active={isCurrent || isCompleted}
+                    isCurrent={isCurrent}
+                    className={`w-full h-auto transition-all duration-300 ${
+                      isLocked ? 'opacity-35 grayscale-[30%]' : ''
                     }`}
                   />
                   
                   {/* Lock overlay for locked levels */}
                   {isLocked && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-muted-foreground/50" />
+                      <div className="p-2 rounded-full bg-background/30 backdrop-blur-sm">
+                        <Lock className="w-5 h-5 text-muted-foreground/60" />
+                      </div>
                     </div>
                   )}
 
                   {/* Current pulse */}
                   {isCurrent && (
                     <motion.div
-                      animate={{ opacity: [0.4, 0, 0.4] }}
-                      transition={{ duration: 2.5, repeat: Infinity }}
+                      animate={{ opacity: [0.3, 0, 0.3] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                       className="absolute inset-0 flex items-center justify-center pointer-events-none"
                     >
-                      <ShieldCrest level={levelKey} active={true} className="w-full h-auto opacity-30 blur-sm" />
+                      <ShieldCrest level={levelKey} active={true} isCurrent={true} className="w-full h-auto opacity-25 blur-md" />
                     </motion.div>
                   )}
                 </motion.button>
 
                 {/* Level name + status label */}
-                <div className="mt-1 text-center">
-                  <p className={`text-sm md:text-base font-display font-bold tracking-wider ${
+                <div className="mt-2 text-center">
+                  <p className={`text-base md:text-lg font-display font-extrabold tracking-wider leading-tight ${
                     isCurrent 
-                      ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent` 
+                      ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent drop-shadow-sm` 
                       : isCompleted
-                        ? 'text-muted-foreground'
-                        : 'text-muted-foreground/30'
+                        ? 'text-foreground/70'
+                        : 'text-muted-foreground/25'
                   }`}>
                     {levelKey}
                   </p>
-                  <p className={`text-[9px] uppercase tracking-widest mt-0.5 ${
-                    isCurrent ? 'text-muted-foreground' : 'text-muted-foreground/30'
+                  <p className={`text-[10px] uppercase tracking-[0.15em] mt-1 font-medium ${
+                    isCurrent 
+                      ? 'text-foreground/60'
+                      : isCompleted 
+                        ? 'text-foreground/40'
+                        : 'text-muted-foreground/20'
                   }`}>
-                    {isCurrent && journeyProgress.isOutlier ? 'OUTLIER' : isCurrent ? 'ATUAL' : isCompleted ? 'CONQUISTADO' : 'BLOQUEADO'}
+                    {isCurrent && journeyProgress.isOutlier ? '★ OUTLIER' : isCurrent ? '● ATUAL' : isCompleted ? '✓ CONQUISTADO' : '🔒 BLOQUEADO'}
                   </p>
                 </div>
 
