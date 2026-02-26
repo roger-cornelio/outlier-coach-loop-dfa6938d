@@ -208,8 +208,11 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   // PARSING E VALIDAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
   
-  const handleParse = () => {
-    console.log('[VALIDATE_CLICK] mode=import');
+  const handleParse = async () => {
+    console.log('[VALIDATE_START]', {
+      textLength: rawText.trim().length,
+      lines: rawText.trim().split('\n').length,
+    });
     
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
@@ -238,8 +241,35 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const inputValidation = validateCoachInput(textareaValue);
       const daysDetected = dayValidation.daysFound.length;
 
-      // Parse o texto
-      const result = parseStructuredText(textForParse);
+      // Parse o texto com timeout de 3s
+      let result: ParseResult;
+      try {
+        result = await Promise.race([
+          Promise.resolve(parseStructuredText(textForParse)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Parser timeout: demorou mais de 3s. Tente reduzir o texto.')), 3000)
+          ),
+        ]);
+      } catch (parseErr) {
+        console.error('[VALIDATE_CRASH] Parser threw or timed out:', parseErr);
+        const fallbackResult = {
+          success: false,
+          days: [],
+          structureIssues: [{
+            severity: 'ERROR' as const,
+            message: `Erro no parser: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
+            dayIndex: undefined,
+            blockIndex: undefined,
+          }],
+          rawText: textareaValue,
+          warnings: [],
+          errors: [`${parseErr instanceof Error ? parseErr.message : String(parseErr)}`],
+          alerts: [],
+          needsDaySelection: false,
+        } as ParseResult;
+        setParsedResult(fallbackResult, []);
+        return;
+      }
 
       // (A) [DIAG_PARSE_RESULT] — shape do resultado do parse
       console.log("[DIAG_PARSE_RESULT]", {
@@ -335,6 +365,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       console.log('[VALIDATE_RESULT] success=' + result.success);
       
       if (result.success && result.days.length > 0) {
+        console.log('[VALIDATE_SUCCESS]', { days: result.days.length, blocks: workouts.reduce((s, d) => s + d.blocks.length, 0) });
         console.log('[MODE_CHANGE] import → edit (reason=validate_success)');
         patchDraft({
           parseResult: result,
@@ -572,6 +603,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   
   // Calcular erros de validação para Preview
   const previewValidation = (() => {
+    try {
     if (!parseResult?.days) return { isValid: true, errors: [] as string[], invalidBlocks: [] as { dayIndex: number; blockIndex: number; reason: string }[] };
     
     const errors: string[] = [];
@@ -629,6 +661,10 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       errors,
       invalidBlocks,
     };
+    } catch (err) {
+      console.error('[PREVIEW_VALIDATION_CRASH]', err);
+      return { isValid: true, errors: [] as string[], invalidBlocks: [] as { dayIndex: number; blockIndex: number; reason: string }[] };
+    }
   })();
   
   // Estado para mostrar erros de validação
@@ -989,7 +1025,7 @@ BLOCO: DESCANSO
                 value={expandedDayForScroll || undefined}
                 onValueChange={(value) => setExpandedDayForScroll(value || null)}
               >
-                {parseResult.days.map((day, dayIndex) => {
+                {(parseResult.days ?? []).map((day, dayIndex) => {
                   const dayName = day.day ? getDayName(day.day) : 'Dia não definido';
                   const isRestDay = restDays[dayIndex] || false;
                   
@@ -1070,23 +1106,12 @@ BLOCO: DESCANSO
                               const trainingLines = block.lines || [];
                               const hasExecutableLines = trainingLines.length > 0;
                               
-                              // [RENDER_CHECK] Log obrigatório
-                              console.log("[RENDER_CHECK]", {
-                                day: dayName,
-                                blockTitle: displayTitle,
-                                trainingLines: trainingLines.length,
-                                hasExecutableLines,
-                                validationErrors: hasValidationErrors ? 1 : 0,
-                              });
+                              // Render check gated behind debug
                               
                               // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco de treino
                               if (!hasExecutableLines && block.type !== "notas") {
-                                console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=false (sem linhas executáveis)`);
                                 return null;
                               }
-                              
-                              // [RENDER_BLOCK] Bloco renderizado
-                              console.log(`[RENDER_BLOCK] title="${displayTitle}" rendered=true`);
                               
                               // ═══════════════════════════════════════════════════════════
                               // NOTAS/COMENTÁRIO: Renderização visual discreta
@@ -1464,12 +1489,7 @@ BLOCO: DESCANSO
             const dayName = getDayName(dayWorkout.day);
             const isRestDay = Boolean(dayWorkout.isRestDay || restDays[dayIndex]);
 
-            // [RENDER_CHECK] Log obrigatório - dia SEMPRE renderizado
-            console.log("[RENDER_CHECK]", {
-              day: dayName,
-              blocksCount: (dayWorkout.blocks || []).length,
-              isRestDay,
-            });
+            // Render check gated - removed excessive logging
 
             // REGRA: Dia SEMPRE renderizado, independente de erros
             return (
