@@ -631,14 +631,6 @@ export function StructuredWorkoutEditor({
                 const dayLabel = DAYS.find((d) => d.value === day.day)?.label || day.day;
                 const dayValidation = validation.dayValidations[day.day];
 
-                // [RENDER_CHECK] Log obrigatório - dia SEMPRE renderizado
-                console.log("[RENDER_CHECK]", {
-                  day: dayLabel,
-                  blocksCount: day.blocks.length,
-                  validationErrors: dayValidation?.errorCount || 0,
-                  isRestDay: day.isRestDay || false,
-                });
-
                 // REGRA: Dia SEMPRE renderizado, erros afetam APENAS estilo visual e publicação
                 return (
                   <div key={day.day} className="border border-border rounded-lg overflow-hidden">
