@@ -50,7 +50,7 @@ import { extractInlineComments } from './blockDisplayUtils';
 // ════════════════════════════════════════════════════════════════════════════
 // DEBUG FLAG — set to true to enable verbose parser logs (PERFORMANCE IMPACT!)
 // ════════════════════════════════════════════════════════════════════════════
-const DEBUG_PARSER = false;
+const DEBUG_PARSER = typeof import.meta !== 'undefined' && import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true';
 const _log = DEBUG_PARSER ? console.log.bind(console) : (() => {}) as (...args: any[]) => void;
 const _debug = DEBUG_PARSER ? console.debug.bind(console) : (() => {}) as (...args: any[]) => void;
 const _warn = DEBUG_PARSER ? console.warn.bind(console) : (() => {}) as (...args: any[]) => void;
