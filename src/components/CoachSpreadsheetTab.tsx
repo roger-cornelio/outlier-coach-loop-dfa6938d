@@ -28,6 +28,7 @@ import { WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { useCoachDraft } from '@/hooks/useCoachDraft';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { getBlockDisplayTitle, getBlockCategoryLabel, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
@@ -159,6 +160,7 @@ interface CoachSpreadsheetTabProps {
 export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
   const { saveWorkout: saveToDb } = useCoachWorkouts();
+  const { clearDraft } = useCoachDraft();
   
   // ESTADO LOCAL APENAS - nunca depende do banco
   const [spreadsheetText, setSpreadsheetText] = useState('');
@@ -398,12 +400,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
       <TabsContent value="import" className="space-y-6">
         <ErrorBoundary
           fallbackTitle="Erro no editor de treino"
-          onClearDraft={() => {
-            try {
-              const keys = Object.keys(localStorage).filter(k => k.startsWith('outlier:coachDraft:'));
-              keys.forEach(k => localStorage.removeItem(k));
-            } catch {}
-          }}
+          onClearDraft={clearDraft}
         >
         <TextModelImporter
           isSaving={isSavingToDb}
