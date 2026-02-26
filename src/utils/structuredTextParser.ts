@@ -47,6 +47,14 @@ import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { detectUnits, hasRecognizedUnit, type UnitConfidence } from './unitDetection';
 import { extractInlineComments } from './blockDisplayUtils';
 
+// ════════════════════════════════════════════════════════════════════════════
+// DEBUG FLAG — set to true to enable verbose parser logs (PERFORMANCE IMPACT!)
+// ════════════════════════════════════════════════════════════════════════════
+const DEBUG_PARSER = false;
+const _log = DEBUG_PARSER ? console.log.bind(console) : (() => {}) as (...args: any[]) => void;
+const _debug = DEBUG_PARSER ? console.debug.bind(console) : (() => {}) as (...args: any[]) => void;
+const _warn = DEBUG_PARSER ? console.warn.bind(console) : (() => {}) as (...args: any[]) => void;
+
 // ============================================
 // TIPOS
 // ============================================
@@ -312,7 +320,7 @@ function isNarrativeLine(line: string): boolean {
   // Verificar padrões de narrativa explicativa
   for (const pattern of NARRATIVE_PATTERNS) {
     if (pattern.test(lower)) {
-      console.log('[isNarrativeLine] → TRUE (narrativa detectada):', line);
+      _log('[isNarrativeLine] → TRUE (narrativa detectada):', line);
       return true;
     }
   }
@@ -394,7 +402,7 @@ function isPureExerciseLine(line: string): boolean {
   // Se tem medida MAS também tem narrativa → NÃO é exercício puro
   // Isso vai forçar a separação TREINO + COMENTÁRIO
   if (hasMeasurable && hasNarrative) {
-    console.log('[isPureExerciseLine] → FALSE (mistura medida + narrativa):', line);
+    _log('[isPureExerciseLine] → FALSE (mistura medida + narrativa):', line);
     return false;
   }
   
@@ -418,7 +426,7 @@ function isTrainingStimulus(line: string): boolean {
   // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
-    console.log('[isTrainingStimulus] → FALSE (linha com narrativa):', line);
+    _log('[isTrainingStimulus] → FALSE (linha com narrativa):', line);
     return false;
   }
   
@@ -550,7 +558,7 @@ function isPrescriptionLine(line: string): boolean {
   // MVP0 CIRÚRGICO: Só bloqueia narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
-    console.log('[isPrescriptionLine] → FALSE (linha com narrativa):', line);
+    _log('[isPrescriptionLine] → FALSE (linha com narrativa):', line);
     return false;
   }
   
@@ -977,7 +985,7 @@ export function classifyLine(line: string, blockCategory?: string): LineType {
   // Deve ir para notas e NUNCA influenciar o motor.
   // ═══════════════════════════════════════════════════════════════
   if (isSubjectiveLine(trimmed)) {
-    console.log('[classifyLine] → comment (linha subjetiva):', trimmed);
+    _log('[classifyLine] → comment (linha subjetiva):', trimmed);
     return 'comment';
   }
   
@@ -1151,7 +1159,7 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   
   // REGRA #: Linhas iniciadas com "#" são SEMPRE classificadas como NOTE
   if (trimmed.startsWith('#')) {
-    console.log('[CLASSIFY] NOTE (# prefix):', trimmed);
+    _log('[CLASSIFY] NOTE (# prefix):', trimmed);
     return { kind: 'NOTE', confidence: 'HIGH' };
   }
   
@@ -1163,7 +1171,7 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   // Deve ir para block.notes e NUNCA influenciar o motor.
   // ═══════════════════════════════════════════════════════════════
   if (isSubjectiveLine(trimmed)) {
-    console.log('[CLASSIFY] NOTE (linha subjetiva):', trimmed);
+    _log('[CLASSIFY] NOTE (linha subjetiva):', trimmed);
     return { kind: 'NOTE', confidence: 'HIGH' };
   }
   
@@ -1181,7 +1189,7 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
     // Verificar se é opcional
     const isOptional = OPTIONAL_PATTERNS.some(p => p.test(lowerLine));
     
-    console.log('[CLASSIFY] EXERCISE (unit detected):', trimmed, '| confidence:', unitResult.confidence, '| units:', unitResult.rawMatches);
+    _log('[CLASSIFY] EXERCISE (unit detected):', trimmed, '| confidence:', unitResult.confidence, '| units:', unitResult.rawMatches);
     
     return {
       kind: 'EXERCISE',
@@ -1219,7 +1227,7 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   // A) EXERCISE OPTIONAL com medida (prioridade máxima para rastreamento)
   // Ex: "corrida opcional 45 min", "se quiser, bike 30min"
   if (isOptional && (isHighExercise || isCardioWithMeasure)) {
-    console.log('[CLASSIFY] EXERCISE OPTIONAL HIGH:', trimmed);
+    _log('[CLASSIFY] EXERCISE OPTIONAL HIGH:', trimmed);
     return {
       kind: 'EXERCISE',
       confidence: 'HIGH',
@@ -1230,7 +1238,7 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
   // B) REST com exercício opcional detectável
   // Ex: "Descanso. Se quiser, corrida leve 30min"
   if (isRest && isOptional && (isHighExercise || isMediumExercise || isCardioWithMeasure)) {
-    console.log('[CLASSIFY] REST + EXERCISE OPTIONAL:', trimmed);
+    _log('[CLASSIFY] REST + EXERCISE OPTIONAL:', trimmed);
     return {
       kind: 'EXERCISE',
       confidence: isHighExercise || isCardioWithMeasure ? 'HIGH' : 'MEDIUM',
@@ -1426,7 +1434,7 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   // Log de diagnóstico
   const trainCount = lines.filter(l => l.kind === 'EXERCISE' || l.kind === 'REST').length;
   const commentCount = lines.filter(l => l.kind === 'NOTE').length;
-  console.log('[TAG_PARSE]', {
+  _log('[TAG_PARSE]', {
     title: block.title || '(sem título)',
     itemsCount: trainCount,
     commentFirst50: block.coachNotes?.[0]?.substring(0, 50) || '',
@@ -1683,7 +1691,7 @@ function isRestInstructionLineGlobal(line: string): boolean {
   //   "90+ minutos de corrida contínua em Zona 2"
   // ════════════════════════════════════════════════════════════════════════════
   if (isExercisePatternLine(normalized)) {
-    console.log('[isRestInstructionLineGlobal] → FALSE (isExercisePatternLine=true, prioridade exercício):', line);
+    _log('[isRestInstructionLineGlobal] → FALSE (isExercisePatternLine=true, prioridade exercício):', line);
     return false;
   }
   
@@ -1712,7 +1720,7 @@ function isRestInstructionLineGlobal(line: string): boolean {
   
   // Verificação rápida: se a linha contém "descanso" E contém dígito → IN_BLOCK_REST
   if (/\bdescanso\b/i.test(lower) && /\d/.test(lower)) {
-    console.log('[isRestInstructionLineGlobal] → TRUE (descanso + dígito):', line);
+    _log('[isRestInstructionLineGlobal] → TRUE (descanso + dígito):', line);
     return true;
   }
   
@@ -1800,19 +1808,19 @@ function isRestDayCandidateLine(line: string): boolean {
   
   // REGRA 1: Se contém dígito → NÃO é candidato a descanso de dia
   if (/\d/.test(normalized)) {
-    console.log('[isRestDayCandidateLine] → false (contém dígito):', line);
+    _log('[isRestDayCandidateLine] → false (contém dígito):', line);
     return false;
   }
   
   // REGRA 2: Se contém aspas de tempo → NÃO é candidato
   if (/['"`''"]/.test(normalized)) {
-    console.log('[isRestDayCandidateLine] → false (contém aspas de tempo):', line);
+    _log('[isRestDayCandidateLine] → false (contém aspas de tempo):', line);
     return false;
   }
   
   // REGRA 3: Se contém unidades de tempo → NÃO é candidato
   if (/\b(min|seg|s|segundos?|minutos?|sec|second)\b/i.test(lower)) {
-    console.log('[isRestDayCandidateLine] → false (contém unidade de tempo):', line);
+    _log('[isRestDayCandidateLine] → false (contém unidade de tempo):', line);
     return false;
   }
   
@@ -1822,23 +1830,23 @@ function isRestDayCandidateLine(line: string): boolean {
   
   // "Descanso" sozinho ou com qualificadores
   if (/^descanso$/i.test(lower)) {
-    console.log('[isRestDayCandidateLine] → true (descanso puro)');
+    _log('[isRestDayCandidateLine] → true (descanso puro)');
     return true;
   }
   if (/^descanso\s+(total|completo|absoluto)$/i.test(lower)) {
-    console.log('[isRestDayCandidateLine] → true (descanso + qualificador)');
+    _log('[isRestDayCandidateLine] → true (descanso + qualificador)');
     return true;
   }
   
   // "Descanso" com parênteses/contexto (ex: "Descanso (com família)")
   if (/^descanso\s*\(.*\)\s*$/i.test(lower)) {
-    console.log('[isRestDayCandidateLine] → true (descanso + contexto)');
+    _log('[isRestDayCandidateLine] → true (descanso + contexto)');
     return true;
   }
   
   // "Dia de descanso/livre/off"
   if (/^dia\s+(de\s+)?(descanso|livre|off)$/i.test(lower)) {
-    console.log('[isRestDayCandidateLine] → true (dia de descanso)');
+    _log('[isRestDayCandidateLine] → true (dia de descanso)');
     return true;
   }
   
@@ -1851,7 +1859,7 @@ function isRestDayCandidateLine(line: string): boolean {
   // "Folga"
   if (/^folga$/i.test(lower)) return true;
   
-  console.log('[isRestDayCandidateLine] → false (nenhum padrão bateu):', line);
+  _log('[isRestDayCandidateLine] → false (nenhum padrão bateu):', line);
   return false;
 }
 
@@ -1865,14 +1873,14 @@ function isHeadingLine(line: string): boolean {
   const trimmed = normalized.trim();
   
   // Debug log para rastrear
-  console.log('[isHeadingLine] Verificando:', JSON.stringify(trimmed), 'len=', trimmed.length);
+  _log('[isHeadingLine] Verificando:', JSON.stringify(trimmed), 'len=', trimmed.length);
   
   // ════════════════════════════════════════════════════════════════════════════
   // REGRA ABSOLUTA 0: ESTRUTURAS ENTRE ** ** NUNCA SÃO HEADINGS
   // Ex: **3 ROUNDS**, **EMOM 30**, **FOR TIME** → são estruturas do bloco
   // ════════════════════════════════════════════════════════════════════════════
   if (/^\*\*.*\*\*$/.test(trimmed)) {
-    console.log('[isHeadingLine] → STRUCTURE_LINE (** **), retorna false (nunca é heading)');
+    _log('[isHeadingLine] → STRUCTURE_LINE (** **), retorna false (nunca é heading)');
     return false;
   }
   
@@ -1881,7 +1889,7 @@ function isHeadingLine(line: string): boolean {
   // Verifica PRIMEIRO, antes de qualquer outra regra
   // ════════════════════════════════════════════════════════════════════════════
   if (isRestInstructionLineGlobal(trimmed)) {
-    console.log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
+    _log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
     return false;
   }
   
@@ -1889,7 +1897,7 @@ function isHeadingLine(line: string): boolean {
   // REGRA ABSOLUTA 2: "OPCIONAL" NUNCA É HEADING
   // ════════════════════════════════════════════════════════════════════════════
   if (isOptionalMarkerLine(trimmed)) {
-    console.log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
+    _log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
     return false;
   }
   
@@ -1897,25 +1905,25 @@ function isHeadingLine(line: string): boolean {
   // REGRA ABSOLUTA 3: CANDIDATO A DIA DE DESCANSO NUNCA É HEADING
   // ════════════════════════════════════════════════════════════════════════════
   if (isRestDayCandidateLine(trimmed)) {
-    console.log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
+    _log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
     return false;
   }
   
   // BLACKLIST: NUNCA é heading
   if (isBlacklistLine(trimmed)) {
-    console.log('[isHeadingLine] → BLACKLIST, retorna false');
+    _log('[isHeadingLine] → BLACKLIST, retorna false');
     return false;
   }
   
   // WHITELIST: SEMPRE é heading (match exato)
   if (isWhitelistLine(trimmed)) {
-    console.log('[isHeadingLine] → WHITELIST match exato, retorna true');
+    _log('[isHeadingLine] → WHITELIST match exato, retorna true');
     return true;
   }
   
   // Heading patterns conhecidos (case-insensitive)
   if (HEADING_PATTERNS.some(p => p.test(trimmed))) {
-    console.log('[isHeadingLine] → HEADING_PATTERNS, retorna true');
+    _log('[isHeadingLine] → HEADING_PATTERNS, retorna true');
     return true;
   }
   
@@ -1929,12 +1937,12 @@ function isHeadingLine(line: string): boolean {
     const hasKeyword = blockKeywords.some(p => p.test(trimmed));
     // Se contém keyword E é curta E não parece exercício, é heading
     if (hasKeyword && !isExercisePatternLine(trimmed)) {
-      console.log('[isHeadingLine] → Keyword match + curta, retorna true');
+      _log('[isHeadingLine] → Keyword match + curta, retorna true');
       return true;
     }
   }
   
-  console.log('[isHeadingLine] → Nenhum match, retorna false');
+  _log('[isHeadingLine] → Nenhum match, retorna false');
   return false;
 }
 
@@ -1948,11 +1956,11 @@ function isExercisePatternLine(line: string): boolean {
   const trimmed = normalized.trim();
   
   // Debug para rastrear
-  console.log('[isExercisePatternLine] Verificando:', JSON.stringify(trimmed));
+  _log('[isExercisePatternLine] Verificando:', JSON.stringify(trimmed));
   
   // A) Começa com número → é exercício
   if (/^\d+/.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Começa com número, retorna true');
+    _log('[isExercisePatternLine] → Começa com número, retorna true');
     return true;
   }
   
@@ -1960,49 +1968,49 @@ function isExercisePatternLine(line: string): boolean {
   // Padrões: "45 min", "até 45 minutos", "30'", "45''", "1h", "2 horas"
   // Note: Usamos ' (aspas simples ASCII) pois já normalizamos
   if (/\d+\s*(?:min(?:uto)?s?|minutes?|'(?!')|''|"|h(?:ora)?s?|seg(?:undo)?s?|sec(?:ond)?s?)\b/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Tem número + unidade de tempo, retorna true');
+    _log('[isExercisePatternLine] → Tem número + unidade de tempo, retorna true');
     return true;
   }
   
   // C) Contém "até X minutos/min" → é exercício
   if (/\baté\s+\d+\s*(?:min(?:uto)?s?|h(?:ora)?s?)/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Padrão "até X minutos", retorna true');
+    _log('[isExercisePatternLine] → Padrão "até X minutos", retorna true');
     return true;
   }
   
   // D) Contém número + unidade de DISTÂNCIA → é exercício
   if (/\d+\s*(?:m|km|metros?|quilômetros?)\b/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Tem número + distância, retorna true');
+    _log('[isExercisePatternLine] → Tem número + distância, retorna true');
     return true;
   }
   
   // E) Contém formatos de exercício (5x5, EMOM, AMRAP, For Time, Rounds, Sets, Reps)
   if (/\d+\s*x\s*\d+/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Padrão sets x reps, retorna true');
+    _log('[isExercisePatternLine] → Padrão sets x reps, retorna true');
     return true;
   }
   if (/\b(?:emom|amrap|for\s*time|rft|tabata)\b/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Formato de treino, retorna true');
+    _log('[isExercisePatternLine] → Formato de treino, retorna true');
     return true;
   }
   if (/\d+\s*(?:rounds?|rodadas?|sets?|séries?|reps?|repeti[çc][õo]es?|cal)\b/i.test(trimmed)) {
-    console.log('[isExercisePatternLine] → Rounds/sets/reps/cal, retorna true');
+    _log('[isExercisePatternLine] → Rounds/sets/reps/cal, retorna true');
     return true;
   }
   
-  console.log('[isExercisePatternLine] → Nenhum padrão de exercício, retorna false');
+  _log('[isExercisePatternLine] → Nenhum padrão de exercício, retorna false');
   return false;
 }
 
 export function parseStructuredText(text: string): ParseResult {
-  console.log('[PARSER] === parseStructuredText INICIADO ===');
-  console.log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
+  _log('[PARSER] === parseStructuredText INICIADO ===');
+  _log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
   const lines = text.split('\n');
-  console.log('[PARSER] Total de linhas:', lines.length);
+  _log('[PARSER] Total de linhas:', lines.length);
   
   // MVP0: Validar âncoras de dia antes de parsear
   const dayValidation = validateDayAnchors(text);
-  console.log('[PARSER] Dias detectados:', dayValidation.daysFound);
+  _log('[PARSER] Dias detectados:', dayValidation.daysFound);
   
   const result: ParseResult = {
     success: false,
@@ -2091,7 +2099,7 @@ export function parseStructuredText(text: string): ParseResult {
       
       // Se está na lista branca, É título!
       if (isWhitelistLine(line)) {
-        console.log('[PARSER] Título WHITELIST encontrado na linha', i + 1, ':', line);
+        _log('[PARSER] Título WHITELIST encontrado na linha', i + 1, ':', line);
         const remaining = [...nonEmptyLines];
         remaining.splice(i, 1);
         return { heading: line, remainingLines: remaining };
@@ -2136,7 +2144,7 @@ export function parseStructuredText(text: string): ParseResult {
           const isShortNoNumbers = line.length <= 40 && !/\d/.test(line);
           
           if (hasBlockKeyword || isShortNoNumbers) {
-            console.log('[PARSER] Heading heurístico na linha', i + 1, ':', line);
+            _log('[PARSER] Heading heurístico na linha', i + 1, ':', line);
             const remaining = [...nonEmptyLines];
             remaining.splice(i, 1);
             return { heading: line, remainingLines: remaining };
@@ -2153,7 +2161,7 @@ export function parseStructuredText(text: string): ParseResult {
       // ════════════════════════════════════════════════════════════════════════════
       // MVP0 LOG: Bloco sendo finalizado
       // ════════════════════════════════════════════════════════════════════════════
-      console.log('[BLOCK_END] Finalizando bloco:', currentBlock.title || '(sem título)', 'isInsideBlock was:', isInsideBlock);
+      _log('[BLOCK_END] Finalizando bloco:', currentBlock.title || '(sem título)', 'isInsideBlock was:', isInsideBlock);
       
       // MVP0: Antes de salvar, tentar extrair heading das instructions se título vazio
       if (!currentBlock.title || currentBlock.title.trim() === '') {
@@ -2171,7 +2179,7 @@ export function parseStructuredText(text: string): ParseResult {
           if (currentBlock.instruction === extracted.heading) {
             currentBlock.instruction = undefined;
           }
-          console.log('[PARSER] Título extraído do conteúdo:', currentBlock.title);
+          _log('[PARSER] Título extraído do conteúdo:', currentBlock.title);
         }
       }
       
@@ -2204,7 +2212,7 @@ export function parseStructuredText(text: string): ParseResult {
         // MVP0 LOG: TAG_SPLIT para diagnóstico
         // ════════════════════════════════════════════════════════════════════════════
         const hasTags = currentBlock.coachNotes.length > 0 || inTrainingTagMode || inCommentTagMode;
-        console.log('[TAG_SPLIT]', {
+        _log('[TAG_SPLIT]', {
           title: currentBlock.title || '(sem título)',
           hasTags,
           trainChars: currentBlock.instructions.join('\n').length + currentBlock.items.length * 20,
@@ -2436,7 +2444,7 @@ export function parseStructuredText(text: string): ParseResult {
     
     // Detectar marcadores de TREINO: [TREINO] ou = TREINO
     if (/^\[TREINO\]$/i.test(trimmedLine) || /^=\s*TREINO\s*$/i.test(trimmedLine)) {
-      console.log('[TAG_MODE] → TREINO (marcador detectado):', trimmedLine);
+      _log('[TAG_MODE] → TREINO (marcador detectado):', trimmedLine);
       inTrainingTagMode = true;
       inCommentTagMode = false;
       continue;
@@ -2448,7 +2456,7 @@ export function parseStructuredText(text: string): ParseResult {
         /^>\s*COMENT[AÁ]RIO\s*$/i.test(trimmedLine) ||
         /^=\s*COMENT[AÁ]RIO\s*$/i.test(trimmedLine) ||
         /^COMENT[AÁ]RIO\s*:?\s*$/i.test(trimmedLine)) {
-      console.log('[TAG_MODE] → COMENTÁRIO (marcador detectado, NÃO cria bloco):', trimmedLine);
+      _log('[TAG_MODE] → COMENTÁRIO (marcador detectado, NÃO cria bloco):', trimmedLine);
       inCommentTagMode = true;
       inTrainingTagMode = false;
       // NÃO fazer continue aqui se não tiver bloco - garantir que bloco existe
@@ -2467,14 +2475,14 @@ export function parseStructuredText(text: string): ParseResult {
     if (/^>/.test(trimmedLine)) {
       const commentContent = trimmedLine.replace(/^>\s*/, '').trim();
       if (commentContent && currentBlock) {
-        console.log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
+        _log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
         currentBlock.coachNotes.push(commentContent);
       } else if (commentContent && !currentBlock) {
         // Se não há bloco atual, criar um para receber o comentário
         currentBlock = createNewBlock('', true);
         isInsideBlock = true;
         currentBlock.coachNotes.push(commentContent);
-        console.log('[COMMENT_LINE] Criado bloco vazio para comentário:', commentContent);
+        _log('[COMMENT_LINE] Criado bloco vazio para comentário:', commentContent);
       }
       continue;
     }
@@ -2496,7 +2504,7 @@ export function parseStructuredText(text: string): ParseResult {
     // Só gerar warning se NÃO estamos em modo de tags
     if (hasMeasure && hasSubjective && !inCommentTagMode && !inTrainingTagMode) {
       const warningMsg = `Linha ${lineNumber}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}" - Mistura treino + comentário. Separe em TREINO: e COMENTÁRIO:`;
-      console.log('[STRUCTURE_WARNING]', warningMsg);
+      _log('[STRUCTURE_WARNING]', warningMsg);
       result.structureWarnings?.push(warningMsg);
       
       // Adicionar ao alerta do dia atual também
@@ -2507,7 +2515,7 @@ export function parseStructuredText(text: string): ParseResult {
 
     // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
     if (isBlockSeparator(line)) {
-      console.log('[PARSER] Separador de bloco detectado:', line);
+      _log('[PARSER] Separador de bloco detectado:', line);
       saveCurrentBlock();
       continue;
     }
@@ -2546,7 +2554,7 @@ export function parseStructuredText(text: string): ParseResult {
         result.days.push(currentDayEntry);
       }
       currentBlock = null;
-      console.log('[PARSER] DAY_MARKER:', line, '→', detectedDay);
+      _log('[PARSER] DAY_MARKER:', line, '→', detectedDay);
       continue;
     }
     
@@ -2557,12 +2565,12 @@ export function parseStructuredText(text: string): ParseResult {
     // instrução de intervalo, NUNCA afeta dia/bloco. Verificado PRIMEIRO!
     // ─────────────────────────────────────────────────────────────────────────────
     if (isRestInstructionLineGlobal(line)) {
-      console.log('[IN_BLOCK_REST] "' + line + '" → nota/metadado do bloco');
-      console.log('[IN_BLOCK_REST]   CONTEXT = "inside_block"');
-      console.log('[IN_BLOCK_REST]   EFFECT = "badge_or_note_only"');
-      console.log('[IN_BLOCK_REST]   day.isRestDay stays = false');
-      console.log('[IN_BLOCK_REST]   block.type unchanged');
-      console.log('[IN_BLOCK_REST]   hasSeenValidHeading =', hasSeenValidHeading);
+      _log('[IN_BLOCK_REST] "' + line + '" → nota/metadado do bloco');
+      _log('[IN_BLOCK_REST]   CONTEXT = "inside_block"');
+      _log('[IN_BLOCK_REST]   EFFECT = "badge_or_note_only"');
+      _log('[IN_BLOCK_REST]   day.isRestDay stays = false');
+      _log('[IN_BLOCK_REST]   block.type unchanged');
+      _log('[IN_BLOCK_REST]   hasSeenValidHeading =', hasSeenValidHeading);
       
       // Tratar como conteúdo do bloco atual
       if (currentBlock) {
@@ -2587,9 +2595,9 @@ export function parseStructuredText(text: string): ParseResult {
     // RESULTADO: day.restSuggestion = true (NUNCA day.isRestDay = true)
     // ─────────────────────────────────────────────────────────────────────────────
     if (isRestDayCandidateLine(line) && !hasSeenValidHeading && !currentBlock) {
-      console.log('[REST_DAY_CANDIDATE] "' + line + '" → sugestão apenas');
-      console.log('[REST_DAY_CANDIDATE]   hasSeenValidHeading =', hasSeenValidHeading);
-      console.log('[REST_DAY_CANDIDATE]   autoApplied = false');
+      _log('[REST_DAY_CANDIDATE] "' + line + '" → sugestão apenas');
+      _log('[REST_DAY_CANDIDATE]   hasSeenValidHeading =', hasSeenValidHeading);
+      _log('[REST_DAY_CANDIDATE]   autoApplied = false');
       
       // Garantir que temos entrada de dia
       if (!currentDayEntry && currentDay) {
@@ -2615,7 +2623,7 @@ export function parseStructuredText(text: string): ParseResult {
     // As linhas seguintes serão marcadas com flag OPTIONAL
     // ─────────────────────────────────────────────────────────────────────────────
     if (isOptionalMarkerLine(line)) {
-      console.log('[OPTIONAL_MARKER] "' + line + '" → currentOptional=true (nunca vira bloco)');
+      _log('[OPTIONAL_MARKER] "' + line + '" → currentOptional=true (nunca vira bloco)');
       currentOptional = true;
       // NÃO criar bloco - "Opcional" é apenas marcador
       continue;
@@ -2637,7 +2645,7 @@ export function parseStructuredText(text: string): ParseResult {
     // MVP0 PATCH D: Debug para confirmar regras
     const isExercise = isExercisePatternLine(line);
     const isHeading = isHeadingLine(line);
-    console.log('[PARSER DEBUG]', {
+    _log('[PARSER DEBUG]', {
       linhaOriginal: line,
       isExerciseLine: isExercise,
       isHeadingLine: isHeading,
@@ -2651,8 +2659,8 @@ export function parseStructuredText(text: string): ParseResult {
     // 4. HEADING_CANDIDATE: ÚNICA forma de transição de bloco
     // ─────────────────────────────────────────────────────────────────────────────
     if (isHeading) {
-      console.log('[HEADING] "' + line + '" createdBlock=true');
-      console.log('[BLOCK_START] Novo bloco iniciado por heading:', line);
+      _log('[HEADING] "' + line + '" createdBlock=true');
+      _log('[BLOCK_START] Novo bloco iniciado por heading:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
       isInsideBlock = true;
@@ -2664,8 +2672,8 @@ export function parseStructuredText(text: string): ParseResult {
     // MVP0: Também é uma transição válida de bloco
     // MVP0 FIX: Estruturas entre ** ** NUNCA são títulos de bloco
     if (isUpperCaseLine(line) && line.length > 3 && !isFormatLine(line) && !/^\*\*.*\*\*$/.test(line.trim())) {
-      console.log('[PARSER] Título MAIÚSCULO detectado:', line);
-      console.log('[BLOCK_START] Novo bloco iniciado por título maiúsculo:', line);
+      _log('[PARSER] Título MAIÚSCULO detectado:', line);
+      _log('[BLOCK_START] Novo bloco iniciado por título maiúsculo:', line);
       saveCurrentBlock();
       currentBlock = createNewBlock(line);
       isInsideBlock = true;
@@ -2689,7 +2697,7 @@ export function parseStructuredText(text: string): ParseResult {
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
       // ════════════════════════════════════════════════════════════════════════════
       if (inCommentTagMode) {
-        console.log('[TAG_SPLIT] Linha vai para COMENTÁRIO (inCommentTagMode):', line.substring(0, 50));
+        _log('[TAG_SPLIT] Linha vai para COMENTÁRIO (inCommentTagMode):', line.substring(0, 50));
         currentBlock.coachNotes.push(line);
         continue;
       }
@@ -2741,7 +2749,7 @@ export function parseStructuredText(text: string): ParseResult {
         if (!currentBlock) {
           currentBlock = createNewBlock('', true);
           isInsideBlock = true;
-          console.log('[BLOCK_START] Novo bloco iniciado por exercício (sem heading)');
+          _log('[BLOCK_START] Novo bloco iniciado por exercício (sem heading)');
         }
         
         currentBlock.items.push(item);
@@ -2766,7 +2774,7 @@ export function parseStructuredText(text: string): ParseResult {
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
       // ════════════════════════════════════════════════════════════════════════════
       if (inCommentTagMode) {
-        console.log('[TAG_SPLIT] Linha vai para COMENTÁRIO (fallback, inCommentTagMode):', line.substring(0, 50));
+        _log('[TAG_SPLIT] Linha vai para COMENTÁRIO (fallback, inCommentTagMode):', line.substring(0, 50));
         currentBlock.coachNotes.push(line);
         continue;
       }
@@ -2797,7 +2805,7 @@ export function parseStructuredText(text: string): ParseResult {
         currentBlock.instructions.push(line);
         currentBlock.optional = isOptional;
         isInsideBlock = true;
-        console.log('[BLOCK_START] Novo bloco iniciado por estímulo/prescrição');
+        _log('[BLOCK_START] Novo bloco iniciado por estímulo/prescrição');
       } else {
         currentBlock = createNewBlock('');
         if (isInstructionLine(line)) {
@@ -2806,7 +2814,7 @@ export function parseStructuredText(text: string): ParseResult {
           currentBlock.instruction = line;
         }
         isInsideBlock = true;
-        console.log('[BLOCK_START] Novo bloco iniciado por conteúdo genérico');
+        _log('[BLOCK_START] Novo bloco iniciado por conteúdo genérico');
       }
     }
   }
@@ -2826,9 +2834,9 @@ export function parseStructuredText(text: string): ParseResult {
   // ════════════════════════════════════════════════════════════════════════════
   // MVP0 AUDITORIA: LOGS DETALHADOS DE DESCANSO
   // ════════════════════════════════════════════════════════════════════════════
-  console.log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
-  console.log('[AUDIT] AUDITORIA DE DESCANSO — INÍCIO');
-  console.log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
+  _log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
+  _log('[AUDIT] AUDITORIA DE DESCANSO — INÍCIO');
+  _log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
   
   for (const day of result.days) {
     totalBlocks += day.blocks.length;
@@ -2844,13 +2852,13 @@ export function parseStructuredText(text: string): ParseResult {
     // MVP0 AUDITORIA: Log detalhado por DIA
     // ════════════════════════════════════════════════════════════════════════════
     const dayLabel = day.day || 'DIA_DESCONHECIDO';
-    console.log('[AUDIT] ─────────────────────────────────────────────────────────────');
-    console.log('[AUDIT] DIA:', dayLabel.toUpperCase());
-    console.log('[AUDIT]   • day.isRestDay =', day.isRestDay ?? false);
-    console.log('[AUDIT]   • day.restSuggestion =', day.restSuggestion ?? false);
-    console.log('[AUDIT]   • day.restSuggestionReason =', day.restSuggestionReason ?? '(nenhum)');
-    console.log('[AUDIT]   • blocksCount =', day.blocks.length);
-    console.log('[AUDIT]   • blockTitles =', JSON.stringify(day.blocks.map(b => b.title || '(sem título)')));
+    _log('[AUDIT] ─────────────────────────────────────────────────────────────');
+    _log('[AUDIT] DIA:', dayLabel.toUpperCase());
+    _log('[AUDIT]   • day.isRestDay =', day.isRestDay ?? false);
+    _log('[AUDIT]   • day.restSuggestion =', day.restSuggestion ?? false);
+    _log('[AUDIT]   • day.restSuggestionReason =', day.restSuggestionReason ?? '(nenhum)');
+    _log('[AUDIT]   • blocksCount =', day.blocks.length);
+    _log('[AUDIT]   • blockTitles =', JSON.stringify(day.blocks.map(b => b.title || '(sem título)')));
     
     // ════════════════════════════════════════════════════════════════════════════
     // MVP0 AUDITORIA: Log detalhado por BLOCO
@@ -2878,20 +2886,20 @@ export function parseStructuredText(text: string): ParseResult {
         }
       }
       
-      console.log('[AUDIT]   └─ BLOCO', blockIdx + 1, ':');
-      console.log('[AUDIT]       • blockTitle =', block.title || '(sem título)');
-      console.log('[AUDIT]       • blockType =', block.type || '(sem tipo)');
-      console.log('[AUDIT]       • restLinesDetected =', JSON.stringify(restLinesInBlock));
-      console.log('[AUDIT]       • restLinesDestination =', restLinesInBlock.length > 0 ? 'instructions (nota/metadado)' : '(nenhuma)');
-      console.log('[AUDIT]       • didRestLineAffectHeadingDetection = false');
+      _log('[AUDIT]   └─ BLOCO', blockIdx + 1, ':');
+      _log('[AUDIT]       • blockTitle =', block.title || '(sem título)');
+      _log('[AUDIT]       • blockType =', block.type || '(sem tipo)');
+      _log('[AUDIT]       • restLinesDetected =', JSON.stringify(restLinesInBlock));
+      _log('[AUDIT]       • restLinesDestination =', restLinesInBlock.length > 0 ? 'instructions (nota/metadado)' : '(nenhuma)');
+      _log('[AUDIT]       • didRestLineAffectHeadingDetection = false');
       
       // ASSERT: Se encontrou linhas de descanso intra-bloco, logar EFFECT
       for (const restLine of restLinesInBlock) {
-        console.log('[AUDIT]       ▶ REST_LINE_FOUND:', JSON.stringify(restLine));
-        console.log('[AUDIT]         CONTEXT = "inside_block"');
-        console.log('[AUDIT]         EFFECT = "badge_or_note_only"');
-        console.log('[AUDIT]         day.isRestDay stays =', day.isRestDay ?? false, '(blocos existem)');
-        console.log('[AUDIT]         block.type unchanged =', block.type || '(sem tipo)');
+        _log('[AUDIT]       ▶ REST_LINE_FOUND:', JSON.stringify(restLine));
+        _log('[AUDIT]         CONTEXT = "inside_block"');
+        _log('[AUDIT]         EFFECT = "badge_or_note_only"');
+        _log('[AUDIT]         day.isRestDay stays =', day.isRestDay ?? false, '(blocos existem)');
+        _log('[AUDIT]         block.type unchanged =', block.type || '(sem tipo)');
       }
     }
     
@@ -2899,7 +2907,7 @@ export function parseStructuredText(text: string): ParseResult {
     // MVP0: REGRA SOBERANA — Dias de descanso NÃO geram warnings/erros
     // ════════════════════════════════════════════════════════════════════════════
     if (day.isRestDay) {
-      console.log('[AUDIT]   ✓ Dia é DESCANSO - ignorando validações de WOD/categoria');
+      _log('[AUDIT]   ✓ Dia é DESCANSO - ignorando validações de WOD/categoria');
       // Dia de descanso válido, sem exigências
       continue;
     }
@@ -2918,9 +2926,9 @@ export function parseStructuredText(text: string): ParseResult {
     }
   }
   
-  console.log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
-  console.log('[AUDIT] AUDITORIA DE DESCANSO — FIM');
-  console.log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
+  _log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');
+  _log('[AUDIT] AUDITORIA DE DESCANSO — FIM');
+  _log('[AUDIT] ═══════════════════════════════════════════════════════════════\n');
 
   if (totalBlocks === 0) {
     result.errors.push('Nenhum bloco de treino identificado');
@@ -2934,8 +2942,8 @@ export function parseStructuredText(text: string): ParseResult {
   result.success = result.errors.length === 0;
   
   // MVP0: Log final para debug do pipeline
-  console.log('[PARSER] === parseStructuredText FINALIZADO ===');
-  console.log('[PARSER] Resultado:', {
+  _log('[PARSER] === parseStructuredText FINALIZADO ===');
+  _log('[PARSER] Resultado:', {
     success: result.success,
     totalDays: result.days.length,
     days: result.days.map(d => ({
@@ -2960,7 +2968,7 @@ export function parseStructuredText(text: string): ParseResult {
   for (const day of result.days) {
     const dayLabel = day.day || 'DESCONHECIDO';
     const dayHeadings = day.blocks.map(b => b.title).filter(Boolean);
-    console.log(`[PARSER] day=${dayLabel.toUpperCase()} blocksCount=${day.blocks.length} headingsList=${JSON.stringify(dayHeadings)}`);
+    _log(`[PARSER] day=${dayLabel.toUpperCase()} blocksCount=${day.blocks.length} headingsList=${JSON.stringify(dayHeadings)}`);
   }
   
   return result;
@@ -2989,7 +2997,7 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
       };
       
       // LOG de verificação
-      console.log('[CONVERT_BLOCK] parsedToDayWorkouts:', {
+      _log('[CONVERT_BLOCK] parsedToDayWorkouts:', {
         title: workoutBlock.title?.substring(0, 30),
         contentHasComentarioTag: workoutBlock.content.includes('[COMENTÁRIO]'),
         coachNotesLength: workoutBlock.coachNotes?.length || 0,
@@ -3048,7 +3056,7 @@ function formatBlockContent(block: ParsedBlock): string {
   // ════════════════════════════════════════════════════════════════════════════
   // LOG de verificação (temporário)
   const hasCoachNotes = block.coachNotes && block.coachNotes.length > 0;
-  console.log('[SAVE_BLOCK] formatBlockContent:', {
+  _log('[SAVE_BLOCK] formatBlockContent:', {
     title: block.title?.substring(0, 30),
     contentHasComentarioTag: trainContent.includes('[COMENTÁRIO]'),
     coachNotesLength: block.coachNotes?.length || 0,
@@ -3213,7 +3221,7 @@ export function validateCoachInput(text: string, options?: ValidateCoachInputOpt
   // ════════════════════════════════════════════════════════════════════════════
   
   if (isStructured) {
-    console.log('[FENCE_GUARD] mode=edit | structured=true → fence IGNORADA');
+    _log('[FENCE_GUARD] mode=edit | structured=true → fence IGNORADA');
     // Retorna validação vazia - blocos estruturados são validados pela UI
     return {
       isValid: true,
@@ -3228,7 +3236,7 @@ export function validateCoachInput(text: string, options?: ValidateCoachInputOpt
   const usesTagFormat = textUsesTagFormat(text);
   let fenceErrors = false;
   
-  console.log('[FENCE_GUARD] mode=import | structured=false → fence ATIVA');
+  _log('[FENCE_GUARD] mode=import | structured=false → fence ATIVA');
   
   // ════════════════════════════════════════════════════════════════════════════
   // CERCA V1: VALIDAÇÃO DETERMINÍSTICA COM DELIMITADORES
