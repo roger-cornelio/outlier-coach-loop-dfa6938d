@@ -6,21 +6,22 @@ import {
   TrendingUp, 
   Target,
   Dumbbell,
-  Medal,
   Loader2,
   Zap,
   Crown,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  CheckCircle2,
+  ArrowRight,
+  Flag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { type AthleteStatus } from '@/types/outlier';
 
-// Types matching database tables
 interface LevelRule {
   level_key: string;
   level_order: number;
@@ -32,35 +33,18 @@ interface LevelRule {
   cap_without_official_race_percent: number;
 }
 
-interface JumpRule {
-  jump_key: string;
-  is_enabled: boolean;
-  race_category: string;
-  rank_scope: string;
-  rank_top_n: number;
-  target_level: string;
-}
-
-// Level colors for visual consistency
 const LEVEL_COLORS: Record<string, string> = {
-  BEGINNER: 'text-cyan-400',
-  INTERMEDIATE: 'text-green-400',
-  ADVANCED: 'text-orange-400',
   OPEN: 'text-purple-400',
   PRO: 'text-amber-400',
-  ELITE: 'text-yellow-400',
+  ELITE: 'text-yellow-300',
 };
 
 const LEVEL_BG_COLORS: Record<string, string> = {
-  BEGINNER: 'bg-cyan-500/10 border-cyan-500/20',
-  INTERMEDIATE: 'bg-green-500/10 border-green-500/20',
-  ADVANCED: 'bg-orange-500/10 border-orange-500/20',
   OPEN: 'bg-purple-500/10 border-purple-500/20',
   PRO: 'bg-amber-500/10 border-amber-500/20',
   ELITE: 'bg-yellow-500/10 border-yellow-500/20',
 };
 
-// Map athlete status to level key
 function statusToLevelKey(status: AthleteStatus): string {
   const map: Record<AthleteStatus, string> = {
     open: 'OPEN',
@@ -74,25 +58,28 @@ export function StatusExplainerModal() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [levelRules, setLevelRules] = useState<LevelRule[]>([]);
-  const [jumpRules, setJumpRules] = useState<JumpRule[]>([]);
   
   const athleteStatus = useAthleteStatus();
   const currentLevelKey = statusToLevelKey(athleteStatus.status);
   
-  // Fetch rules from Supabase
   useEffect(() => {
     if (!open) return;
     
     const fetchRules = async () => {
       setLoading(true);
       try {
-        const [levelsRes, jumpsRes] = await Promise.all([
-          supabase.from('status_level_rules').select('*').order('level_order'),
-          supabase.from('status_jump_rules').select('*').eq('is_enabled', true),
-        ]);
+        const levelsRes = await supabase
+          .from('status_level_rules')
+          .select('*')
+          .order('level_order');
         
-        if (levelsRes.data) setLevelRules(levelsRes.data);
-        if (jumpsRes.data) setJumpRules(jumpsRes.data);
+        if (levelsRes.data) {
+          setLevelRules(
+            levelsRes.data
+              .filter(l => ['OPEN', 'PRO', 'ELITE'].includes(l.level_key))
+              .sort((a, b) => a.level_order - b.level_order)
+          );
+        }
       } catch (error) {
         console.error('Error fetching status rules:', error);
       } finally {
@@ -102,33 +89,6 @@ export function StatusExplainerModal() {
     
     fetchRules();
   }, [open]);
-  
-  // Get HYROX levels only (OPEN, PRO, ELITE)
-  const hyroxLevels = useMemo(() => {
-    return levelRules.filter(r => ['OPEN', 'PRO', 'ELITE'].includes(r.level_key))
-      .sort((a, b) => a.level_order - b.level_order);
-  }, [levelRules]);
-  
-  // Group jump rules by target level, sorted by level order (ascending)
-  const jumpRulesByLevel = useMemo(() => {
-    const grouped: Record<string, JumpRule[]> = {};
-    jumpRules.forEach(rule => {
-      if (!grouped[rule.target_level]) {
-        grouped[rule.target_level] = [];
-      }
-      grouped[rule.target_level].push(rule);
-    });
-    return grouped;
-  }, [jumpRules]);
-
-  // Get jump rule description
-  function getJumpRuleDescription(rule: JumpRule): string {
-    const isWildcard = rule.race_category === 'OPEN' && rule.target_level === 'PRO';
-    if (isWildcard) {
-      return `Top ${rule.rank_top_n} em prova OPEN (wildcard)`;
-    }
-    return `Top ${rule.rank_top_n} em prova ${rule.race_category}`;
-  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -147,7 +107,7 @@ export function StatusExplainerModal() {
         <SheetHeader className="pb-4 border-b border-border/50">
           <SheetTitle className="flex items-center gap-2 text-xl">
             <Zap className="w-5 h-5 text-primary" />
-            Como funciona seu Status?
+            Jornada OUTLIER
           </SheetTitle>
         </SheetHeader>
         
@@ -156,116 +116,146 @@ export function StatusExplainerModal() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <Tabs defaultValue="ruler" className="mt-4">
+          <Tabs defaultValue="jornada" className="mt-4">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="ruler" className="gap-2">
+              <TabsTrigger value="jornada" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
-                <span className="hidden sm:inline">O que faz a</span> Régua subir
+                Jornada
               </TabsTrigger>
-              <TabsTrigger value="hyrox" className="gap-2">
+              <TabsTrigger value="categoria" className="gap-2">
                 <Trophy className="w-4 h-4" />
-                Status HYROX
+                Categoria
               </TabsTrigger>
             </TabsList>
             
-            {/* TAB 1: O que faz a régua subir */}
-            <TabsContent value="ruler" className="overflow-y-auto h-[calc(85vh-160px)] pb-8">
+            {/* TAB 1: Jornada OUTLIER */}
+            <TabsContent value="jornada" className="overflow-y-auto h-[calc(85vh-160px)] pb-8">
               <div className="space-y-4 pt-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  A régua sobe com <strong>treinos registrados</strong> + <strong>benchmarks OUTLIER</strong>.
+                  Sua jornada avança com <strong>treinos concluídos</strong> e <strong>benchmarks OUTLIER</strong> realizados.
+                  O objetivo é conquistar o título <strong className="text-primary">ATLETA OUTLIER</strong> na sua categoria.
                 </p>
-                
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
-                  <p className="text-amber-300">
-                    ⚠️ Benchmarks são testes internos do OUTLIER. <strong>Não são a prova oficial.</strong>
-                  </p>
+
+                {/* How it works */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    Como a régua sobe
+                  </h3>
+                  
+                  <div className="grid gap-2">
+                    <div className="bg-secondary/30 rounded-lg p-3 text-sm flex items-start gap-3">
+                      <Dumbbell className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <strong>Treinos</strong>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Cada dia treinado conta como 1 sessão (máximo 1 por dia). 
+                          A contagem é <strong>permanente</strong> — não expira.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-secondary/30 rounded-lg p-3 text-sm flex items-start gap-3">
+                      <Target className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <strong>Benchmarks</strong>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Testes internos do OUTLIER. Cada benchmark único completado conta. 
+                          <strong className="text-amber-400"> Não são a prova oficial.</strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                {/* All levels accordion - ascending order */}
-                <div className="space-y-2">
-                  <Accordion type="single" collapsible defaultValue={currentLevelKey} className="space-y-2">
+
+                {/* Requirements per level */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Flag className="w-4 h-4 text-primary" />
+                    Requisitos por nível
+                  </h3>
+                  
+                  <div className="space-y-2">
                     {levelRules.map((rule) => {
                       const isCurrentLevel = rule.level_key === currentLevelKey;
                       const levelColor = LEVEL_COLORS[rule.level_key] || 'text-muted-foreground';
                       const levelBg = LEVEL_BG_COLORS[rule.level_key] || 'bg-secondary/30 border-border/50';
                       
                       return (
-                        <AccordionItem 
-                          key={rule.level_key} 
-                          value={rule.level_key}
-                          className={`border rounded-xl overflow-hidden ${levelBg} ${isCurrentLevel ? 'ring-2 ring-primary/50' : ''}`}
+                        <div
+                          key={rule.level_key}
+                          className={`border rounded-xl p-4 ${levelBg} ${isCurrentLevel ? 'ring-2 ring-primary/50' : ''}`}
                         >
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                            <div className="flex items-center gap-3 w-full">
-                              <Target className={`w-4 h-4 ${levelColor}`} />
-                              <span className={`font-semibold ${levelColor}`}>
-                                {rule.label}
-                              </span>
-                              {isCurrentLevel && (
-                                <Badge variant="outline" className="text-[10px] ml-auto mr-2 bg-primary/10 border-primary/30">
-                                  Seu nível
-                                </Badge>
-                              )}
+                          <div className="flex items-center gap-2 mb-3">
+                            <Crown className={`w-4 h-4 ${levelColor}`} />
+                            <span className={`font-bold ${levelColor}`}>
+                              OUTLIER {rule.level_key}
+                            </span>
+                            {isCurrentLevel && (
+                              <Badge variant="outline" className="text-[10px] ml-auto bg-primary/10 border-primary/30">
+                                Sua jornada
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Dumbbell className="w-3.5 h-3.5" />
+                              <span>{rule.training_min_sessions} treinos</span>
                             </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="space-y-3 pt-2 border-t border-border/30">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="flex items-center gap-2 text-muted-foreground">
-                                  <Dumbbell className="w-4 h-4" />
-                                  Treinos
-                                </span>
-                                <span className="font-semibold">
-                                  {rule.training_min_sessions} <span className="text-xs text-muted-foreground font-normal">em {rule.training_window_days} dias</span>
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="flex items-center gap-2 text-muted-foreground">
-                                  <Target className="w-4 h-4" />
-                                  Benchmarks
-                                </span>
-                                <span className="font-semibold">
-                                  {rule.benchmarks_required}
-                                </span>
-                              </div>
-                              
-                              {rule.official_race_required && (
-                                <div className="flex items-center justify-between text-sm pt-2 border-t border-border/20">
-                                  <span className="flex items-center gap-2 text-muted-foreground">
-                                    <Trophy className="w-4 h-4" />
-                                    Sem prova oficial
-                                  </span>
-                                  <span className="text-amber-400 font-semibold">
-                                    Cap em {rule.cap_without_official_race_percent}%
-                                  </span>
-                                </div>
-                              )}
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Target className="w-3.5 h-3.5" />
+                              <span>{rule.benchmarks_required} benchmarks</span>
                             </div>
-                          </AccordionContent>
-                        </AccordionItem>
+                          </div>
+
+                          {rule.level_key !== 'OPEN' && (
+                            <div className="mt-2 pt-2 border-t border-border/20 text-xs text-amber-400 flex items-center gap-1.5">
+                              <Trophy className="w-3.5 h-3.5" />
+                              Requer prova oficial na categoria {rule.level_key}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
-                  </Accordion>
+                  </div>
+                </div>
+
+                {/* Flow explanation */}
+                <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-2">
+                  <p className="font-semibold text-foreground flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary" />
+                    Fluxo de evolução
+                  </p>
+                  <div className="text-muted-foreground text-xs space-y-1">
+                    <p>1. Comece como <strong className="text-purple-400">OPEN</strong> e avance para <strong className="text-purple-400">OUTLIER OPEN</strong> completando treinos + benchmarks.</p>
+                    <p>2. Para subir de categoria (ex: OPEN → PRO), registre uma <strong className="text-amber-400">prova oficial</strong> com tempo compatível.</p>
+                    <p>3. Na nova categoria, complete os requisitos para se tornar <strong>OUTLIER</strong> nela.</p>
+                  </div>
                 </div>
                 
                 <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
-                  📊 <strong>Peso no cálculo:</strong> 60% treinos + 40% benchmarks
+                  📊 <strong>Cálculo:</strong> 50% treinos + 50% benchmarks (média simples)
                 </div>
               </div>
             </TabsContent>
             
-            {/* TAB 2: Status HYROX */}
-            <TabsContent value="hyrox" className="overflow-y-auto h-[calc(85vh-160px)] pb-8">
+            {/* TAB 2: Categoria */}
+            <TabsContent value="categoria" className="overflow-y-auto h-[calc(85vh-160px)] pb-8">
               <div className="space-y-4 pt-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Os níveis HYROX são definidos pela sua <strong>prova oficial</strong> e ranking na faixa de idade.
+                  Sua <strong>categoria</strong> é definida exclusivamente pelo seu tempo em <strong>prova oficial</strong> HYROX.
                 </p>
                 
-                {/* HYROX levels - ascending order: OPEN → PRO → ELITE */}
-                <div className="space-y-3">
-                  {hyroxLevels.map((level) => {
-                    const rules = jumpRulesByLevel[level.level_key] || [];
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
+                  <p className="text-amber-300">
+                    ⚠️ Sem prova oficial registrada, sua categoria é <strong>OPEN</strong>.
+                  </p>
+                </div>
+
+                {/* Category cards */}
+                <div className="space-y-2">
+                  {levelRules.map((level) => {
                     const levelColor = LEVEL_COLORS[level.level_key];
                     const levelBg = LEVEL_BG_COLORS[level.level_key];
                     const isCurrentLevel = level.level_key === currentLevelKey;
@@ -275,49 +265,53 @@ export function StatusExplainerModal() {
                         key={level.level_key}
                         className={`p-4 rounded-xl border ${levelBg} ${isCurrentLevel ? 'ring-2 ring-primary/50' : ''}`}
                       >
-                        <div className="flex items-center gap-3 mb-3">
-                          {level.level_key === 'ELITE' ? (
-                            <Crown className={`w-5 h-5 ${levelColor}`} />
-                          ) : (
-                            <Medal className={`w-5 h-5 ${levelColor}`} />
-                          )}
+                        <div className="flex items-center gap-3">
+                          <Crown className={`w-5 h-5 ${levelColor}`} />
                           <span className={`font-bold text-lg ${levelColor}`}>
-                            {level.label}
+                            {level.level_key}
                           </span>
                           {isCurrentLevel && (
                             <Badge variant="outline" className="text-[10px] ml-auto bg-primary/10 border-primary/30">
-                              Seu nível
+                              Sua categoria
                             </Badge>
                           )}
                         </div>
                         
-                        {rules.length > 0 ? (
-                          <ul className="space-y-2">
-                            {rules.map(rule => (
-                              <li key={rule.jump_key} className="text-sm text-muted-foreground flex items-center gap-2">
-                                <ChevronRight className="w-3 h-3 text-primary" />
-                                {getJumpRuleDescription(rule)}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            Nenhuma regra configurada.
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {level.level_key === 'OPEN' && 'Categoria inicial. Todos os atletas começam aqui.'}
+                          {level.level_key === 'PRO' && 'Requer prova oficial com tempo na faixa PRO.'}
+                          {level.level_key === 'ELITE' && 'Requer prova oficial com tempo na faixa ELITE.'}
+                        </p>
                       </div>
                     );
                   })}
                 </div>
                 
-                <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
-                  💡 <strong>Regra de ouro:</strong> Se mais de uma regra bater, vale sempre o <strong>nível mais alto</strong>.
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    Como mudar de categoria
+                  </h3>
+                  
+                  <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground space-y-2">
+                    <p className="flex items-start gap-2">
+                      <ChevronRight className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      Registre sua prova oficial na aba <strong>"Prova Alvo"</strong>.
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <ChevronRight className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      Seu tempo determina automaticamente se você é OPEN, PRO ou ELITE.
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <ChevronRight className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      A mudança de categoria <strong>não reseta</strong> seus treinos e benchmarks.
+                    </p>
+                  </div>
                 </div>
                 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm">
-                  <p className="text-blue-300">
-                    <strong>Sem prova oficial?</strong> Seu nível máximo é <strong>Avançado</strong>.
-                  </p>
+                <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
+                  💡 <strong>Importante:</strong> Jornada (treinos + benchmarks) e Categoria (prova) são <strong>independentes</strong>. 
+                  Você pode ser OUTLIER OPEN sem nunca ter feito uma prova oficial.
                 </div>
               </div>
             </TabsContent>
