@@ -1,28 +1,48 @@
 
+# Corrigir alinhamento da régua de progresso OPEN-PRO-ELITE
 
-## Plan: Wire ErrorBoundary to clearDraft() via useCoachDraft
+## Problema
+A barra de progresso ("filled track") no componente `LevelProgress` nao alcanca o no PRO mesmo quando o atleta ja e PRO por prova oficial.
 
-### What's Wrong
-The `ErrorBoundary` in `CoachSpreadsheetTab` currently does a **manual** `localStorage.removeItem(...)` instead of using `clearDraft()` from `useCoachDraft`. This means:
-- The React state inside `useCoachDraft` is NOT reset
-- If the ErrorBoundary recovers (re-renders without reload), the stale draft data persists in memory
+**Causa raiz:** Desalinhamento entre posicao visual dos nos e calculo do preenchimento.
 
-### Fix (2 files, minimal changes)
+- Os nos sao renderizados com `justify-between`, ficando em **0%, 50%, 100%** do track
+- O calculo `continuousPosition = (currentLevelIndex + overallProgress) / levelRules.length` produz **33%** para PRO (index 1, length 3)
+- Deveria produzir **50%** para alinhar com o no PRO
 
-#### 1. `src/components/CoachSpreadsheetTab.tsx`
-- Import `useCoachDraft` from `@/hooks/useCoachDraft`
-- Call `const { clearDraft } = useCoachDraft();` inside the component
-- Replace the inline `onClearDraft` lambda (lines 401-405) with `onClearDraft={clearDraft}`
-- This ensures the same `coachId`-scoped cleanup runs (both localStorage removal AND state reset), since both `CoachSpreadsheetTab` and `TextModelImporter` get `coachId` from the same `useAuth()` hook
+## Solucao
 
-#### 2. `src/components/ui/ErrorBoundary.tsx`
-- No changes needed -- the existing `onClearDraft` prop name works fine, since the important thing is what function is passed, not the prop name
-- `handleClearAndReload` already calls `this.props.onClearDraft?.()` and then resets `hasError` state, which is correct behavior
+### Arquivo: `src/hooks/useJourneyProgress.ts`
 
-### Why This Works
-- `useCoachDraft` internally uses `useAuth().profile.id` as `coachId`
-- `TextModelImporter` also calls `useCoachDraft()` which reads the same `coachId`
-- So `clearDraft()` from either location targets the same localStorage key: `outlier:coachDraft:{coachId}`
-- After `clearDraft()`: localStorage key is removed AND React state is set to `getEmptyDraft()`
-- When ErrorBoundary resets `hasError`, TextModelImporter re-mounts and `useCoachDraft` hydrates from localStorage (now empty) -- clean slate
+Alterar a formula de `continuousPosition` (linha 322) de:
 
+```
+(currentLevelIndex + overallProgress) / levelRules.length
+```
+
+Para:
+
+```
+(currentLevelIndex + overallProgress) / (levelRules.length - 1)
+```
+
+Isso mapeia corretamente:
+- OPEN (index 0) com 0% progresso = **0%** (alinha com no OPEN)
+- PRO (index 1) com 0% progresso = **50%** (alinha com no PRO)  
+- ELITE (index 2) com 0% progresso = **100%** (alinha com no ELITE)
+
+E para progresso parcial dentro de um nivel:
+- OPEN com 50% progresso = **25%** (metade do caminho OPEN-PRO)
+- PRO com 50% progresso = **75%** (metade do caminho PRO-ELITE)
+
+### Ajuste complementar
+
+Garantir que `fillPercentage` tenha cap em 100 no `LevelProgress.tsx` (ja existe `Math.max(2, rawFill)` mas precisamos confirmar o teto).
+
+## Arquivos alterados
+1. `src/hooks/useJourneyProgress.ts` — corrigir formula `continuousPosition`
+
+## O que NAO muda
+- Logica de jornada, categoria, requisitos
+- Visual dos nos, cards, animacoes
+- Nenhum outro componente
