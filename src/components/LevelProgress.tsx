@@ -259,7 +259,7 @@ export function LevelProgress() {
   const rawFill = journeyProgress.continuousPosition * 100;
   const fillPercentage = journeyProgress.loading 
     ? 0 
-    : (rawFill > 0 ? Math.max(2, rawFill) : 0);
+    : (rawFill > 0 ? Math.min(100, Math.max(2, rawFill)) : 0);
 
   return (
     <div className="space-y-6">

@@ -319,7 +319,9 @@ export function useJourneyProgress(): JourneyPosition {
     if (provaNecessaria) missingRequirements.push(`Prova oficial ${targetLevelKey}`);
     
     // Continuous position for ruler
-    const continuousPosition = (currentLevelIndex + overallProgress) / levelRules.length;
+    const continuousPosition = levelRules.length > 1
+      ? (currentLevelIndex + overallProgress) / (levelRules.length - 1)
+      : 0;
     
     const targetLevel: TargetLevelProgress = {
       levelKey: targetLevelKey,
