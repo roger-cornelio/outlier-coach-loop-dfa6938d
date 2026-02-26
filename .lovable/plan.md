@@ -1,58 +1,52 @@
 
 
-# Mostrar Dashboard Completo Sem Prova Oficial
+## Plan: Hardening "Validar texto" Against Crashes
 
-## Problema
-Quando o atleta nao tem prova oficial registrada (`hasData = false`), o dashboard mostra apenas um card vazio "PERFIL DE PERFORMANCE" com a mensagem "Lance seu primeiro simulado..." e o botao "BORA TREINAR". Todos os blocos de jornada, regua, checklist de requisitos e prioridades ficam ocultos.
+### Problem
+The "Validar texto" button in the coach panel causes a gray screen (React crash). The existing `try/catch` in `handleParse` only protects the parsing phase, but crashes can also occur:
+1. **During rendering** after `patchDraft` sets state (e.g., accessing `.blocks` on malformed data)
+2. **Inside `parseStructuredText`** (3500+ line parser) throwing unhandled exceptions
+3. **Excessive `console.log` in render loops** (`[RENDER_CHECK]` runs on every block every render)
+4. **No timeout protection** for slow/hanging regex in the parser
 
-## Solucao
-Remover o early return do estado vazio no `DiagnosticRadarBlock` e, em vez disso, renderizar o dashboard completo com:
-- Regua de jornada zerada (0%)
-- Checklist de requisitos (treinos, benchmarks, prova)
-- Mensagem contextual: "Registre uma prova oficial para medirmos seu resultado"
-- CTA "BORA TREINAR" sempre visivel
-- Blocos que dependem de dados de performance (radar, gargalos, prioridades) mostram estado vazio compacto ou sao omitidos
+### Changes
 
-## Mudancas Tecnicas
+#### 1. Add React Error Boundary around TextModelImporter
+- Create a lightweight `ErrorBoundary` component that catches render-phase crashes
+- Wrap `TextModelImporter` in this boundary inside `CoachSpreadsheetTab.tsx`
+- On crash: show a recovery UI with "Limpar rascunho" and "Recarregar" buttons instead of gray screen
+- This is the **root fix** -- even if parsing succeeds but rendering crashes, the user sees a friendly fallback
 
-### Arquivo: `src/components/DiagnosticRadarBlock.tsx`
+#### 2. Line-by-line crash isolation in handleParse
+- Wrap `parseStructuredText` call inside a secondary try/catch that catches parser-internal errors
+- Add line-number detection: if the parser throws, scan the error stack/message for line info and surface it
+- Add the structured logging requested: `VALIDATE_START`, `VALIDATE_SUCCESS`, `VALIDATE_CRASH`
 
-**1. Substituir o early return `!hasData` (linhas 1011-1039)**
+#### 3. Parser timeout protection
+- Wrap the `parseStructuredText` call in a `Promise.race` with a 3-second timeout
+- Make `handleParse` async
+- On timeout: show "Parser demorou demais. Tente reduzir o texto." as a UI error
 
-Em vez de retornar apenas o card vazio + CTA, renderizar o layout mobile/desktop completo. Os sub-blocos que dependem de `scores` (radar, gargalos, prioridades) ja tratam arrays vazios internamente.
+#### 4. Remove excessive render-phase console.logs
+- Remove or gate `[RENDER_CHECK]` and `[RENDER_BLOCK]` logs behind a debug flag (they fire on every render for every block, potentially hundreds of times)
+- Keep only error-level logs in render
 
-Para o **mobile** (`isMobile && !advancedMode`):
-- Manter `MobilePathToEliteCard` (ja funciona com dados zerados -- mostra regua 0%, checklist de requisitos)
-- Substituir a area de "Ultima prova / Meta" por um card informativo: "Registre uma prova oficial para medirmos seu resultado"
-- Omitir `TrainingPrioritiesBlock` e `MobileBottlenecksBlock` (precisam de scores)
-- Omitir `MobileNextStepBlock` (precisa de scores)
-- Manter `MobilePhysiologicalModal` omitido (sem dados)
-- Manter CTA "BORA TREINAR"
+#### 5. Defensive rendering guards
+- In the edit-mode render (line 992), add null checks: `parseResult.days?.map(...)` and guard each `day.blocks?.map(...)` 
+- In `previewValidation` IIFE, add try/catch to prevent render crash from validation logic
 
-Para o **desktop/advanced**:
-- Renderizar o header com nome + categoria OPEN
-- Mostrar a regua de jornada zerada
-- Mostrar checklist de requisitos
-- Onde seria o radar/analise, mostrar card compacto com mensagem de registrar prova
-- Manter CTA
+#### 6. Show error in UI
+- When `parseResult` has errors or `structureIssues` with severity ERROR, display a red banner at the top of the import screen with the error message
+- The banner already exists for preview validation errors; extend it to also show parse-phase errors
 
-**2. Remover o bloco `if (!hasData) { return ... }` por completo**
+### Technical Details
 
-Mover a logica de `hasData` para dentro dos sub-componentes. Os que dependem de scores ja checam `scores.length === 0` e retornam null. O layout principal sempre renderiza.
+**Files to modify:**
+- `src/components/TextModelImporter.tsx` -- async handleParse, timeout, defensive rendering, reduce logs
+- `src/components/CoachSpreadsheetTab.tsx` -- wrap TextModelImporter in ErrorBoundary
+- **New file:** `src/components/ui/ErrorBoundary.tsx` -- React class component error boundary
 
-**3. Adicionar card informativo para estado sem prova**
-
-Criar um pequeno componente inline `NoRaceInfoCard` que exibe:
-```
-Registre uma prova oficial para medirmos seu resultado
-```
-Com icone de Trophy e link/botao para a pagina /prova-alvo.
-
-### Comportamento resultante
-
-| Cenario | Regua | Checklist | Radar/Gargalos | CTA |
-|---------|-------|-----------|----------------|-----|
-| Sem prova, sem treinos | 0% OPEN->PRO | 0/120, 0/3, X prova | Card "Registre prova" | BORA TREINAR |
-| Com treinos, sem prova | X% OPEN->PRO | N/120, M/3, X prova | Card "Registre prova" | BORA TREINAR |
-| Com prova | Calculado | Calculado | Radar completo | BORA TREINAR |
+**Files NOT modified:**
+- `src/utils/structuredTextParser.ts` -- no changes to the parser itself (too risky, 3500 lines)
+- `src/utils/dslParser.ts` -- no changes needed
 
