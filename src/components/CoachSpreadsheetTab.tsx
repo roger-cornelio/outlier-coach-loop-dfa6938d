@@ -27,6 +27,7 @@ import { PublishToAthletesModal } from './PublishToAthletesModal';
 import { WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { getBlockDisplayTitle, getBlockCategoryLabel, normalizeRestLineForDisplay } from '@/utils/blockDisplayUtils';
@@ -395,6 +396,15 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
 
       {/* ABA TEXTO MODELO */}
       <TabsContent value="import" className="space-y-6">
+        <ErrorBoundary
+          fallbackTitle="Erro no editor de treino"
+          onClearDraft={() => {
+            try {
+              const keys = Object.keys(localStorage).filter(k => k.startsWith('outlier:coachDraft:'));
+              keys.forEach(k => localStorage.removeItem(k));
+            } catch {}
+          }}
+        >
         <TextModelImporter
           isSaving={isSavingToDb}
           initialWorkout={initialWorkout}
@@ -422,6 +432,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
             }
           }}
         />
+        </ErrorBoundary>
 
       {/* Errors/Success */}
       <AnimatePresence>
