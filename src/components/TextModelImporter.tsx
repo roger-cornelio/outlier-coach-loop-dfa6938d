@@ -214,154 +214,157 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
 
-    // (1) NO INPUT (Textarea) — fonte de verdade
-    console.log("[RAW_TEXT_TAG_COUNTS]", {
-      treino: (textareaValue.match(/\[TREINO\]/gi) || []).length,
-      comentario: (textareaValue.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
-    });
-    console.log("[RAW_TEXT_FIRST_300]", textareaValue.slice(0, 300));
-    console.log(
-      "[RAW_TEXT_HAS_FENCE_MARKERS]",
-      /\[TREINO\]|\[COMENT[ÁA]RIO\]/i.test(textareaValue)
-    );
+    try {
+      // (1) NO INPUT (Textarea) — fonte de verdade
+      console.log("[RAW_TEXT_TAG_COUNTS]", {
+        treino: (textareaValue.match(/\[TREINO\]/gi) || []).length,
+        comentario: (textareaValue.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+      });
+      console.log("[RAW_TEXT_FIRST_300]", textareaValue.slice(0, 300));
+      console.log(
+        "[RAW_TEXT_HAS_FENCE_MARKERS]",
+        /\[TREINO\]|\[COMENT[ÁA]RIO\]/i.test(textareaValue)
+      );
 
-    // (2) TEXTO PARA PARSE — logo ANTES de parseStructuredText(...)
-    const textForParse = textareaValue;
-    console.log("[TEXT_FOR_PARSE_TAG_COUNTS]", {
-      treino: (textForParse.match(/\[TREINO\]/gi) || []).length,
-      comentario: (textForParse.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
-    });
-    console.log("[TEXT_FOR_PARSE_DIFF_HINT]", textareaValue !== textForParse);
+      // (2) TEXTO PARA PARSE — logo ANTES de parseStructuredText(...)
+      const textForParse = textareaValue;
+      console.log("[TEXT_FOR_PARSE_TAG_COUNTS]", {
+        treino: (textForParse.match(/\[TREINO\]/gi) || []).length,
+        comentario: (textForParse.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
+      });
+      console.log("[TEXT_FOR_PARSE_DIFF_HINT]", textareaValue !== textForParse);
 
-    const dayValidation = validateDayAnchors(textareaValue);
-    const inputValidation = validateCoachInput(textareaValue);
-    const daysDetected = dayValidation.daysFound.length;
+      const dayValidation = validateDayAnchors(textareaValue);
+      const inputValidation = validateCoachInput(textareaValue);
+      const daysDetected = dayValidation.daysFound.length;
 
-    // Parse o texto
-    const result = parseStructuredText(textForParse);
+      // Parse o texto
+      const result = parseStructuredText(textForParse);
 
-    // (A) [DIAG_PARSE_RESULT] — shape do resultado do parse
-    console.log("[DIAG_PARSE_RESULT]", {
-      success: result?.success,
-      totalDays: result?.days?.length,
-      daysCount: result?.days?.length,
-      day0_blocks: result?.days?.[0]?.blocks?.length,
-      day0_block0_keys: result?.days?.[0]?.blocks?.[0]
-        ? Object.keys(result.days[0].blocks[0] as any)
-        : null,
-    });
-    
-    // Se não detectou dias, assumir SEGUNDA
-    if (daysDetected === 0 && (result.days.length === 0 || result.days.every(d => d.blocks.length === 0))) {
-      result.days = [{
-        day: 'seg' as DayOfWeek,
-        blocks: [{
-          title: 'Treino',
-          type: '' as any,
-          format: '',
-          isMainWod: false,
-          isBenchmark: false,
-          optional: false,
-          items: [],
-          lines: rawText.split('\n').filter(line => line.trim()).map((line, idx) => ({
-            id: `fallback-${idx}`,
-            text: line.trim(),
-            type: 'comment' as const,
-          })),
-          coachNotes: [],
-          instructions: [],
-          isAutoGenTitle: true,
-        }],
-        alerts: [],
-      }];
-      result.success = true;
-      result.warnings.push('Não encontramos os dias. Você pode ajustar abaixo.');
-    }
-    
-    // Aplicar issues de estrutura
-    if (inputValidation.issues && inputValidation.issues.length > 0) {
-      result.structureIssues = inputValidation.issues;
-    }
-    
-    result.needsDaySelection = false;
+      // (A) [DIAG_PARSE_RESULT] — shape do resultado do parse
+      console.log("[DIAG_PARSE_RESULT]", {
+        success: result?.success,
+        totalDays: result?.days?.length,
+        daysCount: result?.days?.length,
+        day0_blocks: result?.days?.[0]?.blocks?.length,
+        day0_block0_keys: result?.days?.[0]?.blocks?.[0]
+          ? Object.keys(result.days[0].blocks[0] as any)
+          : null,
+      });
+      
+      // Se não detectou dias, assumir SEGUNDA
+      if (daysDetected === 0 && (result.days.length === 0 || result.days.every(d => d.blocks.length === 0))) {
+        result.days = [{
+          day: 'seg' as DayOfWeek,
+          blocks: [{
+            title: 'Treino',
+            type: '' as any,
+            format: '',
+            isMainWod: false,
+            isBenchmark: false,
+            optional: false,
+            items: [],
+            lines: rawText.split('\n').filter(line => line.trim()).map((line, idx) => ({
+              id: `fallback-${idx}`,
+              text: line.trim(),
+              type: 'comment' as const,
+            })),
+            coachNotes: [],
+            instructions: [],
+            isAutoGenTitle: true,
+          }],
+          alerts: [],
+        }];
+        result.success = true;
+        result.warnings.push('Não encontramos os dias. Você pode ajustar abaixo.');
+      }
+      
+      // Aplicar issues de estrutura
+      if (inputValidation.issues && inputValidation.issues.length > 0) {
+        result.structureIssues = inputValidation.issues;
+      }
+      
+      result.needsDaySelection = false;
 
-    // Converter para DayWorkout[] (fonte única para Preview/Publicar/Atleta)
-    // REGRA MVP0:
-    // - content = APENAS treino executável (sem comentários)
-    // - coachNotes = comentários (fonte única)
-    // - lines = linhas já parseadas (para render sem reparse)
-    const workouts: DayWorkout[] = result.days.map((day) => ({
-      day: (day.day || 'seg') as DayOfWeek,
-      stimulus: '',
-      estimatedTime: 60,
-      isRestDay: day.isRestDay || false,
-      blocks: day.blocks.map((block, idx) => {
-        const parsedLines = block.lines || [];
+      // Converter para DayWorkout[] (fonte única para Preview/Publicar/Atleta)
+      const workouts: DayWorkout[] = result.days.map((day) => ({
+        day: (day.day || 'seg') as DayOfWeek,
+        stimulus: '',
+        estimatedTime: 60,
+        isRestDay: day.isRestDay || false,
+        blocks: day.blocks.map((block, idx) => {
+          const parsedLines = block.lines || [];
 
-        // Linhas de treino (inclui estruturas **...** e exercícios)
-        const trainingLines = parsedLines
-          .filter(l => l.type !== 'comment')
-          .map(l => (l.text || '').trim())
-          .filter(Boolean);
+          const trainingLines = parsedLines
+            .filter(l => l.type !== 'comment')
+            .map(l => (l.text || '').trim())
+            .filter(Boolean);
 
-        // Comentários (linhas puramente comment)
-        const commentLines = parsedLines
-          .filter(l => l.type === 'comment')
-          .map(l => (l.text || '').trim())
-          .filter(Boolean);
+          const commentLines = parsedLines
+            .filter(l => l.type === 'comment')
+            .map(l => (l.text || '').trim())
+            .filter(Boolean);
 
-        // FONTE ÚNICA: coachNotes do parse, com fallback para comments
-        const coachNotes = (Array.isArray(block.coachNotes) && block.coachNotes.length > 0)
-          ? block.coachNotes
-          : commentLines;
+          const coachNotes = (Array.isArray(block.coachNotes) && block.coachNotes.length > 0)
+            ? block.coachNotes
+            : commentLines;
 
-        return {
-          id: `${day.day || 'new'}-${idx}-${Date.now()}`,
-          type: block.type,
-          title: block.title,
-          // content: apenas treino (sem tags, sem comentários)
-          content: trainingLines.join('\n'),
-          // lines: para renderização sem reparse (Preview/Publicação/Atleta)
-          lines: trainingLines.length > 0 ? trainingLines : undefined,
-          coachNotes: coachNotes.length > 0 ? coachNotes : undefined,
-          isMainWod: block.isMainWod || undefined,
-          isBenchmark: block.isBenchmark || undefined,
-        };
-      }),
-    }));
+          return {
+            id: `${day.day || 'new'}-${idx}-${Date.now()}`,
+            type: block.type,
+            title: block.title,
+            content: trainingLines.join('\n'),
+            lines: trainingLines.length > 0 ? trainingLines : undefined,
+            coachNotes: coachNotes.length > 0 ? coachNotes : undefined,
+            isMainWod: block.isMainWod || undefined,
+            isBenchmark: block.isBenchmark || undefined,
+          };
+        }),
+      }));
 
-    // (B) [DIAG_STATE_BEFORE_SET] / [DIAG_STATE_AFTER_SET]
-    console.log("[DIAG_STATE_BEFORE_SET]", summarizeDraft(draft));
-    console.log("[DIAG_STATE_AFTER_SET]", summarizeDraft({
-      ...draft,
-      parseResult: result,
-      parsedDays: workouts,
-      editedDays: null,
-      restDays: {},
-    }));
-    
-    console.debug('[TextModelImporter] handleParse → days=', result.days.length);
-    
-    // Log de resultado da validação
-    console.log('[VALIDATE_RESULT] success=' + result.success);
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // REGRA MVP0: Validar texto → ir DIRETO para EDIT
-    // CRITICAL: setParsedResult + goToEdit devem ser uma ÚNICA chamada patchDraft
-    // para evitar race condition onde o segundo patchDraft sobrescreve o primeiro.
-    // ═══════════════════════════════════════════════════════════════════════════
-    if (result.success && result.days.length > 0) {
-      console.log('[MODE_CHANGE] import → edit (reason=validate_success)');
-      patchDraft({
+      console.log("[DIAG_STATE_BEFORE_SET]", summarizeDraft(draft));
+      console.log("[DIAG_STATE_AFTER_SET]", summarizeDraft({
+        ...draft,
         parseResult: result,
         parsedDays: workouts,
         editedDays: null,
         restDays: {},
-        mode: 'edit',
-      });
-    } else {
-      // Parse falhou - salvar resultado para mostrar erros, sem mudar de tela
-      setParsedResult(result, workouts);
+      }));
+      
+      console.debug('[TextModelImporter] handleParse → days=', result.days.length);
+      console.log('[VALIDATE_RESULT] success=' + result.success);
+      
+      if (result.success && result.days.length > 0) {
+        console.log('[MODE_CHANGE] import → edit (reason=validate_success)');
+        patchDraft({
+          parseResult: result,
+          parsedDays: workouts,
+          editedDays: null,
+          restDays: {},
+          mode: 'edit',
+        });
+      } else {
+        setParsedResult(result, workouts);
+      }
+    } catch (err) {
+      console.error('[VALIDATE_CRASH] handleParse threw:', err);
+      // Mostrar erro sem crashar a UI
+      const fallbackResult = {
+        success: false,
+        days: [],
+        structureIssues: [{
+          severity: 'ERROR' as const,
+          message: `Erro interno ao validar texto: ${err instanceof Error ? err.message : String(err)}`,
+          dayIndex: undefined,
+          blockIndex: undefined,
+        }],
+        rawText: textareaValue,
+        warnings: [],
+        errors: [`Erro interno: ${err instanceof Error ? err.message : String(err)}`],
+        alerts: [],
+        needsDaySelection: false,
+      } as ParseResult;
+      setParsedResult(fallbackResult, []);
     }
   };
 
