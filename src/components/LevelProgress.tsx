@@ -74,80 +74,140 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
-// Heraldic shield SVG shapes per level
+// Heraldic shield SVG shapes per level — premium design with depth, details and texture
 function ShieldCrest({ level, active, className }: { level: ExtendedLevelKey; active: boolean; className?: string }) {
-  const configs: Record<ExtendedLevelKey, { path: string; inner: React.ReactNode; gradient: [string, string] }> = {
-    OPEN: {
-      // Classic pointed shield
-      path: 'M50 2 L95 20 L95 55 Q95 85 50 98 Q5 85 5 55 L5 20 Z',
-      inner: (
-        <g>
-          <path d="M50 30 L58 46 L76 46 L62 56 L67 72 L50 62 L33 72 L38 56 L24 46 L42 46 Z" 
-            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.9 : 0.3} />
-        </g>
-      ),
-      gradient: ['#a855f7', '#7c3aed'],
-    },
-    PRO: {
-      // Ornate shield with top crest
-      path: 'M50 0 L55 8 L65 4 L62 14 L72 14 L66 22 L78 26 L95 30 L95 58 Q95 85 50 98 Q5 85 5 58 L5 30 L22 26 L34 22 L28 14 L38 14 L35 4 L45 8 Z',
-      inner: (
-        <g>
-          <path d="M38 40 L50 32 L62 40 L62 60 L50 68 L38 60 Z" 
-            fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2" opacity={active ? 0.9 : 0.3} />
-          <path d="M50 44 L54 50 L50 56 L46 50 Z" 
-            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.8 : 0.2} />
-        </g>
-      ),
-      gradient: ['#f59e0b', '#d97706'],
-    },
-    ELITE: {
-      // Royal shield with crown top
-      path: 'M30 0 L34 10 L42 6 L44 14 L50 8 L56 14 L58 6 L66 10 L70 0 L80 8 L95 22 L95 58 Q95 88 50 98 Q5 88 5 58 L5 22 L20 8 Z',
-      inner: (
-        <g>
-          {/* Crown */}
-          <path d="M35 34 L40 42 L45 36 L50 44 L55 36 L60 42 L65 34 L65 46 L35 46 Z" 
-            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.9 : 0.3} />
-          {/* Diamond below */}
-          <path d="M50 50 L58 58 L50 70 L42 58 Z" 
-            fill={active ? 'white' : 'currentColor'} opacity={active ? 0.7 : 0.2} />
-        </g>
-      ),
-      gradient: ['#facc15', '#eab308'],
-    },
-  };
+  const id = `shield-${level}-${active ? 'on' : 'off'}`;
 
-  const c = configs[level];
-  const id = `shield-grad-${level}`;
+  if (level === 'OPEN') {
+    return (
+      <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={active ? '#c084fc' : '#888'} stopOpacity={active ? 1 : 0.12} />
+            <stop offset="100%" stopColor={active ? '#7c3aed' : '#666'} stopOpacity={active ? 0.9 : 0.06} />
+          </linearGradient>
+          <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={active ? '#e9d5ff' : '#aaa'} stopOpacity={active ? 0.5 : 0.08} />
+            <stop offset="100%" stopColor={active ? '#a855f7' : '#888'} stopOpacity={active ? 0.3 : 0.04} />
+          </linearGradient>
+          {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
+        </defs>
+        {/* Shield body — classic kite shape */}
+        <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z" 
+          fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.04)'} strokeWidth="2"
+          filter={active ? `url(#${id}-glow)` : undefined} />
+        {/* Inner border */}
+        <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
+          fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
+        {/* Inner panel */}
+        <path d="M50 20 L76 33 L76 56 Q76 81 50 98 Q24 81 24 56 L24 33 Z"
+          fill={`url(#${id}-inner)`} />
+        {/* Star emblem */}
+        <path d="M50 36 L54.5 48 L67 48 L57 56 L61 68 L50 60 L39 68 L43 56 L33 48 L45.5 48 Z" 
+          fill={active ? 'white' : '#999'} opacity={active ? 0.85 : 0.15}
+          stroke={active ? 'rgba(255,255,255,0.4)' : 'none'} strokeWidth="0.5" />
+        {/* Horizontal divider lines */}
+        <line x1="30" y1="78" x2="70" y2="78" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="0.8" />
+        <line x1="35" y1="84" x2="65" y2="84" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.6" />
+      </svg>
+    );
+  }
 
+  if (level === 'PRO') {
+    return (
+      <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stopColor={active ? '#fbbf24' : '#888'} stopOpacity={active ? 1 : 0.12} />
+            <stop offset="50%" stopColor={active ? '#f59e0b' : '#777'} stopOpacity={active ? 0.95 : 0.08} />
+            <stop offset="100%" stopColor={active ? '#b45309' : '#666'} stopOpacity={active ? 0.85 : 0.06} />
+          </linearGradient>
+          <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={active ? '#fef3c7' : '#aaa'} stopOpacity={active ? 0.4 : 0.06} />
+            <stop offset="100%" stopColor={active ? '#d97706' : '#888'} stopOpacity={active ? 0.25 : 0.03} />
+          </linearGradient>
+          {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
+        </defs>
+        {/* Wings / flourish at top */}
+        <path d="M50 12 L62 6 L58 16 L72 10 L66 22 L80 20 L72 28 L50 24 L28 28 L20 20 L34 22 L28 10 L42 16 L38 6 Z"
+          fill={active ? '#f59e0b' : '#888'} opacity={active ? 0.5 : 0.06} />
+        {/* Shield body */}
+        <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
+          fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.04)'} strokeWidth="2"
+          filter={active ? `url(#${id}-glow)` : undefined} />
+        {/* Inner border */}
+        <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
+          fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1.2" />
+        {/* Inner panel */}
+        <path d="M50 24 L74 37 L74 58 Q74 82 50 98 Q26 82 26 58 L26 37 Z"
+          fill={`url(#${id}-inner)`} />
+        {/* Hexagonal emblem */}
+        <path d="M50 36 L62 43 L62 57 L50 64 L38 57 L38 43 Z"
+          fill="none" stroke={active ? 'white' : '#999'} strokeWidth="1.8" opacity={active ? 0.7 : 0.12} />
+        {/* Diamond core */}
+        <path d="M50 42 L56 50 L50 58 L44 50 Z"
+          fill={active ? 'white' : '#999'} opacity={active ? 0.8 : 0.1} />
+        {/* Side bars */}
+        <line x1="32" y1="72" x2="68" y2="72" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
+        <line x1="36" y1="80" x2="64" y2="80" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.7" />
+        {/* Corner dots */}
+        <circle cx="30" cy="42" r="2" fill={active ? 'white' : '#999'} opacity={active ? 0.3 : 0.05} />
+        <circle cx="70" cy="42" r="2" fill={active ? 'white' : '#999'} opacity={active ? 0.3 : 0.05} />
+      </svg>
+    );
+  }
+
+  // ELITE
   return (
-    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={active ? c.gradient[0] : 'hsl(var(--muted-foreground))'} stopOpacity={active ? 1 : 0.15} />
-          <stop offset="100%" stopColor={active ? c.gradient[1] : 'hsl(var(--muted-foreground))'} stopOpacity={active ? 0.8 : 0.08} />
+        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor={active ? '#fde047' : '#888'} stopOpacity={active ? 1 : 0.12} />
+          <stop offset="40%" stopColor={active ? '#facc15' : '#777'} stopOpacity={active ? 0.95 : 0.08} />
+          <stop offset="100%" stopColor={active ? '#a16207' : '#666'} stopOpacity={active ? 0.8 : 0.06} />
         </linearGradient>
-        {active && (
-          <filter id={`glow-${level}`}>
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        )}
+        <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={active ? '#fefce8' : '#aaa'} stopOpacity={active ? 0.45 : 0.06} />
+          <stop offset="100%" stopColor={active ? '#ca8a04' : '#888'} stopOpacity={active ? 0.2 : 0.03} />
+        </linearGradient>
+        <linearGradient id={`${id}-crown`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={active ? '#fef9c3' : '#aaa'} stopOpacity={active ? 0.9 : 0.1} />
+          <stop offset="100%" stopColor={active ? '#eab308' : '#888'} stopOpacity={active ? 0.7 : 0.06} />
+        </linearGradient>
+        {active && <filter id={`${id}-glow`}><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>}
       </defs>
-      {/* Shield shape */}
-      <path 
-        d={c.path} 
-        fill={`url(#${id})`} 
-        stroke={active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.05)'}
-        strokeWidth="1.5"
-        filter={active ? `url(#glow-${level})` : undefined}
-      />
-      {/* Inner emblem */}
-      {c.inner}
+      {/* Crown atop the shield */}
+      <path d="M28 18 L34 8 L40 16 L46 4 L50 0 L54 4 L60 16 L66 8 L72 18 L72 28 L28 28 Z"
+        fill={`url(#${id}-crown)`} stroke={active ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
+      {/* Crown jewels */}
+      <circle cx="40" cy="20" r="2.5" fill={active ? '#fff' : '#999'} opacity={active ? 0.6 : 0.08} />
+      <circle cx="50" cy="16" r="3" fill={active ? '#fff' : '#999'} opacity={active ? 0.7 : 0.08} />
+      <circle cx="60" cy="20" r="2.5" fill={active ? '#fff' : '#999'} opacity={active ? 0.6 : 0.08} />
+      {/* Shield body */}
+      <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
+        fill={`url(#${id}-bg)`} stroke={active ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.04)'} strokeWidth="2.5"
+        filter={active ? `url(#${id}-glow)` : undefined} />
+      {/* Double inner border */}
+      <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
+        fill="none" stroke={active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.03)'} strokeWidth="1.5" />
+      <path d="M50 32 L76 42 L76 60 Q76 84 50 98 Q24 84 24 60 L24 42 Z"
+        fill={`url(#${id}-inner)`} stroke={active ? 'rgba(255,255,255,0.1)' : 'none'} strokeWidth="0.8" />
+      {/* Central eagle/phoenix silhouette */}
+      <g opacity={active ? 0.85 : 0.1} transform="translate(50,62) scale(0.9)">
+        {/* Wings spread */}
+        <path d="M0 -14 L-18 -6 L-22 2 L-14 0 L-8 4 L0 -4 L8 4 L14 0 L22 2 L18 -6 Z"
+          fill={active ? 'white' : '#999'} />
+        {/* Body */}
+        <path d="M-4 -4 L0 -10 L4 -4 L4 8 L0 14 L-4 8 Z"
+          fill={active ? 'white' : '#999'} opacity="0.9" />
+        {/* Tail feathers */}
+        <path d="M-6 10 L0 18 L6 10" fill="none" stroke={active ? 'white' : '#999'} strokeWidth="1.2" opacity="0.6" />
+      </g>
+      {/* Bottom divider */}
+      <line x1="32" y1="86" x2="68" y2="86" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)'} strokeWidth="1" />
+      {/* Corner laurels */}
+      <path d="M20 50 Q14 56 18 64" fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="1.5" />
+      <path d="M80 50 Q86 56 82 64" fill="none" stroke={active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="1.5" />
     </svg>
   );
 }
