@@ -550,11 +550,8 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
                             
                             // REGRA: Se não tem linhas executáveis, NÃO renderiza como bloco
                             if (exerciseLines.length === 0) {
-                              console.log(`[RENDER_BLOCK] CoachSpreadsheet title="${block.title}" rendered=false (sem linhas executáveis)`);
                               return null;
                             }
-                            
-                            console.log(`[RENDER_BLOCK] CoachSpreadsheet title="${block.title}" rendered=true`);
                             
                             return (
                             <div key={block.id} className={`p-3 rounded-lg border ${

@@ -143,6 +143,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   }
 
   // Estados locais (UI only)
+  const [isParsing, setIsParsing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [expandedDayForScroll, setExpandedDayForScroll] = useState<string | null>(null);
@@ -209,15 +210,20 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   // ═══════════════════════════════════════════════════════════════════════════
   
   const handleParse = async () => {
-    console.log('[VALIDATE_START]', {
-      textLength: rawText.trim().length,
-      lines: rawText.trim().split('\n').length,
-    });
-    
+    if (isParsing) return; // prevent double-click
+
     const textareaValue = rawText.trim();
     if (!textareaValue) return;
 
+    console.log('[VALIDATE_UI_LOCK_START]');
+    setIsParsing(true);
+
     try {
+      console.log('[VALIDATE_START]', {
+        textLength: textareaValue.length,
+        lines: textareaValue.split('\n').length,
+      });
+
       // (1) NO INPUT (Textarea) — fonte de verdade
       console.log("[RAW_TEXT_TAG_COUNTS]", {
         treino: (textareaValue.match(/\[TREINO\]/gi) || []).length,
@@ -241,11 +247,14 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const inputValidation = validateCoachInput(textareaValue);
       const daysDetected = dayValidation.daysFound.length;
 
-      // Parse o texto com timeout de 3s
+      // Parse com timeout de 3s — parser roda em macrotask (setTimeout 0)
+      // para que o Promise.race timeout realmente funcione com parser síncrono
       let result: ParseResult;
       try {
         result = await Promise.race([
-          Promise.resolve(parseStructuredText(textForParse)),
+          new Promise<ParseResult>((resolve) =>
+            setTimeout(() => resolve(parseStructuredText(textForParse)), 0)
+          ),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Parser timeout: demorou mais de 3s. Tente reduzir o texto.')), 3000)
           ),
@@ -396,6 +405,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
         needsDaySelection: false,
       } as ParseResult;
       setParsedResult(fallbackResult, []);
+    } finally {
+      setIsParsing(false);
+      console.log('[VALIDATE_UI_LOCK_END]');
     }
   };
 
@@ -840,11 +852,15 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             <div className="flex gap-2 flex-wrap">
               <Button
                 onClick={handleParse}
-                disabled={!rawText.trim()}
+                disabled={!rawText.trim() || isParsing}
                 className="flex-1 min-w-[150px]"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Validar texto
+                {isParsing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Eye className="w-4 h-4 mr-2" />
+                )}
+                {isParsing ? 'Validando...' : 'Validar texto'}
               </Button>
               
               {/* AUTOFORMAT BUTTON - Adiciona hífens automaticamente */}
