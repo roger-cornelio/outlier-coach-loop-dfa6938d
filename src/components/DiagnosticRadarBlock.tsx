@@ -1305,9 +1305,11 @@ export function DiagnosticRadarBlock({
 
               <>
                   <div className="mb-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
+                    <div className="text-center mb-1">
                       <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
                     </div>
                     <div className="relative h-8 w-full rounded-full bg-secondary overflow-visible">
