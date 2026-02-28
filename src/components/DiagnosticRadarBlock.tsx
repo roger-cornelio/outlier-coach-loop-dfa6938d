@@ -6,9 +6,10 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords } from 'lucide-react';
 import { PerformanceStatusCard } from './dashboard/PerformanceStatusCard';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
@@ -1276,10 +1277,20 @@ export function DiagnosticRadarBlock({
         const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
         const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
 
-        const milestones = [
-        { position: 25, icon: Target, label: '25%' },
-        { position: 50, icon: TrendingUp, label: '50%' },
-        { position: 75, icon: Crown, label: '75%' }];
+        const BENCHMARK_ICONS = [Target, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, HeartPulse, Swords];
+        const benchmarksRequired = targetLevel.benchmarksRequired || 3;
+        const benchmarksCompleted = targetLevel.benchmarksCompleted || 0;
+        const milestones = Array.from({ length: benchmarksRequired }, (_, i) => {
+          const position = ((i + 1) / (benchmarksRequired + 1)) * 100;
+          return {
+            position,
+            icon: BENCHMARK_ICONS[i % BENCHMARK_ICONS.length],
+            label: `Benchmark ${i + 1}`,
+            index: i,
+            completed: i < benchmarksCompleted,
+            unlocked: progressToTarget >= position,
+          };
+        });
 
 
         return (
@@ -1318,22 +1329,37 @@ export function DiagnosticRadarBlock({
                       </div>
                       {milestones.map((ms) => {
                       const Icon = ms.icon;
-                      const reached = progressToTarget >= ms.position;
                       return (
-                        <div key={ms.position} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: `${ms.position}%` }}>
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${reached ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
-                              <Icon className="w-3.5 h-3.5" />
-                            </div>
+                        <div key={ms.index} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10" style={{ left: `${ms.position}%` }}>
+                            <button
+                              onClick={() => {
+                                if (ms.completed) {
+                                  toast.success(`Benchmark ${ms.index + 1} concluído! ✓`);
+                                } else if (!ms.unlocked) {
+                                  toast.info('Benchmark ainda não disponível. Continue treinando para desbloquear!');
+                                } else {
+                                  toast.info(`Benchmark ${ms.index + 1} desbloqueado — registre seu resultado!`);
+                                }
+                              }}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                                ms.completed
+                                  ? 'bg-primary border-primary text-primary-foreground scale-105'
+                                  : ms.unlocked
+                                    ? 'bg-muted border-orange-500/60 text-orange-400 animate-pulse'
+                                    : 'bg-muted/60 border-border/40 text-muted-foreground/40 cursor-not-allowed'
+                              }`}
+                            >
+                              {ms.completed ? <Check className="w-3.5 h-3.5" /> : ms.unlocked ? <Icon className="w-3.5 h-3.5" /> : <Lock className="w-2.5 h-2.5" />}
+                            </button>
                           </div>);
-
                     })}
                       {isCapped && <div className="absolute top-0 h-full w-px bg-destructive" style={{ left: `${journey.capPercent}%` }} />}
                     </div>
                     {isCapped &&
                   <p className="text-[10px] text-destructive mt-1.5 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />Travado em {journey.capPercent}% sem prova oficial
-                      </p>
-                  }
+                         <Lock className="w-3 h-3" />Travado em {journey.capPercent}% sem prova oficial
+                       </p>
+                   }
                   </div>
 
 
