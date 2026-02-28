@@ -63,7 +63,7 @@ export function BenchmarksScreen() {
       setIsClearing(false);
     }
   };
-  return <div className="min-h-screen">
+  return <div className="min-h-screen w-full max-w-6xl mx-auto">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4">
