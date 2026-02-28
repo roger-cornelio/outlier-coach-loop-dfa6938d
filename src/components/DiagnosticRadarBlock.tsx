@@ -303,21 +303,128 @@ function percentileToStars(p: number) {
 // ============================================
 // MOBILE BLOCK 1 — CAMINHO PARA ELITE (CARD PRINCIPAL)
 // ============================================
+// ============================================
+// PROJECTED TIME BLOCK — "Estou aqui → Chego aqui"
+// ============================================
+function ProjectedTimeBlock({
+  currentTimeSec,
+  targetTimeSec,
+  targetLabel,
+  projectedGainSec,
+}: {
+  currentTimeSec: number;
+  targetTimeSec: number;
+  targetLabel: string;
+  projectedGainSec: number;
+}) {
+  const projectedTimeSec = Math.max(currentTimeSec - projectedGainSec, targetTimeSec);
+  const reached = currentTimeSec <= targetTimeSec;
+
+  return (
+    <div className="rounded-xl bg-black/30 border border-amber-500/15 p-3 mb-4">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2.5">
+        Meta de resultado
+      </p>
+      <div className="flex items-center justify-between gap-2">
+        {/* Current time */}
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Atual</span>
+          <span className="font-display text-xl font-bold text-foreground">
+            {formatOfficialTime(currentTimeSec)}
+          </span>
+        </div>
+
+        {/* Arrow */}
+        <div className="flex flex-col items-center gap-0.5 px-1">
+          <ChevronRight className="w-5 h-5 text-amber-400" />
+          {projectedGainSec > 0 && !reached && (
+            <span className="text-[9px] text-emerald-400 font-semibold whitespace-nowrap">
+              −{Math.floor(projectedGainSec / 60)}m{(projectedGainSec % 60).toString().padStart(2, '0')}s
+            </span>
+          )}
+        </div>
+
+        {/* Target time */}
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Meta {targetLabel}</span>
+          {reached ? (
+            <span className="font-display text-xl font-bold text-emerald-400">
+              {formatOfficialTime(targetTimeSec)} ✔
+            </span>
+          ) : (
+            <span className="font-display text-xl font-bold text-amber-400">
+              {formatOfficialTime(targetTimeSec)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Projected gain explanation */}
+      {projectedGainSec > 0 && !reached && (
+        <p className="text-[10px] text-muted-foreground mt-2 text-center leading-relaxed">
+          Corrigindo seus pontos fracos, você pode ganhar até{' '}
+          <span className="text-emerald-400 font-semibold">
+            {Math.floor(projectedGainSec / 60)}m{(projectedGainSec % 60).toString().padStart(2, '0')}s
+          </span>{' '}
+          na prova
+        </p>
+      )}
+      {reached && (
+        <p className="text-[10px] text-emerald-400 mt-2 text-center font-semibold">
+          Parabéns! Você já atingiu a meta 🏆
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// HELPER: Calculate projected gain from fixing weak stations
+// Stations below P50 → estimate time gain if brought to P50
+// ============================================
+function calculateProjectedGain(scores: CalculatedScore[]): number {
+  if (scores.length === 0) return 0;
+  
+  let totalGainSec = 0;
+  
+  for (const score of scores) {
+    if (score.percentile_value >= 50) continue;
+    
+    // Estimate: each percentile point below 50 represents ~1-2s of potential gain
+    // This is a conservative heuristic based on HYROX station time distributions
+    const percentileGap = 50 - score.percentile_value;
+    
+    // Larger gaps = more gain potential (non-linear — diminishing returns near P50)
+    const gainPerPoint = score.percentile_value < 25 ? 1.8 : 1.2;
+    const stationGain = Math.round(percentileGap * gainPerPoint);
+    
+    totalGainSec += stationGain;
+  }
+  
+  return totalGainSec;
+}
+
 function MobilePathToEliteCard({
   athleteName,
   journeyData,
   scores,
   todayWorkoutLabel,
   hasTodayWorkout,
-  onStartWorkout
-
-
-
-
-
-
-
-}: {athleteName: string;journeyData: ReturnType<typeof useJourneyProgress>;scores: CalculatedScore[];todayWorkoutLabel?: string;hasTodayWorkout?: boolean;onStartWorkout?: () => void;}) {
+  onStartWorkout,
+  currentTimeSec,
+  targetTimeSec,
+  targetLabel,
+}: {
+  athleteName: string;
+  journeyData: ReturnType<typeof useJourneyProgress>;
+  scores: CalculatedScore[];
+  todayWorkoutLabel?: string;
+  hasTodayWorkout?: boolean;
+  onStartWorkout?: () => void;
+  currentTimeSec?: number | null;
+  targetTimeSec?: number | null;
+  targetLabel?: string;
+}) {
   const { currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped, targetLevel } = journeyData;
 
   const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
@@ -328,6 +435,8 @@ function MobilePathToEliteCard({
   [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 2),
   [scores]
   );
+
+  const projectedGain = useMemo(() => calculateProjectedGain(scores), [scores]);
 
   return (
     <motion.div
@@ -349,6 +458,16 @@ function MobilePathToEliteCard({
             </p>
           }
         </div>
+
+        {/* META DE RESULTADO — "Estou aqui → Chego aqui" */}
+        {currentTimeSec && targetTimeSec && (
+          <ProjectedTimeBlock
+            currentTimeSec={currentTimeSec}
+            targetTimeSec={targetTimeSec}
+            targetLabel={targetLabel || 'ELITE'}
+            projectedGainSec={projectedGain}
+          />
+        )}
 
         {/* Progress Bar (thick) — always rendered when not at top */}
         {!isAtTop &&
@@ -1048,7 +1167,10 @@ export function DiagnosticRadarBlock({
           scores={scores}
           todayWorkoutLabel={todayWorkoutLabel}
           hasTodayWorkout={hasTodayWorkout}
-          onStartWorkout={onStartWorkout} />
+          onStartWorkout={onStartWorkout}
+          currentTimeSec={validatingCompetition?.time_in_seconds}
+          targetTimeSec={eliteTarget?.targetSeconds}
+          targetLabel={eliteTarget?.targetLabel} />
 
 
         {/* Card informativo quando sem prova */}
