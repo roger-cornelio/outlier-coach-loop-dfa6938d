@@ -33,6 +33,7 @@ import {
   EvolutionFocusBlock 
 } from './DashboardBlocks';
 import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
+import { RacesDashboardCard } from './RacesDashboardCard';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
@@ -306,6 +307,11 @@ export function Dashboard() {
             hasTodayWorkout={hasTodayWorkout}
             onStartWorkout={handleStartWorkout}
           />
+        </section>
+
+        {/* BLOCO 2 — PROVAS DA TEMPORADA */}
+        <section className="mb-6">
+          <RacesDashboardCard />
         </section>
 
         {/* Blocos de Evolução movidos para outra view */}
