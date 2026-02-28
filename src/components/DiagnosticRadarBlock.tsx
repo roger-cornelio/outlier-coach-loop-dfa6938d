@@ -27,6 +27,7 @@ import { useJourneyProgress } from '@/hooks/useJourneyProgress';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
+import { useTargetTimes } from '@/hooks/useTargetTimes';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
@@ -1048,10 +1049,13 @@ export function DiagnosticRadarBlock({
     return { time_in_seconds: p.time_in_seconds as number };
   }, [officialCompetitions]);
 
+  const adminTarget = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
+  
   const eliteTarget = useMemo(() => {
+    if (adminTarget) return adminTarget;
     const gender = athleteConfig?.sexo || 'masculino';
     return getEliteTargetSeconds(status, gender);
-  }, [status, athleteConfig?.sexo]);
+  }, [status, athleteConfig?.sexo, adminTarget]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
