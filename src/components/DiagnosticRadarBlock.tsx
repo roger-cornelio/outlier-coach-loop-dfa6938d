@@ -77,6 +77,13 @@ const RADAR_AXES = [
 // COMPONENT PROPS
 // ============================================
 
+interface RaceInfo {
+  nome: string;
+  race_date: string;
+  categoria: string;
+  daysUntil: number;
+}
+
 interface DiagnosticRadarBlockProps {
   scores: CalculatedScore[];
   loading?: boolean;
@@ -84,6 +91,8 @@ interface DiagnosticRadarBlockProps {
   todayWorkoutLabel?: string;
   hasTodayWorkout?: boolean;
   onStartWorkout?: () => void;
+  provaAlvo?: RaceInfo | null;
+  provaAlvoTargetTime?: string | null;
 }
 
 // ============================================
@@ -415,6 +424,8 @@ function MobilePathToEliteCard({
   currentTimeSec,
   targetTimeSec,
   targetLabel,
+  provaAlvo,
+  provaAlvoTargetTime,
 }: {
   athleteName: string;
   journeyData: ReturnType<typeof useJourneyProgress>;
@@ -425,6 +436,8 @@ function MobilePathToEliteCard({
   currentTimeSec?: number | null;
   targetTimeSec?: number | null;
   targetLabel?: string;
+  provaAlvo?: RaceInfo | null;
+  provaAlvoTargetTime?: string | null;
 }) {
   const { currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped, targetLevel } = journeyData;
 
@@ -458,6 +471,23 @@ function MobilePathToEliteCard({
               {currentLevelLabel} → {targetLevelLabel} — {progressToTarget}% do caminho
             </p>
           }
+
+          {/* Prova Alvo inline */}
+          {provaAlvo && (
+            <div className="flex items-center gap-2 mt-2 text-xs">
+              <Target className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-muted-foreground">{provaAlvo.nome}</span>
+              <span className="text-border/40">·</span>
+              <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
+              {provaAlvoTargetTime && (
+                <>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">Meta</span>
+                  <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* META DE RESULTADO — "Estou aqui → Chego aqui" */}
@@ -1029,7 +1059,9 @@ export function DiagnosticRadarBlock({
   hasData: hasDataProp,
   todayWorkoutLabel,
   hasTodayWorkout,
-  onStartWorkout
+  onStartWorkout,
+  provaAlvo,
+  provaAlvoTargetTime,
 }: DiagnosticRadarBlockProps) {
   const { profile } = useAuth();
   const { status, outlierScore, validatingCompetition } = useAthleteStatus();
@@ -1174,7 +1206,9 @@ export function DiagnosticRadarBlock({
           onStartWorkout={onStartWorkout}
           currentTimeSec={validatingCompetition?.time_in_seconds}
           targetTimeSec={eliteTarget?.targetSeconds}
-          targetLabel={eliteTarget?.targetLabel} />
+          targetLabel={eliteTarget?.targetLabel}
+          provaAlvo={provaAlvo}
+          provaAlvoTargetTime={provaAlvoTargetTime} />
 
 
         {/* Card informativo quando sem prova */}
@@ -1299,10 +1333,28 @@ export function DiagnosticRadarBlock({
       {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
         <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-wide text-foreground uppercase mb-2">{athleteName}</h1>
-        <div className="flex items-center justify-center gap-2.5 mb-3">
+        <div className="flex items-center justify-center gap-2.5 mb-1">
           <Crown className="w-6 h-6 text-amber-400 shrink-0" />
           <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
         </div>
+
+        {/* Prova Alvo inline — desktop */}
+        {provaAlvo && (
+          <div className="flex items-center justify-center gap-2 text-sm mb-3">
+            <Target className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-muted-foreground">{provaAlvo.nome}</span>
+            <span className="text-border/40">·</span>
+            <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
+            {provaAlvoTargetTime && (
+              <>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">Meta</span>
+                <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+              </>
+            )}
+          </div>
+        )}
+        {!provaAlvo && <div className="mb-3" />}
 
         {/* Linha inline: Última prova · Meta Elite · Evolução */}
         {(() => {

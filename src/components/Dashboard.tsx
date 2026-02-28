@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
@@ -33,7 +34,8 @@ import {
   EvolutionFocusBlock 
 } from './DashboardBlocks';
 import { DiagnosticRadarBlock } from './DiagnosticRadarBlock';
-import { RacesDashboardCard } from './RacesDashboardCard';
+import { useAthleteRaces } from '@/hooks/useAthleteRaces';
+import { useTargetTimes } from '@/hooks/useTargetTimes';
 import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
@@ -92,6 +94,8 @@ export function Dashboard() {
   const diagnosticScores = useDiagnosticScores();
   const evolutionFocus = useEvolutionFocus();
   const weeklyEvolution = useWeeklyEvolution();
+  const { provaAlvo } = useAthleteRaces();
+  const targetTimes = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
   
   // Carregar configurações do atleta do banco (persistência)
   useAthleteProfile();
@@ -185,6 +189,28 @@ export function Dashboard() {
     const blocks = todayWorkout?.blocks || [];
     return getWorkoutFocusCopy(athleteConfig?.coachStyle, blocks, hasTodayWorkout);
   }, [todayWorkout, athleteConfig?.coachStyle, hasTodayWorkout, loadingPlan]);
+
+  // Prova Alvo info for header
+  const provaAlvoInfo = useMemo(() => {
+    if (!provaAlvo) return null;
+    const daysUntil = differenceInDays(parseISO(provaAlvo.race_date), new Date());
+    return {
+      nome: provaAlvo.nome,
+      race_date: provaAlvo.race_date,
+      categoria: provaAlvo.categoria,
+      daysUntil,
+    };
+  }, [provaAlvo]);
+
+  const provaAlvoTargetTime = useMemo(() => {
+    if (!targetTimes) return null;
+    const totalSec = targetTimes.targetSeconds;
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
+    return `${m}m${String(s).padStart(2, '0')}s`;
+  }, [targetTimes]);
 
 
   // ============================================
@@ -306,12 +332,9 @@ export function Dashboard() {
             todayWorkoutLabel={workoutFocusCopy || undefined}
             hasTodayWorkout={hasTodayWorkout}
             onStartWorkout={handleStartWorkout}
+            provaAlvo={provaAlvoInfo}
+            provaAlvoTargetTime={provaAlvoTargetTime}
           />
-        </section>
-
-        {/* BLOCO 2 — PROVAS DA TEMPORADA */}
-        <section className="mb-6">
-          <RacesDashboardCard />
         </section>
 
         {/* Blocos de Evolução movidos para outra view */}
