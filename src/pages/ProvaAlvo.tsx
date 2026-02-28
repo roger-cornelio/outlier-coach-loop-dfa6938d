@@ -8,13 +8,15 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Target, Orbit, Plus, Calendar, Users, Trophy } from 'lucide-react';
+import { ArrowLeft, Target, Orbit, Plus, Calendar, Users, Trophy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProvaFormModal } from '@/components/ProvaFormModal';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAthleteRaces, type AthleteRace } from '@/hooks/useAthleteRaces';
+import { toast } from 'sonner';
 
 export interface Prova {
   id: string;
@@ -30,45 +32,47 @@ export interface Prova {
   createdAt: Date;
 }
 
-// Mock data inicial
-const MOCK_PROVAS: Prova[] = [];
-
 export default function ProvaAlvo() {
   const navigate = useNavigate();
-  const [provas, setProvas] = useState<Prova[]>(MOCK_PROVAS);
+  const { provaAlvo, provasSatelite, loading, addRace, deleteRace } = useAthleteRaces();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'ALVO' | 'SATELITE'>('ALVO');
-
-  const provaAlvo = provas.find(p => p.type === 'ALVO');
-  const provasSatelite = provas.filter(p => p.type === 'SATELITE');
 
   const handleOpenModal = (type: 'ALVO' | 'SATELITE') => {
     setModalType(type);
     setModalOpen(true);
   };
 
-  const handleSaveProva = (prova: Omit<Prova, 'id' | 'createdAt' | 'athleteId' | 'coachId'>) => {
-    const newProva: Prova = {
-      ...prova,
-      id: crypto.randomUUID(),
-      athleteId: 'mock-athlete-id',
-      coachId: 'mock-coach-id',
-      createdAt: new Date(),
-    };
+  const handleSaveProva = async (prova: Omit<Prova, 'id' | 'createdAt' | 'athleteId' | 'coachId'>) => {
+    const result = await addRace({
+      race_type: prova.type,
+      nome: prova.nome,
+      categoria: prova.categoria,
+      race_date: prova.data.toISOString().split('T')[0],
+      participation_type: prova.participationType,
+      partner_name: prova.partnerAthleteName,
+    });
 
-    // Se for prova alvo, substituir a existente
-    if (prova.type === 'ALVO') {
-      setProvas(prev => [...prev.filter(p => p.type !== 'ALVO'), newProva]);
+    if (result) {
+      toast.success(prova.type === 'ALVO' ? 'Prova Alvo cadastrada!' : 'Prova Satélite cadastrada!');
     } else {
-      setProvas(prev => [...prev, newProva]);
+      toast.error('Erro ao cadastrar prova');
     }
-
     setModalOpen(false);
   };
 
-  const handleDeleteProva = (id: string) => {
-    setProvas(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProva = async (id: string) => {
+    await deleteRace(id);
+    toast.success('Prova removida');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -153,7 +157,7 @@ export default function ProvaAlvo() {
               <Target className="h-5 w-5 text-primary" />
               Sua Prova Alvo
             </h2>
-            <ProvaCard prova={provaAlvo} onDelete={handleDeleteProva} isAlvo />
+            <ProvaCardDB race={provaAlvo} onDelete={handleDeleteProva} isAlvo />
           </div>
         )}
 
@@ -165,15 +169,15 @@ export default function ProvaAlvo() {
               Provas Satélite ({provasSatelite.length})
             </h2>
             <div className="space-y-3">
-              {provasSatelite.map(prova => (
-                <ProvaCard key={prova.id} prova={prova} onDelete={handleDeleteProva} />
+              {provasSatelite.map(race => (
+                <ProvaCardDB key={race.id} race={race} onDelete={handleDeleteProva} />
               ))}
             </div>
           </div>
         )}
 
         {/* Empty state */}
-        {provas.length === 0 && (
+        {!provaAlvo && provasSatelite.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="py-12 text-center">
               <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -199,13 +203,12 @@ export default function ProvaAlvo() {
   );
 }
 
-// Componente de card de prova
-function ProvaCard({ 
-  prova, 
+function ProvaCardDB({ 
+  race, 
   onDelete, 
   isAlvo = false 
 }: { 
-  prova: Prova; 
+  race: AthleteRace; 
   onDelete: (id: string) => void;
   isAlvo?: boolean;
 }) {
@@ -215,11 +218,11 @@ function ProvaCard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-foreground">{prova.nome}</span>
+              <span className="font-semibold text-foreground">{race.nome}</span>
               <Badge variant={isAlvo ? 'default' : 'secondary'} className="text-xs">
-                {prova.categoria}
+                {race.categoria}
               </Badge>
-              {prova.participationType === 'DUPLA' && (
+              {race.participation_type === 'DUPLA' && (
                 <Badge variant="outline" className="text-xs gap-1">
                   <Users className="h-3 w-3" />
                   Dupla
@@ -229,12 +232,12 @@ function ProvaCard({
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                {format(prova.data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                {format(parseISO(race.race_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </span>
-              {prova.partnerAthleteName && (
+              {race.partner_name && (
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5" />
-                  {prova.partnerAthleteName}
+                  {race.partner_name}
                 </span>
               )}
             </div>
@@ -243,7 +246,7 @@ function ProvaCard({
             variant="ghost" 
             size="sm"
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onDelete(prova.id)}
+            onClick={() => onDelete(race.id)}
           >
             Remover
           </Button>

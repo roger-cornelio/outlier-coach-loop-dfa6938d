@@ -91,6 +91,45 @@ export type Database = {
           },
         ]
       }
+      athlete_races: {
+        Row: {
+          categoria: string
+          created_at: string
+          id: string
+          nome: string
+          participation_type: string
+          partner_name: string | null
+          race_date: string
+          race_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          id?: string
+          nome: string
+          participation_type?: string
+          partner_name?: string | null
+          race_date: string
+          race_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          participation_type?: string
+          partner_name?: string | null
+          race_date?: string
+          race_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       benchmark_deltas: {
         Row: {
           bbj_delta: number
