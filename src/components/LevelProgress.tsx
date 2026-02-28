@@ -32,7 +32,7 @@ interface LevelVisualConfig {
 const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   OPEN: {
     icon: <Trophy className="w-5 h-5" />,
-    heroIcon: <Trophy className="w-28 h-28" />,
+    heroIcon: <Trophy className="w-16 h-16 md:w-28 md:h-28" />,
     gradient: 'from-purple-500 via-violet-500 to-fuchsia-500',
     textGradient: 'from-purple-400 to-fuchsia-400',
     bgPattern: 'radial-gradient(ellipse at top, hsl(270 40% 20% / 0.7), transparent 50%)',
@@ -46,7 +46,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
   PRO: {
     icon: <StatusCrownPreset size="sm" />,
-    heroIcon: <StatusCrownPreset size="hero" />,
+    heroIcon: <div className="scale-75 md:scale-100"><StatusCrownPreset size="hero" /></div>,
     gradient: 'from-amber-400 via-yellow-400 to-orange-400',
     textGradient: 'from-amber-300 to-yellow-300',
     bgPattern: 'radial-gradient(ellipse at top, hsl(45 50% 20% / 0.8), transparent 50%)',
@@ -60,7 +60,7 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
   ELITE: {
     icon: <Crown className="w-5 h-5" />,
-    heroIcon: <Crown className="w-32 h-32" />,
+    heroIcon: <Crown className="w-16 h-16 md:w-32 md:h-32" />,
     gradient: 'from-yellow-300 via-amber-300 to-yellow-400',
     textGradient: 'from-yellow-200 to-amber-200',
     bgPattern: 'radial-gradient(ellipse at top, hsl(50 60% 25% / 0.9), transparent 50%), radial-gradient(ellipse at bottom, hsl(45 50% 20% / 0.6), transparent 50%)',
@@ -453,7 +453,7 @@ export function LevelProgress() {
           <div className={`absolute -bottom-20 -left-20 w-48 h-48 bg-gradient-to-br ${currentConfig.gradient} rounded-full blur-3xl opacity-15`} />
         )}
 
-        <div className="relative z-10 p-6 md:p-8">
+        <div className="relative z-10 p-4 md:p-8">
           {/* Top section with icon and level */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex-1">
@@ -470,7 +470,7 @@ export function LevelProgress() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className={`font-display text-4xl md:text-5xl lg:text-6xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight`}
+                className={`font-display text-3xl md:text-5xl lg:text-6xl bg-gradient-to-r ${currentConfig.textGradient} bg-clip-text text-transparent tracking-tight`}
               >
                 {journeyProgress.isOutlier ? 'OUTLIER' : currentConfig.title}
               </motion.h1>
@@ -622,7 +622,7 @@ export function LevelProgress() {
           Jornada de Evolução
         </h3>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
           {LEVELS_ORDER.map((levelKey, index) => {
             const config = LEVEL_CONFIG[levelKey];
             const isCompleted = index < journeyProgress.currentLevelIndex;
@@ -655,7 +655,7 @@ export function LevelProgress() {
                   whileHover={{ scale: 1.04, filter: isCurrent || isCompleted ? 'brightness(1.15)' : 'brightness(1.05)' }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setSelectedLevel(isExpanded ? null : levelKey)}
-                  className="relative w-full max-w-[120px] md:max-w-[145px] transition-all duration-300 bg-transparent border-none cursor-pointer"
+                  className="relative w-full max-w-[90px] md:max-w-[145px] transition-all duration-300 bg-transparent border-none cursor-pointer"
                 >
                   <ShieldCrest 
                     level={levelKey} 
@@ -689,7 +689,7 @@ export function LevelProgress() {
 
                 {/* Level name + status label */}
                 <div className="mt-2 text-center">
-                  <p className={`text-base md:text-lg font-display font-extrabold tracking-wider leading-tight ${
+                  <p className={`text-sm md:text-lg font-display font-extrabold tracking-wider leading-tight ${
                     isCurrent 
                       ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent drop-shadow-sm` 
                       : isCompleted
