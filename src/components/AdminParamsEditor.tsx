@@ -43,11 +43,9 @@ import { FriendlyParamsEditor } from '@/components/FriendlyParamsEditor';
 import type { AthleteLevel } from '@/types/outlier';
 
 const LEVEL_LABELS: Record<string, string> = {
-  iniciante: 'Iniciante',
-  intermediario: 'Intermediário',
-  avancado: 'Avançado',
-  hyrox_open: 'HYROX Open',
-  hyrox_pro: 'HYROX PRO',
+  open: 'OPEN',
+  pro: 'PRO',
+  elite: 'ELITE',
 };
 
 const BUCKET_LABELS: Record<string, string> = {
