@@ -26,7 +26,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[search-hyrox-athlete] Searching: ${firstName || ""} ${lastName}, gender=${gender || "any"}`);
+    console.log(`[search-hyrox-athlete] Searching: firstName="${firstName || ""}" lastName="${lastName}", gender=${gender || "any"}`);
 
     // Search across seasons in parallel
     const seasonResults = await Promise.allSettled(
@@ -51,121 +51,32 @@ serve(async (req) => {
       );
     }
 
-    // Use AI to parse the HTML tables
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Extract result entries directly from HTML (no AI needed for parsing)
+    const allResults = [];
+    for (const page of htmlPages) {
+      const entries = extractResultEntries(page.html, page.seasonId);
+      allResults.push(...entries);
     }
 
-    // Combine HTML from all seasons, trimmed
-    const combinedHtml = htmlPages
-      .map((p) => {
-        const tables = p.html.match(/<table[\s\S]*?<\/table>/gi) || [];
-        const listItems = p.html.match(/<li[^>]*class="[^"]*list-group-item[^"]*"[\s\S]*?<\/li>/gi) || [];
-        const headers = p.html.match(/<h[1-4][^>]*>[\s\S]*?<\/h[1-4]>/gi) || [];
-        const relevant = [...headers.slice(0, 3), ...tables.slice(0, 3), ...listItems.slice(0, 30)].join("\n");
-        if (relevant.length > 200) return `<!-- Season ${p.seasonId} -->\n${relevant.slice(0, 12000)}`;
-        // Fallback: strip scripts and truncate
-        const cleaned = p.html
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<link[^>]*>/gi, "")
-          .replace(/<meta[^>]*>/gi, "")
-          .replace(/\s{2,}/g, " ");
-        return `<!-- Season ${p.seasonId} -->\n${cleaned.slice(0, 12000)}`;
-      })
-      .join("\n\n");
+    console.log(`[search-hyrox-athlete] Extracted ${allResults.length} results from HTML`);
 
-    console.log(`[search-hyrox-athlete] Combined HTML length: ${combinedHtml.length}`);
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert HTML parser specialized in HYROX competition ranking/results list pages from results.hyrox.com.
-
-You will receive HTML from a search results page that lists athletes and their race results. Extract ALL athlete result entries you find.
-
-For each result entry, extract:
-- athlete_name: Full name of the athlete
-- event_name: Event name with location (e.g. "HYROX São Paulo 2025")
-- division: "HYROX" (for Open) or "HYROX PRO" or "HYROX DOUBLES" etc.
-- time_formatted: The finish time as displayed (e.g. "1:25:30")
-- result_url: The full URL to the individual result detail page. Look for <a> links that contain "idp=" parameter. Construct the full URL if needed using base "https://results.hyrox.com/"
-- season_id: The season number from the HTML comments (e.g. 7 or 8)
-
-IMPORTANT: The result_url MUST contain the "idp=" parameter so we can later scrape the detailed result. Look for links in the table rows or list items.
-
-Return ALL matching results, not just the first one.`,
-          },
-          {
-            role: "user",
-            content: `Parse all HYROX athlete results from this search results page HTML:\n\n${combinedHtml}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_search_results",
-              description: "Extract all athlete results from HYROX search page",
-              parameters: {
-                type: "object",
-                properties: {
-                  results: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        athlete_name: { type: "string" },
-                        event_name: { type: "string" },
-                        division: { type: "string" },
-                        time_formatted: { type: "string" },
-                        result_url: { type: "string" },
-                        season_id: { type: "number" },
-                      },
-                      required: ["athlete_name", "event_name", "time_formatted", "result_url"],
-                    },
-                  },
-                },
-                required: ["results"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_search_results" } },
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("[search-hyrox-athlete] AI error:", aiResponse.status, errText);
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (toolCall?.function?.arguments) {
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const results = parsed.results || [];
-      console.log(`[search-hyrox-athlete] Found ${results.length} results`);
-
+    // If we got structured results, return them directly
+    if (allResults.length > 0) {
       return new Response(
-        JSON.stringify({ results }),
+        JSON.stringify({ results: allResults }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Fallback: check if pages had "no results" indication
+    const totalResultsText = htmlPages.map(p => {
+      const match = p.html.match(/(\d+)\s*Results/i);
+      return match ? parseInt(match[1]) : 0;
+    });
+    console.log(`[search-hyrox-athlete] Total results counts:`, totalResultsText);
+
     return new Response(
-      JSON.stringify({ results: [], message: "Could not parse search results" }),
+      JSON.stringify({ results: [], message: "No results found for this athlete" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -180,37 +91,140 @@ Return ALL matching results, not just the first one.`,
   }
 });
 
+/**
+ * Extract result entries directly from HTML using regex.
+ * Each result is an <li> with class list-group-item containing:
+ *   - <h4> with <a href="...idp=XXX...">LastName, FirstName</a>
+ *   - Time fields in list-field divs
+ *   - Event info from the event class on the <li>
+ */
+function extractResultEntries(html: string, seasonId: number): any[] {
+  const results: any[] = [];
+
+  // Match each result <li> - they have event class like "event-HDP_XXX"
+  // Pattern: <li class="...list-group-item...">...<h4>...<a href="...idp=...">Name</a>...</h4>...time...</li>
+  const liPattern = /<li[^>]*class="[^"]*list-group-item[^"]*row"[^>]*>([\s\S]*?)<\/li>/gi;
+  let match;
+
+  while ((match = liPattern.exec(html)) !== null) {
+    const liContent = match[1];
+
+    // Skip header rows
+    if (liContent.includes("list-group-header")) continue;
+
+    // Extract athlete name and URL from <h4><a>
+    const linkMatch = liContent.match(/<h4[^>]*>\s*<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/h4>/i);
+    if (!linkMatch) continue;
+
+    const rawUrl = linkMatch[1].replace(/&amp;/g, "&");
+    const athleteName = linkMatch[2].replace(/<[^>]*>/g, "").trim();
+
+    // Must have idp parameter
+    if (!rawUrl.includes("idp=")) continue;
+
+    // Extract time from the last time field (Totals)
+    const timeMatches = liContent.match(/time-ms"[^>]*>(?:<[^>]*>)*\s*([\d:]+\.\d+)/i);
+    const timeFormatted = timeMatches ? timeMatches[1] : "";
+
+    // Extract event from the <li> class or URL event parameter
+    const eventMatch = rawUrl.match(/event=([^&]+)/);
+    const eventCode = eventMatch ? eventMatch[1] : "";
+
+    // Build full URL
+    const fullUrl = rawUrl.startsWith("http") ? rawUrl : `https://results.hyrox.com${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+
+    // Determine division from event code
+    let division = "HYROX";
+    if (eventCode.includes("PRO") || eventCode.includes("HRP")) division = "HYROX PRO";
+    if (eventCode.includes("HDD") || eventCode.includes("DOUBLES")) division = "HYROX DOUBLES";
+
+    // Decode event name from code (e.g., HDP_TPE26_OVERALL -> Taipei 2026)
+    const eventName = decodeEventCode(eventCode, seasonId);
+
+    results.push({
+      athlete_name: athleteName,
+      event_name: eventName,
+      division,
+      time_formatted: timeFormatted,
+      result_url: fullUrl,
+      season_id: seasonId,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Decode HYROX event codes to human-readable names.
+ * Format: HDP_CityCode_OVERALL or similar
+ */
+function decodeEventCode(code: string, seasonId: number): string {
+  if (!code) return `HYROX Season ${seasonId}`;
+
+  // Common city codes
+  const cities: Record<string, string> = {
+    TPE: "Taipei", BER: "Berlin", HAM: "Hamburg", MUC: "Munich", FRA: "Frankfurt",
+    DUS: "Düsseldorf", CGN: "Cologne", STR: "Stuttgart", LEI: "Leipzig",
+    NYC: "New York", CHI: "Chicago", MIA: "Miami", LAX: "Los Angeles", DAL: "Dallas",
+    LDN: "London", MAN: "Manchester", BHM: "Birmingham",
+    MAD: "Madrid", BCN: "Barcelona", ROM: "Rome", MIL: "Milan",
+    PAR: "Paris", LYO: "Lyon", AMS: "Amsterdam", VIE: "Vienna",
+    SAO: "São Paulo", RIO: "Rio de Janeiro", GRU: "São Paulo",
+    MEX: "Mexico City", BUE: "Buenos Aires", SCL: "Santiago",
+    SYD: "Sydney", MEL: "Melbourne", NIC: "Nice",
+    DXB: "Dubai", SGP: "Singapore", HKG: "Hong Kong", TYO: "Tokyo",
+    SEL: "Seoul", BKK: "Bangkok",
+  };
+
+  // Extract city code (usually 3 chars after first underscore)
+  const parts = code.split("_");
+  let cityCode = "";
+  for (const part of parts) {
+    // Skip common prefixes
+    if (["HDP", "HRP", "HDD", "HDW", "OVERALL", "H24", "H25", "H26"].includes(part)) continue;
+    // City codes are typically 2-4 uppercase letters
+    if (/^[A-Z]{2,4}\d{0,2}$/.test(part)) {
+      cityCode = part.replace(/\d+$/, "");
+      break;
+    }
+  }
+
+  const cityName = cities[cityCode] || cityCode || "Unknown";
+  const yearSuffix = seasonId === 8 ? "2025/26" : seasonId === 7 ? "2024/25" : `Season ${seasonId}`;
+
+  return `HYROX ${cityName} ${yearSuffix}`;
+}
+
 async function searchSeason(
   seasonId: number,
   firstName: string,
   lastName: string,
   gender: string
 ): Promise<string | null> {
-  const url = `https://results.hyrox.com/season-${seasonId}/?pid=list&pidp=ranking_nav`;
-
-  const formData = new URLSearchParams();
-  formData.append("event_main_group", "%");
-  formData.append("event", "%");
-  formData.append("search[name]", lastName);
-  formData.append("search[firstname]", firstName);
-  if (gender) {
-    formData.append("search[sex]", gender);
+  // Use GET with search params in URL - the HYROX site supports this
+  const searchParams = new URLSearchParams();
+  searchParams.append("pid", "list");
+  searchParams.append("pidp", "ranking_nav");
+  searchParams.append("search[name]", lastName);
+  if (firstName) {
+    searchParams.append("search[firstname]", firstName);
   }
-  formData.append("num_results", "25");
-  formData.append("search[start]", "0");
+  if (gender === "M" || gender === "W") {
+    searchParams.append("search[sex]", gender);
+  }
+  searchParams.append("num_results", "25");
 
-  console.log(`[search-hyrox-athlete] Fetching season ${seasonId}: ${url}`);
+  const url = `https://results.hyrox.com/season-${seasonId}/?${searchParams.toString()}`;
+  console.log(`[search-hyrox-athlete] Fetching season ${seasonId}: GET ${url}`);
 
   const response = await fetch(url, {
-    method: "POST",
+    method: "GET",
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Content-Type": "application/x-www-form-urlencoded",
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5",
     },
-    body: formData.toString(),
   });
 
   if (!response.ok) {
@@ -221,9 +235,12 @@ async function searchSeason(
   const html = await response.text();
   console.log(`[search-hyrox-athlete] Season ${seasonId} HTML length: ${html.length}`);
 
-  // Quick check if there are actual results
-  if (html.includes("No results found") || html.includes("Keine Ergebnisse")) {
-    console.log(`[search-hyrox-athlete] Season ${seasonId}: no results`);
+  // Check result count
+  const countMatch = html.match(/>[\s]*(\d+)\s*Results?\s*</i);
+  console.log(`[search-hyrox-athlete] Season ${seasonId} result count: ${countMatch ? countMatch[1] : "unknown"}`);
+
+  if (!html.includes("type-fullname")) {
+    console.log(`[search-hyrox-athlete] Season ${seasonId}: no result entries found`);
     return null;
   }
 
