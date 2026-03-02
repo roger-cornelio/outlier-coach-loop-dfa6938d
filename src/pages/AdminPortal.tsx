@@ -7,7 +7,7 @@ import { ServiceQualityDashboard } from "@/components/admin/ServiceQualityDashbo
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 
 
-import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
+import { OutlierReferenceEditor } from "@/components/admin/OutlierReferenceEditor";
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
@@ -174,8 +174,7 @@ const AdminPortal = () => {
       case "masterBenchmarks":
         return (
           <div className="space-y-6">
-            <MasterBenchmarksEditor />
-            <BenchmarkOverridesEditor />
+            <OutlierReferenceEditor />
           </div>
         );
       case "athleteStatus":
