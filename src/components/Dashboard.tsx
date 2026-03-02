@@ -40,7 +40,6 @@ import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { AthleteHeroIdentity } from './AthleteHeroIdentity';
-import { ImportHyroxCTA } from './ImportHyroxCTA';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -336,11 +335,6 @@ export function Dashboard() {
             provaAlvo={provaAlvoInfo}
             provaAlvoTargetTime={provaAlvoTargetTime}
           />
-        </section>
-
-        {/* BLOCO 2 — CTA IMPORTAR RESULTADO HYROX */}
-        <section className="mb-6">
-          <ImportHyroxCTA />
         </section>
 
         {/* Blocos de Evolução movidos para outra view */}
