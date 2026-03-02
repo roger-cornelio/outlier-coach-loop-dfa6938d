@@ -77,6 +77,13 @@ function splitAthleteName(fullName: string): { firstName: string; lastName: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
 }
 
+/** Convert "LastName, FirstName" (HYROX format) to "FirstName LastName" */
+function formatAthleteName(hyroxName: string): string {
+  if (!hyroxName.includes(',')) return hyroxName;
+  const [last, first] = hyroxName.split(',').map(s => s.trim());
+  return first ? `${first} ${last}` : last;
+}
+
 // --- Types ---
 
 type SearchResult = {
@@ -471,7 +478,7 @@ export default function ImportarProva() {
                         <Flame className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{result.athlete_name}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{formatAthleteName(result.athlete_name)}</p>
                         <p className="text-xs text-muted-foreground truncate">{result.event_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {result.time_formatted}
