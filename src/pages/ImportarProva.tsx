@@ -431,7 +431,8 @@ export default function ImportarProva() {
                         <Flame className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{result.event_name}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{result.athlete_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{result.event_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {result.time_formatted}
                           {result.division ? ` • ${result.division}` : ''}
