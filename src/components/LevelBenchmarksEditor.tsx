@@ -83,7 +83,7 @@ function parseMMSSToSeconds(value: string): number | null {
 export function LevelBenchmarksEditor() {
   const [division, setDivision] = useState('HYROX PRO');
   const [gender, setGender] = useState('F');
-  const [level, setLevel] = useState('iniciante');
+  const [level, setLevel] = useState('open');
   const [benchmarks, setBenchmarks] = useState<LevelBenchmark[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
