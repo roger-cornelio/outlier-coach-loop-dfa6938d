@@ -1,48 +1,78 @@
 
-# Corrigir alinhamento da régua de progresso OPEN-PRO-ELITE
 
-## Problema
-A barra de progresso ("filled track") no componente `LevelProgress` nao alcanca o no PRO mesmo quando o atleta ja e PRO por prova oficial.
+## Busca automatica de resultados HYROX pelo nome do atleta
 
-**Causa raiz:** Desalinhamento entre posicao visual dos nos e calculo do preenchimento.
+### Visao Geral
 
-- Os nos sao renderizados com `justify-between`, ficando em **0%, 50%, 100%** do track
-- O calculo `continuousPosition = (currentLevelIndex + overallProgress) / levelRules.length` produz **33%** para PRO (index 1, length 3)
-- Deveria produzir **50%** para alinhar com o no PRO
+Criar um fluxo onde o app busca automaticamente os resultados do atleta no site results.hyrox.com usando o nome cadastrado no perfil, exibindo uma lista de resultados encontrados para o atleta selecionar e importar.
 
-## Solucao
+### Como funciona o site HYROX
 
-### Arquivo: `src/hooks/useJourneyProgress.ts`
+O site results.hyrox.com usa um formulario POST para buscar resultados por nome (Last Name + First Name). O formulario envia dados para:
+- URL: `https://results.hyrox.com/season-{N}/?pid=list&pidp=ranking_nav`
+- Campos: `search[name]`, `search[firstname]`, `search[sex]`, `event_main_group`, etc.
 
-Alterar a formula de `continuousPosition` (linha 322) de:
+Cada temporada tem um endpoint diferente (season-1 a season-8). Precisamos buscar nas temporadas mais recentes.
 
+### Plano de Implementacao
+
+#### 1. Nova Edge Function: `search-hyrox-athlete`
+
+- Recebe `firstName`, `lastName` e `gender` (M/W)
+- Faz POST no site HYROX simulando o formulario de busca (seasons 8 e 7, ou seja, 25/26 e 24/25)
+- Usa o modelo AI (gemini-2.5-flash) para parsear o HTML da tabela de resultados e extrair:
+  - Nome do atleta
+  - Evento (ex: "2025 Sao Paulo")
+  - Division (HYROX / HYROX PRO)
+  - Tempo final
+  - Link do resultado individual (com o parametro `idp`)
+- Retorna um array de resultados encontrados
+
+#### 2. Atualizar `ImportarProva.tsx` - Novo fluxo em 3 etapas
+
+**Etapa 1 - Busca automatica (nova)**
+- Ao abrir a pagina, se o atleta tem nome cadastrado, mostra: "Buscando seus resultados HYROX..."
+- Exibe lista de resultados encontrados com: evento, tempo, categoria
+- Cada resultado tem um botao "Importar este resultado"
+- Opcao "Nao encontrou? Cole o link manualmente" para manter o fluxo atual
+
+**Etapa 2 - Importacao (existente)**
+- Quando o atleta seleciona um resultado (ou cola um link), procede com o fluxo atual:
+  - Chama `scrape-hyrox-result` para extrair splits detalhados
+  - Salva em `benchmark_results`
+  - Calcula percentis
+  - Mostra tela de sucesso
+
+**Etapa 3 - Sucesso (existente)**
+- Mesma tela de sucesso atual
+
+#### 3. Detalhes Tecnicos
+
+**Edge Function `search-hyrox-athlete`:**
+```text
+POST /season-8/?pid=list&pidp=ranking_nav
+Content-Type: application/x-www-form-urlencoded
+
+event_main_group=%25 (todas as provas)
+event=%25 (todas as divisoes)
+search[name]=Sobrenome
+search[firstname]=Nome
+search[sex]=M
+num_results=25
 ```
-(currentLevelIndex + overallProgress) / levelRules.length
-```
 
-Para:
+- Busca em 2 temporadas (season-8 e season-7) em paralelo
+- Usa AI para parsear tabela HTML de resultados
+- Retorna array com: `event_name`, `time_formatted`, `division`, `result_url`
 
-```
-(currentLevelIndex + overallProgress) / (levelRules.length - 1)
-```
+**Split do nome do atleta:**
+- Pega o `name` do perfil (ex: "Roger Machado")
+- Primeiro token = firstName, restante = lastName
+- Se nome tem apenas 1 token, usa como lastName e firstName vazio
 
-Isso mapeia corretamente:
-- OPEN (index 0) com 0% progresso = **0%** (alinha com no OPEN)
-- PRO (index 1) com 0% progresso = **50%** (alinha com no PRO)  
-- ELITE (index 2) com 0% progresso = **100%** (alinha com no ELITE)
+**UI da lista de resultados:**
+- Cards com icone de medalha, nome do evento, tempo e categoria
+- Checkbox de autorizacao antes de importar
+- Loading state com spinner durante a busca
+- Estado vazio: "Nenhum resultado encontrado" + campo manual de link
 
-E para progresso parcial dentro de um nivel:
-- OPEN com 50% progresso = **25%** (metade do caminho OPEN-PRO)
-- PRO com 50% progresso = **75%** (metade do caminho PRO-ELITE)
-
-### Ajuste complementar
-
-Garantir que `fillPercentage` tenha cap em 100 no `LevelProgress.tsx` (ja existe `Math.max(2, rawFill)` mas precisamos confirmar o teto).
-
-## Arquivos alterados
-1. `src/hooks/useJourneyProgress.ts` — corrigir formula `continuousPosition`
-
-## O que NAO muda
-- Logica de jornada, categoria, requisitos
-- Visual dos nos, cards, animacoes
-- Nenhum outro componente
