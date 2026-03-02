@@ -543,6 +543,54 @@ export type Database = {
         }
         Relationships: []
       }
+      level_time_thresholds: {
+        Row: {
+          age_max: number
+          age_min: number
+          created_at: string
+          division: string
+          elite_cap_seconds: number
+          elite_seconds: number
+          id: string
+          is_active: boolean
+          pro_cap_seconds: number
+          sex: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          age_max: number
+          age_min: number
+          created_at?: string
+          division: string
+          elite_cap_seconds: number
+          elite_seconds: number
+          id?: string
+          is_active?: boolean
+          pro_cap_seconds: number
+          sex: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          age_max?: number
+          age_min?: number
+          created_at?: string
+          division?: string
+          elite_cap_seconds?: number
+          elite_seconds?: number
+          id?: string
+          is_active?: boolean
+          pro_cap_seconds?: number
+          sex?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       percentile_bands: {
         Row: {
           division: string
