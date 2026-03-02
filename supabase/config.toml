@@ -32,3 +32,9 @@ verify_jwt = true
 
 [functions.calculate-hyrox-percentiles]
 verify_jwt = false
+
+[functions.scrape-hyrox-result]
+verify_jwt = false
+
+[functions.search-hyrox-athlete]
+verify_jwt = false
