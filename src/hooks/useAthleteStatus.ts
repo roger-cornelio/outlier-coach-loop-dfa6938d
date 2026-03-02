@@ -1,4 +1,5 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useBenchmarkResults } from './useBenchmarkResults';
 import { useOutlierStore } from '@/store/outlierStore';
 import { 
@@ -7,7 +8,10 @@ import {
   getAgeBracket,
   type CalculatedStatus,
   type AthleteGender,
-  type HyroxAgeBracket
+  type HyroxAgeBracket,
+  type DbThresholds,
+  type EliteProBenchmark,
+  type DivisionFactor,
 } from '@/utils/athleteStatusSystem';
 import { 
   computeOutlierScore, 
@@ -110,6 +114,26 @@ export function useAthleteStatus() {
   const { results, getOfficialCompetitions, getSimulados, loading } = useBenchmarkResults();
   const { athleteConfig, externalResultsRefreshKey } = useOutlierStore();
   
+  // Fetch DB thresholds (benchmarks_elite_pro + division_factors)
+  const [dbThresholds, setDbThresholds] = useState<DbThresholds | undefined>(undefined);
+  
+  useEffect(() => {
+    async function loadThresholds() {
+      const [benchRes, factorRes] = await Promise.all([
+        supabase.from('benchmarks_elite_pro').select('sex, age_min, age_max, elite_pro_seconds').eq('is_active', true).eq('version', 'v1'),
+        supabase.from('division_factors').select('division, factor').eq('is_active', true).eq('version', 'v1'),
+      ]);
+      
+      if (benchRes.data && factorRes.data) {
+        setDbThresholds({
+          benchmarks: benchRes.data as unknown as EliteProBenchmark[],
+          factors: factorRes.data as unknown as DivisionFactor[],
+        });
+      }
+    }
+    loadThresholds();
+  }, []);
+  
   // Map sexo to AthleteGender type
   const gender: AthleteGender = athleteConfig?.sexo === 'feminino' ? 'feminino' : 'masculino';
   
@@ -129,7 +153,8 @@ export function useAthleteStatus() {
       officialCompetitions, 
       gender, 
       previousStatus,
-      athleteBirthDate
+      athleteBirthDate,
+      dbThresholds
     );
     
     // Only save status if there are results
@@ -138,7 +163,7 @@ export function useAthleteStatus() {
     }
     
     return status;
-  }, [results, getOfficialCompetitions, gender, athleteBirthDate, externalResultsRefreshKey]);
+  }, [results, getOfficialCompetitions, gender, athleteBirthDate, externalResultsRefreshKey, dbThresholds]);
   
   // Compute the new Outlier Score
   const outlierScore = useMemo<ScoreResult>(() => {

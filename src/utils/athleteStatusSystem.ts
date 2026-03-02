@@ -16,72 +16,47 @@ export type StatusConfidence = 'baixa' | 'media' | 'alta';
 export type StatusSource = 'prova_oficial' | 'estimado';
 
 // ============================================================
-// CONSTANTES - CLASSIFICAÇÃO DE STATUS (MINUTOS, BASE 30-34)
+// TIPOS PARA THRESHOLDS DO BANCO (ADMIN)
 // ============================================================
 
-/**
- * Limiares para CLASSIFICAÇÃO de status baseado em tempo de prova oficial.
- * Estes definem "onde o atleta compete hoje".
- * Base: faixa 30-34 anos.
- */
-const STATUS_TIME_THRESHOLDS: Record<AthleteGender, {
-  elite: number;    // < elite = ELITE
-  pro: number;      // < pro = PRO
-  // >= pro = OPEN
-}> = {
-  masculino: { elite: 70, pro: 90 },
-  feminino: { elite: 75, pro: 95 },
-};
+export interface EliteProBenchmark {
+  sex: string;        // 'M' | 'F'
+  age_min: number;
+  age_max: number;
+  elite_pro_seconds: number;
+}
 
-/**
- * Limiares de TOPO do nível (em minutos)
- */
-const LEVEL_TOP_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
-  masculino: {
-    open: 90,    // ≤1h30 = topo open
-    pro: 70,     // ≤1h10 = topo pro
-    elite: 60,   // ≤1h00 = topo elite
-  },
-  feminino: {
-    open: 95,    // ≤1h35 = topo open
-    pro: 75,     // ≤1h15 = topo pro
-    elite: 65,   // ≤1h05 = topo elite
-  },
-};
+export interface DivisionFactor {
+  division: string;   // 'PRO' | 'OPEN' | 'DOUBLES' | 'RELAY'
+  factor: number;
+}
 
-/**
- * Limiares de BASE do nível (em minutos)
- */
-const LEVEL_BASE_THRESHOLDS: Record<AthleteGender, Record<AthleteStatus, number>> = {
-  masculino: {
-    open: 130,   // ~2h10 = base open
-    pro: 90,     // ~1h30 = base pro
-    elite: 70,   // ~1h10 = base elite
-  },
-  feminino: {
-    open: 135,   // ~2h15 = base open
-    pro: 95,     // ~1h35 = base pro
-    elite: 75,   // ~1h15 = base elite
-  },
-};
+export interface DbThresholds {
+  benchmarks: EliteProBenchmark[];
+  factors: DivisionFactor[];
+}
 
 // ============================================================
-// TOLERÂNCIA POR IDADE (MINUTOS ADICIONAIS)
+// CONSTANTES FALLBACK (usadas apenas se DB não carregar)
 // ============================================================
 
-const AGE_TOLERANCE_MINUTES: Record<HyroxAgeBracket, number> = {
-  '16-24': 0,
-  '25-29': 0,
-  '30-34': 0,  // Base de referência
-  '35-39': 2,
-  '40-44': 4,
-  '45-49': 6,
-  '50-54': 8,
-  '55-59': 10,
-  '60-64': 13,
-  '65-69': 16,
-  '70+': 20,
+const FALLBACK_ELITE_PRO_SECONDS: Record<AthleteGender, number> = {
+  masculino: 3960,  // M 30-34
+  feminino: 4440,   // F 30-34
 };
+
+const FALLBACK_DIVISION_FACTOR = 1.0; // PRO default
+
+// ============================================================
+// GAP THRESHOLDS (classificação por gap percentual)
+// ============================================================
+// gap = (athlete_time - elite_adjusted) / elite_adjusted
+// ELITE: gap ≤ 0.05 (dentro de 5% do tempo referência)
+// PRO:   gap ≤ 0.15 (dentro de 15%)
+// OPEN:  gap > 0.15
+
+const GAP_ELITE = 0.05;
+const GAP_PRO = 0.15;
 
 // ============================================================
 // NORMALIZAÇÃO PRO → OPEN EQUIVALENTE
@@ -179,8 +154,46 @@ export function getAgeBracket(age: number): HyroxAgeBracket {
   return '70+';
 }
 
-export function getAgeTolerance(ageBracket: HyroxAgeBracket): number {
-  return AGE_TOLERANCE_MINUTES[ageBracket];
+export function getAgeTolerance(_ageBracket: HyroxAgeBracket): number {
+  // Age tolerance is now built into benchmarks_elite_pro per age range
+  return 0;
+}
+
+// ============================================================
+// HELPERS PARA DB THRESHOLDS
+// ============================================================
+
+/**
+ * Busca o elite_pro_seconds do banco para o sexo/idade do atleta.
+ * Retorna fallback se não encontrar.
+ */
+function getEliteProSecondsFromDb(
+  dbThresholds: DbThresholds | undefined,
+  gender: AthleteGender,
+  age: number
+): number {
+  if (!dbThresholds || dbThresholds.benchmarks.length === 0) {
+    return FALLBACK_ELITE_PRO_SECONDS[gender];
+  }
+  const sex = gender === 'feminino' ? 'F' : 'M';
+  const match = dbThresholds.benchmarks.find(
+    b => b.sex === sex && age >= b.age_min && age <= b.age_max
+  );
+  return match?.elite_pro_seconds ?? FALLBACK_ELITE_PRO_SECONDS[gender];
+}
+
+/**
+ * Busca o division factor do banco.
+ */
+function getDivisionFactorFromDb(
+  dbThresholds: DbThresholds | undefined,
+  division: string
+): number {
+  if (!dbThresholds || dbThresholds.factors.length === 0) {
+    return FALLBACK_DIVISION_FACTOR;
+  }
+  const match = dbThresholds.factors.find(f => f.division === division);
+  return match ? Number(match.factor) : FALLBACK_DIVISION_FACTOR;
 }
 
 // ============================================================
@@ -201,65 +214,75 @@ export function toOpenEquivalentSeconds(
 }
 
 /**
- * Obtém limiares de status ajustados por idade.
+ * Obtém limiares de status usando DB thresholds (gap-based).
+ * Retorna tempos em minutos para compatibilidade.
  */
 export function getAdjustedStatusThresholds(
   gender: AthleteGender,
-  ageBracket: HyroxAgeBracket
+  ageBracket: HyroxAgeBracket,
+  dbThresholds?: DbThresholds
 ): { elite: number; pro: number } {
-  const base = STATUS_TIME_THRESHOLDS[gender];
-  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
+  // Get age from bracket midpoint for lookup
+  const ageMid = getAgeMidpoint(ageBracket);
+  const eliteProSec = getEliteProSecondsFromDb(dbThresholds, gender, ageMid);
+  const factor = getDivisionFactorFromDb(dbThresholds, 'PRO'); // Base PRO
+  const eliteAdj = eliteProSec * factor;
   
+  // elite threshold = time where gap = GAP_ELITE (5%)
+  // pro threshold = time where gap = GAP_PRO (15%)
   return {
-    elite: base.elite + tolerance,
-    pro: base.pro + tolerance,
+    elite: (eliteAdj * (1 + GAP_ELITE)) / 60,
+    pro: (eliteAdj * (1 + GAP_PRO)) / 60,
   };
 }
 
-/**
- * Obtém limiares de topo/base do nível ajustados por idade.
- */
-function getAdjustedLevelThresholds(
-  gender: AthleteGender,
-  status: AthleteStatus,
-  ageBracket: HyroxAgeBracket
-): { top: number; base: number } {
-  const tolerance = AGE_TOLERANCE_MINUTES[ageBracket];
-  return {
-    top: LEVEL_TOP_THRESHOLDS[gender][status] + tolerance,
-    base: LEVEL_BASE_THRESHOLDS[gender][status] + tolerance,
+function getAgeMidpoint(bracket: HyroxAgeBracket): number {
+  const map: Record<HyroxAgeBracket, number> = {
+    '16-24': 20, '25-29': 27, '30-34': 32, '35-39': 37,
+    '40-44': 42, '45-49': 47, '50-54': 52, '55-59': 57,
+    '60-64': 62, '65-69': 67, '70+': 72,
   };
+  return map[bracket];
 }
 
 // ============================================================
-// CLASSIFICAÇÃO DE STATUS POR TEMPO
+// CLASSIFICAÇÃO DE STATUS POR TEMPO (GAP-BASED)
 // ============================================================
 
 /**
  * Classifica o STATUS do atleta baseado no tempo de prova oficial.
- * O status define "onde o atleta compete hoje".
+ * Usa modelo de gap percentual com tempos do admin (DB).
  * 
- * REGRAS:
- * - Usa tempo Open-equivalente (PRO normalizado)
- * - Ajusta limiares por idade
- * - Atletas 60+ NÃO podem ser PRO (capped em OPEN)
+ * gap = (athlete_time - elite_adjusted) / elite_adjusted
+ * ELITE: gap ≤ 5%
+ * PRO:   gap ≤ 15%
+ * OPEN:  gap > 15%
  */
 export function getStatusFromOfficialTime(
   timeInSeconds: number,
   gender: AthleteGender = 'masculino',
   raceCategory: RaceCategory = 'OPEN',
-  ageAtRace?: number
+  ageAtRace?: number,
+  dbThresholds?: DbThresholds
 ): LevelClassificationResult {
-  const openEqSec = toOpenEquivalentSeconds(timeInSeconds, gender, raceCategory);
-  const openEqMin = openEqSec / 60;
+  const age = ageAtRace ?? 32; // Default 30-34 range
+  const sex = gender === 'feminino' ? 'F' : 'M';
   
-  const ageBracket = ageAtRace !== undefined ? getAgeBracket(ageAtRace) : '30-34';
-  const t = getAdjustedStatusThresholds(gender, ageBracket);
+  // Get reference from DB
+  const eliteProSec = getEliteProSecondsFromDb(dbThresholds, gender, age);
   
-  // Determina status pelo tempo (3 níveis: open, pro, elite)
+  // Map race category to division for factor lookup
+  let division = 'OPEN';
+  if (raceCategory === 'PRO') division = 'PRO';
+  const divFactor = getDivisionFactorFromDb(dbThresholds, division);
+  
+  const eliteAdjusted = Math.round(eliteProSec * divFactor);
+  const gap = (timeInSeconds - eliteAdjusted) / eliteAdjusted;
+  
+  // Classify by gap
   let status: AthleteStatus;
-  if (openEqMin < t.elite) status = 'elite';
-  else if (openEqMin < t.pro) status = 'pro';
+  if (gap <= GAP_ELITE) status = 'elite';
+  else if (gap <= GAP_PRO) status = 'pro';
   else status = 'open';
   
   // Regra especial: 60+ não podem ser ELITE
@@ -272,10 +295,41 @@ export function getStatusFromOfficialTime(
     cappedReason = `Atletas 60+ são classificados como PRO (tempo seria ELITE)`;
   }
   
-  // Calcula o score DENTRO do nível
-  const levelScore = calculateLevelScore(openEqMin, gender, status, ageBracket);
+  // Score within level based on gap position
+  const levelScore = calculateLevelScoreFromGap(gap, status);
   
   return { status, levelScore, cappedFromPro, cappedReason };
+}
+
+/**
+ * Calcula score 0-100 dentro do nível baseado no gap.
+ */
+function calculateLevelScoreFromGap(gap: number, status: AthleteStatus): number {
+  // Define gap ranges per level
+  let gapMin: number, gapMax: number;
+  switch (status) {
+    case 'elite':
+      gapMin = -0.10; // 10% faster than reference
+      gapMax = GAP_ELITE; // 5%
+      break;
+    case 'pro':
+      gapMin = GAP_ELITE; // 5%
+      gapMax = GAP_PRO; // 15%
+      break;
+    case 'open':
+    default:
+      gapMin = GAP_PRO; // 15%
+      gapMax = 0.50; // 50%
+      break;
+  }
+  
+  // Clamp and invert (lower gap = higher score)
+  const clampedGap = Math.max(gapMin, Math.min(gapMax, gap));
+  const range = gapMax - gapMin;
+  if (range <= 0) return 50;
+  
+  const position = (gapMax - clampedGap) / range; // 0 (worst) to 1 (best)
+  return Math.round(position * 100);
 }
 
 // ============================================================
@@ -298,32 +352,12 @@ export function calculateLevelScore(
   status: AthleteStatus,
   ageBracket: HyroxAgeBracket = '30-34'
 ): number {
-  const { top, base } = getAdjustedLevelThresholds(gender, status, ageBracket);
-  
-  // Se tempo <= top, está no topo (95-100)
-  if (timeInMinutes <= top) {
-    // Linear de 95 a 100 para tempos ainda melhores que o top
-    const bestPossible = top - 10; // ~10 min melhor que top = 100
-    if (timeInMinutes <= bestPossible) return 100;
-    const ratio = (top - timeInMinutes) / (top - bestPossible);
-    return 95 + (ratio * 5);
-  }
-  
-  // Se tempo >= base, está na base (0-10)
-  if (timeInMinutes >= base) {
-    // Linear de 10 a 0 para tempos ainda piores que base
-    const worstInLevel = base + 15; // ~15 min pior que base = 0
-    if (timeInMinutes >= worstInLevel) return 0;
-    const ratio = (worstInLevel - timeInMinutes) / (worstInLevel - base);
-    return ratio * 10;
-  }
-  
-  // Entre base e top: interpolação linear (10-95)
-  const range = base - top;
-  const position = base - timeInMinutes;
-  const ratio = position / range;
-  
-  return 10 + (ratio * 85); // 10 a 95
+  // Now delegates to gap-based scoring using fallback thresholds
+  const timeSeconds = timeInMinutes * 60;
+  const ageMid = getAgeMidpoint(ageBracket);
+  const eliteProSec = getEliteProSecondsFromDb(undefined, gender, ageMid);
+  const gap = (timeSeconds - eliteProSec) / eliteProSec;
+  return calculateLevelScoreFromGap(gap, status);
 }
 
 /**
@@ -374,7 +408,8 @@ function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: st
 export function processOfficialCompetitions(
   officialResults: ExternalResult[],
   gender: AthleteGender = 'masculino',
-  athleteBirthDate?: Date
+  athleteBirthDate?: Date,
+  dbThresholds?: DbThresholds
 ): { valid: OfficialCompetitionResult | null; historical: OfficialCompetitionResult[] } {
   const processed: OfficialCompetitionResult[] = officialResults
     .filter(r => r.time_in_seconds && r.time_in_seconds > 0)
@@ -391,7 +426,7 @@ export function processOfficialCompetitions(
         ageBracket = getAgeBracket(ageAtRace);
       }
       
-      const classification = getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory, ageAtRace);
+      const classification = getStatusFromOfficialTime(r.time_in_seconds!, gender, raceCategory, ageAtRace, dbThresholds);
       
       return {
         id: r.id,
@@ -535,14 +570,15 @@ export function calculateAthleteStatus(
   officialResults: ExternalResult[],
   gender: AthleteGender = 'masculino',
   previousStatus?: AthleteStatus,
-  athleteBirthDate?: Date
+  athleteBirthDate?: Date,
+  dbThresholds?: DbThresholds
 ): CalculatedStatus {
   const athleteAgeBracket = athleteBirthDate 
     ? getAgeBracket(calculateAgeAtDate(athleteBirthDate, new Date()))
     : undefined;
 
   const { valid: validatingCompetition, historical: historicalCompetitions } = 
-    processOfficialCompetitions(officialResults, gender, athleteBirthDate);
+    processOfficialCompetitions(officialResults, gender, athleteBirthDate, dbThresholds);
 
   const validBenchmarks = benchmarkResults.filter(r => r.completed);
   const benchmarksUsed = validBenchmarks.length;
