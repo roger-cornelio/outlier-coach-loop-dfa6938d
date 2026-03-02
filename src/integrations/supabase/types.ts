@@ -663,6 +663,102 @@ export type Database = {
         }
         Relationships: []
       }
+      outlier_base_master: {
+        Row: {
+          base_seconds: number
+          created_at: string
+          id: string
+          station_key: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          base_seconds: number
+          created_at?: string
+          id?: string
+          station_key: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          base_seconds?: number
+          created_at?: string
+          id?: string
+          station_key?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      outlier_factors: {
+        Row: {
+          created_at: string
+          factor_key: string
+          factor_type: string
+          factor_value: number
+          id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          factor_key: string
+          factor_type: string
+          factor_value: number
+          id?: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          factor_key?: string
+          factor_type?: string
+          factor_value?: number
+          id?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      outlier_reference_overrides: {
+        Row: {
+          age_group: string
+          created_at: string
+          division: string
+          id: string
+          override_seconds: number
+          sex: string
+          station_key: string
+          tier: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          age_group: string
+          created_at?: string
+          division: string
+          id?: string
+          override_seconds: number
+          sex: string
+          station_key: string
+          tier: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          age_group?: string
+          created_at?: string
+          division?: string
+          id?: string
+          override_seconds?: number
+          sex?: string
+          station_key?: string
+          tier?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       percentile_bands: {
         Row: {
           division: string
