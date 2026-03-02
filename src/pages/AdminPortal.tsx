@@ -10,14 +10,13 @@ import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEditor";
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
-import { TargetTimesEditor } from "@/components/admin/TargetTimesEditor";
 import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Loader2, 
   Shield, 
-  Users, 
+  Users,
   UserPlus, 
   Settings2, 
   Target,
@@ -34,7 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "targetTimes" | "classification";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification";
 
 interface NavItem {
   id: AdminView;
@@ -68,23 +67,17 @@ const navItems: NavItem[] = [
     icon: <Crown className="w-5 h-5" />,
     description: "Referência técnica do sistema"
   },
-  { 
-    id: "athleteStatus", 
-    label: "Status Atleta", 
-    icon: <Medal className="w-5 h-5" />,
-    description: "Regras de nível"
-  },
-  { 
-    id: "targetTimes", 
-    label: "Metas de Tempo", 
-    icon: <Target className="w-5 h-5" />,
-    description: "Tempos-alvo por nível"
-  },
   {
     id: "classification",
     label: "Classificação",
     icon: <Gauge className="w-5 h-5" />,
-    description: "Ajustes de resultado"
+    description: "Benchmarks elite + fatores de divisão"
+  },
+  { 
+    id: "athleteStatus", 
+    label: "Jornada", 
+    icon: <Medal className="w-5 h-5" />,
+    description: "Requisitos treino/benchmarks"
   },
   { 
     id: "params", 
@@ -187,8 +180,6 @@ const AdminPortal = () => {
         );
       case "athleteStatus":
         return <AthleteStatusAdmin />;
-      case "targetTimes":
-        return <TargetTimesEditor />;
       case "classification":
         return <ClassificationAdminEditor />;
       default:

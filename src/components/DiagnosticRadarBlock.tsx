@@ -48,21 +48,15 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  iniciante: 'INICIANTE',
-  intermediario: 'INTERMEDIÁRIO',
-  avancado: 'AVANÇADO',
-  hyrox_open: 'HYROX OPEN',
-  hyrox_pro: 'HYROX PRO',
-  elite: 'ELITE'
+  open: 'OPEN',
+  pro: 'PRO',
+  elite: 'ELITE',
 };
 
 const STATUS_SUMMARY: Record<string, string> = {
-  iniciante: 'Você está construindo as bases para competir. Continue evoluindo.',
-  intermediario: 'Você compete em um nível consistente dentro da sua categoria.',
-  avancado: 'Seu nível de performance te coloca entre os atletas mais preparados.',
-  hyrox_open: 'Você compete no nível OPEN com resultados validados em prova.',
-  hyrox_pro: 'Você compete no nível PRO com resultados validados em prova.',
-  elite: 'Você está entre os atletas de elite da modalidade.'
+  open: 'Você está na categoria OPEN. Importe uma prova oficial para evoluir.',
+  pro: 'Você compete no nível PRO com resultados validados em prova.',
+  elite: 'Você está entre os atletas de elite da modalidade.',
 };
 
 const RADAR_AXES = [
@@ -1140,8 +1134,8 @@ export function DiagnosticRadarBlock({
     return `HYROX ${level} ${gender}`;
   }, [athleteConfig?.sexo, status]);
 
-  const statusLabel = STATUS_LABELS[status] || 'INTERMEDIÁRIO';
-  const statusSummary = STATUS_SUMMARY[status] || STATUS_SUMMARY.intermediario;
+  const statusLabel = STATUS_LABELS[status] || 'OPEN';
+  const statusSummary = STATUS_SUMMARY[status] || STATUS_SUMMARY.open;
 
   const mainLimiter = useMemo(() => {
     if (!scores.length) return null;

@@ -36,11 +36,9 @@ const METRICS = [
 ];
 
 const LEVELS = [
-  { key: 'iniciante', label: 'Iniciante' },
-  { key: 'intermediario', label: 'Intermediário' },
-  { key: 'avancado', label: 'Avançado' },
-  { key: 'hyrox_open', label: 'HYROX OPEN' },
-  { key: 'hyrox_pro', label: 'HYROX PRO' },
+  { key: 'open', label: 'OPEN' },
+  { key: 'pro', label: 'PRO' },
+  { key: 'elite', label: 'ELITE' },
 ];
 
 // Division values that match the database

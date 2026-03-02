@@ -13,15 +13,11 @@ interface LevelTargetTimes {
   elite: { masculino: number; feminino: number };
 }
 
-// Maps athlete status → which level they're targeting
+// Maps athlete status → which level they're targeting (Jornada V1: 3 levels only)
 const STATUS_TO_TARGET_LEVEL: Record<string, keyof LevelTargetTimes> = {
-  iniciante: 'open',
-  intermediario: 'open',
-  avancado: 'open',
-  hyrox_open: 'pro',
   open: 'pro',
-  hyrox_pro: 'elite',
   pro: 'elite',
+  elite: 'elite',
 };
 
 const LEVEL_LABELS: Record<string, string> = {
