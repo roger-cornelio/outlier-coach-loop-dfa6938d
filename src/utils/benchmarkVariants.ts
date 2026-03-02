@@ -244,42 +244,33 @@ export const BENCHMARK_EXAMPLES = {
     title: 'ENGINE CONDITIONING',
     wodType: 'engine' as const,
     variants: {
-      iniciante: {
+      open: {
         content: `3 Rounds For Time:
 400m Run
 15 Cal Row
 12 Wall Ball (6kg)
 Rest 1:30 between rounds`,
         notes: 'Ritmo confortável, foco em constância',
-        targetRange: { min: 18 * 60, max: 22 * 60 }, // 18:00 - 22:00
+        targetRange: { min: 18 * 60, max: 22 * 60 },
         durationMinutes: 22,
       },
-      intermediario: {
+      pro: {
         content: `4 Rounds For Time:
 400m Run
 20 Cal Row
 15 Wall Ball (9kg)
 Rest 1:00 between rounds`,
-        targetRange: { min: 20 * 60, max: 24 * 60 }, // 20:00 - 24:00
+        targetRange: { min: 20 * 60, max: 24 * 60 },
         durationMinutes: 24,
       },
-      avancado: {
-        content: `5 Rounds For Time:
-400m Run
-25 Cal Row
-20 Wall Ball (9kg)
-Rest 0:45 between rounds`,
-        targetRange: { min: 22 * 60, max: 26 * 60 }, // 22:00 - 26:00
-        durationMinutes: 26,
-      },
-      hyrox_pro: {
+      elite: {
         content: `5 Rounds For Time:
 500m Run
 30 Cal Row
 25 Wall Ball (9kg)
 No rest between rounds`,
         notes: 'Ritmo de competição, transições rápidas',
-        targetRange: { min: 24 * 60, max: 28 * 60 }, // 24:00 - 28:00
+        targetRange: { min: 24 * 60, max: 28 * 60 },
         durationMinutes: 28,
       },
     },
@@ -288,7 +279,7 @@ No rest between rounds`,
     title: 'CHIPPER BENCHMARK',
     wodType: 'mixed' as const,
     variants: {
-      iniciante: {
+      open: {
         content: `For Time:
 30 Cal Bike
 20 Box Step-ups (50cm)
@@ -296,30 +287,20 @@ No rest between rounds`,
 10 Burpees
 200m Farmer Carry (12kg cada)`,
         notes: 'Divida as séries se necessário',
-        targetRange: { min: 12 * 60, max: 16 * 60 }, // 12:00 - 16:00
+        targetRange: { min: 12 * 60, max: 16 * 60 },
         durationMinutes: 16,
       },
-      intermediario: {
+      pro: {
         content: `For Time:
 40 Cal Bike
 30 Box Jumps (50cm)
 20 DB Thrusters (15kg)
 15 Burpees
 300m Farmer Carry (20kg cada)`,
-        targetRange: { min: 14 * 60, max: 18 * 60 }, // 14:00 - 18:00
+        targetRange: { min: 14 * 60, max: 18 * 60 },
         durationMinutes: 18,
       },
-      avancado: {
-        content: `For Time:
-50 Cal Bike
-40 Box Jumps (60cm)
-30 DB Thrusters (20kg)
-20 Burpee Box Jump Overs
-400m Farmer Carry (24kg cada)`,
-        targetRange: { min: 16 * 60, max: 20 * 60 }, // 16:00 - 20:00
-        durationMinutes: 20,
-      },
-      hyrox_pro: {
+      elite: {
         content: `For Time:
 60 Cal Bike
 50 Box Jumps (60cm)
@@ -327,7 +308,7 @@ No rest between rounds`,
 30 Burpee Box Jump Overs
 500m Farmer Carry (32kg cada)`,
         notes: 'Sem pausas, ritmo máximo sustentável',
-        targetRange: { min: 18 * 60, max: 22 * 60 }, // 18:00 - 22:00
+        targetRange: { min: 18 * 60, max: 22 * 60 },
         durationMinutes: 22,
       },
     },
@@ -336,7 +317,7 @@ No rest between rounds`,
     title: 'INTERVAL BENCHMARK',
     wodType: 'hyrox' as const,
     variants: {
-      iniciante: {
+      open: {
         content: `EMOM 16min (4 rounds):
 Min 1: 200m Row
 Min 2: 8 Wall Ball (6kg)
@@ -345,10 +326,10 @@ Min 4: Rest
 
 Score = tempo total de trabalho`,
         notes: 'Objetivo: terminar cada minuto com 10-15s de descanso',
-        targetRange: { min: 10 * 60, max: 12 * 60 }, // 10:00 - 12:00 work time
+        targetRange: { min: 10 * 60, max: 12 * 60 },
         durationMinutes: 16,
       },
-      intermediario: {
+      pro: {
         content: `EMOM 20min (5 rounds):
 Min 1: 250m Row
 Min 2: 12 Wall Ball (9kg)
@@ -356,21 +337,10 @@ Min 3: 8 Burpees
 Min 4: Rest
 
 Score = tempo total de trabalho`,
-        targetRange: { min: 12 * 60, max: 15 * 60 }, // 12:00 - 15:00 work time
+        targetRange: { min: 12 * 60, max: 15 * 60 },
         durationMinutes: 20,
       },
-      avancado: {
-        content: `EMOM 24min (6 rounds):
-Min 1: 300m Row
-Min 2: 15 Wall Ball (9kg)
-Min 3: 10 Burpees
-Min 4: Rest
-
-Score = tempo total de trabalho`,
-        targetRange: { min: 14 * 60, max: 17 * 60 }, // 14:00 - 17:00 work time
-        durationMinutes: 24,
-      },
-      hyrox_pro: {
+      elite: {
         content: `EMOM 24min (6 rounds):
 Min 1: 350m Row
 Min 2: 18 Wall Ball (9kg)
@@ -379,7 +349,7 @@ Min 4: 100m Sled Push
 
 Score = tempo total de trabalho`,
         notes: 'Sem descanso, ritmo de prova',
-        targetRange: { min: 16 * 60, max: 19 * 60 }, // 16:00 - 19:00 work time
+        targetRange: { min: 16 * 60, max: 19 * 60 },
         durationMinutes: 24,
       },
     },

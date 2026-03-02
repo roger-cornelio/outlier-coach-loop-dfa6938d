@@ -52,7 +52,7 @@ export function normalizeBlockForPersistence(block: WorkoutBlock): WorkoutBlock 
   
   // Verificar também levelVariants para durationMinutes
   if (block.levelVariants) {
-    const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const;
+    const levels = ['open', 'pro', 'elite'] as const;
     let hasAnyDuration = false;
     
     for (const level of levels) {
@@ -130,7 +130,7 @@ export function blockHasDuration(block: WorkoutBlock): boolean {
   
   // Verificar levelVariants
   if (block.levelVariants) {
-    const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const;
+    const levels = ['open', 'pro', 'elite'] as const;
     for (const level of levels) {
       const variant = block.levelVariants[level];
       if (variant?.durationMinutes && variant.durationMinutes > 0) {
