@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
@@ -72,6 +73,31 @@ const RADAR_AXES = [
 { key: 'roxzone', name: 'Core & Estabilidade', shortName: 'Core' },
 { key: 'wallballs', name: 'Coordenação sob Fadiga', shortName: 'Eficiência' }];
 
+
+// ============================================
+// INLINE CTA: Importar Prova HYROX
+// ============================================
+
+function ImportProvaInlineCTA() {
+  const navigate = useNavigate();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-primary/15 border border-primary/30 rounded-xl p-4 cursor-pointer hover:bg-primary/20 transition-colors"
+      onClick={() => navigate('/importar-prova')}
+    >
+      <div className="flex items-center gap-3">
+        <Flame className="w-5 h-5 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-foreground">Importar sua prova HYROX</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Cole o link do resultado e desbloqueie seu diagnóstico</p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+      </div>
+    </motion.div>
+  );
+}
 
 // ============================================
 // COMPONENT PROPS
@@ -1211,17 +1237,9 @@ export function DiagnosticRadarBlock({
           provaAlvoTargetTime={provaAlvoTargetTime} />
 
 
-        {/* Card informativo quando sem prova */}
+        {/* CTA importar prova quando sem dados */}
         {!hasData && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card-elevated p-4 border-l-4 border-l-amber-500/60">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Registre uma prova oficial para medirmos seu resultado</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Seu radar de performance e análise de gargalos aparecerão aqui</p>
-              </div>
-            </div>
-          </motion.div>
+          <ImportProvaInlineCTA />
         )}
 
         {/* Linha inline: Última prova · Meta · Evolução — só com dados */}
@@ -1415,17 +1433,7 @@ export function DiagnosticRadarBlock({
           }
 
           if (!lastTime) {
-            return (
-              <div className="card-elevated p-4 border-l-4 border-l-amber-500/60 mt-2">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Registre uma prova oficial para medirmos seu resultado</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Seu radar de performance e análise de gargalos aparecerão aqui</p>
-                  </div>
-                </div>
-              </div>
-            );
+            return <ImportProvaInlineCTA />;
           }
 
           const top = Math.round(100 - outlierScore.score);
