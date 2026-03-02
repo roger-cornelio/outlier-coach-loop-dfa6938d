@@ -110,19 +110,24 @@ export default function ImportarProva() {
   const [searchError, setSearchError] = useState('');
   const [searchDone, setSearchDone] = useState(false);
 
+  // Editable search name fields
+  const profileName = profile?.name || '';
+  const initialSplit = profileName ? splitAthleteName(profileName) : { firstName: '', lastName: '' };
+  const [searchFirstName, setSearchFirstName] = useState(initialSplit.firstName);
+  const [searchLastName, setSearchLastName] = useState(initialSplit.lastName);
+
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
-  const athleteName = profile?.name || '';
 
   // Auto-search on mount
   useEffect(() => {
-    if (!athleteName || !user) return;
+    if (!searchLastName || !user) return;
     searchByName();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function searchByName() {
-    if (!athleteName) {
-      setStep('input');
+    if (!searchLastName.trim()) {
+      toast.error('Preencha pelo menos o sobrenome.');
       return;
     }
     setSearching(true);
@@ -131,11 +136,10 @@ export default function ImportarProva() {
     setSearchDone(false);
 
     try {
-      const { firstName, lastName } = splitAthleteName(athleteName);
       const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
 
       const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
-        body: { firstName, lastName, gender },
+        body: { firstName: searchFirstName.trim(), lastName: searchLastName.trim(), gender },
       });
 
       if (error) throw error;
@@ -333,7 +337,7 @@ export default function ImportarProva() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="px-4 py-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => athleteName ? setStep('search') : navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => searchLastName ? setStep('search') : navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-bold text-foreground">Importar Resultado HYROX</h1>
@@ -382,13 +386,49 @@ export default function ImportarProva() {
 
       <main className="flex-1 flex items-start justify-center px-4 pt-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-4">
+          {/* Editable search fields */}
+          {!searching && (
+            <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+              <p className="text-sm font-medium text-foreground">Buscar por nome no site HYROX</p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                  <Input
+                    value={searchFirstName}
+                    onChange={(e) => setSearchFirstName(e.target.value)}
+                    placeholder="Nome"
+                    className="h-10 rounded-xl"
+                    maxLength={50}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Sobrenome *</label>
+                  <Input
+                    value={searchLastName}
+                    onChange={(e) => setSearchLastName(e.target.value)}
+                    placeholder="Sobrenome"
+                    className="h-10 rounded-xl"
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={searchByName}
+                disabled={!searchLastName.trim()}
+                className="w-full h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Search className="w-4 h-4 mr-2" /> Buscar resultados
+              </Button>
+            </div>
+          )}
+
           {/* Search status */}
           {searching && (
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Search className="w-5 h-5 text-primary animate-pulse" />
                 <p className="text-sm font-medium text-foreground">
-                  Buscando resultados de <span className="text-primary">{athleteName}</span>...
+                  Buscando resultados de <span className="text-primary">{[searchFirstName, searchLastName].filter(Boolean).join(' ')}</span>...
                 </p>
               </div>
               <div className="space-y-3">
@@ -451,13 +491,13 @@ export default function ImportarProva() {
             <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
               <Search className="w-8 h-8 text-muted-foreground mx-auto" />
               <p className="text-sm text-muted-foreground">
-                {searchError || `Nenhum resultado encontrado para "${athleteName}".`}
+                {searchError || `Nenhum resultado encontrado para "${[searchFirstName, searchLastName].filter(Boolean).join(' ')}".`}
               </p>
             </div>
           )}
 
           {/* Manual fallback */}
-          {(searchDone || !athleteName) && !searching && (
+          {(searchDone || !searchLastName) && !searching && (
             <Button
               variant="outline"
               className="w-full h-12 rounded-2xl"
