@@ -122,24 +122,28 @@ function extractResultEntries(html: string, seasonId: number): any[] {
     // Must have idp parameter
     if (!rawUrl.includes("idp=")) continue;
 
-    // Extract time from the last time field (Totals)
-    const timeMatches = liContent.match(/time-ms"[^>]*>(?:<[^>]*>)*\s*([\d:]+\.\d+)/i);
+    // Extract time from the Totals field (right-aligned time-ms div)
+    // HTML: <div class="right list-field type-time ... time-ms" ...><div ...>Totals</div>62:44.68</div>
+    const timeMatches = liContent.match(/type-time[^>]*time-ms[^>]*>(?:<div[^>]*>[^<]*<\/div>)?\s*([\d]+:[\d:.]+)/i);
     const timeFormatted = timeMatches ? timeMatches[1] : "";
 
     // Extract event from the <li> class or URL event parameter
     const eventMatch = rawUrl.match(/event=([^&]+)/);
     const eventCode = eventMatch ? eventMatch[1] : "";
 
-    // Build full URL
-    const fullUrl = rawUrl.startsWith("http") ? rawUrl : `https://results.hyrox.com${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+    // Build full URL preserving season path
+    const fullUrl = rawUrl.startsWith("http") ? rawUrl : `https://results.hyrox.com/season-${seasonId}/${rawUrl.startsWith("?") ? "" : ""}${rawUrl}`;
 
-    // Determine division from event code
+    // Determine division from event code prefix
+    const prefix = eventCode.split("_")[0]?.toUpperCase() || "";
     let division = "HYROX";
-    if (eventCode.includes("PRO") || eventCode.includes("HRP")) division = "HYROX PRO";
-    if (eventCode.includes("HDD") || eventCode.includes("DOUBLES")) division = "HYROX DOUBLES";
+    if (prefix === "HPRO" || prefix === "HRP") division = "HYROX PRO";
+    else if (prefix === "HD" || prefix === "HDD") division = "HYROX DOUBLES";
+    else if (prefix === "HMR") division = "HYROX MIXED RELAY";
+    else if (prefix === "HDP") division = "HYROX";
 
-    // Decode event name from code (e.g., HDP_TPE26_OVERALL -> Taipei 2026)
-    const eventName = decodeEventCode(eventCode, seasonId);
+    const seasonLabel = seasonId === 8 ? "2025/26" : seasonId === 7 ? "2024/25" : `Season ${seasonId}`;
+    const eventName = `${division} ${seasonLabel}`;
 
     results.push({
       athlete_name: athleteName,
