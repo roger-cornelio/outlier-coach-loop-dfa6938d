@@ -140,11 +140,9 @@ export default function ImportarProva() {
 
       const totalSeconds = scrapeData.time_in_seconds;
       const eventName = scrapeData.event_name || 'Prova HYROX';
-      // Sanitize event_date: AI may return partial dates like "2025-XX-XX"
-      const rawDate = scrapeData.event_date || null;
-      const eventDate = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && !rawDate.includes('XX')
-        ? rawDate
-        : null;
+      // Use year only — exact date not needed, location is in event_name
+      const eventYear = scrapeData.event_year || new Date().getFullYear();
+      const eventDate = `${eventYear}-01-01`;
       const raceCategory = scrapeData.race_category || 'OPEN';
       const splits = scrapeData.splits || null;
       const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
