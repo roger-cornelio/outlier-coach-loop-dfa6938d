@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,7 +15,50 @@ import {
   type MetricInput,
 } from '@/utils/hyroxPercentileCalculator';
 
-// Same distribution used by AddResultModal
+function extractIdpFromUrl(url: string): { idp: string | null; event: string | null } {
+  try {
+    const urlObj = new URL(url);
+    return {
+      idp: urlObj.searchParams.get('idp'),
+      event: urlObj.searchParams.get('event') || null,
+    };
+  } catch {
+    const idpMatch = url.match(/idp=([^&]+)/);
+    const eventMatch = url.match(/event=([^&]+)/);
+    return {
+      idp: idpMatch ? idpMatch[1] : null,
+      event: eventMatch ? eventMatch[1] : null,
+    };
+  }
+}
+
+function generateMetricsFromSplits(splits: Record<string, number>): MetricInput[] {
+  const metrics: MetricInput[] = [];
+  const mapping: Record<string, string> = {
+    run_avg_sec: 'run_avg',
+    roxzone_sec: 'roxzone',
+    ski_sec: 'ski',
+    sled_push_sec: 'sled_push',
+    sled_pull_sec: 'sled_pull',
+    bbj_sec: 'bbj',
+    row_sec: 'row',
+    farmers_sec: 'farmers',
+    sandbag_sec: 'sandbag',
+    wallballs_sec: 'wallballs',
+  };
+
+  for (const [key, metricName] of Object.entries(mapping)) {
+    if (splits[key] && splits[key] > 0) {
+      metrics.push({
+        metric: metricName,
+        raw_time_sec: Math.round(splits[key]),
+        data_source: 'real' as const,
+      });
+    }
+  }
+  return metrics;
+}
+
 function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
   const runPercent = 0.42;
   const stationPercent = 0.48;
@@ -39,21 +82,7 @@ function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
   ];
 }
 
-function extractIdpFromUrl(url: string): { idp: string | null; event: string | null } {
-  try {
-    const urlObj = new URL(url);
-    const idp = urlObj.searchParams.get('idp');
-    const event = urlObj.searchParams.get('event') || null;
-    return { idp, event };
-  } catch {
-    const idpMatch = url.match(/idp=([^&]+)/);
-    const eventMatch = url.match(/event=([^&]+)/);
-    return {
-      idp: idpMatch ? idpMatch[1] : null,
-      event: eventMatch ? eventMatch[1] : null,
-    };
-  }
-}
+type ImportStep = 'input' | 'loading' | 'success' | 'error';
 
 export default function ImportarProva() {
   const navigate = useNavigate();
@@ -62,29 +91,12 @@ export default function ImportarProva() {
 
   const [url, setUrl] = useState('');
   const [agreed, setAgreed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState<ImportStep>('input');
   const [savedUrl, setSavedUrl] = useState('');
-
-  // Time fields
-  const [hours, setHours] = useState('');
-  const [minutes, setMinutes] = useState('');
-  const [seconds, setSeconds] = useState('');
-
-  // Event info
-  const [eventName, setEventName] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [raceCategory, setRaceCategory] = useState<'OPEN' | 'PRO'>('OPEN');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [extractedInfo, setExtractedInfo] = useState<string>('');
 
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
-
-  const calculateTotalSeconds = (): number | null => {
-    const h = parseInt(hours) || 0;
-    const m = parseInt(minutes) || 0;
-    const s = parseInt(seconds) || 0;
-    if (h === 0 && m === 0 && s === 0) return null;
-    return h * 3600 + m * 60 + s;
-  };
 
   const handleSubmit = async () => {
     if (!user) {
@@ -97,38 +109,73 @@ export default function ImportarProva() {
     }
     const { idp, event } = extractIdpFromUrl(url.trim());
     if (!idp) {
-      toast.error('Link inválido. Abra seu resultado oficial e copie o link da página.');
+      toast.error('Link inválido. O link precisa conter o parâmetro idp=');
       return;
     }
     if (!agreed) {
       toast.error('Aceite a autorização para continuar.');
       return;
     }
-    const totalSeconds = calculateTotalSeconds();
-    if (!totalSeconds) {
-      toast.error('Preencha o tempo total da prova.');
-      return;
-    }
-    if (!eventName.trim()) {
-      toast.error('Preencha o nome do evento.');
-      return;
-    }
 
-    setSubmitting(true);
+    setStep('loading');
+    setExtractedInfo('Acessando página de resultado...');
+
     try {
-      // 1. Insert into benchmark_results (same as AddResultModal for prova_oficial)
+      // 1. Call edge function to scrape and extract data from HYROX URL
+      setExtractedInfo('Lendo dados da prova...');
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke(
+        'scrape-hyrox-result',
+        { body: { url: url.trim() } }
+      );
+
+      if (scrapeError) {
+        console.error('Scrape error:', scrapeError);
+        throw new Error('Não foi possível ler os dados do link.');
+      }
+
+      if (scrapeData?.error || !scrapeData?.time_in_seconds) {
+        console.error('Scrape returned error:', scrapeData);
+        throw new Error(scrapeData?.error || 'Não encontramos os tempos no link informado.');
+      }
+
+      const totalSeconds = scrapeData.time_in_seconds;
+      const eventName = scrapeData.event_name || 'Prova HYROX';
+      const eventDate = scrapeData.event_date || null;
+      const raceCategory = scrapeData.race_category || 'OPEN';
+      const splits = scrapeData.splits || null;
+      const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
+
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      const formattedTime = `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
+
+      setExtractedInfo(`${eventName} — ${formattedTime} (${raceCategory})`);
+
+      // 2. Insert into benchmark_results
       const insertPayload = {
         user_id: user.id,
         result_type: 'prova_oficial',
-        event_name: eventName.trim(),
-        event_date: eventDate || null,
+        event_name: eventName,
+        event_date: eventDate,
         time_in_seconds: totalSeconds,
-        screenshot_url: url.trim(), // store source URL here
+        screenshot_url: url.trim(),
         race_category: raceCategory,
         completed: true,
         block_id: `prova_oficial_${Date.now()}`,
         workout_id: `prova_oficial_${Date.now()}`,
         benchmark_id: 'HYROX_OFFICIAL',
+        // Save individual splits if available
+        ...(hasSplits && splits.run_avg_sec ? { run_avg_sec: Math.round(splits.run_avg_sec) } : {}),
+        ...(hasSplits && splits.roxzone_sec ? { roxzone_sec: Math.round(splits.roxzone_sec) } : {}),
+        ...(hasSplits && splits.ski_sec ? { ski_sec: Math.round(splits.ski_sec) } : {}),
+        ...(hasSplits && splits.sled_push_sec ? { sled_push_sec: Math.round(splits.sled_push_sec) } : {}),
+        ...(hasSplits && splits.sled_pull_sec ? { sled_pull_sec: Math.round(splits.sled_pull_sec) } : {}),
+        ...(hasSplits && splits.bbj_sec ? { bbj_sec: Math.round(splits.bbj_sec) } : {}),
+        ...(hasSplits && splits.row_sec ? { row_sec: Math.round(splits.row_sec) } : {}),
+        ...(hasSplits && splits.farmers_sec ? { farmers_sec: Math.round(splits.farmers_sec) } : {}),
+        ...(hasSplits && splits.sandbag_sec ? { sandbag_sec: Math.round(splits.sandbag_sec) } : {}),
+        ...(hasSplits && splits.wallballs_sec ? { wallballs_sec: Math.round(splits.wallballs_sec) } : {}),
       };
 
       const { data: insertedData, error: insertError } = await supabase
@@ -139,16 +186,14 @@ export default function ImportarProva() {
 
       if (insertError) {
         if (insertError.code === '23505') {
-          toast.error('Este resultado já foi importado.');
-        } else {
-          throw insertError;
+          throw new Error('Este resultado já foi importado.');
         }
-        return;
+        throw insertError;
       }
 
       const resultId = insertedData?.id;
 
-      // 2. Also save to race_results for link tracking
+      // 3. Save to race_results for link tracking
       await supabase.from('race_results').insert({
         athlete_id: user.id,
         hyrox_idp: idp,
@@ -156,30 +201,83 @@ export default function ImportarProva() {
         source_url: url.trim(),
       } as any).single();
 
-      // 3. Trigger automatic analysis (same pipeline as AddResultModal)
+      // 4. Calculate percentiles
       if (resultId && hasGenderConfigured) {
+        setExtractedInfo('Calculando diagnóstico...');
         const alreadyExists = await hasExistingScores(resultId);
         if (!alreadyExists) {
-          const metrics = generateMetricsFromTotal(totalSeconds);
           const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
           const gender = athleteConfig?.sexo === 'feminino' ? 'F' : 'M';
+
+          // Use real splits if available, otherwise estimate from total
+          const metrics = hasSplits
+            ? generateMetricsFromSplits(splits)
+            : generateMetricsFromTotal(totalSeconds);
+
           await calculateAndSaveHyroxPercentiles(resultId, division, gender, metrics);
         }
       }
 
       triggerExternalResultsRefresh();
       setSavedUrl(url.trim());
-      setSuccess(true);
+      setStep('success');
       toast.success('Prova oficial registrada! 🏆');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Import error:', error);
-      toast.error('Erro ao importar resultado.');
-    } finally {
-      setSubmitting(false);
+      setErrorMsg(error?.message || 'Erro ao importar resultado.');
+      setStep('error');
     }
   };
 
-  if (success) {
+  if (step === 'loading') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md text-center space-y-6"
+        >
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Importando resultado...</h2>
+          <p className="text-sm text-muted-foreground">{extractedInfo}</p>
+          <p className="text-xs text-muted-foreground">Estamos lendo os dados diretamente do site HYROX.</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (step === 'error') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md"
+        >
+          <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="text-xl font-bold text-foreground">Erro na importação</h1>
+            <p className="text-sm text-muted-foreground">{errorMsg}</p>
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-2xl"
+                onClick={() => { setStep('input'); setErrorMsg(''); }}
+              >
+                Tentar novamente
+              </Button>
+              <Button variant="ghost" onClick={() => navigate(-1)}>
+                Voltar
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (step === 'success') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <motion.div
@@ -247,89 +345,16 @@ export default function ImportarProva() {
               </p>
             </div>
 
-            {/* Event name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Nome do evento</label>
-              <Input
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                placeholder="Ex: HYROX São Paulo 2026"
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            {/* Date + Category row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Data</label>
-                <Input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="h-10 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Categoria</label>
-                <div className="flex gap-2">
-                  {(['OPEN', 'PRO'] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setRaceCategory(cat)}
-                      className={`flex-1 h-10 rounded-xl text-sm font-bold transition-colors ${
-                        raceCategory === cat
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Time */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Tempo total</label>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="9"
-                    value={hours}
-                    onChange={(e) => setHours(e.target.value)}
-                    placeholder="0"
-                    className="h-12 text-center text-lg font-bold rounded-xl"
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">h</span>
-                </div>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
-                    placeholder="00"
-                    className="h-12 text-center text-lg font-bold rounded-xl"
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">m</span>
-                </div>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={seconds}
-                    onChange={(e) => setSeconds(e.target.value)}
-                    placeholder="00"
-                    className="h-12 text-center text-lg font-bold rounded-xl"
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">s</span>
-                </div>
-              </div>
+            {/* Info */}
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                ✨ Os dados serão extraídos automaticamente do link:
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Nome e data do evento</li>
+                <li>Categoria (OPEN / PRO)</li>
+                <li>Tempo total e splits por estação</li>
+              </ul>
             </div>
 
             {/* Consent */}
@@ -348,20 +373,11 @@ export default function ImportarProva() {
             {/* Submit */}
             <Button
               onClick={handleSubmit}
-              disabled={submitting || !url.trim()}
+              disabled={!url.trim() || !agreed}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-base font-bold rounded-2xl"
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Importando...
-                </>
-              ) : (
-                <>
-                  <Flame className="w-5 h-5 mr-2" />
-                  IMPORTAR RESULTADO
-                </>
-              )}
+              <Flame className="w-5 h-5 mr-2" />
+              IMPORTAR RESULTADO
             </Button>
           </div>
         </motion.div>
