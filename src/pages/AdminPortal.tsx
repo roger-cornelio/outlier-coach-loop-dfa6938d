@@ -11,6 +11,7 @@ import { MasterBenchmarksEditor } from "@/components/admin/MasterBenchmarksEdito
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { TargetTimesEditor } from "@/components/admin/TargetTimesEditor";
+import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -28,11 +29,12 @@ import {
   ArrowLeft,
   
   Crown,
-  Medal
+  Medal,
+  Gauge
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "targetTimes";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "targetTimes" | "classification";
 
 interface NavItem {
   id: AdminView;
@@ -77,6 +79,12 @@ const navItems: NavItem[] = [
     label: "Metas de Tempo", 
     icon: <Target className="w-5 h-5" />,
     description: "Tempos-alvo por nível"
+  },
+  {
+    id: "classification",
+    label: "Classificação",
+    icon: <Gauge className="w-5 h-5" />,
+    description: "Ajustes de resultado"
   },
   { 
     id: "params", 
@@ -181,6 +189,8 @@ const AdminPortal = () => {
         return <AthleteStatusAdmin />;
       case "targetTimes":
         return <TargetTimesEditor />;
+      case "classification":
+        return <ClassificationAdminEditor />;
       default:
         return <AthleteStatusAdmin />;
     }

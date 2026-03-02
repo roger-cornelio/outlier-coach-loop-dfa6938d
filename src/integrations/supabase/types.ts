@@ -385,6 +385,45 @@ export type Database = {
         }
         Relationships: []
       }
+      benchmarks_elite_pro: {
+        Row: {
+          age_max: number
+          age_min: number
+          created_at: string
+          elite_pro_seconds: number
+          id: string
+          is_active: boolean
+          sex: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          age_max: number
+          age_min: number
+          created_at?: string
+          elite_pro_seconds: number
+          id?: string
+          is_active?: boolean
+          sex: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          age_max?: number
+          age_min?: number
+          created_at?: string
+          elite_pro_seconds?: number
+          id?: string
+          is_active?: boolean
+          sex?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       coach_applications: {
         Row: {
           auth_user_id: string | null
@@ -475,6 +514,39 @@ export type Database = {
           coach_id?: string
           created_at?: string
           id?: string
+        }
+        Relationships: []
+      }
+      division_factors: {
+        Row: {
+          created_at: string
+          division: string
+          factor: number
+          id: string
+          is_active: boolean
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          division: string
+          factor: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          division?: string
+          factor?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
         }
         Relationships: []
       }
