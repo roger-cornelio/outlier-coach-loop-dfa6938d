@@ -1,12 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Trophy, Medal, Timer, Upload, X, Camera, 
-  CheckCircle, Loader2, Calendar, FileText, Sparkles, Wand2, AlertTriangle
+  CheckCircle, Loader2, Calendar, FileText, Sparkles, Wand2, AlertTriangle,
+  Search, Flame, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -68,6 +71,29 @@ function generateMetricsFromTotal(totalSeconds: number): MetricInput[] {
 
 export type ResultType = 'benchmark' | 'simulado' | 'prova_oficial';
 
+type ImportMode = 'manual' | 'search';
+
+type SearchResult = {
+  athlete_name: string;
+  event_name: string;
+  division?: string;
+  time_formatted: string;
+  result_url: string;
+  season_id?: number;
+};
+
+function splitAthleteName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 1) return { firstName: '', lastName: parts[0] || '' };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+function formatAthleteName(hyroxName: string): string {
+  if (!hyroxName.includes(',')) return hyroxName;
+  const [last, first] = hyroxName.split(',').map(s => s.trim());
+  return first ? `${first} ${last}` : last;
+}
+
 /**
  * Interface for extracted/real splits from screenshot or manual input.
  * These are the canonical split times in seconds.
@@ -109,7 +135,7 @@ const EMPTY_SPLITS: ExtractedSplits = {
 };
 
 export function AddResultModal({ onResultAdded }: AddResultModalProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { athleteConfig, setCurrentView, triggerExternalResultsRefresh } = useOutlierStore();
   const [open, setOpen] = useState(false);
   const [resultType, setResultType] = useState<ResultType>('simulado');
@@ -130,9 +156,155 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
   const [extractedSplits, setExtractedSplits] = useState<ExtractedSplits>(EMPTY_SPLITS);
   const [splitsConfidence, setSplitsConfidence] = useState<string | null>(null);
 
+  // HYROX Search state
+  const [importMode, setImportMode] = useState<ImportMode>('manual');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
+  const [searchAgreed, setSearchAgreed] = useState(false);
+  const profileName = profile?.name || '';
+  const initialSplit = profileName ? splitAthleteName(profileName) : { firstName: '', lastName: '' };
+  const [searchFirstName, setSearchFirstName] = useState(initialSplit.firstName);
+  const [searchLastName, setSearchLastName] = useState(initialSplit.lastName);
+
   // Check if gender is configured
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
   const needsGenderForProva = resultType === 'prova_oficial' && !hasGenderConfigured;
+
+  // Auto-search when switching to search mode
+  useEffect(() => {
+    if (importMode === 'search' && searchLastName && !searchDone && !searching) {
+      handleHyroxSearch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importMode]);
+
+  async function handleHyroxSearch() {
+    if (!searchLastName.trim()) {
+      toast.error('Preencha pelo menos o sobrenome.');
+      return;
+    }
+    setSearching(true);
+    setSearchResults([]);
+    setSearchDone(false);
+    try {
+      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
+        body: { firstName: searchFirstName.trim(), lastName: searchLastName.trim(), gender },
+      });
+      if (error) throw error;
+      setSearchResults(data?.results || []);
+    } catch (err: any) {
+      console.error('Search error:', err);
+      toast.error('Não foi possível buscar resultados.');
+    } finally {
+      setSearching(false);
+      setSearchDone(true);
+    }
+  }
+
+  async function handleImportFromSearch(result: SearchResult) {
+    if (!searchAgreed) {
+      toast.error('Aceite a autorização para continuar.');
+      return;
+    }
+    if (!user) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke(
+        'scrape-hyrox-result',
+        { body: { url: result.result_url } }
+      );
+      if (scrapeError) throw new Error('Não foi possível ler os dados do link.');
+      if (scrapeData?.error || !scrapeData?.time_in_seconds) {
+        throw new Error(scrapeData?.error || 'Não encontramos os tempos no link informado.');
+      }
+
+      const totalSeconds = scrapeData.time_in_seconds;
+      const scrapedEventName = scrapeData.event_name || 'Prova HYROX';
+      const eventYear = scrapeData.event_year || new Date().getFullYear();
+      const scrapedEventDate = `${eventYear}-01-01`;
+      const scrapedRaceCategory = scrapeData.race_category || 'OPEN';
+      const splits = scrapeData.splits || null;
+      const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
+
+      const insertPayload = {
+        user_id: user.id,
+        result_type: 'prova_oficial' as const,
+        event_name: scrapedEventName,
+        event_date: scrapedEventDate,
+        time_in_seconds: totalSeconds,
+        screenshot_url: result.result_url,
+        race_category: scrapedRaceCategory,
+        completed: true,
+        block_id: `prova_oficial_${Date.now()}`,
+        workout_id: `prova_oficial_${Date.now()}`,
+        benchmark_id: 'HYROX_OFFICIAL',
+        ...(hasSplits && splits.run_avg_sec ? { run_avg_sec: Math.round(splits.run_avg_sec) } : {}),
+        ...(hasSplits && splits.roxzone_sec ? { roxzone_sec: Math.round(splits.roxzone_sec) } : {}),
+        ...(hasSplits && splits.ski_sec ? { ski_sec: Math.round(splits.ski_sec) } : {}),
+        ...(hasSplits && splits.sled_push_sec ? { sled_push_sec: Math.round(splits.sled_push_sec) } : {}),
+        ...(hasSplits && splits.sled_pull_sec ? { sled_pull_sec: Math.round(splits.sled_pull_sec) } : {}),
+        ...(hasSplits && splits.bbj_sec ? { bbj_sec: Math.round(splits.bbj_sec) } : {}),
+        ...(hasSplits && splits.row_sec ? { row_sec: Math.round(splits.row_sec) } : {}),
+        ...(hasSplits && splits.farmers_sec ? { farmers_sec: Math.round(splits.farmers_sec) } : {}),
+        ...(hasSplits && splits.sandbag_sec ? { sandbag_sec: Math.round(splits.sandbag_sec) } : {}),
+        ...(hasSplits && splits.wallballs_sec ? { wallballs_sec: Math.round(splits.wallballs_sec) } : {}),
+      };
+
+      const { data: insertedData, error: insertError } = await supabase
+        .from('benchmark_results')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
+      if (insertError) {
+        if (insertError.code === '23505') throw new Error('Este resultado já foi importado.');
+        throw insertError;
+      }
+
+      const resultId = insertedData?.id;
+      if (resultId && hasGenderConfigured) {
+        const { hasExistingScores: checkScores } = await import('@/utils/hyroxPercentileCalculator');
+        const alreadyExists = await checkScores(resultId);
+        if (!alreadyExists) {
+          const division = scrapedRaceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
+          const gender = athleteConfig?.sexo === 'feminino' ? 'F' : 'M';
+          const metrics = hasSplits 
+            ? generateMetricsFromSplits(splits)
+            : generateMetricsFromTotal(totalSeconds);
+          const { calculateAndSaveHyroxPercentiles: calc } = await import('@/utils/hyroxPercentileCalculator');
+          await calc(resultId, division, gender, metrics);
+        }
+      }
+
+      triggerExternalResultsRefresh();
+      toast.success('Prova oficial registrada! 🏆');
+      setOpen(false);
+      onResultAdded?.();
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast.error(error?.message || 'Erro ao importar resultado.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function generateMetricsFromSplits(splits: Record<string, number>): MetricInput[] {
+    const metrics: MetricInput[] = [];
+    const mapping: Record<string, string> = {
+      run_avg_sec: 'run_avg', roxzone_sec: 'roxzone', ski_sec: 'ski',
+      sled_push_sec: 'sled_push', sled_pull_sec: 'sled_pull', bbj_sec: 'bbj',
+      row_sec: 'row', farmers_sec: 'farmers', sandbag_sec: 'sandbag', wallballs_sec: 'wallballs',
+    };
+    for (const [key, metricName] of Object.entries(mapping)) {
+      if (splits[key] && splits[key] > 0) {
+        metrics.push({ metric: metricName, raw_time_sec: Math.round(splits[key]), data_source: 'real' as const });
+      }
+    }
+    return metrics;
+  }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -664,6 +836,143 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
             </motion.div>
           )}
 
+          {/* Import Mode Toggle - Only for official races */}
+          {resultType === 'prova_oficial' && !needsGenderForProva && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={importMode === 'search' ? 'default' : 'outline'}
+                size="sm"
+                className="gap-2"
+                onClick={() => setImportMode('search')}
+              >
+                <Search className="w-4 h-4" />
+                Buscar no HYROX
+              </Button>
+              <Button
+                variant={importMode === 'manual' ? 'default' : 'outline'}
+                size="sm"
+                className="gap-2"
+                onClick={() => setImportMode('manual')}
+              >
+                <Camera className="w-4 h-4" />
+                Print / Manual
+              </Button>
+            </div>
+          )}
+
+          {/* HYROX Search Mode */}
+          {resultType === 'prova_oficial' && importMode === 'search' && !needsGenderForProva && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-3"
+            >
+              {/* Editable name fields */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">A busca mostra todos os resultados com nomes próximos. Selecione o seu.</p>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                    <Input
+                      value={searchFirstName}
+                      onChange={(e) => setSearchFirstName(e.target.value)}
+                      placeholder="Nome"
+                      className="h-9 rounded-xl text-sm"
+                      maxLength={50}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">Sobrenome *</label>
+                    <Input
+                      value={searchLastName}
+                      onChange={(e) => setSearchLastName(e.target.value)}
+                      placeholder="Sobrenome"
+                      className="h-9 rounded-xl text-sm"
+                      maxLength={50}
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleHyroxSearch}
+                  disabled={!searchLastName.trim() || searching}
+                  size="sm"
+                  className="w-full gap-2"
+                >
+                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {searching ? 'Buscando...' : 'Buscar resultados'}
+                </Button>
+              </div>
+
+              {/* Loading skeletons */}
+              {searching && (
+                <div className="space-y-2">
+                  <Skeleton className="h-14 rounded-xl" />
+                  <Skeleton className="h-14 rounded-xl" />
+                </div>
+              )}
+
+              {/* Search results */}
+              {searchDone && !searching && searchResults.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">
+                      {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="consent-modal" checked={searchAgreed} onCheckedChange={(v) => setSearchAgreed(v === true)} className="mt-0.5" />
+                    <label htmlFor="consent-modal" className="text-xs text-muted-foreground cursor-pointer">
+                      Autorizo uso do meu resultado para análise de performance.
+                    </label>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {searchResults.map((result, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleImportFromSearch(result)}
+                        disabled={!searchAgreed || isSubmitting}
+                        className="w-full flex items-center gap-2 bg-muted/50 hover:bg-muted rounded-xl p-3 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Flame className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">{formatAthleteName(result.athlete_name)}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{result.event_name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {result.time_formatted}
+                            {result.division ? ` • ${result.division}` : ''}
+                          </p>
+                        </div>
+                        {isSubmitting ? (
+                          <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No results */}
+              {searchDone && !searching && searchResults.length === 0 && (
+                <div className="text-center py-3">
+                  <Search className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum resultado para "{[searchFirstName, searchLastName].filter(Boolean).join(' ')}".
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Manual/Screenshot mode content */}
+          {(resultType !== 'prova_oficial' || importMode === 'manual' || needsGenderForProva) && (
+          <>
           {/* Screenshot Upload - Moved to top for AI extraction flow */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -847,6 +1156,8 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
               </>
             )}
           </Button>
+          </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

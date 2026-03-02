@@ -397,6 +397,7 @@ export default function ImportarProva() {
           {!searching && (
             <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
               <p className="text-sm font-medium text-foreground">Buscar por nome no site HYROX</p>
+              <p className="text-xs text-muted-foreground">A busca mostra todos os resultados com nomes próximos. Selecione o seu.</p>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
