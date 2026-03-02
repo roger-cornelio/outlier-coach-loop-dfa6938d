@@ -22,10 +22,9 @@ export interface TargetTimeRangeConfig {
 }
 
 export interface LevelTimeRangesConfig {
-  iniciante: TargetTimeRangeConfig;
-  intermediario: TargetTimeRangeConfig;
-  avancado: TargetTimeRangeConfig;
-  hyrox_pro: TargetTimeRangeConfig;
+  open: TargetTimeRangeConfig;
+  pro: TargetTimeRangeConfig;
+  elite: TargetTimeRangeConfig;
 }
 
 export interface ScoringBucketConfig {
@@ -703,7 +702,7 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
     
     // Validar time ranges
     if (b.defaultTimeRangesByLevel) {
-      const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const;
+      const levels = ['open', 'pro', 'elite'] as const;
       for (const level of levels) {
         const range = b.defaultTimeRangesByLevel[level];
         if (range) {
@@ -808,7 +807,7 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
   if (params.progression) {
     const p = params.progression;
     if (p.levelThresholds) {
-      const levels = ['iniciante', 'intermediario', 'avancado', 'hyrox_open', 'hyrox_pro'] as const;
+      const levels = ['open', 'pro', 'elite'] as const;
       let prevThreshold = -Infinity;
       for (const level of levels) {
         const threshold = p.levelThresholds[level];

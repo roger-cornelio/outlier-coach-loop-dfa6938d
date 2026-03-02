@@ -83,7 +83,7 @@ function generateDiff(oldParams: OutlierParamsConfig, newParams: OutlierParamsCo
   const oldRanges = oldParams.benchmark.defaultTimeRangesByLevel;
   const newRanges = newParams.benchmark.defaultTimeRangesByLevel;
   
-  for (const level of ['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const) {
+  for (const level of ['open', 'pro', 'elite'] as const) {
     const oldRange = oldRanges[level];
     const newRange = newRanges[level];
     if (oldRange && newRange) {
@@ -651,7 +651,7 @@ export function AdminParamsEditor() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
-                      {(['iniciante', 'intermediario', 'avancado', 'hyrox_pro'] as const).map((level) => {
+                      {(['open', 'pro', 'elite'] as const).map((level) => {
                         const range = editedParams.benchmark.defaultTimeRangesByLevel[level];
                         return (
                           <div key={level} className="grid grid-cols-3 gap-2 items-center">
@@ -722,7 +722,7 @@ export function AdminParamsEditor() {
                         </div>
                       ))}
                       <p className="text-xs text-muted-foreground pt-2">
-                        Valores maiores = tempo maior estimado (iniciante demora mais)
+                        Valores maiores = tempo maior estimado (OPEN demora mais)
                       </p>
                     </div>
                   </AccordionContent>

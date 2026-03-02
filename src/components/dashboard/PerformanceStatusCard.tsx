@@ -53,11 +53,9 @@ export function getEliteTargetSeconds(
 ): { targetSeconds: number; targetLabel: string } | null {
   // Mapa status → próximo nível e threshold (minutos)
   const NEXT_LEVEL: Record<string, { label: string; minutesMasc: number; minutesFem: number }> = {
-    iniciante:      { label: 'INTERMEDIÁRIO', minutesMasc: 95,  minutesFem: 100 },
-    intermediario:  { label: 'AVANÇADO',      minutesMasc: 80,  minutesFem: 85  },
-    avancado:       { label: 'OPEN',          minutesMasc: 70,  minutesFem: 75  },
-    hyrox_open:     { label: 'PRO',           minutesMasc: 66,  minutesFem: 70  },
-    hyrox_pro:      { label: 'ELITE',         minutesMasc: 66,  minutesFem: 70  },
+    open:  { label: 'PRO',   minutesMasc: 70,  minutesFem: 75  },
+    pro:   { label: 'ELITE', minutesMasc: 66,  minutesFem: 70  },
+    elite: { label: 'ELITE', minutesMasc: 66,  minutesFem: 70  },
   };
 
   const entry = NEXT_LEVEL[status as string];
