@@ -11,6 +11,7 @@ import { OutlierReferenceEditor } from "@/components/admin/OutlierReferenceEdito
 import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesEditor";
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
+import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmin";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -26,14 +27,14 @@ import {
   
   Activity,
   ArrowLeft,
-  
+  Dumbbell,
   Crown,
   Medal,
   Gauge
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks";
 
 interface NavItem {
   id: AdminView;
@@ -72,6 +73,12 @@ const navItems: NavItem[] = [
     label: "Classificação",
     icon: <Gauge className="w-5 h-5" />,
     description: "Benchmarks elite + fatores de divisão"
+  },
+  {
+    id: "outlierBenchmarks",
+    label: "Benchmarks OUTLIER",
+    icon: <Dumbbell className="w-5 h-5" />,
+    description: "Treinos-teste de progressão"
   },
   { 
     id: "athleteStatus", 
@@ -177,6 +184,8 @@ const AdminPortal = () => {
             <OutlierReferenceEditor />
           </div>
         );
+      case "outlierBenchmarks":
+        return <OutlierBenchmarksAdmin />;
       case "athleteStatus":
         return <AthleteStatusAdmin />;
       case "classification":

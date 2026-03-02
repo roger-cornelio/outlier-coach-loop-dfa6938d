@@ -256,6 +256,171 @@ export type Database = {
         }
         Relationships: []
       }
+      benchmark_outlier_master: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          difficulty_weight: number
+          expected_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          difficulty_weight?: number
+          expected_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          difficulty_weight?: number
+          expected_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      benchmark_outlier_progress: {
+        Row: {
+          athlete_id: string
+          benchmark_id: string
+          best_seconds: number | null
+          id: string
+          last_seconds: number | null
+          level_reached: string
+          progress_pct: number
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          benchmark_id: string
+          best_seconds?: number | null
+          id?: string
+          last_seconds?: number | null
+          level_reached?: string
+          progress_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          benchmark_id?: string
+          best_seconds?: number | null
+          id?: string
+          last_seconds?: number | null
+          level_reached?: string
+          progress_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benchmark_outlier_progress_benchmark_id_fkey"
+            columns: ["benchmark_id"]
+            isOneToOne: false
+            referencedRelation: "benchmark_outlier_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      benchmark_outlier_results: {
+        Row: {
+          athlete_id: string
+          benchmark_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          result_date: string
+          result_seconds: number
+          source: string
+        }
+        Insert: {
+          athlete_id: string
+          benchmark_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          result_date?: string
+          result_seconds: number
+          source?: string
+        }
+        Update: {
+          athlete_id?: string
+          benchmark_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          result_date?: string
+          result_seconds?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benchmark_outlier_results_benchmark_id_fkey"
+            columns: ["benchmark_id"]
+            isOneToOne: false
+            referencedRelation: "benchmark_outlier_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      benchmark_outlier_targets: {
+        Row: {
+          age_group: string
+          benchmark_id: string
+          created_at: string
+          division: string
+          id: string
+          level: string
+          sex: string
+          target_seconds: number
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          age_group?: string
+          benchmark_id: string
+          created_at?: string
+          division?: string
+          id?: string
+          level?: string
+          sex?: string
+          target_seconds: number
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          age_group?: string
+          benchmark_id?: string
+          created_at?: string
+          division?: string
+          id?: string
+          level?: string
+          sex?: string
+          target_seconds?: number
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benchmark_outlier_targets_benchmark_id_fkey"
+            columns: ["benchmark_id"]
+            isOneToOne: false
+            referencedRelation: "benchmark_outlier_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       benchmark_overrides: {
         Row: {
           age_group: string
