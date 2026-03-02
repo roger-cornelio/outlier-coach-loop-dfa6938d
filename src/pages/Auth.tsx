@@ -688,7 +688,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
               <OutlierWordmark size="hero" onClick={handleLogoClick} />
             ) : (
               <h1 
-                className="font-display text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo cursor-default select-none"
+                className="font-display text-6xl sm:text-7xl md:text-9xl tracking-widest font-bold text-gradient-logo cursor-default select-none"
                 onClick={handleLogoClick}
               >
                 {context === 'coach' ? 'COACH' : 'ADMIN'}

@@ -39,7 +39,7 @@ const SIZE_MAP: Record<WordmarkSize, string> = {
   md: 'text-4xl md:text-5xl',
   lg: 'text-5xl md:text-6xl',
   xl: 'text-6xl md:text-7xl',
-  hero: 'text-7xl md:text-9xl',
+  hero: 'text-6xl sm:text-7xl md:text-9xl',
 };
 
 /**
