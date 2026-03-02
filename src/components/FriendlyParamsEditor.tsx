@@ -97,60 +97,47 @@ const SECTIONS: SectionDefinition[] = [
   {
     id: 'benchmark-times',
     title: 'Faixas de Tempo por Nível',
-    description: 'Tempos de referência para classificação de desempenho em benchmarks',
+    description: 'Tempos de referência para classificação de desempenho em benchmarks (OPEN / PRO / ELITE)',
     icon: <Clock className="w-5 h-5" />,
     fields: [
-      // Iniciante
+      // OPEN
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.iniciante', 
-        label: 'Iniciante — Tempo mínimo', 
+        key: 'benchmark.defaultTimeRangesByLevel.open', 
+        label: 'OPEN — Tempo mínimo', 
         type: 'time', 
         nestedKey: 'min',
-        description: 'Tempo abaixo do qual o atleta é considerado Elite neste nível'
+        description: 'Tempo abaixo do qual o atleta é considerado forte neste nível'
       },
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.iniciante', 
-        label: 'Iniciante — Tempo máximo', 
+        key: 'benchmark.defaultTimeRangesByLevel.open', 
+        label: 'OPEN — Tempo máximo', 
         type: 'time', 
         nestedKey: 'max',
         description: 'Tempo acima do qual o atleta teve dificuldade'
       },
-      // Intermediário
+      // PRO
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.intermediario', 
-        label: 'Intermediário — Tempo mínimo', 
+        key: 'benchmark.defaultTimeRangesByLevel.pro', 
+        label: 'PRO — Tempo mínimo', 
         type: 'time', 
         nestedKey: 'min'
       },
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.intermediario', 
-        label: 'Intermediário — Tempo máximo', 
+        key: 'benchmark.defaultTimeRangesByLevel.pro', 
+        label: 'PRO — Tempo máximo', 
         type: 'time', 
         nestedKey: 'max'
       },
-      // Avançado
+      // ELITE
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.avancado', 
-        label: 'Avançado — Tempo mínimo', 
+        key: 'benchmark.defaultTimeRangesByLevel.elite', 
+        label: 'ELITE — Tempo mínimo', 
         type: 'time', 
         nestedKey: 'min'
       },
       { 
-        key: 'benchmark.defaultTimeRangesByLevel.avancado', 
-        label: 'Avançado — Tempo máximo', 
-        type: 'time', 
-        nestedKey: 'max'
-      },
-      // HYROX PRO
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.hyrox_pro', 
-        label: 'HYROX PRO — Tempo mínimo', 
-        type: 'time', 
-        nestedKey: 'min'
-      },
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.hyrox_pro', 
-        label: 'HYROX PRO — Tempo máximo', 
+        key: 'benchmark.defaultTimeRangesByLevel.elite', 
+        label: 'ELITE — Tempo máximo', 
         type: 'time', 
         nestedKey: 'max'
       },

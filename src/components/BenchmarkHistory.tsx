@@ -256,7 +256,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
               date: formatDate(r.date),
               time: r.timeInSeconds!,
               timeFormatted: metricInfo.format(r.timeInSeconds!),
-              bucket: getBucketForValue(r.timeInSeconds!, data.block, 'intermediario'),
+              bucket: getBucketForValue(r.timeInSeconds!, data.block, 'pro'),
             }));
 
             return (
