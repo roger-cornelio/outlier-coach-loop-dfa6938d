@@ -713,6 +713,36 @@ export type Database = {
           },
         ]
       }
+      race_results: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          hyrox_event: string | null
+          hyrox_idp: string
+          id: string
+          source_url: string
+          verified: boolean
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          hyrox_event?: string | null
+          hyrox_idp: string
+          id?: string
+          source_url: string
+          verified?: boolean
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          hyrox_event?: string | null
+          hyrox_idp?: string
+          id?: string
+          source_url?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       status_config: {
         Row: {
           created_at: string

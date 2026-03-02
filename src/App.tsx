@@ -20,6 +20,7 @@ import AdminPortal from "./pages/AdminPortal";
 import Nutricao from "./pages/Nutricao";
 import MedicinaDoEsporte from "./pages/MedicinaDoEsporte";
 import ProvaAlvo from "./pages/ProvaAlvo";
+import ImportarProva from "./pages/ImportarProva";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/nutricao" element={<Nutricao />} />
               <Route path="/medicina-do-esporte" element={<MedicinaDoEsporte />} />
               <Route path="/prova-alvo" element={<ProvaAlvo />} />
+              <Route path="/importar-prova" element={<ImportarProva />} />
 
               {/* === REDIRECTS === */}
               <Route path="/" element={<Navigate to="/login" replace />} />
