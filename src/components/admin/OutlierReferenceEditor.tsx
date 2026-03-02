@@ -200,6 +200,9 @@ export function OutlierReferenceEditor() {
   }, [factors]);
 
   // Simulation results
+  // Run has 8 legs in HYROX — base stores avg per 1km, total contribution = avg × 8
+  const RUN_LEGS = 8;
+
   const simResults = useMemo(() => {
     return STATIONS.map(st => {
       const base = bases.find(b => b.station_key === st.key);
@@ -217,6 +220,21 @@ export function OutlierReferenceEditor() {
       return { ...st, ref: ov ? ov.override_seconds : ref, isOverride: !!ov } as { key: string; label: string; ref: number; isOverride: boolean };
     });
   }, [bases, factors, overrides, simSex, simAge, simDiv, simTier, getFactor]);
+
+  // Total considering run_avg_1k × 8
+  const simTotal = useMemo(() => {
+    return simResults.reduce((s, r) => {
+      const contribution = r.key === 'run_avg_1k' ? r.ref * RUN_LEGS : r.ref;
+      return s + contribution;
+    }, 0);
+  }, [simResults]);
+
+  const baseTotal = useMemo(() => {
+    return bases.reduce((s, b) => {
+      const contribution = b.station_key === 'run_avg_1k' ? b.base_seconds * RUN_LEGS : b.base_seconds;
+      return s + contribution;
+    }, 0);
+  }, [bases]);
 
   // Save bases
   const saveBases = async () => {
@@ -648,12 +666,12 @@ export function OutlierReferenceEditor() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border/30 bg-muted/10">
-                    <td className="py-2 px-2 font-bold text-xs">TOTAL</td>
+                    <td className="py-2 px-2 font-bold text-xs">TOTAL <span className="text-muted-foreground font-normal">(run ×8)</span></td>
                     <td className="py-2 px-2 text-center font-mono text-xs text-muted-foreground">
-                      {secToMMSS(bases.reduce((s, b) => s + b.base_seconds, 0))}
+                      {secToMMSS(baseTotal)}
                     </td>
                     <td className="py-2 px-2 text-center font-mono font-bold text-primary">
-                      {secToMMSS(simResults.reduce((s, r) => s + r.ref, 0))}
+                      {secToMMSS(simTotal)}
                     </td>
                     <td></td>
                   </tr>
