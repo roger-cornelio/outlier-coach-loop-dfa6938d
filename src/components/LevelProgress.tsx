@@ -74,7 +74,13 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
-// Heraldic shield SVG shapes per level — premium design with partial fill support
+// ═══════════════════════════════════════════════════════════════════════════
+// SHIELD CREST — Identidade visual oficial dos escudos OUTLIER
+// Mesma silhueta para OPEN, PRO e ELITE. Ícones distintos por nível.
+// ═══════════════════════════════════════════════════════════════════════════
+const SHIELD_PATH = "M50 6 L90 24 L90 62 Q90 96 50 116 Q10 96 10 62 L10 24 Z";
+const SHIELD_INNER = "M50 14 L82 28 L82 58 Q82 88 50 108 Q18 88 18 58 L18 28 Z";
+
 function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }: { 
   level: ExtendedLevelKey; 
   active: boolean; 
@@ -83,232 +89,151 @@ function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }:
   className?: string;
 }) {
   const id = `shield-${level}-${active ? 'on' : 'off'}-${Math.round(fillPercent)}`;
-  const borderGlow = isCurrent ? 0.6 : active ? 0.35 : 0.05;
-  // fillPercent: 0-100 controls how much of the shield is colored (bottom-to-top reveal)
-  // Map fillPercent to a Y coordinate for the clip (120 = bottom, 4 = top of shield)
-  const clipY = 120 - (fillPercent / 100) * 116; // 116 is total height range (4 to 120)
+  const isLocked = !active && fillPercent === 0;
   const showPartialFill = fillPercent > 0 && fillPercent < 100 && !active;
+  const clipY = 120 - (fillPercent / 100) * 116;
 
-  if (level === 'OPEN') {
-    return (
-      <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id={`${id}-radial`} cx="50%" cy="30%" r="70%">
-            <stop offset="0%" stopColor={active ? '#d8b4fe' : '#888'} stopOpacity={active ? 0.6 : 0.06} />
-            <stop offset="100%" stopColor={active ? '#581c87' : '#444'} stopOpacity={active ? 0.9 : 0.04} />
-          </radialGradient>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.15" y2="1">
-            <stop offset="0%" stopColor={active ? '#c084fc' : '#666'} stopOpacity={active ? 1 : 0.1} />
-            <stop offset="50%" stopColor={active ? '#9333ea' : '#555'} stopOpacity={active ? 0.95 : 0.07} />
-            <stop offset="100%" stopColor={active ? '#581c87' : '#444'} stopOpacity={active ? 0.85 : 0.05} />
-          </linearGradient>
-          <linearGradient id={`${id}-partial`} x1="0" y1="0" x2="0.15" y2="1">
-            <stop offset="0%" stopColor="#c084fc" stopOpacity="0.7" />
-            <stop offset="50%" stopColor="#9333ea" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#581c87" stopOpacity="0.5" />
-          </linearGradient>
-          {(active || showPartialFill) && (
-            <filter id={`${id}-glow`}>
-              <feGaussianBlur stdDeviation={isCurrent ? '3.5' : '2'} result="b"/>
-              <feComposite in="b" in2="SourceGraphic" operator="over"/>
-            </filter>
-          )}
-          {showPartialFill && (
-            <clipPath id={`${id}-clip`}>
-              <rect x="0" y={clipY} width="100" height={120 - clipY} />
-            </clipPath>
-          )}
-        </defs>
-        {/* Base shield (inactive look) */}
-        <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z"
-          fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.08)'}
-          stroke={active ? `rgba(192,132,252,${borderGlow})` : 'rgba(255,255,255,0.03)'}
-          strokeWidth={isCurrent ? '2.5' : '1.5'}
-          filter={active ? `url(#${id}-glow)` : undefined} />
-        {/* Partial fill overlay */}
-        {showPartialFill && (
-          <g clipPath={`url(#${id}-clip)`}>
-            <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z"
-              fill={`url(#${id}-partial)`}
-              filter={`url(#${id}-glow)`} />
-          </g>
-        )}
-        {/* Inner radial overlay */}
-        {active && (
-          <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
-            fill={`url(#${id}-radial)`} />
-        )}
-        {/* Inner trim */}
-        <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.8" strokeDasharray="3 4" />
-        {/* Star emblem */}
-        <path d="M50 34 L55 47 L69 47 L58 55.5 L62.5 68 L50 60 L37.5 68 L42 55.5 L31 47 L45 47 Z"
-          fill={active ? 'white' : '#777'} opacity={active ? 0.8 : showPartialFill ? 0.15 : 0.1}
-          stroke={active ? 'rgba(255,255,255,0.3)' : 'none'} strokeWidth="0.6" />
-        {/* Accent lines */}
-        <line x1="28" y1="80" x2="72" y2="80" stroke={active ? 'rgba(192,132,252,0.25)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.7" />
-        <line x1="34" y1="86" x2="66" y2="86" stroke={active ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.01)'} strokeWidth="0.5" />
-      </svg>
-    );
-  }
+  // Border colors per level (active)
+  const borderColors: Record<ExtendedLevelKey, string> = {
+    OPEN: '#6B6B6B',    // graphite
+    PRO: '#F97316',     // orange
+    ELITE: '#F97316',   // vibrant orange
+  };
+  // Icon fill for active state
+  const iconFills: Record<ExtendedLevelKey, string> = {
+    OPEN: '#F97316',
+    PRO: '#F97316', 
+    ELITE: '#FBBF24',
+  };
 
-  if (level === 'PRO') {
-    return (
-      <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id={`${id}-radial`} cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor={active ? '#fef3c7' : '#888'} stopOpacity={active ? 0.5 : 0.05} />
-            <stop offset="100%" stopColor={active ? '#78350f' : '#444'} stopOpacity={active ? 0.7 : 0.03} />
-          </radialGradient>
-          <linearGradient id={`${id}-bg`} x1="0.1" y1="0" x2="0.9" y2="1">
-            <stop offset="0%" stopColor={active ? '#fcd34d' : '#666'} stopOpacity={active ? 1 : 0.1} />
-            <stop offset="30%" stopColor={active ? '#f59e0b' : '#555'} stopOpacity={active ? 0.95 : 0.08} />
-            <stop offset="70%" stopColor={active ? '#d97706' : '#555'} stopOpacity={active ? 0.9 : 0.06} />
-            <stop offset="100%" stopColor={active ? '#92400e' : '#444'} stopOpacity={active ? 0.8 : 0.05} />
-          </linearGradient>
-          <linearGradient id={`${id}-partial`} x1="0.1" y1="0" x2="0.9" y2="1">
-            <stop offset="0%" stopColor="#fcd34d" stopOpacity="0.5" />
-            <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#92400e" stopOpacity="0.35" />
-          </linearGradient>
-          {(active || showPartialFill) && (
-            <filter id={`${id}-glow`}>
-              <feGaussianBlur stdDeviation={isCurrent ? '4' : '2.5'} result="b"/>
-              <feComposite in="b" in2="SourceGraphic" operator="over"/>
-            </filter>
-          )}
-          {showPartialFill && (
-            <clipPath id={`${id}-clip`}>
-              <rect x="0" y={clipY} width="100" height={120 - clipY} />
-            </clipPath>
-          )}
-        </defs>
-        {/* Ornamental wings */}
-        <path d="M50 14 L60 7 L57 16 L70 11 L65 22 L78 20 L70 28 L50 24 L30 28 L22 20 L35 22 L30 11 L43 16 L40 7 Z"
-          fill={active ? '#b45309' : '#555'} opacity={active ? 0.45 : 0.05}
-          stroke={active ? 'rgba(251,191,36,0.2)' : 'none'} strokeWidth="0.5" />
-        {/* Base shield */}
-        <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
-          fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.08)'}
-          stroke={active ? `rgba(251,191,36,${borderGlow})` : 'rgba(255,255,255,0.03)'}
-          strokeWidth={isCurrent ? '2.5' : '1.5'}
-          filter={active ? `url(#${id}-glow)` : undefined} />
-        {/* Partial fill overlay */}
-        {showPartialFill && (
-          <g clipPath={`url(#${id}-clip)`}>
-            <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
-              fill={`url(#${id}-partial)`}
-              filter={`url(#${id}-glow)`} />
-          </g>
-        )}
-        {/* Metallic radial */}
-        {active && (
-          <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
-            fill={`url(#${id}-radial)`} />
-        )}
-        {/* Inner trim */}
-        <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.02)'} strokeWidth="1" />
-        {/* Hexagonal emblem */}
-        <path d="M50 36 L63 43.5 L63 58.5 L50 66 L37 58.5 L37 43.5 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.55)' : '#777'} strokeWidth="2" opacity={active ? 1 : showPartialFill ? 0.12 : 0.08} />
-        {/* Diamond core */}
-        <path d="M50 42 L57 50 L50 58 L43 50 Z"
-          fill={active ? 'white' : '#777'} opacity={active ? 0.75 : showPartialFill ? 0.12 : 0.08} />
-        {/* Cross marks */}
-        <line x1="50" y1="38" x2="50" y2="44" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
-        <line x1="50" y1="56" x2="50" y2="64" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
-        {/* Accent bars */}
-        <line x1="30" y1="74" x2="70" y2="74" stroke={active ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.8" />
-        <line x1="35" y1="82" x2="65" y2="82" stroke={active ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.01)'} strokeWidth="0.5" />
-        {/* Corner studs */}
-        <circle cx="28" cy="42" r="2" fill={active ? 'rgba(251,191,36,0.4)' : 'transparent'} />
-        <circle cx="72" cy="42" r="2" fill={active ? 'rgba(251,191,36,0.4)' : 'transparent'} />
-      </svg>
-    );
-  }
+  const borderColor = active ? borderColors[level] : '#2F2F2F';
+  const bgColor = active ? '#1A1A1A' : '#1A1A1A';
+  const iconColor = active ? iconFills[level] : '#3A3A3A';
+  const strokeW = active && level === 'ELITE' ? 3 : active ? 2.5 : 2;
 
-  // ELITE
   return (
     <svg viewBox="0 0 100 120" className={className} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id={`${id}-radial`} cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor={active ? '#fefce8' : '#888'} stopOpacity={active ? 0.4 : 0.04} />
-          <stop offset="100%" stopColor={active ? '#713f12' : '#444'} stopOpacity={active ? 0.6 : 0.03} />
-        </radialGradient>
-        <linearGradient id={`${id}-bg`} x1="0.1" y1="0" x2="0.9" y2="1">
-          <stop offset="0%" stopColor={active ? '#fef08a' : '#555'} stopOpacity={active ? 1 : 0.1} />
-          <stop offset="35%" stopColor={active ? '#facc15' : '#505050'} stopOpacity={active ? 0.95 : 0.08} />
-          <stop offset="70%" stopColor={active ? '#ca8a04' : '#484848'} stopOpacity={active ? 0.85 : 0.06} />
-          <stop offset="100%" stopColor={active ? '#713f12' : '#404040'} stopOpacity={active ? 0.75 : 0.05} />
-        </linearGradient>
-        <linearGradient id={`${id}-partial`} x1="0.1" y1="0" x2="0.9" y2="1">
-          <stop offset="0%" stopColor="#fef08a" stopOpacity="0.45" />
-          <stop offset="50%" stopColor="#facc15" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#713f12" stopOpacity="0.3" />
-        </linearGradient>
-        <linearGradient id={`${id}-crown`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={active ? '#fef9c3' : '#555'} stopOpacity={active ? 0.85 : 0.08} />
-          <stop offset="100%" stopColor={active ? '#a16207' : '#444'} stopOpacity={active ? 0.6 : 0.04} />
-        </linearGradient>
-        {(active || showPartialFill) && (
-          <filter id={`${id}-glow`}>
-            <feGaussianBlur stdDeviation={isCurrent ? '5' : '3'} result="b"/>
-            <feComposite in="b" in2="SourceGraphic" operator="over"/>
+        {/* Partial fill gradient */}
+        {showPartialFill && (
+          <>
+            <linearGradient id={`${id}-partial`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={iconFills[level]} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={iconFills[level]} stopOpacity="0.15" />
+            </linearGradient>
+            <clipPath id={`${id}-clip`}>
+              <rect x="0" y={clipY} width="100" height={120 - clipY} />
+            </clipPath>
+          </>
+        )}
+        {/* Elite outer glow */}
+        {active && level === 'ELITE' && (
+          <filter id={`${id}-glow`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="b"/>
+            <feFlood floodColor="#F97316" floodOpacity="0.35"/>
+            <feComposite in2="b" operator="in" result="glow"/>
+            <feMerge>
+              <feMergeNode in="glow"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
           </filter>
         )}
-        {showPartialFill && (
-          <clipPath id={`${id}-clip`}>
-            <rect x="0" y={clipY} width="100" height={120 - clipY} />
-          </clipPath>
-        )}
       </defs>
-      {/* Crown */}
-      <path d="M28 18 L34 8 L40 16 L46 4 L50 0 L54 4 L60 16 L66 8 L72 18 L72 28 L28 28 Z"
-        fill={active ? `url(#${id}-crown)` : 'rgba(80,80,80,0.06)'}
-        stroke={active ? `rgba(250,204,21,${borderGlow * 0.8})` : 'rgba(255,255,255,0.03)'}
-        strokeWidth="1.2" />
-      {/* Crown jewels */}
-      <circle cx="40" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
-      <circle cx="50" cy="15" r="3.2" fill={active ? '#fefce8' : '#666'} opacity={active ? 0.8 : 0.06} />
-      <circle cx="60" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
-      {/* Base shield */}
-      <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
-        fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.06)'}
-        stroke={active ? `rgba(250,204,21,${borderGlow})` : 'rgba(100,100,100,0.08)'}
-        strokeWidth={isCurrent ? '3' : '2'}
-        filter={active ? `url(#${id}-glow)` : undefined} />
+
+      {/* Shield body */}
+      <path d={SHIELD_PATH}
+        fill={bgColor}
+        stroke={borderColor}
+        strokeWidth={strokeW}
+        filter={active && level === 'ELITE' ? `url(#${id}-glow)` : undefined}
+      />
+
+      {/* Inner bevel line */}
+      <path d={SHIELD_INNER}
+        fill="none"
+        stroke={active ? `${borderColor}33` : '#2A2A2A'}
+        strokeWidth="1"
+      />
+
       {/* Partial fill overlay */}
       {showPartialFill && (
         <g clipPath={`url(#${id}-clip)`}>
-          <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
-            fill={`url(#${id}-partial)`}
-            filter={`url(#${id}-glow)`} />
+          <path d={SHIELD_PATH} fill={`url(#${id}-partial)`} />
         </g>
       )}
-      {/* Inner radial */}
-      {active && (
-        <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
-          fill={`url(#${id}-radial)`} />
+
+      {/* Level-specific icon (only when not locked) */}
+      {!isLocked && level === 'OPEN' && (
+        /* Arrow pointing up */
+        <g opacity={active ? 1 : 0.4}>
+          <path d="M50 30 L38 58 L44 58 L44 82 L56 82 L56 58 L62 58 Z"
+            fill={iconColor}
+            stroke={active ? '#00000044' : 'none'}
+            strokeWidth="0.5"
+          />
+          {active && (
+            <path d="M50 30 L38 58 L44 58 L44 82 L56 82 L56 58 L62 58 Z"
+              fill="none" stroke="#FFFFFF22" strokeWidth="0.8"
+            />
+          )}
+        </g>
       )}
-      {/* Double border */}
-      <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
-        fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(100,100,100,0.04)'} strokeWidth="1.2" />
-      <path d="M50 32 L76 42 L76 60 Q76 84 50 98 Q24 84 24 60 L24 42 Z"
-        fill="none" stroke={active ? 'rgba(255,255,255,0.08)' : 'rgba(100,100,100,0.02)'} strokeWidth="0.8" strokeDasharray="2 3" />
-      {/* Eagle silhouette */}
-      <g opacity={active ? 0.8 : showPartialFill ? 0.1 : 0.07} transform="translate(50,62) scale(1)">
-        <path d="M0 -16 L-20 -7 L-24 2 L-16 -1 L-9 4 L0 -5 L9 4 L16 -1 L24 2 L20 -7 Z"
-          fill={active ? 'white' : '#777'} />
-        <path d="M-4.5 -5 L0 -12 L4.5 -5 L4.5 8 L0 15 L-4.5 8 Z"
-          fill={active ? 'white' : '#777'} opacity="0.85" />
-        <path d="M-7 10 L0 20 L7 10" fill="none" stroke={active ? 'white' : '#777'} strokeWidth="1.2" opacity="0.5" />
-      </g>
-      {/* Bottom bar */}
-      <line x1="30" y1="88" x2="70" y2="88" stroke={active ? 'rgba(250,204,21,0.2)' : 'rgba(100,100,100,0.03)'} strokeWidth="0.8" />
-      {/* Laurel curves */}
-      <path d="M18 50 Q12 58 16 66" fill="none" stroke={active ? 'rgba(250,204,21,0.18)' : 'rgba(100,100,100,0.02)'} strokeWidth="1.5" />
-      <path d="M82 50 Q88 58 84 66" fill="none" stroke={active ? 'rgba(250,204,21,0.18)' : 'rgba(100,100,100,0.02)'} strokeWidth="1.5" />
+
+      {!isLocked && level === 'PRO' && (
+        /* Crossed swords */
+        <g opacity={active ? 1 : 0.4} transform="translate(50,58)">
+          {/* Sword 1 (left-to-right diagonal) */}
+          <line x1="-22" y1="20" x2="22" y2="-20" stroke={iconColor} strokeWidth="3.5" strokeLinecap="round" />
+          <line x1="-22" y1="20" x2="22" y2="-20" stroke={active ? '#00000033' : 'none'} strokeWidth="5" strokeLinecap="round" />
+          <line x1="-22" y1="20" x2="22" y2="-20" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Guard 1 */}
+          <line x1="-14" y1="8" x2="-6" y2="16" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Pommel 1 */}
+          <circle cx="-22" cy="20" r="2.5" fill={iconColor} />
+          
+          {/* Sword 2 (right-to-left diagonal) */}
+          <line x1="22" y1="20" x2="-22" y2="-20" stroke={iconColor} strokeWidth="3.5" strokeLinecap="round" />
+          <line x1="22" y1="20" x2="-22" y2="-20" stroke={active ? '#00000033' : 'none'} strokeWidth="5" strokeLinecap="round" />
+          <line x1="22" y1="20" x2="-22" y2="-20" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Guard 2 */}
+          <line x1="14" y1="8" x2="6" y2="16" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Pommel 2 */}
+          <circle cx="22" cy="20" r="2.5" fill={iconColor} />
+        </g>
+      )}
+
+      {!isLocked && level === 'ELITE' && (
+        /* Geometric crown */
+        <g opacity={active ? 1 : 0.4} transform="translate(50,60)">
+          {/* Crown base */}
+          <path d="M-22 8 L-22 -2 L-14 -12 L-7 -4 L0 -18 L7 -4 L14 -12 L22 -2 L22 8 Z"
+            fill={iconColor}
+            stroke={active ? '#FFFFFF22' : 'none'}
+            strokeWidth="0.8"
+          />
+          {/* Crown band */}
+          <rect x="-22" y="8" width="44" height="6" rx="1" fill={iconColor} opacity="0.9" />
+          {/* Jewels */}
+          <circle cx="-7" cy="-1" r="2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
+          <circle cx="0" cy="-8" r="2.5" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.9 : 0.3} />
+          <circle cx="7" cy="-1" r="2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
+        </g>
+      )}
+
+      {/* LOCKED STATE — Padlock */}
+      {isLocked && (
+        <g transform="translate(50,60)" opacity="1">
+          {/* Lock body - rounded rectangle */}
+          <rect x="-11" y="-2" width="22" height="18" rx="3" ry="3" fill="#CFCFCF" />
+          {/* Lock shackle - arch */}
+          <path d="M-7 -2 L-7 -10 Q-7 -18 0 -18 Q7 -18 7 -10 L7 -2"
+            fill="none" stroke="#CFCFCF" strokeWidth="3.5" strokeLinecap="round"
+          />
+          {/* Keyhole */}
+          <circle cx="0" cy="7" r="3" fill="#1A1A1A" />
+          <rect x="-1.2" y="7" width="2.4" height="6" rx="1" fill="#1A1A1A" />
+        </g>
+      )}
     </svg>
   );
 }
@@ -764,14 +689,7 @@ export function LevelProgress() {
                     }`}
                   />
                   
-                  {/* Lock overlay for levels with no progress */}
-                  {shieldFillPercent === 0 && !isOutlierAtLevel && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="p-2 rounded-full bg-background/30 backdrop-blur-sm">
-                        <Lock className="w-5 h-5 text-muted-foreground/60" />
-                      </div>
-                    </div>
-                  )}
+                  {/* Lock is now part of the SVG — no overlay needed */}
 
                   {/* Current target pulse */}
                   {isCurrentTarget && shieldFillPercent > 0 && (
