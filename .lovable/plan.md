@@ -1,78 +1,48 @@
 
 
-## Busca automatica de resultados HYROX pelo nome do atleta
+## Visual Refinement: Shields to Match Reference Image Exactly
 
-### Visao Geral
+### Current vs Reference — Key Differences
 
-Criar um fluxo onde o app busca automaticamente os resultados do atleta no site results.hyrox.com usando o nome cadastrado no perfil, exibindo uma lista de resultados encontrados para o atleta selecionar e importar.
+1. **Shield shape/depth**: Current shields are flat. Reference has a visible 3D beveled edge — the outer border appears raised with a subtle gradient, giving depth.
 
-### Como funciona o site HYROX
+2. **Locked state — icons too faint**: Current `opacity: 0.12` makes icons nearly invisible. Reference shows icons clearly at ~25-30% opacity (#3A3A3A on #1A1A1A background), distinctly visible behind the padlock.
 
-O site results.hyrox.com usa um formulario POST para buscar resultados por nome (Last Name + First Name). O formulario envia dados para:
-- URL: `https://results.hyrox.com/season-{N}/?pid=list&pidp=ranking_nav`
-- Campos: `search[name]`, `search[firstname]`, `search[sex]`, `event_main_group`, etc.
+3. **Locked state — border**: Current uses flat `#2F2F2F`. Reference shows a slightly beveled/gradient border that gives the shield dimension even when locked.
 
-Cada temporada tem um endpoint diferente (season-1 a season-8). Precisamos buscar nas temporadas mais recentes.
+4. **Padlock proportions**: Current padlock is roughly correct but needs refinement — reference shows a slightly wider body relative to shackle, and more defined keyhole.
 
-### Plano de Implementacao
+5. **OPEN arrow icon**: Reference shows a sharper, more angular arrowhead — wider at base, with a visible center shaft. Current is close but the proportions need tweaking.
 
-#### 1. Nova Edge Function: `search-hyrox-athlete`
+6. **PRO swords**: Reference swords are more stylized — leaf-shaped blades crossing at center with distinct guards. The current pommel circles are too large.
 
-- Recebe `firstName`, `lastName` e `gender` (M/W)
-- Faz POST no site HYROX simulando o formulario de busca (seasons 8 e 7, ou seja, 25/26 e 24/25)
-- Usa o modelo AI (gemini-2.5-flash) para parsear o HTML da tabela de resultados e extrair:
-  - Nome do atleta
-  - Evento (ex: "2025 Sao Paulo")
-  - Division (HYROX / HYROX PRO)
-  - Tempo final
-  - Link do resultado individual (com o parametro `idp`)
-- Retorna um array de resultados encontrados
+7. **ELITE crown**: Reference crown is wider with rounder peaks and more prominent jewel dots. Current is close but needs wider proportions.
 
-#### 2. Atualizar `ImportarProva.tsx` - Novo fluxo em 3 etapas
+8. **ELITE glow**: Reference has a warm orange outer glow that's more prominent — visible ring of light around the entire shield.
 
-**Etapa 1 - Busca automatica (nova)**
-- Ao abrir a pagina, se o atleta tem nome cadastrado, mostra: "Buscando seus resultados HYROX..."
-- Exibe lista de resultados encontrados com: evento, tempo, categoria
-- Cada resultado tem um botao "Importar este resultado"
-- Opcao "Nao encontrou? Cole o link manualmente" para manter o fluxo atual
+9. **Shield inner bevel**: Reference shows a clear inner shield contour line creating a raised-edge effect. Current `SHIELD_INNER` path exists but opacity may be too low.
 
-**Etapa 2 - Importacao (existente)**
-- Quando o atleta seleciona um resultado (ou cola um link), procede com o fluxo atual:
-  - Chama `scrape-hyrox-result` para extrair splits detalhados
-  - Salva em `benchmark_results`
-  - Calcula percentis
-  - Mostra tela de sucesso
+### Implementation Plan
 
-**Etapa 3 - Sucesso (existente)**
-- Mesma tela de sucesso atual
+**Single file edit**: `src/components/LevelProgress.tsx` — `ShieldCrest` function only.
 
-#### 3. Detalhes Tecnicos
+1. **Increase locked icon opacity** from `0.12` → `0.25` so icons are visible behind padlock (matching reference).
 
-**Edge Function `search-hyrox-athlete`:**
-```text
-POST /season-8/?pid=list&pidp=ranking_nav
-Content-Type: application/x-www-form-urlencoded
+2. **Add 3D bevel effect** to shield border:
+   - Add a `linearGradient` for the outer stroke to simulate light from top-left
+   - Make inner bevel line more visible (`#3A3A3A` → `#404040` for locked, `borderColor + 44` for active)
 
-event_main_group=%25 (todas as provas)
-event=%25 (todas as divisoes)
-search[name]=Sobrenome
-search[firstname]=Nome
-search[sex]=M
-num_results=25
-```
+3. **Refine OPEN arrow** proportions — wider arrowhead, slightly thinner shaft to match reference.
 
-- Busca em 2 temporadas (season-8 e season-7) em paralelo
-- Usa AI para parsear tabela HTML de resultados
-- Retorna array com: `event_name`, `time_formatted`, `division`, `result_url`
+4. **Refine PRO swords** — reduce pommel size, make blades slightly thinner/more elegant.
 
-**Split do nome do atleta:**
-- Pega o `name` do perfil (ex: "Roger Machado")
-- Primeiro token = firstName, restante = lastName
-- Se nome tem apenas 1 token, usa como lastName e firstName vazio
+5. **Refine ELITE crown** — widen overall, make peaks rounder, increase jewel sizes.
 
-**UI da lista de resultados:**
-- Cards com icone de medalha, nome do evento, tempo e categoria
-- Checkbox de autorizacao antes de importar
-- Loading state com spinner durante a busca
-- Estado vazio: "Nenhum resultado encontrado" + campo manual de link
+6. **Enhance ELITE glow** — increase `stdDeviation` and opacity for a more visible warm glow ring.
+
+7. **Adjust padlock** — widen body slightly, refine keyhole proportions.
+
+8. **Add subtle gradient to shield background** — reference shows the shield isn't perfectly flat black, it has a very subtle top-to-bottom gradient giving it dimension.
+
+No logic changes. No unlock criteria changes. Purely SVG visual adjustments within the existing `ShieldCrest` component.
 
