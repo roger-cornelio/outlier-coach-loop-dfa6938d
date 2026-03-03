@@ -123,40 +123,44 @@ export function useTopPercent(
     if (cachedBenchmarks && cachedFactors && cachedAnchors) return;
 
     async function load() {
-      const [benchRes, factorsRes, anchorsRes] = await Promise.all([
-        supabase
-          .from('benchmarks_elite_pro')
-          .select('sex, age_min, age_max, elite_pro_seconds')
-          .eq('is_active', true)
-          .eq('version', 'v1'),
-        supabase
-          .from('division_factors')
-          .select('division, factor')
-          .eq('is_active', true)
-          .eq('version', 'v1'),
-        supabase
-          .from('system_params')
-          .select('value')
-          .eq('key', 'top_percent_anchors')
-          .single(),
-      ]);
+      try {
+        const [benchRes, factorsRes, anchorsRes] = await Promise.all([
+          supabase
+            .from('benchmarks_elite_pro')
+            .select('sex, age_min, age_max, elite_pro_seconds')
+            .eq('is_active', true)
+            .eq('version', 'v1'),
+          supabase
+            .from('division_factors')
+            .select('division, factor')
+            .eq('is_active', true)
+            .eq('version', 'v1'),
+          supabase
+            .from('system_params')
+            .select('value')
+            .eq('key', 'top_percent_anchors')
+            .single(),
+        ]);
 
-      if (benchRes.data) {
-        cachedBenchmarks = benchRes.data as unknown as EliteProBenchmark[];
-        setBenchmarks(cachedBenchmarks);
+        if (benchRes.data) {
+          cachedBenchmarks = benchRes.data as unknown as EliteProBenchmark[];
+          setBenchmarks(cachedBenchmarks);
+        }
+
+        if (factorsRes.data) {
+          cachedFactors = factorsRes.data as unknown as DivisionFactor[];
+          setFactors(cachedFactors);
+        }
+
+        if (anchorsRes.data?.value && typeof anchorsRes.data.value === 'object') {
+          cachedAnchors = anchorsRes.data.value as unknown as Record<string, TopPercentAnchors>;
+          setAnchors(cachedAnchors);
+        }
+      } catch (err) {
+        console.error('useTopPercent load error:', err);
+      } finally {
+        setLoading(false);
       }
-
-      if (factorsRes.data) {
-        cachedFactors = factorsRes.data as unknown as DivisionFactor[];
-        setFactors(cachedFactors);
-      }
-
-      if (anchorsRes.data?.value && typeof anchorsRes.data.value === 'object') {
-        cachedAnchors = anchorsRes.data.value as unknown as Record<string, TopPercentAnchors>;
-        setAnchors(cachedAnchors);
-      }
-
-      setLoading(false);
     }
     load();
   }, []);
