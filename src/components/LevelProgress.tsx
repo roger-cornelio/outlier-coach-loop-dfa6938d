@@ -76,10 +76,12 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SHIELD CREST — Identidade visual oficial dos escudos OUTLIER
-// Mesma silhueta para OPEN, PRO e ELITE. Ícones distintos por nível.
+// Replicação EXATA do print de referência. Sem variações criativas.
 // ═══════════════════════════════════════════════════════════════════════════
-const SHIELD_PATH = "M50 8 L88 22 L88 52 Q88 80 50 96 Q12 80 12 52 L12 22 Z";
-const SHIELD_INNER = "M50 15 L81 27 L81 50 Q81 74 50 88 Q19 74 19 50 L19 27 Z";
+
+// Shield silhouette — hexagonal/angular shape matching reference exactly
+const SHIELD_PATH = "M50 4 L90 20 L90 55 Q90 82 50 98 Q10 82 10 55 L10 20 Z";
+const SHIELD_INNER = "M50 10 L84 24 L84 53 Q84 77 50 91 Q16 77 16 53 L16 24 Z";
 
 function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }: { 
   level: ExtendedLevelKey; 
@@ -89,62 +91,55 @@ function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }:
   className?: string;
 }) {
   const id = `shield-${level}-${active ? 'on' : 'off'}-${Math.round(fillPercent)}`;
-  const isLocked = !active && fillPercent === 0;
-  const showPartialFill = fillPercent > 0 && fillPercent < 100 && !active;
-  const clipY = 100 - (fillPercent / 100) * 92;
+  const isLocked = !active;
+  const showPartialFill = !active && fillPercent > 0 && fillPercent < 100;
+  const clipY = 100 - (fillPercent / 100) * 96;
 
-  // Border colors per level (active)
-  const borderColors: Record<ExtendedLevelKey, string> = {
-    OPEN: '#6B6B6B',
-    PRO: '#F97316',
-    ELITE: '#F97316',
-  };
-  // Icon fill for active state
-  const iconFills: Record<ExtendedLevelKey, string> = {
-    OPEN: '#F97316',
-    PRO: '#F97316', 
-    ELITE: '#FBBF24',
-  };
+  // Colors exactly matching reference
+  const ORANGE = '#FF6A00';
+  const DARK_BG = level === 'OPEN' ? '#121212' : level === 'PRO' ? '#0E0E0E' : '#0A0A0A';
+  const LOCKED_BORDER = '#2A2A2A';
+  const LOCKED_ICON = '#2A2A2A';
+  const PADLOCK_COLOR = '#888888';
 
-  const borderColor = active ? borderColors[level] : '#2F2F2F';
-  const bgColor = '#1A1A1A';
-  const iconColor = active ? iconFills[level] : '#3A3A3A';
-  const strokeW = active && level === 'ELITE' ? 3 : active ? 2.5 : 2;
+  const borderColor = active ? (level === 'OPEN' ? '#3A3A3A' : ORANGE) : LOCKED_BORDER;
+  const iconColor = active ? ORANGE : LOCKED_ICON;
+  const strokeW = active && level === 'ELITE' ? 3 : 2.5;
 
   return (
-    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 100 104" className={className} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        {/* 3D bevel gradient for border */}
+        {/* 3D bevel gradient for border — top-left light, bottom-right dark */}
         <linearGradient id={`${id}-bevel`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={active ? '#FFFFFF' : '#555555'} stopOpacity="0.35" />
-          <stop offset="50%" stopColor={borderColor} stopOpacity="1" />
-          <stop offset="100%" stopColor={active ? '#000000' : '#1A1A1A'} stopOpacity="0.5" />
+          <stop offset="0%" stopColor="#666666" stopOpacity="0.6" />
+          <stop offset="40%" stopColor={borderColor} stopOpacity="1" />
+          <stop offset="100%" stopColor="#111111" stopOpacity="0.8" />
         </linearGradient>
 
-        {/* Subtle background gradient for depth */}
+        {/* Dark background with subtle depth */}
         <linearGradient id={`${id}-bg`} x1="0.5" y1="0" x2="0.5" y2="1">
-          <stop offset="0%" stopColor="#252525" />
-          <stop offset="100%" stopColor="#141414" />
+          <stop offset="0%" stopColor={DARK_BG} />
+          <stop offset="100%" stopColor="#0A0A0A" />
         </linearGradient>
 
         {/* Partial fill gradient */}
         {showPartialFill && (
           <>
             <linearGradient id={`${id}-partial`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={iconFills[level]} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={iconFills[level]} stopOpacity="0.15" />
+              <stop offset="0%" stopColor={ORANGE} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={ORANGE} stopOpacity="0.1" />
             </linearGradient>
             <clipPath id={`${id}-clip`}>
-              <rect x="0" y={clipY} width="100" height={100 - clipY} />
+              <rect x="0" y={clipY} width="100" height={104 - clipY} />
             </clipPath>
           </>
         )}
 
-        {/* Elite outer glow — more prominent warm ring */}
+        {/* ELITE outer glow — subtle warm orange ring */}
         {active && level === 'ELITE' && (
-          <filter id={`${id}-glow`} x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="6" result="b"/>
-            <feFlood floodColor="#F97316" floodOpacity="0.5"/>
+          <filter id={`${id}-glow`} x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feFlood floodColor={ORANGE} floodOpacity="0.55"/>
             <feComposite in2="b" operator="in" result="glow"/>
             <feMerge>
               <feMergeNode in="glow"/>
@@ -154,19 +149,20 @@ function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }:
         )}
       </defs>
 
-      {/* Shield body with subtle gradient bg */}
+      {/* Shield body */}
       <path d={SHIELD_PATH}
         fill={`url(#${id}-bg)`}
         stroke={`url(#${id}-bevel)`}
         strokeWidth={strokeW}
+        strokeLinejoin="round"
         filter={active && level === 'ELITE' ? `url(#${id}-glow)` : undefined}
       />
 
-      {/* Inner bevel line — more visible for 3D raised effect */}
+      {/* Inner bevel line for 3D raised edge */}
       <path d={SHIELD_INNER}
         fill="none"
-        stroke={active ? `${borderColor}44` : '#404040'}
-        strokeWidth="1.2"
+        stroke={active && level !== 'OPEN' ? `${ORANGE}22` : '#333333'}
+        strokeWidth="1"
       />
 
       {/* Partial fill overlay */}
@@ -176,84 +172,78 @@ function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }:
         </g>
       )}
 
-      {/* ══ LEVEL ICONS ══ */}
+      {/* ══ LEVEL ICONS — exact match to reference ══ */}
 
-      {/* OPEN — Sharper angular arrowhead, wider base, thinner shaft */}
+      {/* OPEN — Bold upward arrow, centered, orange vibrant */}
       {level === 'OPEN' && (
-        <g opacity={isLocked ? 0.4 : active ? 1 : 0.4}>
-          <path d="M50 22 L32 48 L42 48 L42 72 L58 72 L58 48 L68 48 Z"
+        <g opacity={isLocked ? 0.25 : 1}>
+          <path d="M50 20 L30 48 L40 48 L40 75 L60 75 L60 48 L70 48 Z"
             fill={iconColor}
           />
           {active && (
-            <>
-              <path d="M50 28 L37 47 L43 47 L43 70 L57 70 L57 47 L63 47 Z"
-                fill="none" stroke="#FFFFFF18" strokeWidth="1"
-              />
-              <line x1="50" y1="30" x2="50" y2="68" stroke="#FFFFFF12" strokeWidth="2" />
-            </>
+            <path d="M50 24 L34 47 L42 47 L42 73 L58 73 L58 47 L66 47 Z"
+              fill="none" stroke="#FFFFFF10" strokeWidth="0.8"
+            />
           )}
         </g>
       )}
 
-      {/* PRO — Crossed leaf-blade swords, smaller pommels, thinner blades */}
+      {/* PRO — Crossed swords, proportional to reference */}
       {level === 'PRO' && (
-        <g opacity={isLocked ? 0.4 : active ? 1 : 0.4} transform="translate(50,48)">
-          <path d="M-18 16 Q-9 3 0 0 Q9 -3 18 -18 L20 -15 Q11 -2 2 2 Q-7 5 -15 19 Z"
-            fill={iconColor} />
-          <rect x="-14" y="4" width="11" height="2.5" rx="1.2"
-            fill={iconColor} transform="rotate(-45, -8.5, 5.25)" />
-          <circle cx="-17" cy="17" r="2" fill={iconColor} />
+        <g opacity={isLocked ? 0.25 : 1} transform="translate(50,50)">
+          {/* Left sword blade (bottom-left to top-right) */}
+          <path d="M-22 22 L18 -22" stroke={iconColor} strokeWidth="4" strokeLinecap="round" fill="none" />
+          {/* Left sword guard */}
+          <line x1="-14" y1="8" x2="-4" y2="18" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Left sword pommel */}
+          <circle cx="-20" cy="20" r="2.5" fill={iconColor} />
           
-          <path d="M18 16 Q9 3 0 0 Q-9 -3 -18 -18 L-20 -15 Q-11 -2 -2 2 Q7 5 15 19 Z"
-            fill={iconColor} />
-          <rect x="3" y="4" width="11" height="2.5" rx="1.2"
-            fill={iconColor} transform="rotate(45, 8.5, 5.25)" />
-          <circle cx="17" cy="17" r="2" fill={iconColor} />
+          {/* Right sword blade (bottom-right to top-left) */}
+          <path d="M22 22 L-18 -22" stroke={iconColor} strokeWidth="4" strokeLinecap="round" fill="none" />
+          {/* Right sword guard */}
+          <line x1="14" y1="8" x2="4" y2="18" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
+          {/* Right sword pommel */}
+          <circle cx="20" cy="20" r="2.5" fill={iconColor} />
 
-          {active && (
-            <>
-              <line x1="-15" y1="15" x2="17" y2="-15" stroke="#FFFFFF20" strokeWidth="0.8" />
-              <line x1="15" y1="15" x2="-17" y2="-15" stroke="#FFFFFF20" strokeWidth="0.8" />
-            </>
-          )}
+          {/* Blade tips — leaf shape */}
+          <path d="M18 -22 L22 -18 L16 -16 Z" fill={iconColor} />
+          <path d="M-18 -22 L-22 -18 L-16 -16 Z" fill={iconColor} />
         </g>
       )}
 
-      {/* ELITE — Wider crown, rounder peaks, bigger jewels */}
+      {/* ELITE — Wide crown with rounded peaks and jewel dots */}
       {level === 'ELITE' && (
-        <g opacity={isLocked ? 0.4 : active ? 1 : 0.4} transform="translate(50,52)">
-          <path d="M-26 8 L-26 1 Q-20 -4 -16 -9 Q-11 -3 -7 0 Q-3 -9 0 -20 Q3 -9 7 0 Q11 -3 16 -9 Q20 -4 26 1 L26 8 Z"
+        <g opacity={isLocked ? 0.25 : 1} transform="translate(50,52)">
+          {/* Crown body — wide, 5 peaks */}
+          <path d="M-28 10 L-28 0 L-18 -12 L-9 2 L0 -22 L9 2 L18 -12 L28 0 L28 10 Z"
             fill={iconColor}
           />
-          <rect x="-26" y="8" width="52" height="7" rx="2" fill={iconColor} opacity="0.85" />
+          {/* Crown base band */}
+          <rect x="-28" y="10" width="56" height="8" rx="2" fill={iconColor} opacity="0.9" />
           
+          {/* Jewel dots on crown */}
           {active && (
             <>
-              <path d="M0 -20 L-2.5 -15 L0 -10 L2.5 -15 Z" fill="#FEF3C7" opacity="0.5" />
-              <path d="M-16 -9 L-18 -5 L-16 -1 L-14 -5 Z" fill="#FEF3C7" opacity="0.35" />
-              <path d="M16 -9 L14 -5 L16 -1 L18 -5 Z" fill="#FEF3C7" opacity="0.35" />
+              <circle cx="0" cy="-8" r="3" fill="#FFD700" opacity="0.85" />
+              <circle cx="-14" cy="-2" r="2.5" fill="#FFD700" opacity="0.7" />
+              <circle cx="14" cy="-2" r="2.5" fill="#FFD700" opacity="0.7" />
             </>
-          )}
-
-          <circle cx="-9" cy="1" r="2.5" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
-          <circle cx="0" cy="-5" r="3" fill={active ? '#FEFCE8' : '#555'} opacity={active ? 0.9 : 0.3} />
-          <circle cx="9" cy="1" r="2.5" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
-          
-          {active && (
-            <line x1="-24" y1="12" x2="24" y2="12" stroke="#FFFFFF15" strokeWidth="0.8" />
           )}
         </g>
       )}
 
-      {/* LOCKED STATE — Small padlock below icon */}
+      {/* LOCKED STATE — Padlock centered over icon, no blur, no chrome */}
       {isLocked && (
-        <g transform="translate(50,68)">
-          <path d="M-3.5 0 L-3.5 -4 Q-3.5 -9 0 -9 Q3.5 -9 3.5 -4 L3.5 0"
-            fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round"
+        <g transform="translate(50, 70)">
+          {/* Shackle */}
+          <path d="M-5 0 L-5 -6 Q-5 -12 0 -12 Q5 -12 5 -6 L5 0"
+            fill="none" stroke={PADLOCK_COLOR} strokeWidth="2.2" strokeLinecap="round"
           />
-          <rect x="-5.5" y="-0.5" width="11" height="8.5" rx="2" ry="2" fill="#888" />
-          <circle cx="0" cy="3" r="1.3" fill="#1A1A1A" />
-          <rect x="-0.5" y="3" width="1" height="3" rx="0.5" fill="#1A1A1A" />
+          {/* Body */}
+          <rect x="-7.5" y="-1" width="15" height="11" rx="2.5" ry="2.5" fill={PADLOCK_COLOR} />
+          {/* Keyhole */}
+          <circle cx="0" cy="3.5" r="1.8" fill="#1A1A1A" />
+          <rect x="-0.7" y="3.5" width="1.4" height="4" rx="0.7" fill="#1A1A1A" />
         </g>
       )}
     </svg>
