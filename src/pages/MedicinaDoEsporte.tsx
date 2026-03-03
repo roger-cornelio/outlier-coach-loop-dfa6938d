@@ -61,7 +61,7 @@ export default function MedicinaDoEsporte() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-8">
+    <div className="min-h-screen w-full self-stretch bg-background p-3 sm:p-6 md:p-8 overflow-x-hidden">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Botão Voltar */}
         <Button

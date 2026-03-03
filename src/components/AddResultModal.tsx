@@ -709,10 +709,11 @@ export function AddResultModal({ onResultAdded }: AddResultModalProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button 
-          className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
+          size="sm"
+          className="gap-1 sm:gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg px-2 sm:px-4"
         >
-          <Plus className="w-4 h-4" />
-          Adicionar Resultado
+          <Plus className="w-4 h-4 flex-shrink-0" />
+          <span className="hidden sm:inline">Adicionar</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
