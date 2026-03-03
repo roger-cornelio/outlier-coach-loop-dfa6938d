@@ -74,10 +74,20 @@ const LEVEL_CONFIG: Record<ExtendedLevelKey, LevelVisualConfig> = {
   },
 };
 
-// Heraldic shield SVG shapes per level — premium design with depth, radial glow, and metallic textures
-function ShieldCrest({ level, active, isCurrent, className }: { level: ExtendedLevelKey; active: boolean; isCurrent?: boolean; className?: string }) {
-  const id = `shield-${level}-${active ? 'on' : 'off'}`;
+// Heraldic shield SVG shapes per level — premium design with partial fill support
+function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }: { 
+  level: ExtendedLevelKey; 
+  active: boolean; 
+  isCurrent?: boolean; 
+  fillPercent?: number;
+  className?: string;
+}) {
+  const id = `shield-${level}-${active ? 'on' : 'off'}-${Math.round(fillPercent)}`;
   const borderGlow = isCurrent ? 0.6 : active ? 0.35 : 0.05;
+  // fillPercent: 0-100 controls how much of the shield is colored (bottom-to-top reveal)
+  // Map fillPercent to a Y coordinate for the clip (120 = bottom, 4 = top of shield)
+  const clipY = 120 - (fillPercent / 100) * 116; // 116 is total height range (4 to 120)
+  const showPartialFill = fillPercent > 0 && fillPercent < 100 && !active;
 
   if (level === 'OPEN') {
     return (
@@ -92,28 +102,48 @@ function ShieldCrest({ level, active, isCurrent, className }: { level: ExtendedL
             <stop offset="50%" stopColor={active ? '#9333ea' : '#555'} stopOpacity={active ? 0.95 : 0.07} />
             <stop offset="100%" stopColor={active ? '#581c87' : '#444'} stopOpacity={active ? 0.85 : 0.05} />
           </linearGradient>
-          {active && (
+          <linearGradient id={`${id}-partial`} x1="0" y1="0" x2="0.15" y2="1">
+            <stop offset="0%" stopColor="#c084fc" stopOpacity="0.7" />
+            <stop offset="50%" stopColor="#9333ea" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#581c87" stopOpacity="0.5" />
+          </linearGradient>
+          {(active || showPartialFill) && (
             <filter id={`${id}-glow`}>
               <feGaussianBlur stdDeviation={isCurrent ? '3.5' : '2'} result="b"/>
               <feComposite in="b" in2="SourceGraphic" operator="over"/>
             </filter>
           )}
+          {showPartialFill && (
+            <clipPath id={`${id}-clip`}>
+              <rect x="0" y={clipY} width="100" height={120 - clipY} />
+            </clipPath>
+          )}
         </defs>
-        {/* Shield body */}
+        {/* Base shield (inactive look) */}
         <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z"
-          fill={`url(#${id}-bg)`}
+          fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.08)'}
           stroke={active ? `rgba(192,132,252,${borderGlow})` : 'rgba(255,255,255,0.03)'}
           strokeWidth={isCurrent ? '2.5' : '1.5'}
           filter={active ? `url(#${id}-glow)` : undefined} />
+        {/* Partial fill overlay */}
+        {showPartialFill && (
+          <g clipPath={`url(#${id}-clip)`}>
+            <path d="M50 4 L92 24 L92 60 Q92 95 50 116 Q8 95 8 60 L8 24 Z"
+              fill={`url(#${id}-partial)`}
+              filter={`url(#${id}-glow)`} />
+          </g>
+        )}
         {/* Inner radial overlay */}
-        <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
-          fill={`url(#${id}-radial)`} />
+        {active && (
+          <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
+            fill={`url(#${id}-radial)`} />
+        )}
         {/* Inner trim */}
         <path d="M50 14 L82 30 L82 58 Q82 87 50 106 Q18 87 18 58 L18 30 Z"
           fill="none" stroke={active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.8" strokeDasharray="3 4" />
         {/* Star emblem */}
         <path d="M50 34 L55 47 L69 47 L58 55.5 L62.5 68 L50 60 L37.5 68 L42 55.5 L31 47 L45 47 Z"
-          fill={active ? 'white' : '#777'} opacity={active ? 0.8 : 0.1}
+          fill={active ? 'white' : '#777'} opacity={active ? 0.8 : showPartialFill ? 0.15 : 0.1}
           stroke={active ? 'rgba(255,255,255,0.3)' : 'none'} strokeWidth="0.6" />
         {/* Accent lines */}
         <line x1="28" y1="80" x2="72" y2="80" stroke={active ? 'rgba(192,132,252,0.25)' : 'rgba(255,255,255,0.02)'} strokeWidth="0.7" />
@@ -136,36 +166,56 @@ function ShieldCrest({ level, active, isCurrent, className }: { level: ExtendedL
             <stop offset="70%" stopColor={active ? '#d97706' : '#555'} stopOpacity={active ? 0.9 : 0.06} />
             <stop offset="100%" stopColor={active ? '#92400e' : '#444'} stopOpacity={active ? 0.8 : 0.05} />
           </linearGradient>
-          {active && (
+          <linearGradient id={`${id}-partial`} x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop offset="0%" stopColor="#fcd34d" stopOpacity="0.5" />
+            <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#92400e" stopOpacity="0.35" />
+          </linearGradient>
+          {(active || showPartialFill) && (
             <filter id={`${id}-glow`}>
               <feGaussianBlur stdDeviation={isCurrent ? '4' : '2.5'} result="b"/>
               <feComposite in="b" in2="SourceGraphic" operator="over"/>
             </filter>
+          )}
+          {showPartialFill && (
+            <clipPath id={`${id}-clip`}>
+              <rect x="0" y={clipY} width="100" height={120 - clipY} />
+            </clipPath>
           )}
         </defs>
         {/* Ornamental wings */}
         <path d="M50 14 L60 7 L57 16 L70 11 L65 22 L78 20 L70 28 L50 24 L30 28 L22 20 L35 22 L30 11 L43 16 L40 7 Z"
           fill={active ? '#b45309' : '#555'} opacity={active ? 0.45 : 0.05}
           stroke={active ? 'rgba(251,191,36,0.2)' : 'none'} strokeWidth="0.5" />
-        {/* Shield body */}
+        {/* Base shield */}
         <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
-          fill={`url(#${id}-bg)`}
+          fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.08)'}
           stroke={active ? `rgba(251,191,36,${borderGlow})` : 'rgba(255,255,255,0.03)'}
           strokeWidth={isCurrent ? '2.5' : '1.5'}
           filter={active ? `url(#${id}-glow)` : undefined} />
+        {/* Partial fill overlay */}
+        {showPartialFill && (
+          <g clipPath={`url(#${id}-clip)`}>
+            <path d="M50 8 L90 28 L90 62 Q90 96 50 116 Q10 96 10 62 L10 28 Z"
+              fill={`url(#${id}-partial)`}
+              filter={`url(#${id}-glow)`} />
+          </g>
+        )}
         {/* Metallic radial */}
-        <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
-          fill={`url(#${id}-radial)`} />
+        {active && (
+          <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
+            fill={`url(#${id}-radial)`} />
+        )}
         {/* Inner trim */}
         <path d="M50 18 L80 34 L80 60 Q80 88 50 106 Q20 88 20 60 L20 34 Z"
           fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.02)'} strokeWidth="1" />
         {/* Hexagonal emblem */}
         <path d="M50 36 L63 43.5 L63 58.5 L50 66 L37 58.5 L37 43.5 Z"
-          fill="none" stroke={active ? 'rgba(255,255,255,0.55)' : '#777'} strokeWidth="2" opacity={active ? 1 : 0.08} />
+          fill="none" stroke={active ? 'rgba(255,255,255,0.55)' : '#777'} strokeWidth="2" opacity={active ? 1 : showPartialFill ? 0.12 : 0.08} />
         {/* Diamond core */}
         <path d="M50 42 L57 50 L50 58 L43 50 Z"
-          fill={active ? 'white' : '#777'} opacity={active ? 0.75 : 0.08} />
-        {/* Cross marks inside hex */}
+          fill={active ? 'white' : '#777'} opacity={active ? 0.75 : showPartialFill ? 0.12 : 0.08} />
+        {/* Cross marks */}
         <line x1="50" y1="38" x2="50" y2="44" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
         <line x1="50" y1="56" x2="50" y2="64" stroke={active ? 'rgba(255,255,255,0.4)' : 'transparent'} strokeWidth="1" />
         {/* Accent bars */}
@@ -192,42 +242,62 @@ function ShieldCrest({ level, active, isCurrent, className }: { level: ExtendedL
           <stop offset="70%" stopColor={active ? '#ca8a04' : '#484848'} stopOpacity={active ? 0.85 : 0.06} />
           <stop offset="100%" stopColor={active ? '#713f12' : '#404040'} stopOpacity={active ? 0.75 : 0.05} />
         </linearGradient>
+        <linearGradient id={`${id}-partial`} x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stopColor="#fef08a" stopOpacity="0.45" />
+          <stop offset="50%" stopColor="#facc15" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#713f12" stopOpacity="0.3" />
+        </linearGradient>
         <linearGradient id={`${id}-crown`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={active ? '#fef9c3' : '#555'} stopOpacity={active ? 0.85 : 0.08} />
           <stop offset="100%" stopColor={active ? '#a16207' : '#444'} stopOpacity={active ? 0.6 : 0.04} />
         </linearGradient>
-        {active && (
+        {(active || showPartialFill) && (
           <filter id={`${id}-glow`}>
             <feGaussianBlur stdDeviation={isCurrent ? '5' : '3'} result="b"/>
             <feComposite in="b" in2="SourceGraphic" operator="over"/>
           </filter>
         )}
+        {showPartialFill && (
+          <clipPath id={`${id}-clip`}>
+            <rect x="0" y={clipY} width="100" height={120 - clipY} />
+          </clipPath>
+        )}
       </defs>
       {/* Crown */}
       <path d="M28 18 L34 8 L40 16 L46 4 L50 0 L54 4 L60 16 L66 8 L72 18 L72 28 L28 28 Z"
-        fill={`url(#${id}-crown)`}
+        fill={active ? `url(#${id}-crown)` : 'rgba(80,80,80,0.06)'}
         stroke={active ? `rgba(250,204,21,${borderGlow * 0.8})` : 'rgba(255,255,255,0.03)'}
         strokeWidth="1.2" />
       {/* Crown jewels */}
       <circle cx="40" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
       <circle cx="50" cy="15" r="3.2" fill={active ? '#fefce8' : '#666'} opacity={active ? 0.8 : 0.06} />
       <circle cx="60" cy="20" r="2.5" fill={active ? '#fef9c3' : '#666'} opacity={active ? 0.7 : 0.06} />
-      {/* Shield body */}
+      {/* Base shield */}
       <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
-        fill={`url(#${id}-bg)`}
+        fill={active ? `url(#${id}-bg)` : 'rgba(80,80,80,0.06)'}
         stroke={active ? `rgba(250,204,21,${borderGlow})` : 'rgba(100,100,100,0.08)'}
         strokeWidth={isCurrent ? '3' : '2'}
         filter={active ? `url(#${id}-glow)` : undefined} />
+      {/* Partial fill overlay */}
+      {showPartialFill && (
+        <g clipPath={`url(#${id}-clip)`}>
+          <path d="M50 16 L92 32 L92 64 Q92 98 50 116 Q8 98 8 64 L8 32 Z"
+            fill={`url(#${id}-partial)`}
+            filter={`url(#${id}-glow)`} />
+        </g>
+      )}
       {/* Inner radial */}
-      <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
-        fill={`url(#${id}-radial)`} />
+      {active && (
+        <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
+          fill={`url(#${id}-radial)`} />
+      )}
       {/* Double border */}
       <path d="M50 26 L82 38 L82 62 Q82 90 50 106 Q18 90 18 62 L18 38 Z"
         fill="none" stroke={active ? 'rgba(255,255,255,0.15)' : 'rgba(100,100,100,0.04)'} strokeWidth="1.2" />
       <path d="M50 32 L76 42 L76 60 Q76 84 50 98 Q24 84 24 60 L24 42 Z"
         fill="none" stroke={active ? 'rgba(255,255,255,0.08)' : 'rgba(100,100,100,0.02)'} strokeWidth="0.8" strokeDasharray="2 3" />
       {/* Eagle silhouette */}
-      <g opacity={active ? 0.8 : 0.07} transform="translate(50,62) scale(1)">
+      <g opacity={active ? 0.8 : showPartialFill ? 0.1 : 0.07} transform="translate(50,62) scale(1)">
         <path d="M0 -16 L-20 -7 L-24 2 L-16 -1 L-9 4 L0 -5 L9 4 L16 -1 L24 2 L20 -7 Z"
           fill={active ? 'white' : '#777'} />
         <path d="M-4.5 -5 L0 -12 L4.5 -5 L4.5 8 L0 15 L-4.5 8 Z"
@@ -628,9 +698,6 @@ export function LevelProgress() {
         <div className="grid grid-cols-3 gap-1 sm:gap-2 md:gap-4">
           {LEVELS_ORDER.map((levelKey, index) => {
             const config = LEVEL_CONFIG[levelKey];
-            const isCompleted = index < journeyProgress.currentLevelIndex;
-            const isCurrent = index === journeyProgress.currentLevelIndex;
-            const isLocked = index > journeyProgress.currentLevelIndex;
             const levelRule = journeyProgress.allLevels.find((l: any) => l.level_key === levelKey);
             const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
             const isExpanded = selectedLevel === levelKey;
@@ -645,6 +712,33 @@ export function LevelProgress() {
             const categoryIdx = LEVELS_ORDER.indexOf(journeyProgress.category);
             const raceMet = !requiresRace || (journeyProgress.hasOfficialRace && categoryIdx >= index);
             
+            // OUTLIER status: all requirements met for this level
+            const isOutlierAtLevel = trainingMet && benchMet && raceMet;
+            // Previous level must be outlier to show progress on this one
+            const prevLevelOutlier = index === 0 ? true : (() => {
+              const prevRule = journeyProgress.allLevels.find((l: any) => l.level_key === LEVELS_ORDER[index - 1]);
+              const prevTrainingReq = prevRule?.training_min_sessions || 120;
+              const prevBenchReq = prevRule?.benchmarks_required || 3;
+              const prevRaceReq = prevRule?.official_race_required && LEVELS_ORDER[index - 1] !== 'OPEN';
+              const prevRaceMet = !prevRaceReq || (journeyProgress.hasOfficialRace && categoryIdx >= index - 1);
+              return trainingDone >= prevTrainingReq && benchDone >= prevBenchReq && prevRaceMet;
+            })();
+            
+            // Calculate fill percentage for partial coloring
+            let shieldFillPercent = 0;
+            if (isOutlierAtLevel) {
+              shieldFillPercent = 100;
+            } else if (prevLevelOutlier || index === 0) {
+              // Show partial progress: average of training and benchmark progress toward this level
+              const tProg = Math.min(1, trainingDone / trainingReq);
+              const bProg = Math.min(1, benchDone / benchReq);
+              // Race is a gate, not a percentage — if race not met, cap at 90%
+              const avgProg = (tProg + bProg) / 2;
+              shieldFillPercent = Math.round((!raceMet && avgProg > 0.9) ? 90 : avgProg * 100);
+            }
+            
+            const isCurrentTarget = journeyProgress.category === levelKey && !isOutlierAtLevel;
+            
             return (
               <motion.div
                 key={levelKey}
@@ -655,22 +749,23 @@ export function LevelProgress() {
               >
                 {/* Heraldic Shield Crest */}
                 <motion.button
-                  whileHover={{ scale: 1.04, filter: isCurrent || isCompleted ? 'brightness(1.15)' : 'brightness(1.05)' }}
+                  whileHover={{ scale: 1.04, filter: isOutlierAtLevel ? 'brightness(1.15)' : 'brightness(1.05)' }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setSelectedLevel(isExpanded ? null : levelKey)}
                   className="relative w-full max-w-[90px] md:max-w-[145px] transition-all duration-300 bg-transparent border-none cursor-pointer"
                 >
                   <ShieldCrest 
                     level={levelKey} 
-                    active={isCurrent || isCompleted}
-                    isCurrent={isCurrent}
+                    active={isOutlierAtLevel}
+                    isCurrent={isCurrentTarget}
+                    fillPercent={shieldFillPercent}
                     className={`w-full h-auto transition-all duration-300 ${
-                      isLocked ? 'opacity-35 grayscale-[30%]' : ''
+                      shieldFillPercent === 0 && !isOutlierAtLevel ? 'opacity-35 grayscale-[30%]' : ''
                     }`}
                   />
                   
-                  {/* Lock overlay for locked levels */}
-                  {isLocked && (
+                  {/* Lock overlay for levels with no progress */}
+                  {shieldFillPercent === 0 && !isOutlierAtLevel && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="p-2 rounded-full bg-background/30 backdrop-blur-sm">
                         <Lock className="w-5 h-5 text-muted-foreground/60" />
@@ -678,8 +773,8 @@ export function LevelProgress() {
                     </div>
                   )}
 
-                  {/* Current pulse */}
-                  {isCurrent && (
+                  {/* Current target pulse */}
+                  {isCurrentTarget && shieldFillPercent > 0 && (
                     <motion.div
                       animate={{ opacity: [0.3, 0, 0.3] }}
                       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
@@ -692,23 +787,24 @@ export function LevelProgress() {
 
                 {/* Level name + status label */}
                 <div className="mt-2 text-center">
-                  <p className={`text-sm md:text-lg font-display font-extrabold tracking-wider leading-tight ${
-                    isCurrent 
+                  <p className={`text-xs md:text-base font-display font-extrabold tracking-wider leading-tight ${
+                    isOutlierAtLevel 
                       ? `bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent drop-shadow-sm` 
-                      : isCompleted
+                      : shieldFillPercent > 0
                         ? 'text-foreground/70'
                         : 'text-muted-foreground/25'
                   }`}>
                     {levelKey}
+                    <span className="block text-[10px] md:text-xs tracking-[0.2em]">OUTLIER</span>
                   </p>
                   <p className={`text-[10px] uppercase tracking-[0.15em] mt-1 font-medium ${
-                    isCurrent 
+                    isOutlierAtLevel 
                       ? 'text-foreground/60'
-                      : isCompleted 
+                      : shieldFillPercent > 0
                         ? 'text-foreground/40'
                         : 'text-muted-foreground/20'
                   }`}>
-                    {isCurrent && journeyProgress.isOutlier ? '★ OUTLIER' : isCurrent ? '● ATUAL' : isCompleted ? '✓ CONQUISTADO' : '🔒 BLOQUEADO'}
+                    {isOutlierAtLevel ? '★ CONQUISTADO' : shieldFillPercent > 0 ? `${shieldFillPercent}%` : '🔒 BLOQUEADO'}
                   </p>
                 </div>
 
@@ -730,7 +826,7 @@ export function LevelProgress() {
                             : <Dumbbell className="w-3 h-3 text-muted-foreground shrink-0" />
                           }
                           <span className={trainingMet ? 'text-green-400' : 'text-muted-foreground'}>
-                            {isCurrent ? `${trainingDone}/` : ''}{trainingReq} treinos
+                            {isCurrentTarget ? `${trainingDone}/` : ''}{trainingReq} treinos
                           </span>
                         </div>
                         {/* Benchmarks */}
@@ -740,7 +836,7 @@ export function LevelProgress() {
                             : <Target className="w-3 h-3 text-muted-foreground shrink-0" />
                           }
                           <span className={benchMet ? 'text-green-400' : 'text-muted-foreground'}>
-                            {isCurrent ? `${benchDone}/` : ''}{benchReq} benchmarks
+                            {isCurrentTarget ? `${benchDone}/` : ''}{benchReq} benchmarks
                           </span>
                         </div>
                         {/* Prova */}
