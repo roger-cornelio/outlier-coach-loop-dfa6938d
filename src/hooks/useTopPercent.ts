@@ -1,13 +1,17 @@
 /**
- * useTopPercent — computes deterministic Top% from admin-defined thresholds.
+ * useTopPercent — computes deterministic Top% from admin-defined classification thresholds.
  * 
- * Uses level_time_thresholds (elite_seconds = Top5%, pro_cap_seconds = Top10%)
+ * Uses benchmarks_elite_pro (base time per sex/age) + division_factors
  * and system_params.top_percent_anchors (elite_world_001, open_100).
  * 
- * Piecewise interpolation:
- * - ELITE zone (t <= t_elite_5): lerp 5%→0.01% toward world record
- * - PRO zone (t_elite_5 < t <= t_pro_10): lerp 10%→5%
- * - OPEN zone (t > t_pro_10): lerp 100%→10%
+ * Classification gap thresholds (from outlier classification system):
+ * - ELITE: gap ≤ 5%  → elite_cutoff = elite_adjusted * 1.05
+ * - PRO:   gap ≤ 15% → pro_cutoff   = elite_adjusted * 1.15
+ * 
+ * Piecewise interpolation for Top%:
+ * - ELITE zone (t <= elite_cutoff): lerp 5%→0.01% toward world record
+ * - PRO zone (elite_cutoff < t <= pro_cutoff): lerp 10%→5%
+ * - OPEN zone (t > pro_cutoff): lerp 100%→10%
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -35,13 +39,16 @@ interface TopPercentAnchors {
   open_100: number;        // seconds — slowest / Top 100%
 }
 
-interface ThresholdRow {
-  elite_seconds: number;
-  pro_cap_seconds: number;
+interface EliteProBenchmark {
   sex: string;
   age_min: number;
   age_max: number;
+  elite_pro_seconds: number;
+}
+
+interface DivisionFactor {
   division: string;
+  factor: number;
 }
 
 export interface TopPercentResult {
@@ -51,7 +58,7 @@ export interface TopPercentResult {
   topText: string | null;
   /** Whether to show Top% (only if <= 20) */
   shouldShow: boolean;
-  /** Meta ELITE time in seconds, or null */
+  /** Meta ELITE time in seconds (max time to be classified ELITE), or null */
   metaEliteSeconds: number | null;
   /** Loading state */
   loading: boolean;
@@ -95,7 +102,8 @@ function computeTopPercent(
 
 // ─── Cache ───────────────────────────────────────────────────────────────────
 
-let cachedThresholds: ThresholdRow[] | null = null;
+let cachedBenchmarks: EliteProBenchmark[] | null = null;
+let cachedFactors: DivisionFactor[] | null = null;
 let cachedAnchors: Record<string, TopPercentAnchors> | null = null;
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -106,18 +114,24 @@ export function useTopPercent(
   age: number | null | undefined,
   division: string = 'INDIVIDUAL',
 ): TopPercentResult {
-  const [thresholds, setThresholds] = useState<ThresholdRow[] | null>(cachedThresholds);
+  const [benchmarks, setBenchmarks] = useState<EliteProBenchmark[] | null>(cachedBenchmarks);
+  const [factors, setFactors] = useState<DivisionFactor[] | null>(cachedFactors);
   const [anchors, setAnchors] = useState<Record<string, TopPercentAnchors> | null>(cachedAnchors);
-  const [loading, setLoading] = useState(!cachedThresholds || !cachedAnchors);
+  const [loading, setLoading] = useState(!cachedBenchmarks || !cachedFactors || !cachedAnchors);
 
   useEffect(() => {
-    if (cachedThresholds && cachedAnchors) return;
+    if (cachedBenchmarks && cachedFactors && cachedAnchors) return;
 
     async function load() {
-      const [threshRes, anchorsRes] = await Promise.all([
+      const [benchRes, factorsRes, anchorsRes] = await Promise.all([
         supabase
-          .from('level_time_thresholds')
-          .select('elite_seconds, pro_cap_seconds, sex, age_min, age_max, division')
+          .from('benchmarks_elite_pro')
+          .select('sex, age_min, age_max, elite_pro_seconds')
+          .eq('is_active', true)
+          .eq('version', 'v1'),
+        supabase
+          .from('division_factors')
+          .select('division, factor')
           .eq('is_active', true)
           .eq('version', 'v1'),
         supabase
@@ -127,9 +141,14 @@ export function useTopPercent(
           .single(),
       ]);
 
-      if (threshRes.data) {
-        cachedThresholds = threshRes.data as ThresholdRow[];
-        setThresholds(cachedThresholds);
+      if (benchRes.data) {
+        cachedBenchmarks = benchRes.data as unknown as EliteProBenchmark[];
+        setBenchmarks(cachedBenchmarks);
+      }
+
+      if (factorsRes.data) {
+        cachedFactors = factorsRes.data as unknown as DivisionFactor[];
+        setFactors(cachedFactors);
       }
 
       if (anchorsRes.data?.value && typeof anchorsRes.data.value === 'object') {
@@ -149,23 +168,35 @@ export function useTopPercent(
     const sexKey = sex === 'feminino' ? 'F' : 'M';
     const genderKey = sex === 'feminino' ? 'feminino' : 'masculino';
 
-    // Find matching threshold row
-    const effectiveAge = age ?? 30; // default age bracket
-    const row = thresholds?.find(
-      (r) =>
-        r.sex === sexKey &&
-        r.division === division &&
-        effectiveAge >= r.age_min &&
-        effectiveAge <= r.age_max,
+    // Find matching benchmark row from benchmarks_elite_pro
+    const effectiveAge = age ?? 30;
+    const benchRow = benchmarks?.find(
+      (b) =>
+        b.sex === sexKey &&
+        effectiveAge >= b.age_min &&
+        effectiveAge <= b.age_max,
     );
 
-    if (!row) {
-      console.warn('missing_admin_threshold', { sex: sexKey, age: effectiveAge, division, reason: 'no matching level_time_thresholds row' });
+    if (!benchRow) {
+      console.warn('missing_admin_threshold', { sex: sexKey, age: effectiveAge, reason: 'no matching benchmarks_elite_pro row' });
       return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds: null, loading: false };
     }
 
-    const t_elite_5 = row.elite_seconds;
-    const t_pro_10 = row.pro_cap_seconds;
+    // Get division factor (map INDIVIDUAL to PRO as default)
+    const divKey = division === 'INDIVIDUAL' ? 'PRO' : division;
+    const divFactor = factors?.find(f => f.division === divKey);
+    const factor = divFactor ? Number(divFactor.factor) : 1.0;
+
+    // elite_adjusted = base benchmark * division factor
+    const eliteAdjusted = benchRow.elite_pro_seconds * factor;
+
+    // Derive thresholds from classification gap system:
+    // ELITE: gap ≤ 5% → max time = elite_adjusted * 1.05
+    // PRO:   gap ≤ 15% → max time = elite_adjusted * 1.15
+    const t_elite_5 = Math.round(eliteAdjusted * 1.05);
+    const t_pro_10 = Math.round(eliteAdjusted * 1.15);
+
+    // Meta ELITE = max time to still be classified as ELITE
     const metaEliteSeconds = t_elite_5;
 
     // Get world-record and open-floor anchors
@@ -197,5 +228,5 @@ export function useTopPercent(
       metaEliteSeconds,
       loading: false,
     };
-  }, [lastRaceSeconds, sex, age, division, thresholds, anchors, loading]);
+  }, [lastRaceSeconds, sex, age, division, benchmarks, factors, anchors, loading]);
 }
