@@ -56,7 +56,7 @@ export function EvolutionMilestones() {
   };
 
   return (
-    <div className="card-elevated p-6">
+    <div className="card-elevated p-4 sm:p-6 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="p-2 rounded-lg bg-primary/20">

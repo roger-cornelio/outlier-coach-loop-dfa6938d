@@ -427,7 +427,7 @@ export function LevelProgress() {
   // fillPercentage no longer needed — shields replaced the ruler
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* HERO CARD */}
       <motion.div
         key={currentLevelKey}
@@ -622,7 +622,7 @@ export function LevelProgress() {
           Jornada de Evolução
         </h3>
         
-        <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="grid grid-cols-3 gap-1 sm:gap-2 md:gap-4">
           {LEVELS_ORDER.map((levelKey, index) => {
             const config = LEVEL_CONFIG[levelKey];
             const isCompleted = index < journeyProgress.currentLevelIndex;
@@ -785,7 +785,7 @@ export function LevelProgress() {
       )}
 
       {/* Stats Grid - Treinos & Benchmarks */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {[
           { Icon: Dumbbell, value: journeyProgress.trainingSessions, label: 'Treinos', delay: 0.4 },
           { Icon: Target, value: journeyProgress.targetLevel.benchmarksCompleted, label: 'Benchmarks', delay: 0.5 },
@@ -795,7 +795,7 @@ export function LevelProgress() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: stat.delay }}
-            className={`p-4 rounded-2xl ${currentConfig.cardStyle} border ${currentConfig.borderStyle} text-center`}
+            className={`p-3 sm:p-4 rounded-2xl ${currentConfig.cardStyle} border ${currentConfig.borderStyle} text-center min-w-0 overflow-hidden`}
           >
             <stat.Icon className={`w-5 h-5 mx-auto mb-2`} />
             <p className="font-display text-2xl">{stat.value}</p>
