@@ -564,7 +564,10 @@ export function LevelProgress() {
                 className="mb-4 p-3 bg-secondary/30 border border-border/30 rounded-xl"
               >
                 <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">
-                  Para virar {journeyProgress.targetLevelKey} OUTLIER:
+                  {journeyProgress.isOutlier 
+                    ? `Próximo passo:`
+                    : `Para virar ${journeyProgress.targetLevelKey} OUTLIER:`
+                  }
                 </p>
                 <div className="space-y-1">
                   {/* Training check */}

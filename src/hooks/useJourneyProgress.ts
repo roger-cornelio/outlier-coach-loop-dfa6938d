@@ -245,8 +245,8 @@ export function useJourneyProgress(): JourneyPosition {
     const outlierTitle = isOutlier ? `ATLETA OUTLIER — ${currentCategory}` : null;
     
     // STEP 3: Determine labels based on outlier status
-    // Not yet outlier: "OPEN" → "OUTLIER OPEN" (working towards outlier at current category)
-    // Already outlier: "OUTLIER OPEN" → "OUTLIER PRO" (needs PRO race to change category)
+    // When outlier at current category: show 100% achieved, target = current category OUTLIER
+    // The ruler only adjusts to next category when category changes via official race
     const currentLevelKey = currentCategory;
     const currentLevelIndex = Math.max(0, levelRules.findIndex(l => l.level_key === currentCategory));
     
@@ -263,50 +263,48 @@ export function useJourneyProgress(): JourneyPosition {
       targetLevelLabel = `OUTLIER ${currentCategory}`;
       targetLevelIndex = currentLevelIndex;
     } else if (currentCategory === 'ELITE') {
-      // At top - maintenance mode
+      // At absolute top - ELITE OUTLIER achieved
       currentLevelLabel = `OUTLIER ${currentCategory}`;
       targetLevelKey = 'ELITE';
       targetLevelLabel = `OUTLIER ELITE`;
       targetLevelIndex = levelRules.length - 1;
       isAtTop = true;
     } else {
-      // Already outlier, working towards next category (needs race)
+      // Outlier achieved at current category — show 100% achieved
+      // Target stays at current category (already conquered)
       currentLevelLabel = `OUTLIER ${currentCategory}`;
-      const nextCategoryIdx = Math.min(currentLevelIndex + 1, levelRules.length - 1);
-      targetLevelKey = (levelRules[nextCategoryIdx]?.level_key || 'ELITE') as ExtendedLevelKey;
-      targetLevelLabel = `OUTLIER ${targetLevelKey}`;
-      targetLevelIndex = nextCategoryIdx;
+      targetLevelKey = currentCategory;
+      targetLevelLabel = `OUTLIER ${currentCategory}`;
+      targetLevelIndex = currentLevelIndex;
     }
     
     // STEP 4: Calculate progress
-    // If not yet outlier: progress towards current category requirements
-    // If already outlier: progress towards next category requirements (but blocked by race)
-    const targetRule = isOutlierAtCategory && !isAtTop
-      ? levelRules[Math.min(currentLevelIndex + 1, levelRules.length - 1)]
-      : currentCategoryRule;
+    // When outlier at current category: 100% (achieved!)
+    // When not outlier: progress towards current category requirements
+    const targetRule = currentCategoryRule;
     
     const targetTrainingReq = targetRule?.training_min_sessions || 200;
     const targetBenchmarksReq = targetRule?.benchmarks_required || 5;
-    const targetNeedsRace = !isOutlierAtCategory ? false : true; // Next category always needs race
     
     const trainingProgress = Math.min(1, trainingSessions / targetTrainingReq);
     const benchmarkProgress = Math.min(1, benchmarksCompleted / targetBenchmarksReq);
-    const overallProgress = isAtTop ? 1 : (trainingProgress + benchmarkProgress) / 2;
+    const overallProgress = (isOutlierAtCategory || isAtTop) ? 1 : (trainingProgress + benchmarkProgress) / 2;
     
     // Missing requirements
     const missingRequirements: string[] = [];
     const treinosRestantes = Math.max(0, targetTrainingReq - trainingSessions);
     const benchmarksRestantes = Math.max(0, targetBenchmarksReq - benchmarksCompleted);
     
-    // Race requirement: only for next category (when already outlier)
-    const nextCategoryKey = isOutlierAtCategory && !isAtTop ? targetLevelKey : null;
-    const categoryIdx = LEVELS_ORDER.indexOf(category);
-    const targetIdx = nextCategoryKey ? LEVELS_ORDER.indexOf(nextCategoryKey) : -1;
-    const provaNecessaria = isOutlierAtCategory && !isAtTop && categoryIdx < targetIdx;
+    // When already outlier, show what's needed for next level (race)
+    const nextCategoryIdx = Math.min(currentLevelIndex + 1, levelRules.length - 1);
+    const nextCategoryKey = isOutlierAtCategory && !isAtTop
+      ? (levelRules[nextCategoryIdx]?.level_key || 'ELITE') as ExtendedLevelKey
+      : null;
+    const provaNecessaria = isOutlierAtCategory && !isAtTop;
     
     if (treinosRestantes > 0) missingRequirements.push(`${treinosRestantes} treinos`);
     if (benchmarksRestantes > 0) missingRequirements.push(`${benchmarksRestantes} benchmarks`);
-    if (provaNecessaria) missingRequirements.push(`Prova oficial ${targetLevelKey}`);
+    if (provaNecessaria && nextCategoryKey) missingRequirements.push(`Prova oficial ${nextCategoryKey}`);
     
     // Continuous position for ruler
     const continuousPosition = levelRules.length > 1
