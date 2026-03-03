@@ -1,7 +1,7 @@
 // OUTLIER Scoring System
 // Computes athlete score based on official, simulated, and benchmark percentiles
 
-export type ScoreCategory = "OPEN" | "PRO";
+export type ScoreCategory = "OPEN" | "PRO" | "ELITE";
 
 export interface ScoreInput {
   category: ScoreCategory;
@@ -35,7 +35,7 @@ function round1(n: number): number {
 
 /**
  * Converts a percentile (0-1) to a category-adjusted score (0-100)
- * Different curves for OPEN vs PRO categories
+ * Different curves for OPEN, PRO and ELITE categories
  */
 function percentileToCategoryScore(percentile: number, category: ScoreCategory): number {
   const p = clamp(percentile, 0, 1);

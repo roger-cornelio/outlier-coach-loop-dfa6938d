@@ -1130,7 +1130,7 @@ export function DiagnosticRadarBlock({
   const athleteName = profile?.name?.toUpperCase() || 'ATLETA';
   const athleteCategory = useMemo(() => {
     const gender = athleteConfig?.sexo === 'feminino' ? 'WOMEN' : 'MEN';
-    const level = status === 'elite' ? 'PRO' : status === 'pro' ? 'PRO' : 'OPEN';
+    const level = status === 'elite' ? 'ELITE' : status === 'pro' ? 'PRO' : 'OPEN';
     return `HYROX ${level} ${gender}`;
   }, [athleteConfig?.sexo, status]);
 
