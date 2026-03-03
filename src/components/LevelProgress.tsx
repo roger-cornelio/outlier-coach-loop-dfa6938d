@@ -162,76 +162,104 @@ function ShieldCrest({ level, active, isCurrent, fillPercent = 100, className }:
         </g>
       )}
 
-      {/* Level-specific icon (only when not locked) */}
-      {!isLocked && level === 'OPEN' && (
-        /* Arrow pointing up */
-        <g opacity={active ? 1 : 0.4}>
-          <path d="M50 30 L38 58 L44 58 L44 82 L56 82 L56 58 L62 58 Z"
+      {/* ══ LEVEL ICONS ══ */}
+      {/* Always render faint icon in background for locked state */}
+
+      {/* OPEN — Sharp upward arrowhead with shaft */}
+      {level === 'OPEN' && (
+        <g opacity={isLocked ? 0.12 : active ? 1 : 0.4}>
+          {/* Arrowhead */}
+          <path d="M50 28 L34 56 L43 56 L43 84 L57 84 L57 56 L66 56 Z"
             fill={iconColor}
-            stroke={active ? '#00000044' : 'none'}
-            strokeWidth="0.5"
           />
+          {/* Inner highlight on arrowhead */}
           {active && (
-            <path d="M50 30 L38 58 L44 58 L44 82 L56 82 L56 58 L62 58 Z"
-              fill="none" stroke="#FFFFFF22" strokeWidth="0.8"
+            <path d="M50 34 L40 54 L44 54 L44 80 L56 80 L56 54 L60 54 Z"
+              fill="none" stroke="#FFFFFF18" strokeWidth="1"
             />
+          )}
+          {/* Center glow line */}
+          {active && (
+            <line x1="50" y1="36" x2="50" y2="78" stroke="#FFFFFF15" strokeWidth="2" />
           )}
         </g>
       )}
 
-      {!isLocked && level === 'PRO' && (
-        /* Crossed swords */
-        <g opacity={active ? 1 : 0.4} transform="translate(50,58)">
-          {/* Sword 1 (left-to-right diagonal) */}
-          <line x1="-22" y1="20" x2="22" y2="-20" stroke={iconColor} strokeWidth="3.5" strokeLinecap="round" />
-          <line x1="-22" y1="20" x2="22" y2="-20" stroke={active ? '#00000033' : 'none'} strokeWidth="5" strokeLinecap="round" />
-          <line x1="-22" y1="20" x2="22" y2="-20" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
-          {/* Guard 1 */}
-          <line x1="-14" y1="8" x2="-6" y2="16" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
-          {/* Pommel 1 */}
-          <circle cx="-22" cy="20" r="2.5" fill={iconColor} />
+      {/* PRO — Crossed swords with leaf blades & guards */}
+      {level === 'PRO' && (
+        <g opacity={isLocked ? 0.12 : active ? 1 : 0.4} transform="translate(50,58)">
+          {/* Sword 1 blade (bottom-left to top-right) */}
+          <path d="M-20 18 L18 -22 L22 -18 L-16 22 Z"
+            fill={iconColor} />
+          {/* Sword 1 guard */}
+          <rect x="-16" y="6" width="14" height="3.5" rx="1.5"
+            fill={iconColor} transform="rotate(-45, -9, 7.75)" />
+          {/* Sword 1 pommel */}
+          <circle cx="-19" cy="19" r="3" fill={iconColor} />
           
-          {/* Sword 2 (right-to-left diagonal) */}
-          <line x1="22" y1="20" x2="-22" y2="-20" stroke={iconColor} strokeWidth="3.5" strokeLinecap="round" />
-          <line x1="22" y1="20" x2="-22" y2="-20" stroke={active ? '#00000033' : 'none'} strokeWidth="5" strokeLinecap="round" />
-          <line x1="22" y1="20" x2="-22" y2="-20" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
-          {/* Guard 2 */}
-          <line x1="14" y1="8" x2="6" y2="16" stroke={iconColor} strokeWidth="3" strokeLinecap="round" />
-          {/* Pommel 2 */}
-          <circle cx="22" cy="20" r="2.5" fill={iconColor} />
+          {/* Sword 2 blade (bottom-right to top-left) */}
+          <path d="M20 18 L-18 -22 L-22 -18 L16 22 Z"
+            fill={iconColor} />
+          {/* Sword 2 guard */}
+          <rect x="2" y="6" width="14" height="3.5" rx="1.5"
+            fill={iconColor} transform="rotate(45, 9, 7.75)" />
+          {/* Sword 2 pommel */}
+          <circle cx="19" cy="19" r="3" fill={iconColor} />
+
+          {/* Blade edge highlights */}
+          {active && (
+            <>
+              <line x1="-17" y1="17" x2="19" y2="-19" stroke="#FFFFFF20" strokeWidth="1" />
+              <line x1="17" y1="17" x2="-19" y2="-19" stroke="#FFFFFF20" strokeWidth="1" />
+            </>
+          )}
         </g>
       )}
 
-      {!isLocked && level === 'ELITE' && (
-        /* Geometric crown */
-        <g opacity={active ? 1 : 0.4} transform="translate(50,60)">
-          {/* Crown base */}
-          <path d="M-22 8 L-22 -2 L-14 -12 L-7 -4 L0 -18 L7 -4 L14 -12 L22 -2 L22 8 Z"
+      {/* ELITE — Wide geometric crown with 3 peaks */}
+      {level === 'ELITE' && (
+        <g opacity={isLocked ? 0.12 : active ? 1 : 0.4} transform="translate(50,62)">
+          {/* Crown body — 3 peaks, center tallest */}
+          <path d="M-24 10 L-24 0 L-15 -10 L-8 -2 L0 -20 L8 -2 L15 -10 L24 0 L24 10 Z"
             fill={iconColor}
-            stroke={active ? '#FFFFFF22' : 'none'}
-            strokeWidth="0.8"
           />
-          {/* Crown band */}
-          <rect x="-22" y="8" width="44" height="6" rx="1" fill={iconColor} opacity="0.9" />
-          {/* Jewels */}
-          <circle cx="-7" cy="-1" r="2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
-          <circle cx="0" cy="-8" r="2.5" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.9 : 0.3} />
-          <circle cx="7" cy="-1" r="2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.8 : 0.3} />
+          {/* Crown base band */}
+          <rect x="-24" y="10" width="48" height="7" rx="1.5" fill={iconColor} opacity="0.85" />
+          
+          {/* Peak tips — small diamonds */}
+          {active && (
+            <>
+              <path d="M0 -20 L-2 -16 L0 -12 L2 -16 Z" fill="#FEF3C7" opacity="0.5" />
+              <path d="M-15 -10 L-17 -7 L-15 -4 L-13 -7 Z" fill="#FEF3C7" opacity="0.35" />
+              <path d="M15 -10 L13 -7 L15 -4 L17 -7 Z" fill="#FEF3C7" opacity="0.35" />
+            </>
+          )}
+
+          {/* Jewels on crown face */}
+          <circle cx="-8" cy="2" r="2.2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.75 : 0.25} />
+          <circle cx="0" cy="-6" r="2.8" fill={active ? '#FEFCE8' : '#555'} opacity={active ? 0.85 : 0.25} />
+          <circle cx="8" cy="2" r="2.2" fill={active ? '#FEF3C7' : '#555'} opacity={active ? 0.75 : 0.25} />
+          
+          {/* Band detail line */}
+          {active && (
+            <line x1="-22" y1="13.5" x2="22" y2="13.5" stroke="#FFFFFF15" strokeWidth="0.8" />
+          )}
         </g>
       )}
 
-      {/* LOCKED STATE — Padlock */}
+      {/* LOCKED STATE — Padlock overlaid on faint icon */}
       {isLocked && (
-        <g transform="translate(50,60)" opacity="1">
-          {/* Lock body - rounded rectangle */}
-          <rect x="-11" y="-2" width="22" height="18" rx="3" ry="3" fill="#CFCFCF" />
-          {/* Lock shackle - arch */}
-          <path d="M-7 -2 L-7 -10 Q-7 -18 0 -18 Q7 -18 7 -10 L7 -2"
+        <g transform="translate(50,60)">
+          {/* Lock shackle - arch with real curves */}
+          <path d="M-7.5 -1 L-7.5 -9 Q-7.5 -19 0 -19 Q7.5 -19 7.5 -9 L7.5 -1"
             fill="none" stroke="#CFCFCF" strokeWidth="3.5" strokeLinecap="round"
           />
-          {/* Keyhole */}
-          <circle cx="0" cy="7" r="3" fill="#1A1A1A" />
-          <rect x="-1.2" y="7" width="2.4" height="6" rx="1" fill="#1A1A1A" />
+          {/* Lock body - rounded rectangle */}
+          <rect x="-12" y="-2" width="24" height="19" rx="3.5" ry="3.5" fill="#CFCFCF" />
+          {/* Keyhole circle */}
+          <circle cx="0" cy="6" r="3.2" fill="#1A1A1A" />
+          {/* Keyhole slot */}
+          <rect x="-1.3" y="6" width="2.6" height="6.5" rx="1" fill="#1A1A1A" />
         </g>
       )}
     </svg>
