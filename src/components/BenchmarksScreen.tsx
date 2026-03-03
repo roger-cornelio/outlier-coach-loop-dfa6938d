@@ -84,12 +84,10 @@ export function BenchmarksScreen() {
             </div>
             
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Clear All Button */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="icon" className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 w-8 sm:h-9 sm:w-auto sm:px-3 sm:gap-2">
+                  <Button variant="outline" size="icon" className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 w-8">
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Zerar</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
