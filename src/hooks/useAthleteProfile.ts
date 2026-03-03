@@ -57,31 +57,26 @@ export function useAthleteProfile() {
         }
 
         // Montar athleteConfig a partir dos dados do banco
-        const hasPersistedConfig = data.training_level || data.peso || data.altura || data.idade || data.sexo;
+        // Normalizar valores legados para open/pro
+        const normalizeLevel = (level: string | null): TrainingLevel => {
+          if (level === 'pro') return 'pro';
+          if (level === 'open') return 'open';
+          return 'open';
+        };
         
-        if (hasPersistedConfig) {
-          // Normalizar valores legados para open/pro
-          const normalizeLevel = (level: string | null): TrainingLevel => {
-            if (level === 'pro') return 'pro';
-            if (level === 'open') return 'open';
-            // Fallback para valores legados ou null
-            return 'open';
-          };
-          
-          const loadedConfig: AthleteConfig = {
-            trainingLevel: normalizeLevel(data.training_level),
-            sessionDuration: parseSessionDuration(data.session_duration) || athleteConfig?.sessionDuration || 60,
-            altura: data.altura ?? athleteConfig?.altura,
-            peso: data.peso ?? athleteConfig?.peso,
-            idade: data.idade ?? athleteConfig?.idade,
-            sexo: (data.sexo as 'masculino' | 'feminino') ?? athleteConfig?.sexo,
-            unavailableEquipment: (data.unavailable_equipment as string[] | null) ?? athleteConfig?.unavailableEquipment ?? [],
-            equipmentNotes: data.equipment_notes ?? athleteConfig?.equipmentNotes ?? '',
-            coachStyle: (data.coach_style as CoachStyle) || coachStyle || 'PULSE',
-          };
+        const loadedConfig: AthleteConfig = {
+          trainingLevel: normalizeLevel(data.training_level),
+          sessionDuration: parseSessionDuration(data.session_duration) || athleteConfig?.sessionDuration || 60,
+          altura: data.altura ?? athleteConfig?.altura,
+          peso: data.peso ?? athleteConfig?.peso,
+          idade: data.idade ?? athleteConfig?.idade,
+          sexo: (data.sexo as 'masculino' | 'feminino') ?? athleteConfig?.sexo,
+          unavailableEquipment: (data.unavailable_equipment as string[] | null) ?? athleteConfig?.unavailableEquipment ?? [],
+          equipmentNotes: data.equipment_notes ?? athleteConfig?.equipmentNotes ?? '',
+          coachStyle: (data.coach_style as CoachStyle) || coachStyle || 'PULSE',
+        };
 
-          setAthleteConfig(loadedConfig);
-        }
+        setAthleteConfig(loadedConfig);
       }
       
       setIsLoaded(true);
