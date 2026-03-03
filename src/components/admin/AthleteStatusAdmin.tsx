@@ -40,6 +40,7 @@ interface AthleteSimulation {
   trainingSessions: number;
   benchmarksCompleted: number;
   hasOfficialRace: boolean;
+  validatedCategory: 'OPEN' | 'PRO' | 'ELITE';
 }
 
 /**
@@ -76,6 +77,7 @@ export function AthleteStatusAdmin() {
     trainingSessions: 50,
     benchmarksCompleted: 2,
     hasOfficialRace: false,
+    validatedCategory: 'PRO',
   });
 
   useEffect(() => {
@@ -139,10 +141,10 @@ export function AthleteStatusAdmin() {
 
   // Simulation: Jornada V1 — 50/50 training + benchmarks
   const simulationResult = useMemo(() => {
-    const { trainingSessions, benchmarksCompleted, hasOfficialRace } = simulation;
+    const { trainingSessions, benchmarksCompleted, hasOfficialRace, validatedCategory } = simulation;
     
-    // Current category defaults to OPEN without race
-    const currentCategory = hasOfficialRace ? 'PRO' : 'OPEN';
+    // Categoria validada por prova oficial (sem prova: OPEN)
+    const currentCategory = hasOfficialRace ? validatedCategory : 'OPEN';
     const currentRule = levelRules.find(l => l.level_key === currentCategory) || levelRules[0];
     
     if (!currentRule) {
@@ -363,6 +365,21 @@ export function AthleteStatusAdmin() {
                     onCheckedChange={(checked) => setSimulation(s => ({ ...s, hasOfficialRace: checked }))}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Categoria validada pela prova</Label>
+                  <select
+                    value={simulation.validatedCategory}
+                    onChange={(e) => setSimulation(s => ({ ...s, validatedCategory: e.target.value as 'OPEN' | 'PRO' | 'ELITE' }))}
+                    disabled={!simulation.hasOfficialRace}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="OPEN">OPEN</option>
+                    <option value="PRO">PRO</option>
+                    <option value="ELITE">ELITE</option>
+                  </select>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   A categoria é definida pelo tempo da prova (aba Classificação). Aqui simulamos apenas o progresso da jornada.
                 </p>

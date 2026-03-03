@@ -122,26 +122,17 @@ function countUniqueBenchmarks(benchmarkResults: { benchmark_id?: string }[]): n
 }
 
 /**
- * Determine category from official race results.
- * Without a race → OPEN.
+ * Determine category from validated official classification.
+ * Without valid official race classification → OPEN.
  */
-function determineCategoryFromRace(
-  officialCompetitions: { race_category?: string; time_in_seconds?: number }[]
+function determineCategoryFromAthleteStatus(
+  athleteStatus: ReturnType<typeof useAthleteStatus>
 ): ExtendedLevelKey {
-  if (officialCompetitions.length === 0) return 'OPEN';
-  
-  // Find best category from official results
-  let bestCategory: ExtendedLevelKey = 'OPEN';
-  const categoryOrder: Record<string, number> = { OPEN: 0, PRO: 1, ELITE: 2 };
-  
-  for (const comp of officialCompetitions) {
-    const cat = (comp.race_category?.toUpperCase() || 'OPEN') as ExtendedLevelKey;
-    if (LEVELS_ORDER.includes(cat) && (categoryOrder[cat] || 0) > (categoryOrder[bestCategory] || 0)) {
-      bestCategory = cat;
-    }
+  if (athleteStatus.statusSource !== 'prova_oficial' || !athleteStatus.validatingCompetition) {
+    return 'OPEN';
   }
-  
-  return bestCategory;
+
+  return statusToLevelKey(athleteStatus.status);
 }
 
 export function useJourneyProgress(): JourneyPosition {
@@ -149,7 +140,7 @@ export function useJourneyProgress(): JourneyPosition {
   const [loading, setLoading] = useState(true);
   
   const athleteStatus = useAthleteStatus();
-  const { results: benchmarkResults, getOfficialCompetitions } = useBenchmarkResults();
+  const { results: benchmarkResults } = useBenchmarkResults();
   const { workoutResults } = useOutlierStore();
   
   // Fetch rules from database
@@ -186,10 +177,9 @@ export function useJourneyProgress(): JourneyPosition {
     // Count unique benchmarks completed
     const benchmarksCompleted = countUniqueBenchmarks(benchmarkResults);
     
-    // Determine category from official race
-    const officialCompetitions = getOfficialCompetitions();
-    const hasOfficialRace = officialCompetitions.length > 0;
-    const category = determineCategoryFromRace(officialCompetitions);
+    // Determine category from validated official classification
+    const hasOfficialRace = athleteStatus.statusSource === 'prova_oficial' && !!athleteStatus.validatingCompetition;
+    const category = determineCategoryFromAthleteStatus(athleteStatus);
     
     const defaultTarget: TargetLevelProgress = {
       levelKey: 'OPEN',
@@ -368,7 +358,7 @@ export function useJourneyProgress(): JourneyPosition {
       missingRequirements,
       nextRequirements: { treinosRestantes, benchmarksRestantes, provaNecessaria },
     };
-  }, [loading, levelRules, athleteStatus, benchmarkResults, getOfficialCompetitions, workoutResults]);
+  }, [loading, levelRules, athleteStatus, benchmarkResults, workoutResults]);
   
   return journeyPosition;
 }
