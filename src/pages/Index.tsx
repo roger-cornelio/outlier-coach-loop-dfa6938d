@@ -347,7 +347,7 @@ const Index = () => {
         )}
         
         {/* Main content area */}
-        <div className="flex-1 min-h-screen">
+        <div className="flex-1 min-h-screen min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}

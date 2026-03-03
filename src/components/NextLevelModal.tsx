@@ -105,7 +105,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
       <SheetTrigger asChild>
         <Button 
           variant="outline" 
-          className={`w-full gap-2 border-2 border-dashed ${
+          className={`w-full gap-2 border-2 border-dashed overflow-hidden ${
             isAtTop 
               ? 'border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10' 
               : `${LEVEL_BG[targetLevelKey]} hover:bg-opacity-20`
@@ -122,7 +122,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
             <>
               <ArrowRight className="w-4 h-4" />
               <span>Próximo nível</span>
-              <Badge variant="outline" className={`ml-auto ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
+              <Badge variant="outline" className={`ml-auto shrink-0 ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
                 {targetLevelLabel}
               </Badge>
             </>
