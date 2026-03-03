@@ -29,6 +29,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useTargetTimes } from '@/hooks/useTargetTimes';
+import { useTopPercent } from '@/hooks/useTopPercent';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
@@ -1102,12 +1103,23 @@ export function DiagnosticRadarBlock({
   }, [officialCompetitions]);
 
   const adminTarget = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
+
+  // Top% deterministic calculation from admin thresholds
+  const topPercentData = useTopPercent(
+    validatingCompetition?.time_in_seconds,
+    athleteConfig?.sexo || 'masculino',
+    athleteConfig?.idade,
+  );
   
   const eliteTarget = useMemo(() => {
+    // Prefer admin-defined Meta ELITE from level_time_thresholds
+    if (topPercentData.metaEliteSeconds) {
+      return { targetSeconds: topPercentData.metaEliteSeconds, targetLabel: 'ELITE' };
+    }
     if (adminTarget) return adminTarget;
     const gender = athleteConfig?.sexo || 'masculino';
     return getEliteTargetSeconds(status, gender);
-  }, [status, athleteConfig?.sexo, adminTarget]);
+  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
@@ -1251,6 +1263,16 @@ export function DiagnosticRadarBlock({
               <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
             </span>
           );
+
+          // Top% from admin thresholds (only show if <= 20%)
+          if (topPercentData.shouldShow && topPercentData.topText) {
+            parts.push(
+              <span key="top" className="flex items-center gap-1.5">
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground"><span className="font-bold text-foreground">{topPercentData.topText}</span></span>
+              </span>
+            );
+          }
 
           if (targetSec) {
             const delta = lastTime - targetSec;
@@ -1430,15 +1452,15 @@ export function DiagnosticRadarBlock({
             return <ImportProvaInlineCTA />;
           }
 
-          const top = Math.round(100 - outlierScore.score);
+          const top = topPercentData;
           return (
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
               <span className="text-muted-foreground">Última prova</span>
               <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
-              {top >= 1 && top <= 99 &&
+              {top.shouldShow && top.topText &&
               <>
                   <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Top <span className="font-bold text-foreground">{top}%</span></span>
+                  <span className="text-muted-foreground"><span className="font-bold text-foreground">{top.topText}</span></span>
                 </>
               }
               {metaChip}

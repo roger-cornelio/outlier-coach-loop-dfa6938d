@@ -65,12 +65,7 @@ export function getEliteTargetSeconds(
   return { targetSeconds: minutes * 60, targetLabel: entry.label };
 }
 
-/** Safe top-percent: returns null if value is outside 1–99 */
-function safeTopPercent(score: number): number | null {
-  const top = Math.round(100 - score);
-  if (top < 1 || top > 99) return null;
-  return top;
-}
+// Top% is now computed externally by useTopPercent hook
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -91,6 +86,10 @@ interface PerformanceStatusCardProps {
   className?: string;
   hideStatusChip?: boolean;
   onImportRace?: () => void;
+  /** Admin-based Top% text (e.g. "Top 3%"), null to hide */
+  topText?: string | null;
+  /** Whether to show the Top% chip */
+  showTopPercent?: boolean;
 }
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
@@ -169,8 +168,9 @@ export function PerformanceStatusCard({
   className,
   hideStatusChip = false,
   onImportRace,
+  topText,
+  showTopPercent = false,
 }: PerformanceStatusCardProps) {
-  const topPercent = safeTopPercent(outlierScore.score);
   const scoreColorClass = getScoreColorClass(outlierScore.score);
 
   const lastRaceFormatted = useMemo(() => {
@@ -223,7 +223,7 @@ export function PerformanceStatusCard({
         id: 'status',
         icon: Award,
         label: 'Status OUTLIER',
-        value: topPercent !== null ? `${statusLabel} · Top ${topPercent}%` : statusLabel,
+        value: showTopPercent && topText ? `${statusLabel} · ${topText}` : statusLabel,
         valueClass: scoreColorClass,
       });
     }
@@ -286,7 +286,7 @@ export function PerformanceStatusCard({
 
     return list;
   }, [
-    hideStatusChip, topPercent, statusLabel, scoreColorClass,
+    hideStatusChip, showTopPercent, topText, statusLabel, scoreColorClass,
     lastRaceFormatted, eliteTargetFormatted, eliteDelta, eliteTargetLabel,
     evolutionDelta, showEvolutionCta, raceCount,
   ]);
