@@ -63,31 +63,31 @@ export function BenchmarksScreen() {
       setIsClearing(false);
     }
   };
-  return <div className="min-h-screen w-full self-stretch">
+  return <div className="min-h-screen w-full self-stretch overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setCurrentView('dashboard')} className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors" title="Voltar ao Dashboard">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2 w-full">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <button onClick={() => setCurrentView('dashboard')} className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors flex-shrink-0" title="Voltar ao Dashboard">
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div>
-                <h1 className="font-display text-2xl text-gradient flex items-center gap-2 text-accent">
-                  <Trophy className="w-6 h-6 text-primary" />
-                  Evolução
+              <div className="min-w-0">
+                <h1 className="font-display text-lg sm:text-2xl text-gradient flex items-center gap-2 text-accent">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+                  <span className="truncate">Evolução</span>
                 </h1>
-                {athleteConfig && <p className="text-sm text-muted-foreground">
+                {athleteConfig && <p className="text-xs sm:text-sm text-muted-foreground truncate">
                     {LEVEL_NAMES[status]} • Acompanhe seu progresso
                   </p>}
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Clear All Button */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10">
+                  <Button variant="outline" size="icon" className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 w-8 sm:h-9 sm:w-auto sm:px-3 sm:gap-2">
                     <Trash2 className="w-4 h-4" />
                     <span className="hidden sm:inline">Zerar</span>
                   </Button>
@@ -117,7 +117,7 @@ export function BenchmarksScreen() {
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-8">
         <div className="space-y-8">
           {/* Evolution Milestones */}
           <motion.div initial={{
