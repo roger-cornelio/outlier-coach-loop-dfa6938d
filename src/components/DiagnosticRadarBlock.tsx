@@ -446,7 +446,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
   const { allLevels, trainingSessions, targetLevel, category, hasOfficialRace } = journeyData;
 
   return (
-    <div className="grid grid-cols-3 gap-2 mb-4">
+    <div className="grid grid-cols-3 gap-3 my-4 max-w-xs mx-auto">
       {SHIELDS_ORDER.map((levelKey, index) => {
         const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
         const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
