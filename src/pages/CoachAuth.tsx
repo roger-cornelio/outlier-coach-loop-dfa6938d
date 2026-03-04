@@ -231,11 +231,7 @@ export default function CoachAuth() {
 
   // ===== RENDER =====
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,4%)] to-[hsl(0,0%,2%)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div 
-        className="absolute inset-0 opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.15), transparent 60%)' }}
-      />
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
 
       <motion.div
         initial={{ opacity: 0 }}
