@@ -243,6 +243,9 @@ function extractResultEntries(html: string, seasonId: number, eventName: string)
       result_url: fullUrl,
       season_id: seasonId,
     });
+  }
+
+  return results;
 }
 
 /**
@@ -259,7 +262,4 @@ function generateSearchVariants(firstName: string, lastName: string): { firstNam
     variants.push({ firstName, lastName: lastWord });
   }
   return variants;
-}
-
-  return results;
 }
