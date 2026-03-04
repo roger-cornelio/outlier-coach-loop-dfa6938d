@@ -1650,8 +1650,8 @@ export function DiagnosticRadarBlock({
                    }
                   </div>
 
-
-
+                  {/* Journey Shields — OPEN / PRO / ELITE */}
+                  <JourneyShieldsRow journeyData={journeyData} />
 
                   {/* REQUISITOS PARA {targetLevel} — UNIFIED CHECKLIST */}
                   <div className="rounded-lg border border-border/30 p-3">
