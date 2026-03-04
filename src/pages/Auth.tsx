@@ -673,7 +673,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="w-full max-w-md z-10 flex flex-col items-center"
+        className="w-full max-w-md md:max-w-lg z-10 flex flex-col items-center"
       >
         {/* HERO BRANDING - Maximum emphasis */}
         <div className="text-center mb-12">
