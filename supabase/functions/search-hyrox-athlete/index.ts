@@ -33,20 +33,22 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[search-hyrox-athlete] Searching: firstName="${firstName || ""}" lastName="${lastName}", gender=${gender || "any"}`);
+    const variants = generateSearchVariants(firstName || "", lastName);
+    console.log(`[search-hyrox-athlete] Searching with ${variants.length} variant(s):`, JSON.stringify(variants));
 
-    // For each season: get the event list, then search all events for the athlete
+    // For each season × variant: search all events
     const seasonResults = await Promise.allSettled(
-      SEASONS.map((season) => searchSeasonAllEvents(season.id, firstName || "", lastName, gender || ""))
+      SEASONS.flatMap((season) =>
+        variants.map((v) => searchSeasonAllEvents(season.id, v.firstName, v.lastName, gender || ""))
+      )
     );
 
     const allResults: any[] = [];
-    for (let i = 0; i < seasonResults.length; i++) {
-      const result = seasonResults[i];
+    for (const result of seasonResults) {
       if (result.status === "fulfilled" && result.value) {
         allResults.push(...result.value);
       } else if (result.status === "rejected") {
-        console.error(`[search-hyrox-athlete] Season ${SEASONS[i].id} failed:`, result.reason);
+        console.error(`[search-hyrox-athlete] variant failed:`, result.reason);
       }
     }
 
@@ -241,7 +243,23 @@ function extractResultEntries(html: string, seasonId: number, eventName: string)
       result_url: fullUrl,
       season_id: seasonId,
     });
+}
+
+/**
+ * Generate search variants for compound names.
+ * e.g. ("Roger", "Gabriel de Oliveira Cornelio") =>
+ *   [{ firstName: "Roger", lastName: "Gabriel de Oliveira Cornelio" },
+ *    { firstName: "Roger", lastName: "Cornelio" }]
+ */
+function generateSearchVariants(firstName: string, lastName: string): { firstName: string; lastName: string }[] {
+  const variants: { firstName: string; lastName: string }[] = [{ firstName, lastName }];
+  const parts = lastName.trim().split(/\s+/);
+  if (parts.length > 1) {
+    const lastWord = parts[parts.length - 1];
+    variants.push({ firstName, lastName: lastWord });
   }
+  return variants;
+}
 
   return results;
 }
