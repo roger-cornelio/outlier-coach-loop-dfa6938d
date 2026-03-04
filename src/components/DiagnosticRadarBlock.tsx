@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords } from 'lucide-react';
+import { ShieldCrest } from '@/components/ui/ShieldCrest';
+import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { PerformanceStatusCard } from './dashboard/PerformanceStatusCard';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
@@ -435,6 +437,87 @@ function calculateProjectedGain(scores: CalculatedScore[]): number {
   return totalGainSec;
 }
 
+// ============================================
+// JOURNEY SHIELDS ROW — 3 escudos OPEN/PRO/ELITE
+// ============================================
+const SHIELDS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
+
+function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof useJourneyProgress> }) {
+  const { allLevels, trainingSessions, targetLevel, category, hasOfficialRace } = journeyData;
+
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-4">
+      {SHIELDS_ORDER.map((levelKey, index) => {
+        const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
+        const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
+
+        const trainingReq = levelRule?.training_min_sessions || 120;
+        const benchReq = levelRule?.benchmarks_required || 3;
+        const trainingDone = trainingSessions;
+        const benchDone = targetLevel.benchmarksCompleted;
+        const trainingMet = trainingDone >= trainingReq;
+        const benchMet = benchDone >= benchReq;
+        const categoryIdx = SHIELDS_ORDER.indexOf(category);
+        const raceMet = !requiresRace || (hasOfficialRace && categoryIdx >= index);
+
+        const isOutlierAtLevel = trainingMet && benchMet && raceMet;
+
+        // Previous level must be outlier to show progress
+        const prevLevelOutlier = index === 0 ? true : (() => {
+          const prevRule = allLevels.find((l: any) => l.level_key === SHIELDS_ORDER[index - 1]);
+          const prevTrainingReq = prevRule?.training_min_sessions || 120;
+          const prevBenchReq = prevRule?.benchmarks_required || 3;
+          const prevRaceReq = prevRule?.official_race_required && SHIELDS_ORDER[index - 1] !== 'OPEN';
+          const prevRaceMet = !prevRaceReq || (hasOfficialRace && categoryIdx >= index - 1);
+          return trainingDone >= prevTrainingReq && benchDone >= prevBenchReq && prevRaceMet;
+        })();
+
+        let shieldFillPercent = 0;
+        if (isOutlierAtLevel) {
+          shieldFillPercent = 100;
+        } else if (prevLevelOutlier || index === 0) {
+          const tProg = Math.min(1, trainingDone / trainingReq);
+          const bProg = Math.min(1, benchDone / benchReq);
+          const avgProg = (tProg + bProg) / 2;
+          shieldFillPercent = Math.round((!raceMet && avgProg > 0.9) ? 90 : avgProg * 100);
+        }
+
+        return (
+          <div key={levelKey} className="flex flex-col items-center">
+            <ShieldCrest
+              level={levelKey}
+              active={isOutlierAtLevel}
+              fillPercent={shieldFillPercent}
+              className={`w-16 h-auto transition-all duration-300 ${
+                shieldFillPercent === 0 && !isOutlierAtLevel ? 'opacity-35 grayscale-[30%]' : ''
+              }`}
+            />
+            <p className={`text-[10px] font-display font-extrabold tracking-wider mt-1 leading-tight text-center ${
+              isOutlierAtLevel
+                ? 'text-amber-400'
+                : shieldFillPercent > 0
+                  ? 'text-foreground/70'
+                  : 'text-muted-foreground/25'
+            }`}>
+              {levelKey}
+              <span className="block text-[8px] tracking-[0.2em]">OUTLIER</span>
+            </p>
+            <p className={`text-[8px] uppercase tracking-[0.1em] font-medium ${
+              isOutlierAtLevel
+                ? 'text-foreground/60'
+                : shieldFillPercent > 0
+                  ? 'text-foreground/40'
+                  : 'text-muted-foreground/20'
+            }`}>
+              {isOutlierAtLevel ? '★ CONQUISTADO' : shieldFillPercent > 0 ? `${shieldFillPercent}%` : '🔒 BLOQUEADO'}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MobilePathToEliteCard({
   athleteName,
   journeyData,
@@ -555,6 +638,9 @@ function MobilePathToEliteCard({
           }
           </div>
         }
+
+        {/* Journey Shields — OPEN / PRO / ELITE */}
+        <JourneyShieldsRow journeyData={journeyData} />
 
         {/* Checklist: contadores progressivos */}
         {!isAtTop &&
