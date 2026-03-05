@@ -1,29 +1,30 @@
 
 
-## Problema
+## Plano: Substituir escudos SVG inline por imagens externas
 
-A busca atual envia o nome completo do perfil dividido como `firstName="Roger"` e `lastName="Gabriel de Oliveira Cornelio"`. O site HYROX busca por correspondência exata no campo sobrenome, então não encontra "Roger Cornelio" — o nome com que o atleta está registrado.
+### O que muda
 
-## Solução
+O componente `ShieldCrest.tsx` será simplificado — todo o SVG inline (paths, gradients, filtros, ícones, cadeado) será removido e substituído por um simples `<img>` apontando para as URLs fornecidas.
 
-Modificar a **edge function** `search-hyrox-athlete` para gerar **múltiplas variantes de busca** automaticamente e combinar os resultados.
+### Mapeamento de URLs
 
-### Variantes de busca geradas (por temporada):
+| Level | Estado | URL |
+|-------|--------|-----|
+| OPEN | blocked | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_travado.png` |
+| OPEN | active | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_destravado.png` |
+| PRO | blocked | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_travado.png` |
+| PRO | active | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_destravado.png` |
+| ELITE | blocked | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_travado.png` |
+| ELITE | active | `https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_destravado.png` |
 
-1. **Original**: firstName + lastName completo (ex: "Roger" + "Gabriel de Oliveira Cornelio")
-2. **Só último sobrenome**: firstName + última palavra do lastName (ex: "Roger" + "Cornelio")
+### Alteração em `src/components/ui/ShieldCrest.tsx`
 
-Se o lastName for uma única palavra, só executa uma busca (sem duplicar).
+1. Criar um mapa `SHIELD_URLS` com chave `{level}-{active|locked}` → URL
+2. Remover todo o conteúdo SVG inline (defs, paths, gradients, filtros, ícones, cadeado)
+3. Substituir por `<img src={url} alt={level} className={className} />` 
+4. Manter a mesma interface (`level`, `active`, `className`) — as props `fillPercent` e `isCurrent` deixam de ter efeito visual (as imagens já representam o estado completo)
 
-### Alteração técnica
+### Resultado
 
-**Arquivo: `supabase/functions/search-hyrox-athlete/index.ts`**
-
-- Adicionar função `generateSearchVariants(firstName, lastName)` que retorna pares únicos `{firstName, lastName}` para tentar
-- No handler principal, executar todas as variantes em paralelo para todas as temporadas
-- A deduplicação por `result_url` já existe e continua funcionando
-
-### Sem alterações no banco de dados ou no frontend
-
-O frontend já envia o nome completo — a edge function é que vai gerar as variantes internamente.
+O componente fica com ~20 linhas. Todos os locais que usam `<ShieldCrest>` continuam funcionando sem alteração.
 
