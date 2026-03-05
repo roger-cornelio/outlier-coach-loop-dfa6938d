@@ -150,7 +150,7 @@ export function StatusExplainerModal() {
                         <strong>Treinos</strong>
                         <p className="text-muted-foreground text-xs mt-0.5">
                           Cada dia treinado conta como 1 sessão (máximo 1 por dia). 
-                          A contagem é <strong>permanente</strong> — não expira.
+                          Válidos por <strong>12 meses</strong> — sessões mais antigas expiram.
                         </p>
                       </div>
                     </div>
@@ -160,7 +160,8 @@ export function StatusExplainerModal() {
                       <div>
                         <strong>Benchmarks</strong>
                         <p className="text-muted-foreground text-xs mt-0.5">
-                          Testes internos do OUTLIER. Cada benchmark único completado conta. 
+                          Testes internos do OUTLIER. Cada benchmark único completado conta.
+                          Válidos por <strong>12 meses</strong>.
                           <strong className="text-amber-400"> Não são a prova oficial.</strong>
                         </p>
                       </div>
@@ -237,6 +238,17 @@ export function StatusExplainerModal() {
                 <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
                   📊 <strong>Cálculo:</strong> 50% treinos + 50% benchmarks (média simples)
                 </div>
+
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 text-sm">
+                  <p className="text-orange-300 flex items-start gap-2">
+                    <Calendar className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>
+                      <strong>Validade de 12 meses:</strong> Treinos e benchmarks expiram após 12 meses. 
+                      Após esse período, a régua de jornada zera e você precisa acumular novamente. 
+                      Porém, sua <strong>categoria</strong> (OPEN/PRO/ELITE) permanece — ela é definida pela prova oficial e não expira.
+                    </span>
+                  </p>
+                </div>
               </div>
             </TabsContent>
             
@@ -304,7 +316,7 @@ export function StatusExplainerModal() {
                     </p>
                     <p className="flex items-start gap-2">
                       <ChevronRight className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      A mudança de categoria <strong>não reseta</strong> seus treinos e benchmarks.
+                      A mudança de categoria <strong>não reseta</strong> seus treinos e benchmarks. Porém, treinos e benchmarks expiram após <strong>12 meses</strong>.
                     </p>
                   </div>
                 </div>

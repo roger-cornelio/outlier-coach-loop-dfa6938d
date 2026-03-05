@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
  * Pure logic extraction from useJourneyProgress for testing.
@@ -23,8 +23,10 @@ const LEVEL_RULES: LevelRule[] = [
   { level_key: 'ELITE', level_order: 3, label: 'HYROX ELITE', training_min_sessions: 400, benchmarks_required: 10, official_race_required: true },
 ];
 
+const JOURNEY_EXPIRATION_DAYS = 365;
+
 /**
- * Core calculation logic matching useJourneyProgress (post-fix)
+ * Core calculation logic matching useJourneyProgress (with 12-month expiration)
  */
 function calculateJourney(
   trainingSessions: number,
@@ -53,12 +55,10 @@ function calculateJourney(
     targetLevelLabel = 'OUTLIER ELITE';
     isAtTop = true;
   } else {
-    // Outlier achieved — ruler stays at 100%, target = current category OUTLIER
     targetLevelKey = currentCategory;
     targetLevelLabel = `OUTLIER ${currentCategory}`;
   }
 
-  // Always use current category's rule for requirements
   const targetTrainingReq = currentCategoryRule.training_min_sessions;
   const targetBenchmarksReq = currentCategoryRule.benchmarks_required;
 
@@ -67,7 +67,6 @@ function calculateJourney(
   const overallProgress = (isOutlierAtCategory || isAtTop) ? 1 : (trainingProgress + benchmarkProgress) / 2;
   const progressPercent = overallProgress > 0 ? Math.max(1, Math.round(overallProgress * 100)) : 0;
 
-  // Next category info (for "needs race" message)
   const nextCategoryIdx = Math.min(currentLevelIndex + 1, levelRules.length - 1);
   const nextCategoryKey = isOutlierAtCategory && !isAtTop
     ? levelRules[nextCategoryIdx].level_key as ExtendedLevelKey
@@ -90,6 +89,20 @@ function calculateJourney(
   };
 }
 
+/**
+ * Simulate the 12-month expiration filter.
+ * Given training dates and a "now" date, returns only valid sessions.
+ */
+function filterValidSessions(
+  sessionDates: string[],
+  nowDate: Date,
+): string[] {
+  const cutoff = new Date(nowDate);
+  cutoff.setDate(cutoff.getDate() - JOURNEY_EXPIRATION_DAYS);
+  const cutoffStr = cutoff.toISOString().substring(0, 10);
+  return sessionDates.filter(d => d >= cutoffStr);
+}
+
 describe('Jornada OUTLIER V1 — Fluxo de Progressão', () => {
   it('Cenário 1: 120 treinos + 3 benchmarks + sem prova → 100% OPEN OUTLIER', () => {
     const result = calculateJourney(120, 3, 'OPEN', false);
@@ -99,7 +112,6 @@ describe('Jornada OUTLIER V1 — Fluxo de Progressão', () => {
     expect(result.progressPercent).toBe(100);
     expect(result.targetLevelKey).toBe('OPEN');
     expect(result.targetLevelLabel).toBe('OUTLIER OPEN');
-    // Shows that next step needs PRO race
     expect(result.provaNecessaria).toBe(true);
     expect(result.nextCategoryKey).toBe('PRO');
   });
@@ -113,8 +125,8 @@ describe('Jornada OUTLIER V1 — Fluxo de Progressão', () => {
     expect(result.targetLevelLabel).toBe('OUTLIER PRO');
     expect(result.targetTrainingReq).toBe(200);
     expect(result.targetBenchmarksReq).toBe(5);
-    expect(result.trainingProgress).toBe(60); // 120/200
-    expect(result.benchmarkProgress).toBe(60); // 3/5
+    expect(result.trainingProgress).toBe(60);
+    expect(result.benchmarkProgress).toBe(60);
     expect(result.progressPercent).toBe(60);
   });
 
@@ -138,8 +150,8 @@ describe('Jornada OUTLIER V1 — Fluxo de Progressão', () => {
     expect(result.targetLevelLabel).toBe('OUTLIER ELITE');
     expect(result.targetTrainingReq).toBe(400);
     expect(result.targetBenchmarksReq).toBe(10);
-    expect(result.trainingProgress).toBe(63); // 250/400
-    expect(result.benchmarkProgress).toBe(70); // 7/10
+    expect(result.trainingProgress).toBe(63);
+    expect(result.benchmarkProgress).toBe(70);
   });
 
   it('Cenário 5: ELITE OUTLIER completo → topo, 100%', () => {
@@ -160,17 +172,80 @@ describe('Jornada OUTLIER V1 — Fluxo de Progressão', () => {
   });
 
   it('Cenário 7: Transição OPEN OUTLIER → PRO via prova', () => {
-    // ANTES: OPEN OUTLIER
     const before = calculateJourney(120, 3, 'OPEN', false);
     expect(before.isOutlier).toBe(true);
     expect(before.progressPercent).toBe(100);
 
-    // DEPOIS: Postou prova PRO → categoria muda
     const after = calculateJourney(120, 3, 'PRO', true);
     expect(after.isOutlier).toBe(false);
     expect(after.targetTrainingReq).toBe(200);
     expect(after.trainingProgress).toBe(60);
     expect(after.benchmarkProgress).toBe(60);
     expect(after.progressPercent).toBe(60);
+  });
+});
+
+describe('Jornada OUTLIER — Expiração de 12 meses', () => {
+  it('Cenário 8: Treinos dentro de 12 meses são contados', () => {
+    const now = new Date('2026-03-05');
+    const sessions = [
+      '2025-06-01', // ~9 months ago — valid
+      '2025-09-15', // ~6 months ago — valid
+      '2026-01-10', // ~2 months ago — valid
+    ];
+    const valid = filterValidSessions(sessions, now);
+    expect(valid.length).toBe(3);
+  });
+
+  it('Cenário 9: Treinos com mais de 12 meses são descartados', () => {
+    const now = new Date('2026-03-05');
+    const sessions = [
+      '2024-12-01', // ~15 months ago — expired
+      '2025-01-15', // ~14 months ago — expired
+      '2025-06-01', // ~9 months ago — valid
+      '2026-01-10', // ~2 months ago — valid
+    ];
+    const valid = filterValidSessions(sessions, now);
+    expect(valid.length).toBe(2);
+  });
+
+  it('Cenário 10: Todos os treinos expirados → régua zera, mas categoria mantém', () => {
+    const now = new Date('2026-03-05');
+    const sessions = [
+      '2024-06-01', // ~21 months ago
+      '2024-09-01', // ~18 months ago
+    ];
+    const valid = filterValidSessions(sessions, now);
+    expect(valid.length).toBe(0);
+
+    // With 0 valid sessions, progress is 0 but category stays PRO
+    const result = calculateJourney(0, 0, 'PRO', true);
+    expect(result.currentCategory).toBe('PRO');
+    expect(result.progressPercent).toBe(0);
+    expect(result.isOutlier).toBe(false);
+  });
+
+  it('Cenário 11: Treino no limite exato de 365 dias é incluído', () => {
+    const now = new Date('2026-03-05');
+    const sessions = [
+      '2025-03-05', // exactly 365 days ago — should be included (>= cutoff)
+      '2025-03-04', // 366 days ago — expired
+    ];
+    const valid = filterValidSessions(sessions, now);
+    expect(valid.length).toBe(1);
+    expect(valid[0]).toBe('2025-03-05');
+  });
+
+  it('Cenário 12: Atleta perde Outlier quando treinos expiram, mas mantém categoria', () => {
+    // Before: OPEN OUTLIER with 120 training sessions
+    const resultBefore = calculateJourney(120, 3, 'OPEN', false);
+    expect(resultBefore.isOutlier).toBe(true);
+    expect(resultBefore.progressPercent).toBe(100);
+
+    // After: 80 sessions expired, only 40 remain valid
+    const resultAfter = calculateJourney(40, 3, 'OPEN', false);
+    expect(resultAfter.isOutlier).toBe(false);
+    expect(resultAfter.currentCategory).toBe('OPEN'); // Category preserved
+    expect(resultAfter.progressPercent).toBeLessThan(100);
   });
 });
