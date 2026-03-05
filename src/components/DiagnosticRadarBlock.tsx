@@ -470,6 +470,10 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
 
         const isOutlierAtLevel = trainingMet && benchMet && raceMet;
 
+        // NEW RULE: Shield is unlocked (active image) if athlete's official category
+        // is at or above this level. E.g. ELITE category unlocks OPEN + PRO shields.
+        const isUnlockedByCategory = hasOfficialRace && categoryIdx >= index;
+
         // Previous level must be outlier to show progress
         const prevLevelOutlier = index === 0 ? true : (() => {
           const prevRule = allLevels.find((l: any) => l.level_key === SHIELDS_ORDER[index - 1]);
@@ -483,6 +487,12 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
         let shieldFillPercent = 0;
         if (isOutlierAtLevel) {
           shieldFillPercent = 100;
+        } else if (isUnlockedByCategory) {
+          // Unlocked by category but not yet outlier — show journey progress
+          const tProg = Math.min(1, trainingDone / trainingReq);
+          const bProg = Math.min(1, benchDone / benchReq);
+          const avgProg = (tProg + bProg) / 2;
+          shieldFillPercent = Math.max(1, Math.round(avgProg * 100)); // min 1% to keep it active-looking
         } else if (prevLevelOutlier || index === 0) {
           const tProg = Math.min(1, trainingDone / trainingReq);
           const bProg = Math.min(1, benchDone / benchReq);
@@ -490,34 +500,44 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
           shieldFillPercent = Math.round((!raceMet && avgProg > 0.9) ? 90 : avgProg * 100);
         }
 
+        // Shield shows active (colored) if outlier OR unlocked by category
+        const showActive = isOutlierAtLevel || isUnlockedByCategory;
+
         return (
           <div key={levelKey} className="flex flex-col items-center flex-1">
             <ShieldCrest
               level={levelKey}
-              active={isOutlierAtLevel}
+              active={showActive}
               fillPercent={shieldFillPercent}
               className={`w-[7rem] sm:w-[9rem] h-auto transition-all duration-300 ${
-                shieldFillPercent === 0 && !isOutlierAtLevel ? 'opacity-35 grayscale-[30%]' : ''
+                !showActive && shieldFillPercent === 0 ? 'opacity-35 grayscale-[30%]' : ''
               }`}
             />
             <p className={`font-display font-extrabold tracking-[0.15em] mt-2 leading-none text-center ${
               isOutlierAtLevel
                 ? 'text-amber-400'
-                : shieldFillPercent > 0
+                : showActive
                   ? 'text-foreground/80'
-                  : 'text-muted-foreground/50'
+                  : shieldFillPercent > 0
+                    ? 'text-foreground/70'
+                    : 'text-muted-foreground/50'
             }`}>
               <span className="block text-base sm:text-lg">{levelKey}</span>
               <span className="block text-base sm:text-lg mt-0.5">OUTLIER</span>
             </p>
-            {!isOutlierAtLevel && shieldFillPercent === 0 && (
-              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-muted-foreground/40">
-                🔒 BLOQUEADO
-              </p>
-            )}
             {isOutlierAtLevel && (
               <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-amber-400/70">
                 ★ CONQUISTADO
+              </p>
+            )}
+            {!isOutlierAtLevel && showActive && (
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-foreground/50">
+                {shieldFillPercent}% da jornada
+              </p>
+            )}
+            {!showActive && shieldFillPercent === 0 && (
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-muted-foreground/40">
+                🔒 BLOQUEADO
               </p>
             )}
           </div>
