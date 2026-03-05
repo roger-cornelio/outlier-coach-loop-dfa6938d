@@ -149,7 +149,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   
                   {/* Crown Icon - Hero size, white */}
                   <div className="relative">
-                    <StatusCrownPreset size="hero" colorClass="text-white" />
+                    <StatusCrownPreset status={newStatus} size="hero" colorClass="text-white" />
                   </div>
                 </motion.div>
               )}

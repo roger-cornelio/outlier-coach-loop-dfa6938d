@@ -1,21 +1,26 @@
-import { Crown } from 'lucide-react';
+import { Crown, Swords, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { AthleteStatus } from '@/types/outlier';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * StatusCrown — Componente Canônico de Ícone de Status
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * ÚNICO ícone de status do atleta em todo o app.
- * Garante consistência pixel-perfect: mesmo stroke, viewBox e proporção.
+ * Renderiza o ícone correto baseado no status do atleta:
+ *   - OPEN  → Seta para cima (ArrowUp)
+ *   - PRO   → Espadas cruzadas (Swords)
+ *   - ELITE → Coroa (Crown)
  * 
- * USO OBRIGATÓRIO: Substituir <Crown /> por <StatusCrown /> em TODOS os 
- * pontos onde o status do atleta é exibido.
+ * USO OBRIGATÓRIO: Substituir <Crown /> por <StatusCrown status={...} />
+ * em TODOS os pontos onde o status do atleta é exibido.
  */
 
 export type StatusCrownSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 
 interface StatusCrownProps {
+  /** Status do atleta — determina qual ícone é renderizado */
+  status?: AthleteStatus;
   /** Tamanho do ícone */
   size?: StatusCrownSize;
   /** Cor customizada (tailwind class) */
@@ -24,9 +29,6 @@ interface StatusCrownProps {
   className?: string;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ESCALA CANÔNICA — Proporções fixas para cada tamanho
-// ═══════════════════════════════════════════════════════════════════════════
 const SIZE_MAP: Record<StatusCrownSize, string> = {
   xs: 'w-3 h-3',
   sm: 'w-4 h-4',
@@ -36,28 +38,25 @@ const SIZE_MAP: Record<StatusCrownSize, string> = {
   hero: 'w-20 h-20',
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PROPRIEDADES CANÔNICAS DO ÍCONE
-// ═══════════════════════════════════════════════════════════════════════════
 const CANONICAL_STROKE_WIDTH = 1.5;
 
-/**
- * StatusCrown — Coroa canônica do status do atleta
- * 
- * @example
- * // Uso básico
- * <StatusCrown size="md" />
- * 
- * // Com cor customizada
- * <StatusCrown size="lg" colorClass="text-amber-400" />
- */
+/** Mapa status → ícone Lucide */
+const STATUS_ICON_MAP: Record<AthleteStatus, typeof Crown> = {
+  open: ArrowUp,
+  pro: Swords,
+  elite: Crown,
+};
+
 export function StatusCrown({ 
+  status = 'elite',
   size = 'md', 
   colorClass,
   className 
 }: StatusCrownProps) {
+  const IconComponent = STATUS_ICON_MAP[status] ?? Crown;
+
   return (
-    <Crown
+    <IconComponent
       className={cn(
         SIZE_MAP[size],
         colorClass,
@@ -65,7 +64,6 @@ export function StatusCrown({
         className
       )}
       strokeWidth={CANONICAL_STROKE_WIDTH}
-      // Propriedades fixas para consistência visual
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

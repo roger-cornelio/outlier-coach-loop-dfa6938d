@@ -129,6 +129,7 @@ export function AthleteStatusAvatar({
         >
           {/* StatusCrownPreset canônico */}
           <StatusCrownPreset 
+            status={status}
             size={sizeConfig.crownSize}
             colorClass={config.crownColor}
           />
@@ -151,7 +152,7 @@ export function AthleteStatusAvatar({
               sizeConfig.text
             )}
           >
-            <StatusCrownPreset size="sm" colorClass={config.text} />
+            <StatusCrownPreset status={status} size="sm" colorClass={config.text} />
             <span>ATLETA {config.label}</span>
           </div>
         </motion.div>
@@ -192,7 +193,7 @@ export function AthleteStatusBadge({
         size === 'sm' ? 'text-xs' : 'text-sm'
       )}
     >
-      <StatusCrownPreset size="xs" colorClass={config.text} />
+      <StatusCrownPreset status={status} size="xs" colorClass={config.text} />
       <span className="font-semibold uppercase">{config.label}</span>
     </div>
   );
