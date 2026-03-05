@@ -1,29 +1,33 @@
 
 
-## Problema
+## Mapeamento Completo: Status dos Slugs de Conquistas
 
-A busca atual envia o nome completo do perfil dividido como `firstName="Roger"` e `lastName="Gabriel de Oliveira Cornelio"`. O site HYROX busca por correspondência exata no campo sobrenome, então não encontra "Roger Cornelio" — o nome com que o atleta está registrado.
+### Já implementado (OK)
 
-## Solução
+**`src/components/ui/ShieldCrest.tsx`** — O componente já está 100% correto com todas as 6 URLs mapeadas:
 
-Modificar a **edge function** `search-hyrox-athlete` para gerar **múltiplas variantes de busca** automaticamente e combinar os resultados.
+| Chave | URL | Status |
+|-------|-----|--------|
+| OPEN-active | `.../open_outlier_destravado.png` | ✓ OK |
+| OPEN-locked | `.../open_outlier_travado.png` | ✓ OK |
+| PRO-active | `.../pro_outlier_destravado.png` | ✓ OK |
+| PRO-locked | `.../pro_outlier_travado.png` | ✓ OK |
+| ELITE-active | `.../elite_outlier_destravado.png` | ✓ OK |
+| ELITE-locked | `.../elite_outlier_travado.png` | ✓ OK |
 
-### Variantes de busca geradas (por temporada):
+### Consumidores do componente (2 telas)
 
-1. **Original**: firstName + lastName completo (ex: "Roger" + "Gabriel de Oliveira Cornelio")
-2. **Só último sobrenome**: firstName + última palavra do lastName (ex: "Roger" + "Cornelio")
+1. **`LevelProgress.tsx`** — Tela de Evolução (grid 3 colunas, 90px mobile / 145px desktop) — usa `ShieldCrest` com `active` baseado no nível do atleta
+2. **`DiagnosticRadarBlock.tsx`** — Bloco de diagnóstico radar — usa `ShieldCrest` em miniatura junto ao radar
 
-Se o lastName for uma única palavra, só executa uma busca (sem duplicar).
+### Componentes que NÃO usam ShieldCrest (usam StatusCrown/coroa separada)
 
-### Alteração técnica
+- **`AthleteStatusAvatar.tsx`** — Avatar principal com coroa (ícone SVG inline via `StatusCrownPreset`), não escudo
+- **`AthleteHeroIdentity.tsx`** — Nome + badge de status com coroa, não escudo
 
-**Arquivo: `supabase/functions/search-hyrox-athlete/index.ts`**
+### Conclusão
 
-- Adicionar função `generateSearchVariants(firstName, lastName)` que retorna pares únicos `{firstName, lastName}` para tentar
-- No handler principal, executar todas as variantes em paralelo para todas as temporadas
-- A deduplicação por `result_url` já existe e continua funcionando
+A implementação dos novos slugs de conquistas (PNG externos) já está **completa**. O `ShieldCrest.tsx` foi refatorado na mensagem anterior e já contém todas as URLs fornecidas. Os dois componentes que consomem escudos (`LevelProgress` e `DiagnosticRadarBlock`) já apontam para o componente atualizado.
 
-### Sem alterações no banco de dados ou no frontend
-
-O frontend já envia o nome completo — a edge function é que vai gerar as variantes internamente.
+Não há alteração de código pendente. O próximo passo é **testar visualmente** fazendo login com as credenciais fornecidas para confirmar que as imagens carregam corretamente na tela de evolução.
 
