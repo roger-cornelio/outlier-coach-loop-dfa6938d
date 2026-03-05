@@ -126,6 +126,7 @@ export function UserAvatar({
       
       {/* StatusCrownPreset canônico */}
       <StatusCrownPreset 
+        status={statusKey || undefined}
         size={sizeConfig.crownSize}
         colorClass={visual.iconColor}
         className="relative z-10"

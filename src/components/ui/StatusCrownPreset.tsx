@@ -1,56 +1,37 @@
 import { StatusCrown, type StatusCrownSize } from '@/components/ui/StatusCrown';
 import { cn } from '@/lib/utils';
+import type { AthleteStatus } from '@/types/outlier';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * StatusCrownPreset — Preset Canônico do Ícone de Status
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * WRAPPER OBRIGATÓRIO para garantir pixel-match entre:
- *   - Status Badge/Header do atleta
- *   - Jornada de Evolução (LevelProgress)
- *   - Qualquer outro uso do símbolo de status
- * 
- * REGRAS:
- *   - Não permite override de stroke, viewBox ou proporção
- *   - Aceita apenas: size (opcional), colorClass (opcional)
- *   - Classe drop-shadow-md é FIXA para todos os usos
+ * Renderiza o ícone correto por status (seta OPEN, espadas PRO, coroa ELITE).
  */
 
 interface StatusCrownPresetProps {
+  /** Status do atleta — determina qual ícone */
+  status?: AthleteStatus;
   /** Tamanho do ícone (default: 'md') */
   size?: StatusCrownSize;
-  /** Cor customizada (tailwind class) - deve seguir o padrão do status */
+  /** Cor customizada (tailwind class) */
   colorClass?: string;
-  /** Classes adicionais de posicionamento APENAS (não afeta visual do ícone) */
+  /** Classes adicionais de posicionamento */
   className?: string;
 }
 
-/**
- * StatusCrownPreset — Uso canônico do símbolo de status
- * 
- * @example
- * // No badge de status
- * <StatusCrownPreset size="sm" colorClass="text-amber-400" />
- * 
- * // Na jornada (step icon)
- * <StatusCrownPreset size="lg" />
- * 
- * // Hero/destaque
- * <StatusCrownPreset size="hero" colorClass="text-amber-900" />
- */
 export function StatusCrownPreset({
+  status = 'elite',
   size = 'md',
   colorClass,
   className,
 }: StatusCrownPresetProps) {
   return (
     <StatusCrown
+      status={status}
       size={size}
       colorClass={colorClass}
-      // ═══════════════════════════════════════════════════════════════════════
-      // CLASSE FIXA — drop-shadow-md é parte do preset canônico
-      // ═══════════════════════════════════════════════════════════════════════
       className={cn('drop-shadow-md', className)}
     />
   );

@@ -66,7 +66,7 @@ export function AthleteHeroIdentity({
       
       {/* Badge de Status com Coroa */}
       <div className="flex items-center gap-2 mb-1">
-        <StatusCrownPreset size="sm" colorClass={config.crownColor} />
+        <StatusCrownPreset status={status} size="sm" colorClass={config.crownColor} />
         <span className={cn('font-semibold text-sm sm:text-base tracking-wider', config.labelColor)}>
           {config.label}
         </span>

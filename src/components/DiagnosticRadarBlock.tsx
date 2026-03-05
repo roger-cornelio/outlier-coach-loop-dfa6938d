@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords } from 'lucide-react';
+import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
 import { NextLevelModal } from '@/components/NextLevelModal';
 import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
@@ -1466,7 +1467,7 @@ export function DiagnosticRadarBlock({
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
         <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-wide text-foreground uppercase mb-2">{athleteName}</h1>
         <div className="flex items-center justify-center gap-2.5 mb-1">
-          <Crown className="w-6 h-6 text-amber-400 shrink-0" />
+          <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" />
           <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
         </div>
 
@@ -1596,7 +1597,7 @@ export function DiagnosticRadarBlock({
               {/* ELITE state */}
               {isAtTop ?
               <div className="text-center py-4">
-                  <Crown className="w-6 h-6 text-amber-400 mx-auto mb-2" />
+                  <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" className="mx-auto mb-2" />
                   <p className="text-sm font-semibold text-foreground">Você está no topo</p>
                   <p className="text-xs text-muted-foreground mt-1">Modo manutenção — mantenha sua consistência.</p>
                 </div> :
