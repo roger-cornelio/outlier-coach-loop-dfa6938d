@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1359,48 +1360,30 @@ export function DiagnosticRadarBlock({
           <ImportProvaInlineCTA />
         )}
 
-        {/* Linha inline: Última prova · Meta · Evolução — só com dados */}
+        {/* Barra de métricas — só com dados */}
         {hasData && validatingCompetition?.time_in_seconds && (() => {
           const lastTime = validatingCompetition.time_in_seconds;
           const targetSec = eliteTarget?.targetSeconds;
           const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
           const prevTime = previousCompetition?.time_in_seconds;
 
-          const parts: React.ReactNode[] = [];
-
-          // 1. Última prova
-          parts.push(
-            <span key="last" className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Última prova</span>
-              <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
-            </span>
-          );
-
-          // 2. Meta (próxima categoria — tempo admin, nunca menor que o tempo da prova)
+          // Meta value + class
+          let metaValue = '—';
+          let metaClass = 'text-foreground';
           if (targetSec) {
-            const effectiveTarget = Math.max(targetSec, lastTime);
             const delta = lastTime - targetSec;
-            const targetFmt = formatOfficialTime(effectiveTarget);
             if (delta <= 0) {
-              parts.push(
-                <span key="meta" className="flex items-center gap-1.5">
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">{formatOfficialTime(targetSec)} ✔</span>
-                </span>
-              );
+              metaValue = `${formatOfficialTime(targetSec)} ✔`;
+              metaClass = 'text-emerald-400';
             } else {
-              parts.push(
-                <span key="meta" className="flex items-center gap-1.5">
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">{formatOfficialTime(targetSec)}</span>
-                </span>
-              );
+              metaValue = formatOfficialTime(targetSec);
+              metaClass = 'text-amber-400';
             }
           }
 
-          // 3. Evolução (gap entre prova atual e anterior, mín 30s)
+          // Evolução value + class
+          let evolValue = 'Aguardando próxima prova';
+          let evolClass = 'text-muted-foreground/60 italic font-normal';
           if (prevTime) {
             const diff = lastTime - prevTime;
             if (Math.abs(diff) >= 30) {
@@ -1408,30 +1391,39 @@ export function DiagnosticRadarBlock({
               const m = Math.floor(abs / 60);
               const s = Math.round(abs % 60);
               const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
-              parts.push(
-                <span key="evol" className="flex items-center gap-1.5">
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Evolução</span>
-                  <span className={`font-bold ${diff < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
-                  </span>
-                </span>
-              );
+              evolValue = diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`;
+              evolClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
             }
-          } else {
-            parts.push(
-              <span key="evol-wait" className="flex items-center gap-1.5">
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">Evolução</span>
-                <span className="text-muted-foreground/60 italic">Aguardando próxima prova</span>
-              </span>
-            );
           }
 
           return (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs px-4 pb-3 pt-1">
-              {parts}
-            </div>);
+            <div className="mx-3 mb-3 mt-1 grid grid-cols-3 gap-1.5 p-2.5 bg-muted/5 border border-border/15 rounded-xl">
+              {/* Última prova */}
+              <div className="flex flex-col items-center text-center gap-0.5">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Timer className="w-3 h-3" />
+                  <span>Última prova</span>
+                </div>
+                <span className="font-bold text-xs text-foreground">{formatOfficialTime(lastTime)}</span>
+              </div>
+              {/* Meta */}
+              <div className="flex flex-col items-center text-center gap-0.5 border-x border-border/10">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Target className="w-3 h-3" />
+                  <span>Meta {targetLabel}</span>
+                </div>
+                <span className={cn('font-bold text-xs', metaClass)}>{metaValue}</span>
+              </div>
+              {/* Evolução */}
+              <div className="flex flex-col items-center text-center gap-0.5">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>Evolução</span>
+                </div>
+                <span className={cn('font-bold text-xs', evolClass)}>{evolValue}</span>
+              </div>
+            </div>
+          );
         })()}
 
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
@@ -1496,7 +1488,7 @@ export function DiagnosticRadarBlock({
         )}
         {!provaAlvo && <div className="mb-3" />}
 
-        {/* Linha inline: Última prova · Meta · Evolução */}
+        {/* Barra de métricas — grid 3 colunas */}
         {(() => {
           const lastTime = validatingCompetition?.time_in_seconds;
           const targetSec = eliteTarget?.targetSeconds;
@@ -1506,29 +1498,23 @@ export function DiagnosticRadarBlock({
             return <ImportProvaInlineCTA />;
           }
 
-          // Meta chip (nunca menor que o tempo da prova)
-          let metaChip: React.ReactNode = null;
+          // Meta
+          let metaValue = '—';
+          let metaClass = 'text-foreground';
           if (targetSec) {
             const delta = lastTime - targetSec;
             if (delta <= 0) {
-              metaChip =
-              <>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">{formatOfficialTime(targetSec)} ✔</span>
-                </>;
+              metaValue = `${formatOfficialTime(targetSec)} ✔`;
+              metaClass = 'text-emerald-400';
             } else {
-              metaChip =
-              <>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">{formatOfficialTime(targetSec)}</span>
-                </>;
+              metaValue = formatOfficialTime(targetSec);
+              metaClass = 'text-amber-400';
             }
           }
 
-          // Evolução chip (gap entre prova atual e anterior)
-          let evolChip: React.ReactNode = null;
+          // Evolução
+          let evolValue = 'Aguardando próxima prova';
+          let evolClass = 'text-muted-foreground/60 italic font-normal';
           if (previousCompetition?.time_in_seconds) {
             const diff = lastTime - previousCompetition.time_in_seconds;
             if (Math.abs(diff) >= 30) {
@@ -1536,32 +1522,36 @@ export function DiagnosticRadarBlock({
               const m = Math.floor(abs / 60);
               const s = Math.round(abs % 60);
               const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
-              evolChip =
-              <>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Evolução</span>
-                  <span className={`font-bold ${diff < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
-                  </span>
-                </>;
+              evolValue = diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`;
+              evolClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
             }
-          } else {
-            evolChip =
-            <>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">Evolução</span>
-                <span className="text-muted-foreground/60 italic">Aguardando próxima prova</span>
-              </>;
           }
 
           return (
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
-              <span className="text-muted-foreground">Última prova</span>
-              <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
-              {metaChip}
-              {evolChip}
-            </div>);
-
+            <div className="mt-3 grid grid-cols-3 gap-2 p-3 bg-muted/5 border border-border/15 rounded-xl">
+              <div className="flex flex-col items-center text-center gap-0.5">
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                  <Timer className="w-3.5 h-3.5" />
+                  <span>Última prova</span>
+                </div>
+                <span className="font-bold text-sm text-foreground">{formatOfficialTime(lastTime)}</span>
+              </div>
+              <div className="flex flex-col items-center text-center gap-0.5 border-x border-border/10">
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Meta {targetLabel}</span>
+                </div>
+                <span className={cn('font-bold text-sm', metaClass)}>{metaValue}</span>
+              </div>
+              <div className="flex flex-col items-center text-center gap-0.5">
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>Evolução</span>
+                </div>
+                <span className={cn('font-bold text-sm', evolClass)}>{evolValue}</span>
+              </div>
+            </div>
+          );
         })()}
       </motion.div>
 
