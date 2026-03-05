@@ -454,7 +454,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
   const { allLevels, trainingSessions, targetLevel, category, hasOfficialRace } = journeyData;
 
   return (
-    <div className="grid grid-cols-3 gap-3 my-4 max-w-xs mx-auto">
+    <div className="grid grid-cols-3 gap-6 sm:gap-8 my-4 max-w-sm mx-auto">
       {SHIELDS_ORDER.map((levelKey, index) => {
         const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
         const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
@@ -496,7 +496,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
               level={levelKey}
               active={isOutlierAtLevel}
               fillPercent={shieldFillPercent}
-              className={`w-16 h-auto transition-all duration-300 ${
+              className={`w-24 sm:w-28 h-auto transition-all duration-300 ${
                 shieldFillPercent === 0 && !isOutlierAtLevel ? 'opacity-35 grayscale-[30%]' : ''
               }`}
             />
