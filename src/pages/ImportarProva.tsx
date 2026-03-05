@@ -95,7 +95,7 @@ type SearchResult = {
   season_id?: number;
 };
 
-type ImportStep = 'search' | 'input' | 'loading' | 'success' | 'error';
+type ImportStep = 'search' | 'input' | 'loading' | 'success' | 'error' | 'batch-loading' | 'batch-success';
 
 // --- Component ---
 
@@ -116,6 +116,11 @@ export default function ImportarProva() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [searchDone, setSearchDone] = useState(false);
+
+  // Multi-select state
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [batchImporting, setBatchImporting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, errors: 0 });
 
   // Editable search name fields
   const profileName = profile?.name || '';
@@ -160,6 +165,23 @@ export default function ImportarProva() {
     }
   }
 
+  function toggleSelection(idx: number) {
+    setSelectedIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (selectedIndices.size === searchResults.length) {
+      setSelectedIndices(new Set());
+    } else {
+      setSelectedIndices(new Set(searchResults.map((_, i) => i)));
+    }
+  }
+
   async function handleImportFromSearch(result: SearchResult) {
     if (!agreed) {
       toast.error('Aceite a autorização para continuar.');
@@ -167,6 +189,115 @@ export default function ImportarProva() {
     }
     setUrl(result.result_url);
     await handleImport(result.result_url);
+  }
+
+  async function handleBatchImport() {
+    if (!agreed) {
+      toast.error('Aceite a autorização para continuar.');
+      return;
+    }
+    if (selectedIndices.size === 0) {
+      toast.error('Selecione pelo menos uma prova.');
+      return;
+    }
+
+    const selected = Array.from(selectedIndices).map(i => searchResults[i]);
+    setBatchImporting(true);
+    setBatchProgress({ done: 0, total: selected.length, errors: 0 });
+    setStep('batch-loading');
+
+    let errors = 0;
+    for (let i = 0; i < selected.length; i++) {
+      try {
+        await handleImportSilent(selected[i].result_url);
+      } catch {
+        errors++;
+      }
+      setBatchProgress({ done: i + 1, total: selected.length, errors });
+    }
+
+    triggerExternalResultsRefresh();
+    setBatchImporting(false);
+    setStep('batch-success');
+    setBatchProgress(prev => ({ ...prev, errors }));
+  }
+
+  /** Silent import — no step/UI changes, throws on error */
+  async function handleImportSilent(importUrl: string) {
+    const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke(
+      'scrape-hyrox-result',
+      { body: { url: importUrl } }
+    );
+
+    if (scrapeError) throw new Error('Não foi possível ler os dados do link.');
+    if (scrapeData?.error || !scrapeData?.time_in_seconds) {
+      throw new Error(scrapeData?.error || 'Não encontramos os tempos no link.');
+    }
+
+    const totalSeconds = scrapeData.time_in_seconds;
+    const eventName = scrapeData.event_name || 'Prova HYROX';
+    const eventYear = scrapeData.event_year || new Date().getFullYear();
+    const eventDate = `${eventYear}-01-01`;
+    const raceCategory = scrapeData.race_category || 'OPEN';
+    const splits = scrapeData.splits || null;
+    const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
+
+    const insertPayload = {
+      user_id: user!.id,
+      result_type: 'prova_oficial',
+      event_name: eventName,
+      event_date: eventDate,
+      time_in_seconds: totalSeconds,
+      screenshot_url: importUrl,
+      race_category: raceCategory,
+      completed: true,
+      block_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      workout_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      benchmark_id: 'HYROX_OFFICIAL',
+      ...(hasSplits && splits.run_avg_sec ? { run_avg_sec: Math.round(splits.run_avg_sec) } : {}),
+      ...(hasSplits && splits.roxzone_sec ? { roxzone_sec: Math.round(splits.roxzone_sec) } : {}),
+      ...(hasSplits && splits.ski_sec ? { ski_sec: Math.round(splits.ski_sec) } : {}),
+      ...(hasSplits && splits.sled_push_sec ? { sled_push_sec: Math.round(splits.sled_push_sec) } : {}),
+      ...(hasSplits && splits.sled_pull_sec ? { sled_pull_sec: Math.round(splits.sled_pull_sec) } : {}),
+      ...(hasSplits && splits.bbj_sec ? { bbj_sec: Math.round(splits.bbj_sec) } : {}),
+      ...(hasSplits && splits.row_sec ? { row_sec: Math.round(splits.row_sec) } : {}),
+      ...(hasSplits && splits.farmers_sec ? { farmers_sec: Math.round(splits.farmers_sec) } : {}),
+      ...(hasSplits && splits.sandbag_sec ? { sandbag_sec: Math.round(splits.sandbag_sec) } : {}),
+      ...(hasSplits && splits.wallballs_sec ? { wallballs_sec: Math.round(splits.wallballs_sec) } : {}),
+    };
+
+    const { data: insertedData, error: insertError } = await supabase
+      .from('benchmark_results')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') return; // Already imported, skip silently
+      throw insertError;
+    }
+
+    const resultId = insertedData?.id;
+    const { idp, event } = extractIdpFromUrl(importUrl);
+
+    if (idp) {
+      await supabase.from('race_results').insert({
+        athlete_id: user!.id,
+        hyrox_idp: idp,
+        hyrox_event: event,
+        source_url: importUrl,
+      } as any).single();
+    }
+
+    if (resultId && hasGenderConfigured) {
+      const alreadyExists = await hasExistingScores(resultId);
+      if (!alreadyExists) {
+        const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
+        const gender = athleteConfig?.sexo === 'feminino' ? 'F' : 'M';
+        const metrics = hasSplits ? generateMetricsFromSplits(splits) : generateMetricsFromTotal(totalSeconds);
+        await calculateAndSaveHyroxPercentiles(resultId, division, gender, metrics);
+      }
+    }
   }
 
   async function handleSubmitManual() {
@@ -381,6 +512,50 @@ export default function ImportarProva() {
     );
   }
 
+  // --- Render: Batch Loading ---
+  if (step === 'batch-loading') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md text-center space-y-6">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Importando {batchProgress.total} prova{batchProgress.total > 1 ? 's' : ''}...</h2>
+          <p className="text-sm text-muted-foreground">{batchProgress.done} de {batchProgress.total} concluída{batchProgress.done > 1 ? 's' : ''}</p>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${(batchProgress.done / batchProgress.total) * 100}%` }} />
+          </div>
+          {batchProgress.errors > 0 && (
+            <p className="text-xs text-amber-400">{batchProgress.errors} erro{batchProgress.errors > 1 ? 's' : ''} (duplicadas ou inacessíveis)</p>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
+  // --- Render: Batch Success ---
+  if (step === 'batch-success') {
+    const imported = batchProgress.total - batchProgress.errors;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">
+          <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {imported} prova{imported > 1 ? 's' : ''} importada{imported > 1 ? 's' : ''}!
+            </h1>
+            {batchProgress.errors > 0 && (
+              <p className="text-sm text-muted-foreground">{batchProgress.errors} já existia{batchProgress.errors > 1 ? 'm' : ''} ou falhou.</p>
+            )}
+            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-base font-bold rounded-2xl" onClick={() => navigate('/app')}>
+              Gerar diagnóstico OUTLIER
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   // --- Render: Search (default) ---
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -451,12 +626,26 @@ export default function ImportarProva() {
           {searchDone && !searching && searchResults.length > 0 && (
             <div className="space-y-4">
               <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  <h2 className="text-base font-bold text-foreground">
-                    {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''}
-                  </h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-primary" />
+                    <h2 className="text-base font-bold text-foreground">
+                      {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''}
+                    </h2>
+                  </div>
+                  {searchResults.length > 1 && (
+                    <button
+                      onClick={selectAll}
+                      className="text-xs text-primary font-semibold hover:underline"
+                    >
+                      {selectedIndices.size === searchResults.length ? 'Desmarcar tudo' : 'Selecionar tudo'}
+                    </button>
+                  )}
                 </div>
+
+                {searchResults.length > 1 && (
+                  <p className="text-xs text-muted-foreground">Selecione as provas que deseja importar.</p>
+                )}
 
                 {/* Consent checkbox */}
                 <div className="flex items-start gap-3">
@@ -466,30 +655,61 @@ export default function ImportarProva() {
                   </label>
                 </div>
 
-                {/* Results list */}
+                {/* Results list with checkboxes */}
                 <div className="space-y-2">
-                  {searchResults.map((result, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleImportFromSearch(result)}
-                      disabled={!agreed}
-                      className="w-full flex items-center gap-3 bg-muted/50 hover:bg-muted rounded-xl p-4 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Flame className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{formatAthleteName(result.athlete_name)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{result.event_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {result.time_formatted}
-                          {result.division ? ` • ${result.division}` : ''}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                    </button>
-                  ))}
+                  {searchResults.map((result, idx) => {
+                    const isSelected = selectedIndices.has(idx);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => searchResults.length > 1 ? toggleSelection(idx) : handleImportFromSearch(result)}
+                        disabled={searchResults.length > 1 ? false : !agreed}
+                        className={`w-full flex items-center gap-3 rounded-xl p-4 text-left transition-colors ${
+                          isSelected 
+                            ? 'bg-primary/10 border border-primary/30' 
+                            : 'bg-muted/50 hover:bg-muted border border-transparent'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {searchResults.length > 1 ? (
+                          <div className="shrink-0">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSelection(idx)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Flame className="w-5 h-5 text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{formatAthleteName(result.athlete_name)}</p>
+                          <p className="text-xs text-muted-foreground truncate">{result.event_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {result.time_formatted}
+                            {result.division ? ` • ${result.division}` : ''}
+                          </p>
+                        </div>
+                        {searchResults.length === 1 && (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Batch import button */}
+                {searchResults.length > 1 && selectedIndices.size > 0 && (
+                  <Button
+                    onClick={handleBatchImport}
+                    disabled={!agreed}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-base font-bold rounded-2xl"
+                  >
+                    <Flame className="w-5 h-5 mr-2" />
+                    Importar {selectedIndices.size} prova{selectedIndices.size > 1 ? 's' : ''} selecionada{selectedIndices.size > 1 ? 's' : ''}
+                  </Button>
+                )}
               </div>
             </div>
           )}
