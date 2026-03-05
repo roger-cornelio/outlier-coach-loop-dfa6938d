@@ -105,7 +105,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
       <SheetTrigger asChild>
         <Button 
           variant="outline" 
-          className={`w-full gap-2 border-2 border-dashed overflow-hidden ${
+          className={`w-full gap-2 border-2 border-dashed overflow-hidden font-display uppercase tracking-wider text-xs ${
             isAtTop 
               ? 'border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10' 
               : `${LEVEL_BG[targetLevelKey]} hover:bg-opacity-20`
@@ -114,15 +114,15 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
           {isAtTop ? (
             <>
               <Crown className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-300">
+              <span className="text-yellow-300 font-extrabold tracking-[0.15em]">
                 {isOutlier ? 'ATLETA OUTLIER — ELITE' : 'Você está no topo!'}
               </span>
             </>
           ) : (
             <>
               <ArrowRight className="w-4 h-4" />
-              <span>Próximo nível</span>
-              <Badge variant="outline" className={`ml-auto shrink-0 ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
+              <span className="font-extrabold tracking-[0.15em]">Próximo Nível</span>
+              <Badge variant="outline" className={`ml-auto shrink-0 font-display font-extrabold tracking-wider ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
                 {targetLevelLabel}
               </Badge>
             </>
