@@ -1368,6 +1368,7 @@ export function DiagnosticRadarBlock({
 
           const parts: React.ReactNode[] = [];
 
+          // 1. Última prova
           parts.push(
             <span key="last" className="flex items-center gap-1.5">
               <span className="text-muted-foreground">Última prova</span>
@@ -1375,16 +1376,7 @@ export function DiagnosticRadarBlock({
             </span>
           );
 
-          // Top% from admin thresholds (only show if <= 20%)
-          if (topPercentData.shouldShow && topPercentData.topText) {
-            parts.push(
-              <span key="top" className="flex items-center gap-1.5">
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground"><span className="font-bold text-foreground">{topPercentData.topText}</span></span>
-              </span>
-            );
-          }
-
+          // 2. Meta (próxima categoria — tempo admin)
           if (targetSec) {
             const delta = lastTime - targetSec;
             const targetFmt = formatOfficialTime(targetSec);
@@ -1407,6 +1399,7 @@ export function DiagnosticRadarBlock({
             }
           }
 
+          // 3. Evolução (gap entre prova atual e anterior, mín 30s)
           if (prevTime) {
             const diff = lastTime - prevTime;
             if (Math.abs(diff) >= 30) {
@@ -1424,13 +1417,6 @@ export function DiagnosticRadarBlock({
                 </span>
               );
             }
-          } else {
-            parts.push(
-              <span key="evol-cta" className="flex items-center gap-1.5">
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground/60 text-[11px] italic">Evolução disponível após próxima prova</span>
-              </span>
-            );
           }
 
           return (
@@ -1501,15 +1487,19 @@ export function DiagnosticRadarBlock({
         )}
         {!provaAlvo && <div className="mb-3" />}
 
-        {/* Linha inline: Última prova · Meta Elite · Evolução */}
+        {/* Linha inline: Última prova · Meta · Evolução */}
         {(() => {
           const lastTime = validatingCompetition?.time_in_seconds;
           const targetSec = eliteTarget?.targetSeconds;
           const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
 
-          // Meta elite chip — mostra o tempo alvo, não o delta
+          if (!lastTime) {
+            return <ImportProvaInlineCTA />;
+          }
+
+          // Meta chip
           let metaChip: React.ReactNode = null;
-          if (lastTime && targetSec) {
+          if (targetSec) {
             const delta = lastTime - targetSec;
             const targetFmt = formatOfficialTime(targetSec);
             if (delta <= 0) {
@@ -1519,7 +1509,6 @@ export function DiagnosticRadarBlock({
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
                   <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
                 </>;
-
             } else {
               metaChip =
               <>
@@ -1527,13 +1516,12 @@ export function DiagnosticRadarBlock({
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
                   <span className="font-bold text-amber-400">{targetFmt}</span>
                 </>;
-
             }
           }
 
-          // Evolução chip
+          // Evolução chip (gap entre prova atual e anterior)
           let evolChip: React.ReactNode = null;
-          if (lastTime && previousCompetition?.time_in_seconds) {
+          if (previousCompetition?.time_in_seconds) {
             const diff = lastTime - previousCompetition.time_in_seconds;
             if (Math.abs(diff) >= 30) {
               const abs = Math.abs(diff);
@@ -1548,32 +1536,13 @@ export function DiagnosticRadarBlock({
                     {diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`}
                   </span>
                 </>;
-
             }
-          } else if (lastTime && !previousCompetition?.time_in_seconds) {
-            evolChip =
-            <>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground/60 text-xs italic">Evolução disponível após próxima prova</span>
-              </>;
-
           }
 
-          if (!lastTime) {
-            return <ImportProvaInlineCTA />;
-          }
-
-          const top = topPercentData;
           return (
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
               <span className="text-muted-foreground">Última prova</span>
               <span className="font-bold text-foreground">{formatOfficialTime(lastTime)}</span>
-              {top.shouldShow && top.topText &&
-              <>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground"><span className="font-bold text-foreground">{top.topText}</span></span>
-                </>
-              }
               {metaChip}
               {evolChip}
             </div>);
