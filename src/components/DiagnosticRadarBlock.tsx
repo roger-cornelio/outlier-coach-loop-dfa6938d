@@ -498,22 +498,22 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
               fillPercent={100}
               className="w-[7rem] sm:w-[9rem] h-auto transition-all duration-300"
             />
-            <p className={`text-[10px] font-display font-extrabold tracking-wider mt-1 leading-tight text-center ${
+            <p className={`text-sm sm:text-base font-display font-extrabold tracking-[0.15em] mt-2 leading-tight text-center ${
               isOutlierAtLevel
                 ? 'text-amber-400'
                 : shieldFillPercent > 0
-                  ? 'text-foreground/70'
-                  : 'text-muted-foreground/25'
+                  ? 'text-foreground/80'
+                  : 'text-muted-foreground/50'
             }`}>
               {levelKey}
-              <span className="block text-[8px] tracking-[0.2em]">OUTLIER</span>
+              <span className="block text-[10px] sm:text-xs tracking-[0.2em] font-bold mt-0.5">OUTLIER</span>
             </p>
-            <p className={`text-[8px] uppercase tracking-[0.1em] font-medium ${
+            <p className={`text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 ${
               isOutlierAtLevel
-                ? 'text-foreground/60'
+                ? 'text-foreground/70'
                 : shieldFillPercent > 0
-                  ? 'text-foreground/40'
-                  : 'text-muted-foreground/20'
+                  ? 'text-foreground/50'
+                  : 'text-muted-foreground/35'
             }`}>
               {isOutlierAtLevel ? '★ CONQUISTADO' : shieldFillPercent > 0 ? `${shieldFillPercent}%` : '🔒 BLOQUEADO'}
             </p>
