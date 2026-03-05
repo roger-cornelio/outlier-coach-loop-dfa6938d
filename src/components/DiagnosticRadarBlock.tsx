@@ -509,10 +509,8 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
               level={levelKey}
               active={showActive}
               fillPercent={shieldFillPercent}
-              className={`h-auto transition-all duration-300 ${
-                showActive 
-                  ? 'w-[7rem] sm:w-[9rem]' 
-                  : 'w-[5.5rem] sm:w-[7rem] opacity-35 grayscale-[30%]'
+              className={`w-[7rem] sm:w-[9rem] h-auto transition-all duration-300 ${
+                !showActive ? 'opacity-35 grayscale-[30%]' : ''
               }`}
             />
             <p className={`font-display font-extrabold tracking-[0.15em] mt-2 leading-none text-center ${
