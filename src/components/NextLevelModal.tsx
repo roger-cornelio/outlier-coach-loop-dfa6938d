@@ -103,31 +103,37 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          className={`w-full gap-2 border-2 border-dashed overflow-hidden font-display uppercase tracking-wider text-xs ${
+        <button 
+          onClick={() => setOpen(true)}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
             isAtTop 
               ? 'border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10' 
-              : `${LEVEL_BG[targetLevelKey]} hover:bg-opacity-20`
+              : 'border-border/50 bg-background/50 hover:bg-muted/30'
           }`}
         >
           {isAtTop ? (
             <>
-              <Crown className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-300 font-extrabold tracking-[0.15em]">
-                {isOutlier ? 'ATLETA OUTLIER — ELITE' : 'Você está no topo!'}
-              </span>
+              <div className="flex items-center gap-2">
+                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-yellow-300">
+                  {isOutlier ? 'ATLETA OUTLIER — ELITE' : 'Você está no topo!'}
+                </span>
+              </div>
             </>
           ) : (
             <>
-              <ArrowRight className="w-4 h-4" />
-              <span className="font-extrabold tracking-[0.15em]">Próximo Nível</span>
-              <Badge variant="outline" className={`ml-auto shrink-0 font-display font-extrabold tracking-wider ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
+              <div className="flex items-center gap-2">
+                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Próximo nível</span>
+              </div>
+              <span className={`text-xs font-display font-extrabold tracking-wider px-3 py-1 rounded-full border ${
+                LEVEL_TEXT_COLORS[targetLevelKey]
+              } ${LEVEL_BG[targetLevelKey]}`}>
                 {targetLevelLabel}
-              </Badge>
+              </span>
             </>
           )}
-        </Button>
+        </button>
       </SheetTrigger>
       
       <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
