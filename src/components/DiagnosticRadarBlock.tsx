@@ -454,7 +454,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
   const { allLevels, trainingSessions, targetLevel, category, hasOfficialRace } = journeyData;
 
   return (
-    <div className="grid grid-cols-3 gap-8 sm:gap-12 my-6 max-w-md mx-auto">
+    <div className="flex items-start justify-between my-6 px-2">
       {SHIELDS_ORDER.map((levelKey, index) => {
         const levelRule = allLevels.find((l: any) => l.level_key === levelKey);
         const requiresRace = levelRule?.official_race_required && levelKey !== 'OPEN';
@@ -491,12 +491,12 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
         }
 
         return (
-          <div key={levelKey} className="flex flex-col items-center">
+          <div key={levelKey} className="flex flex-col items-center flex-1">
             <ShieldCrest
               level={levelKey}
               active={true}
               fillPercent={100}
-              className="w-32 sm:w-36 h-auto transition-all duration-300"
+              className="w-[7rem] sm:w-[9rem] h-auto transition-all duration-300"
             />
             <p className={`text-[10px] font-display font-extrabold tracking-wider mt-1 leading-tight text-center ${
               isOutlierAtLevel
@@ -624,7 +624,7 @@ function MobilePathToEliteCard({
                 initial={{ width: 0 }}
                 animate={{ width: `${progressToTarget}%` }}
                 transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                className="h-full rounded-full bg-gradient-to-r from-orange-600 to-orange-400" />
                   <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-sm">
                     {progressToTarget}%
                   </span>
