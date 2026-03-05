@@ -471,8 +471,8 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
         const isOutlierAtLevel = trainingMet && benchMet && raceMet;
 
         // NEW RULE: Shield is unlocked (active image) if athlete's official category
-        // is at or above this level. E.g. ELITE category unlocks OPEN + PRO shields.
-        const isUnlockedByCategory = hasOfficialRace && categoryIdx >= index;
+        // is ABOVE this level (strictly). E.g. ELITE category unlocks OPEN + PRO, but NOT ELITE itself.
+        const isUnlockedByCategory = hasOfficialRace && categoryIdx > index;
 
         // Previous level must be outlier to show progress
         const prevLevelOutlier = index === 0 ? true : (() => {
