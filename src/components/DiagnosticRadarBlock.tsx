@@ -505,14 +505,16 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
 
         return (
           <div key={levelKey} className="flex flex-col items-center flex-1">
-            <ShieldCrest
-              level={levelKey}
-              active={showActive}
-              fillPercent={shieldFillPercent}
-              className={`w-[7rem] sm:w-[9rem] h-auto transition-all duration-300 ${
-                !showActive ? 'opacity-35 grayscale-[30%]' : ''
-              }`}
-            />
+            <div className="w-[7rem] h-[7rem] sm:w-[9rem] sm:h-[9rem] flex items-center justify-center">
+              <ShieldCrest
+                level={levelKey}
+                active={showActive}
+                fillPercent={shieldFillPercent}
+                className={`w-full h-full object-contain transition-all duration-300 ${
+                  !showActive ? 'opacity-35 grayscale-[30%]' : ''
+                }`}
+              />
+            </div>
             <p className={`font-display font-extrabold tracking-[0.15em] mt-2 leading-none text-center ${
               isOutlierAtLevel
                 ? 'text-amber-400'
