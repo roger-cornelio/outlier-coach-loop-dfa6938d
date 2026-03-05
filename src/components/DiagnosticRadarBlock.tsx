@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords } from 'lucide-react';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
+import { NextLevelModal } from '@/components/NextLevelModal';
 import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { PerformanceStatusCard } from './dashboard/PerformanceStatusCard';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
@@ -271,7 +272,7 @@ function LargeCircleProgress({ value, total, label }: { value: number; total: nu
   );
 }
 
-function RequirementsChecklist({ journeyData, compact }: RequirementsChecklistProps) {
+function RequirementsChecklist({ journeyData, compact, showNextLevelButton }: RequirementsChecklistProps & { showNextLevelButton?: boolean }) {
   const { targetLevel } = journeyData;
   const {
     benchmarksCompleted, benchmarksRequired,
@@ -318,6 +319,13 @@ function RequirementsChecklist({ journeyData, compact }: RequirementsChecklistPr
           </div>
         )}
       </div>
+
+      {/* Próximo nível button */}
+      {showNextLevelButton && (
+        <div className="pt-2">
+          <NextLevelModal journeyProgress={journeyData} />
+        </div>
+      )}
     </div>
   );
 }
@@ -651,6 +659,7 @@ function MobilePathToEliteCard({
             <RequirementsChecklist
               journeyData={journeyData}
               compact
+              showNextLevelButton
             />
 
           </div>
@@ -1661,6 +1670,7 @@ export function DiagnosticRadarBlock({
                     </div>
                     <RequirementsChecklist
                       journeyData={journeyData}
+                      showNextLevelButton
                     />
 
                   </div>
