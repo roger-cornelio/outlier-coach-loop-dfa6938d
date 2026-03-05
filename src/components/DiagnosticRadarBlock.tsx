@@ -509,8 +509,10 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
               level={levelKey}
               active={showActive}
               fillPercent={shieldFillPercent}
-              className={`w-[7rem] sm:w-[9rem] h-auto transition-all duration-300 ${
-                !showActive && shieldFillPercent === 0 ? 'opacity-35 grayscale-[30%]' : ''
+              className={`h-auto transition-all duration-300 ${
+                showActive 
+                  ? 'w-[7rem] sm:w-[9rem]' 
+                  : 'w-[5.5rem] sm:w-[7rem] opacity-35 grayscale-[30%]'
               }`}
             />
             <p className={`font-display font-extrabold tracking-[0.15em] mt-2 leading-none text-center ${
@@ -518,9 +520,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
                 ? 'text-amber-400'
                 : showActive
                   ? 'text-foreground/80'
-                  : shieldFillPercent > 0
-                    ? 'text-foreground/70'
-                    : 'text-muted-foreground/50'
+                  : 'text-muted-foreground/50'
             }`}>
               <span className="block text-base sm:text-lg">{levelKey}</span>
               <span className="block text-base sm:text-lg mt-0.5">OUTLIER</span>
@@ -530,12 +530,7 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
                 ★ CONQUISTADO
               </p>
             )}
-            {!isOutlierAtLevel && showActive && (
-              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-foreground/50">
-                {shieldFillPercent}% da jornada
-              </p>
-            )}
-            {!showActive && shieldFillPercent === 0 && (
+            {!showActive && (
               <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-muted-foreground/40">
                 🔒 BLOQUEADO
               </p>
