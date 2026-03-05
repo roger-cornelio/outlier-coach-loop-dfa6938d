@@ -695,11 +695,11 @@ function MobilePathToEliteCard({
         <Button
           size="lg"
           onClick={onStartWorkout}
-          className="w-full font-display text-lg tracking-wider rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg h-14">
+          className="w-full font-display text-xl tracking-wider rounded-2xl bg-orange-500 hover:bg-orange-600 text-white transition-all flex items-center justify-center gap-3 shadow-lg h-16">
 
-          <Flame className="w-6 h-6" />
+          <Flame className="w-7 h-7" />
           BORA TREINAR
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-6 h-6" />
         </Button>
         <p className="text-muted-foreground/60 text-[10px] text-center mt-1.5">Veja seu treino do dia</p>
       </div>
