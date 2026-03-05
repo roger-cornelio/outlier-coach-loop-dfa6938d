@@ -498,25 +498,26 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
               fillPercent={100}
               className="w-[7rem] sm:w-[9rem] h-auto transition-all duration-300"
             />
-            <p className={`text-sm sm:text-base font-display font-extrabold tracking-[0.15em] mt-2 leading-tight text-center ${
+            <p className={`font-display font-extrabold tracking-[0.15em] mt-2 leading-none text-center ${
               isOutlierAtLevel
                 ? 'text-amber-400'
                 : shieldFillPercent > 0
                   ? 'text-foreground/80'
                   : 'text-muted-foreground/50'
             }`}>
-              {levelKey}
-              <span className="block text-[10px] sm:text-xs tracking-[0.2em] font-bold mt-0.5">OUTLIER</span>
+              <span className="block text-base sm:text-lg">{levelKey}</span>
+              <span className="block text-base sm:text-lg mt-0.5">OUTLIER</span>
             </p>
-            <p className={`text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 ${
-              isOutlierAtLevel
-                ? 'text-foreground/70'
-                : shieldFillPercent > 0
-                  ? 'text-foreground/50'
-                  : 'text-muted-foreground/35'
-            }`}>
-              {isOutlierAtLevel ? '★ CONQUISTADO' : shieldFillPercent > 0 ? `${shieldFillPercent}%` : '🔒 BLOQUEADO'}
-            </p>
+            {!isOutlierAtLevel && shieldFillPercent === 0 && (
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-muted-foreground/40">
+                🔒 BLOQUEADO
+              </p>
+            )}
+            {isOutlierAtLevel && (
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold mt-1 text-amber-400/70">
+                ★ CONQUISTADO
+              </p>
+            )}
           </div>
         );
       })}
