@@ -9,6 +9,7 @@ import {
   XCircle,
   Crown,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -156,7 +157,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                 <div>
                   <span className="text-sm text-muted-foreground">Próximo nível</span>
                   <p className={`font-semibold ${LEVEL_TEXT_COLORS[targetLevelKey]}`}>
-                    OUTLIER {targetLevelLabel}
+                    {targetLevelLabel}
                   </p>
                 </div>
               </>
@@ -241,7 +242,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
               {/* Checklist */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Requisitos para OUTLIER {targetLevelLabel}
+                  Requisitos para {targetLevelLabel}
                 </h4>
                 
                 {/* Training */}
@@ -303,7 +304,7 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm font-medium">
                       <Trophy className="w-4 h-4" />
-                      Prova oficial {targetLevelLabel}
+                      Prova oficial {LEVEL_LABELS[targetLevelKey]}
                     </span>
                     {!targetLevel.officialRaceRequired ? (
                       <span className="text-sm text-muted-foreground">
@@ -321,9 +322,9 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                       </span>
                     )}
                   </div>
-                  {provaNecessaria && (
+                   {provaNecessaria && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      Para atingir OUTLIER {targetLevelLabel}, você precisa de uma prova oficial com resultado {targetLevelLabel}.
+                      Para atingir {targetLevelLabel}, você precisa de uma prova oficial com resultado {LEVEL_LABELS[targetLevelKey]}.
                     </p>
                   )}
                 </div>
@@ -346,11 +347,22 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-green-400 mt-0.5" />
                     <p className="text-sm text-green-300">
-                      <strong>Todos os requisitos cumpridos!</strong> Você é ATLETA OUTLIER — {targetLevelLabel}!
+                      <strong>Todos os requisitos cumpridos!</strong> Você é ATLETA OUTLIER — {LEVEL_LABELS[targetLevelKey]}!
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* 12-month expiration notice */}
+              <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                <div className="flex items-start gap-2">
+                  <Calendar className="w-4 h-4 text-orange-400 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    <strong className="text-orange-300">Validade de 12 meses:</strong> Treinos e benchmarks expiram após 12 meses. 
+                    Sua categoria (OPEN/PRO/ELITE) é permanente e definida pela prova oficial.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
