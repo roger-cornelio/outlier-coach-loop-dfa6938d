@@ -93,29 +93,45 @@ export interface JourneyPosition {
 
 const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
+/** Expiration window: 12 months (365 days) */
+const JOURNEY_EXPIRATION_DAYS = 365;
+
+function getExpirationCutoff(): string {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - JOURNEY_EXPIRATION_DAYS);
+  return cutoff.toISOString().substring(0, 10); // YYYY-MM-DD
+}
+
 /**
  * Count unique training days from workoutResults (max 1 per day).
- * Benchmark results are excluded (they don't count as training).
+ * Only counts sessions within the last 12 months.
  */
 function countUniqueTrainingDays(workoutResults: { date: string; blockId?: string }[]): number {
+  const cutoff = getExpirationCutoff();
   const uniqueDays = new Set<string>();
   for (const r of workoutResults) {
     if (r.date) {
       const day = r.date.substring(0, 10); // YYYY-MM-DD
-      uniqueDays.add(day);
+      if (day >= cutoff) {
+        uniqueDays.add(day);
+      }
     }
   }
   return uniqueDays.size;
 }
 
 /**
- * Count unique benchmark IDs completed.
+ * Count unique benchmark IDs completed within the last 12 months.
  */
-function countUniqueBenchmarks(benchmarkResults: { benchmark_id?: string }[]): number {
+function countUniqueBenchmarks(benchmarkResults: { benchmark_id?: string; created_at?: string }[]): number {
+  const cutoff = getExpirationCutoff();
   const uniqueIds = new Set<string>();
   for (const r of benchmarkResults) {
     if (r.benchmark_id) {
-      uniqueIds.add(r.benchmark_id);
+      const date = r.created_at ? r.created_at.substring(0, 10) : '';
+      if (!r.created_at || date >= cutoff) {
+        uniqueIds.add(r.benchmark_id);
+      }
     }
   }
   return uniqueIds.size;
