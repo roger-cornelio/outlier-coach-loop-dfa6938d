@@ -90,8 +90,8 @@ function ImportProvaInlineCTA() {
       <div className="flex items-center gap-3">
         <Flame className="w-5 h-5 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground">Importar sua prova HYROX</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Cole o link do resultado e desbloqueie seu diagnóstico</p>
+          <p className="text-sm font-bold text-foreground">Descubra seu nível OUTLIER</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Importe sua prova e veja seu diagnóstico completo</p>
         </div>
         <ChevronRight className="w-4 h-4 text-primary shrink-0" />
       </div>
