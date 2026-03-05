@@ -1,33 +1,44 @@
 
 
-## Mapeamento Completo: Status dos Slugs de Conquistas
+## Plano: Redesign do Cabeçalho de Métricas
 
-### Já implementado (OK)
+### Problema
+As informações de performance (Última prova, Meta, Evolução) estão misturadas visualmente com o título do atleta (nome + nível), causando confusão. Tudo parece um bloco só de texto.
 
-**`src/components/ui/ShieldCrest.tsx`** — O componente já está 100% correto com todas as 6 URLs mapeadas:
+### Solução
+Separar as métricas em uma **barra de estatísticas** visualmente distinta, logo abaixo do nome do atleta.
 
-| Chave | URL | Status |
-|-------|-----|--------|
-| OPEN-active | `.../open_outlier_destravado.png` | ✓ OK |
-| OPEN-locked | `.../open_outlier_travado.png` | ✓ OK |
-| PRO-active | `.../pro_outlier_destravado.png` | ✓ OK |
-| PRO-locked | `.../pro_outlier_travado.png` | ✓ OK |
-| ELITE-active | `.../elite_outlier_destravado.png` | ✓ OK |
-| ELITE-locked | `.../elite_outlier_travado.png` | ✓ OK |
+### O que muda
 
-### Consumidores do componente (2 telas)
+1. **Separação visual clara** — As 3 métricas (Última prova, Meta, Evolução) saem da linha de texto e vão para um container próprio com fundo sutil (`bg-muted/10`), borda fina e cantos arredondados.
 
-1. **`LevelProgress.tsx`** — Tela de Evolução (grid 3 colunas, 90px mobile / 145px desktop) — usa `ShieldCrest` com `active` baseado no nível do atleta
-2. **`DiagnosticRadarBlock.tsx`** — Bloco de diagnóstico radar — usa `ShieldCrest` em miniatura junto ao radar
+2. **Layout em grid 3 colunas** — Cada métrica ocupa uma coluna com:
+   - Ícone pequeno + label em cima (texto miúdo, cor neutra)
+   - Valor em baixo (texto bold, maior)
 
-### Componentes que NÃO usam ShieldCrest (usam StatusCrown/coroa separada)
+3. **Ícones para cada métrica**:
+   - ⏱ Timer → Última prova
+   - 🎯 Target → Meta (próxima categoria)
+   - 📈 TrendingUp → Evolução
 
-- **`AthleteStatusAvatar.tsx`** — Avatar principal com coroa (ícone SVG inline via `StatusCrownPreset`), não escudo
-- **`AthleteHeroIdentity.tsx`** — Nome + badge de status com coroa, não escudo
+4. **Espaçamento** — Margem de `mt-3` entre o bloco do nome/categoria e a barra de métricas.
 
-### Conclusão
+5. **Consistência mobile/desktop** — A mesma estrutura se aplica nas duas versões (mobile e desktop) dentro do `DiagnosticRadarBlock.tsx`.
 
-A implementação dos novos slugs de conquistas (PNG externos) já está **completa**. O `ShieldCrest.tsx` foi refatorado na mensagem anterior e já contém todas as URLs fornecidas. Os dois componentes que consomem escudos (`LevelProgress` e `DiagnosticRadarBlock`) já apontam para o componente atualizado.
+### Resultado visual esperado
 
-Não há alteração de código pendente. O próximo passo é **testar visualmente** fazendo login com as credenciais fornecidas para confirmar que as imagens carregam corretamente na tela de evolução.
+```text
+┌─────────────────────────────────────────────┐
+│  👑 HYROX ELITE MEN                        │
+│  Nome do Atleta                             │
+└─────────────────────────────────────────────┘
+                    ↕ espaço
+┌─────────────────────────────────────────────┐
+│  ⏱ Última prova  │  🎯 Meta ELITE │  📈 Evolução   │
+│  1h14m32s        │  1h10m00s      │  ↓ 2m10s       │
+└─────────────────────────────────────────────┘
+```
+
+### Arquivo editado
+- `src/components/DiagnosticRadarBlock.tsx` — substituir as linhas inline de métricas (versão desktop ~linhas 1370-1440 e versão mobile ~linhas 1500-1560) pelo novo grid com container estilizado.
 
