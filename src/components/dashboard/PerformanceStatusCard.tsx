@@ -271,16 +271,14 @@ export function PerformanceStatusCard({
         valueClass: improved ? 'text-emerald-400' : 'text-amber-400',
       });
     } else if (showEvolutionCta) {
-      // E. CTA — sem histórico de provas
-      const ctaLabel =
-        raceCount <= 1
-          ? 'Evolução disponível após próxima prova'
-          : 'Compare sua evolução';
+      // Sem prova anterior → mostrar "Aguardando"
       list.push({
-        kind: 'cta',
-        id: 'evolution-cta',
-        label: ctaLabel,
-        ctaText: 'Importar prova anterior',
+        kind: 'chip',
+        id: 'evolution',
+        icon: TrendingUp,
+        label: 'Evolução',
+        value: 'Aguardando próxima prova',
+        valueClass: 'text-muted-foreground/60 italic font-normal',
       });
     }
 

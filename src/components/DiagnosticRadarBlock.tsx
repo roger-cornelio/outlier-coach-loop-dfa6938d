@@ -1376,16 +1376,17 @@ export function DiagnosticRadarBlock({
             </span>
           );
 
-          // 2. Meta (próxima categoria — tempo admin)
+          // 2. Meta (próxima categoria — tempo admin, nunca menor que o tempo da prova)
           if (targetSec) {
+            const effectiveTarget = Math.max(targetSec, lastTime);
             const delta = lastTime - targetSec;
-            const targetFmt = formatOfficialTime(targetSec);
+            const targetFmt = formatOfficialTime(effectiveTarget);
             if (delta <= 0) {
               parts.push(
                 <span key="meta" className="flex items-center gap-1.5">
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
+                  <span className="font-bold text-emerald-400">{formatOfficialTime(targetSec)} ✔</span>
                 </span>
               );
             } else {
@@ -1393,7 +1394,7 @@ export function DiagnosticRadarBlock({
                 <span key="meta" className="flex items-center gap-1.5">
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">{targetFmt}</span>
+                  <span className="font-bold text-amber-400">{formatOfficialTime(targetSec)}</span>
                 </span>
               );
             }
@@ -1417,6 +1418,14 @@ export function DiagnosticRadarBlock({
                 </span>
               );
             }
+          } else {
+            parts.push(
+              <span key="evol-wait" className="flex items-center gap-1.5">
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">Evolução</span>
+                <span className="text-muted-foreground/60 italic">Aguardando próxima prova</span>
+              </span>
+            );
           }
 
           return (
@@ -1497,24 +1506,23 @@ export function DiagnosticRadarBlock({
             return <ImportProvaInlineCTA />;
           }
 
-          // Meta chip
+          // Meta chip (nunca menor que o tempo da prova)
           let metaChip: React.ReactNode = null;
           if (targetSec) {
             const delta = lastTime - targetSec;
-            const targetFmt = formatOfficialTime(targetSec);
             if (delta <= 0) {
               metaChip =
               <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-emerald-400">{targetFmt} ✔</span>
+                  <span className="font-bold text-emerald-400">{formatOfficialTime(targetSec)} ✔</span>
                 </>;
             } else {
               metaChip =
               <>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta {targetLabel}</span>
-                  <span className="font-bold text-amber-400">{targetFmt}</span>
+                  <span className="font-bold text-amber-400">{formatOfficialTime(targetSec)}</span>
                 </>;
             }
           }
@@ -1537,6 +1545,13 @@ export function DiagnosticRadarBlock({
                   </span>
                 </>;
             }
+          } else {
+            evolChip =
+            <>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">Evolução</span>
+                <span className="text-muted-foreground/60 italic">Aguardando próxima prova</span>
+              </>;
           }
 
           return (
