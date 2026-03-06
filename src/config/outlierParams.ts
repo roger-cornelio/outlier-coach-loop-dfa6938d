@@ -1,13 +1,16 @@
 /**
  * OUTLIER PARAMS - SINGLE SOURCE OF TRUTH
  * 
- * Todos os parâmetros numéricos e regras de ajuste do MVP
+ * Todos os parâmetros numéricos e regras de ajuste do sistema
  * estão centralizados neste arquivo.
  * 
  * REGRAS:
  * - Nenhuma função do app deve ter números hardcoded
  * - Todas as funções devem importar e usar getActiveParams()
  * - Versionamento permite atualizar sem quebrar histórico
+ * 
+ * NOTA: Cálculo de Kcal agora usa motor de física (movement_patterns table).
+ * Os METs aqui servem APENAS como fallback para estimativa de tempo por bloco.
  */
 
 import type { AthleteLevel, WodType } from '@/types/outlier';
@@ -43,12 +46,10 @@ export interface BenchmarkConfig {
   scoringBuckets: ScoringBucketConfig;
   allowCoachOverride: boolean;
   coachOverridePriority: 'coach_wins' | 'app_wins' | 'merge';
-  // Limiares para classificação de bucket por nível
   bucketThresholds: {
-    elitePercent: number;   // % abaixo do min = ELITE
-    strongPercent: number;  // % entre min e média = STRONG
-    okPercent: number;      // % entre média e max = OK
-    // acima do max = TOUGH
+    elitePercent: number;
+    strongPercent: number;
+    okPercent: number;
   };
 }
 
@@ -66,7 +67,6 @@ export interface EstimationConfig {
     [K in AthleteLevel]: number;
   };
   defaultSessionCapMinutes: number;
-  // Multiplicadores de tempo por formato de WOD
   formatMultipliers: {
     for_time: number;
     amrap: number;
@@ -74,72 +74,38 @@ export interface EstimationConfig {
     chipper: number;
     interval: number;
   };
-  // Tempo mínimo e máximo de estimativa (segundos)
   minEstimateSeconds: number;
   maxEstimateSeconds: number;
 }
 
-export interface ModalityMetConfig {
+/**
+ * Configuração simplificada de METs por modalidade de bloco.
+ * Usado APENAS para estimativa de tempo em benchmarkTimeGenerator.
+ * Cálculo de Kcal real usa o motor de física (movement_patterns).
+ */
+export interface BlockMetConfig {
   baseKcalPerMin: number;
   description?: string;
 }
 
 export interface ExerciseMetsConfig {
   metBaseByModality: {
-    aquecimento: ModalityMetConfig;
-    conditioning: ModalityMetConfig;
-    forca: ModalityMetConfig;
-    especifico: ModalityMetConfig;
-    core: ModalityMetConfig;
-    corrida: ModalityMetConfig;
-    notas: ModalityMetConfig;
-    // Modalidades específicas para análise
-    running: ModalityMetConfig;
-    rowing: ModalityMetConfig;
-    bike: ModalityMetConfig;
-    skierg: ModalityMetConfig;
-    weightlifting: ModalityMetConfig;
-    gymnastics: ModalityMetConfig;
-    sled: ModalityMetConfig;
+    aquecimento: BlockMetConfig;
+    conditioning: BlockMetConfig;
+    forca: BlockMetConfig;
+    especifico: BlockMetConfig;
+    core: BlockMetConfig;
+    corrida: BlockMetConfig;
+    notas: BlockMetConfig;
   };
-  intensityMultipliers: {
-    [pse: number]: number; // PSE 1-10 -> factor
-  };
-  weightFactorRules: {
-    baselineKg: number;  // Peso de referência
-    formula: 'linear';   // Fórmula de ajuste
-  };
-  ageFactorRules: {
-    under30: number;
-    under40: number;
-    under50: number;
-    over50: number;
-  };
-  sexFactorRules: {
-    masculino: number;
-    feminino: number;
-  };
-  runningKcalFactor: number; // kcal = peso_kg * km * fator
+  /** Fator de corrida: kcal = peso_kg * km * fator (usado em workoutCalculations) */
+  runningKcalFactor: number;
+  /** Velocidade por nível para estimativa de distância */
   levelSpeedKmh: {
     [K in AthleteLevel]: number;
   };
+  /** Fallback quando modalidade não é identificada */
   fallbackKcalPerMin: number;
-}
-
-export interface AdaptationConfig {
-  enableAdaptiveScaling: boolean;
-  scalingOrder: ('reps' | 'distance' | 'load' | 'rest')[];
-  constraints: {
-    minRepsPercent: number;
-    maxRepsPercent: number;
-    minDistancePercent: number;
-    maxDistancePercent: number;
-    minLoadPercent: number;
-    maxLoadPercent: number;
-    minRestSeconds: number;
-    maxRestSeconds: number;
-  };
-  preserveDifficultyRule: 'maintain_intent' | 'scale_proportional' | 'coach_defined';
 }
 
 export interface LabelsConfig {
@@ -157,7 +123,7 @@ export interface ProgressionConfig {
   consistencyValidation: {
     minStrongWeeks: number;
     minStrongRatio: number;
-    consistencyThreshold: number; // Max standard deviation
+    consistencyThreshold: number;
   };
   temporalDecay: {
     halfLifeDays: number;
@@ -177,28 +143,27 @@ export interface OutlierParamsConfig {
   benchmark: BenchmarkConfig;
   estimation: EstimationConfig;
   exerciseMets: ExerciseMetsConfig;
-  adaptation: AdaptationConfig;
   labels: LabelsConfig;
   progression: ProgressionConfig;
 }
 
 // ============================================
-// CONFIGURAÇÃO PADRÃO v1
+// CONFIGURAÇÃO PADRÃO v2
 // ============================================
 
 export const DEFAULT_PARAMS: OutlierParamsConfig = {
-  version: 'v1',
+  version: 'v2',
   isActive: true,
   updatedAt: new Date().toISOString(),
-  notes: 'Configuração inicial do MVP OUTLIER',
+  notes: 'v2 — Removido adaptation (usa motor obrigatório), removido METs demográficos (usa motor de física)',
 
   // A) BENCHMARK
   benchmark: {
     enabledOnlyForBenchmark: true,
     defaultTimeRangesByLevel: {
-      open: { min: 14 * 60, max: 25 * 60 },       // 14:00 - 25:00 (amplo range para iniciantes)
-      pro: { min: 12 * 60, max: 18 * 60 },        // 12:00 - 18:00 (intermediário-avançado)
-      elite: { min: 10 * 60, max: 14 * 60 },      // 10:00 - 14:00 (elite)
+      open: { min: 14 * 60, max: 25 * 60 },
+      pro: { min: 12 * 60, max: 18 * 60 },
+      elite: { min: 10 * 60, max: 14 * 60 },
     },
     scoringBuckets: {
       elite: 100,
@@ -210,9 +175,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     allowCoachOverride: true,
     coachOverridePriority: 'coach_wins',
     bucketThresholds: {
-      elitePercent: 0,      // <= min = ELITE
-      strongPercent: 50,    // <= média = STRONG
-      okPercent: 100,       // <= max = OK
+      elitePercent: 0,
+      strongPercent: 50,
+      okPercent: 100,
     },
   },
 
@@ -229,9 +194,9 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       default: { baseMinutes: 15, variancePercent: 0.18 },
     },
     levelMultipliers: {
-      open: 1.25,     // Mais lento (iniciantes/intermediário)
-      pro: 1.0,       // Base (avançado/open)
-      elite: 0.85,    // Mais rápido (pro/elite)
+      open: 1.25,
+      pro: 1.0,
+      elite: 0.85,
     },
     defaultSessionCapMinutes: 60,
     formatMultipliers: {
@@ -241,14 +206,14 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       chipper: 1.2,
       interval: 1.0,
     },
-    minEstimateSeconds: 300,  // 5 min
-    maxEstimateSeconds: 7200, // 120 min
+    minEstimateSeconds: 300,
+    maxEstimateSeconds: 7200,
   },
 
-  // C) EXERCISE METS / ENERGY - CORRIGIDO para valores mais realistas
+  // C) EXERCISE METS (fallback para estimativa de tempo por tipo de bloco)
+  // Kcal real agora é calculada pelo motor de física (movement_patterns + energyCalculator)
   exerciseMets: {
     metBaseByModality: {
-      // Fallback baseKcalPerMin alinhado com MET (para consistência)
       aquecimento: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
       conditioning: { baseKcalPerMin: 13.0, description: '~780 kcal/h (MET ~10.5)' },
       forca: { baseKcalPerMin: 9.0, description: '~540 kcal/h (MET ~6.5)' },
@@ -256,68 +221,17 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       core: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
       corrida: { baseKcalPerMin: 12.0, description: '~720 kcal/h (MET ~10.0)' },
       notas: { baseKcalPerMin: 0, description: 'Sem gasto calórico' },
-      // Modalidades específicas (para análise de conteúdo)
-      running: { baseKcalPerMin: 12.0, description: 'Corrida em WOD' },
-      rowing: { baseKcalPerMin: 12.0, description: 'Remo em WOD' },
-      bike: { baseKcalPerMin: 12.0, description: 'Assault Bike' },
-      skierg: { baseKcalPerMin: 12.0, description: 'SkiErg' },
-      weightlifting: { baseKcalPerMin: 9.0, description: 'Levantamento' },
-      gymnastics: { baseKcalPerMin: 10.0, description: 'Ginástica' },
-      sled: { baseKcalPerMin: 14.0, description: 'Sled Push/Pull' },
     },
-    intensityMultipliers: {
-      1: 0.5,   // Very light
-      2: 0.6,
-      3: 0.7,   // Light
-      4: 0.85,
-      5: 1.0,   // Moderate (base)
-      6: 1.1,
-      7: 1.2,   // Vigorous
-      8: 1.35,
-      9: 1.5,   // Very hard
-      10: 1.7,  // Maximum
-    },
-    weightFactorRules: {
-      baselineKg: 70,
-      formula: 'linear',
-    },
-    ageFactorRules: {
-      under30: 1.05,
-      under40: 1.0,
-      under50: 0.95,
-      over50: 0.90,
-    },
-    sexFactorRules: {
-      masculino: 1.1,
-      feminino: 1.0,
-    },
-    runningKcalFactor: 1.0, // kcal = peso_kg * km * fator
+    runningKcalFactor: 1.0,
     levelSpeedKmh: {
-      open: 9.0,      // 6:40/km (iniciante/intermediário)
-      pro: 12.0,      // 5:00/km (avançado/open)
-      elite: 14.0,    // 4:17/km (pro/elite)
+      open: 9.0,
+      pro: 12.0,
+      elite: 14.0,
     },
-    fallbackKcalPerMin: 10.0, // Ajustado de 8.0 para 10.0
+    fallbackKcalPerMin: 10.0,
   },
 
-  // D) ADAPTATION
-  adaptation: {
-    enableAdaptiveScaling: false, // Ainda não implementado
-    scalingOrder: ['reps', 'distance', 'load', 'rest'],
-    constraints: {
-      minRepsPercent: 50,
-      maxRepsPercent: 150,
-      minDistancePercent: 50,
-      maxDistancePercent: 150,
-      minLoadPercent: 60,
-      maxLoadPercent: 120,
-      minRestSeconds: 15,
-      maxRestSeconds: 180,
-    },
-    preserveDifficultyRule: 'maintain_intent',
-  },
-
-  // E) LABELS E NÍVEIS
+  // D) LABELS E NÍVEIS
   labels: {
     athleteLevels: ['open', 'pro', 'elite'],
     wodTypes: ['engine', 'strength', 'skill', 'mixed', 'hyrox', 'benchmark'],
@@ -326,7 +240,7 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     performanceBuckets: ['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'],
   },
 
-  // F) PROGRESSION (sistema de evolução)
+  // E) PROGRESSION (sistema de evolução)
   progression: {
     levelThresholds: {
       open: 40,
@@ -361,16 +275,11 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
 const PARAMS_STORAGE_KEY = 'outlier-params';
 const PARAMS_HISTORY_KEY = 'outlier-params-history';
 
-/**
- * Carrega os parâmetros ativos do localStorage
- * Se não existir, retorna os parâmetros padrão
- */
 export function loadParams(): OutlierParamsConfig {
   try {
     const stored = localStorage.getItem(PARAMS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Merge com defaults para garantir que novos campos existam
       return mergeWithDefaults(parsed);
     }
   } catch (error) {
@@ -379,35 +288,42 @@ export function loadParams(): OutlierParamsConfig {
   return { ...DEFAULT_PARAMS };
 }
 
-/**
- * Merge parâmetros salvos com defaults para garantir campos novos
- */
 function mergeWithDefaults(saved: Partial<OutlierParamsConfig>): OutlierParamsConfig {
+  // Strip removed sections from old saved data
+  const { adaptation, ...cleanSaved } = saved as any;
+
+  // Strip removed exerciseMets sub-keys
+  if (cleanSaved.exerciseMets) {
+    const { intensityMultipliers, weightFactorRules, ageFactorRules, sexFactorRules, ...cleanMets } = cleanSaved.exerciseMets;
+    
+    // Strip removed modality keys from metBaseByModality
+    if (cleanMets.metBaseByModality) {
+      const { running, rowing, bike, skierg, weightlifting, gymnastics, sled, ...cleanModalities } = cleanMets.metBaseByModality;
+      cleanMets.metBaseByModality = { ...DEFAULT_PARAMS.exerciseMets.metBaseByModality, ...cleanModalities };
+    }
+    
+    cleanSaved.exerciseMets = { ...DEFAULT_PARAMS.exerciseMets, ...cleanMets };
+  }
+
   return {
     ...DEFAULT_PARAMS,
-    ...saved,
-    benchmark: { ...DEFAULT_PARAMS.benchmark, ...saved.benchmark },
-    estimation: { ...DEFAULT_PARAMS.estimation, ...saved.estimation },
-    exerciseMets: { ...DEFAULT_PARAMS.exerciseMets, ...saved.exerciseMets },
-    adaptation: { ...DEFAULT_PARAMS.adaptation, ...saved.adaptation },
-    labels: { ...DEFAULT_PARAMS.labels, ...saved.labels },
-    progression: { ...DEFAULT_PARAMS.progression, ...saved.progression },
+    ...cleanSaved,
+    benchmark: { ...DEFAULT_PARAMS.benchmark, ...cleanSaved.benchmark },
+    estimation: { ...DEFAULT_PARAMS.estimation, ...cleanSaved.estimation },
+    exerciseMets: cleanSaved.exerciseMets || DEFAULT_PARAMS.exerciseMets,
+    labels: { ...DEFAULT_PARAMS.labels, ...cleanSaved.labels },
+    progression: { ...DEFAULT_PARAMS.progression, ...cleanSaved.progression },
   };
 }
 
-/**
- * Salva os parâmetros (cria nova versão)
- */
 export function saveParams(params: OutlierParamsConfig): void {
   try {
-    // Atualizar timestamp e versão
     const newParams: OutlierParamsConfig = {
       ...params,
       updatedAt: new Date().toISOString(),
       isActive: true,
     };
     
-    // Salvar versão anterior no histórico
     const currentParams = loadParams();
     if (currentParams.version !== newParams.version) {
       saveToHistory(currentParams);
@@ -421,9 +337,6 @@ export function saveParams(params: OutlierParamsConfig): void {
   }
 }
 
-/**
- * Salva uma versão no histórico
- */
 function saveToHistory(params: OutlierParamsConfig): void {
   try {
     const history = loadHistory();
@@ -431,7 +344,6 @@ function saveToHistory(params: OutlierParamsConfig): void {
       ...params,
       isActive: false,
     });
-    // Manter apenas as últimas 10 versões
     if (history.length > 10) {
       history.shift();
     }
@@ -441,9 +353,6 @@ function saveToHistory(params: OutlierParamsConfig): void {
   }
 }
 
-/**
- * Carrega o histórico de versões
- */
 export function loadHistory(): OutlierParamsConfig[] {
   try {
     const stored = localStorage.getItem(PARAMS_HISTORY_KEY);
@@ -456,9 +365,6 @@ export function loadHistory(): OutlierParamsConfig[] {
   return [];
 }
 
-/**
- * Restaura uma versão específica do histórico
- */
 export function restoreVersion(version: string): OutlierParamsConfig | null {
   const history = loadHistory();
   const found = history.find(p => p.version === version);
@@ -474,9 +380,6 @@ export function restoreVersion(version: string): OutlierParamsConfig | null {
   return null;
 }
 
-/**
- * Reseta para os parâmetros padrão
- */
 export function resetToDefaults(): OutlierParamsConfig {
   const defaultCopy = {
     ...DEFAULT_PARAMS,
@@ -492,10 +395,6 @@ export function resetToDefaults(): OutlierParamsConfig {
 
 let activeParams: OutlierParamsConfig | null = null;
 
-/**
- * Obtém os parâmetros ativos (singleton)
- * TODAS as funções do app devem usar este método
- */
 export function getActiveParams(): OutlierParamsConfig {
   if (!activeParams) {
     activeParams = loadParams();
@@ -503,58 +402,34 @@ export function getActiveParams(): OutlierParamsConfig {
   return activeParams;
 }
 
-/**
- * Atualiza os parâmetros ativos
- */
 export function setActiveParams(params: OutlierParamsConfig): void {
   saveParams(params);
   activeParams = params;
 }
 
-/**
- * Força recarga dos parâmetros
- */
 export function reloadParams(): OutlierParamsConfig {
   activeParams = loadParams();
   return activeParams;
 }
 
-/**
- * Obtém parâmetros de uma versão específica do histórico
- * Se não encontrar, retorna null
- */
 export function getParamsForVersion(version: string): OutlierParamsConfig | null {
-  // Check if it's the active version
   const active = getActiveParams();
   if (active.version === version) {
     return active;
   }
-  
-  // Search in history
   const history = loadHistory();
   const found = history.find(p => p.version === version);
   return found || null;
 }
 
-/**
- * Obtém parâmetros para um WOD específico
- * - Se for benchmark com paramsVersionUsed: usa essa versão
- * - Senão: usa parâmetros ativos
- * 
- * Usado para garantir que benchmarks antigos não mudem quando params são atualizados
- */
 export function getParamsForWod(wod: { isBenchmark?: boolean; paramsVersionUsed?: string }): OutlierParamsConfig {
-  // Se for benchmark com versão salva, tentar carregar essa versão
   if (wod.isBenchmark && wod.paramsVersionUsed) {
     const versionParams = getParamsForVersion(wod.paramsVersionUsed);
     if (versionParams) {
       return versionParams;
     }
-    // Fallback: versão não encontrada no histórico
     console.warn(`[outlierParams] Versão ${wod.paramsVersionUsed} não encontrada no histórico, usando params ativos`);
   }
-  
-  // Default: parâmetros ativos
   return getActiveParams();
 }
 
@@ -562,10 +437,6 @@ export function getParamsForWod(wod: { isBenchmark?: boolean; paramsVersionUsed?
 // HELPERS COM FALLBACK
 // ============================================
 
-/**
- * Obtém um valor numérico com fallback seguro
- * Nunca retorna NaN ou undefined
- */
 export function getNumericParam<T extends number>(
   value: T | undefined | null,
   fallback: T,
@@ -580,9 +451,6 @@ export function getNumericParam<T extends number>(
   return fallback;
 }
 
-/**
- * Obtém multiplicador de nível com fallback
- */
 export function getLevelMultiplier(level: AthleteLevel): number {
   const params = getActiveParams();
   return getNumericParam(
@@ -592,40 +460,12 @@ export function getLevelMultiplier(level: AthleteLevel): number {
   );
 }
 
-/**
- * Obtém fator de tipo de WOD com fallback
- */
 export function getWodTypeFactor(wodType: WodType | 'default'): WodTypeEstimationConfig {
   const params = getActiveParams();
   const factor = params.estimation.wodTypeFactors[wodType] || params.estimation.wodTypeFactors.default;
   return factor || { baseMinutes: 15, variancePercent: 0.18 };
 }
 
-/**
- * Obtém kcal base por modalidade com fallback
- */
-export function getModalityKcal(modality: string): number {
-  const params = getActiveParams();
-  const met = params.exerciseMets.metBaseByModality[modality as keyof typeof params.exerciseMets.metBaseByModality];
-  return met?.baseKcalPerMin ?? params.exerciseMets.fallbackKcalPerMin;
-}
-
-/**
- * Obtém fator de intensidade (PSE) com fallback
- */
-export function getIntensityFactor(pse: number): number {
-  const params = getActiveParams();
-  const clampedPse = Math.min(10, Math.max(1, Math.round(pse)));
-  return getNumericParam(
-    params.exerciseMets.intensityMultipliers[clampedPse],
-    1.0,
-    `intensityFactor.${clampedPse}`
-  );
-}
-
-/**
- * Obtém threshold de nível para progressão
- */
 export function getLevelThreshold(level: AthleteLevel): number {
   const params = getActiveParams();
   return getNumericParam(
@@ -635,9 +475,6 @@ export function getLevelThreshold(level: AthleteLevel): number {
   );
 }
 
-/**
- * Obtém score de bucket para classificação
- */
 export function getBucketScore(bucket: string): number {
   const params = getActiveParams();
   const bucketLower = bucket.toLowerCase() as keyof ScoringBucketConfig;
@@ -648,9 +485,6 @@ export function getBucketScore(bucket: string): number {
   );
 }
 
-/**
- * Obtém velocidade por nível para estimativa de distância
- */
 export function getLevelSpeedKmh(level: AthleteLevel): number {
   const params = getActiveParams();
   return getNumericParam(
@@ -661,7 +495,7 @@ export function getLevelSpeedKmh(level: AthleteLevel): number {
 }
 
 // ============================================
-// VALIDAÇÃO COMPLETA
+// VALIDAÇÃO
 // ============================================
 
 export interface ValidationResult {
@@ -670,19 +504,14 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-/**
- * Valida uma configuração de parâmetros (validação completa)
- */
 export function validateParams(params: Partial<OutlierParamsConfig>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Validar versão
   if (!params.version) {
     errors.push('Versão é obrigatória');
   }
 
-  // Validar seções obrigatórias
   if (!params.benchmark) {
     errors.push('Seção "benchmark" é obrigatória');
   }
@@ -696,30 +525,27 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
     errors.push('Seção "labels" é obrigatória');
   }
 
-  // Validar benchmark
   if (params.benchmark) {
     const b = params.benchmark;
     
-    // Validar time ranges
     if (b.defaultTimeRangesByLevel) {
       const levels = ['open', 'pro', 'elite'] as const;
       for (const level of levels) {
         const range = b.defaultTimeRangesByLevel[level];
         if (range) {
           if (typeof range.min !== 'number' || isNaN(range.min) || range.min < 0) {
-            errors.push(`benchmark.timeRangesByLevel.${level}.min inválido (deve ser número positivo)`);
+            errors.push(`benchmark.timeRangesByLevel.${level}.min inválido`);
           }
           if (typeof range.max !== 'number' || isNaN(range.max) || range.max < 0) {
-            errors.push(`benchmark.timeRangesByLevel.${level}.max inválido (deve ser número positivo)`);
+            errors.push(`benchmark.timeRangesByLevel.${level}.max inválido`);
           }
           if (range.min > range.max) {
-            errors.push(`benchmark.timeRangesByLevel.${level}: min (${range.min}) deve ser <= max (${range.max})`);
+            errors.push(`benchmark.timeRangesByLevel.${level}: min deve ser <= max`);
           }
         }
       }
     }
     
-    // Validar scoring buckets
     if (b.scoringBuckets) {
       if (b.scoringBuckets.elite <= b.scoringBuckets.strong) {
         errors.push('Score ELITE deve ser maior que STRONG');
@@ -730,7 +556,6 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
       if (b.scoringBuckets.ok <= b.scoringBuckets.tough) {
         errors.push('Score OK deve ser maior que TOUGH');
       }
-      // Check for negative values
       for (const [key, val] of Object.entries(b.scoringBuckets)) {
         if (typeof val !== 'number' || val < 0) {
           errors.push(`scoringBuckets.${key} deve ser número >= 0`);
@@ -739,24 +564,21 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
     }
   }
 
-  // Validar estimation
   if (params.estimation) {
     const e = params.estimation;
     
-    // Level multipliers
     if (e.levelMultipliers) {
       for (const [level, mult] of Object.entries(e.levelMultipliers)) {
         if (typeof mult !== 'number' || isNaN(mult)) {
           errors.push(`levelMultipliers.${level} deve ser número`);
         } else if (mult <= 0) {
-          errors.push(`levelMultipliers.${level} deve ser positivo (atual: ${mult})`);
+          errors.push(`levelMultipliers.${level} deve ser positivo`);
         } else if (mult > 3) {
-          warnings.push(`levelMultipliers.${level} = ${mult} parece muito alto (máximo recomendado: 3)`);
+          warnings.push(`levelMultipliers.${level} = ${mult} parece muito alto`);
         }
       }
     }
     
-    // WOD type factors
     if (e.wodTypeFactors) {
       for (const [type, factor] of Object.entries(e.wodTypeFactors)) {
         if (factor) {
@@ -770,7 +592,6 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
       }
     }
     
-    // Min/max estimate bounds
     if (e.minEstimateSeconds !== undefined && e.maxEstimateSeconds !== undefined) {
       if (e.minEstimateSeconds >= e.maxEstimateSeconds) {
         errors.push('minEstimateSeconds deve ser menor que maxEstimateSeconds');
@@ -778,7 +599,6 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
     }
   }
 
-  // Validar exerciseMets
   if (params.exerciseMets) {
     const m = params.exerciseMets;
     
@@ -790,20 +610,11 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
       }
     }
     
-    if (m.intensityMultipliers) {
-      for (const [pse, mult] of Object.entries(m.intensityMultipliers)) {
-        if (typeof mult !== 'number' || mult <= 0) {
-          errors.push(`intensityMultipliers[${pse}] deve ser positivo`);
-        }
-      }
-    }
-    
     if (m.fallbackKcalPerMin !== undefined && m.fallbackKcalPerMin < 0) {
       errors.push('fallbackKcalPerMin deve ser >= 0');
     }
   }
 
-  // Validar progression
   if (params.progression) {
     const p = params.progression;
     if (p.levelThresholds) {
