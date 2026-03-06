@@ -1,44 +1,28 @@
 
 
-## Plano: Redesign do Cabeçalho de Métricas
+## Plano: Adicionar campo "Sexo" no formulário de cadastro
 
 ### Problema
-As informações de performance (Última prova, Meta, Evolução) estão misturadas visualmente com o título do atleta (nome + nível), causando confusão. Tudo parece um bloco só de texto.
+O cálculo de percentis HYROX exige o gênero do atleta (`sexo`). Atualmente, esse dado só é coletado nas configurações do perfil, e muitos atletas não preenchem antes de importar uma prova --- resultando em scores não calculados silenciosamente.
 
 ### Solução
-Separar as métricas em uma **barra de estatísticas** visualmente distinta, logo abaixo do nome do atleta.
+Adicionar um campo obrigatório de seleção de sexo ("Masculino" / "Feminino") diretamente no formulário de signup (`src/pages/Auth.tsx`). O valor será salvo no `raw_user_meta_data` do signup e persistido no perfil via trigger `handle_new_user`.
 
-### O que muda
+### Alterações
 
-1. **Separação visual clara** — As 3 métricas (Última prova, Meta, Evolução) saem da linha de texto e vão para um container próprio com fundo sutil (`bg-muted/10`), borda fina e cantos arredondados.
+#### 1. Atualizar trigger `handle_new_user` (migração SQL)
+- Extrair `sexo` do `raw_user_meta_data` e gravar na coluna `sexo` da tabela `profiles` no momento da criação do perfil.
 
-2. **Layout em grid 3 colunas** — Cada métrica ocupa uma coluna com:
-   - Ícone pequeno + label em cima (texto miúdo, cor neutra)
-   - Valor em baixo (texto bold, maior)
+#### 2. Modificar `src/pages/Auth.tsx`
+- Adicionar state `sexo` (`'masculino' | 'feminino' | ''`).
+- Adicionar dois botões de seleção (Masculino / Feminino) no formulário de signup, abaixo do campo "Nome".
+- Atualizar `signupSchema` para incluir validação de `sexo`.
+- Passar `sexo` no `options.data` do `supabase.auth.signUp()`.
+- Exibir erro de validação se não selecionado.
 
-3. **Ícones para cada métrica**:
-   - ⏱ Timer → Última prova
-   - 🎯 Target → Meta (próxima categoria)
-   - 📈 TrendingUp → Evolução
+#### 3. Atualizar `src/components/WelcomeScreen.tsx`
+- Na chamada `saveCoachStyle('PULSE')`, o sexo já estará no banco (veio do signup), então o cálculo de percentis funcionará automaticamente na importação de prova.
 
-4. **Espaçamento** — Margem de `mt-3` entre o bloco do nome/categoria e a barra de métricas.
-
-5. **Consistência mobile/desktop** — A mesma estrutura se aplica nas duas versões (mobile e desktop) dentro do `DiagnosticRadarBlock.tsx`.
-
-### Resultado visual esperado
-
-```text
-┌─────────────────────────────────────────────┐
-│  👑 HYROX ELITE MEN                        │
-│  Nome do Atleta                             │
-└─────────────────────────────────────────────┘
-                    ↕ espaço
-┌─────────────────────────────────────────────┐
-│  ⏱ Última prova  │  🎯 Meta ELITE │  📈 Evolução   │
-│  1h14m32s        │  1h10m00s      │  ↓ 2m10s       │
-└─────────────────────────────────────────────┘
-```
-
-### Arquivo editado
-- `src/components/DiagnosticRadarBlock.tsx` — substituir as linhas inline de métricas (versão desktop ~linhas 1370-1440 e versão mobile ~linhas 1500-1560) pelo novo grid com container estilizado.
+### Resultado
+Todo atleta novo terá `sexo` definido desde o primeiro momento, eliminando o bloqueio silencioso no cálculo de percentis HYROX.
 
