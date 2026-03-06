@@ -766,12 +766,16 @@ export function AdminParamsEditor() {
                   </AccordionContent>
                 </AccordionItem>
                 
-                {/* METs */}
+                {/* METs (apenas para estimativa de tempo - Kcal real usa motor de física) */}
                 <AccordionItem value="mets">
                   <AccordionTrigger className="text-sm font-medium">
-                    🔋 METs por Modalidade (kcal/min)
+                    ⏱️ Base de Tempo por Modalidade (fallback)
                   </AccordionTrigger>
                   <AccordionContent>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Usado apenas para estimar duração de blocos quando não há duração explícita.
+                      O cálculo de Kcal real usa o Motor Físico (aba dedicada).
+                    </p>
                     <div className="space-y-3 pt-2">
                       {(['aquecimento', 'conditioning', 'forca', 'especifico', 'core', 'corrida'] as const).map((mod) => {
                         const met = editedParams.exerciseMets.metBaseByModality[mod];

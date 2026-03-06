@@ -98,8 +98,7 @@ function estimateBaseTimeSeconds(content: string, durationMinutes?: number): num
   const analysis = analyzeWorkoutContent(content);
   const format = detectWodFormat(content);
   
-  // Tempos base por modalidade (do config)
-  const mets = params.exerciseMets.metBaseByModality;
+  // Tempo estimado por modalidade (heurística baseada em duração típica)
   let baseSeconds = 0;
   
   // Tempo estimado por modalidade (segundos)

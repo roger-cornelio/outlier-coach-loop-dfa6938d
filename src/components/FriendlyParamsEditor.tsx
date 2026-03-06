@@ -307,8 +307,8 @@ const SECTIONS: SectionDefinition[] = [
   },
   {
     id: 'energy',
-    title: 'Gasto Calórico',
-    description: 'Configurações de cálculo de calorias',
+    title: 'Fallback Calórico',
+    description: 'Valores usados quando o Motor Físico não cobre o exercício',
     icon: <Zap className="w-5 h-5" />,
     fields: [
       { 
@@ -318,16 +318,16 @@ const SECTIONS: SectionDefinition[] = [
         suffix: 'kcal/min',
         min: 1,
         max: 30,
-        description: 'Valor padrão quando o tipo de exercício não é identificado'
+        description: 'Valor padrão quando o motor de física não cobre o exercício'
       },
       { 
         key: 'exerciseMets.runningKcalFactor', 
-        label: 'Fator de corrida', 
+        label: 'Fator de corrida (ACSM)', 
         type: 'number',
         suffix: 'x',
         min: 0.5,
         max: 2,
-        description: 'Multiplicador para cálculo de calorias em corrida'
+        description: 'Multiplicador kcal = peso_kg × km × fator'
       },
     ]
   },
