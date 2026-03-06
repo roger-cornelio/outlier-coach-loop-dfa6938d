@@ -49,6 +49,39 @@ export interface ExerciseKcalInput {
   distanceMeters?: number;
   durationMinutes?: number;
   movementPattern: MovementPattern;
+  /** Athlete gender for default weight fallback */
+  athleteGender?: 'M' | 'F' | string | null;
+  /** Default weights from global_exercises table */
+  defaultMaleWeightKg?: number | null;
+  defaultFemaleWeightKg?: number | null;
+}
+
+/**
+ * Resolve external weight using priority chain:
+ * 1st: Explicit coach override (externalWeightKg)
+ * 2nd: Gender-based default from global_exercises
+ * 3rd: 0 (bodyweight)
+ */
+export function resolveExternalWeight(input: {
+  externalWeightKg?: number;
+  athleteGender?: 'M' | 'F' | string | null;
+  defaultMaleWeightKg?: number | null;
+  defaultFemaleWeightKg?: number | null;
+}): number {
+  // 1st: Explicit coach value
+  if (input.externalWeightKg != null && input.externalWeightKg > 0) {
+    return input.externalWeightKg;
+  }
+  // 2nd: Gender-based default
+  const gender = input.athleteGender?.toUpperCase();
+  if (gender === 'M' && input.defaultMaleWeightKg != null) {
+    return input.defaultMaleWeightKg;
+  }
+  if (gender === 'F' && input.defaultFemaleWeightKg != null) {
+    return input.defaultFemaleWeightKg;
+  }
+  // 3rd: bodyweight
+  return 0;
 }
 
 export interface ExerciseKcalResult {
@@ -79,12 +112,19 @@ const DEFAULT_METABOLIC_FACTOR = 1.0; // kcal/kg/km (legacy HYROX)
 export function calculateExerciseKcal(input: ExerciseKcalInput): ExerciseKcalResult {
   const {
     userWeightKg,
-    externalWeightKg = 0,
     reps = 1,
     distanceMeters,
     durationMinutes,
     movementPattern,
   } = input;
+
+  // Resolve weight via priority chain
+  const externalWeightKg = resolveExternalWeight({
+    externalWeightKg: input.externalWeightKg,
+    athleteGender: input.athleteGender,
+    defaultMaleWeightKg: input.defaultMaleWeightKg,
+    defaultFemaleWeightKg: input.defaultFemaleWeightKg,
+  });
 
   const warnings: string[] = [];
 

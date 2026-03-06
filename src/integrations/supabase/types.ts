@@ -996,18 +996,24 @@ export type Database = {
       global_exercises: {
         Row: {
           created_at: string
+          default_female_weight_kg: number | null
+          default_male_weight_kg: number | null
           id: string
           movement_pattern_id: string
           name: string
         }
         Insert: {
           created_at?: string
+          default_female_weight_kg?: number | null
+          default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id: string
           name: string
         }
         Update: {
           created_at?: string
+          default_female_weight_kg?: number | null
+          default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id?: string
           name?: string

@@ -11,9 +11,10 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp, Clipboard, Zap } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, ChevronDown, ChevronUp, Clipboard, Zap, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -90,6 +91,12 @@ export interface WorkoutItem {
   unit: string;
   movement: string;
   notes?: string;
+  /** Display text for athlete (e.g., "RPE 8", "Moderate") */
+  displayLoad?: string;
+  /** Explicit calculation weight override in kg */
+  calcWeightKg?: number | null;
+  /** Whether to use standard HYROX weight (default true) */
+  useStandardWeight?: boolean;
 }
 
 export interface StructuredBlock {
@@ -782,132 +789,199 @@ export function StructuredBlockEditor({
                 )}
 
                 <div className="space-y-2">
-                  {block.items.map((item, index) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-move" />
+                  {block.items.map((item, index) => {
+                    const useStandard = item.useStandardWeight !== false; // default true
+                    const showCalcWeight = !useStandard;
 
-                      {/* Quantidade */}
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateItem(item.id, {
-                            quantity: e.target.value === "" ? "" : parseFloat(e.target.value),
-                          })
-                        }
-                        placeholder="Qtd"
-                        className="w-16 text-center"
-                        min={0}
-                      />
+                    return (
+                    <div key={item.id} className="space-y-1.5">
+                      {/* Main row */}
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 cursor-move" />
 
-                      {/* Unidade */}
-                      <Select value={item.unit} onValueChange={(v) => updateItem(item.id, { unit: v })}>
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border border-border z-50">
-                          {UNITS.map((unit) => (
-                            <SelectItem key={unit.value} value={unit.value}>
-                              {unit.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      {/* Movimento com autocomplete (physics-based ou legacy) */}
-                      {exerciseLibrary && exerciseLibrary.exercises.length > 0 ? (
-                        <ExerciseSelector
-                          value={item.movement}
-                          onChange={(name) => updateItem(item.id, { movement: name })}
-                          exercises={exerciseLibrary.exercises}
-                          patterns={exerciseLibrary.patterns}
-                          onCreateCustom={exerciseLibrary.createCustomExercise
-                            ? async (name, patternId) => {
-                                await exerciseLibrary.createCustomExercise!(name, patternId);
-                              }
-                            : undefined
+                        {/* Quantidade */}
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateItem(item.id, {
+                              quantity: e.target.value === "" ? "" : parseFloat(e.target.value),
+                            })
                           }
-                          className="flex-1"
+                          placeholder="Qtd"
+                          className="w-16 text-center"
+                          min={0}
                         />
-                      ) : (
-                        <Popover
-                          open={activeMovementField === item.id}
-                          onOpenChange={(open) => {
-                            setActiveMovementField(open ? item.id : null);
-                            if (open) setMovementSearch(item.movement);
-                          }}
-                        >
-                          <PopoverTrigger asChild>
-                            <Input
-                              value={item.movement}
-                              onChange={(e) => {
-                                updateItem(item.id, { movement: e.target.value });
-                                setMovementSearch(e.target.value);
-                                if (!activeMovementField) setActiveMovementField(item.id);
-                              }}
-                              onFocus={() => {
-                                setActiveMovementField(item.id);
-                                setMovementSearch(item.movement);
-                              }}
-                              placeholder="Movimento"
-                              className="flex-1"
-                            />
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-64 p-0 bg-popover border border-border"
-                            align="start"
-                            onOpenAutoFocus={(e) => e.preventDefault()}
+
+                        {/* Unidade */}
+                        <Select value={item.unit} onValueChange={(v) => updateItem(item.id, { unit: v })}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border border-border z-50">
+                            {UNITS.map((unit) => (
+                              <SelectItem key={unit.value} value={unit.value}>
+                                {unit.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {/* Movimento com autocomplete (physics-based ou legacy) */}
+                        {exerciseLibrary && exerciseLibrary.exercises.length > 0 ? (
+                          <ExerciseSelector
+                            value={item.movement}
+                            onChange={(name) => updateItem(item.id, { movement: name })}
+                            exercises={exerciseLibrary.exercises}
+                            patterns={exerciseLibrary.patterns}
+                            onCreateCustom={exerciseLibrary.createCustomExercise
+                              ? async (name, patternId) => {
+                                  await exerciseLibrary.createCustomExercise!(name, patternId);
+                                }
+                              : undefined
+                            }
+                            className="flex-1"
+                          />
+                        ) : (
+                          <Popover
+                            open={activeMovementField === item.id}
+                            onOpenChange={(open) => {
+                              setActiveMovementField(open ? item.id : null);
+                              if (open) setMovementSearch(item.movement);
+                            }}
                           >
-                            <Command>
-                              <CommandInput
-                                placeholder="Buscar movimento..."
-                                value={movementSearch}
-                                onValueChange={setMovementSearch}
+                            <PopoverTrigger asChild>
+                              <Input
+                                value={item.movement}
+                                onChange={(e) => {
+                                  updateItem(item.id, { movement: e.target.value });
+                                  setMovementSearch(e.target.value);
+                                  if (!activeMovementField) setActiveMovementField(item.id);
+                                }}
+                                onFocus={() => {
+                                  setActiveMovementField(item.id);
+                                  setMovementSearch(item.movement);
+                                }}
+                                placeholder="Movimento"
+                                className="flex-1"
                               />
-                              <CommandList>
-                                <CommandEmpty>Nenhum resultado</CommandEmpty>
-                                <CommandGroup>
-                                  {movementSuggestions.map((movement) => (
-                                    <CommandItem
-                                      key={movement}
-                                      value={movement}
-                                      onSelect={() => {
-                                        updateItem(item.id, { movement });
-                                        setActiveMovementField(null);
-                                      }}
-                                    >
-                                      {movement}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-64 p-0 bg-popover border border-border"
+                              align="start"
+                              onOpenAutoFocus={(e) => e.preventDefault()}
+                            >
+                              <Command>
+                                <CommandInput
+                                  placeholder="Buscar movimento..."
+                                  value={movementSearch}
+                                  onValueChange={setMovementSearch}
+                                />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum resultado</CommandEmpty>
+                                  <CommandGroup>
+                                    {movementSuggestions.map((movement) => (
+                                      <CommandItem
+                                        key={movement}
+                                        value={movement}
+                                        onSelect={() => {
+                                          updateItem(item.id, { movement });
+                                          setActiveMovementField(null);
+                                        }}
+                                      >
+                                        {movement}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+
+                        {/* Remover */}
+                        {block.items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItem(item.id)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Smart Row: Display Load + Calculation Weight */}
+                      <div className="flex items-center gap-2 ml-6">
+                        {/* Display Load (what athlete sees) */}
+                        <Input
+                          value={item.displayLoad || ""}
+                          onChange={(e) => updateItem(item.id, { displayLoad: e.target.value })}
+                          placeholder="Carga visual (ex: RPE 8, Moderado, 20kg)"
+                          className="flex-1 h-8 text-xs"
+                        />
+
+                        {/* Advanced toggle */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className={`h-8 w-8 p-0 ${!useStandard ? 'text-primary' : 'text-muted-foreground'}`}
+                              title="Configurar peso de cálculo"
+                            >
+                              <Settings2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3 bg-popover border border-border space-y-3" align="end">
+                            <p className="text-xs font-medium text-foreground">Peso para Cálculo de Kcal</p>
+
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id={`std-weight-${item.id}`}
+                                checked={useStandard}
+                                onCheckedChange={(checked) =>
+                                  updateItem(item.id, {
+                                    useStandardWeight: checked === true,
+                                    calcWeightKg: checked === true ? null : item.calcWeightKg,
+                                  })
+                                }
+                              />
+                              <label htmlFor={`std-weight-${item.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                                Usar peso padrão HYROX
+                              </label>
+                            </div>
+
+                            {showCalcWeight && (
+                              <div className="space-y-1">
+                                <label className="text-[11px] text-muted-foreground">Peso manual (kg):</label>
+                                <Input
+                                  type="number"
+                                  value={item.calcWeightKg ?? ""}
+                                  onChange={(e) =>
+                                    updateItem(item.id, {
+                                      calcWeightKg: e.target.value === "" ? null : parseFloat(e.target.value),
+                                    })
+                                  }
+                                  placeholder="Ex: 100"
+                                  className="h-8 text-xs"
+                                  min={0}
+                                  step={0.5}
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                  Este valor será usado no cálculo de calorias, independente do texto exibido.
+                                </p>
+                              </div>
+                            )}
                           </PopoverContent>
                         </Popover>
-                      )}
-
-                      {/* Observação */}
-                      <Input
-                        value={item.notes || ""}
-                        onChange={(e) => updateItem(item.id, { notes: e.target.value })}
-                        placeholder="Obs"
-                        className="w-24"
-                      />
-
-                      {/* Remover */}
-                      {block.items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
