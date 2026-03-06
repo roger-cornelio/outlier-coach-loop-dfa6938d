@@ -13,6 +13,8 @@ export interface ExerciseOption {
   name: string;
   source: 'global' | 'custom';
   movementPattern: MovementPattern;
+  defaultMaleWeightKg?: number | null;
+  defaultFemaleWeightKg?: number | null;
 }
 
 interface RawMovementPattern {
@@ -57,7 +59,7 @@ export function useExerciseLibrary(coachUserId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('global_exercises')
-        .select('id, name, movement_pattern_id')
+        .select('id, name, movement_pattern_id, default_male_weight_kg, default_female_weight_kg')
         .order('name');
       if (error) throw error;
       return data;
@@ -88,7 +90,14 @@ export function useExerciseLibrary(coachUserId?: string) {
     for (const ex of globalExercises) {
       const pattern = patternMap.get(ex.movement_pattern_id);
       if (pattern) {
-        result.push({ id: ex.id, name: ex.name, source: 'global', movementPattern: pattern });
+        result.push({
+          id: ex.id,
+          name: ex.name,
+          source: 'global',
+          movementPattern: pattern,
+          defaultMaleWeightKg: ex.default_male_weight_kg,
+          defaultFemaleWeightKg: ex.default_female_weight_kg,
+        });
       }
     }
 
