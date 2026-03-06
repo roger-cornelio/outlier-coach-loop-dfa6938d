@@ -56,19 +56,11 @@ const CATEGORY_DEFINITIONS: Record<string, { label: string; description: string 
   },
   estimation: {
     label: 'Estimativas',
-    description: 'Multiplicadores e fatores para cálculo de tempo/calorias'
-  },
-  mets: {
-    label: 'METs / Energia',
-    description: 'Valores calóricos por modalidade e intensidade'
-  },
-  adaptation: {
-    label: 'Adaptação',
-    description: 'Regras de ajuste de treino por perfil do atleta'
+    description: 'Multiplicadores e fatores para cálculo de tempo'
   },
   progression: {
     label: 'Progressão',
-    description: 'Thresholds e regras de evolução de nível'
+    description: 'Thresholds de evolução, decay temporal e pesos de benchmark'
   },
   general: {
     label: 'Geral',

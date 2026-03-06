@@ -1,18 +1,18 @@
 /**
- * OUTLIER PARAMS - SINGLE SOURCE OF TRUTH
+ * OUTLIER PARAMS - CACHE LAYER FOR SYSTEM PARAMS
  * 
- * Parâmetros de REGRAS DO JOGO e GAMIFICAÇÃO.
+ * This file provides synchronous access to system parameters
+ * that are stored in the database (system_params table).
+ * 
+ * ARCHITECTURE:
+ * - Source of truth: system_params table (DB)
+ * - This file: localStorage cache + fallback defaults
+ * - Sync: useParamsSync hook fetches DB → writes to cache on app load
  * 
  * DOMÍNIOS:
  * - Benchmark: Scoring buckets, faixas de tempo por nível
- * - Estimation: Multiplicadores de nível, fatores por tipo de WOD, velocidade por nível
- * - Progression: Thresholds de evolução, temporal decay, benchmark type weights
- * - Labels: Níveis, tipos de WOD, formatos
- * 
- * NÃO INCLUI:
- * - Calorias/Kcal → Motor Físico (movement_patterns + energyCalculator.ts)
- * - METs → Depreciado (substituído pelo motor de física biomecânica)
- * - Adaptação → Motor de Adaptação Obrigatória (mandatoryAdaptationEngine.ts)
+ * - Estimation: Multiplicadores de nível, fatores por tipo de WOD
+ * - Progression: Thresholds de evolução, temporal decay
  */
 
 import type { AthleteLevel, WodType } from '@/types/outlier';
@@ -78,7 +78,6 @@ export interface EstimationConfig {
   };
   minEstimateSeconds: number;
   maxEstimateSeconds: number;
-  /** Velocidade por nível para estimativa de distância de corrida */
   levelSpeedKmh: {
     [K in AthleteLevel]: number;
   };
@@ -123,16 +122,15 @@ export interface OutlierParamsConfig {
 }
 
 // ============================================
-// CONFIGURAÇÃO PADRÃO v3
+// DEFAULTS (fallback when DB is unreachable)
 // ============================================
 
 export const DEFAULT_PARAMS: OutlierParamsConfig = {
-  version: 'v3',
+  version: 'v3-db',
   isActive: true,
   updatedAt: new Date().toISOString(),
-  notes: 'v3 — Removido exerciseMets (Kcal agora usa Motor Físico). Parâmetros focados em regras do jogo.',
+  notes: 'Fallback defaults — real values come from database',
 
-  // A) BENCHMARK
   benchmark: {
     enabledOnlyForBenchmark: true,
     defaultTimeRangesByLevel: {
@@ -140,23 +138,12 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       pro: { min: 12 * 60, max: 18 * 60 },
       elite: { min: 10 * 60, max: 14 * 60 },
     },
-    scoringBuckets: {
-      elite: 100,
-      strong: 85,
-      ok: 65,
-      tough: 40,
-      dnf: 10,
-    },
+    scoringBuckets: { elite: 100, strong: 85, ok: 65, tough: 40, dnf: 10 },
     allowCoachOverride: true,
     coachOverridePriority: 'coach_wins',
-    bucketThresholds: {
-      elitePercent: 0,
-      strongPercent: 50,
-      okPercent: 100,
-    },
+    bucketThresholds: { elitePercent: 0, strongPercent: 50, okPercent: 100 },
   },
 
-  // B) ESTIMATION (WOD não benchmark)
   estimation: {
     enableAthleteTimeEstimate: true,
     wodTypeFactors: {
@@ -168,29 +155,14 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
       benchmark: { baseMinutes: 15, variancePercent: 0.15 },
       default: { baseMinutes: 15, variancePercent: 0.18 },
     },
-    levelMultipliers: {
-      open: 1.25,
-      pro: 1.0,
-      elite: 0.85,
-    },
+    levelMultipliers: { open: 1.25, pro: 1.0, elite: 0.85 },
     defaultSessionCapMinutes: 60,
-    formatMultipliers: {
-      for_time: 1.0,
-      amrap: 1.0,
-      emom: 1.0,
-      chipper: 1.2,
-      interval: 1.0,
-    },
+    formatMultipliers: { for_time: 1.0, amrap: 1.0, emom: 1.0, chipper: 1.2, interval: 1.0 },
     minEstimateSeconds: 300,
     maxEstimateSeconds: 7200,
-    levelSpeedKmh: {
-      open: 9.0,
-      pro: 12.0,
-      elite: 14.0,
-    },
+    levelSpeedKmh: { open: 9.0, pro: 12.0, elite: 14.0 },
   },
 
-  // C) LABELS E NÍVEIS
   labels: {
     athleteLevels: ['open', 'pro', 'elite'],
     wodTypes: ['engine', 'strength', 'skill', 'mixed', 'hyrox', 'benchmark'],
@@ -199,257 +171,176 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     performanceBuckets: ['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'],
   },
 
-  // D) PROGRESSION (sistema de evolução)
   progression: {
-    levelThresholds: {
-      open: 40,
-      pro: 70,
-      elite: 90,
-    },
-    consistencyValidation: {
-      minStrongWeeks: 2,
-      minStrongRatio: 0.7,
-      consistencyThreshold: 15,
-    },
-    temporalDecay: {
-      halfLifeDays: 30,
-      minWeight: 0.1,
-    },
+    levelThresholds: { open: 40, pro: 70, elite: 90 },
+    consistencyValidation: { minStrongWeeks: 2, minStrongRatio: 0.7, consistencyThreshold: 15 },
+    temporalDecay: { halfLifeDays: 30, minWeight: 0.1 },
     benchmarkTypeWeights: {
-      engine: 1.2,
-      chipper: 1.0,
-      intervalado: 1.1,
-      amrap: 1.0,
-      emom: 0.9,
-      fortime: 1.1,
-      default: 1.0,
+      engine: 1.2, chipper: 1.0, intervalado: 1.1,
+      amrap: 1.0, emom: 0.9, fortime: 1.1, default: 1.0,
     },
   },
 };
 
 // ============================================
-// STORAGE E VERSIONAMENTO
+// CACHE (localStorage-backed)
 // ============================================
 
-const PARAMS_STORAGE_KEY = 'outlier-params';
-const PARAMS_HISTORY_KEY = 'outlier-params-history';
+const PARAMS_CACHE_KEY = 'outlier-params-db-cache';
 
-export function loadParams(): OutlierParamsConfig {
+/**
+ * Write DB params to local cache. Called by useParamsSync.
+ */
+export function writeParamsCache(dbParams: Record<string, any>): OutlierParamsConfig {
+  const config = buildConfigFromDbParams(dbParams);
   try {
-    const stored = localStorage.getItem(PARAMS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return mergeWithDefaults(parsed);
+    localStorage.setItem(PARAMS_CACHE_KEY, JSON.stringify(config));
+    activeParams = config;
+    console.log('[outlierParams] Cache updated from DB');
+  } catch (e) {
+    console.warn('[outlierParams] Failed to write cache:', e);
+  }
+  return config;
+}
+
+/**
+ * Build full config from flat DB key-value map.
+ * DB keys are like "benchmark.scoringBuckets" → value is the JSON object.
+ */
+function buildConfigFromDbParams(dbParams: Record<string, any>): OutlierParamsConfig {
+  const get = (key: string, fallback: any) => dbParams[key] ?? fallback;
+
+  return {
+    version: 'db-live',
+    isActive: true,
+    updatedAt: new Date().toISOString(),
+
+    benchmark: {
+      enabledOnlyForBenchmark: get('benchmark.enabledOnlyForBenchmark', DEFAULT_PARAMS.benchmark.enabledOnlyForBenchmark),
+      defaultTimeRangesByLevel: get('benchmark.defaultTimeRangesByLevel', DEFAULT_PARAMS.benchmark.defaultTimeRangesByLevel),
+      scoringBuckets: get('benchmark.scoringBuckets', DEFAULT_PARAMS.benchmark.scoringBuckets),
+      allowCoachOverride: get('benchmark.allowCoachOverride', DEFAULT_PARAMS.benchmark.allowCoachOverride),
+      coachOverridePriority: get('benchmark.coachOverridePriority', DEFAULT_PARAMS.benchmark.coachOverridePriority),
+      bucketThresholds: get('benchmark.bucketThresholds', DEFAULT_PARAMS.benchmark.bucketThresholds),
+    },
+
+    estimation: {
+      enableAthleteTimeEstimate: get('estimation.enableAthleteTimeEstimate', DEFAULT_PARAMS.estimation.enableAthleteTimeEstimate),
+      wodTypeFactors: get('estimation.wodTypeFactors', DEFAULT_PARAMS.estimation.wodTypeFactors),
+      levelMultipliers: get('estimation.levelMultipliers', DEFAULT_PARAMS.estimation.levelMultipliers),
+      defaultSessionCapMinutes: get('estimation.defaultSessionCapMinutes', DEFAULT_PARAMS.estimation.defaultSessionCapMinutes),
+      formatMultipliers: get('estimation.formatMultipliers', DEFAULT_PARAMS.estimation.formatMultipliers),
+      minEstimateSeconds: get('estimation.minEstimateSeconds', DEFAULT_PARAMS.estimation.minEstimateSeconds),
+      maxEstimateSeconds: get('estimation.maxEstimateSeconds', DEFAULT_PARAMS.estimation.maxEstimateSeconds),
+      levelSpeedKmh: get('estimation.levelSpeedKmh', DEFAULT_PARAMS.estimation.levelSpeedKmh),
+    },
+
+    labels: DEFAULT_PARAMS.labels, // Labels are static, no need for DB
+
+    progression: {
+      levelThresholds: get('progression.levelThresholds', DEFAULT_PARAMS.progression.levelThresholds),
+      consistencyValidation: get('progression.consistencyValidation', DEFAULT_PARAMS.progression.consistencyValidation),
+      temporalDecay: get('progression.temporalDecay', DEFAULT_PARAMS.progression.temporalDecay),
+      benchmarkTypeWeights: get('progression.benchmarkTypeWeights', DEFAULT_PARAMS.progression.benchmarkTypeWeights),
+    },
+  };
+}
+
+function loadFromCache(): OutlierParamsConfig {
+  try {
+    const cached = localStorage.getItem(PARAMS_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Ensure all sections exist
+      return {
+        ...DEFAULT_PARAMS,
+        ...parsed,
+        benchmark: { ...DEFAULT_PARAMS.benchmark, ...parsed.benchmark },
+        estimation: { ...DEFAULT_PARAMS.estimation, ...parsed.estimation },
+        labels: DEFAULT_PARAMS.labels,
+        progression: { ...DEFAULT_PARAMS.progression, ...parsed.progression },
+      };
     }
-  } catch (error) {
-    console.warn('[outlierParams] Erro ao carregar params, usando defaults:', error);
+  } catch (e) {
+    console.warn('[outlierParams] Failed to read cache:', e);
+  }
+  // Also try legacy key
+  try {
+    const legacy = localStorage.getItem('outlier-params');
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      const { adaptation, exerciseMets, ...clean } = parsed as any;
+      return {
+        ...DEFAULT_PARAMS,
+        ...clean,
+        benchmark: { ...DEFAULT_PARAMS.benchmark, ...clean.benchmark },
+        estimation: { ...DEFAULT_PARAMS.estimation, ...clean.estimation },
+        labels: DEFAULT_PARAMS.labels,
+        progression: { ...DEFAULT_PARAMS.progression, ...clean.progression },
+      };
+    }
+  } catch {
+    // ignore
   }
   return { ...DEFAULT_PARAMS };
 }
 
-function mergeWithDefaults(saved: Partial<OutlierParamsConfig>): OutlierParamsConfig {
-  // Strip removed sections from old saved data
-  const { adaptation, exerciseMets, ...cleanSaved } = saved as any;
-
-  // Migrate levelSpeedKmh from old exerciseMets into estimation if needed
-  if (exerciseMets?.levelSpeedKmh && !cleanSaved.estimation?.levelSpeedKmh) {
-    cleanSaved.estimation = {
-      ...DEFAULT_PARAMS.estimation,
-      ...cleanSaved.estimation,
-      levelSpeedKmh: exerciseMets.levelSpeedKmh,
-    };
-  }
-
-  return {
-    ...DEFAULT_PARAMS,
-    ...cleanSaved,
-    benchmark: { ...DEFAULT_PARAMS.benchmark, ...cleanSaved.benchmark },
-    estimation: { ...DEFAULT_PARAMS.estimation, ...cleanSaved.estimation },
-    labels: { ...DEFAULT_PARAMS.labels, ...cleanSaved.labels },
-    progression: { ...DEFAULT_PARAMS.progression, ...cleanSaved.progression },
-  };
-}
-
-export function saveParams(params: OutlierParamsConfig): void {
-  try {
-    const newParams: OutlierParamsConfig = {
-      ...params,
-      updatedAt: new Date().toISOString(),
-      isActive: true,
-    };
-    
-    const currentParams = loadParams();
-    if (currentParams.version !== newParams.version) {
-      saveToHistory(currentParams);
-    }
-    
-    localStorage.setItem(PARAMS_STORAGE_KEY, JSON.stringify(newParams));
-    console.log(`[outlierParams] Parâmetros salvos: ${newParams.version}`);
-  } catch (error) {
-    console.error('[outlierParams] Erro ao salvar params:', error);
-    throw error;
-  }
-}
-
-function saveToHistory(params: OutlierParamsConfig): void {
-  try {
-    const history = loadHistory();
-    history.push({
-      ...params,
-      isActive: false,
-    });
-    if (history.length > 10) {
-      history.shift();
-    }
-    localStorage.setItem(PARAMS_HISTORY_KEY, JSON.stringify(history));
-  } catch (error) {
-    console.warn('[outlierParams] Erro ao salvar histórico:', error);
-  }
-}
-
-export function loadHistory(): OutlierParamsConfig[] {
-  try {
-    const stored = localStorage.getItem(PARAMS_HISTORY_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.warn('[outlierParams] Erro ao carregar histórico:', error);
-  }
-  return [];
-}
-
-export function restoreVersion(version: string): OutlierParamsConfig | null {
-  const history = loadHistory();
-  const found = history.find(p => p.version === version);
-  if (found) {
-    const restored = {
-      ...found,
-      isActive: true,
-      updatedAt: new Date().toISOString(),
-    };
-    saveParams(restored);
-    return restored;
-  }
-  return null;
-}
-
-export function resetToDefaults(): OutlierParamsConfig {
-  const defaultCopy = {
-    ...DEFAULT_PARAMS,
-    updatedAt: new Date().toISOString(),
-  };
-  saveParams(defaultCopy);
-  return defaultCopy;
-}
-
 // ============================================
-// SINGLETON PARA ACESSO GLOBAL
+// SINGLETON
 // ============================================
 
 let activeParams: OutlierParamsConfig | null = null;
 
 export function getActiveParams(): OutlierParamsConfig {
   if (!activeParams) {
-    activeParams = loadParams();
+    activeParams = loadFromCache();
   }
   return activeParams;
-}
-
-export function setActiveParams(params: OutlierParamsConfig): void {
-  saveParams(params);
-  activeParams = params;
 }
 
 export function reloadParams(): OutlierParamsConfig {
-  activeParams = loadParams();
+  activeParams = loadFromCache();
   return activeParams;
 }
 
-export function getParamsForVersion(version: string): OutlierParamsConfig | null {
-  const active = getActiveParams();
-  if (active.version === version) {
-    return active;
+// Legacy compatibility
+export function setActiveParams(params: OutlierParamsConfig): void {
+  activeParams = params;
+  try {
+    localStorage.setItem(PARAMS_CACHE_KEY, JSON.stringify(params));
+  } catch {
+    // ignore
   }
-  const history = loadHistory();
-  const found = history.find(p => p.version === version);
-  return found || null;
 }
 
-export function getParamsForWod(wod: { isBenchmark?: boolean; paramsVersionUsed?: string }): OutlierParamsConfig {
-  if (wod.isBenchmark && wod.paramsVersionUsed) {
-    const versionParams = getParamsForVersion(wod.paramsVersionUsed);
-    if (versionParams) {
-      return versionParams;
-    }
-    console.warn(`[outlierParams] Versão ${wod.paramsVersionUsed} não encontrada no histórico, usando params ativos`);
-  }
+export function loadParams(): OutlierParamsConfig {
+  return getActiveParams();
+}
+
+export function saveParams(params: OutlierParamsConfig): void {
+  setActiveParams(params);
+}
+
+export function getParamsForVersion(_version: string): OutlierParamsConfig | null {
+  // With DB-backed params, versioning is handled by the DB audit trail
+  return getActiveParams();
+}
+
+export function getParamsForWod(_wod: { isBenchmark?: boolean; paramsVersionUsed?: string }): OutlierParamsConfig {
+  return getActiveParams();
+}
+
+export function loadHistory(): OutlierParamsConfig[] {
+  return []; // History now lives in DB audit (updated_at, updated_by)
+}
+
+export function resetToDefaults(): OutlierParamsConfig {
+  setActiveParams({ ...DEFAULT_PARAMS, updatedAt: new Date().toISOString() });
   return getActiveParams();
 }
 
 // ============================================
-// HELPERS COM FALLBACK
-// ============================================
-
-export function getNumericParam<T extends number>(
-  value: T | undefined | null,
-  fallback: T,
-  logKey?: string
-): T {
-  if (typeof value === 'number' && !isNaN(value)) {
-    return value;
-  }
-  if (logKey) {
-    console.warn(`[outlierParams] Usando fallback para ${logKey}: ${fallback}`);
-  }
-  return fallback;
-}
-
-export function getLevelMultiplier(level: AthleteLevel): number {
-  const params = getActiveParams();
-  return getNumericParam(
-    params.estimation.levelMultipliers[level],
-    1.0,
-    `levelMultiplier.${level}`
-  );
-}
-
-export function getWodTypeFactor(wodType: WodType | 'default'): WodTypeEstimationConfig {
-  const params = getActiveParams();
-  const factor = params.estimation.wodTypeFactors[wodType] || params.estimation.wodTypeFactors.default;
-  return factor || { baseMinutes: 15, variancePercent: 0.18 };
-}
-
-export function getLevelThreshold(level: AthleteLevel): number {
-  const params = getActiveParams();
-  return getNumericParam(
-    params.progression.levelThresholds[level],
-    50,
-    `levelThreshold.${level}`
-  );
-}
-
-export function getBucketScore(bucket: string): number {
-  const params = getActiveParams();
-  const bucketLower = bucket.toLowerCase() as keyof ScoringBucketConfig;
-  return getNumericParam(
-    params.benchmark.scoringBuckets[bucketLower],
-    65,
-    `bucketScore.${bucket}`
-  );
-}
-
-export function getLevelSpeedKmh(level: AthleteLevel): number {
-  const params = getActiveParams();
-  return getNumericParam(
-    params.estimation.levelSpeedKmh[level],
-    10.0,
-    `levelSpeed.${level}`
-  );
-}
-
-// ============================================
-// VALIDAÇÃO
+// VALIDATION
 // ============================================
 
 export interface ValidationResult {
@@ -462,114 +353,64 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!params.version) {
-    errors.push('Versão é obrigatória');
+  if (params.benchmark?.scoringBuckets) {
+    const b = params.benchmark.scoringBuckets;
+    if (b.elite <= b.strong) errors.push('Score ELITE deve ser maior que STRONG');
+    if (b.strong <= b.ok) errors.push('Score STRONG deve ser maior que OK');
+    if (b.ok <= b.tough) errors.push('Score OK deve ser maior que TOUGH');
   }
 
-  if (!params.benchmark) {
-    errors.push('Seção "benchmark" é obrigatória');
-  }
-  if (!params.estimation) {
-    errors.push('Seção "estimation" é obrigatória');
-  }
-  if (!params.labels) {
-    errors.push('Seção "labels" é obrigatória');
-  }
-
-  if (params.benchmark) {
-    const b = params.benchmark;
-    
-    if (b.defaultTimeRangesByLevel) {
-      const levels = ['open', 'pro', 'elite'] as const;
-      for (const level of levels) {
-        const range = b.defaultTimeRangesByLevel[level];
-        if (range) {
-          if (typeof range.min !== 'number' || isNaN(range.min) || range.min < 0) {
-            errors.push(`benchmark.timeRangesByLevel.${level}.min inválido`);
-          }
-          if (typeof range.max !== 'number' || isNaN(range.max) || range.max < 0) {
-            errors.push(`benchmark.timeRangesByLevel.${level}.max inválido`);
-          }
-          if (range.min > range.max) {
-            errors.push(`benchmark.timeRangesByLevel.${level}: min deve ser <= max`);
-          }
-        }
-      }
-    }
-    
-    if (b.scoringBuckets) {
-      if (b.scoringBuckets.elite <= b.scoringBuckets.strong) {
-        errors.push('Score ELITE deve ser maior que STRONG');
-      }
-      if (b.scoringBuckets.strong <= b.scoringBuckets.ok) {
-        errors.push('Score STRONG deve ser maior que OK');
-      }
-      if (b.scoringBuckets.ok <= b.scoringBuckets.tough) {
-        errors.push('Score OK deve ser maior que TOUGH');
-      }
-      for (const [key, val] of Object.entries(b.scoringBuckets)) {
-        if (typeof val !== 'number' || val < 0) {
-          errors.push(`scoringBuckets.${key} deve ser número >= 0`);
-        }
-      }
+  if (params.estimation?.levelMultipliers) {
+    for (const [level, mult] of Object.entries(params.estimation.levelMultipliers)) {
+      if (typeof mult !== 'number' || mult <= 0) errors.push(`levelMultipliers.${level} deve ser positivo`);
+      if (typeof mult === 'number' && mult > 3) warnings.push(`levelMultipliers.${level} = ${mult} parece muito alto`);
     }
   }
 
-  if (params.estimation) {
-    const e = params.estimation;
-    
-    if (e.levelMultipliers) {
-      for (const [level, mult] of Object.entries(e.levelMultipliers)) {
-        if (typeof mult !== 'number' || isNaN(mult)) {
-          errors.push(`levelMultipliers.${level} deve ser número`);
-        } else if (mult <= 0) {
-          errors.push(`levelMultipliers.${level} deve ser positivo`);
-        } else if (mult > 3) {
-          warnings.push(`levelMultipliers.${level} = ${mult} parece muito alto`);
-        }
-      }
-    }
-    
-    if (e.wodTypeFactors) {
-      for (const [type, factor] of Object.entries(e.wodTypeFactors)) {
-        if (factor) {
-          if (typeof factor.baseMinutes !== 'number' || factor.baseMinutes <= 0) {
-            errors.push(`wodTypeFactors.${type}.baseMinutes deve ser positivo`);
-          }
-          if (typeof factor.variancePercent !== 'number' || factor.variancePercent < 0 || factor.variancePercent > 1) {
-            warnings.push(`wodTypeFactors.${type}.variancePercent deve estar entre 0 e 1`);
-          }
-        }
-      }
-    }
-    
-    if (e.minEstimateSeconds !== undefined && e.maxEstimateSeconds !== undefined) {
-      if (e.minEstimateSeconds >= e.maxEstimateSeconds) {
-        errors.push('minEstimateSeconds deve ser menor que maxEstimateSeconds');
-      }
+  if (params.estimation?.minEstimateSeconds !== undefined && params.estimation?.maxEstimateSeconds !== undefined) {
+    if (params.estimation.minEstimateSeconds >= params.estimation.maxEstimateSeconds) {
+      errors.push('minEstimateSeconds deve ser menor que maxEstimateSeconds');
     }
   }
 
-  if (params.progression) {
-    const p = params.progression;
-    if (p.levelThresholds) {
-      const levels = ['open', 'pro', 'elite'] as const;
-      let prevThreshold = -Infinity;
-      for (const level of levels) {
-        const threshold = p.levelThresholds[level];
-        if (threshold !== undefined) {
-          if (threshold <= prevThreshold) {
-            warnings.push(`Thresholds de nível devem ser crescentes (${level}: ${threshold})`);
-          }
-          prevThreshold = threshold;
-        }
-      }
-    }
-  }
+  return { isValid: errors.length === 0, errors, warnings };
+}
 
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-  };
+// ============================================
+// HELPERS (used by utils that can't use hooks)
+// ============================================
+
+export function getNumericParam<T extends number>(
+  value: T | undefined | null,
+  fallback: T,
+  _logKey?: string
+): T {
+  if (typeof value === 'number' && !isNaN(value)) return value;
+  return fallback;
+}
+
+export function getLevelMultiplier(level: AthleteLevel): number {
+  const params = getActiveParams();
+  return getNumericParam(params.estimation.levelMultipliers[level], 1.0);
+}
+
+export function getWodTypeFactor(wodType: WodType | 'default'): WodTypeEstimationConfig {
+  const params = getActiveParams();
+  return params.estimation.wodTypeFactors[wodType] || params.estimation.wodTypeFactors.default || { baseMinutes: 15, variancePercent: 0.18 };
+}
+
+export function getLevelThreshold(level: AthleteLevel): number {
+  const params = getActiveParams();
+  return getNumericParam(params.progression.levelThresholds[level], 50);
+}
+
+export function getBucketScore(bucket: string): number {
+  const params = getActiveParams();
+  const bucketLower = bucket.toLowerCase() as keyof ScoringBucketConfig;
+  return getNumericParam(params.benchmark.scoringBuckets[bucketLower], 65);
+}
+
+export function getLevelSpeedKmh(level: AthleteLevel): number {
+  const params = getActiveParams();
+  return getNumericParam(params.estimation.levelSpeedKmh[level], 10.0);
 }

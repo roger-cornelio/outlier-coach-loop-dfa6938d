@@ -98,56 +98,11 @@ const SECTIONS: SectionDefinition[] = [
     description: 'Pontuações atribuídas a cada faixa de desempenho (scoring buckets)',
     icon: <Target className="w-5 h-5" />,
     fields: [
-      { 
-        key: 'benchmark.scoringBuckets', 
-        label: 'Elite', 
-        type: 'number', 
-        nestedKey: 'elite' as any,
-        suffix: 'pts',
-        min: 0,
-        max: 100,
-        description: 'Pontuação para desempenho Elite'
-      },
-      { 
-        key: 'benchmark.scoringBuckets', 
-        label: 'Strong', 
-        type: 'number', 
-        nestedKey: 'strong' as any,
-        suffix: 'pts',
-        min: 0,
-        max: 100,
-        description: 'Pontuação para desempenho Strong'
-      },
-      { 
-        key: 'benchmark.scoringBuckets', 
-        label: 'OK', 
-        type: 'number', 
-        nestedKey: 'ok' as any,
-        suffix: 'pts',
-        min: 0,
-        max: 100,
-        description: 'Pontuação para desempenho OK'
-      },
-      { 
-        key: 'benchmark.scoringBuckets', 
-        label: 'Tough', 
-        type: 'number', 
-        nestedKey: 'tough' as any,
-        suffix: 'pts',
-        min: 0,
-        max: 100,
-        description: 'Pontuação para desempenho Tough'
-      },
-      { 
-        key: 'benchmark.scoringBuckets', 
-        label: 'DNF', 
-        type: 'number', 
-        nestedKey: 'dnf' as any,
-        suffix: 'pts',
-        min: 0,
-        max: 100,
-        description: 'Pontuação para DNF (não finalizou)'
-      },
+      { key: 'benchmark.scoringBuckets', label: 'Elite', type: 'number', nestedKey: 'elite' as any, suffix: 'pts', min: 0, max: 100, description: 'Pontuação para desempenho Elite' },
+      { key: 'benchmark.scoringBuckets', label: 'Strong', type: 'number', nestedKey: 'strong' as any, suffix: 'pts', min: 0, max: 100, description: 'Pontuação para desempenho Strong' },
+      { key: 'benchmark.scoringBuckets', label: 'OK', type: 'number', nestedKey: 'ok' as any, suffix: 'pts', min: 0, max: 100, description: 'Pontuação para desempenho OK' },
+      { key: 'benchmark.scoringBuckets', label: 'Tough', type: 'number', nestedKey: 'tough' as any, suffix: 'pts', min: 0, max: 100, description: 'Pontuação para desempenho Tough' },
+      { key: 'benchmark.scoringBuckets', label: 'DNF', type: 'number', nestedKey: 'dnf' as any, suffix: 'pts', min: 0, max: 100, description: 'Pontuação para DNF (não finalizou)' },
     ]
   },
   {
@@ -156,36 +111,9 @@ const SECTIONS: SectionDefinition[] = [
     description: 'Percentuais para definir as faixas de desempenho',
     icon: <Percent className="w-5 h-5" />,
     fields: [
-      { 
-        key: 'benchmark.bucketThresholds', 
-        label: 'Limiar Elite', 
-        type: 'number', 
-        nestedKey: 'elitePercent' as any,
-        suffix: '%',
-        min: 0,
-        max: 100,
-        description: 'Percentual abaixo do mínimo para ser Elite'
-      },
-      { 
-        key: 'benchmark.bucketThresholds', 
-        label: 'Limiar Strong', 
-        type: 'number', 
-        nestedKey: 'strongPercent' as any,
-        suffix: '%',
-        min: 0,
-        max: 100,
-        description: 'Percentual até a média para ser Strong'
-      },
-      { 
-        key: 'benchmark.bucketThresholds', 
-        label: 'Limiar OK', 
-        type: 'number', 
-        nestedKey: 'okPercent' as any,
-        suffix: '%',
-        min: 0,
-        max: 100,
-        description: 'Percentual até o máximo para ser OK'
-      },
+      { key: 'benchmark.bucketThresholds', label: 'Limiar Elite', type: 'number', nestedKey: 'elitePercent' as any, suffix: '%', min: 0, max: 100, description: 'Percentual abaixo do mínimo para ser Elite' },
+      { key: 'benchmark.bucketThresholds', label: 'Limiar Strong', type: 'number', nestedKey: 'strongPercent' as any, suffix: '%', min: 0, max: 100, description: 'Percentual até a média para ser Strong' },
+      { key: 'benchmark.bucketThresholds', label: 'Limiar OK', type: 'number', nestedKey: 'okPercent' as any, suffix: '%', min: 0, max: 100, description: 'Percentual até o máximo para ser OK' },
     ]
   },
   {
@@ -194,16 +122,8 @@ const SECTIONS: SectionDefinition[] = [
     description: 'Configurações de comportamento do sistema de benchmarks',
     icon: <Settings2 className="w-5 h-5" />,
     fields: [
-      { 
-        key: 'benchmark.allowCoachOverride', 
-        label: 'Permitir treinador sobrescrever benchmarks', 
-        type: 'toggle',
-        description: 'Se ativo, o coach pode definir faixas de tempo manualmente'
-      },
-      { 
-        key: 'benchmark.coachOverridePriority', 
-        label: 'Prioridade quando coach define valores', 
-        type: 'select',
+      { key: 'benchmark.allowCoachOverride', label: 'Permitir treinador sobrescrever benchmarks', type: 'toggle', description: 'Se ativo, o coach pode definir faixas de tempo manualmente' },
+      { key: 'benchmark.coachOverridePriority', label: 'Prioridade quando coach define valores', type: 'select',
         options: [
           { value: '"coach_wins"', label: 'Coach tem prioridade' },
           { value: '"app_wins"', label: 'Sistema tem prioridade' },
@@ -211,12 +131,7 @@ const SECTIONS: SectionDefinition[] = [
         ],
         description: 'Como resolver conflitos entre valores do coach e do sistema'
       },
-      { 
-        key: 'benchmark.enabledOnlyForBenchmark', 
-        label: 'Tempos de referência apenas para benchmarks', 
-        type: 'toggle',
-        description: 'Se ativo, WODs comuns não exibem faixas de tempo de referência'
-      },
+      { key: 'benchmark.enabledOnlyForBenchmark', label: 'Tempos de referência apenas para benchmarks', type: 'toggle', description: 'Se ativo, WODs comuns não exibem faixas de tempo de referência' },
     ]
   },
   {
@@ -225,33 +140,25 @@ const SECTIONS: SectionDefinition[] = [
     description: 'Parâmetros para estimar duração de treinos por nível e tipo de WOD',
     icon: <TrendingUp className="w-5 h-5" />,
     fields: [
-      { 
-        key: 'estimation.enableAthleteTimeEstimate', 
-        label: 'Habilitar estimativa de tempo', 
-        type: 'toggle',
-        description: 'Se ativo, o sistema calcula tempo estimado para cada atleta'
-      },
-      { 
-        key: 'estimation.defaultSessionCapMinutes', 
-        label: 'Duração máxima de sessão', 
-        type: 'number',
-        suffix: 'min',
-        min: 30,
-        max: 180,
-        description: 'Limite máximo para estimativa de tempo de treino'
-      },
-      { 
-        key: 'estimation.minEstimateSeconds', 
-        label: 'Estimativa mínima', 
-        type: 'time',
-        description: 'Menor tempo possível de estimativa'
-      },
-      { 
-        key: 'estimation.maxEstimateSeconds', 
-        label: 'Estimativa máxima', 
-        type: 'time',
-        description: 'Maior tempo possível de estimativa'
-      },
+      { key: 'estimation.enableAthleteTimeEstimate', label: 'Habilitar estimativa de tempo', type: 'toggle', description: 'Se ativo, o sistema calcula tempo estimado para cada atleta' },
+      { key: 'estimation.defaultSessionCapMinutes', label: 'Duração máxima de sessão', type: 'number', suffix: 'min', min: 30, max: 180, description: 'Limite máximo para estimativa de tempo de treino' },
+      { key: 'estimation.minEstimateSeconds', label: 'Estimativa mínima', type: 'time', description: 'Menor tempo possível de estimativa' },
+      { key: 'estimation.maxEstimateSeconds', label: 'Estimativa máxima', type: 'time', description: 'Maior tempo possível de estimativa' },
+    ]
+  },
+  {
+    id: 'progression',
+    title: 'Progressão & Evolução',
+    description: 'Thresholds de nível, validação de consistência e decaimento temporal',
+    icon: <TrendingUp className="w-5 h-5" />,
+    fields: [
+      { key: 'progression.levelThresholds', label: 'Score mín. OPEN', type: 'number', nestedKey: 'open' as any, suffix: 'pts', min: 0, max: 100, description: 'Score mínimo para nível OPEN' },
+      { key: 'progression.levelThresholds', label: 'Score mín. PRO', type: 'number', nestedKey: 'pro' as any, suffix: 'pts', min: 0, max: 100, description: 'Score mínimo para nível PRO' },
+      { key: 'progression.levelThresholds', label: 'Score mín. ELITE', type: 'number', nestedKey: 'elite' as any, suffix: 'pts', min: 0, max: 100, description: 'Score mínimo para nível ELITE' },
+      { key: 'progression.temporalDecay', label: 'Meia-vida (dias)', type: 'number', nestedKey: 'halfLifeDays' as any, suffix: 'dias', min: 7, max: 365, description: 'Dias para benchmark antigo perder metade do peso' },
+      { key: 'progression.temporalDecay', label: 'Peso mínimo', type: 'number', nestedKey: 'minWeight' as any, suffix: 'x', min: 0, max: 1, description: 'Menor peso possível para benchmarks antigos' },
+      { key: 'progression.consistencyValidation', label: 'Semanas Strong mín.', type: 'number', nestedKey: 'minStrongWeeks' as any, suffix: 'sem', min: 1, max: 12, description: 'Semanas mínimas com performance Strong+ para subir' },
+      { key: 'progression.consistencyValidation', label: 'Ratio Strong mín.', type: 'number', nestedKey: 'minStrongRatio' as any, suffix: 'x', min: 0, max: 1, description: 'Proporção mínima de benchmarks Strong+ (0-1)' },
     ]
   },
 ];
