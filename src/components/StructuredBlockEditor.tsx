@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import type { WorkoutBlock } from "@/types/outlier";
+import { ExerciseSelector } from "@/components/ExerciseSelector";
 
 // ============================================
 // TIPOS E CONSTANTES
@@ -382,6 +383,12 @@ interface StructuredBlockEditorProps {
   isExpanded?: boolean;
   onToggleExpand?: () => void;
   movementHistory?: string[]; // Histórico de movimentos do coach
+  /** Exercise library data for physics-based selector */
+  exerciseLibrary?: {
+    exercises: import('@/hooks/useExerciseLibrary').ExerciseOption[];
+    patterns: import('@/utils/energyCalculator').MovementPattern[];
+    createCustomExercise?: (name: string, patternId: string) => Promise<any>;
+  };
 }
 
 export function StructuredBlockEditor({
@@ -392,6 +399,7 @@ export function StructuredBlockEditor({
   isExpanded = true,
   onToggleExpand,
   movementHistory = [],
+  exerciseLibrary,
 }: StructuredBlockEditorProps) {
   const [showPasteInput, setShowPasteInput] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -806,61 +814,77 @@ export function StructuredBlockEditor({
                         </SelectContent>
                       </Select>
 
-                      {/* Movimento com autocomplete */}
-                      <Popover
-                        open={activeMovementField === item.id}
-                        onOpenChange={(open) => {
-                          setActiveMovementField(open ? item.id : null);
-                          if (open) setMovementSearch(item.movement);
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Input
-                            value={item.movement}
-                            onChange={(e) => {
-                              updateItem(item.id, { movement: e.target.value });
-                              setMovementSearch(e.target.value);
-                              if (!activeMovementField) setActiveMovementField(item.id);
-                            }}
-                            onFocus={() => {
-                              setActiveMovementField(item.id);
-                              setMovementSearch(item.movement);
-                            }}
-                            placeholder="Movimento"
-                            className="flex-1"
-                          />
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-64 p-0 bg-popover border border-border"
-                          align="start"
-                          onOpenAutoFocus={(e) => e.preventDefault()}
+                      {/* Movimento com autocomplete (physics-based ou legacy) */}
+                      {exerciseLibrary && exerciseLibrary.exercises.length > 0 ? (
+                        <ExerciseSelector
+                          value={item.movement}
+                          onChange={(name) => updateItem(item.id, { movement: name })}
+                          exercises={exerciseLibrary.exercises}
+                          patterns={exerciseLibrary.patterns}
+                          onCreateCustom={exerciseLibrary.createCustomExercise
+                            ? async (name, patternId) => {
+                                await exerciseLibrary.createCustomExercise!(name, patternId);
+                              }
+                            : undefined
+                          }
+                          className="flex-1"
+                        />
+                      ) : (
+                        <Popover
+                          open={activeMovementField === item.id}
+                          onOpenChange={(open) => {
+                            setActiveMovementField(open ? item.id : null);
+                            if (open) setMovementSearch(item.movement);
+                          }}
                         >
-                          <Command>
-                            <CommandInput
-                              placeholder="Buscar movimento..."
-                              value={movementSearch}
-                              onValueChange={setMovementSearch}
+                          <PopoverTrigger asChild>
+                            <Input
+                              value={item.movement}
+                              onChange={(e) => {
+                                updateItem(item.id, { movement: e.target.value });
+                                setMovementSearch(e.target.value);
+                                if (!activeMovementField) setActiveMovementField(item.id);
+                              }}
+                              onFocus={() => {
+                                setActiveMovementField(item.id);
+                                setMovementSearch(item.movement);
+                              }}
+                              placeholder="Movimento"
+                              className="flex-1"
                             />
-                            <CommandList>
-                              <CommandEmpty>Nenhum resultado</CommandEmpty>
-                              <CommandGroup>
-                                {movementSuggestions.map((movement) => (
-                                  <CommandItem
-                                    key={movement}
-                                    value={movement}
-                                    onSelect={() => {
-                                      updateItem(item.id, { movement });
-                                      setActiveMovementField(null);
-                                    }}
-                                  >
-                                    {movement}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-64 p-0 bg-popover border border-border"
+                            align="start"
+                            onOpenAutoFocus={(e) => e.preventDefault()}
+                          >
+                            <Command>
+                              <CommandInput
+                                placeholder="Buscar movimento..."
+                                value={movementSearch}
+                                onValueChange={setMovementSearch}
+                              />
+                              <CommandList>
+                                <CommandEmpty>Nenhum resultado</CommandEmpty>
+                                <CommandGroup>
+                                  {movementSuggestions.map((movement) => (
+                                    <CommandItem
+                                      key={movement}
+                                      value={movement}
+                                      onSelect={() => {
+                                        updateItem(item.id, { movement });
+                                        setActiveMovementField(null);
+                                      }}
+                                    >
+                                      {movement}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      )}
 
                       {/* Observação */}
                       <Input

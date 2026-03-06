@@ -682,6 +682,38 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_exercises: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          movement_pattern_id: string
+          name: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          movement_pattern_id: string
+          name: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          movement_pattern_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_exercises_movement_pattern_id_fkey"
+            columns: ["movement_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "movement_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discovered_events: {
         Row: {
           admin_notes: string | null
@@ -961,6 +993,35 @@ export type Database = {
           },
         ]
       }
+      global_exercises: {
+        Row: {
+          created_at: string
+          id: string
+          movement_pattern_id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movement_pattern_id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movement_pattern_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_exercises_movement_pattern_id_fkey"
+            columns: ["movement_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "movement_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hyrox_metric_scores: {
         Row: {
           created_at: string
@@ -1039,6 +1100,42 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           version?: string
+        }
+        Relationships: []
+      }
+      movement_patterns: {
+        Row: {
+          created_at: string
+          default_distance_meters: number
+          formula_type: Database["public"]["Enums"]["formula_type"]
+          friction_coefficient: number | null
+          human_efficiency_rate: number
+          id: string
+          moved_mass_percentage: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_distance_meters?: number
+          formula_type?: Database["public"]["Enums"]["formula_type"]
+          friction_coefficient?: number | null
+          human_efficiency_rate?: number
+          id?: string
+          moved_mass_percentage?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_distance_meters?: number
+          formula_type?: Database["public"]["Enums"]["formula_type"]
+          friction_coefficient?: number | null
+          human_efficiency_rate?: number
+          id?: string
+          moved_mass_percentage?: number
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1697,6 +1794,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "coach" | "superadmin"
+      formula_type: "vertical_work" | "horizontal_friction" | "metabolic"
       workout_status: "draft" | "published" | "archived"
     }
     CompositeTypes: {
@@ -1826,6 +1924,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "coach", "superadmin"],
+      formula_type: ["vertical_work", "horizontal_friction", "metabolic"],
       workout_status: ["draft", "published", "archived"],
     },
   },
