@@ -588,7 +588,9 @@ export function KnowledgeBaseAdmin() {
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground italic">
+                              Só biblioteca
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
@@ -768,9 +770,10 @@ export function KnowledgeBaseAdmin() {
 
               {/* Criteria tags */}
               <div className="space-y-2">
-                <Label>Critérios de Análise</Label>
+                <Label>Critérios de Análise (opcional)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Selecione em quais análises do app este artigo deve ser utilizado.
+                  Selecione em quais análises do app este artigo deve ser usado como referência pela IA.
+                  Se nenhum critério for selecionado, o artigo ficará apenas na biblioteca.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                   {ANALYSIS_CRITERIA.map((c) => (
