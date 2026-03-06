@@ -1225,14 +1225,20 @@ export function DiagnosticRadarBlock({
   );
   
   const eliteTarget = useMemo(() => {
-    // Prefer admin-defined Meta ELITE from level_time_thresholds
+    // Determine next level based on current status
+    // OPEN athletes → meta PRO, PRO athletes → meta ELITE, ELITE → meta ELITE
+    const isOpen = status === 'open';
+    
+    if (isOpen && topPercentData.metaProSeconds) {
+      return { targetSeconds: topPercentData.metaProSeconds, targetLabel: 'PRO' };
+    }
     if (topPercentData.metaEliteSeconds) {
       return { targetSeconds: topPercentData.metaEliteSeconds, targetLabel: 'ELITE' };
     }
     if (adminTarget) return adminTarget;
     const gender = athleteConfig?.sexo || 'masculino';
     return getEliteTargetSeconds(status, gender);
-  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds]);
+  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds, topPercentData.metaProSeconds]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
