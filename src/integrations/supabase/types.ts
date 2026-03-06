@@ -1113,6 +1113,7 @@ export type Database = {
         Row: {
           created_at: string
           default_distance_meters: number
+          default_seconds_per_rep: number | null
           formula_type: Database["public"]["Enums"]["formula_type"]
           friction_coefficient: number | null
           human_efficiency_rate: number
@@ -1124,6 +1125,7 @@ export type Database = {
         Insert: {
           created_at?: string
           default_distance_meters?: number
+          default_seconds_per_rep?: number | null
           formula_type?: Database["public"]["Enums"]["formula_type"]
           friction_coefficient?: number | null
           human_efficiency_rate?: number
@@ -1135,6 +1137,7 @@ export type Database = {
         Update: {
           created_at?: string
           default_distance_meters?: number
+          default_seconds_per_rep?: number | null
           formula_type?: Database["public"]["Enums"]["formula_type"]
           friction_coefficient?: number | null
           human_efficiency_rate?: number
