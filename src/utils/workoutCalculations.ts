@@ -1,5 +1,5 @@
 import type { AthleteConfig, WorkoutBlock, AthleteLevel } from '@/types/outlier';
-import { getEffectiveDuration, getEffectivePSE } from '@/utils/benchmarkVariants';
+import { getEffectiveDuration } from '@/utils/benchmarkVariants';
 import { 
   sumBlocksDurationSec, 
   getBlockEffectiveDurationSec,
@@ -11,52 +11,19 @@ import {
   getLevelSpeedKmh,
   getNumericParam 
 } from '@/config/outlierParams';
-import { 
-  calculateBlockCaloriesHyrox, 
-  HYROX_FACTORS,
-  type CalorieCalculationResult 
-} from '@/utils/hyroxCalorieEngine';
 
 // ============================================
-// MOTOR DETERMINÍSTICO HYROX (v2)
+// MOTOR DE CALORIAS: PHYSICS ENGINE
 // ============================================
-// REGRA INVIOLÁVEL:
-// - Tabela de fatores é a ÚNICA fonte de verdade
-// - Removido: ageFactor, sexFactor, weightFactor, PSE principal
-// - Corrida: kcal = peso_kg × distância_km × fator
-// - Estações: kcal = peso_kg × time_min × fator
+// Toda estimativa de Kcal agora usa o Motor Físico
+// (movement_patterns + energyCalculator.ts).
+// Este arquivo mantém APENAS lógica de tempo.
 // ============================================
-
-/**
- * Extrai distância em km do conteúdo do bloco
- */
-function extractDistanceKm(content: string): number | null {
-  const lower = content.toLowerCase();
-  
-  // Padrão: Xkm, X km, X quilômetros
-  const kmMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*(km|quilômetros?|quilometros?)/);
-  if (kmMatch) {
-    return parseFloat(kmMatch[1].replace(',', '.'));
-  }
-  
-  // Padrão: Xm (metros) -> converter para km
-  const mMatch = lower.match(/(\d+)\s*m(?:\s|$|,|;)/);
-  if (mMatch) {
-    const meters = parseInt(mMatch[1], 10);
-    if (meters >= 100) { // Só considera se for >= 100m
-      return meters / 1000;
-    }
-  }
-  
-  return null;
-}
 
 /**
  * Get the block's actual duration in minutes
- * This is the ONLY value used for calorie calculation
  */
 export function getBlockDuration(block: WorkoutBlock, level?: AthleteLevel): number | null {
-  // Use effective duration based on level variants
   const effectiveDuration = getEffectiveDuration(block, level);
   if (effectiveDuration && effectiveDuration > 0) {
     return effectiveDuration;
@@ -66,22 +33,8 @@ export function getBlockDuration(block: WorkoutBlock, level?: AthleteLevel): num
 
 /**
  * Get block duration in SECONDS using the SINGLE DETERMINISTIC RULE.
- * 
- * REGRA ÚNICA (delegada para getBlockEffectiveDurationSec):
- * 1. durationSec > 0 → usar durationSec
- * 2. durationMinutes > 0 → usar durationMinutes * 60
- * 3. senão → retornar 0
- * 
- * NOTA: Esta função considera levelVariants para obter durationMinutes efetivo.
- * 
- * EXPLICITAMENTE PROIBIDO:
- * - extractTimeFromContent
- * - parsing de texto
- * - defaults por tipo de bloco
- * - heurísticas baseadas em regex
  */
 export function getBlockDurationSec(block: WorkoutBlock & { durationSec?: number }, level?: AthleteLevel): number {
-  // Construir fonte de duração considerando levelVariants
   const effectiveDurationMinutes = getEffectiveDuration(block, level);
   
   const durationSource: BlockDurationSource = {
@@ -89,19 +42,16 @@ export function getBlockDurationSec(block: WorkoutBlock & { durationSec?: number
     durationMinutes: effectiveDurationMinutes,
   };
   
-  // Delegar para a regra única determinística
   return getBlockEffectiveDurationSec(durationSource);
 }
 
 /**
- * Calcula o tempo total do treino em segundos usando sumBlocksDurationSec
- * REGRA: Tempo total = soma real dos blocos
+ * Calcula o tempo total do treino em segundos
  */
 export function calculateTotalWorkoutDurationSec(
   blocks: Array<WorkoutBlock & { durationSec?: number }>,
   level?: AthleteLevel
 ): { totalSec: number; byBlockSec: Record<string, number> } {
-  // Mapear blocos para TimeBlock com durationSec calculado
   const timeBlocks: TimeBlock[] = blocks.map((block, index) => ({
     id: block.id || `block_${index}`,
     title: block.title,
@@ -112,8 +62,7 @@ export function calculateTotalWorkoutDurationSec(
 }
 
 /**
- * Get REFERENCE time (informational only, NOT for calories)
- * This shows the athlete how long the workout typically takes
+ * Get REFERENCE time (informational only)
  */
 export function getReferenceTimeForLevel(
   block: WorkoutBlock,
@@ -121,16 +70,13 @@ export function getReferenceTimeForLevel(
 ): number | null {
   const params = getActiveParams();
   
-  // If block has explicit reference times, use them
   if (block.referenceTime) {
     return Math.round(block.referenceTime[level] / 60);
   }
 
-  // Estimate from content patterns
   const baseMinutes = estimateFromContent(block);
   if (baseMinutes === null) return null;
 
-  // Usar multiplicador do config
   const multiplier = getNumericParam(
     params.estimation.levelMultipliers[level],
     1.0,
@@ -141,17 +87,13 @@ export function getReferenceTimeForLevel(
 
 /**
  * Legacy function for backward compatibility
- * Uses block duration if available, otherwise estimates
  */
 export function getEstimatedTimeForLevel(
   block: WorkoutBlock,
   level: AthleteLevel
 ): number | null {
-  // First try block duration
   const duration = getBlockDuration(block, level);
   if (duration) return duration;
-  
-  // Fall back to reference time estimation
   return getReferenceTimeForLevel(block, level);
 }
 
@@ -173,14 +115,12 @@ function estimateFromContent(block: WorkoutBlock): number | null {
   const emomMatch = content.match(/emom\s*(\d+)/i);
   if (emomMatch) return parseInt(emomMatch[1]);
 
-  // Default estimates by block type (usando config)
   const params = getActiveParams();
   const wodTypeFactor = params.estimation.wodTypeFactors[block.type as keyof typeof params.estimation.wodTypeFactors];
   if (wodTypeFactor?.baseMinutes) {
     return wodTypeFactor.baseMinutes;
   }
 
-  // Fallback por tipo de bloco
   switch (block.type) {
     case 'aquecimento': return 10;
     case 'forca': return 20;
@@ -194,99 +134,50 @@ function estimateFromContent(block: WorkoutBlock): number | null {
 }
 
 /**
- * Calcula calorias para corrida baseado em distância
- * Fórmula: peso_kg * km * HYROX_FACTORS.RUN
+ * Extrai distância em km do conteúdo do bloco
  */
-export function calculateRunningCalories(
-  weightKg: number,
-  distanceKm: number
-): number {
-  return Math.round(weightKg * distanceKm * HYROX_FACTORS.RUN);
+function extractDistanceKm(content: string): number | null {
+  const lower = content.toLowerCase();
+  
+  const kmMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*(km|quilômetros?|quilometros?)/);
+  if (kmMatch) {
+    return parseFloat(kmMatch[1].replace(',', '.'));
+  }
+  
+  const mMatch = lower.match(/(\d+)\s*m(?:\s|$|,|;)/);
+  if (mMatch) {
+    const meters = parseInt(mMatch[1], 10);
+    if (meters >= 100) {
+      return meters / 1000;
+    }
+  }
+  
+  return null;
 }
 
 /**
- * Calcula calorias para corrida estimando distância pelo tempo e velocidade do nível
- */
-export function calculateRunningCaloriesByTime(
-  weightKg: number,
-  durationMinutes: number,
-  level: AthleteLevel
-): number {
-  const speedKmh = getLevelSpeedKmh(level);
-  const estimatedKm = (durationMinutes / 60) * speedKmh;
-  return calculateRunningCalories(weightKg, estimatedKm);
-}
-
-// ============================================
-// MOTOR DETERMINÍSTICO HYROX
-// Removido: ageFactor, sexFactor, weightFactor, PSE principal, baseKcal genérico
-// Mantido: peso, distância (run), tempo e fator (tabela/arquetipo)
-// ============================================
-
-/**
- * Calculate calories using Motor Determinístico HYROX
- * 
- * FÓRMULAS:
- * - Corrida: kcal = peso_kg × distância_km × fator
- * - Estações: kcal = peso_kg × time_min × fator
- * 
- * REMOVIDO DO MOTOR ANTIGO:
- * - ageFactor, sexFactor, weightFactor como multiplicadores globais
- * - PSE do cálculo principal
- * - baseKcal genérico por modalidade
+ * @deprecated Kcal agora é calculada pelo Motor Físico (energyCalculator.ts).
+ * Esta função existe apenas para compatibilidade e retorna null.
  */
 export function calculateCalories(
-  block: WorkoutBlock,
-  athleteConfig: AthleteConfig | null,
-  level?: AthleteLevel
+  _block: WorkoutBlock,
+  _athleteConfig: AthleteConfig | null,
+  _level?: AthleteLevel
 ): number | null {
-  if (!athleteConfig) return null;
-  
-  const effectiveLevel = level || 'open';
-  const weight = athleteConfig.peso;
-  if (!weight) return null;
-
-  // Obter duração do bloco em segundos
-  const durationMin = getBlockDuration(block, effectiveLevel);
-  const durationSec = durationMin ? durationMin * 60 : 0;
-  
-  if (durationSec <= 0 && block.type !== 'corrida') {
-    return null;
-  }
-
-  // Usar Motor Determinístico HYROX
-  const blockWithDuration = { ...block, durationSec };
-  const result: CalorieCalculationResult = calculateBlockCaloriesHyrox(
-    blockWithDuration,
-    weight,
-    effectiveLevel
-  );
-  
-  if (result.resolution === 'error') {
-    console.warn('[calculateCalories] Motor HYROX retornou erro:', result.error);
-    return null;
-  }
-  
-  return result.kcal;
+  // Calorie calculation has been moved to the Physics Engine (energyCalculator.ts)
+  // This function is kept for backward compatibility
+  return null;
 }
 
 /**
- * Calculate total workout calories
- * Usa calculateTotalWorkoutDurationSec para garantir consistência
+ * @deprecated Use Physics Engine instead.
  */
 export function calculateTotalWorkoutCalories(
-  blocks: WorkoutBlock[],
-  athleteConfig: AthleteConfig | null,
-  level?: AthleteLevel
+  _blocks: WorkoutBlock[],
+  _athleteConfig: AthleteConfig | null,
+  _level?: AthleteLevel
 ): number {
-  if (!athleteConfig || !athleteConfig.peso) return 0;
-
-  let total = 0;
-  for (const block of blocks) {
-    const calories = calculateCalories(block, athleteConfig, level);
-    if (calories) total += calories;
-  }
-  return total;
+  return 0;
 }
 
 /**

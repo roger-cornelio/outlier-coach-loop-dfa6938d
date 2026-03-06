@@ -10,10 +10,10 @@ import {
   type BlockDurationSource 
 } from '../timeCalc';
 import { 
-  calculateRunningCalories, 
   calculateTotalWorkoutDurationSec,
   getBlockDurationSec 
 } from '../workoutCalculations';
+import { calculateExerciseKcal, type MovementPattern } from '../energyCalculator';
 import type { WorkoutBlock } from '@/types/outlier';
 
 // ============================================
@@ -185,29 +185,36 @@ describe('resolveDisplayedTotalSec', () => {
   });
 });
 
-describe('calculateRunningCalories', () => {
-  it('deve calcular ~400kcal para 80kg correndo 5km (±15%)', () => {
-    const weight = 80; // kg
-    const distance = 5; // km
-    
-    const calories = calculateRunningCalories(weight, distance);
-    
-    // Esperado: 80 * 5 * 1.0 = 400 kcal
-    // Com tolerância de ±15%: 340 a 460 kcal
-    expect(calories).toBeGreaterThanOrEqual(340);
-    expect(calories).toBeLessThanOrEqual(460);
-    expect(calories).toBe(400); // valor exato esperado
+describe('Physics Engine - Running Calories (ACSM)', () => {
+  const distanceCardioPattern: MovementPattern = {
+    id: 'test-run',
+    name: 'Distance Cardio',
+    formula_type: 'metabolic',
+    moved_mass_percentage: 0,
+    default_distance_meters: 1.0,
+    friction_coefficient: null,
+    human_efficiency_rate: 0.20,
+  };
+
+  it('deve calcular ~412kcal para 80kg correndo 5km (fórmula ACSM: 1.03 × km × kg)', () => {
+    const result = calculateExerciseKcal({
+      userWeightKg: 80,
+      repsOrDistance: 5000, // 5km in meters
+      movementPattern: distanceCardioPattern,
+    });
+    // 1.03 * 5 * 80 = 412
+    expect(result.kcal).toBe(412);
   });
 
   it('deve escalar proporcionalmente com peso e distância', () => {
-    // 70kg, 10km = 700 kcal
-    expect(calculateRunningCalories(70, 10)).toBe(700);
-    
-    // 60kg, 3km = 180 kcal
-    expect(calculateRunningCalories(60, 3)).toBe(180);
-    
-    // 100kg, 1km = 100 kcal
-    expect(calculateRunningCalories(100, 1)).toBe(100);
+    const r1 = calculateExerciseKcal({ userWeightKg: 70, repsOrDistance: 10000, movementPattern: distanceCardioPattern });
+    expect(r1.kcal).toBe(Math.floor(1.03 * 10 * 70)); // 721
+
+    const r2 = calculateExerciseKcal({ userWeightKg: 60, repsOrDistance: 3000, movementPattern: distanceCardioPattern });
+    expect(r2.kcal).toBe(Math.floor(1.03 * 3 * 60)); // 185
+
+    const r3 = calculateExerciseKcal({ userWeightKg: 100, repsOrDistance: 1000, movementPattern: distanceCardioPattern });
+    expect(r3.kcal).toBe(Math.floor(1.03 * 1 * 100)); // 103
   });
 });
 

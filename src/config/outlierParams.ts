@@ -1,16 +1,18 @@
 /**
  * OUTLIER PARAMS - SINGLE SOURCE OF TRUTH
  * 
- * Todos os parâmetros numéricos e regras de ajuste do sistema
- * estão centralizados neste arquivo.
+ * Parâmetros de REGRAS DO JOGO e GAMIFICAÇÃO.
  * 
- * REGRAS:
- * - Nenhuma função do app deve ter números hardcoded
- * - Todas as funções devem importar e usar getActiveParams()
- * - Versionamento permite atualizar sem quebrar histórico
+ * DOMÍNIOS:
+ * - Benchmark: Scoring buckets, faixas de tempo por nível
+ * - Estimation: Multiplicadores de nível, fatores por tipo de WOD, velocidade por nível
+ * - Progression: Thresholds de evolução, temporal decay, benchmark type weights
+ * - Labels: Níveis, tipos de WOD, formatos
  * 
- * NOTA: Cálculo de Kcal agora usa motor de física (movement_patterns table).
- * Os METs aqui servem APENAS como fallback para estimativa de tempo por bloco.
+ * NÃO INCLUI:
+ * - Calorias/Kcal → Motor Físico (movement_patterns + energyCalculator.ts)
+ * - METs → Depreciado (substituído pelo motor de física biomecânica)
+ * - Adaptação → Motor de Adaptação Obrigatória (mandatoryAdaptationEngine.ts)
  */
 
 import type { AthleteLevel, WodType } from '@/types/outlier';
@@ -31,11 +33,11 @@ export interface LevelTimeRangesConfig {
 }
 
 export interface ScoringBucketConfig {
-  elite: number;    // Score para ELITE
-  strong: number;   // Score para STRONG
-  ok: number;       // Score para OK
-  tough: number;    // Score para TOUGH
-  dnf: number;      // Score para DNF
+  elite: number;
+  strong: number;
+  ok: number;
+  tough: number;
+  dnf: number;
 }
 
 export interface BenchmarkConfig {
@@ -76,36 +78,10 @@ export interface EstimationConfig {
   };
   minEstimateSeconds: number;
   maxEstimateSeconds: number;
-}
-
-/**
- * Configuração simplificada de METs por modalidade de bloco.
- * Usado APENAS para estimativa de tempo em benchmarkTimeGenerator.
- * Cálculo de Kcal real usa o motor de física (movement_patterns).
- */
-export interface BlockMetConfig {
-  baseKcalPerMin: number;
-  description?: string;
-}
-
-export interface ExerciseMetsConfig {
-  metBaseByModality: {
-    aquecimento: BlockMetConfig;
-    conditioning: BlockMetConfig;
-    forca: BlockMetConfig;
-    especifico: BlockMetConfig;
-    core: BlockMetConfig;
-    corrida: BlockMetConfig;
-    notas: BlockMetConfig;
-  };
-  /** Fator de corrida: kcal = peso_kg * km * fator (usado em workoutCalculations) */
-  runningKcalFactor: number;
-  /** Velocidade por nível para estimativa de distância */
+  /** Velocidade por nível para estimativa de distância de corrida */
   levelSpeedKmh: {
     [K in AthleteLevel]: number;
   };
-  /** Fallback quando modalidade não é identificada */
-  fallbackKcalPerMin: number;
 }
 
 export interface LabelsConfig {
@@ -142,20 +118,19 @@ export interface OutlierParamsConfig {
   
   benchmark: BenchmarkConfig;
   estimation: EstimationConfig;
-  exerciseMets: ExerciseMetsConfig;
   labels: LabelsConfig;
   progression: ProgressionConfig;
 }
 
 // ============================================
-// CONFIGURAÇÃO PADRÃO v2
+// CONFIGURAÇÃO PADRÃO v3
 // ============================================
 
 export const DEFAULT_PARAMS: OutlierParamsConfig = {
-  version: 'v2',
+  version: 'v3',
   isActive: true,
   updatedAt: new Date().toISOString(),
-  notes: 'v2 — Removido adaptation (usa motor obrigatório), removido METs demográficos (usa motor de física)',
+  notes: 'v3 — Removido exerciseMets (Kcal agora usa Motor Físico). Parâmetros focados em regras do jogo.',
 
   // A) BENCHMARK
   benchmark: {
@@ -208,30 +183,14 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     },
     minEstimateSeconds: 300,
     maxEstimateSeconds: 7200,
-  },
-
-  // C) EXERCISE METS (fallback para estimativa de tempo por tipo de bloco)
-  // Kcal real agora é calculada pelo motor de física (movement_patterns + energyCalculator)
-  exerciseMets: {
-    metBaseByModality: {
-      aquecimento: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
-      conditioning: { baseKcalPerMin: 13.0, description: '~780 kcal/h (MET ~10.5)' },
-      forca: { baseKcalPerMin: 9.0, description: '~540 kcal/h (MET ~6.5)' },
-      especifico: { baseKcalPerMin: 15.0, description: '~900 kcal/h (MET ~12.0 HYROX)' },
-      core: { baseKcalPerMin: 6.0, description: '~360 kcal/h (MET ~5.0)' },
-      corrida: { baseKcalPerMin: 12.0, description: '~720 kcal/h (MET ~10.0)' },
-      notas: { baseKcalPerMin: 0, description: 'Sem gasto calórico' },
-    },
-    runningKcalFactor: 1.0,
     levelSpeedKmh: {
       open: 9.0,
       pro: 12.0,
       elite: 14.0,
     },
-    fallbackKcalPerMin: 10.0,
   },
 
-  // D) LABELS E NÍVEIS
+  // C) LABELS E NÍVEIS
   labels: {
     athleteLevels: ['open', 'pro', 'elite'],
     wodTypes: ['engine', 'strength', 'skill', 'mixed', 'hyrox', 'benchmark'],
@@ -240,7 +199,7 @@ export const DEFAULT_PARAMS: OutlierParamsConfig = {
     performanceBuckets: ['ELITE', 'STRONG', 'OK', 'TOUGH', 'DNF'],
   },
 
-  // E) PROGRESSION (sistema de evolução)
+  // D) PROGRESSION (sistema de evolução)
   progression: {
     levelThresholds: {
       open: 40,
@@ -290,19 +249,15 @@ export function loadParams(): OutlierParamsConfig {
 
 function mergeWithDefaults(saved: Partial<OutlierParamsConfig>): OutlierParamsConfig {
   // Strip removed sections from old saved data
-  const { adaptation, ...cleanSaved } = saved as any;
+  const { adaptation, exerciseMets, ...cleanSaved } = saved as any;
 
-  // Strip removed exerciseMets sub-keys
-  if (cleanSaved.exerciseMets) {
-    const { intensityMultipliers, weightFactorRules, ageFactorRules, sexFactorRules, ...cleanMets } = cleanSaved.exerciseMets;
-    
-    // Strip removed modality keys from metBaseByModality
-    if (cleanMets.metBaseByModality) {
-      const { running, rowing, bike, skierg, weightlifting, gymnastics, sled, ...cleanModalities } = cleanMets.metBaseByModality;
-      cleanMets.metBaseByModality = { ...DEFAULT_PARAMS.exerciseMets.metBaseByModality, ...cleanModalities };
-    }
-    
-    cleanSaved.exerciseMets = { ...DEFAULT_PARAMS.exerciseMets, ...cleanMets };
+  // Migrate levelSpeedKmh from old exerciseMets into estimation if needed
+  if (exerciseMets?.levelSpeedKmh && !cleanSaved.estimation?.levelSpeedKmh) {
+    cleanSaved.estimation = {
+      ...DEFAULT_PARAMS.estimation,
+      ...cleanSaved.estimation,
+      levelSpeedKmh: exerciseMets.levelSpeedKmh,
+    };
   }
 
   return {
@@ -310,7 +265,6 @@ function mergeWithDefaults(saved: Partial<OutlierParamsConfig>): OutlierParamsCo
     ...cleanSaved,
     benchmark: { ...DEFAULT_PARAMS.benchmark, ...cleanSaved.benchmark },
     estimation: { ...DEFAULT_PARAMS.estimation, ...cleanSaved.estimation },
-    exerciseMets: cleanSaved.exerciseMets || DEFAULT_PARAMS.exerciseMets,
     labels: { ...DEFAULT_PARAMS.labels, ...cleanSaved.labels },
     progression: { ...DEFAULT_PARAMS.progression, ...cleanSaved.progression },
   };
@@ -488,7 +442,7 @@ export function getBucketScore(bucket: string): number {
 export function getLevelSpeedKmh(level: AthleteLevel): number {
   const params = getActiveParams();
   return getNumericParam(
-    params.exerciseMets.levelSpeedKmh[level],
+    params.estimation.levelSpeedKmh[level],
     10.0,
     `levelSpeed.${level}`
   );
@@ -517,9 +471,6 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
   }
   if (!params.estimation) {
     errors.push('Seção "estimation" é obrigatória');
-  }
-  if (!params.exerciseMets) {
-    errors.push('Seção "exerciseMets" é obrigatória');
   }
   if (!params.labels) {
     errors.push('Seção "labels" é obrigatória');
@@ -596,22 +547,6 @@ export function validateParams(params: Partial<OutlierParamsConfig>): Validation
       if (e.minEstimateSeconds >= e.maxEstimateSeconds) {
         errors.push('minEstimateSeconds deve ser menor que maxEstimateSeconds');
       }
-    }
-  }
-
-  if (params.exerciseMets) {
-    const m = params.exerciseMets;
-    
-    if (m.metBaseByModality) {
-      for (const [mod, met] of Object.entries(m.metBaseByModality)) {
-        if (met && (typeof met.baseKcalPerMin !== 'number' || met.baseKcalPerMin < 0)) {
-          errors.push(`mets.${mod}.baseKcalPerMin deve ser número >= 0`);
-        }
-      }
-    }
-    
-    if (m.fallbackKcalPerMin !== undefined && m.fallbackKcalPerMin < 0) {
-      errors.push('fallbackKcalPerMin deve ser >= 0');
     }
   }
 
