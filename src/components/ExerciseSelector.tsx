@@ -87,6 +87,12 @@ const PATTERN_VISUALS: Record<string, PatternConfig> = {
     description: 'Clean, Snatch, C&J',
     color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   },
+  'Total Body Plyometric': {
+    label: 'Pliométrico',
+    icon: <ArrowUp className="w-4 h-4" />,
+    description: 'Burpee, Broad Jump, Box Jump',
+    color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+  },
 };
 
 // ============================================
