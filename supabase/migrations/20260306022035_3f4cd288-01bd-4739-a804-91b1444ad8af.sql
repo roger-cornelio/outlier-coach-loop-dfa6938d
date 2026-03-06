@@ -1,0 +1,1 @@
+ALTER TABLE public.movement_patterns ADD COLUMN default_seconds_per_rep numeric NULL;
