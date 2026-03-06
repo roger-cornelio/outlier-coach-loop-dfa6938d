@@ -1,28 +1,32 @@
 
 
-## Plano: Adicionar campo "Sexo" no formulário de cadastro
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
 ### Problema
-O cálculo de percentis HYROX exige o gênero do atleta (`sexo`). Atualmente, esse dado só é coletado nas configurações do perfil, e muitos atletas não preenchem antes de importar uma prova --- resultando em scores não calculados silenciosamente.
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
 ### Solução
-Adicionar um campo obrigatório de seleção de sexo ("Masculino" / "Feminino") diretamente no formulário de signup (`src/pages/Auth.tsx`). O valor será salvo no `raw_user_meta_data` do signup e persistido no perfil via trigger `handle_new_user`.
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
 ### Alterações
 
-#### 1. Atualizar trigger `handle_new_user` (migração SQL)
-- Extrair `sexo` do `raw_user_meta_data` e gravar na coluna `sexo` da tabela `profiles` no momento da criação do perfil.
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-#### 2. Modificar `src/pages/Auth.tsx`
-- Adicionar state `sexo` (`'masculino' | 'feminino' | ''`).
-- Adicionar dois botões de seleção (Masculino / Feminino) no formulário de signup, abaixo do campo "Nome".
-- Atualizar `signupSchema` para incluir validação de `sexo`.
-- Passar `sexo` no `options.data` do `supabase.auth.signUp()`.
-- Exibir erro de validação se não selecionado.
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-#### 3. Atualizar `src/components/WelcomeScreen.tsx`
-- Na chamada `saveCoachStyle('PULSE')`, o sexo já estará no banco (veio do signup), então o cálculo de percentis funcionará automaticamente na importação de prova.
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-### Resultado
-Todo atleta novo terá `sexo` definido desde o primeiro momento, eliminando o bloqueio silencioso no cálculo de percentis HYROX.
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
