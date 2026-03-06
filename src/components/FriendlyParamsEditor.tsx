@@ -24,11 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Clock, 
   Target, 
   Settings2, 
   TrendingUp, 
-  Zap, 
   Percent,
   ChevronDown,
   ChevronRight,
@@ -95,58 +93,9 @@ interface SectionDefinition {
 
 const SECTIONS: SectionDefinition[] = [
   {
-    id: 'benchmark-times',
-    title: 'Faixas de Tempo por Nível',
-    description: 'Tempos de referência para classificação de desempenho em benchmarks (OPEN / PRO / ELITE)',
-    icon: <Clock className="w-5 h-5" />,
-    fields: [
-      // OPEN
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.open', 
-        label: 'OPEN — Tempo mínimo', 
-        type: 'time', 
-        nestedKey: 'min',
-        description: 'Tempo abaixo do qual o atleta é considerado forte neste nível'
-      },
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.open', 
-        label: 'OPEN — Tempo máximo', 
-        type: 'time', 
-        nestedKey: 'max',
-        description: 'Tempo acima do qual o atleta teve dificuldade'
-      },
-      // PRO
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.pro', 
-        label: 'PRO — Tempo mínimo', 
-        type: 'time', 
-        nestedKey: 'min'
-      },
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.pro', 
-        label: 'PRO — Tempo máximo', 
-        type: 'time', 
-        nestedKey: 'max'
-      },
-      // ELITE
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.elite', 
-        label: 'ELITE — Tempo mínimo', 
-        type: 'time', 
-        nestedKey: 'min'
-      },
-      { 
-        key: 'benchmark.defaultTimeRangesByLevel.elite', 
-        label: 'ELITE — Tempo máximo', 
-        type: 'time', 
-        nestedKey: 'max'
-      },
-    ]
-  },
-  {
     id: 'scoring',
     title: 'Classificação de Performance',
-    description: 'Pontuações atribuídas a cada faixa de desempenho',
+    description: 'Pontuações atribuídas a cada faixa de desempenho (scoring buckets)',
     icon: <Target className="w-5 h-5" />,
     fields: [
       { 
@@ -242,7 +191,7 @@ const SECTIONS: SectionDefinition[] = [
   {
     id: 'rules',
     title: 'Regras de Prioridade',
-    description: 'Configurações de comportamento do sistema',
+    description: 'Configurações de comportamento do sistema de benchmarks',
     icon: <Settings2 className="w-5 h-5" />,
     fields: [
       { 
@@ -273,7 +222,7 @@ const SECTIONS: SectionDefinition[] = [
   {
     id: 'estimation',
     title: 'Estimativas de Tempo',
-    description: 'Parâmetros para estimar duração de treinos',
+    description: 'Parâmetros para estimar duração de treinos por nível e tipo de WOD',
     icon: <TrendingUp className="w-5 h-5" />,
     fields: [
       { 
@@ -304,13 +253,6 @@ const SECTIONS: SectionDefinition[] = [
         description: 'Maior tempo possível de estimativa'
       },
     ]
-  },
-  {
-    id: 'energy-info',
-    title: 'Gasto Calórico',
-    description: 'O cálculo de Kcal é gerido pelo Motor Físico (aba dedicada)',
-    icon: <Zap className="w-5 h-5" />,
-    fields: []
   },
 ];
 
@@ -605,19 +547,23 @@ export function FriendlyParamsEditor() {
 
   return (
     <div className="space-y-6">
-      {/* Percentile Warning Banner */}
+      {/* Scope clarification banner */}
       <div className="p-4 rounded-lg bg-sky-500/10 border border-sky-500/20">
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 text-sky-500 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-sky-500">
-              Percentis NÃO são configurados aqui
+              Regras do Jogo &amp; Gamificação
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Percentis fazem parte de um modelo estatístico versionado separado.
-              Para calibrar percentis, acesse a seção{' '}
-              <span className="font-medium text-foreground">"Calibração de Percentis (v1)"</span>.
+              Esta seção gerencia <strong>scoring</strong>, <strong>estimativas de tempo</strong> e <strong>regras de prioridade</strong>.
+              Outros domínios têm abas dedicadas:
             </p>
+            <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside space-y-0.5">
+              <li><strong>Motor Físico</strong> → Calorias e constantes biomecânicas</li>
+              <li><strong>Jornada</strong> → Progressão de nível e regras de status</li>
+              <li><strong>Classificação</strong> → Benchmarks HYROX e fatores de divisão</li>
+            </ul>
           </div>
         </div>
       </div>
