@@ -47,23 +47,25 @@ serve(async (req) => {
 
     // Use Gemini to extract article metadata
     const prompt = `You are an expert at analyzing scientific articles and sports science documents.
+IMPORTANT: ALL text output (title, key_takeaways, full_summary) MUST be translated to Brazilian Portuguese (pt-BR), regardless of the original language of the document.
 
 Analyze this document and extract the following information in JSON format:
 {
-  "title": "The article title",
-  "author_or_source": "Author names or source publication",
+  "title": "O título do artigo traduzido para português",
+  "author_or_source": "Author names or source publication (keep original names)",
   "category": "One of: Biomechanics, Pacing Strategy, Concurrent Training, Nutrition, Transition/Fatigue, General",
   "target_station": "One of: Running, SkiErg, Sled Push, Sled Pull, Burpee Broad Jump, Rowing, Farmers Carry, Sandbag Lunges, Wall Balls, General",
-  "key_takeaways": "Bullet points summarizing main findings (use • for bullets)",
-  "full_summary": "Detailed summary of the article content",
+  "key_takeaways": "Pontos-chave resumindo as principais descobertas EM PORTUGUÊS (use • para bullets)",
+  "full_summary": "Resumo detalhado do conteúdo do artigo EM PORTUGUÊS",
   "publication_year": 2024
 }
 
 Rules:
+- TRANSLATE everything to Portuguese (pt-BR), except author names and category/station enum values.
 - If the document is about HYROX specifically, pick the most relevant station. If it covers multiple or general fitness, use "General".
 - For category, pick the best match. If unsure, use "General".
-- key_takeaways should be concise bullet points (3-8 bullets).
-- full_summary should be a comprehensive paragraph or two.
+- key_takeaways should be concise bullet points (3-8 bullets) IN PORTUGUESE.
+- full_summary should be a comprehensive paragraph or two IN PORTUGUESE.
 - publication_year should be an integer. If not found, use null.
 - Return ONLY valid JSON, no markdown fences.`;
 
