@@ -93,6 +93,43 @@ const PATTERN_VISUALS: Record<string, PatternConfig> = {
     description: 'Burpee, Broad Jump, Box Jump',
     color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
   },
+  // Canonical names (new seed)
+  'Squat/Vertical Push': {
+    label: 'Squat',
+    icon: <Dumbbell className="w-4 h-4" />,
+    description: 'Wall Balls, Front Squats, Thrusters',
+    color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  },
+  'Hinge/Deadlift': {
+    label: 'Hinge',
+    icon: <Dumbbell className="w-4 h-4" />,
+    description: 'Deadlifts, Cleans, KB Swings',
+    color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  },
+  'Pull Vertical': {
+    label: 'Pull',
+    icon: <ArrowUp className="w-4 h-4" />,
+    description: 'Pull-ups, Muscle-ups',
+    color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  },
+  'Horizontal Sled Friction': {
+    label: 'Sled',
+    icon: <Move className="w-4 h-4" />,
+    description: 'Sled Push, Sled Pull',
+    color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  },
+  'Isometric': {
+    label: 'Isométrico',
+    icon: <Target className="w-4 h-4" />,
+    description: 'Planks, Wall Sits',
+    color: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  },
+  'Distance Cardio': {
+    label: 'Cardio Distância',
+    icon: <Bike className="w-4 h-4" />,
+    description: 'Corrida, Remo, Bike',
+    color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  },
 };
 
 // ============================================
