@@ -14,6 +14,7 @@ import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
 import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmin";
 import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
+import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -33,11 +34,12 @@ import {
   Crown,
   Medal,
   Gauge,
-  BookOpen
+  BookOpen,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns";
 
 interface NavItem {
   id: AdminView;
@@ -100,6 +102,12 @@ const navItems: NavItem[] = [
     label: "Base Científica",
     icon: <BookOpen className="w-5 h-5" />,
     description: "Artigos e conhecimento para IA"
+  },
+  {
+    id: "movementPatterns",
+    label: "Motor Físico",
+    icon: <Calculator className="w-5 h-5" />,
+    description: "Constantes biomecânicas do motor de Kcal"
   },
   { 
     id: "params", 
@@ -209,6 +217,8 @@ const AdminPortal = () => {
         return <EventReviewAdmin />;
       case "knowledgeBase":
         return <KnowledgeBaseAdmin />;
+      case "movementPatterns":
+        return <MovementPatternsAdmin />;
       default:
         return <AthleteStatusAdmin />;
     }
