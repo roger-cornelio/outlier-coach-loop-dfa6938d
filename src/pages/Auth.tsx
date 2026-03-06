@@ -27,6 +27,7 @@ const signupSchema = z.object({
   name: z.string().trim().min(2, 'Nome deve ter no mínimo 2 caracteres').max(100, 'Nome muito longo'),
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
+  sexo: z.enum(['masculino', 'feminino'], { required_error: 'Selecione o sexo' }),
 });
 
 const forgotSchema = z.object({
@@ -49,7 +50,8 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
+  const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string }>({});
   const [resetSent, setResetSent] = useState(false);
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
@@ -305,7 +307,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       if (mode === 'login') {
         loginSchema.parse({ email, password });
       } else if (mode === 'signup') {
-        signupSchema.parse({ name, email, password });
+        signupSchema.parse({ name, email, password, sexo: sexo || undefined });
       } else if (mode === 'reset-password') {
         resetPasswordSchema.parse({ password, confirmPassword });
       } else {
@@ -315,12 +317,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return true;
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string } = {};
+        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string } = {};
         err.errors.forEach((error) => {
           if (error.path[0] === 'name') fieldErrors.name = error.message;
           if (error.path[0] === 'email') fieldErrors.email = error.message;
           if (error.path[0] === 'password') fieldErrors.password = error.message;
           if (error.path[0] === 'confirmPassword') fieldErrors.confirmPassword = error.message;
+          if (error.path[0] === 'sexo') fieldErrors.sexo = error.message;
         });
         setErrors(fieldErrors);
       }
@@ -368,6 +371,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
             emailRedirectTo: redirectUrl,
             data: {
               name: name.trim(),
+              sexo: sexo,
             },
           },
         });
@@ -882,7 +886,38 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   </div>
                 )}
 
-                {/* Email */}
+                {/* Sex selection (signup only) */}
+                {mode === 'signup' && (
+                  <div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSexo('masculino')}
+                        className={`flex-1 py-2 rounded text-sm font-medium transition-colors border ${
+                          sexo === 'masculino'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background/50 text-muted-foreground border-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        Masculino
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSexo('feminino')}
+                        className={`flex-1 py-2 rounded text-sm font-medium transition-colors border ${
+                          sexo === 'feminino'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background/50 text-muted-foreground border-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        Feminino
+                      </button>
+                    </div>
+                    {errors.sexo && (
+                      <p className="text-destructive text-xs mt-1">{errors.sexo}</p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <div className="relative">
                     <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />

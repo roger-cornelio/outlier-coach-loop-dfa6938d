@@ -47,7 +47,7 @@ type AuthContextValue = {
   /** Recarrega o perfil do banco de dados */
   refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: unknown | null }>;
-  signUp: (email: string, password: string, name?: string) => Promise<{ error: unknown | null }>;
+  signUp: (email: string, password: string, name?: string, sexo?: string) => Promise<{ error: unknown | null }>;
   signOut: () => Promise<{ error: null }>;
   refreshSession: () => Promise<{ error: unknown | null }>;
 };
@@ -429,7 +429,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+  const signUp = useCallback(async (email: string, password: string, name?: string, sexo?: string) => {
     const redirectUrl = `${window.location.origin}/`;
 
     const { error } = await supabase.auth.signUp({
@@ -437,7 +437,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: name ? { name } : undefined,
+        data: {
+          ...(name ? { name } : {}),
+          ...(sexo ? { sexo } : {}),
+        },
       },
     });
 
