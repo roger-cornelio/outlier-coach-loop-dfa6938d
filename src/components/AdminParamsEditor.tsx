@@ -414,10 +414,10 @@ export function AdminParamsEditor() {
               <div>
                 <h1 className="font-display text-2xl font-bold tracking-wide flex items-center gap-2">
                   <Settings2 className="w-6 h-6" />
-                  PARÂMETROS DO SISTEMA
+                  REGRAS DO JOGO
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Single source of truth — todas as regras do MVP
+                  Scoring, estimativas de tempo e regras de prioridade
                 </p>
               </div>
             </div>
@@ -451,7 +451,8 @@ export function AdminParamsEditor() {
             <div>
               <p className="text-sm font-medium text-amber-500">Atenção: Parâmetros globais</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Alterações aqui afetam TODOS os cálculos do sistema: benchmarks, estimativas de tempo, calorias, classificações e progressão.
+                Alterações aqui afetam scoring, estimativas de tempo e regras de prioridade.
+                Para outros domínios: <strong>Motor Físico</strong> (Kcal), <strong>Jornada</strong> (progressão), <strong>Classificação</strong> (benchmarks HYROX).
               </p>
             </div>
           </div>
@@ -738,22 +739,6 @@ export function AdminParamsEditor() {
                   </AccordionContent>
                 </AccordionItem>
                 
-                {/* Info: Motor Físico agora cuida de Kcal */}
-                <AccordionItem value="energy-info">
-                  <AccordionTrigger className="text-sm font-medium">
-                    ⚡ Gasto Calórico (Motor Físico)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
-                      <p className="text-sm font-medium text-sky-500 mb-1">Motor Físico ativo</p>
-                      <p className="text-xs text-muted-foreground">
-                        O cálculo de Kcal é gerido exclusivamente pela aba <strong>Motor Físico</strong>, 
-                        utilizando constantes biomecânicas da tabela <code className="bg-muted px-1 py-0.5 rounded">movement_patterns</code>.
-                        METs por modalidade foram removidos desta seção.
-                      </p>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
               </Accordion>
             </div>
           </div>
