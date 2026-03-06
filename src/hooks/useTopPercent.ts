@@ -60,6 +60,8 @@ export interface TopPercentResult {
   shouldShow: boolean;
   /** Meta ELITE time in seconds (max time to be classified ELITE), or null */
   metaEliteSeconds: number | null;
+  /** Meta PRO time in seconds (max time to be classified PRO), or null */
+  metaProSeconds: number | null;
   /** Loading state */
   loading: boolean;
 }
@@ -166,7 +168,7 @@ export function useTopPercent(
   }, []);
 
   return useMemo((): TopPercentResult => {
-    if (loading) return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds: null, loading: true };
+    if (loading) return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds: null, metaProSeconds: null, loading: true };
 
     // Resolve sex key
     const sexKey = sex === 'feminino' ? 'F' : 'M';
@@ -183,7 +185,7 @@ export function useTopPercent(
 
     if (!benchRow) {
       console.warn('missing_admin_threshold', { sex: sexKey, age: effectiveAge, reason: 'no matching benchmarks_elite_pro row' });
-      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds: null, loading: false };
+      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds: null, metaProSeconds: null, loading: false };
     }
 
     // Get division factor (map INDIVIDUAL to PRO as default)
@@ -202,19 +204,21 @@ export function useTopPercent(
 
     // Meta ELITE = max time to still be classified as ELITE
     const metaEliteSeconds = t_elite_5;
+    // Meta PRO = max time to still be classified as PRO
+    const metaProSeconds = t_pro_10;
 
     // Get world-record and open-floor anchors
     const genderAnchors = anchors?.[genderKey];
     if (!genderAnchors) {
       console.warn('missing_admin_threshold', { genderKey, reason: 'no top_percent_anchors for gender' });
-      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds, loading: false };
+      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds, metaProSeconds, loading: false };
     }
 
     const t_elite_world_001 = genderAnchors.elite_world_001;
     const t_open_100 = genderAnchors.open_100;
 
     if (!lastRaceSeconds || lastRaceSeconds <= 0) {
-      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds, loading: false };
+      return { topPercent: null, topText: null, shouldShow: false, metaEliteSeconds, metaProSeconds, loading: false };
     }
 
     const top = computeTopPercent(lastRaceSeconds, t_elite_5, t_pro_10, t_elite_world_001, t_open_100);
@@ -230,6 +234,7 @@ export function useTopPercent(
       topText: formatTopPercent(clampedTop),
       shouldShow,
       metaEliteSeconds,
+      metaProSeconds,
       loading: false,
     };
   }, [lastRaceSeconds, sex, age, division, benchmarks, factors, anchors, loading]);
