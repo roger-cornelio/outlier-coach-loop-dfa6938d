@@ -1343,6 +1343,9 @@ export type Database = {
           author_or_source: string | null
           category: string
           created_at: string
+          criteria_tags: Json | null
+          file_path: string | null
+          file_url: string | null
           full_summary: string | null
           id: string
           key_takeaways: string | null
@@ -1355,6 +1358,9 @@ export type Database = {
           author_or_source?: string | null
           category?: string
           created_at?: string
+          criteria_tags?: Json | null
+          file_path?: string | null
+          file_url?: string | null
           full_summary?: string | null
           id?: string
           key_takeaways?: string | null
@@ -1367,6 +1373,9 @@ export type Database = {
           author_or_source?: string | null
           category?: string
           created_at?: string
+          criteria_tags?: Json | null
+          file_path?: string | null
+          file_url?: string | null
           full_summary?: string | null
           id?: string
           key_takeaways?: string | null
