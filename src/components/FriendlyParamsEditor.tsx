@@ -306,30 +306,11 @@ const SECTIONS: SectionDefinition[] = [
     ]
   },
   {
-    id: 'energy',
-    title: 'Fallback Calórico',
-    description: 'Valores usados quando o Motor Físico não cobre o exercício',
+    id: 'energy-info',
+    title: 'Gasto Calórico',
+    description: 'O cálculo de Kcal é gerido pelo Motor Físico (aba dedicada)',
     icon: <Zap className="w-5 h-5" />,
-    fields: [
-      { 
-        key: 'exerciseMets.fallbackKcalPerMin', 
-        label: 'Calorias por minuto (fallback)', 
-        type: 'number',
-        suffix: 'kcal/min',
-        min: 1,
-        max: 30,
-        description: 'Valor padrão quando o motor de física não cobre o exercício'
-      },
-      { 
-        key: 'exerciseMets.runningKcalFactor', 
-        label: 'Fator de corrida (ACSM)', 
-        type: 'number',
-        suffix: 'x',
-        min: 0.5,
-        max: 2,
-        description: 'Multiplicador kcal = peso_kg × km × fator'
-      },
-    ]
+    fields: []
   },
 ];
 

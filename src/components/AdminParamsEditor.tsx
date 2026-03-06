@@ -139,20 +139,6 @@ function generateDiff(oldParams: OutlierParamsConfig, newParams: OutlierParamsCo
     }
   }
   
-  // Compare METs
-  const modalidades = ['conditioning', 'forca', 'especifico', 'aquecimento', 'core', 'corrida'] as const;
-  for (const mod of modalidades) {
-    const oldMet = oldParams.exerciseMets.metBaseByModality[mod];
-    const newMet = newParams.exerciseMets.metBaseByModality[mod];
-    if (oldMet && newMet && oldMet.baseKcalPerMin !== newMet.baseKcalPerMin) {
-      diffs.push({
-        path: `mets.${mod}`,
-        oldValue: `${oldMet.baseKcalPerMin} kcal/min`,
-        newValue: `${newMet.baseKcalPerMin} kcal/min`,
-      });
-    }
-  }
-  
   return diffs;
 }
 
@@ -265,21 +251,7 @@ export function AdminParamsEditor() {
     }));
   };
   
-  const updateModalityMet = (modality: string, value: number) => {
-    setEditedParams(prev => ({
-      ...prev,
-      exerciseMets: {
-        ...prev.exerciseMets,
-        metBaseByModality: {
-          ...prev.exerciseMets.metBaseByModality,
-          [modality]: {
-            ...prev.exerciseMets.metBaseByModality[modality as keyof typeof prev.exerciseMets.metBaseByModality],
-            baseKcalPerMin: value,
-          },
-        },
-      },
-    }));
-  };
+  // REMOVED: updateModalityMet - METs foram removidos (Motor Físico agora é a fonte de Kcal)
   
   // Sync JSON when guided changes
   useEffect(() => {
@@ -766,35 +738,19 @@ export function AdminParamsEditor() {
                   </AccordionContent>
                 </AccordionItem>
                 
-                {/* METs (apenas para estimativa de tempo - Kcal real usa motor de física) */}
-                <AccordionItem value="mets">
+                {/* Info: Motor Físico agora cuida de Kcal */}
+                <AccordionItem value="energy-info">
                   <AccordionTrigger className="text-sm font-medium">
-                    ⏱️ Base de Tempo por Modalidade (fallback)
+                    ⚡ Gasto Calórico (Motor Físico)
                   </AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Usado apenas para estimar duração de blocos quando não há duração explícita.
-                      O cálculo de Kcal real usa o Motor Físico (aba dedicada).
-                    </p>
-                    <div className="space-y-3 pt-2">
-                      {(['aquecimento', 'conditioning', 'forca', 'especifico', 'core', 'corrida'] as const).map((mod) => {
-                        const met = editedParams.exerciseMets.metBaseByModality[mod];
-                        return (
-                          <div key={mod} className="grid grid-cols-2 gap-2 items-center">
-                            <Label className="text-xs capitalize">{mod}</Label>
-                            <div className="flex items-center gap-1">
-                              <Input
-                                type="number"
-                                step="0.5"
-                                value={met?.baseKcalPerMin || 8}
-                                onChange={(e) => updateModalityMet(mod, parseFloat(e.target.value) || 8)}
-                                className="h-8 text-xs"
-                              />
-                              <span className="text-xs text-muted-foreground">kcal/min</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                      <p className="text-sm font-medium text-sky-500 mb-1">Motor Físico ativo</p>
+                      <p className="text-xs text-muted-foreground">
+                        O cálculo de Kcal é gerido exclusivamente pela aba <strong>Motor Físico</strong>, 
+                        utilizando constantes biomecânicas da tabela <code className="bg-muted px-1 py-0.5 rounded">movement_patterns</code>.
+                        METs por modalidade foram removidos desta seção.
+                      </p>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
