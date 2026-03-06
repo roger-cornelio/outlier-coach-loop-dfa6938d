@@ -5,6 +5,7 @@ import { AdminParamsEditor } from "@/components/AdminParamsEditor";
 import { UserManagement } from "@/components/UserManagement";
 import { ServiceQualityDashboard } from "@/components/admin/ServiceQualityDashboard";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
+import { EventReviewAdmin } from "@/components/admin/EventReviewAdmin";
 
 
 import { OutlierReferenceEditor } from "@/components/admin/OutlierReferenceEditor";
@@ -34,7 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview";
 
 interface NavItem {
   id: AdminView;
@@ -85,6 +86,12 @@ const navItems: NavItem[] = [
     label: "Jornada", 
     icon: <Medal className="w-5 h-5" />,
     description: "Requisitos treino/benchmarks"
+  },
+  {
+    id: "eventReview",
+    label: "Provas",
+    icon: <Target className="w-5 h-5" />,
+    description: "Fila de revisão de provas"
   },
   { 
     id: "params", 
@@ -190,6 +197,8 @@ const AdminPortal = () => {
         return <AthleteStatusAdmin />;
       case "classification":
         return <ClassificationAdminEditor />;
+      case "eventReview":
+        return <EventReviewAdmin />;
       default:
         return <AthleteStatusAdmin />;
     }
