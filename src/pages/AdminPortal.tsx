@@ -97,9 +97,9 @@ const navItems: NavItem[] = [
   },
   {
     id: "knowledgeBase",
-    label: "Knowledge Base",
+    label: "Base Científica",
     icon: <BookOpen className="w-5 h-5" />,
-    description: "Artigos científicos para IA"
+    description: "Artigos e conhecimento para IA"
   },
   { 
     id: "params", 
