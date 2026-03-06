@@ -35,6 +35,8 @@ import { WeekPeriodSelector, WeekPeriod } from "./WeekPeriodSelector";
 import { StructuredEditorDebugBar } from "./StructuredEditorDebugBar";
 import { identifyMainBlock } from "@/utils/mainBlockIdentifier";
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from "@/types/outlier";
+import { useExerciseLibrary } from "@/hooks/useExerciseLibrary";
+import { useAuth } from "@/hooks/useAuth";
 
 // ============================================
 // TIPOS
@@ -96,6 +98,17 @@ export function StructuredWorkoutEditor({
   isSaving = false,
   linkedAthletesCount = 0,
 }: StructuredWorkoutEditorProps) {
+  // ============================================
+  // EXERCISE LIBRARY (physics-based)
+  // ============================================
+  const { user } = useAuth();
+  const { exercises: libExercises, patterns: libPatterns, createCustomExercise } = useExerciseLibrary(user?.id);
+  const exerciseLibrary = useMemo(() => ({
+    exercises: libExercises,
+    patterns: libPatterns,
+    createCustomExercise,
+  }), [libExercises, libPatterns, createCustomExercise]);
+
   // ============================================
   // ESTADO INICIAL: Criar Day 1 (Segunda) automaticamente
   // FIX MVP0: Editor nunca pode iniciar vazio/sumido
@@ -796,6 +809,7 @@ export function StructuredWorkoutEditor({
                               showValidation={showValidation}
                               isExpanded={expandedBlocks.has(block.id)}
                               onToggleExpand={() => toggleBlockExpand(block.id)}
+                              exerciseLibrary={exerciseLibrary}
                             />
                           </div>
                         );
