@@ -9,6 +9,7 @@ import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import { GlobalDebugBar } from "@/components/GlobalDebugBar";
+import { useParamsSync } from "@/hooks/useParamsSync";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
@@ -63,12 +64,18 @@ function LastRoutePersistor() {
   return null;
 }
 
+function ParamsSyncProvider({ children }: { children: React.ReactNode }) {
+  useParamsSync();
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <LastRoutePersistor />
       <TooltipProvider>
         <AuthProvider>
+          <ParamsSyncProvider>
           <Toaster />
           <Sonner />
           <SessionRefreshBanner />
@@ -109,6 +116,7 @@ const App = () => (
           
           {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
           <GlobalDebugBar />
+          </ParamsSyncProvider>
         </AuthProvider>
       </TooltipProvider>
     </BrowserRouter>
