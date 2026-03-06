@@ -22,14 +22,24 @@ interface MovementPattern {
 
 type EditableFields = Pick<MovementPattern, "moved_mass_percentage" | "default_distance_meters" | "friction_coefficient" | "human_efficiency_rate" | "default_seconds_per_rep">;
 
+const patternNamePt: Record<string, string> = {
+  'Squat/Vertical Push': 'Agachamento / Empurrar Vertical',
+  'Hinge/Deadlift': 'Dobradiça / Levantamento',
+  'Pull Vertical': 'Puxada Vertical',
+  'Total Body Plyometric': 'Pliométrico Corpo Inteiro',
+  'Horizontal Sled Friction': 'Sled Horizontal (Fricção)',
+  'Isometric': 'Isométrico',
+  'Distance Cardio': 'Cardio Distância',
+};
+
 const formulaBadge = (type: string) => {
   switch (type) {
     case "vertical_work":
-      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30">vertical_work</Badge>;
+      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30">Trabalho Vertical</Badge>;
     case "horizontal_friction":
-      return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30">horizontal_friction</Badge>;
+      return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30">Fricção Horizontal</Badge>;
     case "metabolic":
-      return <Badge className="bg-zinc-500/20 text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/30">metabolic</Badge>;
+      return <Badge className="bg-zinc-500/20 text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/30">Metabólico</Badge>;
     default:
       return <Badge variant="outline">{type}</Badge>;
   }
@@ -111,7 +121,7 @@ export function MovementPatternsAdmin() {
         <div className="flex items-center gap-3">
           <Calculator className="w-5 h-5 text-orange-400" />
           <div>
-            <CardTitle className="text-lg">Motor Físico — Movement Patterns</CardTitle>
+            <CardTitle className="text-lg">Motor Físico — Padrões de Movimento</CardTitle>
             <CardDescription>Constantes biomecânicas usadas pelo motor de Kcal e estimativa de tempo (TUT).</CardDescription>
           </div>
         </div>
@@ -133,7 +143,7 @@ export function MovementPatternsAdmin() {
           <TableBody>
             {patterns.map(p => (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="font-medium">{patternNamePt[p.name] || p.name}</TableCell>
                 <TableCell>{formulaBadge(p.formula_type)}</TableCell>
                 <TableCell className="text-right">
                   <Input
