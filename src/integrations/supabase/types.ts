@@ -1338,6 +1338,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scientific_articles: {
+        Row: {
+          author_or_source: string | null
+          category: string
+          created_at: string
+          full_summary: string | null
+          id: string
+          key_takeaways: string | null
+          publication_year: number | null
+          target_station: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_or_source?: string | null
+          category?: string
+          created_at?: string
+          full_summary?: string | null
+          id?: string
+          key_takeaways?: string | null
+          publication_year?: number | null
+          target_station?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_or_source?: string | null
+          category?: string
+          created_at?: string
+          full_summary?: string | null
+          id?: string
+          key_takeaways?: string | null
+          publication_year?: number | null
+          target_station?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       status_config: {
         Row: {
           created_at: string

@@ -13,6 +13,7 @@ import { BenchmarkOverridesEditor } from "@/components/admin/BenchmarkOverridesE
 import { AthleteStatusAdmin } from "@/components/admin/AthleteStatusAdmin";
 import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdminEditor";
 import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmin";
+import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -31,11 +32,12 @@ import {
   Dumbbell,
   Crown,
   Medal,
-  Gauge
+  Gauge,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase";
 
 interface NavItem {
   id: AdminView;
@@ -92,6 +94,12 @@ const navItems: NavItem[] = [
     label: "Provas",
     icon: <Target className="w-5 h-5" />,
     description: "Fila de revisão de provas"
+  },
+  {
+    id: "knowledgeBase",
+    label: "Knowledge Base",
+    icon: <BookOpen className="w-5 h-5" />,
+    description: "Artigos científicos para IA"
   },
   { 
     id: "params", 
@@ -199,6 +207,8 @@ const AdminPortal = () => {
         return <ClassificationAdminEditor />;
       case "eventReview":
         return <EventReviewAdmin />;
+      case "knowledgeBase":
+        return <KnowledgeBaseAdmin />;
       default:
         return <AthleteStatusAdmin />;
     }
