@@ -7,23 +7,31 @@
  * 
  * FORMULAS:
  * 
- * 1. VERTICAL WORK (Squat, Push, Pull, Hinge, Lunge, Core, Olympic):
+ * 1. VERTICAL WORK (Squat, Push, Pull, Hinge, Plyometric):
  *    total_mass = externalWeightKg + (userWeightKg × moved_mass_percentage)
- *    joules = total_mass × 9.81 × distanceMeters × reps
+ *    joules = total_mass × 9.81 × strictDistance × totalReps
  *    kcal = (joules / 4184) / human_efficiency_rate
+ *    CRITICAL: strictDistance ALWAYS comes from pattern.default_distance_meters,
+ *    never from parsed text (e.g. "10m" in Broad Jumps).
  * 
  * 2. HORIZONTAL FRICTION (Sled Push/Pull):
- *    joules = externalWeightKg × 9.81 × friction_coefficient × distanceMeters
+ *    joules = externalWeightKg × 9.81 × friction_coefficient × totalMeters
  *    kcal = (joules / 4184) / human_efficiency_rate
  * 
- * 3. METABOLIC (Cardio – Running, Rowing, Bike, SkiErg):
- *    Uses simplified kcal ≈ userWeightKg × distanceKm × 1.0 (legacy HYROX factor)
- *    This is a reasonable proxy; true metabolic cost requires VO2 data.
+ * 3. METABOLIC:
+ *    a) Distance Cardio (Running, Rowing): kcal = 1.03 × (meters/1000) × userWeightKg
+ *    b) Isometric (Planks): kcal = MET(3.0) × userWeightKg × (seconds/3600)
  * 
  * CONSTANTS:
  *   g = 9.81 m/s²
  *   1 kcal = 4184 J
  *   Human mechanical efficiency ≈ 20% (default)
+ * 
+ * PARSING CONTRACT:
+ *   - vertical_work → repsOrDistance = number of REPS
+ *   - horizontal_friction → repsOrDistance = METERS
+ *   - metabolic (cardio) → repsOrDistance = METERS
+ *   - metabolic (isometric) → repsOrDistance = SECONDS
  */
 
 // ============================================
@@ -40,12 +48,24 @@ export interface MovementPattern {
   default_distance_meters: number;
   friction_coefficient: number | null;
   human_efficiency_rate: number;
+  default_seconds_per_rep?: number | null;
 }
 
 export interface ExerciseKcalInput {
   userWeightKg: number;
   externalWeightKg?: number;
+  /**
+   * Unified input:
+   * - For vertical_work: number of REPS
+   * - For horizontal_friction: METERS of sled travel
+   * - For metabolic/cardio: METERS of distance
+   * - For metabolic/isometric: SECONDS of hold
+   */
+  repsOrDistance?: number;
+  sets?: number;
+  /** @deprecated Use repsOrDistance instead. Kept for backward compat. */
   reps?: number;
+  /** @deprecated Use repsOrDistance instead. Kept for backward compat. */
   distanceMeters?: number;
   durationMinutes?: number;
   movementPattern: MovementPattern;
@@ -99,7 +119,10 @@ export interface ExerciseKcalResult {
 
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
-const DEFAULT_METABOLIC_FACTOR = 1.0; // kcal/kg/km (legacy HYROX)
+/** Running energy cost: ~1.03 kcal/kg/km (ACSM standard) */
+const CARDIO_KCAL_PER_KG_PER_KM = 1.03;
+/** Approximate MET value for isometric holds (planks, wall sits) */
+const ISOMETRIC_MET = 3.0;
 
 // ============================================
 // MAIN ENGINE
@@ -112,11 +135,16 @@ const DEFAULT_METABOLIC_FACTOR = 1.0; // kcal/kg/km (legacy HYROX)
 export function calculateExerciseKcal(input: ExerciseKcalInput): ExerciseKcalResult {
   const {
     userWeightKg,
-    reps = 1,
-    distanceMeters,
     durationMinutes,
     movementPattern,
+    sets = 1,
   } = input;
+
+  // Resolve repsOrDistance from new or legacy fields
+  const repsOrDistance = input.repsOrDistance 
+    ?? input.reps 
+    ?? input.distanceMeters 
+    ?? 1;
 
   // Resolve weight via priority chain
   const externalWeightKg = resolveExternalWeight({
@@ -140,63 +168,83 @@ export function calculateExerciseKcal(input: ExerciseKcalInput): ExerciseKcalRes
     };
   }
 
-  const effectiveDistance = distanceMeters ?? movementPattern.default_distance_meters;
-  const efficiency = movementPattern.human_efficiency_rate || 0.20;
+  const eff = movementPattern.human_efficiency_rate || 0.20;
+  const totalRepsOrMeters = repsOrDistance * sets;
 
   switch (movementPattern.formula_type) {
+    // ─── VERTICAL WORK ──────────────────────────────
+    // CRITICAL: NEVER trust user text for vertical distance.
+    // Always force the biological distance from the pattern.
     case 'vertical_work': {
-      const totalMass = externalWeightKg + (userWeightKg * movementPattern.moved_mass_percentage);
-      const joules = totalMass * GRAVITY * effectiveDistance * reps;
-      const kcal = (joules / JOULES_PER_KCAL) / efficiency;
+      const strictDistance = movementPattern.default_distance_meters || 0.6;
+      const totalMass = externalWeightKg + (userWeightKg * (movementPattern.moved_mass_percentage || 0));
+      const joules = totalMass * GRAVITY * strictDistance * totalRepsOrMeters;
+      const kcal = (joules / JOULES_PER_KCAL) / eff;
 
       return {
-        kcal: Math.round(kcal),
+        kcal: Math.floor(kcal),
         joules: Math.round(joules),
         formulaUsed: 'vertical_work',
         totalMassKg: Math.round(totalMass * 10) / 10,
-        distanceUsed: effectiveDistance,
+        distanceUsed: strictDistance,
         warnings,
       };
     }
 
+    // ─── HORIZONTAL FRICTION ────────────────────────
+    // totalRepsOrMeters = distance in meters for sled exercises
     case 'horizontal_friction': {
       const friction = movementPattern.friction_coefficient ?? 0.45;
-      const joules = externalWeightKg * GRAVITY * friction * effectiveDistance;
-      const kcal = (joules / JOULES_PER_KCAL) / efficiency;
+      const joules = externalWeightKg * GRAVITY * friction * totalRepsOrMeters;
+      const kcal = (joules / JOULES_PER_KCAL) / eff;
 
       if (externalWeightKg <= 0) {
         warnings.push('Carga externa obrigatória para exercícios de fricção (sled)');
       }
 
       return {
-        kcal: Math.round(kcal),
+        kcal: Math.floor(kcal),
         joules: Math.round(joules),
         formulaUsed: 'horizontal_friction',
         totalMassKg: externalWeightKg,
-        distanceUsed: effectiveDistance,
+        distanceUsed: totalRepsOrMeters,
         warnings,
       };
     }
 
+    // ─── METABOLIC ──────────────────────────────────
     case 'metabolic': {
-      // For cardio, use distance in km if available, otherwise estimate from duration
-      let distanceKm = effectiveDistance / 1000;
+      let kcal: number;
+      let joules: number;
 
-      if (durationMinutes && durationMinutes > 0 && !distanceMeters) {
-        // Rough estimate: ~10 km/h average pace → ~0.167 km/min
-        distanceKm = durationMinutes * 0.167;
-        warnings.push('Distância estimada a partir da duração (ritmo médio ~10 km/h)');
+      const isDistanceCardio = movementPattern.name === 'Distance Cardio' 
+        || movementPattern.default_distance_meters === 1.0;
+
+      if (isDistanceCardio) {
+        // Running/Rowing/Bike: 1.03 kcal per kg per km
+        let distanceKm = totalRepsOrMeters / 1000;
+
+        // Fallback: estimate from duration if no distance
+        if (distanceKm <= 0 && durationMinutes && durationMinutes > 0) {
+          distanceKm = durationMinutes * 0.167; // ~10 km/h
+          warnings.push('Distância estimada a partir da duração (ritmo médio ~10 km/h)');
+        }
+
+        kcal = CARDIO_KCAL_PER_KG_PER_KM * distanceKm * userWeightKg;
+        joules = kcal * JOULES_PER_KCAL;
+      } else {
+        // Isometric (Planks, Wall Sits): totalRepsOrMeters = seconds
+        const hours = totalRepsOrMeters / 3600;
+        kcal = ISOMETRIC_MET * userWeightKg * hours;
+        joules = kcal * JOULES_PER_KCAL;
       }
 
-      const kcal = userWeightKg * distanceKm * DEFAULT_METABOLIC_FACTOR;
-      const joules = kcal * JOULES_PER_KCAL; // reverse for display
-
       return {
-        kcal: Math.round(kcal),
+        kcal: Math.floor(kcal),
         joules: Math.round(joules),
         formulaUsed: 'metabolic',
         totalMassKg: userWeightKg,
-        distanceUsed: distanceKm * 1000,
+        distanceUsed: totalRepsOrMeters,
         warnings,
       };
     }
