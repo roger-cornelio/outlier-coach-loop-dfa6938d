@@ -682,6 +682,98 @@ export type Database = {
         }
         Relationships: []
       }
+      discovered_events: {
+        Row: {
+          admin_notes: string | null
+          categoria_hyrox: string | null
+          cidade: string | null
+          created_at: string
+          created_by: string | null
+          data_evento: string | null
+          duplicata_de: string | null
+          estado: string | null
+          grau_confianca: number
+          id: string
+          nome: string
+          organizador: string | null
+          origem_principal: string | null
+          pais: string | null
+          possivel_duplicata: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          slug: string | null
+          status_validacao: string
+          tipo_evento: string
+          updated_at: string
+          url_inscricao: string | null
+          url_origem: string | null
+          url_resultado: string | null
+          venue: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          categoria_hyrox?: string | null
+          cidade?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_evento?: string | null
+          duplicata_de?: string | null
+          estado?: string | null
+          grau_confianca?: number
+          id?: string
+          nome: string
+          organizador?: string | null
+          origem_principal?: string | null
+          pais?: string | null
+          possivel_duplicata?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slug?: string | null
+          status_validacao?: string
+          tipo_evento?: string
+          updated_at?: string
+          url_inscricao?: string | null
+          url_origem?: string | null
+          url_resultado?: string | null
+          venue?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          categoria_hyrox?: string | null
+          cidade?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_evento?: string | null
+          duplicata_de?: string | null
+          estado?: string | null
+          grau_confianca?: number
+          id?: string
+          nome?: string
+          organizador?: string | null
+          origem_principal?: string | null
+          pais?: string | null
+          possivel_duplicata?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slug?: string | null
+          status_validacao?: string
+          tipo_evento?: string
+          updated_at?: string
+          url_inscricao?: string | null
+          url_origem?: string | null
+          url_resultado?: string | null
+          venue?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovered_events_duplicata_de_fkey"
+            columns: ["duplicata_de"]
+            isOneToOne: false
+            referencedRelation: "discovered_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       division_factors: {
         Row: {
           created_at: string
@@ -714,6 +806,128 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      event_discovery_logs: {
+        Row: {
+          cidade_detectada: string | null
+          created_at: string
+          data_detectada: string | null
+          estado_detectado: string | null
+          event_id: string | null
+          id: string
+          motivo_pendencia: string[] | null
+          origem: string | null
+          raw_text: string | null
+          raw_title: string | null
+          raw_url: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          score: number
+          termo_busca: string | null
+        }
+        Insert: {
+          cidade_detectada?: string | null
+          created_at?: string
+          data_detectada?: string | null
+          estado_detectado?: string | null
+          event_id?: string | null
+          id?: string
+          motivo_pendencia?: string[] | null
+          origem?: string | null
+          raw_text?: string | null
+          raw_title?: string | null
+          raw_url?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number
+          termo_busca?: string | null
+        }
+        Update: {
+          cidade_detectada?: string | null
+          created_at?: string
+          data_detectada?: string | null
+          estado_detectado?: string | null
+          event_id?: string | null
+          id?: string
+          motivo_pendencia?: string[] | null
+          origem?: string | null
+          raw_text?: string | null
+          raw_title?: string | null
+          raw_url?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number
+          termo_busca?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_discovery_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "discovered_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_review_queue: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          discovery_log_id: string | null
+          event_id: string | null
+          id: string
+          motivo: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status_fila: string
+          sugestoes_busca_json: Json | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          discovery_log_id?: string | null
+          event_id?: string | null
+          id?: string
+          motivo?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status_fila?: string
+          sugestoes_busca_json?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          discovery_log_id?: string | null
+          event_id?: string | null
+          id?: string
+          motivo?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status_fila?: string
+          sugestoes_busca_json?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_review_queue_discovery_log_id_fkey"
+            columns: ["discovery_log_id"]
+            isOneToOne: false
+            referencedRelation: "event_discovery_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_review_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "discovered_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
