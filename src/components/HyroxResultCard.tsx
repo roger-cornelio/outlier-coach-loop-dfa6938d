@@ -15,6 +15,8 @@ interface HyroxResultCardProps {
     created_at: string;
   };
   gender: 'M' | 'F';
+  /** Optional: time difference in seconds vs previous race (positive = improved) */
+  timeDeltaSeconds?: number | null;
 }
 
 function formatTime(seconds: number): string {
@@ -27,9 +29,30 @@ function formatTime(seconds: number): string {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-function formatFullDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+/**
+ * Extract season label from event_name year.
+ * HYROX seasons: Season 7 = 2024/25, Season 8 = 2025/26, etc.
+ * We derive season from the event year in the event_name.
+ */
+function getSeasonFromEventName(eventName: string | null): string | null {
+  if (!eventName) return null;
+  const yearMatch = eventName.match(/\b(20\d{2})\b/);
+  if (!yearMatch) return null;
+  const year = parseInt(yearMatch[1]);
+  // Season mapping: 2024 → S7 (2024/25), 2025 → S8 (2025/26), 2023 → S6 (2023/24)
+  const seasonNum = year - 2017;
+  return `Temporada ${seasonNum}`;
+}
+
+/**
+ * Extract just the location from event_name.
+ * Strips "HYROX" prefix and trailing year.
+ * E.g., "HYROX CIUDAD DE MEXICO 2024" → "CIUDAD DE MEXICO"
+ */
+function getEventLocation(eventName: string | null): string {
+  if (!eventName) return 'HYROX';
+  let name = eventName.replace(/^HYROX\s*/i, '').replace(/\s*\b20\d{2}\b\s*$/, '').trim();
+  return name || eventName;
 }
 
 /**
@@ -39,7 +62,7 @@ function formatFullDate(dateStr: string): string {
  * - "Ver análise" CTA button
  * - Expandable analysis section with radar chart
  */
-export function HyroxResultCard({ result, gender }: HyroxResultCardProps) {
+export function HyroxResultCard({ result, gender, timeDeltaSeconds }: HyroxResultCardProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   const isOfficial = result.result_type === 'prova_oficial';
@@ -73,7 +96,7 @@ export function HyroxResultCard({ result, gender }: HyroxResultCardProps) {
           <div className="text-left">
             <div className="flex items-center gap-2">
               <h4 className="font-display text-sm">
-                {result.event_name || 'HYROX'}
+                {getEventLocation(result.event_name)}
               </h4>
               <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
                 isOfficial
@@ -86,10 +109,13 @@ export function HyroxResultCard({ result, gender }: HyroxResultCardProps) {
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="w-3 h-3" />
               <span>
-                {result.event_date 
-                  ? formatFullDate(result.event_date)
-                  : formatFullDate(result.created_at)}
+                {getSeasonFromEventName(result.event_name) || 'HYROX'}
               </span>
+              {timeDeltaSeconds != null && timeDeltaSeconds !== 0 && (
+                <span className={`ml-1 font-semibold ${timeDeltaSeconds > 0 ? 'text-status-good' : 'text-status-attention'}`}>
+                  {timeDeltaSeconds > 0 ? '▼' : '▲'} {formatTime(Math.abs(timeDeltaSeconds))}
+                </span>
+              )}
             </div>
           </div>
         </div>

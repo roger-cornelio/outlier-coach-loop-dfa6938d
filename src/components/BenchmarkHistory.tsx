@@ -228,13 +228,21 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
       {/* External Results - Simulados and Provas - Using HyroxResultCard */}
       {filteredExternalResults.length > 0 && (
         <div className="space-y-3">
-          {filteredExternalResults.map((result) => (
-            <HyroxResultCard
-              key={result.id}
-              result={result}
-              gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
-            />
-          ))}
+          {filteredExternalResults.map((result, idx) => {
+            // Calculate time delta vs next (older) race
+            const nextResult = filteredExternalResults[idx + 1];
+            const timeDelta = (nextResult?.time_in_seconds && result.time_in_seconds)
+              ? nextResult.time_in_seconds - result.time_in_seconds  // positive = improved (faster)
+              : null;
+            return (
+              <HyroxResultCard
+                key={result.id}
+                result={result}
+                gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
+                timeDeltaSeconds={timeDelta}
+              />
+            );
+          })}
         </div>
       )}
 
