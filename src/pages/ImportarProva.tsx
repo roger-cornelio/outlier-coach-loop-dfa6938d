@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2, AlertTriangle, Search, Trophy, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2, AlertTriangle, Search, Trophy, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -122,46 +122,67 @@ export default function ImportarProva() {
   const [batchImporting, setBatchImporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, errors: 0 });
 
-  // Editable search name fields
+  // Fuzzy search: single input with debounce
   const profileName = profile?.name || '';
-  const initialSplit = profileName ? splitAthleteName(profileName) : { firstName: '', lastName: '' };
-  const [searchFirstName, setSearchFirstName] = useState(initialSplit.firstName);
-  const [searchLastName, setSearchLastName] = useState(initialSplit.lastName);
+  const [searchQuery, setSearchQuery] = useState(profileName);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSearchedRef = useRef('');
 
   const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
 
-  // Auto-search on mount
-  useEffect(() => {
-    if (!searchLastName || !user) return;
-    searchByName();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const executeSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    if (trimmed === lastSearchedRef.current) return;
+    lastSearchedRef.current = trimmed;
 
-  async function searchByName() {
-    if (!searchLastName.trim()) {
-      toast.error('Preencha pelo menos o sobrenome.');
-      return;
+    // Split query into first/last name for the API
+    const parts = trimmed.split(/\s+/);
+    let firstName = '';
+    let lastName = '';
+    if (parts.length === 1) {
+      lastName = parts[0];
+    } else {
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ');
     }
+
     setSearching(true);
     setSearchError('');
-    setSearchResults([]);
     setSearchDone(false);
 
     try {
       const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
 
       const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
-        body: { firstName: searchFirstName.trim(), lastName: searchLastName.trim(), gender },
+        body: { firstName: firstName, lastName: lastName, gender },
       });
 
       if (error) throw error;
       setSearchResults(data?.results || []);
+      setSelectedIndices(new Set());
     } catch (err: any) {
       console.error('Search error:', err);
       setSearchError('Não foi possível buscar resultados automaticamente.');
     } finally {
       setSearching(false);
       setSearchDone(true);
+    }
+  }, [athleteConfig?.sexo]);
+
+  // Auto-search on mount if profile name exists
+  useEffect(() => {
+    if (!profileName || !user) return;
+    executeSearch(profileName);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced search on query change
+  function handleQueryChange(value: string) {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.trim().length >= 3) {
+      debounceRef.current = setTimeout(() => executeSearch(value), 800);
     }
   }
 
@@ -475,7 +496,7 @@ export default function ImportarProva() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="px-4 py-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => searchLastName ? setStep('search') : navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => searchQuery ? setStep('search') : navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-bold text-foreground">Importar Resultado HYROX</h1>
@@ -568,164 +589,156 @@ export default function ImportarProva() {
 
       <main className="flex-1 flex items-start justify-center px-4 pt-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-4">
-          {/* Editable search fields */}
-          {!searching && (
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-              <p className="text-sm font-medium text-foreground">Buscar por nome no site HYROX</p>
-              <p className="text-xs text-muted-foreground">A busca mostra todos os resultados com nomes próximos. Selecione o seu.</p>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
-                  <Input
-                    value={searchFirstName}
-                    onChange={(e) => setSearchFirstName(e.target.value)}
-                    placeholder="Nome"
-                    className="h-10 rounded-xl"
-                    maxLength={50}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Sobrenome *</label>
-                  <Input
-                    value={searchLastName}
-                    onChange={(e) => setSearchLastName(e.target.value)}
-                    placeholder="Sobrenome"
-                    className="h-10 rounded-xl"
-                    maxLength={50}
-                  />
-                </div>
+          {/* Fuzzy search input */}
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+            <p className="text-sm font-medium text-foreground">Buscar atleta</p>
+            <p className="text-xs text-muted-foreground">Digite seu nome completo ou parcial. A busca é aproximada.</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') executeSearch(searchQuery); }}
+                placeholder="Ex: Rafael Costa"
+                className="h-12 rounded-xl pl-10 pr-10"
+                maxLength={80}
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => { setSearchQuery(''); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {searching && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Buscando <span className="text-primary">{searchQuery}</span>...</span>
               </div>
-              <Button
-                onClick={searchByName}
-                disabled={!searchLastName.trim()}
-                className="w-full h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
+          </div>
+
+          {/* Search results - inline dropdown style */}
+          <AnimatePresence>
+            {searchDone && !searching && searchResults.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="space-y-4"
               >
-                <Search className="w-4 h-4 mr-2" /> Buscar resultados
-              </Button>
-            </div>
-          )}
-
-          {/* Search status */}
-          {searching && (
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <Search className="w-5 h-5 text-primary animate-pulse" />
-                <p className="text-sm font-medium text-foreground">
-                  Buscando resultados de <span className="text-primary">{[searchFirstName, searchLastName].filter(Boolean).join(' ')}</span>...
-                </p>
-              </div>
-              <div className="space-y-3">
-                <Skeleton className="h-16 rounded-xl" />
-                <Skeleton className="h-16 rounded-xl" />
-                <Skeleton className="h-16 rounded-xl" />
-              </div>
-            </div>
-          )}
-
-          {/* Search results */}
-          {searchDone && !searching && searchResults.length > 0 && (
-            <div className="space-y-4">
-              <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-primary" />
-                    <h2 className="text-base font-bold text-foreground">
-                      {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''}
-                    </h2>
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-primary" />
+                      <h2 className="text-base font-bold text-foreground">
+                        {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''}
+                      </h2>
+                    </div>
+                    {searchResults.length > 1 && (
+                      <button
+                        onClick={selectAll}
+                        className="text-xs text-primary font-semibold hover:underline"
+                      >
+                        {selectedIndices.size === searchResults.length ? 'Desmarcar tudo' : 'Selecionar tudo'}
+                      </button>
+                    )}
                   </div>
+
                   {searchResults.length > 1 && (
-                    <button
-                      onClick={selectAll}
-                      className="text-xs text-primary font-semibold hover:underline"
+                    <p className="text-xs text-muted-foreground">Selecione as provas que deseja importar.</p>
+                  )}
+
+                  {/* Consent checkbox */}
+                  <div className="flex items-start gap-3">
+                    <Checkbox id="consent-search" checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} className="mt-0.5" />
+                    <label htmlFor="consent-search" className="text-sm text-muted-foreground cursor-pointer">
+                      Autorizo uso do meu resultado para análise de performance.
+                    </label>
+                  </div>
+
+                  {/* Results list */}
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {searchResults.map((result, idx) => {
+                      const isSelected = selectedIndices.has(idx);
+                      const athleteName = formatAthleteName(result.athlete_name);
+                      // Extract location from event_name (strip "HYROX" and year)
+                      const location = (result.event_name || '').replace(/^HYROX\s*/i, '').replace(/\s*\b20\d{2}\b\s*$/, '').trim() || result.event_name;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => searchResults.length > 1 ? toggleSelection(idx) : handleImportFromSearch(result)}
+                          disabled={searchResults.length > 1 ? false : !agreed}
+                          className={`w-full flex items-center gap-3 rounded-xl p-3 text-left transition-colors ${
+                            isSelected
+                              ? 'bg-primary/10 border border-primary/30'
+                              : 'bg-muted/50 hover:bg-muted border border-transparent'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {searchResults.length > 1 ? (
+                            <div className="shrink-0">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelection(idx)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Flame className="w-4 h-4 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {athleteName}
+                              <span className="text-muted-foreground font-normal ml-1 text-xs">
+                                ({location} — {result.time_formatted})
+                              </span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {result.division || 'HYROX'}
+                              {result.season_id ? ` • T${result.season_id}` : ''}
+                            </p>
+                          </div>
+                          {searchResults.length === 1 && (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Batch import button */}
+                  {searchResults.length > 1 && selectedIndices.size > 0 && (
+                    <Button
+                      onClick={handleBatchImport}
+                      disabled={!agreed}
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-base font-bold rounded-2xl"
                     >
-                      {selectedIndices.size === searchResults.length ? 'Desmarcar tudo' : 'Selecionar tudo'}
-                    </button>
+                      <Flame className="w-5 h-5 mr-2" />
+                      Importar {selectedIndices.size} prova{selectedIndices.size > 1 ? 's' : ''} selecionada{selectedIndices.size > 1 ? 's' : ''}
+                    </Button>
                   )}
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                {searchResults.length > 1 && (
-                  <p className="text-xs text-muted-foreground">Selecione as provas que deseja importar.</p>
-                )}
-
-                {/* Consent checkbox */}
-                <div className="flex items-start gap-3">
-                  <Checkbox id="consent-search" checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} className="mt-0.5" />
-                  <label htmlFor="consent-search" className="text-sm text-muted-foreground cursor-pointer">
-                    Autorizo uso do meu resultado para análise de performance.
-                  </label>
-                </div>
-
-                {/* Results list with checkboxes */}
-                <div className="space-y-2">
-                  {searchResults.map((result, idx) => {
-                    const isSelected = selectedIndices.has(idx);
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => searchResults.length > 1 ? toggleSelection(idx) : handleImportFromSearch(result)}
-                        disabled={searchResults.length > 1 ? false : !agreed}
-                        className={`w-full flex items-center gap-3 rounded-xl p-4 text-left transition-colors ${
-                          isSelected 
-                            ? 'bg-primary/10 border border-primary/30' 
-                            : 'bg-muted/50 hover:bg-muted border border-transparent'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {searchResults.length > 1 ? (
-                          <div className="shrink-0">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSelection(idx)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <Flame className="w-5 h-5 text-primary" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{formatAthleteName(result.athlete_name)}</p>
-                          <p className="text-xs text-muted-foreground truncate">{result.event_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {result.time_formatted}
-                            {result.division ? ` • ${result.division}` : ''}
-                          </p>
-                        </div>
-                        {searchResults.length === 1 && (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Batch import button */}
-                {searchResults.length > 1 && selectedIndices.size > 0 && (
-                  <Button
-                    onClick={handleBatchImport}
-                    disabled={!agreed}
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-base font-bold rounded-2xl"
-                  >
-                    <Flame className="w-5 h-5 mr-2" />
-                    Importar {selectedIndices.size} prova{selectedIndices.size > 1 ? 's' : ''} selecionada{selectedIndices.size > 1 ? 's' : ''}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* No results or error */}
+          {/* No results */}
           {searchDone && !searching && searchResults.length === 0 && (
             <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
               <Search className="w-8 h-8 text-muted-foreground mx-auto" />
               <p className="text-sm text-muted-foreground">
-                {searchError || `Nenhum resultado encontrado para "${[searchFirstName, searchLastName].filter(Boolean).join(' ')}".`}
+                {searchError || `Nenhum resultado encontrado para "${searchQuery}".`}
               </p>
             </div>
           )}
 
           {/* Manual fallback */}
-          {(searchDone || !searchLastName) && !searching && (
+          {(searchDone || !searchQuery.trim()) && !searching && (
             <Button
               variant="outline"
               className="w-full h-12 rounded-2xl"
