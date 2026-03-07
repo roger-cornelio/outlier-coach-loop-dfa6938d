@@ -88,6 +88,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [data, setData] = useState<DiagnosticoData>({ resumo: null, splits: [], diagnosticos: [] });
   const [loading, setLoading] = useState(true);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [url, setUrl] = useState('');
   const [hacking, setHacking] = useState(false);
