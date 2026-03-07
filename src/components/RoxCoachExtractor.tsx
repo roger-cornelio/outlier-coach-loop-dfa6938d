@@ -318,14 +318,17 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
-  /** Import all visible results sequentially */
-  async function handleImportAll() {
-    if (!user || searchResults.length === 0) return;
+  /** Import selected results sequentially */
+  async function handleImportSelected() {
+    if (!user || selectedResults.size === 0) return;
+    const toImport = searchResults.filter(r => selectedResults.has(r.result_url));
+    if (toImport.length === 0) return;
+
     setImportingAll(true);
     let successCount = 0;
     let failCount = 0;
 
-    for (const result of searchResults) {
+    for (const result of toImport) {
       setSelectedUrl(result.result_url);
       try {
         const tasks: Promise<any>[] = [generateDiagnostic(result)];
@@ -344,15 +347,32 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     setSelectedUrl('');
     setImportingAll(false);
+    setSelectedResults(new Set());
 
     if (successCount > 0) {
       toast.success(`${successCount} diagnóstico(s) importado(s) com sucesso! 🔥`);
-      // Remove imported results from list
-      setSearchResults([]);
+      setSearchResults(prev => prev.filter(r => !selectedResults.has(r.result_url)));
       onSuccess();
     }
     if (failCount > 0) {
       toast.error(`${failCount} prova(s) não puderam ser importadas.`);
+    }
+  }
+
+  function toggleResultSelection(url: string) {
+    setSelectedResults(prev => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedResults.size === searchResults.length) {
+      setSelectedResults(new Set());
+    } else {
+      setSelectedResults(new Set(searchResults.map(r => r.result_url)));
     }
   }
 
