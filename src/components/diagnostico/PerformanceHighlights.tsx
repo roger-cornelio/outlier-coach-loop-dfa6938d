@@ -29,12 +29,12 @@ export default function PerformanceHighlights({ resumo }: Props) {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Finish Time — hero card */}
-        <div className="col-span-2 lg:col-span-1 bg-primary/10 border-2 border-primary rounded-xl p-5 space-y-1">
-          <div className="flex items-center gap-2 text-primary">
+        <div className="col-span-2 lg:col-span-1 bg-primary/10 border-2 border-primary rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-primary">
             <Flag className="w-4 h-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Finish Time</span>
+            <span className="text-[10px] font-medium uppercase tracking-wide">Finish Time</span>
           </div>
-          <p className="text-2xl lg:text-3xl font-extrabold text-primary truncate">
+          <p className="text-2xl font-extrabold text-primary">
             {resumo.finish_time || '—'}
           </p>
         </div>
@@ -45,13 +45,13 @@ export default function PerformanceHighlights({ resumo }: Props) {
           return (
             <div
               key={key}
-              className="bg-card border border-border rounded-xl p-4 space-y-1"
+              className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1"
             >
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Icon className="w-4 h-4 text-primary" />
-                <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+                <span className="text-[10px] font-medium uppercase tracking-wide">{label}</span>
               </div>
-              <p className="text-xl font-bold text-primary truncate">
+              <p className="text-2xl font-extrabold text-primary">
                 {display}
               </p>
             </div>
