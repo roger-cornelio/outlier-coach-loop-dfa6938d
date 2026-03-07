@@ -1,8 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Clock, Calendar } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Clock, Calendar, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import type { WorkoutBlock, WorkoutResult, PerformanceBucket, BenchmarkDirection } from '@/types/outlier';
 import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetricInfo } from '@/utils/benchmarkVariants';
 import { supabase } from '@/integrations/supabase/client';
