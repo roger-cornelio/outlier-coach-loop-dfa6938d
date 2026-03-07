@@ -1,4 +1,4 @@
-import { Crosshair, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Crosshair, TrendingUp } from 'lucide-react';
 import type { DiagnosticoMelhoria, DiagnosticoResumo } from './types';
 import { secondsToTime } from './types';
 
