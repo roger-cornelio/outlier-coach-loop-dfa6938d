@@ -71,7 +71,17 @@ const PRO_TO_OPEN_FACTOR: Record<AthleteGender, number> = {
 // CONFIGURAÇÕES DE BENCHMARK
 // ============================================================
 
-const OFFICIAL_COMPETITION_VALIDITY_DAYS = 18 * 30; // 18 meses
+/**
+ * Race validity for classification: only current year and previous year count.
+ * E.g., in 2026 season (2025/26), races from 2024 don't count.
+ * This means race year must be >= (current year - 1).
+ */
+function getSeasonValidityCutoff(): Date {
+  const currentYear = new Date().getFullYear();
+  // Races from Jan 1 of previous year onward are valid
+  return new Date(currentYear - 1, 0, 1); // Jan 1 of (currentYear - 1)
+}
+
 const DECAY_HALF_LIFE_DAYS = 30;
 const MIN_WEIGHT = 0.1;
 const MIN_BENCHMARKS_MEDIUM_CONFIDENCE = 4;
