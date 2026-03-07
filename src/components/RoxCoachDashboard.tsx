@@ -118,21 +118,38 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     if (!user || !selectedResumoId) return;
     setDeleting(true);
     try {
-      // CASCADE will delete linked melhoria and splits
       await supabase.from('diagnostico_resumo').delete().eq('id', selectedResumoId);
-
-      // Also clean up any legacy orphan data without resumo_id
       await Promise.all([
         supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id).is('resumo_id', null),
         supabase.from('tempos_splits').delete().eq('atleta_id', user.id).is('resumo_id', null),
       ]);
-
       setSelectedResumoId(null);
       setLocalRefresh(v => v + 1);
       toast.success('Diagnóstico apagado com sucesso.');
     } catch (err) {
       console.error('Error deleting diagnostic:', err);
       toast.error('Erro ao apagar diagnóstico.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleDeleteAllDiagnostics() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id);
+      await Promise.all([
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+      ]);
+      setSelectedResumoId(null);
+      setAllResumos([]);
+      setLocalRefresh(v => v + 1);
+      toast.success('Todos os diagnósticos foram apagados.');
+    } catch (err) {
+      console.error('Error deleting all diagnostics:', err);
+      toast.error('Erro ao apagar diagnósticos.');
     } finally {
       setDeleting(false);
     }
@@ -261,28 +278,55 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               {showImporter ? 'Fechar importador' : 'Importar novo diagnóstico'}
             </Button>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  Apagar diagnóstico
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Apagar diagnóstico?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    O diagnóstico de "{selectedResumo.evento}" será apagado permanentemente.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteDiagnostic} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {deleting ? 'Apagando...' : 'Sim, apagar'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex items-center gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    Apagar este
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar diagnóstico?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      O diagnóstico de "{selectedResumo.evento}" será apagado permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteDiagnostic} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      {deleting ? 'Apagando...' : 'Sim, apagar'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {allResumos.length > 1 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
+                      <Trash2 className="w-4 h-4" />
+                      Excluir todos
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir todos os diagnósticos?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Todos os {allResumos.length} diagnósticos serão apagados permanentemente. Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAllDiagnostics} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {deleting ? 'Apagando...' : 'Sim, excluir todos'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
 
           {showImporter && (

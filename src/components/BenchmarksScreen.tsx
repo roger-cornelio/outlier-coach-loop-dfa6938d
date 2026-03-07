@@ -34,24 +34,13 @@ export function BenchmarksScreen() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleClearAllResults = async () => {
-    setIsClearing(true);
-    try {
-      clearHistory();
-      if (user?.id) {
-        const { error } = await supabase.from('benchmark_results').delete().eq('user_id', user.id);
-        if (error) throw error;
-      }
-      clearStatusHistory();
-      triggerExternalResultsRefresh();
-      toast.success('Todos os resultados foram apagados');
-      setRefreshKey(prev => prev + 1);
-    } catch (error) {
-      console.error('Error clearing results:', error);
-      toast.error('Erro ao apagar resultados');
-    } finally {
-      setIsClearing(false);
-    }
+  const handleClearAllResults = () => {
+    // UI-only: clears local store state, not the database
+    clearHistory();
+    clearStatusHistory();
+    triggerExternalResultsRefresh();
+    toast.success('Visualização zerada. Os dados permanecem salvos.');
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
@@ -86,16 +75,15 @@ export function BenchmarksScreen() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Zerar todos os resultados?</AlertDialogTitle>
+                    <AlertDialogTitle>Limpar visualização?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação irá apagar permanentemente todos os seus benchmarks, simulados e provas oficiais. 
-                      Seu progresso e nível serão resetados. Esta ação não pode ser desfeita.
+                      Isso vai limpar a tela de evolução. Seus dados continuam salvos no banco de dados.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearAllResults} disabled={isClearing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      {isClearing ? 'Apagando...' : 'Sim, apagar tudo'}
+                    <AlertDialogAction onClick={handleClearAllResults} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Limpar tela
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

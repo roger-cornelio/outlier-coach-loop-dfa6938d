@@ -1,8 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Clock, Calendar } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Clock, Calendar, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import type { WorkoutBlock, WorkoutResult, PerformanceBucket, BenchmarkDirection } from '@/types/outlier';
 import { getEffectiveTargetRange, classifyBenchmarkPerformance, getBenchmarkMetricInfo } from '@/utils/benchmarkVariants';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,39 +124,72 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
   const [expandedBenchmark, setExpandedBenchmark] = useState<string | null>(null);
   const [externalResults, setExternalResults] = useState<ExternalResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
-  // Fetch external results (simulados and provas) from Supabase
-  useEffect(() => {
-    const fetchExternalResults = async () => {
-      if (!user) return;
+  const fetchExternalResults = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('benchmark_results')
+        .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
+        .eq('user_id', user.id)
+        .in('result_type', ['simulado', 'prova_oficial']);
+
+      const { data, error } = await query;
       
-      setLoading(true);
-      try {
-        let query = supabase
-          .from('benchmark_results')
-          .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
-          .eq('user_id', user.id)
-          .in('result_type', ['simulado', 'prova_oficial']);
-
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        // Sort: event_date desc (when available), then created_at desc
-        const sorted = (data || []).sort((a: any, b: any) => {
-          const dateA = a.event_date || a.created_at;
-          const dateB = b.event_date || b.created_at;
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
-        });
-        setExternalResults(sorted as ExternalResult[]);
-      } catch (err) {
-        console.error('Error fetching external results:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchExternalResults();
+      if (error) throw error;
+      const sorted = (data || []).sort((a: any, b: any) => {
+        const dateA = a.event_date || a.created_at;
+        const dateB = b.event_date || b.created_at;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+      setExternalResults(sorted as ExternalResult[]);
+    } catch (err) {
+      console.error('Error fetching external results:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchExternalResults();
+  }, [user, fetchExternalResults]);
+
+  const handleDeleteResult = async (id: string) => {
+    try {
+      const { error } = await supabase.from('benchmark_results').delete().eq('id', id);
+      if (error) throw error;
+      setExternalResults(prev => prev.filter(r => r.id !== id));
+      toast.success('Resultado excluído.');
+    } catch (err) {
+      console.error('Error deleting result:', err);
+      toast.error('Erro ao excluir resultado.');
+    }
+  };
+
+  const handleDeleteAllFiltered = async () => {
+    if (!user) return;
+    setDeletingAll(true);
+    try {
+      const typeFilter = filterType === 'prova_oficial' ? 'prova_oficial' : filterType === 'simulado' ? 'simulado' : null;
+      let query = supabase.from('benchmark_results').delete().eq('user_id', user.id);
+      if (typeFilter) {
+        query = query.eq('result_type', typeFilter);
+      } else {
+        query = query.in('result_type', ['simulado', 'prova_oficial']);
+      }
+      const { error } = await query;
+      if (error) throw error;
+      await fetchExternalResults();
+      toast.success('Todos os resultados desta aba foram excluídos.');
+    } catch (err) {
+      console.error('Error deleting all:', err);
+      toast.error('Erro ao excluir resultados.');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   // Filter external results based on filterType
   const filteredExternalResults = useMemo(() => {
@@ -245,9 +281,36 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
                 result={result}
                 gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
                 timeDeltaSeconds={timeDelta}
+                onDelete={handleDeleteResult}
               />
             );
           })}
+
+          {/* Zerar tudo button */}
+          <div className="flex justify-end pt-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Excluir todos
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir todos os resultados?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Todos os {filterType === 'prova_oficial' ? 'provas oficiais' : filterType === 'simulado' ? 'simulados' : 'resultados'} serão apagados permanentemente. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllFiltered} disabled={deletingAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {deletingAll ? 'Excluindo...' : 'Sim, excluir todos'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       )}
 

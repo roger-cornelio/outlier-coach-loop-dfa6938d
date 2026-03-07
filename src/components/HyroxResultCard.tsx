@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Medal, Timer, Calendar, Image, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Medal, Timer, Calendar, Image, ExternalLink, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { HyroxAnalysisCard } from './HyroxAnalysisCard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface HyroxResultCardProps {
   result: {
@@ -17,6 +18,8 @@ interface HyroxResultCardProps {
   gender: 'M' | 'F';
   /** Optional: time difference in seconds vs previous race (positive = improved) */
   timeDeltaSeconds?: number | null;
+  /** Optional: callback when result is deleted */
+  onDelete?: (id: string) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -62,7 +65,7 @@ function getEventLocation(eventName: string | null): string {
  * - "Ver análise" CTA button
  * - Expandable analysis section with radar chart
  */
-export function HyroxResultCard({ result, gender, timeDeltaSeconds }: HyroxResultCardProps) {
+export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete }: HyroxResultCardProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   const isOfficial = result.result_type === 'prova_oficial';
@@ -178,6 +181,34 @@ export function HyroxResultCard({ result, gender, timeDeltaSeconds }: HyroxResul
                   gender={gender}
                   raceCategory={result.race_category}
                 />
+              )}
+
+              {/* Delete individual result */}
+              {onDelete && (
+                <div className="flex justify-end pt-3 mt-3 border-t border-border">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive/80 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Excluir prova
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir esta prova?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          O resultado de "{getEventLocation(result.event_name)}" será apagado permanentemente do banco de dados.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDelete(result.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Sim, excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               )}
             </div>
           </motion.div>
