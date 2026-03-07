@@ -281,9 +281,36 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
                 result={result}
                 gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
                 timeDeltaSeconds={timeDelta}
+                onDelete={handleDeleteResult}
               />
             );
           })}
+
+          {/* Zerar tudo button */}
+          <div className="flex justify-end pt-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Excluir todos
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir todos os resultados?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Todos os {filterType === 'prova_oficial' ? 'provas oficiais' : filterType === 'simulado' ? 'simulados' : 'resultados'} serão apagados permanentemente. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllFiltered} disabled={deletingAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {deletingAll ? 'Excluindo...' : 'Sim, excluir todos'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       )}
 
