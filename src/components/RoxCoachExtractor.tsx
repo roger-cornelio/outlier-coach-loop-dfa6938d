@@ -315,7 +315,9 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       {searching && (
         <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Buscando sua última prova...</span>
+          <span className="text-sm">
+            {mode === 'diagnostic_only' ? 'Buscando provas...' : 'Buscando sua última prova...'}
+          </span>
         </div>
       )}
 
