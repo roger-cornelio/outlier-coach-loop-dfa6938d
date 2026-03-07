@@ -186,53 +186,107 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </div>
       )}
 
-      {/* Race Cards */}
-      {!loading && allResumos.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {allResumos.map((resumo, index) => {
-            const isActive = resumo.id === selectedResumoId;
-            const location = extractLocation(resumo.evento);
-            const season = extractSeason(resumo.temporada, resumo.evento);
+      {/* Race Cards - Latest on top, others below */}
+      {!loading && allResumos.length > 0 && (() => {
+        const latestResumo = allResumos[0];
+        const olderResumos = allResumos.slice(1);
+        const latestLocation = extractLocation(latestResumo.evento);
+        const latestSeason = extractSeason(latestResumo.temporada, latestResumo.evento);
+        const latestIsActive = latestResumo.id === selectedResumoId;
 
-            return (
+        return (
+          <div className="space-y-4">
+            {/* PROVA ATUAL */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                Prova Atual
+              </h3>
               <motion.button
-                key={resumo.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                onClick={() => setSelectedResumoId(resumo.id)}
-                className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] relative ${
-                  isActive
-                    ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                onClick={() => setSelectedResumoId(latestResumo.id)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left ring-2 ring-primary/50 ${
+                  latestIsActive
+                    ? 'border-primary bg-primary/10'
                     : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
-                } ${index === 0 ? 'ring-2 ring-primary/50' : ''}`}
+                }`}
               >
-                {index === 0 && (
-                  <span className="absolute -top-2 left-3 text-[9px] font-bold uppercase tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
-                    Mais recente
-                  </span>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
-                  <span className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                    {location || 'Prova'}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div>
+                    <span className={`text-sm font-bold ${latestIsActive ? 'text-primary' : 'text-foreground'}`}>
+                      {latestLocation || 'Prova'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                      <span className="text-[11px] text-muted-foreground">
+                        {latestSeason} {latestResumo.divisao ? `· ${latestResumo.divisao}` : ''}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {season} {resumo.divisao ? `· ${resumo.divisao}` : ''}
-                  </span>
-                </div>
-                {resumo.finish_time && (
-                  <span className={`text-sm font-extrabold ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                    {resumo.finish_time}
+                {latestResumo.finish_time && (
+                  <span className={`text-lg font-extrabold ${latestIsActive ? 'text-primary' : 'text-foreground'}`}>
+                    {latestResumo.finish_time}
                   </span>
                 )}
               </motion.button>
-            );
-          })}
-        </div>
-      )}
+            </div>
+
+            {/* OUTRAS PROVAS */}
+            {olderResumos.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Outras Provas
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {olderResumos.map((resumo) => {
+                    const isActive = resumo.id === selectedResumoId;
+                    const location = extractLocation(resumo.evento);
+                    const season = extractSeason(resumo.temporada, resumo.evento);
+
+                    return (
+                      <motion.button
+                        key={resumo.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => setSelectedResumoId(resumo.id)}
+                        className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[150px] ${
+                          isActive
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                            : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
+                          <span className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                            {location || 'Prova'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            {season} {resumo.divisao ? `· ${resumo.divisao}` : ''}
+                          </span>
+                        </div>
+                        {resumo.finish_time && (
+                          <span className={`text-sm font-extrabold ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                            {resumo.finish_time}
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Loading skeletons */}
       {loading && (
