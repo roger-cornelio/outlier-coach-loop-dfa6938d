@@ -41,10 +41,10 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
-              Parecer de Performance
+              Parecer OUTLIER
             </h3>
             <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-              Análise Inteligente · Dados Reais
+              Inteligência de Performance · Dados Reais
             </p>
           </div>
         </div>
