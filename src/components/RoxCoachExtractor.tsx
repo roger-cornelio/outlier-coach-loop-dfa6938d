@@ -78,6 +78,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
   const [generating, setGenerating] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
+  const [importingAll, setImportingAll] = useState(false);
 
   useEffect(() => {
     if (!profileName || !user) return;
