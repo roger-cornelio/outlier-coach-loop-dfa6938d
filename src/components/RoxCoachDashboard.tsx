@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Trash2, Loader2 } from 'lucide-react';
+import { Zap, Trash2, Loader2, MapPin, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -7,14 +7,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import type { DiagnosticoData, DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
+import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 import DiagnosticCharts from './diagnostico/DiagnosticCharts';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
 import RoxCoachExtractor from './RoxCoachExtractor';
+import { motion } from 'framer-motion';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
@@ -22,52 +22,107 @@ interface RoxCoachDashboardProps {
 
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [data, setData] = useState<DiagnosticoData>({ resumo: null, splits: [], diagnosticos: [] });
+  const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
+  const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
+  const [splits, setSplits] = useState<Split[]>([]);
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [localRefresh, setLocalRefresh] = useState(0);
   const [showImporter, setShowImporter] = useState(false);
 
-  // Fetch diagnostic data from DB
+  // Fetch all resumos
   useEffect(() => {
     if (!user) { setLoading(false); return; }
 
-    async function fetchData() {
+    async function fetchResumos() {
       setLoading(true);
       try {
-        const [resumoRes, splitsRes, diagRes] = await Promise.all([
-          supabase.from('diagnostico_resumo').select('*').eq('atleta_id', user!.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-          supabase.from('tempos_splits').select('*').eq('atleta_id', user!.id),
-          supabase.from('diagnostico_melhoria').select('*').eq('atleta_id', user!.id),
-        ]);
+        const { data } = await supabase
+          .from('diagnostico_resumo')
+          .select('*')
+          .eq('atleta_id', user!.id)
+          .order('created_at', { ascending: false });
 
-        setData({
-          resumo: (resumoRes.data as DiagnosticoResumo | null),
-          splits: (splitsRes.data as Split[]) || [],
-          diagnosticos: (diagRes.data as DiagnosticoMelhoria[]) || [],
-        });
+        const resumos = (data as DiagnosticoResumo[]) || [];
+        setAllResumos(resumos);
+
+        // Auto-select most recent
+        if (resumos.length > 0 && !selectedResumoId) {
+          setSelectedResumoId(resumos[0].id);
+        } else if (resumos.length > 0 && selectedResumoId && !resumos.find(r => r.id === selectedResumoId)) {
+          setSelectedResumoId(resumos[0].id);
+        }
       } catch (err) {
-        console.error('Error fetching diagnostic data:', err);
+        console.error('Error fetching resumos:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchData();
+    fetchResumos();
   }, [user, refreshKey, localRefresh]);
 
+  // Fetch detail data when selectedResumoId changes
+  useEffect(() => {
+    if (!user || !selectedResumoId) {
+      setSplits([]);
+      setDiagnosticos([]);
+      return;
+    }
+
+    async function fetchDetail() {
+      setLoadingDetail(true);
+      try {
+        const [splitsRes, diagRes] = await Promise.all([
+          supabase.from('tempos_splits').select('*').eq('resumo_id', selectedResumoId),
+          supabase.from('diagnostico_melhoria').select('*').eq('resumo_id', selectedResumoId),
+        ]);
+
+        let splitsData = (splitsRes.data as Split[]) || [];
+        let diagData = (diagRes.data as DiagnosticoMelhoria[]) || [];
+
+        // Fallback for legacy data without resumo_id
+        if (splitsData.length === 0 && diagData.length === 0) {
+          const [fallbackSplits, fallbackDiag] = await Promise.all([
+            supabase.from('tempos_splits').select('*').eq('atleta_id', user!.id).is('resumo_id', null),
+            supabase.from('diagnostico_melhoria').select('*').eq('atleta_id', user!.id).is('resumo_id', null),
+          ]);
+          splitsData = (fallbackSplits.data as Split[]) || [];
+          diagData = (fallbackDiag.data as DiagnosticoMelhoria[]) || [];
+        }
+
+        setSplits(splitsData);
+        setDiagnosticos(diagData);
+      } catch (err) {
+        console.error('Error fetching detail:', err);
+      } finally {
+        setLoadingDetail(false);
+      }
+    }
+
+    fetchDetail();
+  }, [user, selectedResumoId]);
+
+  const selectedResumo = allResumos.find(r => r.id === selectedResumoId) || null;
+
   async function handleDeleteDiagnostic() {
-    if (!user) return;
+    if (!user || !selectedResumoId) return;
     setDeleting(true);
     try {
+      // CASCADE will delete linked melhoria and splits
+      await supabase.from('diagnostico_resumo').delete().eq('id', selectedResumoId);
+
+      // Also clean up any legacy orphan data without resumo_id
       await Promise.all([
-        supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
-        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
-        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id).is('resumo_id', null),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id).is('resumo_id', null),
       ]);
-      setData({ resumo: null, splits: [], diagnosticos: [] });
+
+      setSelectedResumoId(null);
+      setLocalRefresh(v => v + 1);
       toast.success('Diagnóstico apagado com sucesso.');
     } catch (err) {
       console.error('Error deleting diagnostic:', err);
@@ -77,29 +132,77 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     }
   }
 
-  const hasData = data.resumo || data.splits.length > 0 || data.diagnosticos.length > 0;
+  const hasData = allResumos.length > 0;
+
+  /** Extract location from event name like "2025 Sao Paulo • HYROX PRO" */
+  function extractLocation(evento: string | null): string {
+    if (!evento) return '';
+    const parts = evento.split('•')[0]?.trim() || evento;
+    // Remove leading year
+    return parts.replace(/^\d{4}\s+/, '').trim();
+  }
+
+  function extractSeason(temporada: string | null, evento: string | null): string {
+    if (temporada) return temporada;
+    if (evento) {
+      const yearMatch = evento.match(/^(\d{4})/);
+      if (yearMatch) return yearMatch[1];
+    }
+    return '';
+  }
 
   return (
     <div className="space-y-6">
-      {/* Dynamic title */}
-      {data.resumo?.nome_atleta && (
+      {/* Title */}
+      {selectedResumo?.nome_atleta && (
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico OUTLIER: {data.resumo.nome_atleta}
+            Diagnóstico OUTLIER: {selectedResumo.nome_atleta}
           </h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            {data.resumo.evento && (
-              <Badge variant="outline" className="text-xs font-medium">
-                {data.resumo.evento}
-              </Badge>
-            )}
-            {(data.resumo.divisao || data.resumo.temporada) && (
-              <Badge variant="secondary" className="text-xs font-medium">
-                {[data.resumo.divisao, data.resumo.temporada].filter(Boolean).join(' · ')}
-              </Badge>
-            )}
-          </div>
+        </div>
+      )}
+
+      {/* Race Cards */}
+      {!loading && allResumos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {allResumos.map((resumo) => {
+            const isActive = resumo.id === selectedResumoId;
+            const location = extractLocation(resumo.evento);
+            const season = extractSeason(resumo.temporada, resumo.evento);
+
+            return (
+              <motion.button
+                key={resumo.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => setSelectedResumoId(resumo.id)}
+                className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] ${
+                  isActive
+                    ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                    : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
+                  <span className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                    {location || 'Prova'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {season} {resumo.divisao ? `· ${resumo.divisao}` : ''}
+                  </span>
+                </div>
+                {resumo.finish_time && (
+                  <span className={`text-sm font-extrabold ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                    {resumo.finish_time}
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
         </div>
       )}
 
@@ -110,27 +213,37 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
           </div>
           <Skeleton className="h-40 rounded-xl" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
-          </div>
+        </div>
+      )}
+
+      {/* Detail loading */}
+      {!loading && loadingDetail && (
+        <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Carregando diagnóstico...</span>
         </div>
       )}
 
       {/* Data sections */}
-      {!loading && hasData && (
+      {!loading && !loadingDetail && selectedResumo && (
         <>
-          {data.resumo && <PerformanceHighlights resumo={data.resumo} />}
-          {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)} showFullAnalysis={showFullAnalysis} />}
+          <PerformanceHighlights resumo={selectedResumo} />
+          <ParecerPremium
+            resumo={selectedResumo}
+            diagnosticos={diagnosticos}
+            onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)}
+            showFullAnalysis={showFullAnalysis}
+          />
 
           {showFullAnalysis && (
             <>
-              <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
-              <SplitTimesGrid splits={data.splits} />
-              <ImprovementTable diagnosticos={data.diagnosticos} splits={data.splits} />
+              <DiagnosticCharts splits={splits} diagnosticos={diagnosticos} />
+              <SplitTimesGrid splits={splits} />
+              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
             </>
           )}
 
-          {/* Import new + Delete actions */}
+          {/* Actions */}
           <div className="flex items-center justify-between gap-2 pt-2">
             <Button
               variant="outline"
@@ -153,7 +266,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 <AlertDialogHeader>
                   <AlertDialogTitle>Apagar diagnóstico?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Todos os dados do diagnóstico atual serão apagados permanentemente. Você poderá gerar um novo importando uma prova.
+                    O diagnóstico de "{selectedResumo.evento}" será apagado permanentemente.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -166,14 +279,13 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             </AlertDialog>
           </div>
 
-          {/* Inline importer when toggled */}
           {showImporter && (
             <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => { setLocalRefresh(v => v + 1); setShowImporter(false); }} />
           )}
         </>
       )}
 
-      {/* Empty state — show extractor inline */}
+      {/* Empty state */}
       {!loading && !hasData && (
         <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
