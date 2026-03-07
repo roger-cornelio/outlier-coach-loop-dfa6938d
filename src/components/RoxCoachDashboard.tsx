@@ -39,12 +39,23 @@ function PercentageBadge({ value }: { value: number }) {
   return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30">{value.toFixed(1)}%</Badge>;
 }
 
-/** Format seconds to mm:ss */
+/** Format seconds to mm:ss - always format for consistency */
 function formatTime(seconds: number): string {
-  if (!seconds || seconds <= 0) return '-';
+  if (seconds == null || seconds <= 0) return '0';
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
+  if (m === 0) return `${s}s`;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** Translate metric name to Portuguese */
+function translateMetric(metric: string): string {
+  if (!metric) return '-';
+  const map: Record<string, string> = {
+    'potential improvement': 'Melhoria Potencial',
+    'time': 'Tempo',
+  };
+  return map[metric.toLowerCase()] || metric;
 }
 
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
