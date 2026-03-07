@@ -1,10 +1,13 @@
-import { AlertTriangle, Crosshair, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Crosshair, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { DiagnosticoMelhoria, DiagnosticoResumo } from './types';
 import { secondsToTime } from './types';
 
 interface Props {
   resumo: DiagnosticoResumo;
   diagnosticos: DiagnosticoMelhoria[];
+  onToggleFullAnalysis?: () => void;
+  showFullAnalysis?: boolean;
 }
 
 function Highlight({ children }: { children: React.ReactNode }) {
