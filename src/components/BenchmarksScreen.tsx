@@ -34,13 +34,33 @@ export function BenchmarksScreen() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleClearAllResults = () => {
-    // UI-only: clears local store state, not the database
-    clearHistory();
-    clearStatusHistory();
-    triggerExternalResultsRefresh();
-    toast.success('Visualização zerada. Os dados permanecem salvos.');
-    setRefreshKey(prev => prev + 1);
+  const handleClearAllEvolution = async () => {
+    if (!user) return;
+    setIsClearing(true);
+    try {
+      // Delete all evolution data from DB
+      await Promise.all([
+        supabase.from('benchmark_results').delete().eq('user_id', user.id),
+        supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+        supabase.from('race_results').delete().eq('athlete_id', user.id),
+        supabase.from('benchmark_outlier_results').delete().eq('athlete_id', user.id),
+        supabase.from('benchmark_outlier_progress').delete().eq('athlete_id', user.id),
+        supabase.from('hyrox_metric_scores').delete().eq('hyrox_result_id', user.id),
+      ]);
+      // Clear local state
+      clearHistory();
+      clearStatusHistory();
+      triggerExternalResultsRefresh();
+      setRefreshKey(prev => prev + 1);
+      toast.success('Todos os dados de evolução foram apagados.');
+    } catch (err) {
+      console.error('Error clearing evolution data:', err);
+      toast.error('Erro ao limpar dados de evolução.');
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   return (
@@ -69,21 +89,22 @@ export function BenchmarksScreen() {
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="icon" className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 w-8">
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 gap-1.5 px-2.5">
                     <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs">Limpar dados</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Limpar visualização?</AlertDialogTitle>
+                    <AlertDialogTitle>Limpar dados de evolução?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Isso vai limpar a tela de evolução. Seus dados continuam salvos no banco de dados.
+                      Isso vai apagar permanentemente todos os dados de evolução: diagnósticos, provas, simulados e benchmarks. Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearAllResults} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Limpar tela
+                    <AlertDialogAction onClick={handleClearAllEvolution} disabled={isClearing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      {isClearing ? 'Apagando...' : 'Sim, apagar tudo'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
