@@ -168,14 +168,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {/* Inline importer when toggled */}
           {showImporter && (
-            <RoxCoachExtractor onSuccess={() => { setLocalRefresh(v => v + 1); setShowImporter(false); }} />
+            <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => { setLocalRefresh(v => v + 1); setShowImporter(false); }} />
           )}
         </>
       )}
 
       {/* Empty state — show extractor inline */}
       {!loading && !hasData && (
-        <RoxCoachExtractor onSuccess={() => setLocalRefresh(v => v + 1)} />
+        <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
     </div>
   );

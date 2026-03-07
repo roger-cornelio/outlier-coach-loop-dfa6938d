@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoxCoachExtractorProps {
   onSuccess: () => void;
+  /** 'full' = save race + diagnostic (default); 'diagnostic_only' = only diagnostic tables */
+  mode?: 'full' | 'diagnostic_only';
 }
 
 interface SearchResult {
@@ -62,7 +64,7 @@ function extractIdpFromUrl(url: string): { idp: string | null; event: string | n
   }
 }
 
-export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps) {
+export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoachExtractorProps) {
   const { user, profile } = useAuth();
   const { athleteConfig } = useOutlierStore();
 
@@ -111,11 +113,11 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
 
       const rawResults: SearchResult[] = data?.results || [];
 
-      // REGRA 1: Sort by most recent (higher season_id first) then slice to 1
+      // In diagnostic_only mode, show all results; in full mode, show only most recent
       const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
-      const mostRecent = sorted.slice(0, 1);
+      const displayed = mode === 'diagnostic_only' ? sorted : sorted.slice(0, 1);
 
-      setSearchResults(mostRecent);
+      setSearchResults(displayed);
     } catch (err: any) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados.');
@@ -243,11 +245,13 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     setGenerating(true);
 
     try {
-      // Execute Action A (save history) and Action B (diagnostic) in parallel
-      const [, diagnosticResult] = await Promise.allSettled([
-        saveRaceHistory(result),
-        generateDiagnostic(result),
-      ]);
+      // In diagnostic_only mode, skip race history save
+      const tasks: Promise<any>[] = [generateDiagnostic(result)];
+      if (mode === 'full') {
+        tasks.unshift(saveRaceHistory(result));
+      }
+      const settled = await Promise.allSettled(tasks);
+      const diagnosticResult = mode === 'full' ? settled[1] : settled[0];
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
@@ -276,7 +280,9 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
           Diagnóstico de Performance
         </h2>
         <p className="text-xs text-muted-foreground">
-          Busque seu nome para encontrar sua última prova e gerar o diagnóstico automaticamente.
+          {mode === 'diagnostic_only'
+            ? 'Busque seu nome para encontrar suas provas e importar o diagnóstico.'
+            : 'Busque seu nome para encontrar sua última prova e gerar o diagnóstico automaticamente.'}
         </p>
       </div>
 
@@ -309,7 +315,9 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
       {searching && (
         <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Buscando sua última prova...</span>
+          <span className="text-sm">
+            {mode === 'diagnostic_only' ? 'Buscando provas...' : 'Buscando sua última prova...'}
+          </span>
         </div>
       )}
 
@@ -322,7 +330,9 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
             className="space-y-2"
           >
             <p className="text-xs text-muted-foreground font-medium">
-              Última prova encontrada — clique para gerar o diagnóstico:
+              {mode === 'diagnostic_only'
+                ? `${searchResults.length} prova(s) encontrada(s) — clique para importar o diagnóstico:`
+                : 'Última prova encontrada — clique para gerar o diagnóstico:'}
             </p>
             <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
