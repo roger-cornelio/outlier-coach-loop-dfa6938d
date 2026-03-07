@@ -168,7 +168,8 @@ async function searchEventForAthlete(
   eventName: string,
   firstName: string,
   lastName: string,
-  gender: string
+  gender: string,
+  eventIndex: number = 999
 ): Promise<any[]> {
   const url = `https://results.hyrox.com/season-${seasonId}/?pid=list&pidp=ranking_nav&event_main_group=${encodeURIComponent(eventName)}&search%5Bname%5D=${encodeURIComponent(lastName)}${firstName ? `&search%5Bfirstname%5D=${encodeURIComponent(firstName)}` : ""}${gender === "M" || gender === "W" ? `&search%5Bsex%5D=${gender}` : ""}&num_results=25`;
 
