@@ -56,8 +56,8 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
               Fala, <Highlight>{nome}</Highlight>! Você finalizou o{' '}
               <Highlight>{evento}</Highlight> com a marca de{' '}
               <Highlight>{finish}</Highlight>. Nós dissecamos a sua prova e
-              comparamos cada split seu contra a elite (Top 1%) da categoria{' '}
-              <Highlight>{divisao}</Highlight>.
+              comparamos cada split seu contra a referência OUTLIER da categoria{' '}
+              <Highlight>{divisao}</Highlight> — o padrão que separa quem é da média de quem é fora da curva.
             </p>
 
             <p>
