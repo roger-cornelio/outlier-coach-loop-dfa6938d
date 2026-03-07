@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoxCoachExtractorProps {
   onSuccess: () => void;
+  /** 'full' = save race + diagnostic (default); 'diagnostic_only' = only diagnostic tables */
+  mode?: 'full' | 'diagnostic_only';
 }
 
 interface SearchResult {
