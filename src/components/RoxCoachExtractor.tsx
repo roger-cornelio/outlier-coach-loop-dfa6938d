@@ -296,6 +296,8 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
+        // Remove imported result from list
+        setSearchResults(prev => prev.filter(r => r.result_url !== result.result_url));
         onSuccess();
       } else if (diagnosticResult.status === 'rejected') {
         console.error('Diagnostic generation error:', diagnosticResult.reason);
