@@ -1,290 +1,59 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Zap, Trash2, Loader2, Search, Trophy, ChevronRight, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Zap, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import type { DiagnosticoData, DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
-import AIAnalysis from './diagnostico/AIAnalysis';
 import DiagnosticCharts from './diagnostico/DiagnosticCharts';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
 
-type SearchResult = {
-  athlete_name: string;
-  event_name: string;
-  division?: string;
-  time_formatted: string;
-  result_url: string;
-  season_id?: number;
-};
-
 interface RoxCoachDashboardProps {
   refreshKey?: number;
 }
 
-// Noise words to filter from split/diagnostic names
-const SPLIT_NOISE = ['splits', 'total', 'average', 'station', 'movement', 'time', 'split', ''];
-
-/** Parse a numeric value from potentially formatted strings like "87.5%" */
-function toNum(val: any): number {
-  if (val == null || val === '') return 0;
-  const cleaned = String(val).replace(/[^0-9.\-]/g, '');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
-/** Find value from an object using multiple possible keys (case-insensitive) */
-function findValue(obj: any, ...aliases: string[]): any {
-  if (!obj || typeof obj !== 'object') return undefined;
-  for (const alias of aliases) {
-    const lower = alias.toLowerCase();
-    for (const key of Object.keys(obj)) {
-      if (key.toLowerCase() === lower) return obj[key];
-    }
-  }
-  return undefined;
-}
-
-/** Convert "mm:ss" or "hh:mm:ss" string to total seconds */
-function timeToSec(t: string): number {
-  if (!t || typeof t !== 'string') return 0;
-  const parts = t.trim().split(':').map(Number);
-  if (parts.some(isNaN)) return 0;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parts[0] || 0;
-}
-
-/** Parse a score value: if it contains ":", treat as time and convert to seconds; otherwise use toNum */
-function parseScoreValue(val: any): number {
-  if (val == null || val === '') return 0;
-  const s = String(val).trim();
-  if (s.includes(':')) return timeToSec(s);
-  return toNum(s);
-}
-
-function parsePotentialImprovement(val: string) {
-  const result = { improvement: '', yourScore: '', top1: '' };
-  if (!val || typeof val !== 'string') return result;
-  const match = val.match(/^([\d:]+)\s*\(.*?(\d[\d:]+).*?(\d[\d:]+)\)/i);
-  if (match) {
-    result.improvement = match[1]; result.yourScore = match[2]; result.top1 = match[3];
-    return result;
-  }
-  const fromTo = val.match(/(\d[\d:]+).*?to\s*(\d[\d:]+)/i);
-  if (fromTo) {
-    result.yourScore = fromTo[1]; result.top1 = fromTo[2];
-    const diff = timeToSec(fromTo[1]) - timeToSec(fromTo[2]);
-    if (diff > 0) {
-      const mins = Math.floor(diff / 60); const secs = diff % 60;
-      result.improvement = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return result;
-  }
-  if (/^\d[\d:]+$/.test(val.trim())) result.improvement = val.trim();
-  return result;
-}
-
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
-  const { user, profile } = useAuth();
-  const { athleteConfig } = useOutlierStore();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<DiagnosticoData>({ resumo: null, splits: [], diagnosticos: [] });
   const [loading, setLoading] = useState(true);
-  const [localRefresh, setLocalRefresh] = useState(0);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Search state
-  const profileName = profile?.name || '';
-  const [searchQuery, setSearchQuery] = useState(profileName);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchDone, setSearchDone] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSearchedRef = useRef('');
-
-  // Authorization & generation
-  const [agreed, setAgreed] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [selectedUrl, setSelectedUrl] = useState('');
-
-  // Auto-search on mount
+  // Fetch diagnostic data from DB
   useEffect(() => {
-    if (!profileName || !user) return;
-    executeSearch(profileName);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!user) { setLoading(false); return; }
 
-  const executeSearch = useCallback(async (query: string) => {
-    const trimmed = query.trim();
-    if (!trimmed || trimmed.length < 2) return;
-    if (trimmed === lastSearchedRef.current) return;
-    lastSearchedRef.current = trimmed;
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const [resumoRes, splitsRes, diagRes] = await Promise.all([
+          supabase.from('diagnostico_resumo').select('*').eq('atleta_id', user!.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          supabase.from('tempos_splits').select('*').eq('atleta_id', user!.id),
+          supabase.from('diagnostico_melhoria').select('*').eq('atleta_id', user!.id),
+        ]);
 
-    const parts = trimmed.split(/\s+/);
-    let firstName = '';
-    let lastName = '';
-    if (parts.length === 1) {
-      lastName = parts[0];
-    } else {
-      firstName = parts[0];
-      lastName = parts.slice(1).join(' ');
+        setData({
+          resumo: (resumoRes.data as DiagnosticoResumo | null),
+          splits: (splitsRes.data as Split[]) || [],
+          diagnosticos: (diagRes.data as DiagnosticoMelhoria[]) || [],
+        });
+      } catch (err) {
+        console.error('Error fetching diagnostic data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setSearching(true);
-    setSearchDone(false);
-
-    try {
-      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
-      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
-        body: { firstName, lastName, gender },
-      });
-      if (error) throw error;
-      setSearchResults(data?.results || []);
-    } catch (err: any) {
-      console.error('Search error:', err);
-      toast.error('Erro ao buscar resultados.');
-    } finally {
-      setSearching(false);
-      setSearchDone(true);
-    }
-  }, [athleteConfig?.sexo]);
-
-  function handleQueryChange(value: string) {
-    setSearchQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.trim().length >= 3) {
-      debounceRef.current = setTimeout(() => executeSearch(value), 800);
-    }
-  }
-
-  async function handleSelectResult(result: SearchResult) {
-    if (!agreed) {
-      toast.error('Aceite a autorização de uso dos dados para continuar.');
-      return;
-    }
-    if (!user) return;
-
-    setSelectedUrl(result.result_url);
-    setGenerating(true);
-
-    try {
-      const { data: apiData, error: fnError } = await supabase.functions.invoke('proxy-roxcoach', {
-        body: { url: result.result_url },
-      });
-      if (fnError) throw new Error(fnError.message);
-      if (!apiData) throw new Error('API retornou dados vazios.');
-
-      console.log('API Response keys:', Object.keys(apiData));
-
-      // 1. Parse resumo_performance
-      const rawResumo = apiData.resumo_performance || apiData.resumo || {};
-      const resumoRow = {
-        atleta_id: user.id,
-        nome_atleta: rawResumo.nome_atleta || null,
-        temporada: rawResumo.temporada || null,
-        evento: rawResumo.evento || null,
-        divisao: rawResumo.divisao || null,
-        finish_time: rawResumo.finish_time || null,
-        posicao_categoria: rawResumo.posicao_categoria || null,
-        posicao_geral: rawResumo.posicao_geral || null,
-        run_total: rawResumo.run_total || null,
-        workout_total: rawResumo.workout_total || null,
-        texto_ia: apiData.texto_ia || null,
-        source_url: result.result_url,
-      };
-
-      // 2. Parse tempos_splits
-      const rawSplits = apiData.tempos_splits || apiData.splits || [];
-      const splitRows: any[] = [];
-      if (Array.isArray(rawSplits)) {
-        for (const item of rawSplits) {
-          let splitName = findValue(item, 'Split', 'split_name', 'Movement', 'Station', 'name', 'Splits') || '';
-          let time = String(findValue(item, 'Time', 'time', 'Tempo') || '');
-          if (!splitName && item['0'] !== undefined) {
-            splitName = String(item['0'] || ''); time = String(item['1'] || '');
-          }
-          splitName = splitName.trim(); time = time.trim();
-          if (!splitName || SPLIT_NOISE.includes(splitName.toLowerCase())) continue;
-          if (!time) continue;
-          splitRows.push({ atleta_id: user.id, split_name: splitName, time });
-        }
-      }
-
-      // 3. Parse diagnostico_melhoria
-      const rawDiag = apiData.diagnostico_melhoria || apiData.diagnostico || [];
-      const diagRows: any[] = [];
-      if (Array.isArray(rawDiag)) {
-        for (const item of rawDiag) {
-          const movement = findValue(item, 'Splits', 'Movement', 'movement', 'Station', 'split_name') || '';
-          const focusDuringTraining = findValue(item, 'Focus During Training', 'focus_during_training', '%', 'percentage', 'Percentage') || '';
-          const percentage = toNum(focusDuringTraining);
-          const rawYourScore = findValue(item, 'your_score', 'You', 'you', 'Your Score');
-          const rawTop1 = findValue(item, 'top_1', 'Top 1%', 'Top1');
-          const rawImprovement = findValue(item, 'improvement_value', 'Potential Improvement', 'potential_improvement', 'Gap', 'gap', 'Improvement');
-          const yourScore = parseScoreValue(rawYourScore);
-          const top1 = parseScoreValue(rawTop1);
-          const improvementValue = parseScoreValue(rawImprovement);
-          const metric = findValue(item, 'Metric', 'metric') || 'time';
-          if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
-          diagRows.push({
-            atleta_id: user.id, movement, metric,
-            value: toNum(findValue(item, 'Value', 'value')),
-            your_score: yourScore, top_1: top1, improvement_value: improvementValue,
-            percentage, total_improvement: toNum(findValue(item, 'Total', 'total_improvement', 'Total Improvement')),
-          });
-        }
-      }
-
-      // 4. Validate
-      if (diagRows.length === 0 && splitRows.length === 0 && !resumoRow.texto_ia) {
-        throw new Error('Não foi possível extrair dados válidos dessa prova.');
-      }
-
-      // 5. Delete old + insert new
-      await Promise.all([
-        supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
-        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
-        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
-      ]);
-
-      const results: string[] = [];
-      const { error: resumoErr } = await supabase.from('diagnostico_resumo').insert(resumoRow);
-      if (resumoErr) console.error('Resumo insert error:', resumoErr.message);
-      else results.push('resumo');
-
-      if (diagRows.length > 0) {
-        const { error: diagError } = await supabase.from('diagnostico_melhoria').insert(diagRows);
-        if (diagError) throw new Error(`Erro ao salvar diagnóstico: ${diagError.message}`);
-        results.push(`${diagRows.length} diagnósticos`);
-      }
-
-      if (splitRows.length > 0) {
-        const { error: splitError } = await supabase.from('tempos_splits').insert(splitRows);
-        if (splitError) throw new Error(`Erro ao salvar splits: ${splitError.message}`);
-        results.push(`${splitRows.length} splits`);
-      }
-
-      toast.success(`Diagnóstico OUTLIER gerado: ${results.join(' + ')} 🔥`);
-      setLocalRefresh(k => k + 1);
-    } catch (err: any) {
-      console.error('Diagnostic generation error:', err);
-      toast.error(err?.message || 'Erro ao gerar diagnóstico.');
-    } finally {
-      setGenerating(false);
-      setSelectedUrl('');
-    }
-  }
+    fetchData();
+  }, [user, refreshKey]);
 
   async function handleDeleteDiagnostic() {
     if (!user) return;
@@ -295,8 +64,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
         supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
       ]);
+      setData({ resumo: null, splits: [], diagnosticos: [] });
       toast.success('Diagnóstico apagado com sucesso.');
-      setLocalRefresh(k => k + 1);
     } catch (err) {
       console.error('Error deleting diagnostic:', err);
       toast.error('Erro ao apagar diagnóstico.');
@@ -331,132 +100,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </div>
       )}
 
-      {/* Search area */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico OUTLIER
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Busque seu nome para encontrar suas provas e gerar o diagnóstico automaticamente.
-          </p>
-        </div>
-
-        {/* Search input */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => handleQueryChange(e.target.value)}
-              placeholder="Digite seu nome completo..."
-              className="h-12 rounded-xl pl-10"
-              disabled={generating}
-            />
-          </div>
-          <Button
-            onClick={() => { lastSearchedRef.current = ''; executeSearch(searchQuery); }}
-            disabled={searching || searchQuery.trim().length < 2 || generating}
-            className="h-12 rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-          >
-            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-          </Button>
-        </div>
-
-        {/* Authorization checkbox */}
-        <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-muted/20">
-          <Checkbox
-            id="auth-consent"
-            checked={agreed}
-            onCheckedChange={(v) => setAgreed(!!v)}
-            className="mt-0.5"
-          />
-          <label htmlFor="auth-consent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-            <ShieldCheck className="w-3.5 h-3.5 inline mr-1 text-primary" />
-            Autorizo o uso dos meus dados de resultado de provas HYROX para gerar o diagnóstico de performance OUTLIER. 
-            Os dados serão utilizados exclusivamente para análise dentro da plataforma.
-          </label>
-        </div>
-
-        {/* Loading */}
-        {searching && (
-          <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Buscando suas provas...</span>
-          </div>
-        )}
-
-        {/* Results list */}
-        <AnimatePresence>
-          {!searching && searchResults.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-2"
-            >
-              <p className="text-xs text-muted-foreground font-medium">
-                {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''} — selecione a prova para diagnosticar:
-              </p>
-              <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1">
-                {searchResults.map((result, idx) => {
-                  const isSelected = selectedUrl === result.result_url;
-                  return (
-                    <motion.button
-                      key={`${result.result_url}-${idx}`}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      onClick={() => handleSelectResult(result)}
-                      disabled={generating || !agreed}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
-                      } ${generating && !isSelected ? 'opacity-40 cursor-not-allowed' : ''} ${!agreed ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Trophy className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {result.event_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {result.athlete_name} • {result.division || 'OPEN'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {result.time_formatted && (
-                          <span className="text-sm font-bold text-primary tabular-nums">
-                            {result.time_formatted}
-                          </span>
-                        )}
-                        {isSelected && generating ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Empty state */}
-        {!searching && searchDone && searchResults.length === 0 && (
-          <div className="py-6 text-center space-y-2">
-            <Search className="w-8 h-8 text-muted-foreground/30 mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              Nenhum resultado encontrado. Tente outro nome ou verifique a grafia.
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* Loading skeletons */}
       {loading && (
         <div className="space-y-4">
@@ -473,27 +116,17 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {/* Data sections */}
       {!loading && hasData && (
         <>
-          {/* Section 1: Performance Highlights */}
           {data.resumo && <PerformanceHighlights resumo={data.resumo} />}
-
-          {/* Section 2: Parecer Premium */}
           {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)} showFullAnalysis={showFullAnalysis} />}
 
-          {/* Collapsible full analysis */}
           {showFullAnalysis && (
             <>
-              {/* Section 3: Charts */}
               <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
-
-              {/* Section 4: Split Times Grid */}
               <SplitTimesGrid splits={data.splits} />
-
-              {/* Section 5: Improvement Table */}
               <ImprovementTable diagnosticos={data.diagnosticos} splits={data.splits} />
             </>
           )}
 
-          {/* Delete button */}
           <div className="flex justify-end">
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -506,7 +139,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 <AlertDialogHeader>
                   <AlertDialogTitle>Apagar diagnóstico?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Todos os dados do diagnóstico atual serão apagados permanentemente. Você poderá gerar um novo a qualquer momento.
+                    Todos os dados do diagnóstico atual serão apagados permanentemente. Você poderá gerar um novo importando uma prova.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -521,14 +154,21 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — redirect to import */}
       {!loading && !hasData && (
-        <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-3">
+        <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-4">
           <Zap className="w-10 h-10 text-muted-foreground/30 mx-auto" />
           <h3 className="text-sm font-bold text-foreground">Conheça a sua prova como nunca antes</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Cole a URL do seu resultado e clique em "Gerar Diagnóstico OUTLIER". Nossa tecnologia vai revelar exatamente onde você está perdendo tempo — e como se tornar fora da curva.
+            Importe um resultado HYROX oficial e o diagnóstico OUTLIER será gerado automaticamente, revelando exatamente onde você está perdendo tempo.
           </p>
+          <Button
+            onClick={() => navigate('/importar-prova')}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-2xl font-bold px-6"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Importar Prova e Gerar Diagnóstico
+          </Button>
         </div>
       )}
     </div>
