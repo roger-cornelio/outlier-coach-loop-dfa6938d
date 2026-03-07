@@ -345,8 +345,37 @@ function ImportProvaInlineCTA() {
     }
   }
 
+  // FIX 3: Show imported result instead of CTA
+  if (state === 'done' && importedResult) {
+    const hrs = Math.floor(importedResult.totalSeconds / 3600);
+    const mins = Math.floor((importedResult.totalSeconds % 3600) / 60);
+    const secs = importedResult.totalSeconds % 60;
+    const timeStr = hrs > 0
+      ? `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+      : `${mins}:${String(secs).padStart(2, '0')}`;
 
-  if (state === 'error') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-accent/10 border border-accent/30 rounded-xl p-4"
+      >
+        <div className="flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">
+              {importedResult.eventName}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {importedResult.raceCategory} • {timeStr}
+            </p>
+          </div>
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+        </div>
+      </motion.div>
+    );
+  }
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
