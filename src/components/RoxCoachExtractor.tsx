@@ -231,7 +231,7 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
       onSuccess();
     } catch (err: any) {
       console.error('RoxCoach extract error:', err);
-      toast.error(err?.message || 'Erro ao extrair dados do RoxCoach.');
+      toast.error(err?.message || 'Erro ao gerar diagnóstico.');
     } finally {
       setLoading(false);
     }
