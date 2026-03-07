@@ -243,17 +243,41 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
   return (
     <div className="space-y-6">
+      {/* Dynamic title */}
+      {data.resumo?.nome_atleta && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Diagnóstico: {data.resumo.nome_atleta}
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {data.resumo.evento && (
+              <Badge variant="outline" className="text-xs font-medium">
+                {data.resumo.evento}
+              </Badge>
+            )}
+            {(data.resumo.divisao || data.resumo.temporada) && (
+              <Badge variant="secondary" className="text-xs font-medium">
+                {[data.resumo.divisao, data.resumo.temporada].filter(Boolean).join(' · ')}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico de Performance
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
-          </p>
-        </div>
+        {!data.resumo?.nome_atleta && (
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Diagnóstico de Performance
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
+            </p>
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={url}
