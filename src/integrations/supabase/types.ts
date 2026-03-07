@@ -723,6 +723,7 @@ export type Database = {
           metric: string
           movement: string
           percentage: number
+          resumo_id: string | null
           top_1: number
           total_improvement: number
           value: number
@@ -736,6 +737,7 @@ export type Database = {
           metric: string
           movement: string
           percentage?: number
+          resumo_id?: string | null
           top_1?: number
           total_improvement?: number
           value?: number
@@ -749,12 +751,21 @@ export type Database = {
           metric?: string
           movement?: string
           percentage?: number
+          resumo_id?: string | null
           top_1?: number
           total_improvement?: number
           value?: number
           your_score?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "diagnostico_melhoria_resumo_id_fkey"
+            columns: ["resumo_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostico_resumo"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       diagnostico_resumo: {
         Row: {
@@ -1744,6 +1755,7 @@ export type Database = {
           atleta_id: string
           created_at: string
           id: string
+          resumo_id: string | null
           split_name: string
           time: string
         }
@@ -1751,6 +1763,7 @@ export type Database = {
           atleta_id: string
           created_at?: string
           id?: string
+          resumo_id?: string | null
           split_name: string
           time: string
         }
@@ -1758,10 +1771,19 @@ export type Database = {
           atleta_id?: string
           created_at?: string
           id?: string
+          resumo_id?: string | null
           split_name?: string
           time?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tempos_splits_resumo_id_fkey"
+            columns: ["resumo_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostico_resumo"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

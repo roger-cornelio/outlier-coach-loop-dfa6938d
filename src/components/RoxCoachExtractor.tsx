@@ -210,23 +210,29 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       throw new Error('Não foi possível extrair dados válidos dessa prova.');
     }
 
-    // Delete old + insert new
-    await Promise.all([
-      supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
-      supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
-      supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
-    ]);
+    // Insert resumo first to get its ID for linking
+    const { data: insertedResumo, error: resumoError } = await supabase
+      .from('diagnostico_resumo')
+      .insert(parsed.resumoRow)
+      .select('id')
+      .single();
 
-    await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
+    if (resumoError || !insertedResumo) {
+      throw new Error(`Erro ao salvar resumo: ${resumoError?.message || 'unknown'}`);
+    }
 
+    const resumoId = insertedResumo.id;
     const results: string[] = [];
+
     if (parsed.diagRows.length > 0) {
-      const { error } = await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
+      const rowsWithResumoId = parsed.diagRows.map(r => ({ ...r, resumo_id: resumoId }));
+      const { error } = await supabase.from('diagnostico_melhoria').insert(rowsWithResumoId);
       if (error) throw new Error(`Erro ao salvar diagnóstico: ${error.message}`);
       results.push(`${parsed.diagRows.length} diagnósticos`);
     }
     if (parsed.splitRows.length > 0) {
-      const { error } = await supabase.from('tempos_splits').insert(parsed.splitRows);
+      const rowsWithResumoId = parsed.splitRows.map(r => ({ ...r, resumo_id: resumoId }));
+      const { error } = await supabase.from('tempos_splits').insert(rowsWithResumoId);
       if (error) throw new Error(`Erro ao salvar splits: ${error.message}`);
       results.push(`${parsed.splitRows.length} splits`);
     }
