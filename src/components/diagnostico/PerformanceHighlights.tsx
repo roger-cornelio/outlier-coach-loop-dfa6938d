@@ -1,15 +1,22 @@
-import { Trophy, MapPin, Dumbbell, Timer, Flag } from 'lucide-react';
+import { Trophy, MapPin, Dumbbell, Timer, Flag, Medal } from 'lucide-react';
 import type { DiagnosticoResumo } from './types';
 
 interface Props {
   resumo: DiagnosticoResumo;
 }
 
+/** Extract only the numeric/time portion from a string (e.g. "21st in Age Group" → "21") */
+function extractNumeric(val: string | null | undefined): string {
+  if (!val) return '—';
+  const match = val.match(/^[\d:]+/);
+  return match ? match[0] : val.replace(/[^\d:.,]/g, '') || '—';
+}
+
 const stats = [
+  { key: 'posicao_categoria', label: 'Rank Categoria', icon: Medal },
+  { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin },
   { key: 'run_total', label: 'Run Total', icon: Timer },
   { key: 'workout_total', label: 'Workout Total', icon: Dumbbell },
-  { key: 'posicao_categoria', label: 'Rank Categoria', icon: Trophy },
-  { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin },
 ] as const;
 
 export default function PerformanceHighlights({ resumo }: Props) {
@@ -27,13 +34,14 @@ export default function PerformanceHighlights({ resumo }: Props) {
             <Flag className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wide">Finish Time</span>
           </div>
-          <p className="text-3xl lg:text-4xl font-extrabold text-primary truncate">
+          <p className="text-2xl lg:text-3xl font-extrabold text-primary truncate">
             {resumo.finish_time || '—'}
           </p>
         </div>
 
         {stats.map(({ key, label, icon: Icon }) => {
-          const value = resumo[key as keyof DiagnosticoResumo];
+          const raw = resumo[key as keyof DiagnosticoResumo] as string | null;
+          const display = extractNumeric(raw);
           return (
             <div
               key={key}
@@ -43,8 +51,8 @@ export default function PerformanceHighlights({ resumo }: Props) {
                 <Icon className="w-4 h-4 text-primary" />
                 <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
               </div>
-              <p className="text-2xl font-bold text-primary truncate">
-                {value || '—'}
+              <p className="text-xl font-bold text-primary truncate">
+                {display}
               </p>
             </div>
           );
