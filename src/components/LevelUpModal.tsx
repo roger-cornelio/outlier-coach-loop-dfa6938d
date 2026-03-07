@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
+import { ChevronRight } from 'lucide-react';
 import type { AthleteStatus } from '@/types/outlier';
 
 interface LevelUpModalProps {
@@ -15,10 +16,11 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
   accentHsl: string;
   levelKey: 'OPEN' | 'PRO' | 'ELITE';
+  nextLabel: string | null;
 }> = {
-  open: { label: 'OPEN', accentHsl: '271 81% 56%', levelKey: 'OPEN' },
-  pro: { label: 'PRO', accentHsl: '45 93% 58%', levelKey: 'PRO' },
-  elite: { label: 'ELITE', accentHsl: '50 95% 65%', levelKey: 'ELITE' },
+  open: { label: 'OPEN', accentHsl: '271 81% 56%', levelKey: 'OPEN', nextLabel: 'PRO OUTLIER' },
+  pro: { label: 'PRO', accentHsl: '45 93% 58%', levelKey: 'PRO', nextLabel: 'ELITE OUTLIER' },
+  elite: { label: 'ELITE', accentHsl: '50 95% 65%', levelKey: 'ELITE', nextLabel: null },
 };
 
 function CelebrationParticles({ accentHsl }: { accentHsl: string }) {
@@ -119,13 +121,13 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                 >
                   {/* Multi-layer glow */}
                   <motion.div
-                    className="absolute inset-0 -m-16 rounded-full blur-[80px]"
+                    className="absolute inset-0 -m-20 rounded-full blur-[100px]"
                     style={{ backgroundColor: `hsl(${config.accentHsl} / 0.35)` }}
                     animate={{ scale: [1, 1.15, 1], opacity: [0.35, 0.5, 0.35] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   />
                   <motion.div
-                    className="absolute inset-0 -m-8 rounded-full blur-2xl"
+                    className="absolute inset-0 -m-12 rounded-full blur-2xl"
                     style={{ backgroundColor: `hsl(${config.accentHsl} / 0.2)` }}
                     animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.35, 0.2] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
@@ -133,7 +135,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
 
                   {/* Shield image — pulsating */}
                   <motion.div
-                    className="relative w-40 h-40 md:w-52 md:h-52"
+                    className="relative w-56 h-56 md:w-72 md:h-72"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   >
@@ -209,10 +211,14 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       'text-zinc-900',
                       'rounded-xl',
                       'border-0 shadow-lg shadow-amber-400/20',
-                      'transition-all duration-200 hover:shadow-xl hover:shadow-amber-400/30'
+                      'transition-all duration-200 hover:shadow-xl hover:shadow-amber-400/30',
+                      'flex items-center gap-2'
                     )}
                   >
-                    Continuar como Outlier
+                    {config.nextLabel
+                      ? `Avançar para ${config.nextLabel}`
+                      : `Você é ${config.label} OUTLIER`}
+                    {config.nextLabel && <ChevronRight className="w-5 h-5" />}
                   </Button>
                 </motion.div>
               )}
