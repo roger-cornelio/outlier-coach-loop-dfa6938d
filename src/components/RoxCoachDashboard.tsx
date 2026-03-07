@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
-import DiagnosticCharts from './diagnostico/DiagnosticCharts';
+
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
