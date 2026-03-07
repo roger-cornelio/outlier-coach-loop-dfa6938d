@@ -226,7 +226,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         results.push(`${splitRows.length} splits`);
       }
 
-      toast.success(`Diagnóstico gerado: ${results.join(' + ')} 🔥`);
+      toast.success(`Diagnóstico OUTLIER gerado: ${results.join(' + ')} 🔥`);
       setLocalRefresh(k => k + 1);
     } catch (err: any) {
       console.error('Diagnostic generation error:', err);
