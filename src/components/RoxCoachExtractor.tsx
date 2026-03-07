@@ -410,11 +410,27 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
             animate={{ opacity: 1, y: 0 }}
             className="space-y-2"
           >
-            <p className="text-xs text-muted-foreground font-medium">
-              {mode === 'diagnostic_only'
-                ? `${searchResults.length} prova(s) encontrada(s) — clique para importar o diagnóstico:`
-                : 'Última prova encontrada — clique para gerar o diagnóstico:'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground font-medium">
+                {mode === 'diagnostic_only'
+                  ? `${searchResults.length} prova(s) nova(s) encontrada(s):`
+                  : 'Última prova encontrada — clique para gerar o diagnóstico:'}
+              </p>
+              {mode === 'diagnostic_only' && searchResults.length > 1 && (
+                <Button
+                  onClick={handleImportAll}
+                  disabled={generating || importingAll}
+                  size="sm"
+                  className="rounded-lg text-xs font-bold"
+                >
+                  {importingAll ? (
+                    <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Importando...</>
+                  ) : (
+                    <>Importar todas ({searchResults.length})</>
+                  )}
+                </Button>
+              )}
+            </div>
             <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
                 const isSelected = selectedUrl === result.result_url;
