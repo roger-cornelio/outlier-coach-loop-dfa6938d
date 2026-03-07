@@ -182,6 +182,34 @@ export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete }: 
                   raceCategory={result.race_category}
                 />
               )}
+
+              {/* Delete individual result */}
+              {onDelete && (
+                <div className="flex justify-end pt-3 mt-3 border-t border-border">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive/80 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Excluir prova
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir esta prova?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          O resultado de "{getEventLocation(result.event_name)}" será apagado permanentemente do banco de dados.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDelete(result.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Sim, excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
