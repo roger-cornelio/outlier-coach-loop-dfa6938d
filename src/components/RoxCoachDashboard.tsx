@@ -67,6 +67,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
   const [loading, setLoading] = useState(true);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -86,13 +87,31 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchData();
   }, [user, refreshKey, localRefresh]);
 
+  async function handleDeleteDiagnostic() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await Promise.all([
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+      ]);
+      toast.success('Diagnóstico apagado com sucesso.');
+      setLocalRefresh(k => k + 1);
+    } catch (err) {
+      console.error('Error deleting diagnostic:', err);
+      toast.error('Erro ao apagar diagnóstico.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) return null;
 
   const hasData = splits.length > 0 || diagnosticos.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* RoxCoach Extractor - always visible */}
+      {/* Extractor - always visible */}
       <RoxCoachExtractor onSuccess={() => setLocalRefresh(k => k + 1)} />
 
       {/* Data sections */}
