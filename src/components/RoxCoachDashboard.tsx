@@ -310,6 +310,10 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {!loading && !loadingDetail && selectedResumo && (
         <>
           <PerformanceHighlights resumo={selectedResumo} />
+          
+          {/* Split times table - always visible */}
+          <SplitTimesGrid splits={splits} />
+
           <ParecerPremium
             resumo={selectedResumo}
             diagnosticos={diagnosticos}
@@ -319,8 +323,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {showFullAnalysis && (
             <>
-              <DiagnosticCharts splits={splits} diagnosticos={diagnosticos} />
-              <SplitTimesGrid splits={splits} />
               <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
             </>
           )}
