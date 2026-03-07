@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
-import DiagnosticCharts from './diagnostico/DiagnosticCharts';
+
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
@@ -310,6 +310,10 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {!loading && !loadingDetail && selectedResumo && (
         <>
           <PerformanceHighlights resumo={selectedResumo} />
+          
+          {/* Split times table - always visible */}
+          <SplitTimesGrid splits={splits} />
+
           <ParecerPremium
             resumo={selectedResumo}
             diagnosticos={diagnosticos}
@@ -319,8 +323,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {showFullAnalysis && (
             <>
-              <DiagnosticCharts splits={splits} diagnosticos={diagnosticos} />
-              <SplitTimesGrid splits={splits} />
               <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
             </>
           )}
