@@ -113,11 +113,11 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       const rawResults: SearchResult[] = data?.results || [];
 
-      // REGRA 1: Sort by most recent (higher season_id first) then slice to 1
+      // In diagnostic_only mode, show all results; in full mode, show only most recent
       const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
-      const mostRecent = sorted.slice(0, 1);
+      const displayed = mode === 'diagnostic_only' ? sorted : sorted.slice(0, 1);
 
-      setSearchResults(mostRecent);
+      setSearchResults(displayed);
     } catch (err: any) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados.');
