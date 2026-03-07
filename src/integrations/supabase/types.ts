@@ -1599,6 +1599,51 @@ export type Database = {
         }
         Relationships: []
       }
+      station_valence_weights: {
+        Row: {
+          anaerobica: number
+          cardio: number
+          core: number
+          eficiencia: number
+          forca: number
+          id: string
+          potencia: number
+          sort_order: number
+          station_key: string
+          station_label: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          anaerobica?: number
+          cardio?: number
+          core?: number
+          eficiencia?: number
+          forca?: number
+          id?: string
+          potencia?: number
+          sort_order?: number
+          station_key: string
+          station_label: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          anaerobica?: number
+          cardio?: number
+          core?: number
+          eficiencia?: number
+          forca?: number
+          id?: string
+          potencia?: number
+          sort_order?: number
+          station_key?: string
+          station_label?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       status_config: {
         Row: {
           created_at: string
