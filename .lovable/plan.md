@@ -1,32 +1,18 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Plano: Mover Demo Level Up para dentro do Admin
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### O que muda
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+1. **Remover a rota `/demo/level-up`** do `App.tsx` e o import do `DemoLevelUp`
 
-### Alterações
+2. **Adicionar nova view `demoLevelUp` ao AdminPortal**:
+   - Adicionar `"demoLevelUp"` ao tipo `AdminView`
+   - Adicionar item no `navItems` com ícone `Shield` e label "Demo Level Up"
+   - Renderizar o conteúdo do modal demo quando essa view estiver ativa (inline, sem página separada)
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+3. **Simplificar `DemoLevelUp.tsx`** para ser um componente (não página), exportando apenas o conteúdo dos botões + modal, sem o wrapper `min-h-screen`
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
-
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
-
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### Resultado
+A demo fica acessível apenas por admins autenticados, dentro do painel admin, como mais uma aba no menu lateral.
 
