@@ -152,38 +152,44 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
     }
   }, [user]);
 
-  // Fetch external results (simulados and provas) from Supabase
   useEffect(() => {
-    const fetchExternalResults = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        let query = supabase
-          .from('benchmark_results')
-          .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
-          .eq('user_id', user.id)
-          .in('result_type', ['simulado', 'prova_oficial']);
-
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        // Sort: event_date desc (when available), then created_at desc
-        const sorted = (data || []).sort((a: any, b: any) => {
-          const dateA = a.event_date || a.created_at;
-          const dateB = b.event_date || b.created_at;
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
-        });
-        setExternalResults(sorted as ExternalResult[]);
-      } catch (err) {
-        console.error('Error fetching external results:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchExternalResults();
-  }, [user]);
+  }, [user, fetchExternalResults]);
+
+  const handleDeleteResult = async (id: string) => {
+    try {
+      const { error } = await supabase.from('benchmark_results').delete().eq('id', id);
+      if (error) throw error;
+      setExternalResults(prev => prev.filter(r => r.id !== id));
+      toast.success('Resultado excluído.');
+    } catch (err) {
+      console.error('Error deleting result:', err);
+      toast.error('Erro ao excluir resultado.');
+    }
+  };
+
+  const handleDeleteAllFiltered = async () => {
+    if (!user) return;
+    setDeletingAll(true);
+    try {
+      const typeFilter = filterType === 'prova_oficial' ? 'prova_oficial' : filterType === 'simulado' ? 'simulado' : null;
+      let query = supabase.from('benchmark_results').delete().eq('user_id', user.id);
+      if (typeFilter) {
+        query = query.eq('result_type', typeFilter);
+      } else {
+        query = query.in('result_type', ['simulado', 'prova_oficial']);
+      }
+      const { error } = await query;
+      if (error) throw error;
+      await fetchExternalResults();
+      toast.success('Todos os resultados desta aba foram excluídos.');
+    } catch (err) {
+      console.error('Error deleting all:', err);
+      toast.error('Erro ao excluir resultados.');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   // Filter external results based on filterType
   const filteredExternalResults = useMemo(() => {
