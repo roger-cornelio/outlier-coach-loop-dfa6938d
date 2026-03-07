@@ -20,6 +20,8 @@ interface HyroxResultCardProps {
   timeDeltaSeconds?: number | null;
   /** Optional: callback when result is deleted */
   onDelete?: (id: string) => void;
+  /** Optional: highlight as the most recent race */
+  isLatest?: boolean;
 }
 
 function formatTime(seconds: number): string {
