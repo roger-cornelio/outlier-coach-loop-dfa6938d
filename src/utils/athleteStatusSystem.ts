@@ -410,9 +410,8 @@ function safeParseDate(dateString: string | undefined | null): Date | null {
 function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: string): boolean {
   const date = safeParseDate(eventDate) ?? safeParseDate(createdAt);
   if (!date) return false;
-  const now = new Date();
-  const daysDiff = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
-  return daysDiff <= OFFICIAL_COMPETITION_VALIDITY_DAYS;
+  const cutoff = getSeasonValidityCutoff();
+  return date.getTime() >= cutoff.getTime();
 }
 
 export function processOfficialCompetitions(
