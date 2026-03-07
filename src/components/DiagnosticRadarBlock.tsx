@@ -1679,76 +1679,51 @@ export function DiagnosticRadarBlock({
           provaAlvoTargetTime={provaAlvoTargetTime} />
 
 
-        {/* CTA importar prova quando sem dados */}
-        {!hasData && (
+        {/* CTA importar prova quando ainda não há prova oficial válida */}
+        {!performanceSnapshot.currentTime && (
           <ImportProvaInlineCTA />
         )}
 
-        {/* Barra de métricas — só com dados */}
-        {hasData && validatingCompetition?.time_in_seconds && (() => {
-          const lastTime = validatingCompetition.time_in_seconds;
-          const targetSec = eliteTarget?.targetSeconds;
-          const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
-          const prevTime = previousCompetition?.time_in_seconds;
-
-          // Meta value + class
-          let metaValue = '—';
-          let metaClass = 'text-foreground';
-          if (targetSec) {
-            const delta = lastTime - targetSec;
-            if (delta <= 0) {
-              metaValue = `${formatOfficialTime(targetSec)} ✔`;
-              metaClass = 'text-emerald-400';
-            } else {
-              metaValue = formatOfficialTime(targetSec);
-              metaClass = 'text-amber-400';
-            }
-          }
-
-          // Evolução value + class
-          let evolValue = 'Aguardando próxima prova';
-          let evolClass = 'text-muted-foreground/60 italic font-normal';
-          if (prevTime) {
-            const diff = lastTime - prevTime;
-            if (Math.abs(diff) >= 30) {
-              const abs = Math.abs(diff);
-              const m = Math.floor(abs / 60);
-              const s = Math.round(abs % 60);
-              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
-              evolValue = diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`;
-              evolClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
-            }
-          }
-
-          return (
-            <div className="mx-3 mb-3 mt-1 grid grid-cols-3 gap-1.5 p-2.5 bg-muted/5 border border-border/15 rounded-xl">
-              {/* Última prova */}
-              <div className="flex flex-col items-center text-center gap-0.5">
-                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                  <Timer className="w-3 h-3" />
-                  <span>Última prova</span>
-                </div>
-                <span className="font-bold text-xs text-foreground">{formatOfficialTime(lastTime)}</span>
+        {/* Barra de métricas da prova mais recente */}
+        {performanceSnapshot.currentTime && (
+          <div className="mx-3 mb-3 mt-1 grid grid-cols-2 gap-1.5 p-2.5 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
+            {/* Tempo da prova */}
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                <Timer className="w-3 h-3" />
+                <span>Tempo prova</span>
               </div>
-              {/* Meta */}
-              <div className="flex flex-col items-center text-center gap-0.5 border-x border-border/10">
-                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                  <Target className="w-3 h-3" />
-                  <span>Meta {targetLabel}</span>
-                </div>
-                <span className={cn('font-bold text-xs', metaClass)}>{metaValue}</span>
-              </div>
-              {/* Evolução */}
-              <div className="flex flex-col items-center text-center gap-0.5">
-                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>Evolução</span>
-                </div>
-                <span className={cn('font-bold text-xs', evolClass)}>{evolValue}</span>
-              </div>
+              <span className="font-bold text-xs text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
             </div>
-          );
-        })()}
+
+            {/* Meta */}
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                <Target className="w-3 h-3" />
+                <span>Meta {performanceSnapshot.targetLabel}</span>
+              </div>
+              <span className={cn('font-bold text-xs', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
+            </div>
+
+            {/* Ganho potencial */}
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                <Zap className="w-3 h-3" />
+                <span>Ganho</span>
+              </div>
+              <span className={cn('font-bold text-xs', performanceSnapshot.gainClass)}>{performanceSnapshot.gainValue}</span>
+            </div>
+
+            {/* Evolução */}
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                <TrendingUp className="w-3 h-3" />
+                <span>Evolução</span>
+              </div>
+              <span className={cn('font-bold text-xs', performanceSnapshot.evolutionClass)}>{performanceSnapshot.evolutionValue}</span>
+            </div>
+          </div>
+        )}
 
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
         <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
