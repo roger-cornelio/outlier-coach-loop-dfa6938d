@@ -52,6 +52,14 @@ function timeToSec(t: string): number {
   return parts[0] || 0;
 }
 
+/** Parse a score value: if it contains ":", treat as time and convert to seconds; otherwise use toNum */
+function parseScoreValue(val: any): number {
+  if (val == null || val === '') return 0;
+  const s = String(val).trim();
+  if (s.includes(':')) return timeToSec(s);
+  return toNum(s);
+}
+
 function parsePotentialImprovement(val: string) {
   const result = { improvement: '', yourScore: '', top1: '' };
   if (!val || typeof val !== 'string') return result;
