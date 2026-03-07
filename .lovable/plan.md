@@ -1,31 +1,32 @@
 
 
-## Problem
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-The `source_index` formula is inverted. Within a HYROX season, events are listed chronologically -- **higher `event_index` = more recent event**. The current formula `(season_id * 1000) + (999 - event_index)` incorrectly treats lower `event_index` as more recent, causing Mexico City (index 39) to rank above Sao Paulo (index 54).
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-**Data proof:**
-- Mexico City: `source_index = 8960` (season 8, event_index ~39)
-- Sao Paulo: `source_index = 8945` (season 8, event_index ~54)
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-Sao Paulo happened after Mexico City in season 8, so it should appear first.
+### Alterações
 
-## Fix
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-### 1. Fix the formula in `ProvasTab.tsx`
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-Change from:
-```
-(season_id * 1000) + (999 - event_index)
-```
-To:
-```
-(season_id * 1000) + event_index
-```
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-Higher `event_index` within the same season = higher `source_index` = more recent. The sort in `BenchmarkHistory.tsx` already sorts by `source_index DESC`, so this will correctly put Sao Paulo above Mexico City.
-
-### 2. Existing data needs re-import
-
-The 4 existing records with `source_index` values are wrong. The user will need to delete and re-import these provas for the correct ordering. Alternatively, a migration could recalculate: `UPDATE benchmark_results SET source_index = (source_index / 1000) * 1000 + (999 - (source_index % 1000)) WHERE source_index IS NOT NULL`, but re-import is cleaner.
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
