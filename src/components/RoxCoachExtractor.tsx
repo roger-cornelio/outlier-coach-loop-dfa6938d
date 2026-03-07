@@ -119,7 +119,10 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       const rawResults: SearchResult[] = data?.results || [];
 
       // In diagnostic_only mode, show all results; in full mode, show only most recent
-      const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
+      const sorted = rawResults.sort((a, b) => {
+        if (b.season_id !== a.season_id) return b.season_id - a.season_id;
+        return (a.event_index ?? 999) - (b.event_index ?? 999);
+      });
       const displayed = mode === 'diagnostic_only' ? sorted : sorted.slice(0, 1);
 
       // Filter out already-imported races

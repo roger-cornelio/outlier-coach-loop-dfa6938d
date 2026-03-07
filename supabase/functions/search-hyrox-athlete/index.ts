@@ -245,6 +245,7 @@ function extractResultEntries(html: string, seasonId: number, eventName: string,
       time_formatted: timeFormatted,
       result_url: fullUrl,
       season_id: seasonId,
+      event_index: eventIndex,
     });
   }
 
