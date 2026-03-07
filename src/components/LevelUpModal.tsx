@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
+import { ChevronRight } from 'lucide-react';
 import type { AthleteStatus } from '@/types/outlier';
 
 interface LevelUpModalProps {
