@@ -7,7 +7,7 @@ interface Props {
 
 const stats = [
   { key: 'run_total', label: 'Run Total', icon: Timer, color: 'text-primary' },
-  { key: 'workout_total', label: 'Workout Total', icon: PersonStanding, color: 'text-primary' },
+  { key: 'workout_total', label: 'Workout Total', icon: Dumbbell, color: 'text-primary' },
   { key: 'posicao_categoria', label: 'Rank Categoria', icon: Trophy, color: 'text-primary' },
   { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin, color: 'text-primary' },
 ] as const;
