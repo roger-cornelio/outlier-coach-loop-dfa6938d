@@ -245,11 +245,13 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     setGenerating(true);
 
     try {
-      // Execute Action A (save history) and Action B (diagnostic) in parallel
-      const [, diagnosticResult] = await Promise.allSettled([
-        saveRaceHistory(result),
-        generateDiagnostic(result),
-      ]);
+      // In diagnostic_only mode, skip race history save
+      const tasks: Promise<any>[] = [generateDiagnostic(result)];
+      if (mode === 'full') {
+        tasks.unshift(saveRaceHistory(result));
+      }
+      const settled = await Promise.allSettled(tasks);
+      const diagnosticResult = mode === 'full' ? settled[1] : settled[0];
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
