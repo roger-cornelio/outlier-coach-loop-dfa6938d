@@ -124,6 +124,9 @@ export default function ImportarProva() {
   const [batchImporting, setBatchImporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, errors: 0 });
 
+  // RoxCoach state
+  const [roxCoachRefreshKey, setRoxCoachRefreshKey] = useState(0);
+
   // Fuzzy search: single input with debounce
   const profileName = profile?.name || '';
   const [searchQuery, setSearchQuery] = useState(profileName);
