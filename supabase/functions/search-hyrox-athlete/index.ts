@@ -195,7 +195,7 @@ async function searchEventForAthlete(
 /**
  * Extract result entries from HTML.
  */
-function extractResultEntries(html: string, seasonId: number, eventName: string): any[] {
+function extractResultEntries(html: string, seasonId: number, eventName: string, eventIndex: number = 999): any[] {
   const results: any[] = [];
 
   const liPattern = /<li[^>]*class="[^"]*list-group-item[^"]*row"[^>]*>([\s\S]*?)<\/li>/gi;
