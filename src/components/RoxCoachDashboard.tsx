@@ -164,18 +164,25 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       if (Array.isArray(rawDiag)) {
         for (const item of rawDiag) {
           const movement = findValue(item, 'Splits', 'Movement', 'movement', 'Station', 'split_name') || '';
-          const potentialImprovement = findValue(item, 'Potential Improvement', 'potential_improvement', 'Gap', 'gap') || '';
           const focusDuringTraining = findValue(item, 'Focus During Training', 'focus_during_training', '%', 'percentage', 'Percentage') || '';
-          const parsed = typeof potentialImprovement === 'string' ? parsePotentialImprovement(potentialImprovement) : { improvement: '', yourScore: '', top1: '' };
-          const yourScore = parsed.yourScore ? timeToSec(parsed.yourScore) : parseScoreValue(findValue(item, 'You', 'you', 'Your Score', 'your_score'));
-          const top1 = parsed.top1 ? timeToSec(parsed.top1) : parseScoreValue(findValue(item, 'Top 1%', 'top_1', 'Top1'));
-          const improvementValue = parsed.improvement ? timeToSec(parsed.improvement) : parseScoreValue(findValue(item, 'Gap', 'gap', 'Improvement', 'improvement_value'));
           const percentage = toNum(focusDuringTraining);
+
+          // Priority: read fields directly from the API object, then try aliases
+          const rawYourScore = findValue(item, 'your_score', 'You', 'you', 'Your Score');
+          const rawTop1 = findValue(item, 'top_1', 'Top 1%', 'Top1');
+          const rawImprovement = findValue(item, 'improvement_value', 'Potential Improvement', 'potential_improvement', 'Gap', 'gap', 'Improvement');
+
+          const yourScore = parseScoreValue(rawYourScore);
+          const top1 = parseScoreValue(rawTop1);
+          const improvementValue = parseScoreValue(rawImprovement);
+
+          const metric = findValue(item, 'Metric', 'metric') || 'time';
+
           if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
           diagRows.push({
             atleta_id: user.id,
             movement,
-            metric: typeof potentialImprovement === 'string' && potentialImprovement ? 'Potential Improvement' : findValue(item, 'Metric', 'metric') || 'time',
+            metric,
             value: toNum(findValue(item, 'Value', 'value')),
             your_score: yourScore,
             top_1: top1,
