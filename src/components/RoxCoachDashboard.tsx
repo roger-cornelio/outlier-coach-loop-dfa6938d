@@ -333,16 +333,21 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           {data.resumo && <PerformanceHighlights resumo={data.resumo} />}
 
           {/* Section 2: Parecer Premium */}
-          {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} />}
+          {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)} showFullAnalysis={showFullAnalysis} />}
 
-          {/* Section 3: Charts */}
-          <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
+          {/* Collapsible full analysis */}
+          {showFullAnalysis && (
+            <>
+              {/* Section 3: Charts */}
+              <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
 
-          {/* Section 4: Split Times Grid */}
-          <SplitTimesGrid splits={data.splits} />
+              {/* Section 4: Split Times Grid */}
+              <SplitTimesGrid splits={data.splits} />
 
-          {/* Section 5: Improvement Table */}
-          <ImprovementTable diagnosticos={data.diagnosticos} splits={data.splits} />
+              {/* Section 5: Improvement Table */}
+              <ImprovementTable diagnosticos={data.diagnosticos} splits={data.splits} />
+            </>
+          )}
 
           {/* Delete button */}
           <div className="flex justify-end">
