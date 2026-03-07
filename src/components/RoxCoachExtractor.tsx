@@ -445,7 +445,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
                       isSelected
                         ? 'border-primary bg-primary/10'
                         : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
-                    } ${generating && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    } ${(generating || importingAll) && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Trophy className="w-4 h-4 text-primary" />
