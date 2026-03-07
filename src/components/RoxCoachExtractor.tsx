@@ -23,6 +23,7 @@ interface SearchResult {
   time_formatted: string;
   result_url: string;
   season_id: number;
+  event_index?: number;
 }
 
 /** Convert a string to a URL-friendly slug */
