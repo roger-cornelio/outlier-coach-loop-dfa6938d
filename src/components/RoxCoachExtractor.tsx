@@ -22,6 +22,46 @@ interface SearchResult {
   season_id: number;
 }
 
+/** Convert a string to a URL-friendly slug */
+function toSlug(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[^a-z0-9\s-]/g, '')    // remove special chars
+    .trim()
+    .replace(/\s+/g, '-')           // spaces to hyphens
+    .replace(/-+/g, '-');            // collapse multiple hyphens
+}
+
+/** Build the RoxCoach URL from SearchResult data */
+function buildRoxCoachUrl(result: SearchResult): string {
+  const seasonId = result.season_id;
+  // event_name comes as "2025 Rio de Janeiro • HYROX PRO" — extract before " • "
+  const eventPart = result.event_name.split(' • ')[0] || result.event_name;
+  const eventSlug = toSlug(eventPart);
+  const athleteSlug = toSlug(result.athlete_name);
+  return `https://www.rox-coach.com/seasons/${seasonId}/races/${eventSlug}/results/${athleteSlug}`;
+}
+
+/** Extract idp from a Hyrox result URL */
+function extractIdpFromUrl(url: string): { idp: string | null; event: string | null } {
+  try {
+    const urlObj = new URL(url);
+    return {
+      idp: urlObj.searchParams.get('idp'),
+      event: urlObj.searchParams.get('event') || null,
+    };
+  } catch {
+    const idpMatch = url.match(/idp=([^&]+)/);
+    const eventMatch = url.match(/event=([^&]+)/);
+    return {
+      idp: idpMatch ? idpMatch[1] : null,
+      event: eventMatch ? eventMatch[1] : null,
+    };
+  }
+}
+
 export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps) {
   const { user, profile } = useAuth();
   const { athleteConfig } = useOutlierStore();
@@ -68,7 +108,14 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
         body: { firstName, lastName, gender },
       });
       if (error) throw error;
-      setSearchResults(data?.results || []);
+
+      const rawResults: SearchResult[] = data?.results || [];
+
+      // REGRA 1: Sort by most recent (higher season_id first) then slice to 1
+      const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
+      const mostRecent = sorted.slice(0, 1);
+
+      setSearchResults(mostRecent);
     } catch (err: any) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados.');
@@ -86,15 +133,82 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     }
   }
 
-  /** Save diagnostic data using shared parser — only to diagnostic tables, never benchmark_results */
-  async function saveDiagnosticData(apiData: any, sourceUrl: string) {
+  /** Action A: Save race history to race_results table */
+  async function saveRaceHistory(result: SearchResult) {
     if (!user) return;
-    const parsed = parseDiagnosticResponse(apiData, user.id, sourceUrl);
+    const { idp, event: eventCode } = extractIdpFromUrl(result.result_url);
+    if (!idp) {
+      console.warn('No idp found in result URL, skipping race history save');
+      return;
+    }
+
+    // Check for duplicate
+    const { data: existing } = await supabase
+      .from('race_results')
+      .select('id')
+      .eq('athlete_id', user.id)
+      .eq('hyrox_idp', idp)
+      .maybeSingle();
+
+    if (existing) {
+      console.log('Race already saved, skipping duplicate');
+      return;
+    }
+
+    const { error } = await supabase.from('race_results').insert({
+      athlete_id: user.id,
+      hyrox_idp: idp,
+      source_url: result.result_url,
+      hyrox_event: result.event_name,
+    });
+
+    if (error) {
+      console.error('Error saving race history:', error);
+    } else {
+      console.log('Race history saved successfully');
+    }
+  }
+
+  /** Action B: Generate diagnostic via RoxCoach URL */
+  async function generateDiagnostic(result: SearchResult): Promise<string[] | null> {
+    if (!user) return null;
+
+    const roxCoachUrl = buildRoxCoachUrl(result);
+    console.log('[RoxCoachExtractor] Built RoxCoach URL:', roxCoachUrl);
+
+    let proxyData: any = null;
+    try {
+      const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+        body: { url: roxCoachUrl },
+      });
+      if (!proxyResult.error) {
+        proxyData = proxyResult.data;
+      } else {
+        console.warn('proxy-roxcoach returned error:', proxyResult.error.message);
+      }
+    } catch (networkErr) {
+      console.warn('proxy-roxcoach network error:', networkErr);
+    }
+
+    if (!proxyData) {
+      return null;
+    }
+
+    // Check for upstream error flag
+    if (proxyData.ok === false) {
+      console.warn('proxy-roxcoach upstream error:', proxyData.upstream_error_detail);
+      return null;
+    }
+
+    console.log('Raw API Response keys:', Object.keys(proxyData));
+
+    // Parse and save diagnostic data
+    const parsed = parseDiagnosticResponse(proxyData, user.id, roxCoachUrl);
     if (!hasDiagnosticData(parsed)) {
       throw new Error('Não foi possível extrair dados válidos dessa prova.');
     }
 
-    // Delete old + insert new (same pattern as ImportarProva)
+    // Delete old + insert new
     await Promise.all([
       supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
       supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
@@ -118,6 +232,7 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     return results;
   }
 
+  /** REGRA 2: Split click into two parallel actions */
   async function handleGenerateDiagnostic(result: SearchResult) {
     if (!user) {
       toast.error('Faça login para continuar.');
@@ -128,33 +243,25 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     setGenerating(true);
 
     try {
-      let proxyData: any = null;
-      try {
-        const result2 = await supabase.functions.invoke('proxy-roxcoach', {
-          body: { url: result.result_url },
-        });
-        if (!result2.error) {
-          proxyData = result2.data;
-        } else {
-          console.warn('proxy-roxcoach returned error (non-fatal):', result2.error.message);
-        }
-      } catch (networkErr) {
-        console.warn('proxy-roxcoach network error (non-fatal):', networkErr);
+      // Execute Action A (save history) and Action B (diagnostic) in parallel
+      const [, diagnosticResult] = await Promise.allSettled([
+        saveRaceHistory(result),
+        generateDiagnostic(result),
+      ]);
+
+      if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
+        toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
+        onSuccess();
+      } else if (diagnosticResult.status === 'rejected') {
+        console.error('Diagnostic generation error:', diagnosticResult.reason);
+        toast.error(diagnosticResult.reason?.message || 'Erro ao gerar diagnóstico.');
+      } else {
+        // diagnosticResult.value is null — proxy failed
+        toast.error('A API de diagnóstico está indisponível para esta prova. Tente novamente mais tarde.');
       }
-
-      if (!proxyData) {
-        toast.error('A API de diagnóstico está indisponível para esta prova. Tente outra prova ou tente novamente mais tarde.');
-        return;
-      }
-
-      console.log('Raw API Response:', JSON.stringify(proxyData, null, 2));
-
-      const results = await saveDiagnosticData(proxyData, result.result_url);
-      toast.success(`Diagnóstico gerado: ${(results || []).join(' + ')} 🔥`);
-      onSuccess();
     } catch (err: any) {
-      console.error('Diagnostic generation error:', err);
-      toast.error(err?.message || 'Erro ao gerar diagnóstico.');
+      console.error('Unexpected error:', err);
+      toast.error(err?.message || 'Erro inesperado.');
     } finally {
       setGenerating(false);
       setSelectedUrl('');
@@ -169,7 +276,7 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
           Diagnóstico de Performance
         </h2>
         <p className="text-xs text-muted-foreground">
-          Busque seu nome para encontrar suas provas e gerar o diagnóstico automaticamente.
+          Busque seu nome para encontrar sua última prova e gerar o diagnóstico automaticamente.
         </p>
       </div>
 
@@ -202,11 +309,11 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
       {searching && (
         <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Buscando suas provas...</span>
+          <span className="text-sm">Buscando sua última prova...</span>
         </div>
       )}
 
-      {/* Results list */}
+      {/* Results list — only 1 result (most recent) */}
       <AnimatePresence>
         {!searching && searchResults.length > 0 && (
           <motion.div
@@ -215,9 +322,9 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
             className="space-y-2"
           >
             <p className="text-xs text-muted-foreground font-medium">
-              {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''} — selecione a prova para diagnosticar:
+              Última prova encontrada — clique para gerar o diagnóstico:
             </p>
-            <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1">
+            <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
                 const isSelected = selectedUrl === result.result_url;
                 return (
@@ -225,7 +332,6 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
                     key={`${result.result_url}-${idx}`}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
                     onClick={() => handleGenerateDiagnostic(result)}
                     disabled={generating}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
