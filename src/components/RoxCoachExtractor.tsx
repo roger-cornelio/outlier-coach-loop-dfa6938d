@@ -242,10 +242,10 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
       <div className="space-y-1">
         <h2 className="text-base font-bold text-foreground flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          Diagnóstico RoxCoach
+          Diagnóstico de Performance
         </h2>
         <p className="text-xs text-muted-foreground">
-          Cole sua URL do RoxCoach para extrair e salvar seus dados de performance.
+          Cole a URL do seu resultado HYROX para gerar seu diagnóstico completo.
         </p>
       </div>
 
@@ -253,7 +253,7 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
         <Input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Cole a URL do seu resultado no RoxCoach..."
+          placeholder="Cole a URL do seu resultado HYROX..."
           className="h-12 rounded-xl flex-1"
           disabled={loading}
         />
@@ -265,12 +265,12 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Loading...
+              Gerando...
             </>
           ) : (
             <>
               <Zap className="w-4 h-4 mr-2" />
-              Hackear Meus Dados
+              Gerar Diagnóstico
             </>
           )}
         </Button>
