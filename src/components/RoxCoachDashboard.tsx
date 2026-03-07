@@ -55,7 +55,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     }
 
     fetchData();
-  }, [user, refreshKey]);
+  }, [user, refreshKey, localRefresh]);
 
   async function handleDeleteDiagnostic() {
     if (!user) return;
