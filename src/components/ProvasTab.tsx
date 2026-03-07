@@ -40,6 +40,7 @@ interface SearchResult {
   time_formatted: string;
   result_url: string;
   season_id?: number;
+  event_index?: number;
 }
 
 interface ExtractedSplits {
@@ -147,7 +148,10 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
       if (error) throw error;
 
       const rawResults: SearchResult[] = data?.results || [];
-      const sorted = rawResults.sort((a, b) => (b.season_id || 0) - (a.season_id || 0));
+      const sorted = rawResults.sort((a, b) => {
+        if ((b.season_id || 0) !== (a.season_id || 0)) return (b.season_id || 0) - (a.season_id || 0);
+        return (a.event_index ?? 999) - (b.event_index ?? 999);
+      });
 
       // Filter already-imported (check benchmark_results.screenshot_url which stores result_url)
       if (user) {

@@ -90,7 +90,7 @@ async function searchSeasonAllEvents(
   lastName: string,
   gender: string
 ): Promise<any[]> {
-  // Step 1: Get event list from start page
+  // Step 1: Get event list from start page (ordered most recent first by HYROX)
   const events = await fetchEventList(seasonId);
   if (events.length === 0) {
     console.log(`[search-hyrox-athlete] Season ${seasonId}: no events found`);
@@ -106,8 +106,8 @@ async function searchSeasonAllEvents(
   for (let i = 0; i < events.length; i += BATCH_SIZE) {
     const batch = events.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
-      batch.map((eventName) =>
-        searchEventForAthlete(seasonId, eventName, firstName, lastName, gender)
+      batch.map((evt) =>
+        searchEventForAthlete(seasonId, evt.name, firstName, lastName, gender, evt.index)
       )
     );
 
@@ -127,7 +127,7 @@ async function searchSeasonAllEvents(
 /**
  * Fetch the start page for a season and extract available event_main_group options.
  */
-async function fetchEventList(seasonId: number): Promise<string[]> {
+async function fetchEventList(seasonId: number): Promise<{ name: string; index: number }[]> {
   const url = `https://results.hyrox.com/season-${seasonId}/?pid=start`;
   const response = await fetch(url, { headers: FETCH_HEADERS });
 
@@ -139,7 +139,7 @@ async function fetchEventList(seasonId: number): Promise<string[]> {
   const html = await response.text();
 
   // Extract <option value="2025 Rio de Janeiro">...</option> from event_main_group select
-  const events: string[] = [];
+  const events: { name: string; index: number }[] = [];
   const optionPattern = /<option\s+value="([^"]+)"[^>]*>[^<]*<\/option>/gi;
   
   // Find the event_main_group select section
@@ -148,10 +148,12 @@ async function fetchEventList(seasonId: number): Promise<string[]> {
   
   const selectHtml = selectMatch[1];
   let match;
+  let idx = 0;
   while ((match = optionPattern.exec(selectHtml)) !== null) {
     const value = match[1].trim();
     if (value && value !== "%" && value !== "%25") {
-      events.push(value);
+      events.push({ name: value, index: idx });
+      idx++;
     }
   }
 
@@ -166,7 +168,8 @@ async function searchEventForAthlete(
   eventName: string,
   firstName: string,
   lastName: string,
-  gender: string
+  gender: string,
+  eventIndex: number = 999
 ): Promise<any[]> {
   const url = `https://results.hyrox.com/season-${seasonId}/?pid=list&pidp=ranking_nav&event_main_group=${encodeURIComponent(eventName)}&search%5Bname%5D=${encodeURIComponent(lastName)}${firstName ? `&search%5Bfirstname%5D=${encodeURIComponent(firstName)}` : ""}${gender === "M" || gender === "W" ? `&search%5Bsex%5D=${gender}` : ""}&num_results=25`;
 
@@ -186,13 +189,13 @@ async function searchEventForAthlete(
 
   console.log(`[search-hyrox-athlete] Season ${seasonId}, event "${eventName}": ${count} results`);
 
-  return extractResultEntries(html, seasonId, eventName);
+  return extractResultEntries(html, seasonId, eventName, eventIndex);
 }
 
 /**
  * Extract result entries from HTML.
  */
-function extractResultEntries(html: string, seasonId: number, eventName: string): any[] {
+function extractResultEntries(html: string, seasonId: number, eventName: string, eventIndex: number = 999): any[] {
   const results: any[] = [];
 
   const liPattern = /<li[^>]*class="[^"]*list-group-item[^"]*row"[^>]*>([\s\S]*?)<\/li>/gi;
@@ -242,6 +245,7 @@ function extractResultEntries(html: string, seasonId: number, eventName: string)
       time_formatted: timeFormatted,
       result_url: fullUrl,
       season_id: seasonId,
+      event_index: eventIndex,
     });
   }
 
