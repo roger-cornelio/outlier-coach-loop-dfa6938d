@@ -137,7 +137,7 @@ export function BenchmarksScreen() {
               </TabsContent>
               
               <TabsContent value="benchmarks">
-                <BenchmarkHistory key={`benchmarks-${refreshKey}`} filterType="all" />
+                <BenchmarkHistory key={`benchmarks-${refreshKey}`} filterType="benchmark" />
               </TabsContent>
             </Tabs>
           </motion.div>

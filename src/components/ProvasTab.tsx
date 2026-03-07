@@ -221,6 +221,12 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
     const splits = scrapeData.splits || null;
     const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
 
+    // Compute source_index for ordering: higher season + lower event_index = more recent
+    // Encode as season_id * 1000 + (999 - event_index) so higher = more recent
+    const sourceIndex = (result.season_id && result.event_index !== undefined)
+      ? (result.season_id * 1000) + (999 - (result.event_index ?? 999))
+      : null;
+
     const insertPayload: any = {
       user_id: user.id,
       result_type: 'prova_oficial',
@@ -233,6 +239,7 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
       block_id: `prova_oficial_${Date.now()}`,
       workout_id: `prova_oficial_${Date.now()}`,
       benchmark_id: 'HYROX_OFFICIAL',
+      source_index: sourceIndex,
     };
 
     if (hasSplits) {

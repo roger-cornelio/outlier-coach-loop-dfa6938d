@@ -487,6 +487,7 @@ export type Database = {
           ski_sec: number | null
           sled_pull_sec: number | null
           sled_push_sec: number | null
+          source_index: number | null
           time_in_seconds: number | null
           user_id: string
           wallballs_sec: number | null
@@ -515,6 +516,7 @@ export type Database = {
           ski_sec?: number | null
           sled_pull_sec?: number | null
           sled_push_sec?: number | null
+          source_index?: number | null
           time_in_seconds?: number | null
           user_id: string
           wallballs_sec?: number | null
@@ -543,6 +545,7 @@ export type Database = {
           ski_sec?: number | null
           sled_pull_sec?: number | null
           sled_push_sec?: number | null
+          source_index?: number | null
           time_in_seconds?: number | null
           user_id?: string
           wallballs_sec?: number | null

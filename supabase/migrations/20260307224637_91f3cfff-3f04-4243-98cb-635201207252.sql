@@ -1,0 +1,1 @@
+ALTER TABLE public.benchmark_results ADD COLUMN IF NOT EXISTS source_index integer DEFAULT NULL;
