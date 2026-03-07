@@ -247,11 +247,13 @@ export default function ImportarProva() {
 
   /** Silent import — no step/UI changes, throws on error */
   async function handleImportSilent(importUrl: string) {
-    const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke(
-      'scrape-hyrox-result',
-      { body: { url: importUrl } }
-    );
+    // Run scrape + diagnostic proxy in parallel
+    const [scrapeResult, diagResult] = await Promise.all([
+      supabase.functions.invoke('scrape-hyrox-result', { body: { url: importUrl } }),
+      supabase.functions.invoke('proxy-roxcoach', { body: { url: importUrl } }).catch(() => ({ data: null, error: null })),
+    ]);
 
+    const { data: scrapeData, error: scrapeError } = scrapeResult;
     if (scrapeError) throw new Error('Não foi possível ler os dados do link.');
     if (scrapeData?.error || !scrapeData?.time_in_seconds) {
       throw new Error(scrapeData?.error || 'Não encontramos os tempos no link.');
@@ -320,6 +322,37 @@ export default function ImportarProva() {
         const metrics = hasSplits ? generateMetricsFromSplits(splits) : generateMetricsFromTotal(totalSeconds);
         await calculateAndSaveHyroxPercentiles(resultId, division, gender, metrics);
       }
+    }
+
+    // Save diagnostic data in parallel (non-blocking — don't fail import if diagnostic fails)
+    if (diagResult.data) {
+      try {
+        await saveDiagnosticData(diagResult.data, importUrl);
+      } catch (err) {
+        console.warn('Diagnostic save failed (non-critical):', err);
+      }
+    }
+  }
+
+  /** Save parsed diagnostic data to the database */
+  async function saveDiagnosticData(apiData: any, sourceUrl: string) {
+    if (!user) return;
+    const parsed = parseDiagnosticResponse(apiData, user.id, sourceUrl);
+    if (!hasDiagnosticData(parsed)) return;
+
+    // Delete old + insert new
+    await Promise.all([
+      supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
+      supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+      supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+    ]);
+
+    await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
+    if (parsed.diagRows.length > 0) {
+      await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
+    }
+    if (parsed.splitRows.length > 0) {
+      await supabase.from('tempos_splits').insert(parsed.splitRows);
     }
   }
 
