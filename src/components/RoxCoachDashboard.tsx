@@ -14,6 +14,7 @@ import AIAnalysis from './diagnostico/AIAnalysis';
 import DiagnosticCharts from './diagnostico/DiagnosticCharts';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
+import ParecerPremium from './diagnostico/ParecerPremium';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
@@ -331,8 +332,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           {/* Section 1: Performance Highlights */}
           {data.resumo && <PerformanceHighlights resumo={data.resumo} />}
 
-          {/* Section 2: AI Analysis */}
-          {data.resumo?.texto_ia && <AIAnalysis textoIa={data.resumo.texto_ia} />}
+          {/* Section 2: Parecer Premium */}
+          {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} />}
 
           {/* Section 3: Charts */}
           <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
