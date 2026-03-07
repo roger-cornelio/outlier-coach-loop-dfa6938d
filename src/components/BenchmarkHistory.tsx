@@ -291,6 +291,7 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
                 gender={athleteConfig?.sexo === 'feminino' ? 'F' : 'M'}
                 timeDeltaSeconds={timeDelta}
                 onDelete={handleDeleteResult}
+                isLatest={idx === 0}
               />
             );
           })}

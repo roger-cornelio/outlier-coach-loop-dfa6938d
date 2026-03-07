@@ -189,7 +189,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {/* Race Cards */}
       {!loading && allResumos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {allResumos.map((resumo) => {
+          {allResumos.map((resumo, index) => {
             const isActive = resumo.id === selectedResumoId;
             const location = extractLocation(resumo.evento);
             const season = extractSeason(resumo.temporada, resumo.evento);
@@ -200,12 +200,17 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => setSelectedResumoId(resumo.id)}
-                className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] ${
+                className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] relative ${
                   isActive
                     ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
                     : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
-                }`}
+                } ${index === 0 ? 'ring-2 ring-primary/50' : ''}`}
               >
+                {index === 0 && (
+                  <span className="absolute -top-2 left-3 text-[9px] font-bold uppercase tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                    Mais recente
+                  </span>
+                )}
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
                   <span className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
