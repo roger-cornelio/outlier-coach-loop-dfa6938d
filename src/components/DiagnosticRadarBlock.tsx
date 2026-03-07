@@ -79,22 +79,37 @@ const RADAR_AXES = [
 // INLINE CTA: Importar Última Prova HYROX — auto-search + import
 // ============================================
 
+/** Convert a string to a URL-friendly slug */
+function toSlug(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+/** Build the RoxCoach URL from search result data */
+function buildRoxCoachUrl(result: { event_name: string; athlete_name: string; season_id?: number }): string {
+  const seasonId = result.season_id || 8;
+  const eventPart = result.event_name.split(' • ')[0] || result.event_name;
+  const eventSlug = toSlug(eventPart);
+  const athleteSlug = toSlug(result.athlete_name);
+  return `https://www.rox-coach.com/seasons/${seasonId}/races/${eventSlug}/results/${athleteSlug}`;
+}
+
 function ImportProvaInlineCTA() {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
-  const [state, setState] = useState<'idle' | 'searching' | 'found' | 'importing' | 'done' | 'error'>('idle');
-  const [lastRace, setLastRace] = useState<{ athlete_name: string; event_name: string; division?: string; time_formatted: string; result_url: string } | null>(null);
+  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const profileName = profile?.name || '';
 
   async function handleClick() {
     if (state === 'done') return;
-    if (state === 'found' && lastRace) {
-      // User confirmed — import it
-      await importRace(lastRace.result_url);
-      return;
-    }
     if (!profileName || profileName.length < 2) {
       setErrorMsg('Configure seu nome no perfil primeiro.');
       setState('error');
@@ -122,9 +137,12 @@ function ImportProvaInlineCTA() {
         return;
       }
 
-      // Pick the first result (most recent)
-      setLastRace(results[0]);
-      setState('found');
+      // Sort by most recent season and pick the first
+      const sorted = [...results].sort((a: any, b: any) => (b.season_id || 0) - (a.season_id || 0));
+      const mostRecent = sorted[0];
+
+      // Auto-import without confirmation
+      await importRace(mostRecent);
     } catch (err: any) {
       console.error('Quick search error:', err);
       setErrorMsg('Erro ao buscar provas. Tente novamente.');
@@ -132,15 +150,18 @@ function ImportProvaInlineCTA() {
     }
   }
 
-  async function importRace(url: string) {
+  async function importRace(raceResult: any) {
     if (!user) return;
     setState('importing');
 
+    const url = raceResult.result_url;
+    const roxCoachUrl = buildRoxCoachUrl(raceResult);
+
     try {
-      // Only scrape — plus diagnostic in parallel
+      // Action A: Scrape Hyrox data + Action B: Diagnostic via RoxCoach URL — in parallel
       const [scrapeResult, diagResult] = await Promise.all([
         supabase.functions.invoke('scrape-hyrox-result', { body: { url } }),
-        supabase.functions.invoke('proxy-roxcoach', { body: { url } }).catch(() => ({ data: null, error: null })),
+        supabase.functions.invoke('proxy-roxcoach', { body: { url: roxCoachUrl } }).catch(() => ({ data: null, error: null })),
       ]);
 
       const { data: scrapeData, error: scrapeError } = scrapeResult;
@@ -185,7 +206,6 @@ function ImportProvaInlineCTA() {
 
       if (insertError) {
         if (insertError.code === '23505') {
-          // Already imported
           toast.info('Essa prova já foi importada anteriormente.');
           setState('done');
           return;
@@ -235,11 +255,12 @@ function ImportProvaInlineCTA() {
         }
       }
 
-      // Save diagnostic data (non-blocking)
-      if (diagResult?.data) {
+      // Save diagnostic data from RoxCoach (non-blocking)
+      const diagData = diagResult?.data;
+      if (diagData && diagData.ok !== false) {
         try {
           const { parseDiagnosticResponse, hasDiagnosticData } = await import('@/utils/diagnosticParser');
-          const parsed = parseDiagnosticResponse(diagResult.data, user.id, url);
+          const parsed = parseDiagnosticResponse(diagData, user.id, roxCoachUrl);
           if (hasDiagnosticData(parsed)) {
             await Promise.all([
               supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
@@ -279,54 +300,6 @@ function ImportProvaInlineCTA() {
             <p className="text-sm font-bold text-foreground">Prova importada com sucesso!</p>
             <p className="text-xs text-muted-foreground mt-0.5">Seu nível OUTLIER foi recalculado.</p>
           </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  if (state === 'found' && lastRace) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-primary/15 border border-primary/30 rounded-xl p-4 space-y-3"
-      >
-        <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-primary shrink-0" />
-          <p className="text-sm font-bold text-foreground">Última prova encontrada</p>
-        </div>
-
-        <div className="bg-black/30 rounded-lg p-3 space-y-1">
-          <p className="text-sm font-semibold text-foreground">{lastRace.event_name}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            {lastRace.division && (
-              <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">{lastRace.division}</span>
-            )}
-            <span className="text-xs text-muted-foreground font-mono">{lastRace.time_formatted}</span>
-          </div>
-        </div>
-
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          <Info className="w-3 h-3 inline mr-1 text-amber-400" />
-          Apenas provas dos <span className="text-amber-400 font-semibold">últimos 12 meses</span> são válidas para definir seu nível OUTLIER na jornada.
-        </p>
-
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 text-xs"
-            onClick={() => { setState('idle'); setLastRace(null); }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1 text-xs bg-primary hover:bg-primary/90"
-            onClick={() => importRace(lastRace.result_url)}
-          >
-            Importar esta prova
-          </Button>
         </div>
       </motion.div>
     );
