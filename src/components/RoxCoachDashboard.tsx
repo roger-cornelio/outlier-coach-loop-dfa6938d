@@ -52,6 +52,14 @@ function timeToSec(t: string): number {
   return parts[0] || 0;
 }
 
+/** Parse a score value: if it contains ":", treat as time and convert to seconds; otherwise use toNum */
+function parseScoreValue(val: any): number {
+  if (val == null || val === '') return 0;
+  const s = String(val).trim();
+  if (s.includes(':')) return timeToSec(s);
+  return toNum(s);
+}
+
 function parsePotentialImprovement(val: string) {
   const result = { improvement: '', yourScore: '', top1: '' };
   if (!val || typeof val !== 'string') return result;
@@ -159,9 +167,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           const potentialImprovement = findValue(item, 'Potential Improvement', 'potential_improvement', 'Gap', 'gap') || '';
           const focusDuringTraining = findValue(item, 'Focus During Training', 'focus_during_training', '%', 'percentage', 'Percentage') || '';
           const parsed = typeof potentialImprovement === 'string' ? parsePotentialImprovement(potentialImprovement) : { improvement: '', yourScore: '', top1: '' };
-          const yourScore = parsed.yourScore ? timeToSec(parsed.yourScore) : toNum(findValue(item, 'You', 'you', 'Your Score', 'your_score'));
-          const top1 = parsed.top1 ? timeToSec(parsed.top1) : toNum(findValue(item, 'Top 1%', 'top_1', 'Top1'));
-          const improvementValue = parsed.improvement ? timeToSec(parsed.improvement) : toNum(findValue(item, 'Gap', 'gap', 'Improvement', 'improvement_value'));
+          const yourScore = parsed.yourScore ? timeToSec(parsed.yourScore) : parseScoreValue(findValue(item, 'You', 'you', 'Your Score', 'your_score'));
+          const top1 = parsed.top1 ? timeToSec(parsed.top1) : parseScoreValue(findValue(item, 'Top 1%', 'top_1', 'Top1'));
+          const improvementValue = parsed.improvement ? timeToSec(parsed.improvement) : parseScoreValue(findValue(item, 'Gap', 'gap', 'Improvement', 'improvement_value'));
           const percentage = toNum(focusDuringTraining);
           if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
           diagRows.push({

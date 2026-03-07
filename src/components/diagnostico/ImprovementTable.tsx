@@ -66,7 +66,7 @@ export default function ImprovementTable({ diagnosticos }: Props) {
                   {formatTime(d.top_1)}
                 </TableCell>
                 <TableCell className="text-right text-sm text-foreground font-semibold">
-                  {d.improvement_value > 0 ? formatTime(d.improvement_value) : '-'}
+                  {formatTime(d.improvement_value)}
                 </TableCell>
                 <TableCell className="text-center">
                   <PercentageBadge value={d.percentage} />
