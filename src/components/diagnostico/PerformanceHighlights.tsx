@@ -1,4 +1,4 @@
-import { Trophy, MapPin, PersonStanding, Timer } from 'lucide-react';
+import { Trophy, MapPin, Dumbbell, Timer } from 'lucide-react';
 import type { DiagnosticoResumo } from './types';
 
 interface Props {
