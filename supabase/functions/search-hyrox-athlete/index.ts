@@ -189,7 +189,7 @@ async function searchEventForAthlete(
 
   console.log(`[search-hyrox-athlete] Season ${seasonId}, event "${eventName}": ${count} results`);
 
-  return extractResultEntries(html, seasonId, eventName);
+  return extractResultEntries(html, seasonId, eventName, eventIndex);
 }
 
 /**
