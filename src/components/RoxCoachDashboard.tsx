@@ -175,7 +175,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
       {/* Empty state — show extractor inline */}
       {!loading && !hasData && (
-        <RoxCoachExtractor onSuccess={() => setLocalRefresh(v => v + 1)} />
+        <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
     </div>
   );
