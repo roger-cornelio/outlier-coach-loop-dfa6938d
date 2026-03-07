@@ -211,10 +211,14 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       'text-zinc-900',
                       'rounded-xl',
                       'border-0 shadow-lg shadow-amber-400/20',
-                      'transition-all duration-200 hover:shadow-xl hover:shadow-amber-400/30'
+                      'transition-all duration-200 hover:shadow-xl hover:shadow-amber-400/30',
+                      'flex items-center gap-2'
                     )}
                   >
-                    Continuar como Outlier
+                    {config.nextLabel
+                      ? `Avançar para ${config.nextLabel}`
+                      : `Você é ${config.label} OUTLIER`}
+                    {config.nextLabel && <ChevronRight className="w-5 h-5" />}
                   </Button>
                 </motion.div>
               )}
