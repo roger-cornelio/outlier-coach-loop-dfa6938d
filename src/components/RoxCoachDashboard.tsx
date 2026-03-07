@@ -332,8 +332,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           {/* Section 1: Performance Highlights */}
           {data.resumo && <PerformanceHighlights resumo={data.resumo} />}
 
-          {/* Section 2: AI Analysis */}
-          {data.resumo?.texto_ia && <AIAnalysis textoIa={data.resumo.texto_ia} />}
+          {/* Section 2: Parecer Premium */}
+          {data.resumo && <ParecerPremium resumo={data.resumo} diagnosticos={data.diagnosticos} />}
 
           {/* Section 3: Charts */}
           <DiagnosticCharts splits={data.splits} diagnosticos={data.diagnosticos} />
