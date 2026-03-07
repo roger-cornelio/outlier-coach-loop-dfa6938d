@@ -88,10 +88,9 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
           <TableHeader>
             <TableRow className="border-border">
               <TableHead className="text-muted-foreground">Estação</TableHead>
-              <TableHead className="text-muted-foreground">Métrica</TableHead>
               <TableHead className="text-muted-foreground text-right">Você</TableHead>
-              <TableHead className="text-muted-foreground text-right">Meta OUTLIER</TableHead>
-              <TableHead className="text-muted-foreground text-right">Diferença</TableHead>
+              <TableHead className="text-muted-foreground text-right font-semibold text-primary">Meta OUTLIER</TableHead>
+              <TableHead className="text-muted-foreground text-right">Potencial de Evolução</TableHead>
               <TableHead className="text-muted-foreground text-center">Foco %</TableHead>
             </TableRow>
           </TableHeader>
@@ -99,15 +98,14 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
             {rows.map((d) => (
               <TableRow key={d.id} className="border-border">
                 <TableCell className="font-medium text-foreground text-sm">{d.movement}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{translateMetric(d.metric)}</TableCell>
                 <TableCell className="text-right text-sm text-foreground">
                   {formatTime(d.your_score)}
                 </TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">
+                <TableCell className="text-right text-sm text-primary font-bold">
                   {d.top_1 > 0 ? formatTime(d.top_1) : '—'}
                 </TableCell>
                 <TableCell className="text-right text-sm text-foreground font-semibold">
-                  {d.improvement_value > 0 ? formatTime(d.improvement_value) : '—'}
+                  {d.improvement_value > 0 ? `−${formatTime(d.improvement_value)}` : '—'}
                 </TableCell>
                 <TableCell className="text-center">
                   {d.percentage > 0 ? <PercentageBadge value={d.percentage} /> : '—'}
@@ -117,14 +115,13 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
             {/* Totals row */}
             <TableRow className="border-t-2 border-primary/30 bg-primary/[0.06]">
               <TableCell className="font-extrabold text-primary text-sm">PROVA TOTAL</TableCell>
-              <TableCell className="text-muted-foreground text-sm">—</TableCell>
               <TableCell className="text-right text-sm text-foreground font-bold">
                 {formatTime(totalYou)}
               </TableCell>
-              <TableCell className="text-right text-sm text-primary font-bold">
+              <TableCell className="text-right text-sm text-primary font-extrabold text-base">
                 {totalMeta > 0 ? formatTime(totalMeta) : '—'}
               </TableCell>
-              <TableCell className="text-right text-sm font-extrabold text-primary">
+              <TableCell className="text-right text-sm font-extrabold text-primary text-base">
                 {totalDiff > 0 ? `−${formatTime(totalDiff)}` : '—'}
               </TableCell>
               <TableCell className="text-center">
