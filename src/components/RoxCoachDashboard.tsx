@@ -1,13 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Zap, Trash2, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Zap, Trash2, Loader2, Search, Trophy, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { DiagnosticoData, DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 import AIAnalysis from './diagnostico/AIAnalysis';
@@ -15,6 +18,15 @@ import DiagnosticCharts from './diagnostico/DiagnosticCharts';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
+
+type SearchResult = {
+  athlete_name: string;
+  event_name: string;
+  division?: string;
+  time_formatted: string;
+  result_url: string;
+  season_id?: number;
+};
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
