@@ -1,32 +1,58 @@
 
+Objetivo: explicar por que “Métrica” e “Diferença” estão erradas/incompletas e como corrigir sem alterar o contrato da API.
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+Diagnóstico (causa raiz confirmada)
+1) Conversão errada de tempo no parse do diagnóstico
+- Em `src/components/RoxCoachDashboard.tsx` (bloco `handleHack`, parse de `diagnostico_melhoria`), os campos `your_score`, `top_1` e `improvement_value` vindos como texto `"MM:SS"` estão passando por `toNum(...)`.
+- `toNum("41:55")` vira `4155` (remove `:`), quando o correto seria `2515` segundos.
+- Isso distorce os números da tabela (ex.: `41:55` aparece como `69:15`).
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+2) “Diferença” não aparece em todas as linhas por regra de UI
+- Em `src/components/diagnostico/ImprovementTable.tsx`, a coluna Diferença faz:
+  - `d.improvement_value > 0 ? formatTime(...) : '-'`
+- Quando a diferença é `00:00`, a tela mostra `-` (por isso parece “faltando”).
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+3) “Métrica não vem”
+- A resposta atual da API em `diagnostico_melhoria` não inclui `metric` por item.
+- O front está preenchendo fallback com `'time'` (exibido como “Tempo”).
+- Então não é perda no front; é ausência desse campo no payload (ou escolha de fallback).
 
-### Alterações
+Plano de correção
+1) Corrigir parse de tempos no `RoxCoachDashboard`
+- Criar/usar helper único: “se valor contém `:`, converter com `timeToSec`; senão usar `toNum`”.
+- Aplicar em:
+  - `your_score`
+  - `top_1`
+  - `improvement_value`
+- Manter `percentage` com `toNum`.
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+2) Ajustar exibição da coluna Diferença
+- Em `ImprovementTable`, remover condição que troca zero por `-`.
+- Sempre renderizar `formatTime(d.improvement_value)` para exibir `00:00` quando for zero.
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+3) Tratar coluna Métrica com comportamento explícito
+- Se API enviar `metric`, usar diretamente.
+- Se não enviar, manter fallback “time”/“Tempo” (com comentário claro no código para evitar ambiguidade futura).
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+4) Validar fluxo ponta a ponta
+- Reimportar a URL oficial.
+- Confirmar no banco:
+  - `Run Total`: `your_score=2515`, `top_1=2187`, `improvement_value=328`.
+  - Itens sem ganho: `improvement_value=0`.
+- Confirmar na UI:
+  - “Você/Top 1%” corretos (41:55, 36:27 etc.).
+  - Diferença mostra `00:00` nas linhas zeradas (não `-`).
+  - Métrica segue “Tempo” até API fornecer `metric` detalhada.
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+Detalhes técnicos (resumo)
+- Arquivos-alvo:
+  - `src/components/RoxCoachDashboard.tsx` (normalização de entrada)
+  - `src/components/diagnostico/ImprovementTable.tsx` (render da diferença)
+- Não exige migração de banco.
+- Não exige mudança na função de backend para este bug específico.
+- O padrão de paginação/resumable sync não é necessário para este incidente; o problema atual é mapeamento/formatação no front.
 
+Critérios de aceite
+- Nenhum tempo convertido com concatenação de dígitos (ex.: 41:55 jamais virar 4155).
+- Coluna Diferença sempre preenchida (inclusive `00:00`).
+- Dados importados e renderizados batem com JSON da API.
