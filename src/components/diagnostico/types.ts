@@ -1,5 +1,10 @@
 export interface DiagnosticoResumo {
   id: string;
+  nome_atleta: string | null;
+  temporada: string | null;
+  evento: string | null;
+  divisao: string | null;
+  finish_time: string | null;
   posicao_categoria: string | null;
   posicao_geral: string | null;
   run_total: string | null;

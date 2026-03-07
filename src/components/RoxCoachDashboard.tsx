@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Zap, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,11 +120,16 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       const rawResumo = apiData.resumo_performance || apiData.resumo || {};
       const resumoRow = {
         atleta_id: user.id,
-        posicao_categoria: findValue(rawResumo, 'posicao_categoria', 'Posição Categoria', 'rank_categoria', 'Rank Categoria') || null,
-        posicao_geral: findValue(rawResumo, 'posicao_geral', 'Posição Geral', 'rank_geral', 'Rank Geral') || null,
-        run_total: findValue(rawResumo, 'run_total', 'Run Total', 'running_total') || null,
-        workout_total: findValue(rawResumo, 'workout_total', 'Workout Total', 'station_total') || null,
-        texto_ia: apiData.texto_ia || apiData.texto || null,
+        nome_atleta: rawResumo.nome_atleta || null,
+        temporada: rawResumo.temporada || null,
+        evento: rawResumo.evento || null,
+        divisao: rawResumo.divisao || null,
+        finish_time: rawResumo.finish_time || null,
+        posicao_categoria: rawResumo.posicao_categoria || null,
+        posicao_geral: rawResumo.posicao_geral || null,
+        run_total: rawResumo.run_total || null,
+        workout_total: rawResumo.workout_total || null,
+        texto_ia: apiData.texto_ia || null,
         source_url: url.trim(),
       };
 
@@ -237,17 +243,41 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
   return (
     <div className="space-y-6">
+      {/* Dynamic title */}
+      {data.resumo?.nome_atleta && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Diagnóstico: {data.resumo.nome_atleta}
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {data.resumo.evento && (
+              <Badge variant="outline" className="text-xs font-medium">
+                {data.resumo.evento}
+              </Badge>
+            )}
+            {(data.resumo.divisao || data.resumo.temporada) && (
+              <Badge variant="secondary" className="text-xs font-medium">
+                {[data.resumo.divisao, data.resumo.temporada].filter(Boolean).join(' · ')}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico de Performance
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
-          </p>
-        </div>
+        {!data.resumo?.nome_atleta && (
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Diagnóstico de Performance
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
+            </p>
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={url}

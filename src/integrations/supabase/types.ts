@@ -760,33 +760,48 @@ export type Database = {
         Row: {
           atleta_id: string
           created_at: string
+          divisao: string | null
+          evento: string | null
+          finish_time: string | null
           id: string
+          nome_atleta: string | null
           posicao_categoria: string | null
           posicao_geral: string | null
           run_total: string | null
           source_url: string | null
+          temporada: string | null
           texto_ia: string | null
           workout_total: string | null
         }
         Insert: {
           atleta_id: string
           created_at?: string
+          divisao?: string | null
+          evento?: string | null
+          finish_time?: string | null
           id?: string
+          nome_atleta?: string | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
           run_total?: string | null
           source_url?: string | null
+          temporada?: string | null
           texto_ia?: string | null
           workout_total?: string | null
         }
         Update: {
           atleta_id?: string
           created_at?: string
+          divisao?: string | null
+          evento?: string | null
+          finish_time?: string | null
           id?: string
+          nome_atleta?: string | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
           run_total?: string | null
           source_url?: string | null
+          temporada?: string | null
           texto_ia?: string | null
           workout_total?: string | null
         }
