@@ -15,6 +15,7 @@ import {
   hasExistingScores,
   type MetricInput,
 } from '@/utils/hyroxPercentileCalculator';
+import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 
 // --- Utility functions ---
 
