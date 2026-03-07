@@ -103,13 +103,12 @@ function buildRoxCoachUrl(result: { event_name: string; athlete_name: string; se
 function ImportProvaInlineCTA() {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
-  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const profileName = profile?.name || '';
 
   async function handleClick() {
-    if (state === 'done') return;
     if (!profileName || profileName.length < 2) {
       setErrorMsg('Configure seu nome no perfil primeiro.');
       setState('error');
@@ -137,10 +136,10 @@ function ImportProvaInlineCTA() {
         return;
       }
 
-      // Sort by most recent: season desc, then event_index asc (lower = more recent)
+      // Sort by most recent: season desc, then event_index desc (higher = more recent)
       const sorted = [...results].sort((a: any, b: any) => {
         if ((b.season_id || 0) !== (a.season_id || 0)) return (b.season_id || 0) - (a.season_id || 0);
-        return (a.event_index ?? 999) - (b.event_index ?? 999);
+        return (b.event_index ?? -1) - (a.event_index ?? -1);
       });
       const mostRecent = sorted[0];
 
