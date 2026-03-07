@@ -75,16 +75,15 @@ export function BenchmarksScreen() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Zerar todos os resultados?</AlertDialogTitle>
+                    <AlertDialogTitle>Limpar visualização?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação irá apagar permanentemente todos os seus benchmarks, simulados e provas oficiais. 
-                      Seu progresso e nível serão resetados. Esta ação não pode ser desfeita.
+                      Isso vai limpar a tela de evolução. Seus dados continuam salvos no banco de dados.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearAllResults} disabled={isClearing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      {isClearing ? 'Apagando...' : 'Sim, apagar tudo'}
+                    <AlertDialogAction onClick={handleClearAllResults} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Limpar tela
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
