@@ -171,7 +171,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-3">
           <Zap className="w-10 h-10 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">
-            Importe seus dados do RoxCoach acima para ver seu diagnóstico de performance.
+            Gere seu diagnóstico acima para ver sua análise de performance.
           </p>
         </div>
       )}
