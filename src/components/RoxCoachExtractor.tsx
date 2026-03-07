@@ -128,12 +128,24 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     setGenerating(true);
 
     try {
-      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('proxy-roxcoach', {
-        body: { url: result.result_url },
-      }).catch(() => ({ data: null, error: null }));
+      let proxyData: any = null;
+      try {
+        const result2 = await supabase.functions.invoke('proxy-roxcoach', {
+          body: { url: result.result_url },
+        });
+        if (!result2.error) {
+          proxyData = result2.data;
+        } else {
+          console.warn('proxy-roxcoach returned error (non-fatal):', result2.error.message);
+        }
+      } catch (networkErr) {
+        console.warn('proxy-roxcoach network error (non-fatal):', networkErr);
+      }
 
-      if (proxyError) throw new Error(`Erro na API: ${proxyError.message}`);
-      if (!proxyData) throw new Error('API retornou dados vazios. Tente novamente em alguns instantes.');
+      if (!proxyData) {
+        toast.error('A API de diagnóstico está indisponível para esta prova. Tente outra prova ou tente novamente mais tarde.');
+        return;
+      }
 
       console.log('Raw API Response:', JSON.stringify(proxyData, null, 2));
 
