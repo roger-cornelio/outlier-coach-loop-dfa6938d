@@ -49,7 +49,7 @@ export function timeToSeconds(t: string): number {
 
 /** Format seconds back to MM:SS */
 export function secondsToTime(sec: number): string {
-  if (!sec || sec <= 0) return '0:00';
+  if (sec == null || isNaN(sec) || sec < 0) return '00:00';
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;

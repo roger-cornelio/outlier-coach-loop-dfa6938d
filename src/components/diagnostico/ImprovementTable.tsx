@@ -29,8 +29,8 @@ function translateMetric(metric: string): string {
 }
 
 function formatTime(seconds: number): string {
-  if (seconds == null || seconds <= 0) return '0';
-  return secondsToTime(seconds);
+  if (seconds == null || isNaN(seconds) || seconds < 0) return '00:00';
+  return secondsToTime(Math.max(0, seconds));
 }
 
 export default function ImprovementTable({ diagnosticos }: Props) {
