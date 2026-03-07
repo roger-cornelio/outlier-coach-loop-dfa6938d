@@ -28,6 +28,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [showImporter, setShowImporter] = useState(false);
 
   // Fetch diagnostic data from DB
   useEffect(() => {
