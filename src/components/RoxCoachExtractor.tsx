@@ -330,7 +330,9 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
             className="space-y-2"
           >
             <p className="text-xs text-muted-foreground font-medium">
-              Última prova encontrada — clique para gerar o diagnóstico:
+              {mode === 'diagnostic_only'
+                ? `${searchResults.length} prova(s) encontrada(s) — clique para importar o diagnóstico:`
+                : 'Última prova encontrada — clique para gerar o diagnóstico:'}
             </p>
             <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
