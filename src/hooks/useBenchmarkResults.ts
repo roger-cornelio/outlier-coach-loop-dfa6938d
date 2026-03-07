@@ -189,9 +189,10 @@ export function useBenchmarkResults() {
     return scores.reduce((sum, r) => sum + Number(r.score || 0), 0) / scores.length;
   }, [results]);
 
-  // Clear all history
+  // Clear all history (UI-only, database untouched)
   const clearHistory = useCallback(() => {
     setResults([]);
+    setExternalResults([]);
     saveToStorage([]);
   }, []);
 
