@@ -308,7 +308,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             className="h-12 rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2"
           >
             {hacking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {hacking ? 'Hackeando...' : 'Hackear Meus Dados'}
+            {hacking ? 'Analisando...' : 'Gerar Diagnóstico OUTLIER'}
           </Button>
         </div>
       </div>
