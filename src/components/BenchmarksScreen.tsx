@@ -100,8 +100,6 @@ export function BenchmarksScreen() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
-              <AddResultModal onResultAdded={handleResultAdded} />
             </div>
           </div>
         </div>
