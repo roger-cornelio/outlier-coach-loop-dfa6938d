@@ -15,6 +15,7 @@ import { ClassificationAdminEditor } from "@/components/admin/ClassificationAdmi
 import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmin";
 import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
 import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin";
+import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,11 +37,12 @@ import {
   Medal,
   Gauge,
   BookOpen,
-  Calculator
+  Calculator,
+  Grid3X3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "demoLevelUp";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp";
 
 interface NavItem {
   id: AdminView;
@@ -109,6 +111,12 @@ const navItems: NavItem[] = [
     label: "Motor Físico",
     icon: <Calculator className="w-5 h-5" />,
     description: "Constantes biomecânicas do motor de Kcal"
+  },
+  {
+    id: "stationValence",
+    label: "Matriz Valências",
+    icon: <Grid3X3 className="w-5 h-5" />,
+    description: "Pesos estações vs. valências fisiológicas"
   },
   { 
     id: "params", 
@@ -226,6 +234,8 @@ const AdminPortal = () => {
         return <KnowledgeBaseAdmin />;
       case "movementPatterns":
         return <MovementPatternsAdmin />;
+      case "stationValence":
+        return <StationValenceAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
       default:
