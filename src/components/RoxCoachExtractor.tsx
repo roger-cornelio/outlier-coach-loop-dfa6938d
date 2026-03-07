@@ -64,7 +64,7 @@ function extractIdpFromUrl(url: string): { idp: string | null; event: string | n
   }
 }
 
-export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps) {
+export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoachExtractorProps) {
   const { user, profile } = useAuth();
   const { athleteConfig } = useOutlierStore();
 
