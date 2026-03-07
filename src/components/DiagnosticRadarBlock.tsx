@@ -376,6 +376,7 @@ function ImportProvaInlineCTA() {
     );
   }
 
+  if (state === 'error') {
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
