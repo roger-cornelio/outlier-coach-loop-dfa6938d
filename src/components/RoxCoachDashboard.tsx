@@ -14,6 +14,7 @@ import AIAnalysis from './diagnostico/AIAnalysis';
 import DiagnosticCharts from './diagnostico/DiagnosticCharts';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
+import ParecerPremium from './diagnostico/ParecerPremium';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
