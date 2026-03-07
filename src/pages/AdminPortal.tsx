@@ -116,6 +116,12 @@ const navItems: NavItem[] = [
     icon: <Settings2 className="w-5 h-5" />,
     description: "Configurações do sistema"
   },
+  {
+    id: "demoLevelUp",
+    label: "Demo Level Up",
+    icon: <Shield className="w-5 h-5" />,
+    description: "Simular modais de progressão"
+  },
 ];
 
 const AdminPortal = () => {
