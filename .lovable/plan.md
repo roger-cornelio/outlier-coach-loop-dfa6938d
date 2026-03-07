@@ -1,54 +1,32 @@
 
 
-## Plano: Unificar Busca — Importar Prova + Diagnóstico OUTLIER em paralelo
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-### Situação Atual
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-Hoje existem **dois fluxos separados** que usam a mesma busca (`search-hyrox-athlete`):
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-1. **ImportarProva** — chama `scrape-hyrox-result` → salva em `benchmark_results` (tempos, splits, percentis)
-2. **RoxCoachDashboard/Extractor** — chama `proxy-roxcoach` → salva em `diagnostico_resumo`, `diagnostico_melhoria`, `tempos_splits`
+### Alterações
 
-Ambos buscam pelo mesmo nome, retornam a mesma lista de provas e usam a mesma `result_url`.
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-### Proposta
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-Unificar numa única busca: quando o atleta seleciona uma prova, disparar **as duas chamadas em paralelo** (`scrape-hyrox-result` + `proxy-roxcoach`) e salvar tudo de uma vez.
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-### Mudanças
-
-**1. Modificar `ImportarProva.tsx`**
-- Após o atleta selecionar uma prova (ou batch), além de chamar `scrape-hyrox-result`, chamar `proxy-roxcoach` em paralelo com `Promise.all`
-- Reutilizar a lógica de parsing do diagnóstico que já existe em `RoxCoachExtractor.tsx` (extrair para uma função utilitária compartilhada)
-- Mostrar feedback unificado: "Prova importada + Diagnóstico gerado"
-
-**2. Criar `src/utils/diagnosticParser.ts`**
-- Extrair as funções de parsing do `RoxCoachExtractor` (`findValue`, `parsePotentialImprovement`, `timeToSeconds`, parsing de `resumo`, `splits`, `diagRows`) para um módulo reutilizável
-- Exportar uma função tipo `parseDiagnosticResponse(apiData, userId, sourceUrl)` que retorna os objetos prontos para insert
-
-**3. Modificar `RoxCoachDashboard.tsx`**
-- Remover a busca duplicada — o diagnóstico já será gerado automaticamente na importação
-- Manter apenas a visualização dos diagnósticos existentes e a opção de re-gerar se necessário
-
-**4. Fluxo unificado na seleção de prova**
-```text
-Atleta busca nome
-  → Lista de provas aparece
-    → Seleciona prova(s)
-      → Promise.all([
-           scrape-hyrox-result (→ benchmark_results + percentis),
-           proxy-roxcoach (→ diagnostico_resumo + melhoria + splits)
-         ])
-      → Toast: "Prova importada e diagnóstico gerado"
-```
-
-**5. Batch import**
-- No import em lote, cada prova dispara ambas as chamadas em paralelo
-- O diagnóstico mais recente fica como "ativo" na visualização
-
-### Detalhes técnicos
-
-- As duas edge functions já existem e não precisam de alteração
-- Não há mudança de banco de dados — ambas as tabelas já existem
-- A autorização de uso de dados (checkbox) já existe em `ImportarProva` e será mantida
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
