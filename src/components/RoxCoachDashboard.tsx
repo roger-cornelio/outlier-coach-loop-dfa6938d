@@ -143,15 +143,15 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                     {diagnosticos.map((d) => (
                       <TableRow key={d.id} className="border-border">
                         <TableCell className="font-medium text-foreground text-sm">{d.movement}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{d.metric}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{translateMetric(d.metric)}</TableCell>
                         <TableCell className="text-right text-sm text-foreground">
-                          {d.your_score > 300 ? formatTime(d.your_score) : d.your_score}
+                          {formatTime(d.your_score)}
                         </TableCell>
                         <TableCell className="text-right text-sm text-muted-foreground">
-                          {d.top_1 > 300 ? formatTime(d.top_1) : d.top_1}
+                          {formatTime(d.top_1)}
                         </TableCell>
-                        <TableCell className="text-right text-sm text-foreground">
-                          {d.improvement_value > 300 ? formatTime(d.improvement_value) : d.improvement_value}
+                        <TableCell className="text-right text-sm text-foreground font-semibold">
+                          {d.improvement_value > 0 ? formatTime(d.improvement_value) : '-'}
                         </TableCell>
                         <TableCell className="text-center">
                           <PercentageBadge value={d.percentage} />
