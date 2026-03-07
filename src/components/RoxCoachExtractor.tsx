@@ -37,35 +37,50 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
 
       if (!data) throw new Error('API retornou dados vazios.');
 
+      // DEBUG: log raw API response to inspect exact keys
+      console.log('Raw API Response:', JSON.stringify(data, null, 2));
+
       // 2. Delete old data for re-import
       await Promise.all([
         supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
         supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
       ]);
 
-      // 3. Bulk insert diagnostico_melhoria
-      if (data.diagnostico_melhoria && Array.isArray(data.diagnostico_melhoria) && data.diagnostico_melhoria.length > 0) {
-        const diagRows = data.diagnostico_melhoria.map((item: any) => ({
+      // Helper: parse numeric value from potentially formatted strings
+      const toNum = (val: any): number => {
+        if (val == null || val === '') return 0;
+        const cleaned = String(val).replace(/[^0-9.\-]/g, '');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      };
+
+      // 3. Bulk insert diagnostico_melhoria with flexible key mapping
+      const rawDiag = data.diagnostico_melhoria || data.diagnostico || [];
+      if (Array.isArray(rawDiag) && rawDiag.length > 0) {
+        console.log('Raw diagnostico_melhoria[0] keys:', Object.keys(rawDiag[0]));
+        const diagRows = rawDiag.map((item: any) => ({
           atleta_id: user.id,
-          movement: item.movement || '',
-          metric: item.metric || '',
-          value: Number(item.value) || 0,
-          your_score: Number(item.your_score) || 0,
-          top_1: Number(item.top_1) || 0,
-          improvement_value: Number(item.improvement_value) || 0,
-          percentage: Number(item.percentage) || 0,
-          total_improvement: Number(item.total_improvement) || 0,
+          movement: item['Movement'] || item['movement'] || '',
+          metric: item['Metric'] || item['metric'] || '',
+          value: toNum(item['Value'] || item['value']),
+          your_score: toNum(item['You'] || item['you'] || item['Your Score'] || item['your_score']),
+          top_1: toNum(item['Top 1%'] || item['top_1'] || item['Top1'] || item['top1']),
+          improvement_value: toNum(item['Gap'] || item['gap'] || item['Improvement'] || item['improvement_value']),
+          percentage: toNum(item['%'] || item['percentage'] || item['Percentage'] || item['pct']),
+          total_improvement: toNum(item['Total'] || item['total_improvement'] || item['Total Improvement']),
         }));
         const { error: diagError } = await supabase.from('diagnostico_melhoria').insert(diagRows);
         if (diagError) throw new Error(`Erro ao salvar diagnóstico: ${diagError.message}`);
       }
 
-      // 4. Bulk insert tempos_splits
-      if (data.tempos_splits && Array.isArray(data.tempos_splits) && data.tempos_splits.length > 0) {
-        const splitRows = data.tempos_splits.map((item: any) => ({
+      // 4. Bulk insert tempos_splits with flexible key mapping
+      const rawSplits = data.tempos_splits || data.splits || [];
+      if (Array.isArray(rawSplits) && rawSplits.length > 0) {
+        console.log('Raw tempos_splits[0] keys:', Object.keys(rawSplits[0]));
+        const splitRows = rawSplits.map((item: any) => ({
           atleta_id: user.id,
-          split_name: item.split_name || item.name || '',
-          time: String(item.time || ''),
+          split_name: item['Split'] || item['split_name'] || item['Movement'] || item['Station'] || item['name'] || '',
+          time: String(item['Time'] || item['time'] || ''),
         }));
         const { error: splitError } = await supabase.from('tempos_splits').insert(splitRows);
         if (splitError) throw new Error(`Erro ao salvar splits: ${splitError.message}`);
