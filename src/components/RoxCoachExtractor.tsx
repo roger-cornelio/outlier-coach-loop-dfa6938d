@@ -483,7 +483,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
         <div className="py-6 text-center space-y-2">
           <Search className="w-8 h-8 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">
-            Nenhum resultado encontrado. Tente outro nome ou verifique a grafia.
+            Nenhuma prova nova encontrada. Todas já foram importadas ou tente outro nome.
           </p>
         </div>
       )}
