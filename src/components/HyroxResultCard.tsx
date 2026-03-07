@@ -67,7 +67,7 @@ function getEventLocation(eventName: string | null): string {
  * - "Ver análise" CTA button
  * - Expandable analysis section with radar chart
  */
-export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete }: HyroxResultCardProps) {
+export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete, isLatest }: HyroxResultCardProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   const isOfficial = result.result_type === 'prova_oficial';
@@ -76,8 +76,19 @@ export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete }: 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card-elevated rounded-lg overflow-hidden"
+      className={`card-elevated rounded-lg overflow-hidden ${isLatest ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/10' : ''}`}
     >
+      {/* "Mais recente" label */}
+      {isLatest && (
+        <div className="bg-primary/10 border-b border-primary/20 px-3 py-1 flex items-center gap-1.5">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Mais recente</span>
+        </div>
+      )}
+
       {/* Compact Result Header - Clickable */}
       <button
         onClick={() => setShowAnalysis(!showAnalysis)}
