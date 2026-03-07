@@ -16,10 +16,11 @@ const STATUS_CONFIG: Record<AthleteStatus, {
   label: string;
   accentHsl: string;
   levelKey: 'OPEN' | 'PRO' | 'ELITE';
+  nextLabel: string | null;
 }> = {
-  open: { label: 'OPEN', accentHsl: '271 81% 56%', levelKey: 'OPEN' },
-  pro: { label: 'PRO', accentHsl: '45 93% 58%', levelKey: 'PRO' },
-  elite: { label: 'ELITE', accentHsl: '50 95% 65%', levelKey: 'ELITE' },
+  open: { label: 'OPEN', accentHsl: '271 81% 56%', levelKey: 'OPEN', nextLabel: 'PRO OUTLIER' },
+  pro: { label: 'PRO', accentHsl: '45 93% 58%', levelKey: 'PRO', nextLabel: 'ELITE OUTLIER' },
+  elite: { label: 'ELITE', accentHsl: '50 95% 65%', levelKey: 'ELITE', nextLabel: null },
 };
 
 function CelebrationParticles({ accentHsl }: { accentHsl: string }) {
