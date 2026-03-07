@@ -756,6 +756,42 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnostico_resumo: {
+        Row: {
+          atleta_id: string
+          created_at: string
+          id: string
+          posicao_categoria: string | null
+          posicao_geral: string | null
+          run_total: string | null
+          source_url: string | null
+          texto_ia: string | null
+          workout_total: string | null
+        }
+        Insert: {
+          atleta_id: string
+          created_at?: string
+          id?: string
+          posicao_categoria?: string | null
+          posicao_geral?: string | null
+          run_total?: string | null
+          source_url?: string | null
+          texto_ia?: string | null
+          workout_total?: string | null
+        }
+        Update: {
+          atleta_id?: string
+          created_at?: string
+          id?: string
+          posicao_categoria?: string | null
+          posicao_geral?: string | null
+          run_total?: string | null
+          source_url?: string | null
+          texto_ia?: string | null
+          workout_total?: string | null
+        }
+        Relationships: []
+      }
       discovered_events: {
         Row: {
           admin_notes: string | null
