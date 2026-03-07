@@ -371,11 +371,14 @@ export default function ImportarProva() {
 
     try {
       setExtractedInfo('Lendo dados da prova...');
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke(
-        'scrape-hyrox-result',
-        { body: { url: importUrl } }
-      );
+      
+      // Run scrape + diagnostic proxy in parallel
+      const [scrapeResult, diagResult] = await Promise.all([
+        supabase.functions.invoke('scrape-hyrox-result', { body: { url: importUrl } }),
+        supabase.functions.invoke('proxy-roxcoach', { body: { url: importUrl } }).catch(() => ({ data: null, error: null })),
+      ]);
 
+      const { data: scrapeData, error: scrapeError } = scrapeResult;
       if (scrapeError) throw new Error('Não foi possível ler os dados do link.');
       if (scrapeData?.error || !scrapeData?.time_in_seconds) {
         throw new Error(scrapeData?.error || 'Não encontramos os tempos no link informado.');
@@ -453,10 +456,20 @@ export default function ImportarProva() {
         }
       }
 
+      // Save diagnostic data (non-blocking)
+      if (diagResult.data) {
+        try {
+          await saveDiagnosticData(diagResult.data, importUrl);
+        } catch (err) {
+          console.warn('Diagnostic save failed (non-critical):', err);
+        }
+      }
+
       triggerExternalResultsRefresh();
       setSavedUrl(importUrl);
       setStep('success');
-      toast.success('Prova oficial registrada! 🏆');
+      const diagSaved = diagResult.data ? ' + Diagnóstico OUTLIER gerado' : '';
+      toast.success(`Prova oficial registrada${diagSaved}! 🏆`);
     } catch (error: any) {
       console.error('Import error:', error);
       setErrorMsg(error?.message || 'Erro ao importar resultado.');
