@@ -114,43 +114,43 @@ export function BenchmarksScreen() {
 
           {/* Tabs: Todos | Simulados | Provas | Diagnóstico */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs defaultValue="diagnostico" className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-6">
-                <TabsTrigger value="all" className="gap-1 text-xs sm:text-sm sm:gap-2">
-                  <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Todos</span>
-                  <span className="sm:hidden">Todos</span>
+                <TabsTrigger value="diagnostico" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Diagnóstico</span>
+                  <span className="sm:hidden">Diag.</span>
+                </TabsTrigger>
+                <TabsTrigger value="provas" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                  <Medal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>Provas</span>
                 </TabsTrigger>
                 <TabsTrigger value="simulados" className="gap-1 text-xs sm:text-sm sm:gap-2">
                   <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Simulados</span>
                   <span className="sm:hidden">Simul.</span>
                 </TabsTrigger>
-                <TabsTrigger value="provas" className="gap-1 text-xs sm:text-sm sm:gap-2">
-                  <Medal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>Provas</span>
-                </TabsTrigger>
-                <TabsTrigger value="diagnostico" className="gap-1 text-xs sm:text-sm sm:gap-2">
-                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Diagnóstico</span>
-                  <span className="sm:hidden">Diag.</span>
+                <TabsTrigger value="benchmarks" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                  <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Benchmarks</span>
+                  <span className="sm:hidden">Bench.</span>
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="all">
-                <BenchmarkHistory key={`all-${refreshKey}`} filterType="all" />
+              <TabsContent value="diagnostico">
+                <RoxCoachDashboard refreshKey={refreshKey} />
+              </TabsContent>
+
+              <TabsContent value="provas">
+                <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
               </TabsContent>
               
               <TabsContent value="simulados">
                 <BenchmarkHistory key={`simulados-${refreshKey}`} filterType="simulado" />
               </TabsContent>
               
-              <TabsContent value="provas">
-                <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
-              </TabsContent>
-
-              <TabsContent value="diagnostico">
-                <RoxCoachDashboard refreshKey={refreshKey} />
+              <TabsContent value="benchmarks">
+                <BenchmarkHistory key={`benchmarks-${refreshKey}`} filterType="all" />
               </TabsContent>
             </Tabs>
           </motion.div>
