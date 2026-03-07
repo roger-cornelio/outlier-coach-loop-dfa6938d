@@ -440,7 +440,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     onClick={() => handleGenerateDiagnostic(result)}
-                    disabled={generating}
+                    disabled={generating || importingAll}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
                       isSelected
                         ? 'border-primary bg-primary/10'
