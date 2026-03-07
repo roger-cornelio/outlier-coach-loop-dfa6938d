@@ -1958,6 +1958,13 @@ export function DiagnosticRadarBlock({
                   <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" className="mx-auto mb-2" />
                   <p className="text-sm font-semibold text-foreground">Você está no topo</p>
                   <p className="text-xs text-muted-foreground mt-1">Modo manutenção — mantenha sua consistência.</p>
+                </div> : !journey.hasOfficialRace ?
+                <div className="text-center py-6 space-y-2">
+                  <div className="mx-auto w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <Trophy className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Faça uma prova HYROX para desbloquear seu nível OUTLIER</p>
+                  <p className="text-[11px] text-muted-foreground">Importe o resultado da sua prova para iniciar sua jornada de evolução.</p>
                 </div> :
 
               <>
