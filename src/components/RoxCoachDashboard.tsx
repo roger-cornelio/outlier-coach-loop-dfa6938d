@@ -331,36 +331,130 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </div>
       )}
 
-      {/* Input area */}
+      {/* Search area */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        {!data.resumo?.nome_atleta && (
-          <div className="space-y-1">
-            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <Zap className="w-5 h-5 text-primary" />
-              Diagnóstico OUTLIER
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Cole a URL do seu resultado e descubra exatamente onde você está perdendo tempo. A inteligência OUTLIER vai dissecar cada segundo da sua prova.
+        <div className="space-y-1">
+          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Diagnóstico OUTLIER
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Busque seu nome para encontrar suas provas e gerar o diagnóstico automaticamente.
+          </p>
+        </div>
+
+        {/* Search input */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              placeholder="Digite seu nome completo..."
+              className="h-12 rounded-xl pl-10"
+              disabled={generating}
+            />
+          </div>
+          <Button
+            onClick={() => { lastSearchedRef.current = ''; executeSearch(searchQuery); }}
+            disabled={searching || searchQuery.trim().length < 2 || generating}
+            className="h-12 rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          >
+            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          </Button>
+        </div>
+
+        {/* Authorization checkbox */}
+        <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-muted/20">
+          <Checkbox
+            id="auth-consent"
+            checked={agreed}
+            onCheckedChange={(v) => setAgreed(!!v)}
+            className="mt-0.5"
+          />
+          <label htmlFor="auth-consent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+            <ShieldCheck className="w-3.5 h-3.5 inline mr-1 text-primary" />
+            Autorizo o uso dos meus dados de resultado de provas HYROX para gerar o diagnóstico de performance OUTLIER. 
+            Os dados serão utilizados exclusivamente para análise dentro da plataforma.
+          </label>
+        </div>
+
+        {/* Loading */}
+        {searching && (
+          <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Buscando suas provas...</span>
+          </div>
+        )}
+
+        {/* Results list */}
+        <AnimatePresence>
+          {!searching && searchResults.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-2"
+            >
+              <p className="text-xs text-muted-foreground font-medium">
+                {searchResults.length} resultado{searchResults.length > 1 ? 's' : ''} encontrado{searchResults.length > 1 ? 's' : ''} — selecione a prova para diagnosticar:
+              </p>
+              <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1">
+                {searchResults.map((result, idx) => {
+                  const isSelected = selectedUrl === result.result_url;
+                  return (
+                    <motion.button
+                      key={`${result.result_url}-${idx}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      onClick={() => handleSelectResult(result)}
+                      disabled={generating || !agreed}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                        isSelected
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
+                      } ${generating && !isSelected ? 'opacity-40 cursor-not-allowed' : ''} ${!agreed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Trophy className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {result.event_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {result.athlete_name} • {result.division || 'OPEN'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {result.time_formatted && (
+                          <span className="text-sm font-bold text-primary tabular-nums">
+                            {result.time_formatted}
+                          </span>
+                        )}
+                        {isSelected && generating ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Empty state */}
+        {!searching && searchDone && searchResults.length === 0 && (
+          <div className="py-6 text-center space-y-2">
+            <Search className="w-8 h-8 text-muted-foreground/30 mx-auto" />
+            <p className="text-sm text-muted-foreground">
+              Nenhum resultado encontrado. Tente outro nome ou verifique a grafia.
             </p>
           </div>
         )}
-        <div className="flex gap-2">
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Cole aqui a URL do seu resultado..."
-            className="h-12 rounded-xl flex-1"
-            disabled={hacking}
-          />
-          <Button
-            onClick={handleHack}
-            disabled={hacking || !url.trim()}
-            className="h-12 rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2"
-          >
-            {hacking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {hacking ? 'Analisando...' : 'Gerar Diagnóstico OUTLIER'}
-          </Button>
-        </div>
       </div>
 
       {/* Loading skeletons */}
