@@ -78,6 +78,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
   const [generating, setGenerating] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
+  const [importingAll, setImportingAll] = useState(false);
 
   useEffect(() => {
     if (!profileName || !user) return;
@@ -117,7 +118,21 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
       const displayed = mode === 'diagnostic_only' ? sorted : sorted.slice(0, 1);
 
-      setSearchResults(displayed);
+      // Filter out already-imported races
+      if (user) {
+        const urls = displayed.map(r => buildRoxCoachUrl(r));
+        const { data: existing } = await supabase
+          .from('diagnostico_resumo')
+          .select('source_url')
+          .eq('atleta_id', user.id)
+          .in('source_url', urls);
+        
+        const importedUrls = new Set((existing || []).map(e => e.source_url));
+        const filtered = displayed.filter(r => !importedUrls.has(buildRoxCoachUrl(r)));
+        setSearchResults(filtered);
+      } else {
+        setSearchResults(displayed);
+      }
     } catch (err: any) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados.');
@@ -281,6 +296,8 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
+        // Remove imported result from list
+        setSearchResults(prev => prev.filter(r => r.result_url !== result.result_url));
         onSuccess();
       } else if (diagnosticResult.status === 'rejected') {
         console.error('Diagnostic generation error:', diagnosticResult.reason);
@@ -295,6 +312,44 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     } finally {
       setGenerating(false);
       setSelectedUrl('');
+    }
+  }
+
+  /** Import all visible results sequentially */
+  async function handleImportAll() {
+    if (!user || searchResults.length === 0) return;
+    setImportingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const result of searchResults) {
+      setSelectedUrl(result.result_url);
+      try {
+        const tasks: Promise<any>[] = [generateDiagnostic(result)];
+        if (mode === 'full') tasks.unshift(saveRaceHistory(result));
+        const settled = await Promise.allSettled(tasks);
+        const diagResult = mode === 'full' ? settled[1] : settled[0];
+        if (diagResult.status === 'fulfilled' && diagResult.value) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setSelectedUrl('');
+    setImportingAll(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} diagnóstico(s) importado(s) com sucesso! 🔥`);
+      // Remove imported results from list
+      setSearchResults([]);
+      onSuccess();
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} prova(s) não puderam ser importadas.`);
     }
   }
 
@@ -355,11 +410,27 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
             animate={{ opacity: 1, y: 0 }}
             className="space-y-2"
           >
-            <p className="text-xs text-muted-foreground font-medium">
-              {mode === 'diagnostic_only'
-                ? `${searchResults.length} prova(s) encontrada(s) — clique para importar o diagnóstico:`
-                : 'Última prova encontrada — clique para gerar o diagnóstico:'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground font-medium">
+                {mode === 'diagnostic_only'
+                  ? `${searchResults.length} prova(s) nova(s) encontrada(s):`
+                  : 'Última prova encontrada — clique para gerar o diagnóstico:'}
+              </p>
+              {mode === 'diagnostic_only' && searchResults.length > 1 && (
+                <Button
+                  onClick={handleImportAll}
+                  disabled={generating || importingAll}
+                  size="sm"
+                  className="rounded-lg text-xs font-bold"
+                >
+                  {importingAll ? (
+                    <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Importando...</>
+                  ) : (
+                    <>Importar todas ({searchResults.length})</>
+                  )}
+                </Button>
+              )}
+            </div>
             <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
                 const isSelected = selectedUrl === result.result_url;
@@ -369,12 +440,12 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     onClick={() => handleGenerateDiagnostic(result)}
-                    disabled={generating}
+                    disabled={generating || importingAll}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
                       isSelected
                         ? 'border-primary bg-primary/10'
                         : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
-                    } ${generating && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    } ${(generating || importingAll) && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Trophy className="w-4 h-4 text-primary" />
@@ -412,7 +483,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
         <div className="py-6 text-center space-y-2">
           <Search className="w-8 h-8 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">
-            Nenhum resultado encontrado. Tente outro nome ou verifique a grafia.
+            Nenhuma prova nova encontrada. Todas já foram importadas ou tente outro nome.
           </p>
         </div>
       )}
