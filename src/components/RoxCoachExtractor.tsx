@@ -313,6 +313,44 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
+  /** Import all visible results sequentially */
+  async function handleImportAll() {
+    if (!user || searchResults.length === 0) return;
+    setImportingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const result of searchResults) {
+      setSelectedUrl(result.result_url);
+      try {
+        const tasks: Promise<any>[] = [generateDiagnostic(result)];
+        if (mode === 'full') tasks.unshift(saveRaceHistory(result));
+        const settled = await Promise.allSettled(tasks);
+        const diagResult = mode === 'full' ? settled[1] : settled[0];
+        if (diagResult.status === 'fulfilled' && diagResult.value) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setSelectedUrl('');
+    setImportingAll(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} diagnóstico(s) importado(s) com sucesso! 🔥`);
+      // Remove imported results from list
+      setSearchResults([]);
+      onSuccess();
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} prova(s) não puderam ser importadas.`);
+    }
+  }
+
   return (
     <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
       <div className="space-y-1">
