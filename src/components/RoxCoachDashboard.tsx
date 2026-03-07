@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Timer, TrendingUp, Zap } from 'lucide-react';
+import { Timer, TrendingUp, Zap, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import RoxCoachExtractor from './RoxCoachExtractor';
 
 interface Split {
@@ -64,6 +67,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
   const [loading, setLoading] = useState(true);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,13 +87,31 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchData();
   }, [user, refreshKey, localRefresh]);
 
+  async function handleDeleteDiagnostic() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await Promise.all([
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+      ]);
+      toast.success('Diagnóstico apagado com sucesso.');
+      setLocalRefresh(k => k + 1);
+    } catch (err) {
+      console.error('Error deleting diagnostic:', err);
+      toast.error('Erro ao apagar diagnóstico.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) return null;
 
   const hasData = splits.length > 0 || diagnosticos.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* RoxCoach Extractor - always visible */}
+      {/* Extractor - always visible */}
       <RoxCoachExtractor onSuccess={() => setLocalRefresh(k => k + 1)} />
 
       {/* Data sections */}
@@ -163,6 +185,32 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </div>
             </div>
           )}
+
+          {/* Delete button */}
+          <div className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Apagar diagnóstico
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar diagnóstico?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Todos os dados do diagnóstico atual (splits e análise de melhoria) serão apagados permanentemente. Você poderá gerar um novo a qualquer momento.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteDiagnostic} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {deleting ? 'Apagando...' : 'Sim, apagar'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </>
       )}
 
