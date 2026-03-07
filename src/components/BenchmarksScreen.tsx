@@ -4,7 +4,7 @@ import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-re
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
-import { AddResultModal } from './AddResultModal';
+// AddResultModal removed from header - now inside ProvasTab
 import { useAthleteStatus, clearStatusHistory } from '@/hooks/useAthleteStatus';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { LEVEL_NAMES } from '@/types/outlier';
@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import RoxCoachDashboard from './RoxCoachDashboard';
+import { ProvasTab } from './ProvasTab';
 
 export function BenchmarksScreen() {
   const {
@@ -99,8 +100,6 @@ export function BenchmarksScreen() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
-              <AddResultModal onResultAdded={handleResultAdded} />
             </div>
           </div>
         </div>
@@ -142,7 +141,7 @@ export function BenchmarksScreen() {
               </TabsContent>
 
               <TabsContent value="provas">
-                <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
+                <ProvasTab refreshKey={refreshKey} onResultAdded={handleResultAdded} />
               </TabsContent>
               
               <TabsContent value="simulados">
