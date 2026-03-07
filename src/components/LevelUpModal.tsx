@@ -121,13 +121,13 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                 >
                   {/* Multi-layer glow */}
                   <motion.div
-                    className="absolute inset-0 -m-16 rounded-full blur-[80px]"
+                    className="absolute inset-0 -m-20 rounded-full blur-[100px]"
                     style={{ backgroundColor: `hsl(${config.accentHsl} / 0.35)` }}
                     animate={{ scale: [1, 1.15, 1], opacity: [0.35, 0.5, 0.35] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   />
                   <motion.div
-                    className="absolute inset-0 -m-8 rounded-full blur-2xl"
+                    className="absolute inset-0 -m-12 rounded-full blur-2xl"
                     style={{ backgroundColor: `hsl(${config.accentHsl} / 0.2)` }}
                     animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.35, 0.2] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
