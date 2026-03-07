@@ -264,7 +264,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico: {data.resumo.nome_atleta}
+            Diagnóstico OUTLIER: {data.resumo.nome_atleta}
           </h2>
           <div className="flex items-center gap-2 flex-wrap">
             {data.resumo.evento && (
