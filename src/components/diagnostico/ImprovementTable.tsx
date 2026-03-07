@@ -1,11 +1,12 @@
 import { TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { DiagnosticoMelhoria } from './types';
-import { secondsToTime } from './types';
+import type { DiagnosticoMelhoria, Split } from './types';
+import { secondsToTime, timeToSeconds } from './types';
 
 interface Props {
   diagnosticos: DiagnosticoMelhoria[];
+  splits?: Split[];
 }
 
 function PercentageBadge({ value }: { value: number }) {
@@ -33,13 +34,48 @@ function formatTime(seconds: number): string {
   return secondsToTime(Math.max(0, seconds));
 }
 
-export default function ImprovementTable({ diagnosticos }: Props) {
+/** Check if diagnosticos already has a roxzone-like row */
+function hasRoxzone(diagnosticos: DiagnosticoMelhoria[]): boolean {
+  return diagnosticos.some(d =>
+    d.movement.toLowerCase().includes('roxzone') || d.movement.toLowerCase().includes('rox zone')
+  );
+}
+
+/** Extract roxzone time from splits data */
+function getRoxzoneFromSplits(splits: Split[]): number {
+  const roxSplit = splits.find(s =>
+    s.split_name.toLowerCase().includes('roxzone') || s.split_name.toLowerCase().includes('rox zone')
+  );
+  if (roxSplit) return timeToSeconds(roxSplit.time);
+  return 0;
+}
+
+export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
   if (diagnosticos.length === 0) return null;
 
-  const totalYou = diagnosticos.reduce((sum, d) => sum + d.your_score, 0);
-  const totalMeta = diagnosticos.reduce((sum, d) => sum + d.top_1, 0);
-  const totalDiff = diagnosticos.reduce((sum, d) => sum + d.improvement_value, 0);
-  const totalPct = diagnosticos.reduce((sum, d) => sum + d.percentage, 0);
+  // Build rows, injecting Roxzone from splits if missing
+  let rows = [...diagnosticos];
+  if (!hasRoxzone(diagnosticos) && splits.length > 0) {
+    const roxzoneSec = getRoxzoneFromSplits(splits);
+    if (roxzoneSec > 0) {
+      rows.push({
+        id: 'roxzone-computed',
+        movement: 'Roxzone Time',
+        metric: 'time',
+        value: 0,
+        your_score: roxzoneSec,
+        top_1: 0,
+        improvement_value: 0,
+        percentage: 0,
+        total_improvement: 0,
+      });
+    }
+  }
+
+  const totalYou = rows.reduce((sum, d) => sum + d.your_score, 0);
+  const totalMeta = rows.reduce((sum, d) => sum + d.top_1, 0);
+  const totalDiff = rows.reduce((sum, d) => sum + d.improvement_value, 0);
+  const totalPct = rows.reduce((sum, d) => sum + d.percentage, 0);
 
   return (
     <div className="space-y-3">
@@ -60,7 +96,7 @@ export default function ImprovementTable({ diagnosticos }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {diagnosticos.map((d) => (
+            {rows.map((d) => (
               <TableRow key={d.id} className="border-border">
                 <TableCell className="font-medium text-foreground text-sm">{d.movement}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{translateMetric(d.metric)}</TableCell>
@@ -68,13 +104,13 @@ export default function ImprovementTable({ diagnosticos }: Props) {
                   {formatTime(d.your_score)}
                 </TableCell>
                 <TableCell className="text-right text-sm text-muted-foreground">
-                  {formatTime(d.top_1)}
+                  {d.top_1 > 0 ? formatTime(d.top_1) : '—'}
                 </TableCell>
                 <TableCell className="text-right text-sm text-foreground font-semibold">
-                  {formatTime(d.improvement_value)}
+                  {d.improvement_value > 0 ? formatTime(d.improvement_value) : '—'}
                 </TableCell>
                 <TableCell className="text-center">
-                  <PercentageBadge value={d.percentage} />
+                  {d.percentage > 0 ? <PercentageBadge value={d.percentage} /> : '—'}
                 </TableCell>
               </TableRow>
             ))}
@@ -86,10 +122,10 @@ export default function ImprovementTable({ diagnosticos }: Props) {
                 {formatTime(totalYou)}
               </TableCell>
               <TableCell className="text-right text-sm text-primary font-bold">
-                {formatTime(totalMeta)}
+                {totalMeta > 0 ? formatTime(totalMeta) : '—'}
               </TableCell>
               <TableCell className="text-right text-sm font-extrabold text-primary">
-                −{formatTime(totalDiff)}
+                {totalDiff > 0 ? `−${formatTime(totalDiff)}` : '—'}
               </TableCell>
               <TableCell className="text-center">
                 <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 font-bold">
