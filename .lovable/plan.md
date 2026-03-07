@@ -1,32 +1,45 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Plano: Corrigir Fluxo de Importação de Diagnóstico via RoxCoachExtractor
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### Problema atual
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+1. **`RoxCoachExtractor` é um componente órfão** — não está importado em nenhum lugar do app. O `RoxCoachDashboard` (aba Diagnóstico) não o utiliza.
+2. **Não salva `diagnostico_resumo`** — só salva `diagnostico_melhoria` e `tempos_splits`, mas o dashboard precisa dos 3.
+3. **Não usa o parser compartilhado** (`parseDiagnosticResponse` de `diagnosticParser.ts`) — tem lógica duplicada e menos robusta.
+4. **Sem fallback** — quando `proxy-roxcoach` retorna erro 500 (API externa instável), falha completamente.
+5. **Não toca em `benchmark_results`** — isso já está correto, mas precisa ser mantido.
 
-### Alterações
+### Separação de responsabilidades (conforme solicitado)
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+| Fonte | O que salva | Onde salva |
+|-------|------------|------------|
+| `proxy-roxcoach` (RoxCoach) | Diagnóstico tratado (resumo, melhorias, splits) | `diagnostico_resumo`, `diagnostico_melhoria`, `tempos_splits` |
+| `scrape-hyrox-result` (HYROX.com) | Print da prova (tempo total, evento, splits crus) | `benchmark_results`, `race_results` |
+| RoxCoachExtractor | **Só diagnóstico** | **Nunca** salva em `benchmark_results` |
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+### Mudanças
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+#### 1. Refatorar `RoxCoachExtractor.tsx`
+- Remover toda a lógica duplicada de parsing (funções `parsePotentialImprovement`, `findValue`, `toNum`, etc.)
+- Usar `parseDiagnosticResponse` e `hasDiagnosticData` do `diagnosticParser.ts` (mesmo padrão do `ImportarProva`)
+- Salvar nos 3 tabelas: `diagnostico_resumo` + `diagnostico_melhoria` + `tempos_splits`
+- **Não salvar nada** em `benchmark_results`
+- Adicionar `.catch()` no `proxy-roxcoach` para não crashar quando a API externa falhar
+- Passar a `source_url` do resultado para o parser
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+#### 2. Integrar `RoxCoachExtractor` no `RoxCoachDashboard`
+- Quando não há dados de diagnóstico (`!hasData`), renderizar o `RoxCoachExtractor` como tela de importação
+- No `onSuccess`, incrementar o `refreshKey` para recarregar os dados do dashboard
+- Isso conecta o componente órfão ao fluxo real do app
+
+#### 3. Garantir que `ImportarProva` mantenha o comportamento correto
+- Já salva em `benchmark_results` (resultado da prova) — manter
+- Já chama `proxy-roxcoach` em paralelo com fallback `.catch()` — manter
+- Já salva diagnóstico via `saveDiagnosticData` — manter
+- Nenhuma mudança necessária neste arquivo
+
+### Arquivos alterados
+- `src/components/RoxCoachExtractor.tsx` — refatorar para usar `parseDiagnosticResponse`, salvar `diagnostico_resumo`, remover código duplicado
+- `src/components/RoxCoachDashboard.tsx` — importar e renderizar `RoxCoachExtractor` quando não há dados
 
