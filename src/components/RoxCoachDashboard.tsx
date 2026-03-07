@@ -298,7 +298,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Cole aqui a URL do resultado HYROX..."
+            placeholder="Cole aqui a URL do seu resultado..."
             className="h-12 rounded-xl flex-1"
             disabled={hacking}
           />
