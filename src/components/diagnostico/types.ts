@@ -1,5 +1,6 @@
 export interface DiagnosticoResumo {
   id: string;
+  created_at?: string;
   nome_atleta: string | null;
   temporada: string | null;
   evento: string | null;

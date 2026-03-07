@@ -137,8 +137,11 @@ function ImportProvaInlineCTA() {
         return;
       }
 
-      // Sort by most recent season and pick the first
-      const sorted = [...results].sort((a: any, b: any) => (b.season_id || 0) - (a.season_id || 0));
+      // Sort by most recent: season desc, then event_index asc (lower = more recent)
+      const sorted = [...results].sort((a: any, b: any) => {
+        if ((b.season_id || 0) !== (a.season_id || 0)) return (b.season_id || 0) - (a.season_id || 0);
+        return (a.event_index ?? 999) - (b.event_index ?? 999);
+      });
       const mostRecent = sorted[0];
 
       // Auto-import without confirmation

@@ -43,10 +43,16 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         const { data } = await supabase
           .from('diagnostico_resumo')
           .select('*')
-          .eq('atleta_id', user!.id)
-          .order('created_at', { ascending: false });
+          .eq('atleta_id', user!.id);
 
-        const resumos = (data as DiagnosticoResumo[]) || [];
+        const raw = (data as DiagnosticoResumo[]) || [];
+        // Sort: temporada (season) desc, then created_at desc as tiebreaker
+        const resumos = raw.sort((a, b) => {
+          const seasonA = parseInt(a.temporada || '0', 10) || 0;
+          const seasonB = parseInt(b.temporada || '0', 10) || 0;
+          if (seasonB !== seasonA) return seasonB - seasonA;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         setAllResumos(resumos);
 
         // Auto-select most recent
