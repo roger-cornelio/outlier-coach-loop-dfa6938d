@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import RoxCoachExtractor from '@/components/RoxCoachExtractor';
-import RoxCoachDashboard from '@/components/RoxCoachDashboard';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2, AlertTriangle, Search, Trophy, ChevronRight, X } from 'lucide-react';
