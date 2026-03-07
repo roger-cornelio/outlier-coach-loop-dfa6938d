@@ -1,32 +1,31 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+# Plan: Fix proxy-roxcoach deployment
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+## Root Cause
+The code in `supabase/functions/proxy-roxcoach/index.ts` is already a correct pure passthrough proxy. However, the **deployed** version is an old scraping-based function. The logs confirm this: "Fetching detail page...", "Got HTML, length: 148877", "Extracted 17 splits".
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+The function is also **missing from `supabase/config.toml`**, which likely prevents proper redeployment.
 
-### Alterações
+## Changes
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+### 1. Add config.toml entry
+Add `proxy-roxcoach` to `supabase/config.toml` with `verify_jwt = false` (auth is validated in code):
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+```toml
+[functions.proxy-roxcoach]
+verify_jwt = false
+```
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+### 2. Redeploy the edge function
+Use the deploy tool to push the current (correct) passthrough code that's already in the repo. No code changes needed to `index.ts` — it already:
+- Authenticates the user via `getUser()`
+- Calls `https://api-outlier.onrender.com/diagnostico?url=...`
+- Returns the full JSON response (all 4 keys: `resumo_performance`, `texto_ia`, `tempos_splits`, `diagnostico_melhoria`)
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### 3. Test end-to-end
+After deployment, test with the user's URL (`https://www.rox-coach.com/seasons/8/races/2025-rio-de-janeiro/results/roger-cornelio`) to confirm:
+- `nome_atleta`, `finish_time`, `evento`, `divisao`, `temporada` populate in `diagnostico_resumo`
+- `texto_ia` is saved and rendered in the AI Analysis card
+- All 4 sections render correctly with real data
 
