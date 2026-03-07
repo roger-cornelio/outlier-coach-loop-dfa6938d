@@ -451,7 +451,10 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── SEARCH HYROX ── */}
+      {/* ── HISTORY (imported races on top) ── */}
+      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
+
+      {/* ── SEARCH HYROX (below imported races) ── */}
       <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -726,9 +729,6 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
           </div>
         )}
       </div>
-
-      {/* ── HISTORY ── */}
-      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
     </div>
   );
 }
