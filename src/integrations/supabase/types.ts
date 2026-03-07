@@ -714,6 +714,48 @@ export type Database = {
           },
         ]
       }
+      diagnostico_melhoria: {
+        Row: {
+          atleta_id: string
+          created_at: string
+          id: string
+          improvement_value: number
+          metric: string
+          movement: string
+          percentage: number
+          top_1: number
+          total_improvement: number
+          value: number
+          your_score: number
+        }
+        Insert: {
+          atleta_id: string
+          created_at?: string
+          id?: string
+          improvement_value?: number
+          metric: string
+          movement: string
+          percentage?: number
+          top_1?: number
+          total_improvement?: number
+          value?: number
+          your_score?: number
+        }
+        Update: {
+          atleta_id?: string
+          created_at?: string
+          id?: string
+          improvement_value?: number
+          metric?: string
+          movement?: string
+          percentage?: number
+          top_1?: number
+          total_improvement?: number
+          value?: number
+          your_score?: number
+        }
+        Relationships: []
+      }
       discovered_events: {
         Row: {
           admin_notes: string | null
@@ -1643,6 +1685,30 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      tempos_splits: {
+        Row: {
+          atleta_id: string
+          created_at: string
+          id: string
+          split_name: string
+          time: string
+        }
+        Insert: {
+          atleta_id: string
+          created_at?: string
+          id?: string
+          split_name: string
+          time: string
+        }
+        Update: {
+          atleta_id?: string
+          created_at?: string
+          id?: string
+          split_name?: string
+          time?: string
         }
         Relationships: []
       }

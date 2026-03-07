@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import RoxCoachExtractor from '@/components/RoxCoachExtractor';
+import RoxCoachDashboard from '@/components/RoxCoachDashboard';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Flame, ExternalLink, CheckCircle2, Loader2, AlertTriangle, Search, Trophy, ChevronRight, X } from 'lucide-react';
@@ -121,6 +123,9 @@ export default function ImportarProva() {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [batchImporting, setBatchImporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, errors: 0 });
+
+  // RoxCoach state
+  const [roxCoachRefreshKey, setRoxCoachRefreshKey] = useState(0);
 
   // Fuzzy search: single input with debounce
   const profileName = profile?.name || '';
@@ -747,6 +752,12 @@ export default function ImportarProva() {
               {searchResults.length > 0 ? 'Não encontrou? Cole o link manualmente' : 'Colar link do resultado manualmente'}
             </Button>
           )}
+
+          {/* RoxCoach Extractor */}
+          <RoxCoachExtractor onSuccess={() => setRoxCoachRefreshKey(k => k + 1)} />
+
+          {/* RoxCoach Dashboard */}
+          <RoxCoachDashboard refreshKey={roxCoachRefreshKey} />
         </motion.div>
       </main>
     </div>
