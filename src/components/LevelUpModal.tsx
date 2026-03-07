@@ -135,7 +135,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
 
                   {/* Shield image — pulsating */}
                   <motion.div
-                    className="relative w-40 h-40 md:w-52 md:h-52"
+                    className="relative w-56 h-56 md:w-72 md:h-72"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   >
