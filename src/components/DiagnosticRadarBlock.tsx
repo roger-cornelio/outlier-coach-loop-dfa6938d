@@ -179,6 +179,11 @@ function ImportProvaInlineCTA() {
       const splits = scrapeData.splits || null;
       const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
 
+      // source_index: maior season + maior event_index = prova mais recente
+      const sourceIndex = (raceResult.season_id && raceResult.event_index !== undefined)
+        ? (raceResult.season_id * 1000) + (raceResult.event_index ?? 0)
+        : null;
+
       const insertPayload: any = {
         user_id: user.id,
         result_type: 'prova_oficial',
@@ -191,6 +196,7 @@ function ImportProvaInlineCTA() {
         block_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         workout_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         benchmark_id: 'HYROX_OFFICIAL',
+        source_index: sourceIndex,
       };
 
       if (hasSplits) {
