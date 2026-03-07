@@ -752,6 +752,12 @@ export default function ImportarProva() {
               {searchResults.length > 0 ? 'Não encontrou? Cole o link manualmente' : 'Colar link do resultado manualmente'}
             </Button>
           )}
+
+          {/* RoxCoach Extractor */}
+          <RoxCoachExtractor onSuccess={() => setRoxCoachRefreshKey(k => k + 1)} />
+
+          {/* RoxCoach Dashboard */}
+          <RoxCoachDashboard refreshKey={roxCoachRefreshKey} />
         </motion.div>
       </main>
     </div>
