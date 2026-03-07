@@ -128,6 +128,8 @@ export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnaly
               completa!
             </p>
           </div>
+        )}
+
         {/* Toggle full analysis */}
         {gargalo && onToggleFullAnalysis && (
           <Button
