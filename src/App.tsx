@@ -23,6 +23,7 @@ import MedicinaDoEsporte from "./pages/MedicinaDoEsporte";
 import ProvaAlvo from "./pages/ProvaAlvo";
 import ImportarProva from "./pages/ImportarProva";
 import NotFound from "./pages/NotFound";
+import DemoLevelUp from "./pages/DemoLevelUp";
 
 const queryClient = new QueryClient();
 
