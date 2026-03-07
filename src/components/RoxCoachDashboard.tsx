@@ -376,8 +376,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {!loading && !hasData && (
         <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-3">
           <Zap className="w-10 h-10 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            Cole a URL do seu resultado e clique em "Hackear Meus Dados" para gerar seu diagnóstico completo.
+          <h3 className="text-sm font-bold text-foreground">Conheça a sua prova como nunca antes</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Cole a URL do seu resultado e clique em "Gerar Diagnóstico OUTLIER". Nossa tecnologia vai revelar exatamente onde você está perdendo tempo — e como se tornar fora da curva.
           </p>
         </div>
       )}
