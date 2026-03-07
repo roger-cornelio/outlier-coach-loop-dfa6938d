@@ -287,10 +287,10 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           <div className="space-y-1">
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
-              Diagnóstico de Performance
+              Diagnóstico OUTLIER
             </h2>
             <p className="text-xs text-muted-foreground">
-              Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
+              Cole a URL do seu resultado e descubra exatamente onde você está perdendo tempo. A inteligência OUTLIER vai dissecar cada segundo da sua prova.
             </p>
           </div>
         )}
