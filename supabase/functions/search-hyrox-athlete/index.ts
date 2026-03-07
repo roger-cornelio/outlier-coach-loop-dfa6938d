@@ -90,7 +90,7 @@ async function searchSeasonAllEvents(
   lastName: string,
   gender: string
 ): Promise<any[]> {
-  // Step 1: Get event list from start page
+  // Step 1: Get event list from start page (ordered most recent first by HYROX)
   const events = await fetchEventList(seasonId);
   if (events.length === 0) {
     console.log(`[search-hyrox-athlete] Season ${seasonId}: no events found`);
@@ -106,8 +106,8 @@ async function searchSeasonAllEvents(
   for (let i = 0; i < events.length; i += BATCH_SIZE) {
     const batch = events.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
-      batch.map((eventName) =>
-        searchEventForAthlete(seasonId, eventName, firstName, lastName, gender)
+      batch.map((evt) =>
+        searchEventForAthlete(seasonId, evt.name, firstName, lastName, gender, evt.index)
       )
     );
 
