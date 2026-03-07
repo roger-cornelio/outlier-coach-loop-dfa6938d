@@ -217,7 +217,7 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
     const splits = scrapeData.splits || null;
     const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
 
-    const insertPayload: Record<string, any> = {
+    const insertPayload: any = {
       user_id: user.id,
       result_type: 'prova_oficial',
       event_name: scrapedEventName,

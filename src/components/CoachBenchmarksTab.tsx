@@ -115,8 +115,6 @@ export function CoachBenchmarksTab() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
-              <AddResultModal onResultAdded={handleResultAdded} />
             </div>
           </div>
         </CardHeader>

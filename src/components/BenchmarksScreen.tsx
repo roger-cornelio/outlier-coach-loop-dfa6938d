@@ -141,7 +141,7 @@ export function BenchmarksScreen() {
               </TabsContent>
 
               <TabsContent value="provas">
-                <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
+                <ProvasTab refreshKey={refreshKey} onResultAdded={handleResultAdded} />
               </TabsContent>
               
               <TabsContent value="simulados">
