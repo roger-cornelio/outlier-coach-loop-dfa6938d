@@ -127,7 +127,7 @@ async function searchSeasonAllEvents(
 /**
  * Fetch the start page for a season and extract available event_main_group options.
  */
-async function fetchEventList(seasonId: number): Promise<string[]> {
+async function fetchEventList(seasonId: number): Promise<{ name: string; index: number }[]> {
   const url = `https://results.hyrox.com/season-${seasonId}/?pid=start`;
   const response = await fetch(url, { headers: FETCH_HEADERS });
 
@@ -139,7 +139,7 @@ async function fetchEventList(seasonId: number): Promise<string[]> {
   const html = await response.text();
 
   // Extract <option value="2025 Rio de Janeiro">...</option> from event_main_group select
-  const events: string[] = [];
+  const events: { name: string; index: number }[] = [];
   const optionPattern = /<option\s+value="([^"]+)"[^>]*>[^<]*<\/option>/gi;
   
   // Find the event_main_group select section
@@ -148,10 +148,12 @@ async function fetchEventList(seasonId: number): Promise<string[]> {
   
   const selectHtml = selectMatch[1];
   let match;
+  let idx = 0;
   while ((match = optionPattern.exec(selectHtml)) !== null) {
     const value = match[1].trim();
     if (value && value !== "%" && value !== "%25") {
-      events.push(value);
+      events.push({ name: value, index: idx });
+      idx++;
     }
   }
 
