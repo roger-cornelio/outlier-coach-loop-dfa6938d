@@ -200,7 +200,7 @@ function ImportProvaInlineCTA() {
       const totalSeconds = scrapeData.time_in_seconds;
       const eventName = scrapeData.event_name || 'Prova HYROX';
       const eventYear = scrapeData.event_year || new Date().getFullYear();
-      const eventDate = `${eventYear}-01-01`;
+      const eventDate = scrapeData.event_date || `${eventYear}-06-15`; // Mid-year fallback avoids timezone edge cases
       const raceCategory = scrapeData.race_category || 'OPEN';
       const splits = scrapeData.splits || null;
       const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);

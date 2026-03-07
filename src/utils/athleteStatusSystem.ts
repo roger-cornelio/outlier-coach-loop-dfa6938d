@@ -408,10 +408,12 @@ function safeParseDate(dateString: string | undefined | null): Date | null {
 // ============================================================
 
 function isOfficialCompetitionValid(eventDate: string | undefined, createdAt: string): boolean {
-  const date = safeParseDate(eventDate) ?? safeParseDate(createdAt);
-  if (!date) return false;
+  // Compare date strings (YYYY-MM-DD) to avoid timezone issues
+  const dateStr = eventDate?.substring(0, 10) || createdAt?.substring(0, 10);
+  if (!dateStr) return false;
   const cutoff = getSeasonValidityCutoff();
-  return date.getTime() >= cutoff.getTime();
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  return dateStr >= cutoffStr;
 }
 
 export function processOfficialCompetitions(
