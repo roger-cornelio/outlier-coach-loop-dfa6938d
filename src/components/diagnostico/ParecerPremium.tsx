@@ -12,17 +12,20 @@ function Highlight({ children }: { children: React.ReactNode }) {
 }
 
 export default function ParecerPremium({ resumo, diagnosticos }: Props) {
-  // Find the critical bottleneck: station with highest improvement_value
-  const gargalo = diagnosticos.length > 0
-    ? diagnosticos.reduce((worst, d) =>
-        d.improvement_value > worst.improvement_value ? d : worst
-      , diagnosticos[0])
-    : null;
+  // Sort by improvement_value descending, pick top 3
+  const sorted = [...diagnosticos]
+    .filter(d => d.improvement_value > 0)
+    .sort((a, b) => b.improvement_value - a.improvement_value);
+
+  const gargalo = sorted[0] || null;
+  const top3 = sorted.slice(0, 3);
 
   const nome = resumo.nome_atleta || 'Atleta';
   const evento = resumo.evento || 'HYROX';
   const finish = resumo.finish_time || '--:--';
   const divisao = resumo.divisao || 'Open';
+
+  const totalPotential = top3.reduce((sum, d) => sum + d.improvement_value, 0);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/[0.04]">
@@ -60,16 +63,56 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
             <p>
               Os dados não mentem: identificamos exatamente onde a sua performance
               está vazando. O seu maior gargalo atual é no{' '}
-              <Highlight>{gargalo.movement}</Highlight>. Apenas ajustando a sua
-              eficiência neste movimento específico, você tem potencial imediato
-              para cortar{' '}
+              <Highlight>{gargalo.movement}</Highlight>, onde você perdeu{' '}
               <Highlight>{secondsToTime(gargalo.improvement_value)}</Highlight>{' '}
-              do seu tempo final.
+              para o Top 1%.
             </p>
+
+            {/* Top 3 critical stations */}
+            {top3.length > 1 && (
+              <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
+                <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-primary" />
+                  Estações Críticas
+                </p>
+                <div className="space-y-2">
+                  {top3.map((d, i) => (
+                    <div key={d.movement} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {d.movement}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 text-xs">
+                        <span className="text-muted-foreground">
+                          Você: <span className="font-semibold text-foreground">{secondsToTime(d.your_score)}</span>
+                        </span>
+                        <span className="text-muted-foreground">
+                          Top 1%: <span className="font-semibold text-primary">{secondsToTime(d.top_1)}</span>
+                        </span>
+                        <span className="font-bold text-destructive">
+                          −{secondsToTime(d.improvement_value)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {totalPotential > 0 && (
+                  <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                    Potencial combinado: cortar{' '}
+                    <Highlight>{secondsToTime(totalPotential)}</Highlight>{' '}
+                    do seu tempo final focando apenas nessas {top3.length} estações.
+                  </p>
+                )}
+              </div>
+            )}
 
             <p>
               A estratégia agora não é treinar mais, é treinar mais inteligente.
-              Vamos focar em transformar essa fraqueza na sua maior vantagem
+              Vamos focar em transformar essas fraquezas na sua maior vantagem
               competitiva.
             </p>
           </div>
