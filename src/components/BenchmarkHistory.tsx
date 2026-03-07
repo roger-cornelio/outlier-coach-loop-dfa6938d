@@ -132,14 +132,23 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
     try {
       let query = supabase
         .from('benchmark_results')
-        .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
+        .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at, source_index')
         .eq('user_id', user.id)
         .in('result_type', ['simulado', 'prova_oficial']);
 
       const { data, error } = await query;
       
       if (error) throw error;
+      // Sort: most recent first using source_index (higher = more recent), fallback to event_date/created_at
       const sorted = (data || []).sort((a: any, b: any) => {
+        // If both have source_index, use it (higher = more recent)
+        if (a.source_index != null && b.source_index != null) {
+          return b.source_index - a.source_index;
+        }
+        // source_index takes priority over no source_index
+        if (a.source_index != null && b.source_index == null) return -1;
+        if (a.source_index == null && b.source_index != null) return 1;
+        // Fallback to date
         const dateA = a.event_date || a.created_at;
         const dateB = b.event_date || b.created_at;
         return new Date(dateB).getTime() - new Date(dateA).getTime();
