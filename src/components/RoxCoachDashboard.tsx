@@ -156,22 +156,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </>
       )}
 
-      {/* Empty state — redirect to import */}
+      {/* Empty state — show extractor inline */}
       {!loading && !hasData && (
-        <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-4">
-          <Zap className="w-10 h-10 text-muted-foreground/30 mx-auto" />
-          <h3 className="text-sm font-bold text-foreground">Conheça a sua prova como nunca antes</h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Importe um resultado HYROX oficial e o diagnóstico OUTLIER será gerado automaticamente, revelando exatamente onde você está perdendo tempo.
-          </p>
-          <Button
-            onClick={() => navigate('/importar-prova')}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-2xl font-bold px-6"
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            Importar Prova e Gerar Diagnóstico
-          </Button>
-        </div>
+        <RoxCoachExtractor onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
     </div>
   );

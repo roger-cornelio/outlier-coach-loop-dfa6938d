@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
+import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoxCoachExtractorProps {
@@ -21,78 +22,10 @@ interface SearchResult {
   season_id: number;
 }
 
-/** Convert "mm:ss" or "hh:mm:ss" string to total seconds */
-function timeToSeconds(t: string): number {
-  if (!t || typeof t !== 'string') return 0;
-  const parts = t.trim().split(':').map(Number);
-  if (parts.some(isNaN)) return 0;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parts[0] || 0;
-}
-
-/** Parse a numeric value from potentially formatted strings like "87.5%" */
-function toNum(val: any): number {
-  if (val == null || val === '') return 0;
-  const cleaned = String(val).replace(/[^0-9.\-]/g, '');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
-/** Find value from an object using multiple possible keys (case-insensitive) */
-function findValue(obj: any, ...aliases: string[]): any {
-  if (!obj || typeof obj !== 'object') return undefined;
-  for (const alias of aliases) {
-    const lower = alias.toLowerCase();
-    for (const key of Object.keys(obj)) {
-      if (key.toLowerCase() === lower) return obj[key];
-    }
-  }
-  return undefined;
-}
-
-/**
- * Parse "Potential Improvement" field like "05:28 (From 41:55 to 36:27)"
- */
-function parsePotentialImprovement(val: string): { improvement: string; yourScore: string; top1: string } {
-  const result = { improvement: '', yourScore: '', top1: '' };
-  if (!val || typeof val !== 'string') return result;
-
-  const match = val.match(/^([\d:]+)\s*\(.*?(\d[\d:]+).*?(\d[\d:]+)\)/i);
-  if (match) {
-    result.improvement = match[1];
-    result.yourScore = match[2];
-    result.top1 = match[3];
-    return result;
-  }
-
-  const fromTo = val.match(/(\d[\d:]+).*?to\s*(\d[\d:]+)/i);
-  if (fromTo) {
-    result.yourScore = fromTo[1];
-    result.top1 = fromTo[2];
-    const diff = timeToSeconds(fromTo[1]) - timeToSeconds(fromTo[2]);
-    if (diff > 0) {
-      const mins = Math.floor(diff / 60);
-      const secs = diff % 60;
-      result.improvement = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return result;
-  }
-
-  if (/^\d[\d:]+$/.test(val.trim())) {
-    result.improvement = val.trim();
-  }
-
-  return result;
-}
-
-const SPLIT_NOISE = ['splits', 'total', 'average', 'station', 'movement', 'time', 'split', ''];
-
 export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps) {
   const { user, profile } = useAuth();
   const { athleteConfig } = useOutlierStore();
 
-  // Search state
   const profileName = profile?.name || '';
   const [searchQuery, setSearchQuery] = useState(profileName);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -101,11 +34,9 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
-  // Diagnostic generation state
   const [generating, setGenerating] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
 
-  // Auto-search on mount
   useEffect(() => {
     if (!profileName || !user) return;
     executeSearch(profileName);
@@ -155,6 +86,38 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     }
   }
 
+  /** Save diagnostic data using shared parser — only to diagnostic tables, never benchmark_results */
+  async function saveDiagnosticData(apiData: any, sourceUrl: string) {
+    if (!user) return;
+    const parsed = parseDiagnosticResponse(apiData, user.id, sourceUrl);
+    if (!hasDiagnosticData(parsed)) {
+      throw new Error('Não foi possível extrair dados válidos dessa prova.');
+    }
+
+    // Delete old + insert new (same pattern as ImportarProva)
+    await Promise.all([
+      supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
+      supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+      supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+    ]);
+
+    await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
+
+    const results: string[] = [];
+    if (parsed.diagRows.length > 0) {
+      const { error } = await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
+      if (error) throw new Error(`Erro ao salvar diagnóstico: ${error.message}`);
+      results.push(`${parsed.diagRows.length} diagnósticos`);
+    }
+    if (parsed.splitRows.length > 0) {
+      const { error } = await supabase.from('tempos_splits').insert(parsed.splitRows);
+      if (error) throw new Error(`Erro ao salvar splits: ${error.message}`);
+      results.push(`${parsed.splitRows.length} splits`);
+    }
+
+    return results;
+  }
+
   async function handleGenerateDiagnostic(result: SearchResult) {
     if (!user) {
       toast.error('Faça login para continuar.');
@@ -165,118 +128,17 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
     setGenerating(true);
 
     try {
-      // 1. Call proxy to get diagnostic data
       const { data: proxyData, error: proxyError } = await supabase.functions.invoke('proxy-roxcoach', {
         body: { url: result.result_url },
-      });
+      }).catch(() => ({ data: null, error: null }));
+
       if (proxyError) throw new Error(`Erro na API: ${proxyError.message}`);
-      if (!proxyData) throw new Error('API retornou dados vazios.');
+      if (!proxyData) throw new Error('API retornou dados vazios. Tente novamente em alguns instantes.');
 
       console.log('Raw API Response:', JSON.stringify(proxyData, null, 2));
 
-      // 2. Parse diagnostico_melhoria
-      const rawDiag = proxyData.diagnostico_melhoria || proxyData.diagnostico || [];
-      const diagRows: any[] = [];
-
-      if (Array.isArray(rawDiag) && rawDiag.length > 0) {
-        for (const item of rawDiag) {
-          const movement = findValue(item, 'Splits', 'Movement', 'movement', 'Station', 'split_name') || '';
-          const potentialImprovement = findValue(item, 'Potential Improvement', 'potential_improvement', 'Gap', 'gap') || '';
-          const focusDuringTraining = findValue(item, 'Focus During Training', 'focus_during_training', '%', 'percentage', 'Percentage') || '';
-
-          const parsed = typeof potentialImprovement === 'string'
-            ? parsePotentialImprovement(potentialImprovement)
-            : { improvement: '', yourScore: '', top1: '' };
-
-          const yourScore = parsed.yourScore
-            ? timeToSeconds(parsed.yourScore)
-            : toNum(findValue(item, 'You', 'you', 'Your Score', 'your_score'));
-          const top1 = parsed.top1
-            ? timeToSeconds(parsed.top1)
-            : toNum(findValue(item, 'Top 1%', 'top_1', 'Top1'));
-          const improvementValue = parsed.improvement
-            ? timeToSeconds(parsed.improvement)
-            : toNum(findValue(item, 'Gap', 'gap', 'Improvement', 'improvement_value'));
-          const percentage = toNum(focusDuringTraining);
-
-          if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
-
-          diagRows.push({
-            atleta_id: user.id,
-            movement,
-            metric: typeof potentialImprovement === 'string' && potentialImprovement ? 'Potential Improvement' : findValue(item, 'Metric', 'metric') || 'time',
-            value: toNum(findValue(item, 'Value', 'value')),
-            your_score: yourScore,
-            top_1: top1,
-            improvement_value: improvementValue,
-            percentage,
-            total_improvement: toNum(findValue(item, 'Total', 'total_improvement', 'Total Improvement')),
-          });
-        }
-      }
-
-      // 3. Parse tempos_splits
-      const rawSplits = proxyData.tempos_splits || proxyData.splits || [];
-      const splitRows: any[] = [];
-
-      if (Array.isArray(rawSplits) && rawSplits.length > 0) {
-        for (const item of rawSplits) {
-          let splitName = '';
-          let time = '';
-
-          splitName = findValue(item, 'Split', 'split_name', 'Movement', 'Station', 'name', 'Splits') || '';
-          time = String(findValue(item, 'Time', 'time', 'Tempo') || '');
-
-          if (!splitName && item['0'] !== undefined) {
-            splitName = String(item['0'] || '');
-            time = String(item['1'] || '');
-          }
-
-          splitName = splitName.trim();
-          time = time.trim();
-
-          if (!splitName || SPLIT_NOISE.includes(splitName.toLowerCase())) continue;
-          if (!time) continue;
-
-          splitRows.push({
-            atleta_id: user.id,
-            split_name: splitName,
-            time,
-          });
-        }
-      }
-
-      // 4. Validate
-      console.log(`Parsed: ${diagRows.length} diagnosticos, ${splitRows.length} splits`);
-
-      if (diagRows.length === 0 && splitRows.length === 0) {
-        throw new Error(
-          'Não foi possível extrair dados válidos dessa prova. ' +
-          'Verifique se o resultado possui dados detalhados de estações.'
-        );
-      }
-
-      // 5. Delete old + insert new
-      await Promise.all([
-        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
-        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
-      ]);
-
-      const results: string[] = [];
-
-      if (diagRows.length > 0) {
-        const { error: diagError } = await supabase.from('diagnostico_melhoria').insert(diagRows);
-        if (diagError) throw new Error(`Erro ao salvar diagnóstico: ${diagError.message}`);
-        results.push(`${diagRows.length} diagnósticos`);
-      }
-
-      if (splitRows.length > 0) {
-        const { error: splitError } = await supabase.from('tempos_splits').insert(splitRows);
-        if (splitError) throw new Error(`Erro ao salvar splits: ${splitError.message}`);
-        results.push(`${splitRows.length} splits`);
-      }
-
-      toast.success(`Diagnóstico gerado: ${results.join(' + ')} 🔥`);
+      const results = await saveDiagnosticData(proxyData, result.result_url);
+      toast.success(`Diagnóstico gerado: ${(results || []).join(' + ')} 🔥`);
       onSuccess();
     } catch (err: any) {
       console.error('Diagnostic generation error:', err);
