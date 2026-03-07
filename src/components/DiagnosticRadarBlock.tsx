@@ -279,8 +279,8 @@ function ImportProvaInlineCTA() {
       }
 
       triggerExternalResultsRefresh();
-      toast.success('Prova importada! Seu nível OUTLIER foi atualizado.');
-      setState('done');
+      toast.success('Dados da prova atualizados.');
+      setState('idle');
     } catch (err: any) {
       console.error('Quick import error:', err);
       setErrorMsg(err.message || 'Erro ao importar prova.');
