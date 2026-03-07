@@ -109,10 +109,8 @@ export function BenchmarksScreen() {
       {/* Content */}
       <main className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-8 w-full overflow-hidden">
         <div className="space-y-8">
-          {/* Evolution Milestones */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <EvolutionMilestones />
-          </motion.div>
+
+
 
           {/* Tabs: Todos | Simulados | Provas | Diagnóstico */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
