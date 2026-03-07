@@ -189,7 +189,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {/* Race Cards */}
       {!loading && allResumos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {allResumos.map((resumo) => {
+          {allResumos.map((resumo, index) => {
             const isActive = resumo.id === selectedResumoId;
             const location = extractLocation(resumo.evento);
             const season = extractSeason(resumo.temporada, resumo.evento);
