@@ -96,42 +96,91 @@ function parsePotentialImprovement(val: string) {
 }
 
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { athleteConfig } = useOutlierStore();
   const [data, setData] = useState<DiagnosticoData>({ resumo: null, splits: [], diagnosticos: [] });
   const [loading, setLoading] = useState(true);
   const [localRefresh, setLocalRefresh] = useState(0);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [url, setUrl] = useState('');
-  const [hacking, setHacking] = useState(false);
 
-  // Fetch existing data from DB
+  // Search state
+  const profileName = profile?.name || '';
+  const [searchQuery, setSearchQuery] = useState(profileName);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSearchedRef = useRef('');
+
+  // Authorization & generation
+  const [agreed, setAgreed] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState('');
+
+  // Auto-search on mount
   useEffect(() => {
-    if (!user) return;
-    async function fetchData() {
-      setLoading(true);
-      const [resumoRes, splitsRes, diagRes] = await Promise.all([
-        supabase.from('diagnostico_resumo').select('*').eq('atleta_id', user!.id).order('created_at', { ascending: false }).limit(1),
-        supabase.from('tempos_splits').select('*').eq('atleta_id', user!.id).order('created_at'),
-        supabase.from('diagnostico_melhoria').select('*').eq('atleta_id', user!.id).order('percentage', { ascending: false }),
-      ]);
-      setData({
-        resumo: (resumoRes.data as any[])?.[0] || null,
-        splits: (splitsRes.data as any[]) || [],
-        diagnosticos: (diagRes.data as any[]) || [],
-      });
-      setLoading(false);
-    }
-    fetchData();
-  }, [user, refreshKey, localRefresh]);
+    if (!profileName || !user) return;
+    executeSearch(profileName);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleHack = useCallback(async () => {
-    if (!user || !url.trim()) return;
-    setHacking(true);
+  const executeSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    if (trimmed === lastSearchedRef.current) return;
+    lastSearchedRef.current = trimmed;
+
+    const parts = trimmed.split(/\s+/);
+    let firstName = '';
+    let lastName = '';
+    if (parts.length === 1) {
+      lastName = parts[0];
+    } else {
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ');
+    }
+
+    setSearching(true);
+    setSearchDone(false);
+
     try {
-      // Call edge function which proxies external API
+      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
+        body: { firstName, lastName, gender },
+      });
+      if (error) throw error;
+      setSearchResults(data?.results || []);
+    } catch (err: any) {
+      console.error('Search error:', err);
+      toast.error('Erro ao buscar resultados.');
+    } finally {
+      setSearching(false);
+      setSearchDone(true);
+    }
+  }, [athleteConfig?.sexo]);
+
+  function handleQueryChange(value: string) {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.trim().length >= 3) {
+      debounceRef.current = setTimeout(() => executeSearch(value), 800);
+    }
+  }
+
+  async function handleSelectResult(result: SearchResult) {
+    if (!agreed) {
+      toast.error('Aceite a autorização de uso dos dados para continuar.');
+      return;
+    }
+    if (!user) return;
+
+    setSelectedUrl(result.result_url);
+    setGenerating(true);
+
+    try {
       const { data: apiData, error: fnError } = await supabase.functions.invoke('proxy-roxcoach', {
-        body: { url: url.trim() },
+        body: { url: result.result_url },
       });
       if (fnError) throw new Error(fnError.message);
       if (!apiData) throw new Error('API retornou dados vazios.');
@@ -152,7 +201,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         run_total: rawResumo.run_total || null,
         workout_total: rawResumo.workout_total || null,
         texto_ia: apiData.texto_ia || null,
-        source_url: url.trim(),
+        source_url: result.result_url,
       };
 
       // 2. Parse tempos_splits
@@ -180,40 +229,29 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           const movement = findValue(item, 'Splits', 'Movement', 'movement', 'Station', 'split_name') || '';
           const focusDuringTraining = findValue(item, 'Focus During Training', 'focus_during_training', '%', 'percentage', 'Percentage') || '';
           const percentage = toNum(focusDuringTraining);
-
-          // Priority: read fields directly from the API object, then try aliases
           const rawYourScore = findValue(item, 'your_score', 'You', 'you', 'Your Score');
           const rawTop1 = findValue(item, 'top_1', 'Top 1%', 'Top1');
           const rawImprovement = findValue(item, 'improvement_value', 'Potential Improvement', 'potential_improvement', 'Gap', 'gap', 'Improvement');
-
           const yourScore = parseScoreValue(rawYourScore);
           const top1 = parseScoreValue(rawTop1);
           const improvementValue = parseScoreValue(rawImprovement);
-
           const metric = findValue(item, 'Metric', 'metric') || 'time';
-
           if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
           diagRows.push({
-            atleta_id: user.id,
-            movement,
-            metric,
+            atleta_id: user.id, movement, metric,
             value: toNum(findValue(item, 'Value', 'value')),
-            your_score: yourScore,
-            top_1: top1,
-            improvement_value: improvementValue,
-            percentage,
-            total_improvement: toNum(findValue(item, 'Total', 'total_improvement', 'Total Improvement')),
+            your_score: yourScore, top_1: top1, improvement_value: improvementValue,
+            percentage, total_improvement: toNum(findValue(item, 'Total', 'total_improvement', 'Total Improvement')),
           });
         }
       }
 
       // 4. Validate
-      console.log(`Parsed: resumo=${!!resumoRow.texto_ia}, ${splitRows.length} splits, ${diagRows.length} diag`);
       if (diagRows.length === 0 && splitRows.length === 0 && !resumoRow.texto_ia) {
         throw new Error('Não foi possível extrair dados válidos dessa prova.');
       }
 
-      // 5. Delete old + insert new (all 3 tables)
+      // 5. Delete old + insert new
       await Promise.all([
         supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
         supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
@@ -221,8 +259,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       ]);
 
       const results: string[] = [];
-
-      // Insert resumo
       const { error: resumoErr } = await supabase.from('diagnostico_resumo').insert(resumoRow);
       if (resumoErr) console.error('Resumo insert error:', resumoErr.message);
       else results.push('resumo');
@@ -245,9 +281,10 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       console.error('Diagnostic generation error:', err);
       toast.error(err?.message || 'Erro ao gerar diagnóstico.');
     } finally {
-      setHacking(false);
+      setGenerating(false);
+      setSelectedUrl('');
     }
-  }, [user, url]);
+  }
 
   async function handleDeleteDiagnostic() {
     if (!user) return;
