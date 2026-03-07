@@ -210,6 +210,26 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       throw new Error('Não foi possível extrair dados válidos dessa prova.');
     }
 
+    // Override metadata with SearchResult (source of truth)
+    parsed.resumoRow.evento = result.event_name;
+    parsed.resumoRow.temporada = String(result.season_id);
+    parsed.resumoRow.divisao = result.division;
+    parsed.resumoRow.finish_time = result.time_formatted;
+    parsed.resumoRow.nome_atleta = result.athlete_name;
+
+    // Deduplication check
+    const { data: existingDiag } = await supabase
+      .from('diagnostico_resumo')
+      .select('id')
+      .eq('atleta_id', user.id)
+      .eq('source_url', roxCoachUrl)
+      .maybeSingle();
+
+    if (existingDiag) {
+      toast.info('Diagnóstico desta prova já foi importado.');
+      return ['já importado'];
+    }
+
     // Insert resumo first to get its ID for linking
     const { data: insertedResumo, error: resumoError } = await supabase
       .from('diagnostico_resumo')
