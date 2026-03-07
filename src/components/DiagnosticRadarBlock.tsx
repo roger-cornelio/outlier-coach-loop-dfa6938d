@@ -103,8 +103,13 @@ function buildRoxCoachUrl(result: { event_name: string; athlete_name: string; se
 function ImportProvaInlineCTA() {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
-  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [importedResult, setImportedResult] = useState<{
+    eventName: string;
+    totalSeconds: number;
+    raceCategory: string;
+  } | null>(null);
 
   const profileName = profile?.name || '';
 
@@ -160,6 +165,27 @@ function ImportProvaInlineCTA() {
     const roxCoachUrl = buildRoxCoachUrl(raceResult);
 
     try {
+      // FIX 1: Dedup — check if this URL was already imported
+      const { data: existingResults } = await supabase
+        .from('benchmark_results')
+        .select('id, time_in_seconds, event_name, race_category')
+        .eq('user_id', user.id)
+        .eq('screenshot_url', url)
+        .limit(1);
+
+      if (existingResults && existingResults.length > 0) {
+        const existing = existingResults[0];
+        toast.info('Essa prova já foi importada anteriormente.');
+        setImportedResult({
+          eventName: existing.event_name || 'Prova HYROX',
+          totalSeconds: existing.time_in_seconds || 0,
+          raceCategory: existing.race_category || 'OPEN',
+        });
+        triggerExternalResultsRefresh();
+        setState('done');
+        return;
+      }
+
       // Action A: Scrape Hyrox data + Action B: Diagnostic via RoxCoach URL — in parallel
       const [scrapeResult, diagResult] = await Promise.all([
         supabase.functions.invoke('scrape-hyrox-result', { body: { url } }),
@@ -215,7 +241,9 @@ function ImportProvaInlineCTA() {
       if (insertError) {
         if (insertError.code === '23505') {
           toast.info('Essa prova já foi importada anteriormente.');
-          setState('idle');
+          setState('done');
+          setImportedResult({ eventName, totalSeconds, raceCategory });
+          triggerExternalResultsRefresh();
           return;
         }
         throw insertError;
@@ -263,30 +291,53 @@ function ImportProvaInlineCTA() {
         }
       }
 
-      // Save diagnostic data from RoxCoach (non-blocking)
+      // FIX 2: Save diagnostic data WITHOUT deleting all history
+      // Insert new diagnostic linked to this specific result, don't wipe previous ones
       const diagData = diagResult?.data;
       if (diagData && diagData.ok !== false) {
         try {
           const { parseDiagnosticResponse, hasDiagnosticData } = await import('@/utils/diagnosticParser');
           const parsed = parseDiagnosticResponse(diagData, user.id, roxCoachUrl);
           if (hasDiagnosticData(parsed)) {
-            await Promise.all([
-              supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
-              supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
-              supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
-            ]);
-            await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
-            if (parsed.diagRows.length > 0) await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
-            if (parsed.splitRows.length > 0) await supabase.from('tempos_splits').insert(parsed.splitRows);
+            // Check if diagnostic already exists for this source_url
+            const { data: existingDiag } = await supabase
+              .from('diagnostico_resumo')
+              .select('id')
+              .eq('atleta_id', user.id)
+              .eq('source_url', roxCoachUrl)
+              .limit(1);
+
+            if (!existingDiag || existingDiag.length === 0) {
+              // Insert new resumo and get its id to link melhoria/splits
+              const { data: insertedResumo } = await supabase
+                .from('diagnostico_resumo')
+                .insert(parsed.resumoRow)
+                .select('id')
+                .single();
+
+              const resumoId = insertedResumo?.id;
+              if (resumoId) {
+                if (parsed.diagRows.length > 0) {
+                  const linkedDiagRows = parsed.diagRows.map(r => ({ ...r, resumo_id: resumoId }));
+                  await supabase.from('diagnostico_melhoria').insert(linkedDiagRows);
+                }
+                if (parsed.splitRows.length > 0) {
+                  const linkedSplitRows = parsed.splitRows.map(r => ({ ...r, resumo_id: resumoId }));
+                  await supabase.from('tempos_splits').insert(linkedSplitRows);
+                }
+              }
+            }
           }
         } catch (err) {
           console.warn('Diagnostic save failed (non-critical):', err);
         }
       }
 
+      // FIX 3: Set state to 'done' with result data
+      setImportedResult({ eventName, totalSeconds, raceCategory });
       triggerExternalResultsRefresh();
       toast.success('Dados da prova atualizados.');
-      setState('idle');
+      setState('done');
     } catch (err: any) {
       console.error('Quick import error:', err);
       setErrorMsg(err.message || 'Erro ao importar prova.');
@@ -294,6 +345,36 @@ function ImportProvaInlineCTA() {
     }
   }
 
+  // FIX 3: Show imported result instead of CTA
+  if (state === 'done' && importedResult) {
+    const hrs = Math.floor(importedResult.totalSeconds / 3600);
+    const mins = Math.floor((importedResult.totalSeconds % 3600) / 60);
+    const secs = importedResult.totalSeconds % 60;
+    const timeStr = hrs > 0
+      ? `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+      : `${mins}:${String(secs).padStart(2, '0')}`;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-accent/10 border border-accent/30 rounded-xl p-4"
+      >
+        <div className="flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">
+              {importedResult.eventName}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {importedResult.raceCategory} • {timeStr}
+            </p>
+          </div>
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+        </div>
+      </motion.div>
+    );
+  }
 
   if (state === 'error') {
     return (
