@@ -75,26 +75,318 @@ const RADAR_AXES = [
 
 
 // ============================================
-// INLINE CTA: Importar Prova HYROX
+// INLINE CTA: Importar Última Prova HYROX — auto-search + import
 // ============================================
 
 function ImportProvaInlineCTA() {
-  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
+  const [state, setState] = useState<'idle' | 'searching' | 'found' | 'importing' | 'done' | 'error'>('idle');
+  const [lastRace, setLastRace] = useState<{ athlete_name: string; event_name: string; division?: string; time_formatted: string; result_url: string } | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const profileName = profile?.name || '';
+
+  async function handleClick() {
+    if (state === 'done') return;
+    if (state === 'found' && lastRace) {
+      // User confirmed — import it
+      await importRace(lastRace.result_url);
+      return;
+    }
+    if (!profileName || profileName.length < 2) {
+      setErrorMsg('Configure seu nome no perfil primeiro.');
+      setState('error');
+      return;
+    }
+
+    setState('searching');
+    setErrorMsg('');
+
+    try {
+      const parts = profileName.trim().split(/\s+/);
+      const firstName = parts.length > 1 ? parts[0] : '';
+      const lastName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
+      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+
+      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
+        body: { firstName, lastName, gender },
+      });
+
+      if (error) throw error;
+      const results = data?.results || [];
+      if (results.length === 0) {
+        setErrorMsg('Nenhuma prova encontrada no HYROX para seu nome.');
+        setState('error');
+        return;
+      }
+
+      // Pick the first result (most recent)
+      setLastRace(results[0]);
+      setState('found');
+    } catch (err: any) {
+      console.error('Quick search error:', err);
+      setErrorMsg('Erro ao buscar provas. Tente novamente.');
+      setState('error');
+    }
+  }
+
+  async function importRace(url: string) {
+    if (!user) return;
+    setState('importing');
+
+    try {
+      // Only scrape — plus diagnostic in parallel
+      const [scrapeResult, diagResult] = await Promise.all([
+        supabase.functions.invoke('scrape-hyrox-result', { body: { url } }),
+        supabase.functions.invoke('proxy-roxcoach', { body: { url } }).catch(() => ({ data: null, error: null })),
+      ]);
+
+      const { data: scrapeData, error: scrapeError } = scrapeResult;
+      if (scrapeError || scrapeData?.error || !scrapeData?.time_in_seconds) {
+        throw new Error(scrapeData?.error || 'Não foi possível ler os dados da prova.');
+      }
+
+      const totalSeconds = scrapeData.time_in_seconds;
+      const eventName = scrapeData.event_name || 'Prova HYROX';
+      const eventYear = scrapeData.event_year || new Date().getFullYear();
+      const eventDate = `${eventYear}-01-01`;
+      const raceCategory = scrapeData.race_category || 'OPEN';
+      const splits = scrapeData.splits || null;
+      const hasSplits = splits && Object.values(splits).some((v: any) => v && v > 0);
+
+      const insertPayload: any = {
+        user_id: user.id,
+        result_type: 'prova_oficial',
+        event_name: eventName,
+        event_date: eventDate,
+        time_in_seconds: totalSeconds,
+        screenshot_url: url,
+        race_category: raceCategory,
+        completed: true,
+        block_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        workout_id: `prova_oficial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        benchmark_id: 'HYROX_OFFICIAL',
+      };
+
+      if (hasSplits) {
+        const splitKeys = ['run_avg_sec', 'roxzone_sec', 'ski_sec', 'sled_push_sec', 'sled_pull_sec', 'bbj_sec', 'row_sec', 'farmers_sec', 'sandbag_sec', 'wallballs_sec'];
+        for (const key of splitKeys) {
+          if (splits[key]) insertPayload[key] = Math.round(splits[key]);
+        }
+      }
+
+      const { data: insertedData, error: insertError } = await supabase
+        .from('benchmark_results')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          // Already imported
+          toast.info('Essa prova já foi importada anteriormente.');
+          setState('done');
+          return;
+        }
+        throw insertError;
+      }
+
+      // Save race_results reference
+      const idpMatch = url.match(/idp=([^&]+)/);
+      const eventMatch = url.match(/event=([^&]+)/);
+      if (idpMatch) {
+        await supabase.from('race_results').insert({
+          athlete_id: user.id,
+          hyrox_idp: idpMatch[1],
+          hyrox_event: eventMatch ? eventMatch[1] : null,
+          source_url: url,
+        } as any).single();
+      }
+
+      // Calculate percentiles
+      const resultId = insertedData?.id;
+      const hasGenderConfigured = athleteConfig?.sexo && ['masculino', 'feminino'].includes(athleteConfig.sexo);
+      if (resultId && hasGenderConfigured) {
+        const { hasExistingScores, calculateAndSaveHyroxPercentiles } = await import('@/utils/hyroxPercentileCalculator');
+        const alreadyExists = await hasExistingScores(resultId);
+        if (!alreadyExists) {
+          const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
+          const gender = athleteConfig?.sexo === 'feminino' ? 'F' : 'M';
+          
+          const mapping: Record<string, string> = {
+            run_avg_sec: 'run_avg', roxzone_sec: 'roxzone', ski_sec: 'ski',
+            sled_push_sec: 'sled_push', sled_pull_sec: 'sled_pull', bbj_sec: 'bbj',
+            row_sec: 'row', farmers_sec: 'farmers', sandbag_sec: 'sandbag', wallballs_sec: 'wallballs',
+          };
+          
+          let metrics: any[] = [];
+          if (hasSplits) {
+            for (const [key, metricName] of Object.entries(mapping)) {
+              if (splits[key] && splits[key] > 0) {
+                metrics.push({ metric: metricName, raw_time_sec: Math.round(splits[key]), data_source: 'real' });
+              }
+            }
+          }
+          if (metrics.length > 0) {
+            await calculateAndSaveHyroxPercentiles(resultId, division, gender, metrics);
+          }
+        }
+      }
+
+      // Save diagnostic data (non-blocking)
+      if (diagResult?.data) {
+        try {
+          const { parseDiagnosticResponse, hasDiagnosticData } = await import('@/utils/diagnosticParser');
+          const parsed = parseDiagnosticResponse(diagResult.data, user.id, url);
+          if (hasDiagnosticData(parsed)) {
+            await Promise.all([
+              supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id),
+              supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+              supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+            ]);
+            await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
+            if (parsed.diagRows.length > 0) await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
+            if (parsed.splitRows.length > 0) await supabase.from('tempos_splits').insert(parsed.splitRows);
+          }
+        } catch (err) {
+          console.warn('Diagnostic save failed (non-critical):', err);
+        }
+      }
+
+      triggerExternalResultsRefresh();
+      toast.success('Prova importada! Seu nível OUTLIER foi atualizado.');
+      setState('done');
+    } catch (err: any) {
+      console.error('Quick import error:', err);
+      setErrorMsg(err.message || 'Erro ao importar prova.');
+      setState('error');
+    }
+  }
+
+  // Render states
+  if (state === 'done') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-4"
+      >
+        <div className="flex items-center gap-3">
+          <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">Prova importada com sucesso!</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Seu nível OUTLIER foi recalculado.</p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (state === 'found' && lastRace) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-primary/15 border border-primary/30 rounded-xl p-4 space-y-3"
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-sm font-bold text-foreground">Última prova encontrada</p>
+        </div>
+
+        <div className="bg-black/30 rounded-lg p-3 space-y-1">
+          <p className="text-sm font-semibold text-foreground">{lastRace.event_name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {lastRace.division && (
+              <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">{lastRace.division}</span>
+            )}
+            <span className="text-xs text-muted-foreground font-mono">{lastRace.time_formatted}</span>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          <Info className="w-3 h-3 inline mr-1 text-amber-400" />
+          Apenas provas dos <span className="text-amber-400 font-semibold">últimos 12 meses</span> são válidas para definir seu nível OUTLIER na jornada.
+        </p>
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 text-xs"
+            onClick={() => { setState('idle'); setLastRace(null); }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1 text-xs bg-primary hover:bg-primary/90"
+            onClick={() => importRace(lastRace.result_url)}
+          >
+            Importar esta prova
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 cursor-pointer hover:bg-destructive/15 transition-colors"
+        onClick={() => { setState('idle'); setErrorMsg(''); }}
+      >
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">{errorMsg}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque para tentar novamente</p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const isLoading = state === 'searching' || state === 'importing';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-primary/15 border border-primary/30 rounded-xl p-4 cursor-pointer hover:bg-primary/20 transition-colors"
-      onClick={() => navigate('/importar-prova')}
+      className={cn(
+        "bg-primary/15 border border-primary/30 rounded-xl p-4 transition-colors",
+        !isLoading && "cursor-pointer hover:bg-primary/20"
+      )}
+      onClick={isLoading ? undefined : handleClick}
     >
       <div className="flex items-center gap-3">
-        <Flame className="w-5 h-5 text-primary shrink-0" />
+        {isLoading ? (
+          <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" />
+        ) : (
+          <Flame className="w-5 h-5 text-primary shrink-0" />
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground">Descubra seu nível OUTLIER</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Importe sua prova e veja seu diagnóstico completo</p>
+          <p className="text-sm font-bold text-foreground">
+            {state === 'searching' ? 'Buscando sua última prova...' :
+             state === 'importing' ? 'Importando prova e diagnóstico...' :
+             'Descubra seu nível OUTLIER'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {isLoading ? 'Aguarde, estamos processando...' :
+             'Importamos automaticamente sua última prova HYROX'}
+          </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+        {!isLoading && <ChevronRight className="w-4 h-4 text-primary shrink-0" />}
       </div>
+      {!isLoading && (
+        <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+          <Info className="w-3 h-3 inline mr-1 text-amber-400" />
+          Válido para nível OUTLIER: provas dos últimos 12 meses
+        </p>
+      )}
     </motion.div>
   );
 }
