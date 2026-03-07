@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader2, Zap, Search, Trophy, ChevronRight } from 'lucide-react';
+import { Loader2, Zap, Search, Trophy, Check, CheckCheck, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,6 +80,8 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
   const [generating, setGenerating] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [importingAll, setImportingAll] = useState(false);
+  const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
+  const [consentGiven, setConsentGiven] = useState(false);
 
   useEffect(() => {
     if (!profileName || !user) return;
@@ -315,14 +318,17 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
-  /** Import all visible results sequentially */
-  async function handleImportAll() {
-    if (!user || searchResults.length === 0) return;
+  /** Import selected results sequentially */
+  async function handleImportSelected() {
+    if (!user || selectedResults.size === 0) return;
+    const toImport = searchResults.filter(r => selectedResults.has(r.result_url));
+    if (toImport.length === 0) return;
+
     setImportingAll(true);
     let successCount = 0;
     let failCount = 0;
 
-    for (const result of searchResults) {
+    for (const result of toImport) {
       setSelectedUrl(result.result_url);
       try {
         const tasks: Promise<any>[] = [generateDiagnostic(result)];
@@ -341,15 +347,32 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     setSelectedUrl('');
     setImportingAll(false);
+    setSelectedResults(new Set());
 
     if (successCount > 0) {
       toast.success(`${successCount} diagnóstico(s) importado(s) com sucesso! 🔥`);
-      // Remove imported results from list
-      setSearchResults([]);
+      setSearchResults(prev => prev.filter(r => !selectedResults.has(r.result_url)));
       onSuccess();
     }
     if (failCount > 0) {
       toast.error(`${failCount} prova(s) não puderam ser importadas.`);
+    }
+  }
+
+  function toggleResultSelection(url: string) {
+    setSelectedResults(prev => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedResults.size === searchResults.length) {
+      setSelectedResults(new Set());
+    } else {
+      setSelectedResults(new Set(searchResults.map(r => r.result_url)));
     }
   }
 
@@ -409,7 +432,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-2"
-          >
+           >
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground font-medium">
                 {mode === 'diagnostic_only'
@@ -417,63 +440,118 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
                   : 'Última prova encontrada — clique para gerar o diagnóstico:'}
               </p>
               {mode === 'diagnostic_only' && searchResults.length > 1 && (
-                <Button
-                  onClick={handleImportAll}
+                <button
+                  onClick={toggleSelectAll}
                   disabled={generating || importingAll}
-                  size="sm"
-                  className="rounded-lg text-xs font-bold"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors disabled:opacity-40"
                 >
-                  {importingAll ? (
-                    <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Importando...</>
-                  ) : (
-                    <>Importar todas ({searchResults.length})</>
-                  )}
-                </Button>
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  {selectedResults.size === searchResults.length ? 'Desmarcar todas' : 'Selecionar todas'}
+                </button>
               )}
             </div>
             <div className="space-y-1.5">
               {searchResults.map((result, idx) => {
                 const isSelected = selectedUrl === result.result_url;
+                const isChecked = selectedResults.has(result.result_url);
                 return (
-                  <motion.button
+                  <motion.div
                     key={`${result.result_url}-${idx}`}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    onClick={() => handleGenerateDiagnostic(result)}
-                    disabled={generating || importingAll}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
                       isSelected
                         ? 'border-primary bg-primary/10'
-                        : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
-                    } ${(generating || importingAll) && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        : isChecked
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/30'
+                    } ${(generating || importingAll) && !isSelected ? 'opacity-40' : ''}`}
                   >
-                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Trophy className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
+                    {mode === 'diagnostic_only' ? (
+                      <button
+                        onClick={() => toggleResultSelection(result.result_url)}
+                        disabled={generating || importingAll}
+                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                          isChecked ? 'bg-primary border-primary' : 'border-muted-foreground/30 hover:border-primary/60'
+                        }`}>
+                          {isChecked && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Trophy className="w-4 h-4 text-primary" />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => mode === 'diagnostic_only' ? toggleResultSelection(result.result_url) : handleGenerateDiagnostic(result)}
+                      disabled={generating || importingAll}
+                      className="flex-1 min-w-0 text-left disabled:cursor-not-allowed"
+                    >
                       <p className="text-sm font-medium text-foreground truncate">
                         {result.event_name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {result.athlete_name} • {result.division}
                       </p>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {result.time_formatted && (
                         <span className="text-sm font-bold text-primary">
                           {result.time_formatted}
                         </span>
                       )}
-                      {isSelected && generating ? (
+                      {isSelected && (generating || importingAll) && (
                         <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       )}
                     </div>
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </div>
+
+            {/* Consent + Import button */}
+            {(mode === 'diagnostic_only' ? selectedResults.size > 0 : searchResults.length > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 pt-2"
+              >
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <Checkbox
+                    checked={consentGiven}
+                    onCheckedChange={(v) => setConsentGiven(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
+                    <ShieldCheck className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                    Autorizo a utilização dos meus dados de performance para geração do diagnóstico e análise dentro da plataforma Outlier.
+                  </span>
+                </label>
+
+                <Button
+                  onClick={() => {
+                    if (mode === 'diagnostic_only') {
+                      handleImportSelected();
+                    } else {
+                      const result = searchResults[0];
+                      if (result) handleGenerateDiagnostic(result);
+                    }
+                  }}
+                  disabled={!consentGiven || generating || importingAll || (mode === 'diagnostic_only' && selectedResults.size === 0)}
+                  className="w-full h-11 rounded-xl font-bold"
+                >
+                  {generating || importingAll ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Importando...</>
+                  ) : mode === 'diagnostic_only' ? (
+                    <>Importar selecionadas ({selectedResults.size})</>
+                  ) : (
+                    <>Gerar diagnóstico</>
+                  )}
+                </Button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
