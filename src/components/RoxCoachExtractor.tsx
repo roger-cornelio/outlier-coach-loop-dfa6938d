@@ -28,10 +28,12 @@ export default function RoxCoachExtractor({ onSuccess }: RoxCoachExtractorProps)
 
     setLoading(true);
     try {
-      // 1. Call external API
-      const res = await fetch(`https://api-outlier.onrender.com/diagnostico?url=${encodeURIComponent(trimmed)}`);
-      if (!res.ok) throw new Error(`Erro na API: ${res.status}`);
-      const data = await res.json();
+      // 1. Call external API via Edge Function proxy (avoids CORS)
+      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('proxy-roxcoach', {
+        body: { url: trimmed },
+      });
+      if (proxyError) throw new Error(`Erro na API: ${proxyError.message}`);
+      const data = proxyData;
 
       if (!data) throw new Error('API retornou dados vazios.');
 
