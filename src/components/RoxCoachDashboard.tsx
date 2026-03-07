@@ -120,11 +120,16 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       const rawResumo = apiData.resumo_performance || apiData.resumo || {};
       const resumoRow = {
         atleta_id: user.id,
-        posicao_categoria: findValue(rawResumo, 'posicao_categoria', 'Posição Categoria', 'rank_categoria', 'Rank Categoria') || null,
-        posicao_geral: findValue(rawResumo, 'posicao_geral', 'Posição Geral', 'rank_geral', 'Rank Geral') || null,
-        run_total: findValue(rawResumo, 'run_total', 'Run Total', 'running_total') || null,
-        workout_total: findValue(rawResumo, 'workout_total', 'Workout Total', 'station_total') || null,
-        texto_ia: apiData.texto_ia || apiData.texto || null,
+        nome_atleta: rawResumo.nome_atleta || null,
+        temporada: rawResumo.temporada || null,
+        evento: rawResumo.evento || null,
+        divisao: rawResumo.divisao || null,
+        finish_time: rawResumo.finish_time || null,
+        posicao_categoria: rawResumo.posicao_categoria || null,
+        posicao_geral: rawResumo.posicao_geral || null,
+        run_total: rawResumo.run_total || null,
+        workout_total: rawResumo.workout_total || null,
+        texto_ia: apiData.texto_ia || null,
         source_url: url.trim(),
       };
 
