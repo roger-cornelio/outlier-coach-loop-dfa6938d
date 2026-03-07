@@ -91,7 +91,7 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
                           Você: <span className="font-semibold text-foreground">{secondsToTime(d.your_score)}</span>
                         </span>
                         <span className="text-muted-foreground">
-                          Top 1%: <span className="font-semibold text-primary">{secondsToTime(d.top_1)}</span>
+                          Meta: <span className="font-semibold text-primary">{secondsToTime(d.top_1)}</span>
                         </span>
                         <span className="font-bold text-destructive">
                           −{secondsToTime(d.improvement_value)}

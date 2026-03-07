@@ -49,7 +49,7 @@ export default function ImprovementTable({ diagnosticos }: Props) {
               <TableHead className="text-muted-foreground">Estação</TableHead>
               <TableHead className="text-muted-foreground">Métrica</TableHead>
               <TableHead className="text-muted-foreground text-right">Você</TableHead>
-              <TableHead className="text-muted-foreground text-right">Top 1%</TableHead>
+              <TableHead className="text-muted-foreground text-right">Meta OUTLIER</TableHead>
               <TableHead className="text-muted-foreground text-right">Diferença</TableHead>
               <TableHead className="text-muted-foreground text-center">Foco %</TableHead>
             </TableRow>
