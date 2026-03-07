@@ -226,7 +226,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         results.push(`${splitRows.length} splits`);
       }
 
-      toast.success(`Diagnóstico gerado: ${results.join(' + ')} 🔥`);
+      toast.success(`Diagnóstico OUTLIER gerado: ${results.join(' + ')} 🔥`);
       setLocalRefresh(k => k + 1);
     } catch (err: any) {
       console.error('Diagnostic generation error:', err);
@@ -264,7 +264,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" />
-            Diagnóstico: {data.resumo.nome_atleta}
+            Diagnóstico OUTLIER: {data.resumo.nome_atleta}
           </h2>
           <div className="flex items-center gap-2 flex-wrap">
             {data.resumo.evento && (
@@ -287,10 +287,10 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           <div className="space-y-1">
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
-              Diagnóstico de Performance
+              Diagnóstico OUTLIER
             </h2>
             <p className="text-xs text-muted-foreground">
-              Cole a URL do seu resultado HYROX e clique para gerar o diagnóstico completo.
+              Cole a URL do seu resultado e descubra exatamente onde você está perdendo tempo. A inteligência OUTLIER vai dissecar cada segundo da sua prova.
             </p>
           </div>
         )}
@@ -298,7 +298,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Cole aqui a URL do resultado HYROX..."
+            placeholder="Cole aqui a URL do seu resultado..."
             className="h-12 rounded-xl flex-1"
             disabled={hacking}
           />
@@ -308,7 +308,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             className="h-12 rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2"
           >
             {hacking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {hacking ? 'Hackeando...' : 'Hackear Meus Dados'}
+            {hacking ? 'Analisando...' : 'Gerar Diagnóstico OUTLIER'}
           </Button>
         </div>
       </div>
@@ -376,8 +376,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {!loading && !hasData && (
         <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-3">
           <Zap className="w-10 h-10 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            Cole a URL do seu resultado e clique em "Hackear Meus Dados" para gerar seu diagnóstico completo.
+          <h3 className="text-sm font-bold text-foreground">Conheça a sua prova como nunca antes</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Cole a URL do seu resultado e clique em "Gerar Diagnóstico OUTLIER". Nossa tecnologia vai revelar exatamente onde você está perdendo tempo — e como se tornar fora da curva.
           </p>
         </div>
       )}
