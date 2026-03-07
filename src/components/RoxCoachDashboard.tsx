@@ -342,7 +342,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           <SplitTimesGrid splits={data.splits} />
 
           {/* Section 5: Improvement Table */}
-          <ImprovementTable diagnosticos={data.diagnosticos} />
+          <ImprovementTable diagnosticos={data.diagnosticos} splits={data.splits} />
 
           {/* Delete button */}
           <div className="flex justify-end">
