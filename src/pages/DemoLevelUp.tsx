@@ -12,9 +12,9 @@ export default function DemoLevelUp() {
   const [active, setActive] = useState<AthleteStatus | null>(null);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-2xl font-bold text-white mb-4">Demo — Level Up Modal</h1>
-      <p className="text-white/50 text-sm mb-8">Clique em um nível para ver o modal completo</p>
+    <div className="flex flex-col items-center justify-center gap-6 py-12">
+      <h1 className="text-2xl font-bold text-foreground mb-4">Demo — Level Up Modal</h1>
+      <p className="text-muted-foreground text-sm mb-8">Clique em um nível para ver o modal completo</p>
       
       <div className="flex flex-col gap-4 w-full max-w-xs">
         {LEVELS.map(({ status, label, color }) => (
