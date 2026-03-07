@@ -14,7 +14,7 @@ function Highlight({ children }: { children: React.ReactNode }) {
   return <span className="font-bold text-primary">{children}</span>;
 }
 
-export default function ParecerPremium({ resumo, diagnosticos }: Props) {
+export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnalysis, showFullAnalysis }: Props) {
   // Sort by improvement_value descending, pick top 3
   const sorted = [...diagnosticos]
     .filter(d => d.improvement_value > 0)
