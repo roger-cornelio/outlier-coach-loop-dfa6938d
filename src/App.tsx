@@ -104,7 +104,7 @@ const App = () => (
               <Route path="/medicina-do-esporte" element={<MedicinaDoEsporte />} />
               <Route path="/prova-alvo" element={<ProvaAlvo />} />
               <Route path="/importar-prova" element={<ImportarProva />} />
-              <Route path="/demo/level-up" element={<DemoLevelUp />} />
+              
 
               {/* === REDIRECTS === */}
               <Route path="/" element={<Navigate to="/login" replace />} />
