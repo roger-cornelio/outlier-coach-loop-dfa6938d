@@ -111,6 +111,12 @@ const navItems: NavItem[] = [
     icon: <Calculator className="w-5 h-5" />,
     description: "Constantes biomecânicas do motor de Kcal"
   },
+  {
+    id: "stationValence",
+    label: "Matriz Valências",
+    icon: <Grid3X3 className="w-5 h-5" />,
+    description: "Pesos estações vs. valências fisiológicas"
+  },
   { 
     id: "params", 
     label: "Parâmetros", 
