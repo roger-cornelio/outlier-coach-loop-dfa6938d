@@ -118,21 +118,38 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     if (!user || !selectedResumoId) return;
     setDeleting(true);
     try {
-      // CASCADE will delete linked melhoria and splits
       await supabase.from('diagnostico_resumo').delete().eq('id', selectedResumoId);
-
-      // Also clean up any legacy orphan data without resumo_id
       await Promise.all([
         supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id).is('resumo_id', null),
         supabase.from('tempos_splits').delete().eq('atleta_id', user.id).is('resumo_id', null),
       ]);
-
       setSelectedResumoId(null);
       setLocalRefresh(v => v + 1);
       toast.success('Diagnóstico apagado com sucesso.');
     } catch (err) {
       console.error('Error deleting diagnostic:', err);
       toast.error('Erro ao apagar diagnóstico.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleDeleteAllDiagnostics() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await supabase.from('diagnostico_resumo').delete().eq('atleta_id', user.id);
+      await Promise.all([
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', user.id),
+        supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
+      ]);
+      setSelectedResumoId(null);
+      setAllResumos([]);
+      setLocalRefresh(v => v + 1);
+      toast.success('Todos os diagnósticos foram apagados.');
+    } catch (err) {
+      console.error('Error deleting all diagnostics:', err);
+      toast.error('Erro ao apagar diagnósticos.');
     } finally {
       setDeleting(false);
     }
