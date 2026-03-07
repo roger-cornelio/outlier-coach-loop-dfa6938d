@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Medal, Timer, Calendar, Image, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Medal, Timer, Calendar, Image, ExternalLink, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { HyroxAnalysisCard } from './HyroxAnalysisCard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface HyroxResultCardProps {
   result: {
@@ -17,6 +18,8 @@ interface HyroxResultCardProps {
   gender: 'M' | 'F';
   /** Optional: time difference in seconds vs previous race (positive = improved) */
   timeDeltaSeconds?: number | null;
+  /** Optional: callback when result is deleted */
+  onDelete?: (id: string) => void;
 }
 
 function formatTime(seconds: number): string {
