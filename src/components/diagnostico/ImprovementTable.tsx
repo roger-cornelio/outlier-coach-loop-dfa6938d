@@ -36,6 +36,11 @@ function formatTime(seconds: number): string {
 export default function ImprovementTable({ diagnosticos }: Props) {
   if (diagnosticos.length === 0) return null;
 
+  const totalYou = diagnosticos.reduce((sum, d) => sum + d.your_score, 0);
+  const totalMeta = diagnosticos.reduce((sum, d) => sum + d.top_1, 0);
+  const totalDiff = diagnosticos.reduce((sum, d) => sum + d.improvement_value, 0);
+  const totalPct = diagnosticos.reduce((sum, d) => sum + d.percentage, 0);
+
   return (
     <div className="space-y-3">
       <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -73,6 +78,25 @@ export default function ImprovementTable({ diagnosticos }: Props) {
                 </TableCell>
               </TableRow>
             ))}
+            {/* Totals row */}
+            <TableRow className="border-t-2 border-primary/30 bg-primary/[0.06]">
+              <TableCell className="font-extrabold text-primary text-sm">PROVA TOTAL</TableCell>
+              <TableCell className="text-muted-foreground text-sm">—</TableCell>
+              <TableCell className="text-right text-sm text-foreground font-bold">
+                {formatTime(totalYou)}
+              </TableCell>
+              <TableCell className="text-right text-sm text-primary font-bold">
+                {formatTime(totalMeta)}
+              </TableCell>
+              <TableCell className="text-right text-sm font-extrabold text-primary">
+                −{formatTime(totalDiff)}
+              </TableCell>
+              <TableCell className="text-center">
+                <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 font-bold">
+                  {totalPct.toFixed(1)}%
+                </Badge>
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </div>
