@@ -118,7 +118,21 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       const sorted = rawResults.sort((a, b) => b.season_id - a.season_id);
       const displayed = mode === 'diagnostic_only' ? sorted : sorted.slice(0, 1);
 
-      setSearchResults(displayed);
+      // Filter out already-imported races
+      if (user) {
+        const urls = displayed.map(r => buildRoxCoachUrl(r));
+        const { data: existing } = await supabase
+          .from('diagnostico_resumo')
+          .select('source_url')
+          .eq('atleta_id', user.id)
+          .in('source_url', urls);
+        
+        const importedUrls = new Set((existing || []).map(e => e.source_url));
+        const filtered = displayed.filter(r => !importedUrls.has(buildRoxCoachUrl(r)));
+        setSearchResults(filtered);
+      } else {
+        setSearchResults(displayed);
+      }
     } catch (err: any) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados.');
