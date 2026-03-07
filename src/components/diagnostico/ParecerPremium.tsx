@@ -65,7 +65,7 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
               está vazando. O seu maior gargalo atual é no{' '}
               <Highlight>{gargalo.movement}</Highlight>, onde você perdeu{' '}
               <Highlight>{secondsToTime(gargalo.improvement_value)}</Highlight>{' '}
-              para o Top 1%.
+              para a Meta OUTLIER.
             </p>
 
             {/* Top 3 critical stations */}
