@@ -209,7 +209,7 @@ function ImportProvaInlineCTA() {
       if (insertError) {
         if (insertError.code === '23505') {
           toast.info('Essa prova já foi importada anteriormente.');
-          setState('done');
+          setState('idle');
           return;
         }
         throw insertError;
