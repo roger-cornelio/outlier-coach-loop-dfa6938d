@@ -1,17 +1,20 @@
-import { AlertTriangle, Crosshair, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Crosshair, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { DiagnosticoMelhoria, DiagnosticoResumo } from './types';
 import { secondsToTime } from './types';
 
 interface Props {
   resumo: DiagnosticoResumo;
   diagnosticos: DiagnosticoMelhoria[];
+  onToggleFullAnalysis?: () => void;
+  showFullAnalysis?: boolean;
 }
 
 function Highlight({ children }: { children: React.ReactNode }) {
   return <span className="font-bold text-primary">{children}</span>;
 }
 
-export default function ParecerPremium({ resumo, diagnosticos }: Props) {
+export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnalysis, showFullAnalysis }: Props) {
   // Sort by improvement_value descending, pick top 3
   const sorted = [...diagnosticos]
     .filter(d => d.improvement_value > 0)
@@ -125,6 +128,27 @@ export default function ParecerPremium({ resumo, diagnosticos }: Props) {
               completa!
             </p>
           </div>
+        )}
+
+        {/* Toggle full analysis */}
+        {gargalo && onToggleFullAnalysis && (
+          <Button
+            variant="outline"
+            onClick={onToggleFullAnalysis}
+            className="w-full border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2"
+          >
+            {showFullAnalysis ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Fechar análise completa
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Ver análise completa da sua prova
+              </>
+            )}
+          </Button>
         )}
       </div>
     </div>
