@@ -39,12 +39,23 @@ function PercentageBadge({ value }: { value: number }) {
   return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30">{value.toFixed(1)}%</Badge>;
 }
 
-/** Format seconds to mm:ss */
+/** Format seconds to mm:ss - always format for consistency */
 function formatTime(seconds: number): string {
-  if (!seconds || seconds <= 0) return '-';
+  if (seconds == null || seconds <= 0) return '0';
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
+  if (m === 0) return `${s}s`;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** Translate metric name to Portuguese */
+function translateMetric(metric: string): string {
+  if (!metric) return '-';
+  const map: Record<string, string> = {
+    'potential improvement': 'Melhoria Potencial',
+    'time': 'Tempo',
+  };
+  return map[metric.toLowerCase()] || metric;
 }
 
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
@@ -132,15 +143,15 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                     {diagnosticos.map((d) => (
                       <TableRow key={d.id} className="border-border">
                         <TableCell className="font-medium text-foreground text-sm">{d.movement}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{d.metric}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{translateMetric(d.metric)}</TableCell>
                         <TableCell className="text-right text-sm text-foreground">
-                          {d.your_score > 300 ? formatTime(d.your_score) : d.your_score}
+                          {formatTime(d.your_score)}
                         </TableCell>
                         <TableCell className="text-right text-sm text-muted-foreground">
-                          {d.top_1 > 300 ? formatTime(d.top_1) : d.top_1}
+                          {formatTime(d.top_1)}
                         </TableCell>
-                        <TableCell className="text-right text-sm text-foreground">
-                          {d.improvement_value > 300 ? formatTime(d.improvement_value) : d.improvement_value}
+                        <TableCell className="text-right text-sm text-foreground font-semibold">
+                          {d.improvement_value > 0 ? formatTime(d.improvement_value) : '-'}
                         </TableCell>
                         <TableCell className="text-center">
                           <PercentageBadge value={d.percentage} />
