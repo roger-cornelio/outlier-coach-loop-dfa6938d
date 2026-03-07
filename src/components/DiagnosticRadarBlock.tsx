@@ -1787,71 +1787,44 @@ export function DiagnosticRadarBlock({
         )}
         {!provaAlvo && <div className="mb-3" />}
 
-        {/* Barra de métricas — grid 3 colunas */}
-        {(() => {
-          const lastTime = validatingCompetition?.time_in_seconds;
-          const targetSec = eliteTarget?.targetSeconds;
-          const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
-
-          if (!lastTime) {
-            return <ImportProvaInlineCTA />;
-          }
-
-          // Meta
-          let metaValue = '—';
-          let metaClass = 'text-foreground';
-          if (targetSec) {
-            const delta = lastTime - targetSec;
-            if (delta <= 0) {
-              metaValue = `${formatOfficialTime(targetSec)} ✔`;
-              metaClass = 'text-emerald-400';
-            } else {
-              metaValue = formatOfficialTime(targetSec);
-              metaClass = 'text-amber-400';
-            }
-          }
-
-          // Evolução
-          let evolValue = 'Aguardando próxima prova';
-          let evolClass = 'text-muted-foreground/60 italic font-normal';
-          if (previousCompetition?.time_in_seconds) {
-            const diff = lastTime - previousCompetition.time_in_seconds;
-            if (Math.abs(diff) >= 30) {
-              const abs = Math.abs(diff);
-              const m = Math.floor(abs / 60);
-              const s = Math.round(abs % 60);
-              const fmt = m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
-              evolValue = diff < 0 ? `↓ ${fmt}` : `↑ ${fmt}`;
-              evolClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
-            }
-          }
-
-          return (
-            <div className="mt-3 grid grid-cols-3 gap-2 p-3 bg-muted/5 border border-border/15 rounded-xl">
-              <div className="flex flex-col items-center text-center gap-0.5">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Timer className="w-3.5 h-3.5" />
-                  <span>Última prova</span>
-                </div>
-                <span className="font-bold text-sm text-foreground">{formatOfficialTime(lastTime)}</span>
+        {/* Barra de métricas — grid com tempo/meta/ganho/evolução */}
+        {!performanceSnapshot.currentTime ? (
+          <ImportProvaInlineCTA />
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-2 p-3 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <Timer className="w-3.5 h-3.5" />
+                <span>Tempo prova</span>
               </div>
-              <div className="flex flex-col items-center text-center gap-0.5 border-x border-border/10">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Target className="w-3.5 h-3.5" />
-                  <span>Meta {targetLabel}</span>
-                </div>
-                <span className={cn('font-bold text-sm', metaClass)}>{metaValue}</span>
-              </div>
-              <div className="flex flex-col items-center text-center gap-0.5">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>Evolução</span>
-                </div>
-                <span className={cn('font-bold text-sm', evolClass)}>{evolValue}</span>
-              </div>
+              <span className="font-bold text-sm text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
             </div>
-          );
-        })()}
+
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <Target className="w-3.5 h-3.5" />
+                <span>Meta {performanceSnapshot.targetLabel}</span>
+              </div>
+              <span className={cn('font-bold text-sm', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <Zap className="w-3.5 h-3.5" />
+                <span>Ganho</span>
+              </div>
+              <span className={cn('font-bold text-sm', performanceSnapshot.gainClass)}>{performanceSnapshot.gainValue}</span>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Evolução</span>
+              </div>
+              <span className={cn('font-bold text-sm', performanceSnapshot.evolutionClass)}>{performanceSnapshot.evolutionValue}</span>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
