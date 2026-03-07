@@ -47,9 +47,15 @@ export function timeToSeconds(t: string): number {
   return parts[0] || 0;
 }
 
-/** Format seconds back to MM:SS */
+/** Format seconds back to MM:SS or HH:MM:SS when >= 60 minutes */
 export function secondsToTime(sec: number): string {
   if (sec == null || isNaN(sec) || sec < 0) return '00:00';
+  if (sec >= 3600) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.round(sec % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
