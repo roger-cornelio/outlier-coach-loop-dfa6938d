@@ -280,7 +280,9 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
           Diagnóstico de Performance
         </h2>
         <p className="text-xs text-muted-foreground">
-          Busque seu nome para encontrar sua última prova e gerar o diagnóstico automaticamente.
+          {mode === 'diagnostic_only'
+            ? 'Busque seu nome para encontrar suas provas e importar o diagnóstico.'
+            : 'Busque seu nome para encontrar sua última prova e gerar o diagnóstico automaticamente.'}
         </p>
       </div>
 
