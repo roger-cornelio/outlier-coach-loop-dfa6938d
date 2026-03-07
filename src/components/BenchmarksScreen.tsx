@@ -4,7 +4,7 @@ import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-re
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
-import { AddResultModal } from './AddResultModal';
+// AddResultModal removed from header - now inside ProvasTab
 import { useAthleteStatus, clearStatusHistory } from '@/hooks/useAthleteStatus';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { LEVEL_NAMES } from '@/types/outlier';
