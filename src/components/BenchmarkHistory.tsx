@@ -133,13 +133,18 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
           .from('benchmark_results')
           .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
           .eq('user_id', user.id)
-          .in('result_type', ['simulado', 'prova_oficial'])
-          .order('created_at', { ascending: false });
+          .in('result_type', ['simulado', 'prova_oficial']);
 
         const { data, error } = await query;
         
         if (error) throw error;
-        setExternalResults((data || []) as ExternalResult[]);
+        // Sort: event_date desc (when available), then created_at desc
+        const sorted = (data || []).sort((a: any, b: any) => {
+          const dateA = a.event_date || a.created_at;
+          const dateB = b.event_date || b.created_at;
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
+        setExternalResults(sorted as ExternalResult[]);
       } catch (err) {
         console.error('Error fetching external results:', err);
       } finally {
