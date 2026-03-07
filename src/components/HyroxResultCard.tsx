@@ -65,7 +65,7 @@ function getEventLocation(eventName: string | null): string {
  * - "Ver análise" CTA button
  * - Expandable analysis section with radar chart
  */
-export function HyroxResultCard({ result, gender, timeDeltaSeconds }: HyroxResultCardProps) {
+export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete }: HyroxResultCardProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   const isOfficial = result.result_type === 'prova_oficial';
