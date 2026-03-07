@@ -124,6 +124,33 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
   const [expandedBenchmark, setExpandedBenchmark] = useState<string | null>(null);
   const [externalResults, setExternalResults] = useState<ExternalResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  const fetchExternalResults = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('benchmark_results')
+        .select('id, result_type, event_name, event_date, time_in_seconds, screenshot_url, race_category, created_at')
+        .eq('user_id', user.id)
+        .in('result_type', ['simulado', 'prova_oficial']);
+
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      const sorted = (data || []).sort((a: any, b: any) => {
+        const dateA = a.event_date || a.created_at;
+        const dateB = b.event_date || b.created_at;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+      setExternalResults(sorted as ExternalResult[]);
+    } catch (err) {
+      console.error('Error fetching external results:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   // Fetch external results (simulados and provas) from Supabase
   useEffect(() => {
