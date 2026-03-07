@@ -234,6 +234,8 @@ const AdminPortal = () => {
         return <KnowledgeBaseAdmin />;
       case "movementPatterns":
         return <MovementPatternsAdmin />;
+      case "stationValence":
+        return <StationValenceAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
       default:
