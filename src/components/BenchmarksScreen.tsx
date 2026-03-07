@@ -34,24 +34,13 @@ export function BenchmarksScreen() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleClearAllResults = async () => {
-    setIsClearing(true);
-    try {
-      clearHistory();
-      if (user?.id) {
-        const { error } = await supabase.from('benchmark_results').delete().eq('user_id', user.id);
-        if (error) throw error;
-      }
-      clearStatusHistory();
-      triggerExternalResultsRefresh();
-      toast.success('Todos os resultados foram apagados');
-      setRefreshKey(prev => prev + 1);
-    } catch (error) {
-      console.error('Error clearing results:', error);
-      toast.error('Erro ao apagar resultados');
-    } finally {
-      setIsClearing(false);
-    }
+  const handleClearAllResults = () => {
+    // UI-only: clears local store state, not the database
+    clearHistory();
+    clearStatusHistory();
+    triggerExternalResultsRefresh();
+    toast.success('Visualização zerada. Os dados permanecem salvos.');
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
