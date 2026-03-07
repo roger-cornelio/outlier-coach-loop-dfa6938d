@@ -129,7 +129,18 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             </>
           )}
 
-          <div className="flex justify-end">
+          {/* Import new + Delete actions */}
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-primary border-primary/30 hover:bg-primary/10"
+              onClick={() => setShowImporter(v => !v)}
+            >
+              <Zap className="w-4 h-4" />
+              {showImporter ? 'Fechar importador' : 'Importar novo diagnóstico'}
+            </Button>
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2">
@@ -153,6 +164,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </AlertDialogContent>
             </AlertDialog>
           </div>
+
+          {/* Inline importer when toggled */}
+          {showImporter && (
+            <RoxCoachExtractor onSuccess={() => { setLocalRefresh(v => v + 1); setShowImporter(false); }} />
+          )}
         </>
       )}
 
