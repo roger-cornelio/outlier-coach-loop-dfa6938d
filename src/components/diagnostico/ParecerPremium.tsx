@@ -128,6 +128,25 @@ export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnaly
               completa!
             </p>
           </div>
+        {/* Toggle full analysis */}
+        {gargalo && onToggleFullAnalysis && (
+          <Button
+            variant="outline"
+            onClick={onToggleFullAnalysis}
+            className="w-full border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2"
+          >
+            {showFullAnalysis ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Fechar análise completa
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Ver análise completa da sua prova
+              </>
+            )}
+          </Button>
         )}
       </div>
     </div>
