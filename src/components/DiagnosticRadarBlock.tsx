@@ -1456,7 +1456,7 @@ export function DiagnosticRadarBlock({
 
   // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
   const officialCompetitions = useMemo(() => getOfficialCompetitions(), [getOfficialCompetitions]);
-  const raceCount = officialCompetitions.length;
+
   // previousCompetition: segunda prova mais recente com tempo válido
   const previousCompetition = useMemo(() => {
     const withTime = officialCompetitions.filter((c) => typeof c.time_in_seconds === 'number' && c.time_in_seconds > 0);
@@ -1489,6 +1489,73 @@ export function DiagnosticRadarBlock({
     const gender = athleteConfig?.sexo || 'masculino';
     return getEliteTargetSeconds(status, gender);
   }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds, topPercentData.metaProSeconds]);
+
+  const formatDeltaTime = (seconds: number) => {
+    const abs = Math.abs(Math.round(seconds));
+    const formatted = formatOfficialTime(abs);
+    return formatted.startsWith('00:') ? formatted.slice(3) : formatted;
+  };
+
+  const performanceSnapshot = useMemo(() => {
+    const currentTime = validatingCompetition?.time_in_seconds ?? null;
+    const previousTime = previousCompetition?.time_in_seconds ?? null;
+    const targetSec = eliteTarget?.targetSeconds ?? null;
+    const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
+
+    let metaValue = '—';
+    let metaClass = 'text-foreground';
+    if (currentTime && targetSec) {
+      const delta = currentTime - targetSec;
+      if (delta <= 0) {
+        metaValue = `${formatOfficialTime(targetSec)} ✔`;
+        metaClass = 'text-emerald-400';
+      } else {
+        metaValue = formatOfficialTime(targetSec);
+        metaClass = 'text-amber-400';
+      }
+    }
+
+    let gainValue = '—';
+    let gainClass = 'text-muted-foreground';
+    if (currentTime && targetSec) {
+      const gainSeconds = Math.max(currentTime - targetSec, 0);
+      if (gainSeconds <= 0) {
+        gainValue = 'Meta atingida';
+        gainClass = 'text-emerald-400';
+      } else {
+        gainValue = `↓ ${formatDeltaTime(gainSeconds)}`;
+        gainClass = 'text-primary';
+      }
+    }
+
+    let evolutionValue = '—';
+    let evolutionClass = 'text-muted-foreground';
+    if (currentTime && previousTime) {
+      const diff = currentTime - previousTime;
+      if (diff === 0) {
+        evolutionValue = '0s';
+      } else {
+        evolutionValue = diff < 0 ? `↓ ${formatDeltaTime(diff)}` : `↑ ${formatDeltaTime(diff)}`;
+        evolutionClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
+      }
+    }
+
+    return {
+      currentTime,
+      targetLabel,
+      metaValue,
+      metaClass,
+      gainValue,
+      gainClass,
+      evolutionValue,
+      evolutionClass,
+    };
+  }, [
+    validatingCompetition?.time_in_seconds,
+    previousCompetition?.time_in_seconds,
+    eliteTarget?.targetSeconds,
+    eliteTarget?.targetLabel,
+  ]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
