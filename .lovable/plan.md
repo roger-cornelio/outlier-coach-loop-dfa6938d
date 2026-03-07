@@ -1,32 +1,27 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Plan: Dynamic CTA copy + bigger shield
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+**Single file**: `src/components/LevelUpModal.tsx`
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+### Context correction
+The modal celebrates the level the athlete **just completed** (e.g., completed OPEN requirements → shows OPEN shield). The CTA should point to the **next** level.
 
-### Alterações
+### Changes
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+1. **Add `nextLabel` to STATUS_CONFIG**:
+   - `open` → `nextLabel: 'PRO OUTLIER'`
+   - `pro` → `nextLabel: 'ELITE OUTLIER'`
+   - `elite` → `nextLabel: null` (max level)
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+2. **Dynamic button text**:
+   - `open`: "Avançar para PRO OUTLIER"
+   - `pro`: "Avançar para ELITE OUTLIER"
+   - `elite`: "Você é ELITE OUTLIER" (no next level)
+   - Add `ChevronRight` icon from lucide-react (except elite)
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
-
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+3. **Increase shield size**:
+   - Mobile: `w-40 h-40` → `w-56 h-56`
+   - Desktop: `w-52 h-52` → `w-72 h-72`
+   - Expand glow layers: `-m-16` → `-m-20`, `blur-[80px]` → `blur-[100px]`; `-m-8` → `-m-12`
 
