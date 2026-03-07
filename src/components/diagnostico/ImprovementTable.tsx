@@ -86,43 +86,47 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-border">
-              <TableHead className="text-muted-foreground">Estação</TableHead>
-              <TableHead className="text-muted-foreground text-right">Você</TableHead>
-              <TableHead className="text-muted-foreground text-right font-semibold text-primary">Meta OUTLIER</TableHead>
-              <TableHead className="text-muted-foreground text-right">Potencial de Evolução</TableHead>
-              <TableHead className="text-muted-foreground text-center">Foco %</TableHead>
+            <TableRow className="border-border bg-muted/30">
+              <TableHead className="text-muted-foreground text-center text-xs uppercase tracking-wider">Estação</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs uppercase tracking-wider">Você</TableHead>
+              <TableHead className="text-center text-xs uppercase tracking-wider text-primary font-bold">Meta OUTLIER</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs uppercase tracking-wider">Potencial de Evolução</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs uppercase tracking-wider">Foco</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((d) => (
-              <TableRow key={d.id} className="border-border">
-                <TableCell className="font-medium text-foreground text-sm">{d.movement}</TableCell>
-                <TableCell className="text-right text-sm text-foreground">
+            {rows.map((d, i) => (
+              <TableRow key={d.id} className={`border-border transition-colors hover:bg-muted/20 ${i % 2 === 0 ? '' : 'bg-muted/10'}`}>
+                <TableCell className="font-semibold text-foreground text-sm text-center">{d.movement}</TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground tabular-nums">
                   {formatTime(d.your_score)}
                 </TableCell>
-                <TableCell className="text-right text-sm text-primary font-bold">
+                <TableCell className="text-center text-sm text-primary font-bold tabular-nums">
                   {d.top_1 > 0 ? formatTime(d.top_1) : '—'}
                 </TableCell>
-                <TableCell className="text-right text-sm text-foreground font-semibold">
-                  {d.improvement_value > 0 ? `−${formatTime(d.improvement_value)}` : '—'}
+                <TableCell className="text-center text-sm font-semibold tabular-nums">
+                  {d.improvement_value > 0
+                    ? <span className="text-emerald-400">−{formatTime(d.improvement_value)}</span>
+                    : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-center">
-                  {d.percentage > 0 ? <PercentageBadge value={d.percentage} /> : '—'}
+                  {d.percentage > 0 ? <PercentageBadge value={d.percentage} /> : <span className="text-muted-foreground">—</span>}
                 </TableCell>
               </TableRow>
             ))}
             {/* Totals row */}
-            <TableRow className="border-t-2 border-primary/30 bg-primary/[0.06]">
-              <TableCell className="font-extrabold text-primary text-sm">PROVA TOTAL</TableCell>
-              <TableCell className="text-right text-sm text-foreground font-bold">
+            <TableRow className="border-t-2 border-primary/40 bg-primary/[0.08]">
+              <TableCell className="font-extrabold text-primary text-sm text-center tracking-wide">PROVA TOTAL</TableCell>
+              <TableCell className="text-center text-sm text-foreground font-bold tabular-nums">
                 {formatTime(totalYou)}
               </TableCell>
-              <TableCell className="text-right text-sm text-primary font-extrabold text-base">
+              <TableCell className="text-center font-extrabold text-primary tabular-nums text-base">
                 {totalMeta > 0 ? formatTime(totalMeta) : '—'}
               </TableCell>
-              <TableCell className="text-right text-sm font-extrabold text-primary text-base">
-                {totalDiff > 0 ? `−${formatTime(totalDiff)}` : '—'}
+              <TableCell className="text-center font-extrabold tabular-nums text-base">
+                {totalDiff > 0
+                  ? <span className="text-emerald-400">−{formatTime(totalDiff)}</span>
+                  : '—'}
               </TableCell>
               <TableCell className="text-center">
                 <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 font-bold">
