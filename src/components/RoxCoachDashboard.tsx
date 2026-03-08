@@ -115,7 +115,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchDetail();
   }, [user, selectedResumoId]);
 
+  // Filter out invalid N/A-only records from display
+  const validResumos = allResumos.filter(r => {
+    const fields = [r.evento, r.nome_atleta, r.finish_time];
+    return fields.some(v => v && v !== 'N/A' && v.trim() !== '');
+  });
+  
   const selectedResumo = allResumos.find(r => r.id === selectedResumoId) || null;
+  const selectedIsInvalid = selectedResumo && !validResumos.find(r => r.id === selectedResumo.id);
 
   async function handleDeleteDiagnostic() {
     if (!user || !selectedResumoId) return;
@@ -158,7 +165,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     }
   }
 
-  const hasData = allResumos.length > 0;
+  const hasData = validResumos.length > 0;
+  const hasOnlyInvalidData = allResumos.length > 0 && validResumos.length === 0;
 
   /** Extract location from event name like "2025 Sao Paulo • HYROX PRO" */
   function extractLocation(evento: string | null): string {
@@ -180,7 +188,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   return (
     <div className="space-y-6">
       {/* Title */}
-      {selectedResumo?.nome_atleta && (
+      {selectedResumo?.nome_atleta && selectedResumo.nome_atleta !== 'N/A' && (
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" />
@@ -190,9 +198,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       )}
 
       {/* Race Cards - Latest on top, others below */}
-      {!loading && allResumos.length > 0 && (() => {
-        const latestResumo = allResumos[0];
-        const olderResumos = allResumos.slice(1);
+      {!loading && validResumos.length > 0 && (() => {
+        const latestResumo = validResumos[0];
+        const olderResumos = validResumos.slice(1);
         const latestLocation = extractLocation(latestResumo.evento);
         const latestSeason = extractSeason(latestResumo.temporada, latestResumo.evento);
         const latestIsActive = latestResumo.id === selectedResumoId;
@@ -310,7 +318,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       )}
 
       {/* Data sections */}
-      {!loading && !loadingDetail && selectedResumo && (
+      {!loading && !loadingDetail && selectedResumo && !selectedIsInvalid && (
         <>
           <PerformanceHighlights resumo={selectedResumo} />
           
@@ -399,8 +407,34 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </>
       )}
 
+      {/* Invalid data state - records exist but all N/A */}
+      {!loading && hasOnlyInvalidData && (
+        <div className="space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Zap className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Diagnóstico incompleto</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Os diagnósticos existentes não contêm dados válidos. Faça uma <strong className="text-primary">prova oficial HYROX</strong> e importe novamente para desbloquear seu diagnóstico completo.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2 mt-2"
+              onClick={handleDeleteAllDiagnostics}
+              disabled={deleting}
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleting ? 'Limpando...' : 'Limpar registros inválidos'}
+            </Button>
+          </div>
+          <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
+        </div>
+      )}
+
       {/* Empty state */}
-      {!loading && !hasData && (
+      {!loading && !hasData && !hasOnlyInvalidData && (
         <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
     </div>

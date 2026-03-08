@@ -239,6 +239,16 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     parsed.resumoRow.finish_time = result.time_formatted;
     parsed.resumoRow.nome_atleta = result.athlete_name;
 
+    // CRITICAL: Block saving if SearchResult has no real data (all N/A or empty)
+    const hasRealMetadata = [
+      result.event_name,
+      result.athlete_name,
+      result.time_formatted,
+    ].some(v => v && v !== 'N/A' && v.trim() !== '');
+    if (!hasRealMetadata) {
+      throw new Error('Nenhum dado real encontrado para esta prova. Faça uma prova oficial HYROX para desbloquear o diagnóstico.');
+    }
+
     // Deduplication check
     const { data: existingDiag } = await supabase
       .from('diagnostico_resumo')
