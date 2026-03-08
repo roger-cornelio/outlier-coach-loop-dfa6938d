@@ -29,6 +29,13 @@ export function BenchmarksScreen() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
 
+  // Sync local refreshKey with global store (e.g. after import from dashboard CTA)
+  useEffect(() => {
+    if (externalResultsRefreshKey > 0) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [externalResultsRefreshKey]);
+
   const handleResultAdded = () => {
     triggerExternalResultsRefresh();
     setRefreshKey(prev => prev + 1);
