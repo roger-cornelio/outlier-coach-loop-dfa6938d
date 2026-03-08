@@ -198,9 +198,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       )}
 
       {/* Race Cards - Latest on top, others below */}
-      {!loading && allResumos.length > 0 && (() => {
-        const latestResumo = allResumos[0];
-        const olderResumos = allResumos.slice(1);
+      {!loading && validResumos.length > 0 && (() => {
+        const latestResumo = validResumos[0];
+        const olderResumos = validResumos.slice(1);
         const latestLocation = extractLocation(latestResumo.evento);
         const latestSeason = extractSeason(latestResumo.temporada, latestResumo.evento);
         const latestIsActive = latestResumo.id === selectedResumoId;
