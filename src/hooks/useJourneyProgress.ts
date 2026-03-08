@@ -121,23 +121,6 @@ function countUniqueTrainingDays(workoutResults: { date: string; blockId?: strin
 }
 
 /**
- * Count unique benchmark IDs completed within the last 12 months.
- */
-function countUniqueBenchmarks(benchmarkResults: { benchmark_id?: string; created_at?: string }[]): number {
-  const cutoff = getExpirationCutoff();
-  const uniqueIds = new Set<string>();
-  for (const r of benchmarkResults) {
-    if (r.benchmark_id) {
-      const date = r.created_at ? r.created_at.substring(0, 10) : '';
-      if (!r.created_at || date >= cutoff) {
-        uniqueIds.add(r.benchmark_id);
-      }
-    }
-  }
-  return uniqueIds.size;
-}
-
-/**
  * Determine category from validated official classification.
  * Without valid official race classification → OPEN.
  */
