@@ -52,7 +52,7 @@ export function AthleteConfig() {
   const { profile, refreshProfile } = useAuth();
   const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
-  const { saveProfileConfig, updateName, isSaving: isSavingProfile } = useAthleteProfile();
+  const { saveProfileConfig, updateName, isSaving: isSavingProfile, resetAthleteData } = useAthleteProfile();
   
   // REGRA MESTRA: Detectar primeiro setup APENAS via first_setup_completed
   // NÃO usar inferência de coach_style ou outros campos
