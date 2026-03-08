@@ -103,7 +103,7 @@ function buildRoxCoachUrl(result: { event_name: string; athlete_name: string; se
 function ImportProvaInlineCTA() {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
-  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error' | 'no-race'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [importedResult, setImportedResult] = useState<{
     eventName: string;
