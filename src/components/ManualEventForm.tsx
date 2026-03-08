@@ -2,8 +2,8 @@
  * ManualEventForm — Fallback form for manual event submission
  * Used when no event is found via search
  */
-import { useState } from 'react';
-import { ArrowLeft, Send } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ArrowLeft, Send, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getCitiesByState } from '@/config/brazilianCities';
 
 const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
@@ -38,15 +40,21 @@ export function ManualEventForm({ onSubmit, onBack, isSubmitting }: ManualEventF
   const [estado, setEstado] = useState('');
   const [url, setUrl] = useState('');
   const [obs, setObs] = useState('');
+  const [cityOpen, setCityOpen] = useState(false);
+
+  const availableCities = useMemo(() => {
+    if (!estado) return [];
+    return getCitiesByState(estado);
+  }, [estado]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim()) return;
 
     onSubmit({
-      nome: nome.trim(),
+      nome: nome.trim().toUpperCase(),
       data_evento: data ? data.toISOString().split('T')[0] : undefined,
-      cidade: cidade.trim() || undefined,
+      cidade: cidade || undefined,
       estado: estado || undefined,
       url_origem: url.trim() || undefined,
       observacao: obs.trim() || undefined,
@@ -69,9 +77,10 @@ export function ManualEventForm({ onSubmit, onBack, isSubmitting }: ManualEventF
           <Label className="text-xs">Nome da prova *</Label>
           <Input
             value={nome}
-            onChange={e => setNome(e.target.value)}
-            placeholder="Ex: Simulado HYROX Arena Fit"
+            onChange={e => setNome(e.target.value.toUpperCase())}
+            placeholder="Ex: SIMULADO HYROX ARENA FIT"
             required
+            className="uppercase"
           />
         </div>
 
@@ -101,12 +110,8 @@ export function ManualEventForm({ onSubmit, onBack, isSubmitting }: ManualEventF
 
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Cidade</Label>
-            <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Ex: São Paulo" />
-          </div>
-          <div className="space-y-1.5">
             <Label className="text-xs">Estado</Label>
-            <Select value={estado} onValueChange={setEstado}>
+            <Select value={estado} onValueChange={(v) => { setEstado(v); setCidade(''); }}>
               <SelectTrigger>
                 <SelectValue placeholder="UF" />
               </SelectTrigger>
@@ -116,6 +121,41 @@ export function ManualEventForm({ onSubmit, onBack, isSubmitting }: ManualEventF
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cidade</Label>
+            <Popover open={cityOpen} onOpenChange={setCityOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={cityOpen}
+                  className={cn('w-full justify-start text-left font-normal text-sm truncate', !cidade && 'text-muted-foreground')}
+                  disabled={!estado}
+                >
+                  {cidade || (estado ? 'Selecione' : 'Escolha UF')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0 bg-background border z-50" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar cidade..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                    <CommandGroup>
+                      {availableCities.map(c => (
+                        <CommandItem
+                          key={c}
+                          value={c}
+                          onSelect={() => { setCidade(c); setCityOpen(false); }}
+                        >
+                          {c}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
