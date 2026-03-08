@@ -26,27 +26,6 @@ interface SearchResult {
   event_index?: number;
 }
 
-/** Convert a string to a URL-friendly slug */
-function toSlug(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove accents
-    .replace(/[^a-z0-9\s-]/g, '')    // remove special chars
-    .trim()
-    .replace(/\s+/g, '-')           // spaces to hyphens
-    .replace(/-+/g, '-');            // collapse multiple hyphens
-}
-
-/** Build the RoxCoach URL from SearchResult data */
-function buildRoxCoachUrl(result: SearchResult): string {
-  const seasonId = result.season_id;
-  // event_name comes as "2025 Rio de Janeiro • HYROX PRO" — extract before " • "
-  const eventPart = result.event_name.split(' • ')[0] || result.event_name;
-  const eventSlug = toSlug(eventPart);
-  const athleteSlug = toSlug(result.athlete_name);
-  return `https://www.rox-coach.com/seasons/${seasonId}/races/${eventSlug}/results/${athleteSlug}`;
-}
 
 /** Extract idp from a Hyrox result URL */
 function extractIdpFromUrl(url: string): { idp: string | null; event: string | null } {
