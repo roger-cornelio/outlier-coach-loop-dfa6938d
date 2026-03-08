@@ -185,8 +185,12 @@ Deno.serve(async (req) => {
     }
 
     console.error(`[proxy-roxcoach] External API error: ${lastStatus} - ${lastErrorText}`);
-    return new Response(JSON.stringify({ error: `Erro na API externa: ${lastStatus}`, detail: lastErrorText }), {
-      status: lastStatus,
+    return new Response(JSON.stringify({
+      ok: false,
+      upstream_status: lastStatus,
+      upstream_error_detail: lastErrorText,
+    }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
