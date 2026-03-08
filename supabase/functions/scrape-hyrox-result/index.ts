@@ -15,7 +15,7 @@ serve(async (req) => {
 
     if (!url || typeof url !== "string") {
       return new Response(
-        JSON.stringify({ error: "URL is required" }),
+        JSON.stringify({ error: "URL é obrigatória" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -34,7 +34,7 @@ serve(async (req) => {
     if (!pageResponse.ok) {
       console.error("[scrape-hyrox-result] Page fetch failed:", pageResponse.status);
       return new Response(
-        JSON.stringify({ error: `Failed to fetch HYROX page: ${pageResponse.status}` }),
+        JSON.stringify({ error: `Não foi possível acessar a página HYROX (erro ${pageResponse.status})` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -50,7 +50,7 @@ serve(async (req) => {
     // Use AI to parse the HTML
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("Chave de API não configurada");
     }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -139,7 +139,7 @@ Return ONLY valid JSON.`
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("[scrape-hyrox-result] AI error:", aiResponse.status, errText);
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+      throw new Error(`Erro ao processar dados da prova (${aiResponse.status})`);
     }
 
     const aiData = await aiResponse.json();
@@ -162,14 +162,14 @@ Return ONLY valid JSON.`
     }
 
     return new Response(
-      JSON.stringify({ error: "Could not extract data from HYROX page", confidence: "low" }),
+      JSON.stringify({ error: "Não foi possível extrair os dados da página HYROX", confidence: "low" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("[scrape-hyrox-result] Error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido ao importar prova" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

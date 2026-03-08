@@ -28,7 +28,7 @@ serve(async (req) => {
 
     if (!lastName || typeof lastName !== "string") {
       return new Response(
-        JSON.stringify({ error: "lastName is required", results: [] }),
+        JSON.stringify({ error: "Sobrenome é obrigatório", results: [] }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -71,7 +71,7 @@ serve(async (req) => {
     console.error("[search-hyrox-athlete] Error:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : "Erro desconhecido na busca",
         results: [],
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

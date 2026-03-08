@@ -16,7 +16,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Missing or invalid authorization header" }),
+        JSON.stringify({ error: "Não autorizado — header de autenticação ausente" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -31,7 +31,7 @@ serve(async (req) => {
     if (userError || !user) {
       console.error("[extract-time-from-screenshot] Auth error:", userError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        JSON.stringify({ error: "Não autorizado — token inválido" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -42,14 +42,14 @@ serve(async (req) => {
 
     if (!imageUrl) {
       return new Response(
-        JSON.stringify({ error: "Image URL is required" }),
+        JSON.stringify({ error: "URL da imagem é obrigatória" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("Chave de API não configurada");
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -256,19 +256,19 @@ If you can see station times in the image, you MUST extract them. Do NOT return 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits." }),
+          JSON.stringify({ error: "Créditos de IA esgotados." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Erro ao processar imagem (${response.status})`);
     }
 
     const data = await response.json();
@@ -337,14 +337,14 @@ If you can see station times in the image, you MUST extract them. Do NOT return 
     }
 
     return new Response(
-      JSON.stringify({ error: "Could not extract time from image", confidence: "low" }),
+      JSON.stringify({ error: "Não foi possível extrair o tempo da imagem", confidence: "low" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
