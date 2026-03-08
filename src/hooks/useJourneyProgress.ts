@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useAuth } from '@/hooks/useAuth';
 import type { AthleteStatus } from '@/types/outlier';
 
 // Types matching database tables
