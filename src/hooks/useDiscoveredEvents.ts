@@ -103,32 +103,37 @@ export function useDiscoveredEvents() {
     if (!user?.id) return null;
 
     const confidence = calculateConfidence(eventData);
+    const statusValidacao = confidence.meetsMinimum && confidence.score >= 70
+      ? 'VALIDADA'
+      : 'AGUARDANDO_AUTORIZACAO_ADMIN';
 
-    // Create the event
-    const { data: event, error: eventError } = await supabase
+    const eventId = crypto.randomUUID();
+    const logId = crypto.randomUUID();
+
+    const eventPayload = {
+      id: eventId,
+      nome: eventData.nome,
+      data_evento: eventData.data_evento || null,
+      cidade: eventData.cidade || null,
+      estado: eventData.estado || null,
+      url_origem: eventData.url_origem || null,
+      origem_principal: 'MANUAL',
+      status_validacao: statusValidacao,
+      grau_confianca: confidence.score,
+      created_by: user.id,
+    };
+
+    const { error: eventError } = await supabase
       .from('discovered_events')
-      .insert({
-        nome: eventData.nome,
-        data_evento: eventData.data_evento || null,
-        cidade: eventData.cidade || null,
-        estado: eventData.estado || null,
-        url_origem: eventData.url_origem || null,
-        origem_principal: 'MANUAL',
-        status_validacao: confidence.meetsMinimum && confidence.score >= 70
-          ? 'VALIDADA' : 'AGUARDANDO_AUTORIZACAO_ADMIN',
-        grau_confianca: confidence.score,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+      .insert(eventPayload);
 
-    if (eventError || !event) return null;
+    if (eventError) return null;
 
-    // Create discovery log
-    const { data: log } = await supabase
+    await supabase
       .from('event_discovery_logs')
       .insert({
-        event_id: (event as any).id,
+        id: logId,
+        event_id: eventId,
         termo_busca: eventData.termo_busca || eventData.nome,
         origem: 'MANUAL',
         raw_title: eventData.nome,
@@ -140,26 +145,47 @@ export function useDiscoveredEvents() {
         score: confidence.score,
         motivo_pendencia: confidence.pendencias,
         requested_by: user.id,
-      })
-      .select()
-      .single();
+      });
 
-    // If needs admin review, create queue entry
-    if ((event as any).status_validacao === 'AGUARDANDO_AUTORIZACAO_ADMIN') {
+    if (statusValidacao === 'AGUARDANDO_AUTORIZACAO_ADMIN') {
       const suggestions = generateSearchSuggestions(eventData.nome, eventData.cidade);
 
       await supabase
         .from('event_review_queue')
         .insert({
-          event_id: (event as any).id,
-          discovery_log_id: log ? (log as any).id : null,
+          event_id: eventId,
+          discovery_log_id: logId,
           status_fila: 'PENDENTE',
           motivo: confidence.pendencias.join(', '),
           sugestoes_busca_json: suggestions,
         });
     }
 
-    return event as unknown as DiscoveredEvent;
+    const eventResult: DiscoveredEvent = {
+      id: eventId,
+      nome: eventData.nome,
+      slug: null,
+      tipo_evento: 'OFICIAL',
+      data_evento: eventData.data_evento || null,
+      cidade: eventData.cidade || null,
+      estado: eventData.estado || null,
+      pais: 'BR',
+      venue: null,
+      organizador: null,
+      origem_principal: 'MANUAL',
+      url_origem: eventData.url_origem || null,
+      url_inscricao: null,
+      url_resultado: null,
+      status_validacao: statusValidacao,
+      grau_confianca: confidence.score,
+      possivel_duplicata: false,
+      categoria_hyrox: null,
+      admin_notes: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    return eventResult;
   }, [user?.id]);
 
   return { events, loading, searchEvents, requestEventReview };
