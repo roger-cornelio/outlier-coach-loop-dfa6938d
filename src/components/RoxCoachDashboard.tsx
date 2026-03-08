@@ -34,6 +34,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [deleting, setDeleting] = useState(false);
   const [localRefresh, setLocalRefresh] = useState(0);
   const [showImporter, setShowImporter] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // Fetch all resumos
   useEffect(() => {
