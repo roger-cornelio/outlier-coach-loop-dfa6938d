@@ -1969,6 +1969,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      search_public_athletes: {
+        Args: { search_term: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       submit_coach_application: {
         Args: { _contact: string; _email: string; _full_name: string }
         Returns: {
