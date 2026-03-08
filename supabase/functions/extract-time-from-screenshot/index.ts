@@ -31,7 +31,7 @@ serve(async (req) => {
     if (userError || !user) {
       console.error("[extract-time-from-screenshot] Auth error:", userError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        JSON.stringify({ error: "Não autorizado — token inválido" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
