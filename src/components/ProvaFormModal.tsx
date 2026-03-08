@@ -1,9 +1,14 @@
 /**
  * ProvaFormModal - Modal para cadastro de provas (Alvo ou Satélite)
  * Now with assisted search + manual fallback
+ * 
+ * Regras:
+ * - Nome é composto: Nome base + Cidade + Ano (derivado da data)
+ * - Tipo de participação é inferido da categoria (Doubles = DUPLA)
+ * - Cidade obrigatória, vinda de lista validada por estado
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Target, Orbit, Users, Info, Search, PenLine } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,13 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { EventSearchPanel } from '@/components/EventSearchPanel';
@@ -38,6 +43,7 @@ import { ManualEventForm } from '@/components/ManualEventForm';
 import { useDiscoveredEvents, type DiscoveredEvent } from '@/hooks/useDiscoveredEvents';
 import { toast } from 'sonner';
 import type { Prova } from '@/pages/ProvaAlvo';
+import { getCitiesByState } from '@/config/brazilianCities';
 
 const HYROX_CATEGORIAS = [
   { value: 'HYROX', label: 'HYROX' },
@@ -47,6 +53,10 @@ const HYROX_CATEGORIAS = [
   { value: 'HYROX_RELAY', label: 'HYROX Relay' },
   { value: 'HYROX_ADAPTIVE', label: 'HYROX Adaptive' },
 ];
+
+const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+
+const DOUBLES_CATEGORIES = ['HYROX_DOUBLES', 'HYROX_PRO_DOUBLES'];
 
 const MOCK_ATLETAS = [
   { id: 'athlete-1', name: 'João Silva' },
@@ -71,23 +81,42 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const { requestEventReview } = useDiscoveredEvents();
 
-  // Detail form state
-  const [nome, setNome] = useState('');
+  // Structured name fields
+  const [nomeBase, setNomeBase] = useState('');
+  const [estado, setEstado] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [cityOpen, setCityOpen] = useState(false);
+
   const [categoria, setCategoria] = useState('');
   const [data, setData] = useState<Date | undefined>();
-  const [participationType, setParticipationType] = useState<'INDIVIDUAL' | 'DUPLA'>('INDIVIDUAL');
   const [partnerId, setPartnerId] = useState('');
 
   const isAlvo = type === 'ALVO';
+  const isDupla = DOUBLES_CATEGORIES.includes(categoria);
+
+  const availableCities = useMemo(() => {
+    if (!estado) return [];
+    return getCitiesByState(estado);
+  }, [estado]);
+
+  // Build full race name: "HYROX SÃO PAULO 2026"
+  const nomeCompleto = useMemo(() => {
+    const parts = [nomeBase.trim().toUpperCase()];
+    if (cidade) parts.push(cidade.toUpperCase());
+    if (data) parts.push(data.getFullYear().toString());
+    return parts.join(' ');
+  }, [nomeBase, cidade, data]);
 
   const resetAll = () => {
     setEntryMode('choose');
     setSelectedEvent(null);
     setIsSubmittingManual(false);
-    setNome('');
+    setNomeBase('');
+    setEstado('');
+    setCidade('');
+    setCityOpen(false);
     setCategoria('');
     setData(undefined);
-    setParticipationType('INDIVIDUAL');
     setPartnerId('');
   };
 
@@ -98,19 +127,21 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
 
   const handleSelectEvent = (event: DiscoveredEvent) => {
     setSelectedEvent(event);
-    setNome(event.nome);
+    setNomeBase(event.nome);
     setCategoria(event.categoria_hyrox || '');
     if (event.data_evento) {
       setData(new Date(event.data_evento + 'T12:00:00'));
     }
+    if (event.estado) setEstado(event.estado);
+    if (event.cidade) setCidade(event.cidade);
     setEntryMode('details');
   };
 
-  const handleRequestReview = async (event: DiscoveredEvent) => {
+  const handleRequestReview = async (_event: DiscoveredEvent) => {
     toast.success('Solicitação de análise enviada ao Admin');
   };
 
-  const handleManualSubmit = async (data: {
+  const handleManualSubmit = async (formData: {
     nome: string;
     data_evento?: string;
     cidade?: string;
@@ -120,16 +151,17 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
   }) => {
     setIsSubmittingManual(true);
     try {
-      const event = await requestEventReview(data);
+      const event = await requestEventReview(formData);
       if (event) {
         if (event.status_validacao === 'VALIDADA') {
           handleSelectEvent(event);
           toast.success('Prova incluída e validada automaticamente!');
         } else {
           toast.success('Solicitação enviada para análise do Admin');
-          // Still allow the user to proceed with manual data for their planning
-          setNome(data.nome);
-          if (data.data_evento) setData(new Date(data.data_evento + 'T12:00:00'));
+          setNomeBase(formData.nome);
+          if (formData.data_evento) setData(new Date(formData.data_evento + 'T12:00:00'));
+          if (formData.estado) setEstado(formData.estado);
+          if (formData.cidade) setCidade(formData.cidade);
           setEntryMode('details');
         }
       } else {
@@ -142,18 +174,19 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !categoria || !data) return;
+    if (!nomeBase.trim() || !categoria || !data || !cidade) return;
 
+    const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
     const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
 
     onSave({
       type,
-      nome,
+      nome: nomeCompleto,
       categoria,
       data,
       participationType,
-      partnerAthleteId: participationType === 'DUPLA' ? partnerId : undefined,
-      partnerAthleteName: participationType === 'DUPLA' ? partner?.name : undefined,
+      partnerAthleteId: isDupla ? partnerId : undefined,
+      partnerAthleteName: isDupla ? partner?.name : undefined,
     });
 
     resetAll();
@@ -243,17 +276,77 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
               </div>
             )}
 
-            {/* Nome */}
+            {/* Nome da prova */}
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome da prova *</Label>
+              <Label htmlFor="nomeBase">Nome da prova *</Label>
               <Input
-                id="nome"
-                placeholder="Ex: HYROX São Paulo 2025"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
+                id="nomeBase"
+                placeholder="Ex: HYROX"
+                value={nomeBase}
+                onChange={e => setNomeBase(e.target.value.toUpperCase())}
+                className="uppercase"
                 required
               />
             </div>
+
+            {/* Estado + Cidade */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label className="text-xs">Estado *</Label>
+                <Select value={estado} onValueChange={(v) => { setEstado(v); setCidade(''); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50 max-h-60">
+                    {ESTADOS.map(uf => (
+                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Cidade *</Label>
+                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={cityOpen}
+                      className={cn('w-full justify-start text-left font-normal text-sm truncate', !cidade && 'text-muted-foreground')}
+                      disabled={!estado}
+                    >
+                      {cidade || (estado ? 'Selecione' : 'Escolha UF')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[240px] p-0 bg-background border z-50" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar cidade..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                        <CommandGroup>
+                          {availableCities.map(c => (
+                            <CommandItem
+                              key={c}
+                              value={c}
+                              onSelect={() => { setCidade(c); setCityOpen(false); }}
+                            >
+                              {c}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Preview do nome completo */}
+            {nomeBase.trim() && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
+                Nome salvo: <span className="font-semibold text-foreground">{nomeCompleto}</span>
+              </div>
+            )}
 
             {/* Categoria */}
             <div className="space-y-2">
@@ -298,29 +391,8 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
               </Popover>
             </div>
 
-            {/* Participação */}
-            <div className="space-y-3">
-              <Label>Tipo de participação *</Label>
-              <RadioGroup
-                value={participationType}
-                onValueChange={(value) => setParticipationType(value as 'INDIVIDUAL' | 'DUPLA')}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="INDIVIDUAL" id="individual" />
-                  <Label htmlFor="individual" className="font-normal cursor-pointer">Individual</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="DUPLA" id="dupla" />
-                  <Label htmlFor="dupla" className="font-normal cursor-pointer flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    Dupla
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {participationType === 'DUPLA' && (
+            {/* Parceiro de dupla — aparece automaticamente se categoria é Doubles */}
+            {isDupla && (
               <div className="space-y-2">
                 <Label>Parceiro(a) de dupla</Label>
                 <Select value={partnerId} onValueChange={setPartnerId}>
@@ -355,7 +427,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={!nome || !categoria || !data}
+                disabled={!nomeBase.trim() || !categoria || !data || !cidade}
               >
                 Salvar Prova
               </Button>
