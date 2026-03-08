@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Trash2, Loader2, MapPin, Calendar } from 'lucide-react';
+import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -15,6 +15,7 @@ import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
 import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
+import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
 
 interface RoxCoachDashboardProps {
