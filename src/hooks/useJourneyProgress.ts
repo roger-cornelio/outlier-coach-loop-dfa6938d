@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useAuth } from '@/hooks/useAuth';
 import type { AthleteStatus } from '@/types/outlier';
 
 // Types matching database tables
@@ -121,23 +121,6 @@ function countUniqueTrainingDays(workoutResults: { date: string; blockId?: strin
 }
 
 /**
- * Count unique benchmark IDs completed within the last 12 months.
- */
-function countUniqueBenchmarks(benchmarkResults: { benchmark_id?: string; created_at?: string }[]): number {
-  const cutoff = getExpirationCutoff();
-  const uniqueIds = new Set<string>();
-  for (const r of benchmarkResults) {
-    if (r.benchmark_id) {
-      const date = r.created_at ? r.created_at.substring(0, 10) : '';
-      if (!r.created_at || date >= cutoff) {
-        uniqueIds.add(r.benchmark_id);
-      }
-    }
-  }
-  return uniqueIds.size;
-}
-
-/**
  * Determine category from validated official classification.
  * Without valid official race classification → OPEN.
  */
@@ -153,20 +136,30 @@ function determineCategoryFromAthleteStatus(
 
 export function useJourneyProgress(): JourneyPosition {
   const [levelRules, setLevelRules] = useState<LevelRule[]>([]);
+  const [outlierBenchmarksCompleted, setOutlierBenchmarksCompleted] = useState(0);
   const [loading, setLoading] = useState(true);
   
   const athleteStatus = useAthleteStatus();
-  const { results: benchmarkResults } = useBenchmarkResults();
+  const { user } = useAuth();
   const { workoutResults } = useOutlierStore();
   
-  // Fetch rules from database
+  // Fetch rules and OUTLIER benchmark count from database
   useEffect(() => {
-    const fetchRules = async () => {
+    const fetchData = async () => {
       try {
-        const levelsRes = await supabase
-          .from('status_level_rules')
-          .select('*')
-          .order('level_order');
+        const [levelsRes, benchRes] = await Promise.all([
+          supabase
+            .from('status_level_rules')
+            .select('*')
+            .order('level_order'),
+          // Count unique OUTLIER benchmarks from the correct table
+          user?.id
+            ? supabase
+                .from('benchmark_outlier_progress')
+                .select('benchmark_id')
+                .eq('athlete_id', user.id)
+            : Promise.resolve({ data: null }),
+        ]);
         
         if (levelsRes.data) {
           const activeLevelKeys = ['OPEN', 'PRO', 'ELITE'];
@@ -176,6 +169,12 @@ export function useJourneyProgress(): JourneyPosition {
               .sort((a, b) => a.level_order - b.level_order)
           );
         }
+
+        if (benchRes.data) {
+          // Count unique benchmark_ids with progress
+          const uniqueIds = new Set(benchRes.data.map((r: any) => r.benchmark_id));
+          setOutlierBenchmarksCompleted(uniqueIds.size);
+        }
       } catch (error) {
         console.error('Error fetching status rules:', error);
       } finally {
@@ -183,15 +182,15 @@ export function useJourneyProgress(): JourneyPosition {
       }
     };
     
-    fetchRules();
-  }, []);
+    fetchData();
+  }, [user?.id]);
   
   const journeyPosition = useMemo<JourneyPosition>(() => {
     // Count training sessions (unique days, max 1/day)
     const trainingSessions = countUniqueTrainingDays(workoutResults);
     
-    // Count unique benchmarks completed
-    const benchmarksCompleted = countUniqueBenchmarks(benchmarkResults);
+    // Use OUTLIER benchmarks from benchmark_outlier_progress (correct source)
+    const benchmarksCompleted = outlierBenchmarksCompleted;
     
     // Determine category from validated official classification
     const hasOfficialRace = athleteStatus.statusSource === 'prova_oficial' && !!athleteStatus.validatingCompetition;
@@ -372,7 +371,7 @@ export function useJourneyProgress(): JourneyPosition {
       missingRequirements,
       nextRequirements: { treinosRestantes, benchmarksRestantes, provaNecessaria },
     };
-  }, [loading, levelRules, athleteStatus, benchmarkResults, workoutResults]);
+  }, [loading, levelRules, athleteStatus, outlierBenchmarksCompleted, workoutResults]);
   
   return journeyPosition;
 }
