@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { athlete_name, event_name, division, season_id, result_url } = body;
+    const { athlete_name, event_name, division, season_id } = body;
+    // Accept both 'result_url' and 'url' for backwards compatibility
+    const result_url = body.result_url || body.url || '';
 
     // Validate required fields
     if (!athlete_name && !result_url) {
