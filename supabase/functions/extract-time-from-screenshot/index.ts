@@ -262,7 +262,7 @@ If you can see station times in the image, you MUST extract them. Do NOT return 
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits." }),
+          JSON.stringify({ error: "Créditos de IA esgotados." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
