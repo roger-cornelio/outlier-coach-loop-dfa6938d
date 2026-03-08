@@ -268,7 +268,7 @@ If you can see station times in the image, you MUST extract them. Do NOT return 
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Erro ao processar imagem (${response.status})`);
     }
 
     const data = await response.json();
