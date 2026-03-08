@@ -1908,7 +1908,7 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Target className="w-3.5 h-3.5" />
-                <span>Meta {performanceSnapshot.targetLabel}</span>
+                <span>Requisito {performanceSnapshot.targetLabel}</span>
               </div>
               <span className={cn('font-bold text-sm', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
             </div>
