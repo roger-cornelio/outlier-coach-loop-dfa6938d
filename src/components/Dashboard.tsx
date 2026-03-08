@@ -70,7 +70,7 @@ export function Dashboard() {
   
   const { user, profile, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const { state } = useAppState();
-  const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
+  const { status, getEffectiveLevelForWorkout, rulerScore, confidence, validatingCompetition } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
   const { 
