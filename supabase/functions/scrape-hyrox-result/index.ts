@@ -15,7 +15,7 @@ serve(async (req) => {
 
     if (!url || typeof url !== "string") {
       return new Response(
-        JSON.stringify({ error: "URL is required" }),
+        JSON.stringify({ error: "URL é obrigatória" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
