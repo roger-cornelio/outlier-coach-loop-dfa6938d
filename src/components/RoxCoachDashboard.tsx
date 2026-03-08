@@ -46,12 +46,15 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           .eq('atleta_id', user!.id);
 
         const raw = (data as DiagnosticoResumo[]) || [];
-        // Sort: temporada (season) desc, then created_at desc as tiebreaker
+        // Sort: year from evento desc, then temporada (season) desc, then created_at desc
         const resumos = raw.sort((a, b) => {
-          const seasonA = parseInt(a.temporada || '0', 10) || 0;
-          const seasonB = parseInt(b.temporada || '0', 10) || 0;
+          const yearA = parseInt(a.evento?.match(/^(\d{4})/)?.[1] || '0', 10);
+          const yearB = parseInt(b.evento?.match(/^(\d{4})/)?.[1] || '0', 10);
+          if (yearB !== yearA) return yearB - yearA;
+          const seasonA = parseInt(a.temporada?.replace(/\D/g, '') || '0', 10) || 0;
+          const seasonB = parseInt(b.temporada?.replace(/\D/g, '') || '0', 10) || 0;
           if (seasonB !== seasonA) return seasonB - seasonA;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
         });
         setAllResumos(resumos);
 
