@@ -16,7 +16,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Missing or invalid authorization header" }),
+        JSON.stringify({ error: "Não autorizado — header de autenticação ausente" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
