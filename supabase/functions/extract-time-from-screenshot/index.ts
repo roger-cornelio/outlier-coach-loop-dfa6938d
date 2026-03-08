@@ -337,7 +337,7 @@ If you can see station times in the image, you MUST extract them. Do NOT return 
     }
 
     return new Response(
-      JSON.stringify({ error: "Could not extract time from image", confidence: "low" }),
+      JSON.stringify({ error: "Não foi possível extrair o tempo da imagem", confidence: "low" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
