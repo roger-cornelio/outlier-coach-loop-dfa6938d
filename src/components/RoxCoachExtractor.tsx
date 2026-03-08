@@ -365,6 +365,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     setImportingAll(true);
     let successCount = 0;
+    let partialCount = 0;
     let failCount = 0;
 
     for (const result of toImport) {
@@ -375,7 +376,11 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
         const settled = await Promise.allSettled(tasks);
         const diagResult = mode === 'full' ? settled[1] : settled[0];
         if (diagResult.status === 'fulfilled' && diagResult.value) {
-          successCount++;
+          if (diagResult.value.partial) {
+            partialCount++;
+          } else {
+            successCount++;
+          }
         } else {
           failCount++;
         }
@@ -389,7 +394,12 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     setSelectedResults(new Set());
 
     if (successCount > 0) {
-      toast.success(`${successCount} diagnóstico(s) importado(s) com sucesso! 🔥`);
+      toast.success(`${successCount} diagnóstico(s) completo(s) importado(s)! 🔥`);
+    }
+    if (partialCount > 0) {
+      toast.success(`${partialCount} prova(s) salva(s). Diagnóstico detalhado indisponível — tente novamente mais tarde.`, { duration: 5000 });
+    }
+    if (successCount > 0 || partialCount > 0) {
       setSearchResults(prev => prev.filter(r => !selectedResults.has(r.result_url)));
       onSuccess();
     }
