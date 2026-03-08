@@ -318,7 +318,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       )}
 
       {/* Data sections */}
-      {!loading && !loadingDetail && selectedResumo && (
+      {!loading && !loadingDetail && selectedResumo && !selectedIsInvalid && (
         <>
           <PerformanceHighlights resumo={selectedResumo} />
           
