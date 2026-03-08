@@ -1,32 +1,52 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Problema
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+Ao mudar o nome no perfil, o dashboard continua mostrando dados de diagnóstico, provas e métricas do "atleta anterior" porque tudo está vinculado ao `user_id` no banco. O nome é apenas cosmético — os dados persistem.
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+O usuário quer que mudar o nome = novo atleta = limpar dados antigos.
 
-### Alterações
+## Solução
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+Ao salvar um novo nome (diferente do atual), executar uma **limpeza completa** dos dados do atleta no banco e no estado local.
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+### 1. Criar função de limpeza no `useAthleteProfile`
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+**Arquivo:** `src/hooks/useAthleteProfile.ts`
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+Nova função `resetAthleteData(userId)` que:
+- Deleta registros do atleta nas tabelas:
+  - `benchmark_results` (provas importadas)
+  - `hyrox_metric_scores` (scores diagnósticos)
+  - `race_results` (resultados de prova)
+  - `athlete_races` (provas alvo/satélite)
+- Limpa localStorage: `outlier-benchmark-history`, `athlete-status-history`
+
+### 2. Chamar reset no fluxo de save do `AthleteConfig`
+
+**Arquivo:** `src/components/AthleteConfig.tsx`
+
+No `handleSubmit`, quando `nameToSave` é definido (nome mudou):
+1. Chamar `resetAthleteData(user.id)` antes de salvar
+2. Limpar store Zustand: `resetToDefaults()` (limpa baseWorkouts, adaptedWorkouts, workoutResults)
+3. Após salvar, redirecionar para dashboard com estado limpo
+
+### 3. Limpar estado do store
+
+Após reset dos dados, chamar `useOutlierStore.resetToDefaults()` para garantir que o estado local (treinos, resultados, etc.) também é zerado. Depois restaurar apenas o `athleteConfig` e `coachStyle` recém-salvos e setar `currentView = 'dashboard'`.
+
+### Fluxo resultante
+
+```
+Atleta muda nome → handleSubmit detecta nameToSave
+  → DELETE benchmark_results WHERE user_id = X
+  → DELETE hyrox_metric_scores WHERE user_id = X  
+  → DELETE race_results WHERE athlete_id = X
+  → DELETE athlete_races WHERE user_id = X
+  → Limpa localStorage (benchmark history, status)
+  → resetToDefaults() no Zustand
+  → Salva novo perfil
+  → refreshProfile()
+  → Dashboard abre limpo, sem dados antigos
+```
 
