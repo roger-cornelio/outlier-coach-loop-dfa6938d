@@ -136,8 +136,8 @@ function ImportProvaInlineCTA() {
       if (error) throw error;
       const results = data?.results || [];
       if (results.length === 0) {
-        setErrorMsg('Nenhuma prova encontrada no HYROX para seu nome.');
-        setState('error');
+        setErrorMsg('Faça uma prova HYROX para desbloquear seu diagnóstico OUTLIER.');
+        setState('no-race');
         return;
       }
 
