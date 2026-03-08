@@ -1,32 +1,26 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Problema
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+O INSERT na tabela `discovered_events` retorna **403** (RLS violation). Todas as 4 policies da tabela são `RESTRICTIVE`:
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+1. `Admins can manage all events` (ALL, RESTRICTIVE) — exige role admin/superadmin
+2. `Authenticated can read validated events` (SELECT, RESTRICTIVE) — só eventos VALIDADA
+3. `Block anon discovered_events` (ALL, RESTRICTIVE) — bloqueia anon
+4. `Users can insert events` (INSERT, RESTRICTIVE) — `auth.uid() IS NOT NULL`
 
-### Alterações
+O PostgreSQL exige que **pelo menos uma PERMISSIVE** passe **E todas as RESTRICTIVE** passem. Como não há nenhuma PERMISSIVE, o acesso é sempre negado. Além disso, a policy admin (ALL, RESTRICTIVE) bloqueia qualquer INSERT de não-admin.
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+## Correção
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+Migração SQL para corrigir as policies:
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+1. **DROP** as policies problemáticas
+2. **Recriar** com a semântica correta:
+   - `Admins can manage all events` → **PERMISSIVE** ALL para admin/superadmin
+   - `Authenticated can read validated events` → **PERMISSIVE** SELECT (status = VALIDADA)
+   - `Users can insert events` → **PERMISSIVE** INSERT (`auth.uid() IS NOT NULL`)
+   - `Block anon` permanece RESTRICTIVE
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+Isso permite que usuários autenticados façam INSERT (policy permissiva de insert passa) e SELECT de eventos validados, enquanto admins podem fazer tudo.
 
