@@ -382,6 +382,30 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {/* Data sections */}
       {!loading && !loadingDetail && selectedResumo && !selectedIsInvalid && (
         <>
+          {/* Partial diagnostic banner */}
+          {diagnosticos.length === 0 && splits.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Diagnóstico detalhado pendente</p>
+                <p className="text-xs text-muted-foreground">A análise detalhada não estava disponível no momento da importação.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-primary border-primary/30 hover:bg-primary/10 flex-shrink-0"
+                onClick={handleRetryDiagnostic}
+                disabled={retrying}
+              >
+                {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {retrying ? 'Tentando...' : 'Tentar novamente'}
+              </Button>
+            </motion.div>
+          )}
+
           <PerformanceHighlights resumo={selectedResumo} />
           
           {/* Split times table - always visible */}
