@@ -47,6 +47,22 @@ Deno.serve(async (req) => {
 
     console.log(`[proxy-roxcoach] User ${user.id} | athlete=${athlete_name} event=${event_name} division=${division} season=${season_id}`);
 
+    // Extract idp and event from result_url
+    let idp = '';
+    let eventCode = '';
+    if (result_url) {
+      try {
+        const urlObj = new URL(result_url);
+        idp = urlObj.searchParams.get('idp') || '';
+        eventCode = urlObj.searchParams.get('event') || '';
+      } catch {
+        const idpMatch = result_url.match(/idp=([^&]+)/);
+        const eventMatch = result_url.match(/event=([^&]+)/);
+        idp = idpMatch ? idpMatch[1] : '';
+        eventCode = eventMatch ? eventMatch[1] : '';
+      }
+    }
+
     // Build query parameters for the external API
     const params = new URLSearchParams();
     if (athlete_name) params.set('athlete_name', athlete_name);
@@ -54,6 +70,8 @@ Deno.serve(async (req) => {
     if (division) params.set('division', division);
     if (season_id) params.set('season_id', String(season_id));
     if (result_url) params.set('result_url', result_url);
+    if (idp) params.set('idp', idp);
+    if (eventCode) params.set('event', eventCode);
 
     const apiUrl = `https://api-outlier.onrender.com/diagnostico?${params.toString()}`;
 
