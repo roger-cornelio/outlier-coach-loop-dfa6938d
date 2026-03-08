@@ -28,7 +28,7 @@ serve(async (req) => {
 
     if (!lastName || typeof lastName !== "string") {
       return new Response(
-        JSON.stringify({ error: "lastName is required", results: [] }),
+        JSON.stringify({ error: "Sobrenome é obrigatório", results: [] }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
