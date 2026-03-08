@@ -1,32 +1,31 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Problema
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+Quando a prova é importada pelo CTA do dashboard (`DiagnosticRadarBlock`), o diagnóstico é salvo corretamente no banco (`diagnostico_resumo`, `diagnostico_melhoria`, `tempos_splits`). Porém, a aba Diagnóstico (`RoxCoachDashboard`) **não recarrega automaticamente** porque:
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+1. O CTA chama `triggerExternalResultsRefresh()` → incrementa `externalResultsRefreshKey` no Zustand store
+2. A `BenchmarksScreen` tem um `refreshKey` **local** (`useState(0)`) que é passado como prop para `RoxCoachDashboard`
+3. A `BenchmarksScreen` **não escuta** o `externalResultsRefreshKey` do store — só incrementa `refreshKey` quando o usuário adiciona resultado **dentro da própria aba**
+4. Resultado: o `RoxCoachDashboard` nunca re-fetcha os dados após importação externa
 
-### Alterações
+## Solução
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+Fazer a `BenchmarksScreen` escutar o `externalResultsRefreshKey` do Zustand store e sincronizar com seu `refreshKey` local.
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+### Alteração única em `src/components/BenchmarksScreen.tsx`
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+1. Importar `externalResultsRefreshKey` do store
+2. Adicionar um `useEffect` que incrementa `refreshKey` sempre que `externalResultsRefreshKey` muda
+3. Isso faz o `RoxCoachDashboard` re-buscar os dados do banco automaticamente
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+```text
+BenchmarksScreen
+  ├─ subscribes to store.externalResultsRefreshKey
+  ├─ useEffect → setRefreshKey(prev => prev + 1)
+  └─ <RoxCoachDashboard refreshKey={refreshKey} />
+       └─ useEffect re-fetches diagnostico_resumo ✅
+```
+
+Essa é uma mudança de ~5 linhas, sem risco de side-effects.
 
