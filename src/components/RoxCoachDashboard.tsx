@@ -13,6 +13,7 @@ import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
+import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { motion } from 'framer-motion';
 
@@ -331,6 +332,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)}
             showFullAnalysis={showFullAnalysis}
           />
+
+          <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
 
           {showFullAnalysis && (
             <>

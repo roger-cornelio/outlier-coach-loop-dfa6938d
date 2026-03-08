@@ -1,52 +1,32 @@
 
 
-## Plano: Card de Projeção de Evolução com Training Age
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-### O que será feito
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-Criar uma função utilitária `calculateEvolutionTimeframe` e um novo componente visual `EvolutionProjectionCard` que calcula quantos meses o atleta precisa para eliminar o gap total de melhoria, baseado no nível atual (Training Age).
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-### 1. Nova função utilitária
+### Alterações
 
-**Arquivo:** `src/utils/evolutionTimeframe.ts`
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-```typescript
-calculateEvolutionTimeframe(currentFinishTimeSeconds, gapSecondsToImprove)
-```
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-Tiers:
-- **> 5400s (Novato):** 90 seg/mês
-- **4500–5400s (Intermediário):** 40 seg/mês
-- **3900–4500s (Avançado):** 15 seg/mês
-- **< 3900s (Elite):** 4 seg/mês
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-Retorna: `{ months, tierLabel, ratePerMonth, gapFormatted }`
-
-### 2. Novo componente visual
-
-**Arquivo:** `src/components/diagnostico/EvolutionProjectionCard.tsx`
-
-- Recebe `finishTime` (string HH:MM:SS) e `diagnosticos` (array de melhorias)
-- Converte finish_time para segundos, soma `improvement_value` total como gap
-- Chama `calculateEvolutionTimeframe`
-- Exibe um card com:
-  - Ícone 🎯 + título "Projeção de Evolução"
-  - Barra de progresso visual (Progress component)
-  - Texto gamificado: "A ciência do esporte projeta que a eliminação deste gap de X minutos exigirá um ciclo de treinamento contínuo de aproximadamente N meses"
-  - Badge com tier do atleta (Novato/Intermediário/Avançado/Elite)
-  - Taxa de ganho mensal exibida
-
-### 3. Integração no Dashboard
-
-**Arquivo:** `src/components/RoxCoachDashboard.tsx`
-
-- Renderizar `EvolutionProjectionCard` logo após o `ParecerPremium`, antes do toggle de análise completa
-- Props: `finishTime={selectedResumo.finish_time}` e `diagnosticos={diagnosticos}`
-
-### Detalhes técnicos
-
-- O gap total vem do `totalDiff` (soma de `improvement_value` de todos os diagnosticos)
-- O finish_time é convertido de "HH:MM:SS" para segundos usando `timeToSeconds` já existente
-- A barra de progresso mostra visualmente quanto do gap já seria eliminado em X meses
-- Se não houver gap (totalDiff = 0) ou não houver finish_time, o card não renderiza
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
