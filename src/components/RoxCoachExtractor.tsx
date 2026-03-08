@@ -106,7 +106,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       // Filter out already-imported races
       if (user) {
-        const urls = displayed.map(r => buildRoxCoachUrl(r));
+        const urls = displayed.map(r => r.result_url);
         const { data: existing } = await supabase
           .from('diagnostico_resumo')
           .select('source_url')
@@ -114,7 +114,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
           .in('source_url', urls);
         
         const importedUrls = new Set((existing || []).map(e => e.source_url));
-        const filtered = displayed.filter(r => !importedUrls.has(buildRoxCoachUrl(r)));
+        const filtered = displayed.filter(r => !importedUrls.has(r.result_url));
         setSearchResults(filtered);
       } else {
         setSearchResults(displayed);
