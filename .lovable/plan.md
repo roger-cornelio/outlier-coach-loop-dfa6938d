@@ -1,32 +1,53 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Plano: Validação rigorosa + nova chamada ao backend
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### 1. Validação no `diagnosticParser.ts`
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+Adicionar uma função `validateDiagnosticData` chamada dentro de `parseDiagnosticResponse` (após o parsing, antes do return). Regras de rejeição que lançam `new Error('Invalid diagnostic data format')`:
 
-### Alterações
+- **Emoji check**: `movement` contém 🥇, 🥈, 🥉
+- **Ranking check**: `movement` é puramente classificatório (regex `/^\d+(st|nd|rd|th)$/i`)
+- **Zero scores check**: se >80% dos `diagRows` têm `your_score === 0` E `top_1 === 0`
+- Se qualquer regra disparar, `throw new Error('Invalid diagnostic data format')`
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+### 2. Frontend catch em `RoxCoachExtractor.tsx`
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+No `generateDiagnostic`, capturar o erro `'Invalid diagnostic data format'` e exibir toast: `'Diagnóstico detalhado indisponível para esta prova.'` sem salvar nada.
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+### 3. Nova chamada na Edge Function `proxy-roxcoach`
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+Mudar o contrato: em vez de receber `{ url }`, receber `{ athlete_name, event_name, division, season_id, result_url }`. A edge function constrói a chamada à API externa com query parameters:
+
+```
+GET https://api-outlier.onrender.com/diagnostico?athlete_name=...&event_name=...&division=...&season_id=...&result_url=...
+```
+
+Isso delega a inteligência de resolução de URL para o backend Python.
+
+### 4. Frontend `RoxCoachExtractor.tsx` — remover `buildRoxCoachUrl`
+
+- Remover a função `buildRoxCoachUrl` e `toSlug`
+- Em `generateDiagnostic`, enviar o objeto `SearchResult` inteiro para o proxy:
+  ```ts
+  await supabase.functions.invoke('proxy-roxcoach', {
+    body: {
+      athlete_name: result.athlete_name,
+      event_name: result.event_name,
+      division: result.division,
+      season_id: result.season_id,
+      result_url: result.result_url,
+    },
+  });
+  ```
+- O `source_url` salvo no banco passa a ser `result.result_url` (URL original do HYROX)
+- Atualizar a deduplicação para usar `result.result_url` em vez da URL RoxCoach construída
+
+### Arquivos alterados
+
+| Arquivo | Alteração |
+|---|---|
+| `src/utils/diagnosticParser.ts` | Adicionar `validateDiagnosticData` com regras de rejeição |
+| `src/components/RoxCoachExtractor.tsx` | Remover `buildRoxCoachUrl`/`toSlug`, enviar dados de contexto ao proxy, tratar erro de validação |
+| `supabase/functions/proxy-roxcoach/index.ts` | Aceitar campos de contexto e montar query params para a API externa |
 
