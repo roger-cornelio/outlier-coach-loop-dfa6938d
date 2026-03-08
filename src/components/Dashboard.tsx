@@ -5,6 +5,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,7 +70,7 @@ export function Dashboard() {
   
   const { user, profile, isAdmin, isCoach, canManageWorkouts, loading: authLoading, signOut } = useAuth();
   const { state } = useAppState();
-  const { status, getEffectiveLevelForWorkout, rulerScore, confidence } = useAthleteStatus();
+  const { status, getEffectiveLevelForWorkout, rulerScore, confidence, validatingCompetition } = useAthleteStatus();
   const { ensureAdapted, forceRegenerate, hasBaseWorkouts, hasAthleteConfig } = useAdaptationPipeline();
   const { fetchAvailableWorkouts } = useCoachWorkouts();
   const { 
@@ -203,14 +204,28 @@ export function Dashboard() {
   }, [provaAlvo]);
 
   const provaAlvoTargetTime = useMemo(() => {
-    if (!targetTimes) return null;
-    const totalSec = targetTimes.targetSeconds;
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
+    // Use proportional target based on Training Age + days until race
+    const currentTimeSec = validatingCompetition?.open_equivalent_seconds;
+    const daysUntil = provaAlvoInfo?.daysUntil;
+    
+    if (!currentTimeSec || !daysUntil || daysUntil <= 0) {
+      // Fallback to fixed target if no race data
+      if (!targetTimes) return null;
+      const totalSec = targetTimes.targetSeconds;
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
+      return `${m}m${String(s).padStart(2, '0')}s`;
+    }
+
+    const { targetSeconds } = calculateProvaAlvoTarget(currentTimeSec, daysUntil);
+    const h = Math.floor(targetSeconds / 3600);
+    const m = Math.floor((targetSeconds % 3600) / 60);
+    const s = Math.round(targetSeconds % 60);
     if (h > 0) return `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
     return `${m}m${String(s).padStart(2, '0')}s`;
-  }, [targetTimes]);
+  }, [validatingCompetition, provaAlvoInfo, targetTimes]);
 
 
   // ============================================
