@@ -744,7 +744,7 @@ function ProjectedTimeBlock({
 
         {/* Target time */}
         <div className="flex flex-col items-center">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Meta {targetLabel}</span>
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Requisito {targetLabel}</span>
           {reached ? (
             <span className="font-display text-xl font-bold text-emerald-400">
               {formatOfficialTime(targetTimeSec)} ✔
