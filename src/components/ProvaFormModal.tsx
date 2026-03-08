@@ -99,13 +99,45 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     return getCitiesByState(estado);
   }, [estado]);
 
-  // Build full race name: "HYROX SÃO PAULO 2026"
+  // Build full race name: "HYROX SÃO PAULO 2026" (Anti-burro: remove redundâncias)
   const nomeCompleto = useMemo(() => {
-    const parts = [nomeBase.trim().toUpperCase()];
-    if (cidade) parts.push(cidade.toUpperCase());
-    if (data) parts.push(data.getFullYear().toString());
-    return parts.join(' ');
-  }, [nomeBase, cidade, data]);
+    let base = nomeBase.trim().toUpperCase();
+    const cityUpper = cidade ? cidade.toUpperCase() : '';
+    const yearStr = data ? data.getFullYear().toString() : '';
+
+    // Normaliza para comparação sem acentos
+    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    
+    let baseNorm = normalize(base);
+    const cityNorm = normalize(cityUpper);
+    const stateNorm = normalize(estado);
+
+    // Remove cidade da base se o usuário digitou (ex: "HYROX SAO PAULO" → "HYROX")
+    if (cityNorm && baseNorm.includes(cityNorm)) {
+      base = base.replace(new RegExp(cityNorm, 'gi'), '').trim();
+      baseNorm = normalize(base);
+    }
+    
+    // Remove estado (UF) da base se digitado (ex: "HYROX SP" → "HYROX")
+    if (stateNorm && new RegExp(`\\b${stateNorm}\\b`, 'i').test(baseNorm)) {
+      base = base.replace(new RegExp(`\\b${stateNorm}\\b`, 'gi'), '').trim();
+      baseNorm = normalize(base);
+    }
+
+    // Remove ano da base se digitado (ex: "HYROX 2026" → "HYROX")
+    if (yearStr && baseNorm.includes(yearStr)) {
+      base = base.replace(new RegExp(yearStr, 'g'), '').trim();
+    }
+
+    // Limpa espaços extras, hífens ou vírgulas perdidas
+    base = base.replace(/^[\s,\-]+|[\s,-]+$/g, '').replace(/[\s-]+/g, ' ').trim();
+
+    const parts = [base];
+    if (cityUpper) parts.push(cityUpper);
+    if (yearStr) parts.push(yearStr);
+
+    return parts.filter(Boolean).join(' ');
+  }, [nomeBase, cidade, estado, data]);
 
   const resetAll = () => {
     setEntryMode('choose');
