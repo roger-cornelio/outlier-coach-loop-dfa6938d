@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -21,13 +21,21 @@ export function BenchmarksScreen() {
   const {
     setCurrentView,
     athleteConfig,
-    triggerExternalResultsRefresh
+    triggerExternalResultsRefresh,
+    externalResultsRefreshKey
   } = useOutlierStore();
   const { status } = useAthleteStatus();
   const { clearHistory } = useBenchmarkResults();
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
+
+  // Sync local refreshKey with global store (e.g. after import from dashboard CTA)
+  useEffect(() => {
+    if (externalResultsRefreshKey > 0) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [externalResultsRefreshKey]);
 
   const handleResultAdded = () => {
     triggerExternalResultsRefresh();
