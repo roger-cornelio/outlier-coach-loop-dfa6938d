@@ -42,7 +42,7 @@ serve(async (req) => {
 
     if (!imageUrl) {
       return new Response(
-        JSON.stringify({ error: "Image URL is required" }),
+        JSON.stringify({ error: "URL da imagem é obrigatória" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
