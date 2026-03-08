@@ -21,7 +21,8 @@ export function BenchmarksScreen() {
   const {
     setCurrentView,
     athleteConfig,
-    triggerExternalResultsRefresh
+    triggerExternalResultsRefresh,
+    externalResultsRefreshKey
   } = useOutlierStore();
   const { status } = useAthleteStatus();
   const { clearHistory } = useBenchmarkResults();
