@@ -162,7 +162,7 @@ Return ONLY valid JSON.`
     }
 
     return new Response(
-      JSON.stringify({ error: "Could not extract data from HYROX page", confidence: "low" }),
+      JSON.stringify({ error: "Não foi possível extrair os dados da página HYROX", confidence: "low" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
