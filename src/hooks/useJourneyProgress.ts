@@ -388,7 +388,7 @@ export function useJourneyProgress(): JourneyPosition {
       missingRequirements,
       nextRequirements: { treinosRestantes, benchmarksRestantes, provaNecessaria },
     };
-  }, [loading, levelRules, athleteStatus, benchmarkResults, workoutResults]);
+  }, [loading, levelRules, athleteStatus, outlierBenchmarksCompleted, workoutResults]);
   
   return journeyPosition;
 }
