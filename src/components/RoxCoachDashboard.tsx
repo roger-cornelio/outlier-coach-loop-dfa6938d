@@ -115,7 +115,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchDetail();
   }, [user, selectedResumoId]);
 
+  // Filter out invalid N/A-only records from display
+  const validResumos = allResumos.filter(r => {
+    const fields = [r.evento, r.nome_atleta, r.finish_time];
+    return fields.some(v => v && v !== 'N/A' && v.trim() !== '');
+  });
+  
   const selectedResumo = allResumos.find(r => r.id === selectedResumoId) || null;
+  const selectedIsInvalid = selectedResumo && !validResumos.find(r => r.id === selectedResumo.id);
 
   async function handleDeleteDiagnostic() {
     if (!user || !selectedResumoId) return;
