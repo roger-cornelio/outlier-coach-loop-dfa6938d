@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
