@@ -34,7 +34,7 @@ serve(async (req) => {
     if (!pageResponse.ok) {
       console.error("[scrape-hyrox-result] Page fetch failed:", pageResponse.status);
       return new Response(
-        JSON.stringify({ error: `Failed to fetch HYROX page: ${pageResponse.status}` }),
+        JSON.stringify({ error: `Não foi possível acessar a página HYROX (erro ${pageResponse.status})` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
