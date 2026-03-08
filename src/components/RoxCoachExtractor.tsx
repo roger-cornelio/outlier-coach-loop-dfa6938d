@@ -172,57 +172,13 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
-  /** Action B: Generate diagnostic via context-based proxy call */
-  async function generateDiagnostic(result: SearchResult): Promise<string[] | null> {
+  /** Action B: Generate diagnostic via context-based proxy call.
+   *  Returns { results, partial } where partial=true means only resumo was saved (no detailed diagnostic). */
+  async function generateDiagnostic(result: SearchResult): Promise<{ results: string[]; partial: boolean } | null> {
     if (!user) return null;
 
     const sourceUrl = result.result_url;
     console.log('[RoxCoachExtractor] Sending context to proxy-roxcoach for:', result.athlete_name, result.event_name);
-
-    let proxyData: any = null;
-    try {
-      const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-        body: {
-          athlete_name: result.athlete_name,
-          event_name: result.event_name,
-          division: result.division,
-          season_id: result.season_id,
-          result_url: result.result_url,
-        },
-      });
-      if (!proxyResult.error) {
-        proxyData = proxyResult.data;
-      } else {
-        console.warn('proxy-roxcoach returned error:', proxyResult.error.message);
-      }
-    } catch (networkErr) {
-      console.warn('proxy-roxcoach network error:', networkErr);
-    }
-
-    if (!proxyData) {
-      return null;
-    }
-
-    // Check for upstream error flag
-    if (proxyData.ok === false) {
-      console.warn('proxy-roxcoach upstream error:', proxyData.upstream_error_detail);
-      return null;
-    }
-
-    console.log('Raw API Response keys:', Object.keys(proxyData));
-
-    // Parse and validate diagnostic data (throws if leaderboard data detected)
-    const parsed = parseDiagnosticResponse(proxyData, user.id, sourceUrl);
-    if (!hasDiagnosticData(parsed)) {
-      throw new Error('Não foi possível extrair dados válidos dessa prova.');
-    }
-
-    // Override metadata with SearchResult (source of truth)
-    parsed.resumoRow.evento = result.event_name;
-    parsed.resumoRow.temporada = String(result.season_id);
-    parsed.resumoRow.divisao = result.division;
-    parsed.resumoRow.finish_time = result.time_formatted;
-    parsed.resumoRow.nome_atleta = result.athlete_name;
 
     // CRITICAL: Block saving if SearchResult has no real data (all N/A or empty)
     const hasRealMetadata = [
@@ -244,8 +200,84 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     if (existingDiag) {
       toast.info('Diagnóstico desta prova já foi importado.');
-      return ['já importado'];
+      return { results: ['já importado'], partial: false };
     }
+
+    let proxyData: any = null;
+    let upstreamError = false;
+    try {
+      const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+        body: {
+          athlete_name: result.athlete_name,
+          event_name: result.event_name,
+          division: result.division,
+          season_id: result.season_id,
+          result_url: result.result_url,
+        },
+      });
+      if (!proxyResult.error) {
+        proxyData = proxyResult.data;
+      } else {
+        console.warn('proxy-roxcoach returned error:', proxyResult.error.message);
+        upstreamError = true;
+      }
+    } catch (networkErr) {
+      console.warn('proxy-roxcoach network error:', networkErr);
+      upstreamError = true;
+    }
+
+    // Check for upstream error flag
+    if (proxyData?.ok === false) {
+      console.warn('proxy-roxcoach upstream error:', proxyData.upstream_error_detail);
+      upstreamError = true;
+      proxyData = null;
+    }
+
+    // Try to parse full diagnostic data
+    let parsed: ReturnType<typeof parseDiagnosticResponse> | null = null;
+    if (proxyData) {
+      try {
+        console.log('Raw API Response keys:', Object.keys(proxyData));
+        parsed = parseDiagnosticResponse(proxyData, user.id, sourceUrl);
+        if (!hasDiagnosticData(parsed)) {
+          parsed = null;
+        }
+      } catch (parseErr) {
+        console.warn('Diagnostic parse failed:', parseErr);
+        parsed = null;
+      }
+    }
+
+    // === FALLBACK: save minimal resumo when proxy/parse fails ===
+    if (!parsed) {
+      const minimalResumo = {
+        atleta_id: user.id,
+        source_url: sourceUrl,
+        evento: result.event_name,
+        temporada: String(result.season_id),
+        divisao: result.division,
+        finish_time: result.time_formatted,
+        nome_atleta: result.athlete_name,
+      };
+
+      const { error: resumoError } = await supabase
+        .from('diagnostico_resumo')
+        .insert(minimalResumo);
+
+      if (resumoError) {
+        throw new Error(`Erro ao salvar prova: ${resumoError.message}`);
+      }
+
+      return { results: ['prova salva (diagnóstico pendente)'], partial: true };
+    }
+
+    // === FULL PATH: proxy succeeded, save complete diagnostic ===
+    // Override metadata with SearchResult (source of truth)
+    parsed.resumoRow.evento = result.event_name;
+    parsed.resumoRow.temporada = String(result.season_id);
+    parsed.resumoRow.divisao = result.division;
+    parsed.resumoRow.finish_time = result.time_formatted;
+    parsed.resumoRow.nome_atleta = result.athlete_name;
 
     // Insert resumo first to get its ID for linking
     const { data: insertedResumo, error: resumoError } = await supabase
@@ -274,7 +306,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       results.push(`${parsed.splitRows.length} splits`);
     }
 
-    return results;
+    return { results, partial: false };
   }
 
   /** REGRA 2: Split click into two parallel actions */
