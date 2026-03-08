@@ -407,8 +407,34 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         </>
       )}
 
+      {/* Invalid data state - records exist but all N/A */}
+      {!loading && hasOnlyInvalidData && (
+        <div className="space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Zap className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Diagnóstico incompleto</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Os diagnósticos existentes não contêm dados válidos. Faça uma <strong className="text-primary">prova oficial HYROX</strong> e importe novamente para desbloquear seu diagnóstico completo.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-2 mt-2"
+              onClick={handleDeleteAllDiagnostics}
+              disabled={deleting}
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleting ? 'Limpando...' : 'Limpar registros inválidos'}
+            </Button>
+          </div>
+          <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
+        </div>
+      )}
+
       {/* Empty state */}
-      {!loading && !hasData && (
+      {!loading && !hasData && !hasOnlyInvalidData && (
         <RoxCoachExtractor mode="diagnostic_only" onSuccess={() => setLocalRefresh(v => v + 1)} />
       )}
     </div>
