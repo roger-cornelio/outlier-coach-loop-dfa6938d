@@ -85,7 +85,7 @@ export function HyroxResultCard({ result, gender, timeDeltaSeconds, onDelete, is
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Mais recente</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Prova que valida seu nível</span>
         </div>
       )}
 
