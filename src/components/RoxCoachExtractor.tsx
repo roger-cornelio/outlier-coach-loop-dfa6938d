@@ -329,7 +329,12 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       const diagnosticResult = mode === 'full' ? settled[1] : settled[0];
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
-        toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
+        const { results: diagResults, partial } = diagnosticResult.value;
+        if (partial) {
+          toast.success('Prova salva! Diagnóstico detalhado indisponível — tente novamente mais tarde.', { duration: 5000 });
+        } else {
+          toast.success(`Diagnóstico gerado: ${diagResults.join(' + ')} 🔥`);
+        }
         setSearchResults(prev => prev.filter(r => r.result_url !== result.result_url));
         onSuccess();
       } else if (diagnosticResult.status === 'rejected') {
@@ -341,8 +346,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
           toast.error(errMsg || 'Erro ao gerar diagnóstico.');
         }
       } else {
-        // diagnosticResult.value is null — proxy failed
-        toast.error('A API de diagnóstico está indisponível para esta prova. Tente novamente mais tarde.');
+        toast.error('Não foi possível importar esta prova.');
       }
     } catch (err: any) {
       console.error('Unexpected error:', err);
