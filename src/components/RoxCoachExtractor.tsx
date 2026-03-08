@@ -228,7 +228,16 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     // Check for upstream error flag
     if (proxyData?.ok === false) {
-      console.warn('proxy-roxcoach upstream error:', proxyData.upstream_error_detail);
+      const detail = proxyData.upstream_error_detail || '';
+      console.warn('proxy-roxcoach upstream error:', detail);
+
+      // Show user-friendly reason without breaking the import
+      const isNotFound = /não encontrad/i.test(detail);
+      const friendlyMsg = isNotFound
+        ? 'Atleta não encontrado no ranking externo. Prova será salva sem diagnóstico detalhado.'
+        : `Diagnóstico indisponível: ${detail.slice(0, 120) || 'erro na API externa'}. Prova será salva sem diagnóstico detalhado.`;
+      toast.warning(friendlyMsg, { duration: 8000 });
+
       upstreamError = true;
       proxyData = null;
     }
