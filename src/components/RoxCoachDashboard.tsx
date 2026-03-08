@@ -228,6 +228,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     }
   }
 
+  const hasData = validResumos.length > 0;
   const hasOnlyInvalidData = allResumos.length > 0 && validResumos.length === 0;
 
   /** Extract location from event name like "2025 Sao Paulo • HYROX PRO" */
