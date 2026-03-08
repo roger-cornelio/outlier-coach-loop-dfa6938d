@@ -34,42 +34,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { url } = await req.json();
-    if (!url) {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
+    const body = await req.json();
+    const { athlete_name, event_name, division, season_id, result_url } = body;
+
+    // Validate required fields
+    if (!athlete_name && !result_url) {
+      return new Response(JSON.stringify({ error: 'athlete_name or result_url is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`[proxy-roxcoach] Calling external API for user ${user.id}`);
+    console.log(`[proxy-roxcoach] User ${user.id} | athlete=${athlete_name} event=${event_name} division=${division} season=${season_id}`);
 
-    // Call the external diagnostic API with retry for cold-start timeouts
-    const apiUrl = `https://api-outlier.onrender.com/diagnostico?url=${encodeURIComponent(url)}`;
-    
+    // Build query parameters for the external API
+    const params = new URLSearchParams();
+    if (athlete_name) params.set('athlete_name', athlete_name);
+    if (event_name) params.set('event_name', event_name);
+    if (division) params.set('division', division);
+    if (season_id) params.set('season_id', String(season_id));
+    if (result_url) params.set('result_url', result_url);
+
+    const apiUrl = `https://api-outlier.onrender.com/diagnostico?${params.toString()}`;
+
     let apiRes: Response | null = null;
     const maxAttempts = 2;
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout
-        
-        console.log(`[proxy-roxcoach] Attempt ${attempt}/${maxAttempts}`);
+        const timeoutId = setTimeout(() => controller.abort(), 55000);
+
+        console.log(`[proxy-roxcoach] Attempt ${attempt}/${maxAttempts} → ${apiUrl}`);
         apiRes = await fetch(apiUrl, {
           method: 'GET',
           headers: { 'Accept': 'application/json' },
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
-        
+
         if (apiRes.ok) break;
-        
-        // If 500 on first attempt, retry once (likely cold start)
+
         if (apiRes.status >= 500 && attempt < maxAttempts) {
           const errorText = await apiRes.text();
           console.warn(`[proxy-roxcoach] Attempt ${attempt} got ${apiRes.status}, retrying... ${errorText}`);
-          await new Promise(r => setTimeout(r, 3000)); // wait 3s before retry
+          await new Promise(r => setTimeout(r, 3000));
           continue;
         }
       } catch (fetchErr) {
@@ -95,7 +104,6 @@ Deno.serve(async (req) => {
     const apiData = await apiRes.json();
     console.log(`[proxy-roxcoach] External API response keys: ${Object.keys(apiData).join(', ')}`);
 
-    // Forward the full response from the external API
     return new Response(JSON.stringify(apiData), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

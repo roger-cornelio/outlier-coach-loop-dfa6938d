@@ -298,12 +298,16 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
-        // Remove imported result from list
         setSearchResults(prev => prev.filter(r => r.result_url !== result.result_url));
         onSuccess();
       } else if (diagnosticResult.status === 'rejected') {
+        const errMsg = diagnosticResult.reason?.message || '';
         console.error('Diagnostic generation error:', diagnosticResult.reason);
-        toast.error(diagnosticResult.reason?.message || 'Erro ao gerar diagnóstico.');
+        if (errMsg === 'Invalid diagnostic data format') {
+          toast.error('Diagnóstico detalhado indisponível para esta prova.');
+        } else {
+          toast.error(errMsg || 'Erro ao gerar diagnóstico.');
+        }
       } else {
         // diagnosticResult.value is null — proxy failed
         toast.error('A API de diagnóstico está indisponível para esta prova. Tente novamente mais tarde.');
