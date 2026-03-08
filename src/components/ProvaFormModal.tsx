@@ -310,10 +310,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
 
             {/* Nome da prova */}
             <div className="space-y-2">
-              <Label htmlFor="nomeBase">Nome da prova *</Label>
+              <Label htmlFor="nomeBase">Qual evento? *</Label>
               <Input
                 id="nomeBase"
-                placeholder="Ex: HYROX"
+                placeholder="Ex: HYROX, BTD, WOD League"
                 value={nomeBase}
                 onChange={e => setNomeBase(e.target.value.toUpperCase())}
                 className="uppercase"
