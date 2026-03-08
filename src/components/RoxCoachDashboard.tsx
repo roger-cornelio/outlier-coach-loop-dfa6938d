@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Trash2, Loader2, MapPin, Calendar } from 'lucide-react';
+import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -15,6 +15,7 @@ import ImprovementTable from './diagnostico/ImprovementTable';
 import ParecerPremium from './diagnostico/ParecerPremium';
 import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
+import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
 
 interface RoxCoachDashboardProps {
@@ -33,6 +34,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [deleting, setDeleting] = useState(false);
   const [localRefresh, setLocalRefresh] = useState(0);
   const [showImporter, setShowImporter] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // Fetch all resumos
   useEffect(() => {
@@ -163,6 +165,66 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       toast.error('Erro ao apagar diagnósticos.');
     } finally {
       setDeleting(false);
+    }
+  }
+
+  /** Retry fetching detailed diagnostic for a resumo that was saved as partial */
+  async function handleRetryDiagnostic() {
+    if (!user || !selectedResumo) return;
+    setRetrying(true);
+    try {
+      const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+        body: {
+          athlete_name: selectedResumo.nome_atleta || '',
+          event_name: selectedResumo.evento || '',
+          division: selectedResumo.divisao || '',
+          season_id: parseInt(selectedResumo.temporada || '0', 10),
+          result_url: selectedResumo.source_url || '',
+        },
+      });
+
+      if (proxyResult.error) throw new Error(proxyResult.error.message);
+      const proxyData = proxyResult.data;
+      if (proxyData?.ok === false) {
+        toast.error('Diagnóstico detalhado ainda indisponível. Tente novamente mais tarde.');
+        return;
+      }
+
+      const parsed = parseDiagnosticResponse(proxyData, user.id, selectedResumo.source_url || '');
+      if (!hasDiagnosticData(parsed)) {
+        toast.error('Diagnóstico detalhado ainda indisponível.');
+        return;
+      }
+
+      const resumoId = selectedResumo.id;
+
+      // Update resumo with full data
+      if (parsed.resumoRow.texto_ia || parsed.resumoRow.run_total || parsed.resumoRow.workout_total) {
+        await supabase.from('diagnostico_resumo').update({
+          texto_ia: parsed.resumoRow.texto_ia,
+          run_total: parsed.resumoRow.run_total,
+          workout_total: parsed.resumoRow.workout_total,
+          posicao_categoria: parsed.resumoRow.posicao_categoria,
+          posicao_geral: parsed.resumoRow.posicao_geral,
+        }).eq('id', resumoId);
+      }
+
+      if (parsed.diagRows.length > 0) {
+        const rows = parsed.diagRows.map(r => ({ ...r, resumo_id: resumoId }));
+        await supabase.from('diagnostico_melhoria').insert(rows);
+      }
+      if (parsed.splitRows.length > 0) {
+        const rows = parsed.splitRows.map(r => ({ ...r, resumo_id: resumoId }));
+        await supabase.from('tempos_splits').insert(rows);
+      }
+
+      toast.success('Diagnóstico detalhado carregado com sucesso! 🔥');
+      setLocalRefresh(v => v + 1);
+    } catch (err: any) {
+      console.error('Retry diagnostic error:', err);
+      toast.error('Erro ao tentar carregar diagnóstico. Tente novamente mais tarde.');
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -321,6 +383,30 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       {/* Data sections */}
       {!loading && !loadingDetail && selectedResumo && !selectedIsInvalid && (
         <>
+          {/* Partial diagnostic banner */}
+          {diagnosticos.length === 0 && splits.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Diagnóstico detalhado pendente</p>
+                <p className="text-xs text-muted-foreground">A análise detalhada não estava disponível no momento da importação.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-primary border-primary/30 hover:bg-primary/10 flex-shrink-0"
+                onClick={handleRetryDiagnostic}
+                disabled={retrying}
+              >
+                {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {retrying ? 'Tentando...' : 'Tentar novamente'}
+              </Button>
+            </motion.div>
+          )}
+
           <PerformanceHighlights resumo={selectedResumo} />
           
           {/* Split times table - always visible */}

@@ -1,57 +1,32 @@
 
 
-## Diagnóstico: Por que os diagnósticos não estão sendo importados
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-### Causa raiz
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-A API externa de diagnóstico (`api-outlier.onrender.com/diagnostico`) está retornando **erro 500** para **todas** as variantes de nome do atleta:
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-```text
-"Falha ao extrair: Atleta 'Caio Assayag' não encontrado no ranking."
-"Falha ao extrair: Atleta 'Assayag, Caio' não encontrado no ranking."
-"Falha ao extrair: Atleta 'CAIO ASSAYAG' não encontrado no ranking."
-```
+### Alterações
 
-Testei 10+ combinações de nome, evento, divisão, URL e temporada. **Nenhuma funciona.** O problema é na API Python externa, não no app. A API pode ter atualizado o formato esperado ou estar com o ranking indisponível.
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-### O que podemos fazer no app
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-Como a API externa está instável, o plano é melhorar a resiliência e a experiência do usuário:
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-### 1. Mensagem de erro clara no `RoxCoachExtractor`
-
-Quando o proxy retorna `upstream_error_detail` com "não encontrado no ranking", exibir um toast explicativo em vez do genérico "API indisponível":
-
-> "O diagnóstico detalhado está temporariamente indisponível para esta prova. Os dados da prova foram salvos."
-
-### 2. Fallback: salvar prova sem diagnóstico (modo `diagnostic_only`)
-
-**Arquivo:** `src/components/RoxCoachExtractor.tsx`
-
-Atualmente, se `generateDiagnostic` retorna `null`, a importação é contada como falha. Mudar para:
-- Salvar um `diagnostico_resumo` mínimo (com nome, evento, finish_time, divisão) vindo do `SearchResult`
-- Marcar como "diagnóstico pendente" para retry futuro
-- Contar como sucesso parcial na UI
-
-### 3. Botão de Retry no card de diagnóstico
-
-**Arquivo:** `src/components/RoxCoachDashboard.tsx`
-
-Quando um `diagnostico_resumo` existe mas sem `diagnostico_melhoria` associado (0 rows):
-- Mostrar banner "Diagnóstico detalhado indisponível"
-- Botão "Tentar novamente" que re-chama `proxy-roxcoach` com os dados do resumo
-
-### 4. Melhorar mensagem no toast do `handleImportSelected`
-
-Diferenciar entre "falha total" e "importação parcial (sem diagnóstico detalhado)":
-- Sucesso total: "Diagnóstico completo importado"
-- Parcial: "Prova salva. Diagnóstico detalhado indisponível — tente novamente mais tarde."
-- Falha: "Não foi possível importar esta prova."
-
-### Resumo das alterações
-
-| Arquivo | Mudança |
-|---|---|
-| `RoxCoachExtractor.tsx` | Fallback: salvar resumo mínimo quando proxy falha; mensagens diferenciadas |
-| `RoxCoachDashboard.tsx` | Banner + botão retry para diagnósticos sem detalhes |
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
