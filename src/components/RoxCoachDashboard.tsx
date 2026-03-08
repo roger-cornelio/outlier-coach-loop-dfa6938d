@@ -188,7 +188,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   return (
     <div className="space-y-6">
       {/* Title */}
-      {selectedResumo?.nome_atleta && (
+      {selectedResumo?.nome_atleta && selectedResumo.nome_atleta !== 'N/A' && (
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" />
