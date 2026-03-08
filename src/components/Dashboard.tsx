@@ -5,6 +5,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
 import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
