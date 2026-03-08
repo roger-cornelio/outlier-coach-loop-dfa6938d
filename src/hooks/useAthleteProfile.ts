@@ -168,6 +168,41 @@ export function useAthleteProfile() {
     }
   }, [user?.id, isLoaded, loadProfileConfig]);
 
+  // Limpar todos os dados do atleta no banco (para troca de identidade)
+  const resetAthleteData = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      console.info('[useAthleteProfile] Resetting athlete data for userId:', userId);
+      
+      // Deletar em paralelo todas as tabelas de dados do atleta
+      const results = await Promise.allSettled([
+        supabase.from('benchmark_results').delete().eq('user_id', userId),
+        supabase.from('race_results').delete().eq('athlete_id', userId),
+        supabase.from('athlete_races').delete().eq('user_id', userId),
+        supabase.from('diagnostico_melhoria').delete().eq('atleta_id', userId),
+        supabase.from('diagnostico_resumo').delete().eq('atleta_id', userId),
+        supabase.from('tempos_splits').delete().eq('atleta_id', userId),
+        supabase.from('hyrox_metric_scores').delete().eq('hyrox_result_id', userId),
+        supabase.from('benchmark_outlier_results').delete().eq('athlete_id', userId),
+        supabase.from('benchmark_outlier_progress').delete().eq('athlete_id', userId),
+      ]);
+
+      // Limpar localStorage
+      localStorage.removeItem('outlier-benchmark-history');
+      localStorage.removeItem('athlete-status-history');
+
+      const errors = results.filter(r => r.status === 'rejected');
+      if (errors.length > 0) {
+        console.warn('[useAthleteProfile] Some deletions failed:', errors);
+      }
+
+      console.info('[useAthleteProfile] Athlete data reset complete');
+      return true;
+    } catch (err) {
+      console.error('[useAthleteProfile] Error resetting athlete data:', err);
+      return false;
+    }
+  }, []);
+
   return {
     isLoading,
     isSaving,
@@ -175,6 +210,7 @@ export function useAthleteProfile() {
     saveProfileConfig,
     updateName,
     loadProfileConfig,
+    resetAthleteData,
   };
 }
 
