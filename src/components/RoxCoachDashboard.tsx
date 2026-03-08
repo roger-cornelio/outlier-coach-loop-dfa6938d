@@ -168,7 +168,66 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     }
   }
 
-  const hasData = validResumos.length > 0;
+  /** Retry fetching detailed diagnostic for a resumo that was saved as partial */
+  async function handleRetryDiagnostic() {
+    if (!user || !selectedResumo) return;
+    setRetrying(true);
+    try {
+      const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+        body: {
+          athlete_name: selectedResumo.nome_atleta || '',
+          event_name: selectedResumo.evento || '',
+          division: selectedResumo.divisao || '',
+          season_id: parseInt(selectedResumo.temporada || '0', 10),
+          result_url: selectedResumo.source_url || '',
+        },
+      });
+
+      if (proxyResult.error) throw new Error(proxyResult.error.message);
+      const proxyData = proxyResult.data;
+      if (proxyData?.ok === false) {
+        toast.error('Diagnóstico detalhado ainda indisponível. Tente novamente mais tarde.');
+        return;
+      }
+
+      const parsed = parseDiagnosticResponse(proxyData, user.id, selectedResumo.source_url || '');
+      if (!hasDiagnosticData(parsed)) {
+        toast.error('Diagnóstico detalhado ainda indisponível.');
+        return;
+      }
+
+      const resumoId = selectedResumo.id;
+
+      // Update resumo with full data
+      if (parsed.resumoRow.texto_ia || parsed.resumoRow.run_total || parsed.resumoRow.workout_total) {
+        await supabase.from('diagnostico_resumo').update({
+          texto_ia: parsed.resumoRow.texto_ia,
+          run_total: parsed.resumoRow.run_total,
+          workout_total: parsed.resumoRow.workout_total,
+          posicao_categoria: parsed.resumoRow.posicao_categoria,
+          posicao_geral: parsed.resumoRow.posicao_geral,
+        }).eq('id', resumoId);
+      }
+
+      if (parsed.diagRows.length > 0) {
+        const rows = parsed.diagRows.map(r => ({ ...r, resumo_id: resumoId }));
+        await supabase.from('diagnostico_melhoria').insert(rows);
+      }
+      if (parsed.splitRows.length > 0) {
+        const rows = parsed.splitRows.map(r => ({ ...r, resumo_id: resumoId }));
+        await supabase.from('tempos_splits').insert(rows);
+      }
+
+      toast.success('Diagnóstico detalhado carregado com sucesso! 🔥');
+      setLocalRefresh(v => v + 1);
+    } catch (err: any) {
+      console.error('Retry diagnostic error:', err);
+      toast.error('Erro ao tentar carregar diagnóstico. Tente novamente mais tarde.');
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   const hasOnlyInvalidData = allResumos.length > 0 && validResumos.length === 0;
 
   /** Extract location from event name like "2025 Sao Paulo • HYROX PRO" */
