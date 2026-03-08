@@ -186,10 +186,18 @@ function ImportProvaInlineCTA() {
         return;
       }
 
-      // Action A: Scrape Hyrox data + Action B: Diagnostic via RoxCoach URL — in parallel
+      // Action A: Scrape Hyrox data + Action B: Diagnostic via proxy — in parallel
       const [scrapeResult, diagResult] = await Promise.all([
         supabase.functions.invoke('scrape-hyrox-result', { body: { url } }),
-        supabase.functions.invoke('proxy-roxcoach', { body: { url: roxCoachUrl } }).catch(() => ({ data: null, error: null })),
+        supabase.functions.invoke('proxy-roxcoach', {
+          body: {
+            athlete_name: raceResult.athlete_name,
+            event_name: raceResult.event_name,
+            division: raceResult.division,
+            season_id: raceResult.season_id,
+            result_url: url, // Original HYROX URL with idp/event params
+          },
+        }).catch(() => ({ data: null, error: null })),
       ]);
 
       const { data: scrapeData, error: scrapeError } = scrapeResult;
