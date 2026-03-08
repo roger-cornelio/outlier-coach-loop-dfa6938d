@@ -146,7 +146,40 @@ export function parseDiagnosticResponse(
     }
   }
 
+  // Validate before returning — reject leaderboard data
+  validateDiagnosticData(diagRows);
+
   return { resumoRow, splitRows, diagRows };
+}
+
+/**
+ * Validate that diagnostic rows contain real athlete data, not leaderboard scraping artifacts.
+ * Throws Error('Invalid diagnostic data format') if data looks like a leaderboard.
+ */
+function validateDiagnosticData(diagRows: ParsedDiagnostic['diagRows']): void {
+  if (diagRows.length === 0) return;
+
+  const emojiRegex = /[\u{1F947}-\u{1F949}\u{1F3C6}\u{1F3C5}]/u;
+  const rankingRegex = /^\d+(st|nd|rd|th)$/i;
+
+  for (const row of diagRows) {
+    const mov = (row.movement || '').trim();
+    if (emojiRegex.test(mov)) {
+      console.error(`[validateDiagnosticData] Emoji detected in movement: "${mov}"`);
+      throw new Error('Invalid diagnostic data format');
+    }
+    if (rankingRegex.test(mov)) {
+      console.error(`[validateDiagnosticData] Ranking detected in movement: "${mov}"`);
+      throw new Error('Invalid diagnostic data format');
+    }
+  }
+
+  // Check if >80% of rows have zeroed scores
+  const zeroCount = diagRows.filter(r => r.your_score === 0 && r.top_1 === 0).length;
+  if (zeroCount / diagRows.length > 0.8) {
+    console.error(`[validateDiagnosticData] ${zeroCount}/${diagRows.length} rows have zeroed scores`);
+    throw new Error('Invalid diagnostic data format');
+  }
 }
 
 /**

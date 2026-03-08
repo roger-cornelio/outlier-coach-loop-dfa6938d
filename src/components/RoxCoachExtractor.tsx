@@ -26,27 +26,6 @@ interface SearchResult {
   event_index?: number;
 }
 
-/** Convert a string to a URL-friendly slug */
-function toSlug(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove accents
-    .replace(/[^a-z0-9\s-]/g, '')    // remove special chars
-    .trim()
-    .replace(/\s+/g, '-')           // spaces to hyphens
-    .replace(/-+/g, '-');            // collapse multiple hyphens
-}
-
-/** Build the RoxCoach URL from SearchResult data */
-function buildRoxCoachUrl(result: SearchResult): string {
-  const seasonId = result.season_id;
-  // event_name comes as "2025 Rio de Janeiro • HYROX PRO" — extract before " • "
-  const eventPart = result.event_name.split(' • ')[0] || result.event_name;
-  const eventSlug = toSlug(eventPart);
-  const athleteSlug = toSlug(result.athlete_name);
-  return `https://www.rox-coach.com/seasons/${seasonId}/races/${eventSlug}/results/${athleteSlug}`;
-}
 
 /** Extract idp from a Hyrox result URL */
 function extractIdpFromUrl(url: string): { idp: string | null; event: string | null } {
@@ -127,7 +106,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       // Filter out already-imported races
       if (user) {
-        const urls = displayed.map(r => buildRoxCoachUrl(r));
+        const urls = displayed.map(r => r.result_url);
         const { data: existing } = await supabase
           .from('diagnostico_resumo')
           .select('source_url')
@@ -135,7 +114,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
           .in('source_url', urls);
         
         const importedUrls = new Set((existing || []).map(e => e.source_url));
-        const filtered = displayed.filter(r => !importedUrls.has(buildRoxCoachUrl(r)));
+        const filtered = displayed.filter(r => !importedUrls.has(r.result_url));
         setSearchResults(filtered);
       } else {
         setSearchResults(displayed);
@@ -193,17 +172,23 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
-  /** Action B: Generate diagnostic via RoxCoach URL */
+  /** Action B: Generate diagnostic via context-based proxy call */
   async function generateDiagnostic(result: SearchResult): Promise<string[] | null> {
     if (!user) return null;
 
-    const roxCoachUrl = buildRoxCoachUrl(result);
-    console.log('[RoxCoachExtractor] Built RoxCoach URL:', roxCoachUrl);
+    const sourceUrl = result.result_url;
+    console.log('[RoxCoachExtractor] Sending context to proxy-roxcoach for:', result.athlete_name, result.event_name);
 
     let proxyData: any = null;
     try {
       const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-        body: { url: roxCoachUrl },
+        body: {
+          athlete_name: result.athlete_name,
+          event_name: result.event_name,
+          division: result.division,
+          season_id: result.season_id,
+          result_url: result.result_url,
+        },
       });
       if (!proxyResult.error) {
         proxyData = proxyResult.data;
@@ -226,8 +211,8 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     console.log('Raw API Response keys:', Object.keys(proxyData));
 
-    // Parse and save diagnostic data
-    const parsed = parseDiagnosticResponse(proxyData, user.id, roxCoachUrl);
+    // Parse and validate diagnostic data (throws if leaderboard data detected)
+    const parsed = parseDiagnosticResponse(proxyData, user.id, sourceUrl);
     if (!hasDiagnosticData(parsed)) {
       throw new Error('Não foi possível extrair dados válidos dessa prova.');
     }
@@ -249,12 +234,12 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       throw new Error('Nenhum dado real encontrado para esta prova. Faça uma prova oficial HYROX para desbloquear o diagnóstico.');
     }
 
-    // Deduplication check
+    // Deduplication check using original HYROX URL
     const { data: existingDiag } = await supabase
       .from('diagnostico_resumo')
       .select('id')
       .eq('atleta_id', user.id)
-      .eq('source_url', roxCoachUrl)
+      .eq('source_url', sourceUrl)
       .maybeSingle();
 
     if (existingDiag) {
@@ -313,12 +298,16 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
       if (diagnosticResult.status === 'fulfilled' && diagnosticResult.value) {
         toast.success(`Diagnóstico gerado: ${diagnosticResult.value.join(' + ')} 🔥`);
-        // Remove imported result from list
         setSearchResults(prev => prev.filter(r => r.result_url !== result.result_url));
         onSuccess();
       } else if (diagnosticResult.status === 'rejected') {
+        const errMsg = diagnosticResult.reason?.message || '';
         console.error('Diagnostic generation error:', diagnosticResult.reason);
-        toast.error(diagnosticResult.reason?.message || 'Erro ao gerar diagnóstico.');
+        if (errMsg === 'Invalid diagnostic data format') {
+          toast.error('Diagnóstico detalhado indisponível para esta prova.');
+        } else {
+          toast.error(errMsg || 'Erro ao gerar diagnóstico.');
+        }
       } else {
         // diagnosticResult.value is null — proxy failed
         toast.error('A API de diagnóstico está indisponível para esta prova. Tente novamente mais tarde.');
