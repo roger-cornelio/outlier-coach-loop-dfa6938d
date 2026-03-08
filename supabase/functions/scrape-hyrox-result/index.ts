@@ -139,7 +139,7 @@ Return ONLY valid JSON.`
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("[scrape-hyrox-result] AI error:", aiResponse.status, errText);
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+      throw new Error(`Erro ao processar dados da prova (${aiResponse.status})`);
     }
 
     const aiData = await aiResponse.json();
