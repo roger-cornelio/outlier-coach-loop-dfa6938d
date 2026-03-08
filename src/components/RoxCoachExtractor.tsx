@@ -172,17 +172,23 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     }
   }
 
-  /** Action B: Generate diagnostic via RoxCoach URL */
+  /** Action B: Generate diagnostic via context-based proxy call */
   async function generateDiagnostic(result: SearchResult): Promise<string[] | null> {
     if (!user) return null;
 
-    const roxCoachUrl = buildRoxCoachUrl(result);
-    console.log('[RoxCoachExtractor] Built RoxCoach URL:', roxCoachUrl);
+    const sourceUrl = result.result_url;
+    console.log('[RoxCoachExtractor] Sending context to proxy-roxcoach for:', result.athlete_name, result.event_name);
 
     let proxyData: any = null;
     try {
       const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-        body: { url: roxCoachUrl },
+        body: {
+          athlete_name: result.athlete_name,
+          event_name: result.event_name,
+          division: result.division,
+          season_id: result.season_id,
+          result_url: result.result_url,
+        },
       });
       if (!proxyResult.error) {
         proxyData = proxyResult.data;
@@ -205,8 +211,8 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     console.log('Raw API Response keys:', Object.keys(proxyData));
 
-    // Parse and save diagnostic data
-    const parsed = parseDiagnosticResponse(proxyData, user.id, roxCoachUrl);
+    // Parse and validate diagnostic data (throws if leaderboard data detected)
+    const parsed = parseDiagnosticResponse(proxyData, user.id, sourceUrl);
     if (!hasDiagnosticData(parsed)) {
       throw new Error('Não foi possível extrair dados válidos dessa prova.');
     }
@@ -228,12 +234,12 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       throw new Error('Nenhum dado real encontrado para esta prova. Faça uma prova oficial HYROX para desbloquear o diagnóstico.');
     }
 
-    // Deduplication check
+    // Deduplication check using original HYROX URL
     const { data: existingDiag } = await supabase
       .from('diagnostico_resumo')
       .select('id')
       .eq('atleta_id', user.id)
-      .eq('source_url', roxCoachUrl)
+      .eq('source_url', sourceUrl)
       .maybeSingle();
 
     if (existingDiag) {
