@@ -1,32 +1,51 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Problema Identificado
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+A meta da Prova Alvo está usando `useTargetTimes`, que retorna um valor **fixo e absoluto** baseado no nível do atleta:
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+- Atleta **OPEN** → Meta = tempo PRO fixo = **3960s (1h06m00s)**
+- Atleta **PRO** → Meta = tempo ELITE fixo = **3960s (1h06m00s)**
 
-### Alterações
+Isso ignora completamente o tempo atual do atleta. Um atleta com 1h19m recebe meta de 1h06m (gap de 13 minutos), o que é irreal para um único ciclo.
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+## Proposta: Meta Proporcional com Training Age
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+Em vez de usar o tempo fixo do próximo nível, a meta da Prova Alvo deve usar a função `calculateEvolutionTimeframe` já criada para calcular uma **meta realista** baseada em:
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+1. **Tempo atual do atleta** (ex: 1h19m = 4740s)
+2. **Dias até a prova alvo** (ex: 120 dias = ~4 meses)
+3. **Taxa de evolução do tier** (Intermediário = 40s/mês)
+4. **Meta = tempoAtual - (meses × taxa)**
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### Exemplo concreto:
+- Tempo atual: 4740s (1h19m) → Tier Intermediário (40s/mês)
+- Prova Alvo em 120 dias (~4 meses)
+- Ganho projetado: 4 × 40 = 160s
+- **Meta realista: 4740 - 160 = 4580s (1h16m20s)**
+
+## Alterações
+
+### 1. Nova função `calculateProvaAlvoTarget` em `src/utils/evolutionTimeframe.ts`
+
+```typescript
+calculateProvaAlvoTarget(currentFinishTimeSeconds, daysUntilRace)
+```
+
+- Determina o tier do atleta pela tabela de Training Age
+- Calcula meses disponíveis (dias / 30)
+- Projeta ganho = meses × taxa
+- Retorna `{ targetSeconds, projectedGainSeconds, tierLabel }`
+- Limita a meta para nunca ser menor que o threshold do próximo nível (não projeta além do realista)
+
+### 2. Atualizar `src/components/Dashboard.tsx`
+
+- Substituir o cálculo de `provaAlvoTargetTime` que hoje usa `useTargetTimes` (valor fixo)
+- Usar `calculateProvaAlvoTarget(currentTimeSec, provaAlvoInfo.daysUntil)` para derivar a meta proporcional
+- Precisa do `currentTimeSec` (tempo da última prova) — já disponível via `lastRaceResult`
+
+### 3. Manter `useTargetTimes` inalterado
+
+- Continua sendo usado para "Meta PRO" / "Meta ELITE" na grade de diagnóstico (referência fixa do sistema de classificação)
+- A Prova Alvo passa a ter sua própria meta proporcional, separada
 
