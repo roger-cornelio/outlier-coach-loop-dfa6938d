@@ -52,7 +52,7 @@ export function AthleteConfig() {
   const { profile, refreshProfile } = useAuth();
   const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
-  const { saveProfileConfig, updateName, isSaving: isSavingProfile } = useAthleteProfile();
+  const { saveProfileConfig, updateName, isSaving: isSavingProfile, resetAthleteData } = useAthleteProfile();
   
   // REGRA MESTRA: Detectar primeiro setup APENAS via first_setup_completed
   // NÃO usar inferência de coach_style ou outros campos
@@ -227,10 +227,31 @@ export function AthleteConfig() {
     // Persistir no banco de dados
     // CRÍTICO: saveProfileConfig seta first_setup_completed = true
     const nameToSave = displayName !== profile?.name ? displayName.trim() : undefined;
+    
+    // REGRA: Se o nome mudou, tratar como "novo atleta" — limpar todos os dados
+    if (nameToSave && user?.id) {
+      toast.loading('Atualizando identidade do atleta...', { id: 'identity-reset' });
+      
+      // 1. Deletar dados do banco
+      await resetAthleteData(user.id);
+      
+      // 2. Resetar store local (treinos, resultados, etc.)
+      const { resetToDefaults } = useOutlierStore.getState();
+      resetToDefaults();
+      
+      // 3. Restaurar config recém-criada e coach style
+      setAthleteConfig(newConfig);
+      if (coachStyle) {
+        useOutlierStore.getState().setCoachStyle(coachStyle);
+      }
+      
+      toast.dismiss('identity-reset');
+    }
+    
     const saved = await saveProfileConfig(newConfig, nameToSave);
     
     if (saved) {
-      toast.success('Configurações salvas!');
+      toast.success(nameToSave ? 'Identidade atualizada! Dados resetados.' : 'Configurações salvas!');
       // IMPORTANTE: Atualizar profile no contexto de auth para refletir first_setup_completed
       await refreshProfile?.();
     } else {
