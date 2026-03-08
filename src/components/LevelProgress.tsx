@@ -476,10 +476,17 @@ export function LevelProgress() {
             const categoryIdx = LEVELS_ORDER.indexOf(journeyProgress.category);
             const raceMet = !requiresRace || (journeyProgress.hasOfficialRace && categoryIdx >= index);
             
-            // OUTLIER status: all requirements met for this level
-            const isOutlierAtLevel = trainingMet && benchMet && raceMet;
+            // Auto-unlock: if athlete's category is STRICTLY above this level,
+            // the shield is automatically considered "conquered"
+            const isBelowCategory = categoryIdx > index;
+            
+            // OUTLIER status: all requirements met for this level OR auto-unlocked by higher category
+            const isOutlierAtLevel = isBelowCategory || (trainingMet && benchMet && raceMet);
+            
             // Previous level must be outlier to show progress on this one
             const prevLevelOutlier = index === 0 ? true : (() => {
+              // If category is above prev level, auto-unlock
+              if (categoryIdx > index - 1) return true;
               const prevRule = journeyProgress.allLevels.find((l: any) => l.level_key === LEVELS_ORDER[index - 1]);
               const prevTrainingReq = prevRule?.training_min_sessions || 120;
               const prevBenchReq = prevRule?.benchmarks_required || 3;
