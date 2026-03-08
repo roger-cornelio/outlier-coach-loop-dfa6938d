@@ -476,6 +476,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (user?.id) {
+      // Reset anti-loop guard to allow re-fetch
+      profileFetchedForUserRef.current = null;
       await fetchProfile(user.id);
     }
   }, [user?.id, fetchProfile]);
