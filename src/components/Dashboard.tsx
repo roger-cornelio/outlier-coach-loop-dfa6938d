@@ -204,14 +204,28 @@ export function Dashboard() {
   }, [provaAlvo]);
 
   const provaAlvoTargetTime = useMemo(() => {
-    if (!targetTimes) return null;
-    const totalSec = targetTimes.targetSeconds;
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
+    // Use proportional target based on Training Age + days until race
+    const currentTimeSec = validatingCompetition?.open_equivalent_seconds;
+    const daysUntil = provaAlvoInfo?.daysUntil;
+    
+    if (!currentTimeSec || !daysUntil || daysUntil <= 0) {
+      // Fallback to fixed target if no race data
+      if (!targetTimes) return null;
+      const totalSec = targetTimes.targetSeconds;
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
+      return `${m}m${String(s).padStart(2, '0')}s`;
+    }
+
+    const { targetSeconds } = calculateProvaAlvoTarget(currentTimeSec, daysUntil);
+    const h = Math.floor(targetSeconds / 3600);
+    const m = Math.floor((targetSeconds % 3600) / 60);
+    const s = Math.round(targetSeconds % 60);
     if (h > 0) return `${h}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
     return `${m}m${String(s).padStart(2, '0')}s`;
-  }, [targetTimes]);
+  }, [validatingCompetition, provaAlvoInfo, targetTimes]);
 
 
   // ============================================
