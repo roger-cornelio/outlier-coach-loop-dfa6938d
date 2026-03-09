@@ -62,6 +62,9 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
   const [importingAll, setImportingAll] = useState(false);
   const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
   const [consentGiven, setConsentGiven] = useState(false);
+  
+  // Debug state: last API URL sent
+  const [debugApiUrl, setDebugApiUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profileName || !user) return;
@@ -179,6 +182,25 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
 
     const sourceUrl = result.result_url;
     console.log('[RoxCoachExtractor] Sending context to proxy-roxcoach for:', result.athlete_name, result.event_name);
+
+    // Build the external API URL for debug display (mirrors proxy-roxcoach logic)
+    const externalApiBase = 'https://api-outlier.onrender.com/diagnostico';
+    const debugParams = new URLSearchParams();
+    if (result.athlete_name) debugParams.set('athlete_name', result.athlete_name);
+    if (result.event_name) debugParams.set('event_name', result.event_name);
+    if (result.division) debugParams.set('division', result.division);
+    if (result.season_id !== undefined) debugParams.set('season_id', String(result.season_id));
+    if (result.result_url) {
+      debugParams.set('url', result.result_url);
+      debugParams.set('result_url', result.result_url);
+      // Extract idp and event from result_url
+      const { idp, event: eventCode } = extractIdpFromUrl(result.result_url);
+      if (idp) debugParams.set('idp', idp);
+      if (eventCode) debugParams.set('event', eventCode);
+    }
+    const constructedUrl = `${externalApiBase}?${debugParams.toString()}`;
+    setDebugApiUrl(constructedUrl);
+    console.log('[RoxCoachExtractor] External API URL:', constructedUrl);
 
     // CRITICAL: Block saving if SearchResult has no real data (all N/A or empty)
     const hasRealMetadata = [
@@ -620,6 +642,26 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
           <Search className="w-8 h-8 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">
             Nenhuma prova nova encontrada. Todas já foram importadas ou tente outro nome.
+          </p>
+        </div>
+      )}
+
+      {/* Debug Panel: Show external API URL */}
+      {debugApiUrl && (
+        <div className="mt-4 p-3 bg-amber-950/30 border border-amber-600/50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+              Debug: External API URL
+            </span>
+          </div>
+          <div className="bg-black/50 rounded p-2 overflow-x-auto">
+            <code className="text-[10px] text-amber-200 break-all whitespace-pre-wrap font-mono">
+              {debugApiUrl}
+            </code>
+          </div>
+          <p className="text-[10px] text-amber-400/70 mt-2">
+            Esta é a URL construída para a API externa de diagnóstico (api-outlier.onrender.com).
           </p>
         </div>
       )}
