@@ -183,6 +183,25 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     const sourceUrl = result.result_url;
     console.log('[RoxCoachExtractor] Sending context to proxy-roxcoach for:', result.athlete_name, result.event_name);
 
+    // Build the external API URL for debug display (mirrors proxy-roxcoach logic)
+    const externalApiBase = 'https://api-outlier.onrender.com/diagnostico';
+    const debugParams = new URLSearchParams();
+    if (result.athlete_name) debugParams.set('athlete_name', result.athlete_name);
+    if (result.event_name) debugParams.set('event_name', result.event_name);
+    if (result.division) debugParams.set('division', result.division);
+    if (result.season_id !== undefined) debugParams.set('season_id', String(result.season_id));
+    if (result.result_url) {
+      debugParams.set('url', result.result_url);
+      debugParams.set('result_url', result.result_url);
+      // Extract idp and event from result_url
+      const { idp, event: eventCode } = extractIdpFromUrl(result.result_url);
+      if (idp) debugParams.set('idp', idp);
+      if (eventCode) debugParams.set('event', eventCode);
+    }
+    const constructedUrl = `${externalApiBase}?${debugParams.toString()}`;
+    setDebugApiUrl(constructedUrl);
+    console.log('[RoxCoachExtractor] External API URL:', constructedUrl);
+
     // CRITICAL: Block saving if SearchResult has no real data (all N/A or empty)
     const hasRealMetadata = [
       result.event_name,
