@@ -79,7 +79,7 @@ export function SimulationDetailModal({ open, onClose, simulation }: SimulationD
                   <td className="py-2 px-3 text-muted-foreground">{i + 1}</td>
                   <td className="py-2 px-3">
                     <div className="flex items-center gap-2">
-                      {getSplitIcon(HYROX_PHASES[split.phase]?.icon || split.type)}
+                      {getHyroxIcon(HYROX_PHASES[split.phase]?.icon || split.type, 'sm')}
                       {split.label}
                     </div>
                   </td>

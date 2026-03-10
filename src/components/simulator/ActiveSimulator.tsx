@@ -166,7 +166,7 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
             className="w-full max-w-md"
           >
             <Card className="p-8 sm:p-12 text-center space-y-4">
-              <div className="flex justify-center">{getPhaseIcon(currentPhase)}</div>
+              <div className="flex justify-center">{getHyroxIcon(currentPhase.icon, 'lg')}</div>
               <p className="text-xs text-muted-foreground">
                 Fase {phaseIndex + 1} de {HYROX_PHASES.length}
               </p>
