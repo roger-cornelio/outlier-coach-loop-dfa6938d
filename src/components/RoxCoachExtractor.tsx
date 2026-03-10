@@ -63,8 +63,6 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
   const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
   const [consentGiven, setConsentGiven] = useState(false);
   
-  // Debug state: last API URL sent
-  const [debugApiUrl, setDebugApiUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profileName || !user) return;
