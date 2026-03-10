@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   ChevronRight, Flag, Pause, Play, X, 
-  PersonStanding, Waves, ArrowRight, ArrowLeft, 
-  Dumbbell, Rows3, Weight, Footprints, Circle
+  PersonStanding, CableCar, MoveRight, MoveLeft, 
+  TrendingUp, Ship, Luggage, PackageOpen, Target
 } from 'lucide-react';
 import { HYROX_PHASES, formatTimeMs, type SimulatorPhase } from './simulatorConstants';
 import {
