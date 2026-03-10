@@ -94,7 +94,7 @@ export function SimulatorScreen() {
 
   const handleCancelRace = () => {
     setViewState('list');
-    toast.info('Simulado abandonado');
+    toast.info('Simulado encerrado. Como a prova não foi concluída, os tempos não foram salvos no seu histórico.', { duration: 5000 });
   };
 
   // Active simulator is fullscreen overlay
