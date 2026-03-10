@@ -197,7 +197,6 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
       if (eventCode) debugParams.set('event', eventCode);
     }
     const constructedUrl = `${externalApiBase}?${debugParams.toString()}`;
-    setDebugApiUrl(constructedUrl);
     console.log('[RoxCoachExtractor] External API URL:', constructedUrl);
 
     // CRITICAL: Block saving if SearchResult has no real data (all N/A or empty)
