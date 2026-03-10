@@ -311,6 +311,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
+          {/* Projeção de Evolução - usa dados da prova selecionada */}
+          {selectedResumo?.finish_time && diagnosticos.length > 0 && (
+            <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
+          )}
+
 
             {olderResumos.length > 0 && (
               <div className="space-y-2">
