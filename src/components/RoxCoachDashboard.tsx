@@ -435,6 +435,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
           )}
 
+          {/* Projeção de Evolução - usa dados da prova selecionada */}
+          {selectedResumo?.finish_time && diagnosticos.length > 0 && (
+            <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
+          )}
+
           {/* Actions */}
           <div className="flex items-center justify-between gap-2 pt-2">
             <Button
