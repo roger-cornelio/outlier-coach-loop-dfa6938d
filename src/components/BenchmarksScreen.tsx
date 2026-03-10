@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
+import { SimulatorScreen } from './simulator/SimulatorScreen';
 
 export function BenchmarksScreen() {
   const {
