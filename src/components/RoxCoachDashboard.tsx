@@ -413,22 +413,30 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           <PerformanceHighlights resumo={selectedResumo} />
           
-          {/* Split times table - always visible */}
+          {/* Split times - now always rendered (component handles empty state) */}
           <SplitTimesGrid splits={splits} />
 
+          {/* Parecer OUTLIER - with partial data awareness */}
           <ParecerPremium
             resumo={selectedResumo}
             diagnosticos={diagnosticos}
-            onToggleFullAnalysis={() => setShowFullAnalysis(v => !v)}
+            onToggleFullAnalysis={diagnosticos.length > 0 ? () => setShowFullAnalysis(v => !v) : undefined}
             showFullAnalysis={showFullAnalysis}
           />
 
-          
+          {/* AI text fallback when texto_ia is missing but other data exists */}
+          {!selectedResumo.texto_ia && (diagnosticos.length > 0 || splits.length > 0) && (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center space-y-2">
+              <Brain className="w-7 h-7 text-muted-foreground/50 mx-auto" />
+              <p className="text-sm font-medium text-muted-foreground">Análise IA indisponível para esta prova</p>
+              <p className="text-xs text-muted-foreground/70">
+                A análise textual não foi gerada durante a importação. Tente recarregar o diagnóstico.
+              </p>
+            </div>
+          )}
 
-          {showFullAnalysis && (
-            <>
-              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
-            </>
+          {showFullAnalysis && diagnosticos.length > 0 && (
+            <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
           )}
 
           {/* Actions */}
