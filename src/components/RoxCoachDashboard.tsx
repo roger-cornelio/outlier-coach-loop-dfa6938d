@@ -311,7 +311,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* OUTRAS PROVAS */}
+            {/* Projeção de Evolução - logo abaixo da prova atual */}
+            {latestResumo.finish_time && diagnosticos.length > 0 && (
+              <EvolutionProjectionCard finishTime={latestResumo.finish_time} diagnosticos={diagnosticos} />
+            )}
+
             {olderResumos.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -419,7 +423,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             showFullAnalysis={showFullAnalysis}
           />
 
-          <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
+          
 
           {showFullAnalysis && (
             <>
