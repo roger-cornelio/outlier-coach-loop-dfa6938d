@@ -137,13 +137,23 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
   return (
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <Button variant="ghost" size="sm" onClick={() => { if (!isPaused) { pausedAtRef.current = Date.now(); setIsPaused(true); } setShowQuitConfirm(true); }} className="gap-1 text-destructive">
-          <X className="w-4 h-4" /> Encerrar
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-2">
+        <Button 
+          variant="outline" 
+          size="default" 
+          onClick={() => { if (!isPaused) { pausedAtRef.current = Date.now(); setIsPaused(true); } setShowQuitConfirm(true); }} 
+          className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10 font-semibold px-4"
+        >
+          <X className="w-5 h-5" /> Encerrar
         </Button>
         <span className="text-xs text-muted-foreground">{division}</span>
-        <Button variant="ghost" size="sm" onClick={handlePause} className="gap-1">
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+        <Button 
+          variant="outline" 
+          size="default" 
+          onClick={handlePause} 
+          className="gap-2 font-semibold px-4"
+        >
+          {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
           {isPaused ? 'Retomar' : 'Pausar'}
         </Button>
       </div>
