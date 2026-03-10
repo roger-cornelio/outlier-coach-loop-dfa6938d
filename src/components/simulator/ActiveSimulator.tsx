@@ -208,13 +208,15 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
       <AlertDialog open={showQuitConfirm} onOpenChange={setShowQuitConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Abandonar simulado?</AlertDialogTitle>
-            <AlertDialogDescription>O progresso atual será perdido.</AlertDialogDescription>
+            <AlertDialogTitle>Encerrar simulado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja encerrar? O simulado não foi concluído e os dados <strong>não serão salvos</strong> no seu histórico.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { if (isPaused && pausedAtRef.current) { const pauseDuration = Date.now() - pausedAtRef.current; totalPausedRef.current += pauseDuration; phasePausedRef.current += pauseDuration; pausedAtRef.current = null; setIsPaused(false); } }}>Continuar prova</AlertDialogCancel>
             <AlertDialogAction onClick={onCancel} className="bg-destructive text-destructive-foreground">
-              Sim, abandonar
+              Sim, encerrar (DNF)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
