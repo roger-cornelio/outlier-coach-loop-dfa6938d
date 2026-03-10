@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
-  ChevronRight, Flag, Pause, Play, X, 
-  PersonStanding, CableCar, MoveRight, MoveLeft, 
-  TrendingUp, Ship, Luggage, PackageOpen, Target
+  ChevronRight, Flag, Pause, Play, X
 } from 'lucide-react';
 import { HYROX_PHASES, formatTimeMs, type SimulatorPhase } from './simulatorConstants';
 import {
