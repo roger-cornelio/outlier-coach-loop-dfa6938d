@@ -423,7 +423,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             showFullAnalysis={showFullAnalysis}
           />
 
-          <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
+          
 
           {showFullAnalysis && (
             <>
