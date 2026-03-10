@@ -6,6 +6,7 @@ import {
   ChevronRight, Flag, Pause, Play, X
 } from 'lucide-react';
 import { HYROX_PHASES, formatTimeMs, type SimulatorPhase } from './simulatorConstants';
+import { getHyroxIcon } from './HyroxStationIcons';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
@@ -22,22 +23,6 @@ interface ActiveSimulatorProps {
   division: string;
   onFinish: (data: { total_time: number; roxzone_time: number; splits_data: SplitResult[] }) => void;
   onCancel: () => void;
-}
-
-function getPhaseIcon(phase: SimulatorPhase) {
-  const cls = "w-10 h-10 sm:w-14 sm:h-14";
-  switch (phase.icon) {
-    case 'run': return <PersonStanding className={`${cls} text-blue-400`} />;
-    case 'ski': return <CableCar className={`${cls} text-cyan-400`} />;
-    case 'sled_push': return <MoveRight className={`${cls} text-orange-400`} />;
-    case 'sled_pull': return <MoveLeft className={`${cls} text-orange-400`} />;
-    case 'burpee': return <TrendingUp className={`${cls} text-red-400`} />;
-    case 'row': return <Ship className={`${cls} text-green-400`} />;
-    case 'farmers': return <Luggage className={`${cls} text-yellow-400`} />;
-    case 'sandbag': return <PackageOpen className={`${cls} text-purple-400`} />;
-    case 'wallballs': return <Target className={`${cls} text-pink-400`} />;
-    default: return <PersonStanding className={`${cls} text-blue-400`} />;
-  }
 }
 
 export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulatorProps) {
