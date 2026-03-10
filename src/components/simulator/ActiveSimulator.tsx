@@ -133,8 +133,8 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <Button variant="ghost" size="sm" onClick={() => setShowQuitConfirm(true)} className="gap-1 text-destructive">
-          <X className="w-4 h-4" /> Sair
+        <Button variant="ghost" size="sm" onClick={() => { if (!isPaused) { pausedAtRef.current = Date.now(); setIsPaused(true); } setShowQuitConfirm(true); }} className="gap-1 text-destructive">
+          <X className="w-4 h-4" /> Encerrar
         </Button>
         <span className="text-xs text-muted-foreground">{division}</span>
         <Button variant="ghost" size="sm" onClick={handlePause} className="gap-1">
