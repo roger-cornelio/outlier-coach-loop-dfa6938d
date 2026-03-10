@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
+import { SimulatorScreen } from './simulator/SimulatorScreen';
 
 export function BenchmarksScreen() {
   const {
@@ -56,6 +57,7 @@ export function BenchmarksScreen() {
         supabase.from('benchmark_outlier_results').delete().eq('athlete_id', user.id),
         supabase.from('benchmark_outlier_progress').delete().eq('athlete_id', user.id),
         supabase.from('hyrox_metric_scores').delete().eq('hyrox_result_id', user.id),
+        supabase.from('simulations').delete().eq('athlete_id', user.id),
       ]);
       // Clear local state
       clearHistory();
@@ -162,7 +164,7 @@ export function BenchmarksScreen() {
               </TabsContent>
               
               <TabsContent value="simulados">
-                <BenchmarkHistory key={`simulados-${refreshKey}`} filterType="simulado" />
+                <SimulatorScreen />
               </TabsContent>
               
               <TabsContent value="benchmarks">

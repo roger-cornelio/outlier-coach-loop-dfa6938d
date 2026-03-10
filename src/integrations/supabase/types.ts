@@ -1599,6 +1599,36 @@ export type Database = {
         }
         Relationships: []
       }
+      simulations: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          division: string
+          id: string
+          roxzone_time: number
+          splits_data: Json
+          total_time: number
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          division?: string
+          id?: string
+          roxzone_time?: number
+          splits_data?: Json
+          total_time?: number
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          division?: string
+          id?: string
+          roxzone_time?: number
+          splits_data?: Json
+          total_time?: number
+        }
+        Relationships: []
+      }
       station_valence_weights: {
         Row: {
           anaerobica: number
