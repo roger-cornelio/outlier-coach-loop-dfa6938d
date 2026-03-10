@@ -163,7 +163,7 @@ export function BenchmarksScreen() {
               </TabsContent>
               
               <TabsContent value="simulados">
-                <BenchmarkHistory key={`simulados-${refreshKey}`} filterType="simulado" />
+                <SimulatorScreen />
               </TabsContent>
               
               <TabsContent value="benchmarks">
