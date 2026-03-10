@@ -265,8 +265,24 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
       </div>
 
       {/* Quit confirm */}
-      <AlertDialog open={showQuitConfirm} onOpenChange={setShowQuitConfirm}>
-        <AlertDialogContent>
+      <AlertDialog open={showQuitConfirm} onOpenChange={(open) => {
+        if (!open) {
+          // Closing dialog = resume
+          if (isPaused && pausedAtRef.current) {
+            const pauseDuration = Date.now() - pausedAtRef.current;
+            totalPausedRef.current += pauseDuration;
+            if (isInRoxzone) {
+              roxzonePausedRef.current += pauseDuration;
+            } else {
+              phasePausedRef.current += pauseDuration;
+            }
+            pausedAtRef.current = null;
+            setIsPaused(false);
+          }
+          setShowQuitConfirm(false);
+        }
+      }}>
+        <AlertDialogContent className="z-[200]">
           <AlertDialogHeader>
             <AlertDialogTitle>Encerrar simulado?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -274,7 +290,7 @@ export function ActiveSimulator({ division, onFinish, onCancel }: ActiveSimulato
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { if (isPaused && pausedAtRef.current) { const pauseDuration = Date.now() - pausedAtRef.current; totalPausedRef.current += pauseDuration; if (isInRoxzone) { roxzonePausedRef.current += pauseDuration; } else { phasePausedRef.current += pauseDuration; } pausedAtRef.current = null; setIsPaused(false); } }}>Continuar prova</AlertDialogCancel>
+            <AlertDialogCancel>Continuar prova</AlertDialogCancel>
             <AlertDialogAction onClick={onCancel} className="bg-destructive text-destructive-foreground">
               Sim, encerrar (DNF)
             </AlertDialogAction>
