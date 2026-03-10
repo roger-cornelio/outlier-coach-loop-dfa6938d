@@ -1,10 +1,29 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Trophy, Clock, ArrowRightLeft, PersonStanding } from 'lucide-react';
-import { formatTime, HYROX_PHASES } from './simulatorConstants';
+import { 
+  Trophy, Clock, ArrowRightLeft, PersonStanding, 
+  CableCar, MoveRight, MoveLeft, TrendingUp, Ship, Luggage, PackageOpen, Target 
+} from 'lucide-react';
+import { formatTime, HYROX_PHASES, type SimulatorPhase } from './simulatorConstants';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+function getSplitIcon(iconKey: string) {
+  const cls = "w-3.5 h-3.5";
+  switch (iconKey) {
+    case 'run': return <PersonStanding className={`${cls} text-blue-400`} />;
+    case 'ski': return <CableCar className={`${cls} text-cyan-400`} />;
+    case 'sled_push': return <MoveRight className={`${cls} text-orange-400`} />;
+    case 'sled_pull': return <MoveLeft className={`${cls} text-orange-400`} />;
+    case 'burpee': return <TrendingUp className={`${cls} text-red-400`} />;
+    case 'row': return <Ship className={`${cls} text-green-400`} />;
+    case 'farmers': return <Luggage className={`${cls} text-yellow-400`} />;
+    case 'sandbag': return <PackageOpen className={`${cls} text-purple-400`} />;
+    case 'wallballs': return <Target className={`${cls} text-pink-400`} />;
+    default: return <PersonStanding className={`${cls} text-blue-400`} />;
+  }
+}
 
 interface SplitData {
   phase: number;
@@ -78,11 +97,7 @@ export function SimulationDetailModal({ open, onClose, simulation }: SimulationD
                   <td className="py-2 px-3 text-muted-foreground">{i + 1}</td>
                   <td className="py-2 px-3">
                     <div className="flex items-center gap-2">
-                      {split.type === 'run' ? (
-                        <PersonStanding className="w-3.5 h-3.5 text-blue-400" />
-                      ) : (
-                        <span className="w-3.5 h-3.5 rounded-full bg-primary/20 inline-block" />
-                      )}
+                      {getSplitIcon(HYROX_PHASES[split.phase]?.icon || split.type)}
                       {split.label}
                     </div>
                   </td>

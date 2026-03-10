@@ -1,34 +1,32 @@
 
 
-# Melhorar ícones das estações do simulador HYROX
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-## Problema atual
-Os ícones atuais são genéricos do Lucide e não representam bem cada estação:
-- **SkiErg** → `Waves` (ondas genéricas)
-- **Sled Push** → `ArrowRight` (seta)
-- **Sled Pull** → `ArrowLeft` (seta)
-- **Burpee Broad Jump** → `Dumbbell` (halter)
-- **Rowing** → `Rows3` (linhas de tabela)
-- **Farmers Carry** → `Weight` (peso genérico)
-- **Sandbag Lunges** → `Footprints` (pegadas)
-- **Wall Balls** → `Circle` (círculo)
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-## Ícones propostos (Lucide)
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-| Estação | Ícone Lucide | Razão |
-|---------|-------------|-------|
-| Run | `Running` (ou `PersonStanding`) | Pessoa correndo |
-| SkiErg | `CableCar` | Movimento vertical puxando para baixo |
-| Sled Push | `MoveRight` + cor laranja | Empurrar para frente |
-| Sled Pull | `MoveLeft` + cor laranja | Puxar para trás |
-| Burpee Broad Jump | `TrendingUp` | Salto explosivo para frente |
-| Rowing | `Ship` | Remo/embarcação |
-| Farmers Carry | `Luggage` | Carregar peso nas mãos |
-| Sandbag Lunges | `PackageOpen` | Saco de areia |
-| Wall Balls | `Target` | Alvo na parede |
+### Alterações
 
-## Arquivos alterados
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-1. **`src/components/simulator/ActiveSimulator.tsx`** — Atualizar imports e o `switch` do `getPhaseIcon`
-2. **`src/components/simulator/SimulationDetailModal.tsx`** — Adicionar a mesma função `getPhaseIcon` para exibir ícones nos splits da tabela de detalhes (atualmente não tem ícones por split)
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
