@@ -1,32 +1,31 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Plano: Corrigir Projeção de Evolução ao trocar de prova
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### Problema identificado
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+A `EvolutionProjectionCard` (Projeção de Evolução) está fixada no `latestResumo` (prova mais recente) em vez de acompanhar a prova selecionada. Quando o usuário clica em outra prova:
 
-### Alterações
+- **Splits** (`SplitTimesGrid`) e **Resultado Oficial** (`PerformanceHighlights`) atualizam corretamente — ambos usam `selectedResumoId`
+- **Projeção de Evolução** NÃO atualiza — usa `latestResumo.finish_time` fixo, misturando o tempo da prova mais recente com os diagnósticos da prova selecionada
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+### Causa raiz
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+Linha 315-317 de `RoxCoachDashboard.tsx`:
+```
+{latestResumo.finish_time && diagnosticos.length > 0 && (
+  <EvolutionProjectionCard finishTime={latestResumo.finish_time} diagnosticos={diagnosticos} />
+)}
+```
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+Deveria usar `selectedResumo.finish_time` e estar posicionado junto com os outros componentes que reagem à seleção.
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### Alteração
+
+**`src/components/RoxCoachDashboard.tsx`**
+- Mover o `EvolutionProjectionCard` para dentro do bloco que renderiza os dados da prova selecionada (junto com `PerformanceHighlights`, `SplitTimesGrid`, etc.)
+- Trocar `latestResumo.finish_time` por `selectedResumo.finish_time`
+- Usar `selectedResumo` como fonte dos dados de finish_time
+
+Isso garante que ao trocar de prova, **todos** os componentes (Resultado Oficial, Tempos & Parciais, Projeção de Evolução, Parecer) reflitam os dados da prova correta.
 
