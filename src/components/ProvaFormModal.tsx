@@ -207,6 +207,21 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     }
   };
 
+  // Build confirm name from selected event (avoids duplication)
+  const confirmName = useMemo(() => {
+    if (!selectedEvent) return '';
+    const base = selectedEvent.nome.trim().toUpperCase();
+    const city = selectedEvent.cidade?.toUpperCase() || '';
+    const year = selectedEvent.data_evento ? new Date(selectedEvent.data_evento + 'T12:00:00').getFullYear().toString() : '';
+    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    let clean = base;
+    if (city && normalize(clean).includes(normalize(city))) {
+      // City already in name, just append year
+      return [clean, year].filter(Boolean).join(' ');
+    }
+    return [clean, city, year].filter(Boolean).join(' ');
+  }, [selectedEvent]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomeBase.trim() || !categoria || !data || !cidade) return;
@@ -217,6 +232,25 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     onSave({
       type,
       nome: nomeCompleto,
+      categoria,
+      data,
+      participationType,
+      partnerAthleteId: isDupla ? partnerId : undefined,
+      partnerAthleteName: isDupla ? partner?.name : undefined,
+    });
+
+    resetAll();
+  };
+
+  const handleConfirmSubmit = () => {
+    if (!selectedEvent || !categoria || !data) return;
+
+    const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
+    const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
+
+    onSave({
+      type,
+      nome: confirmName,
       categoria,
       data,
       participationType,
