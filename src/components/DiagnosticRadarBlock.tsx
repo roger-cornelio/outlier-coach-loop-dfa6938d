@@ -970,7 +970,7 @@ function MobilePathToEliteCard({
           {provaAlvo && (
             <div className="flex items-center gap-2 mt-2 text-xs">
               <Target className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-muted-foreground">{provaAlvo.nome}</span>
+              <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
               <span className="text-border/40">·</span>
               <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
               {provaAlvoTargetTime && (
