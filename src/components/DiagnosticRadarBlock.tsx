@@ -1887,7 +1887,7 @@ export function DiagnosticRadarBlock({
         {provaAlvo && (
           <div className="flex items-center justify-center gap-2 text-sm mb-3">
             <Target className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-muted-foreground">{provaAlvo.nome}</span>
+            <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
             <span className="text-border/40">·</span>
             <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
             {provaAlvoTargetTime && (
