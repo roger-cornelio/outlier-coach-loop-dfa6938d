@@ -34,7 +34,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
     const filters: Record<string, string | undefined> = {
       query: query || undefined,
       tipo_evento: tipoEvento !== 'TODAS' ? tipoEvento : undefined,
-      estado: (regiao === 'BRASIL' && estado) ? estado : undefined,
+      estado: (regiao === 'BRASIL' && estado && estado !== 'all') ? estado : undefined,
     };
     if (regiao === 'BRASIL') filters.pais = 'BR';
     if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
@@ -127,7 +127,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent className="bg-background border z-50 max-h-60">
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {ESTADOS.map(uf => (
                 <SelectItem key={uf} value={uf}>{uf}</SelectItem>
               ))}
