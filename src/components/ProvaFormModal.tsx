@@ -66,7 +66,7 @@ const MOCK_ATLETAS = [
   { id: 'athlete-5', name: 'Lucas Ferreira' },
 ];
 
-type EntryMode = 'choose' | 'search' | 'manual' | 'details';
+type EntryMode = 'choose' | 'search' | 'manual' | 'details' | 'confirm';
 
 interface ProvaFormModalProps {
   open: boolean;
@@ -166,7 +166,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     }
     if (event.estado) setEstado(event.estado);
     if (event.cidade) setCidade(event.cidade);
-    setEntryMode('details');
+
+    // Official events with complete data → confirm mode (read-only)
+    const isComplete = event.nome && event.data_evento && event.cidade;
+    setEntryMode(isComplete ? 'confirm' : 'details');
   };
 
   const handleRequestReview = async (_event: DiscoveredEvent) => {
@@ -204,6 +207,21 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     }
   };
 
+  // Build confirm name from selected event (avoids duplication)
+  const confirmName = useMemo(() => {
+    if (!selectedEvent) return '';
+    const base = selectedEvent.nome.trim().toUpperCase();
+    const city = selectedEvent.cidade?.toUpperCase() || '';
+    const year = selectedEvent.data_evento ? new Date(selectedEvent.data_evento + 'T12:00:00').getFullYear().toString() : '';
+    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    let clean = base;
+    if (city && normalize(clean).includes(normalize(city))) {
+      // City already in name, just append year
+      return [clean, year].filter(Boolean).join(' ');
+    }
+    return [clean, city, year].filter(Boolean).join(' ');
+  }, [selectedEvent]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomeBase.trim() || !categoria || !data || !cidade) return;
@@ -214,6 +232,25 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     onSave({
       type,
       nome: nomeCompleto,
+      categoria,
+      data,
+      participationType,
+      partnerAthleteId: isDupla ? partnerId : undefined,
+      partnerAthleteName: isDupla ? partner?.name : undefined,
+    });
+
+    resetAll();
+  };
+
+  const handleConfirmSubmit = () => {
+    if (!selectedEvent || !categoria || !data) return;
+
+    const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
+    const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
+
+    onSave({
+      type,
+      nome: confirmName,
       categoria,
       data,
       participationType,
@@ -298,7 +335,76 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
           </div>
         )}
 
-        {/* Step 3: Details (after selecting or manual submission) */}
+        {/* Step 3a: Confirm mode — official event, read-only summary */}
+        {entryMode === 'confirm' && selectedEvent && (
+          <div className="space-y-4 mt-2">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-foreground text-base">{confirmName}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                📍 {selectedEvent.cidade}{selectedEvent.pais ? `, ${selectedEvent.pais}` : ''}
+              </p>
+              {data && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  📅 {format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria HYROX *</Label>
+              <Select value={categoria} onValueChange={setCategoria}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {HYROX_CATEGORIAS.map(cat => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isDupla && (
+              <div className="space-y-2">
+                <Label>Parceiro(a) de dupla</Label>
+                <Select value={partnerId} onValueChange={setPartnerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione seu parceiro(a)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {MOCK_ATLETAS.map(atleta => (
+                      <SelectItem key={atleta.id} value={atleta.id}>
+                        {atleta.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setSelectedEvent(null); setEntryMode('search'); }}
+              >
+                Voltar
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={!categoria}
+                onClick={handleConfirmSubmit}
+              >
+                Salvar Prova
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3b: Details (after selecting or manual submission) */}
         {entryMode === 'details' && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             {selectedEvent && (
