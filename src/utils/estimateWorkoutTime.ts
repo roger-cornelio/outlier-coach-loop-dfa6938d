@@ -209,7 +209,7 @@ export function estimateWorkoutTime(workoutContent: string | string[]): Estimati
   const totalMinutes = Math.ceil(totalSeconds / 60);
   
   // Debug log em dev mode
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('📊 estimateWorkoutTime breakdown:', {
       itemsFound: items.length,
       roundsMultiplier,

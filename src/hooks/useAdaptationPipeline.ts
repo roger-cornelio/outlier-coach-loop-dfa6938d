@@ -95,7 +95,7 @@ export function useAdaptationPipeline() {
       });
 
       // Validar adaptação (em dev)
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         const validation = validateAdaptation(
           dayWorkout,
           result.workout,

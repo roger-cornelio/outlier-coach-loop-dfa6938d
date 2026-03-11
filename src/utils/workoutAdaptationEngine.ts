@@ -1206,7 +1206,7 @@ export function buildWorkoutByTime(config: WorkoutAdaptationConfig): AdaptedWork
   const validatedTime = calculateWodTime(adaptedBlocks, nivel, sexKey);
   
   // 11. Debug log
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('🏋️ buildWorkoutByTime v4 (Adaptação Inteligente):', {
       nivel,
       sexo,
