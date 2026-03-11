@@ -36,6 +36,7 @@ import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useTargetTimes } from '@/hooks/useTargetTimes';
 import { useTopPercent } from '@/hooks/useTopPercent';
+import { deduplicateRaceName } from '@/utils/raceNameDedup';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
