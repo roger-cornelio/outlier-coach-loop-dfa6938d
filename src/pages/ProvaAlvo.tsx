@@ -17,6 +17,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAthleteRaces, type AthleteRace } from '@/hooks/useAthleteRaces';
 import { toast } from 'sonner';
+import { deduplicateRaceName } from '@/utils/raceNameDedup';
 
 export interface Prova {
   id: string;
@@ -218,7 +219,7 @@ function ProvaCardDB({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-foreground">{race.nome}</span>
+              <span className="font-semibold text-foreground">{deduplicateRaceName(race.nome)}</span>
               <Badge variant={isAlvo ? 'default' : 'secondary'} className="text-xs">
                 {race.categoria}
               </Badge>

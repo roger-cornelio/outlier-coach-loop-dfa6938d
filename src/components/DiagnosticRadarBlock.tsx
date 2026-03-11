@@ -36,6 +36,7 @@ import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useTargetTimes } from '@/hooks/useTargetTimes';
 import { useTopPercent } from '@/hooks/useTopPercent';
+import { deduplicateRaceName } from '@/utils/raceNameDedup';
 
 // ============================================
 // MAPAS DE MÉTRICAS → LABELS E ANÁLISE
@@ -969,7 +970,7 @@ function MobilePathToEliteCard({
           {provaAlvo && (
             <div className="flex items-center gap-2 mt-2 text-xs">
               <Target className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-muted-foreground">{provaAlvo.nome}</span>
+              <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
               <span className="text-border/40">·</span>
               <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
               {provaAlvoTargetTime && (
@@ -1886,7 +1887,7 @@ export function DiagnosticRadarBlock({
         {provaAlvo && (
           <div className="flex items-center justify-center gap-2 text-sm mb-3">
             <Target className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-muted-foreground">{provaAlvo.nome}</span>
+            <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
             <span className="text-border/40">·</span>
             <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
             {provaAlvoTargetTime && (
