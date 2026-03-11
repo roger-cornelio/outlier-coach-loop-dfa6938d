@@ -73,7 +73,7 @@ const RADAR_AXES = [
 { key: 'row', name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
 { key: 'roxzone', name: 'Core & Estabilidade', shortName: 'Core' },
 { key: 'wallballs', name: 'Coordenação sob Fadiga', shortName: 'Eficiência' }];
-import { deduplicateRaceName } from '@/utils/raceNameDedup';
+
 
 // ============================================
 // INLINE CTA: Importar Última Prova HYROX — auto-search + import
