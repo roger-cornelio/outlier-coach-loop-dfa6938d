@@ -335,7 +335,76 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
           </div>
         )}
 
-        {/* Step 3: Details (after selecting or manual submission) */}
+        {/* Step 3a: Confirm mode — official event, read-only summary */}
+        {entryMode === 'confirm' && selectedEvent && (
+          <div className="space-y-4 mt-2">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-foreground text-base">{confirmName}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                📍 {selectedEvent.cidade}{selectedEvent.pais ? `, ${selectedEvent.pais}` : ''}
+              </p>
+              {data && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  📅 {format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria HYROX *</Label>
+              <Select value={categoria} onValueChange={setCategoria}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {HYROX_CATEGORIAS.map(cat => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isDupla && (
+              <div className="space-y-2">
+                <Label>Parceiro(a) de dupla</Label>
+                <Select value={partnerId} onValueChange={setPartnerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione seu parceiro(a)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {MOCK_ATLETAS.map(atleta => (
+                      <SelectItem key={atleta.id} value={atleta.id}>
+                        {atleta.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setSelectedEvent(null); setEntryMode('search'); }}
+              >
+                Voltar
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={!categoria}
+                onClick={handleConfirmSubmit}
+              >
+                Salvar Prova
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3b: Details (after selecting or manual submission) */}
         {entryMode === 'details' && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             {selectedEvent && (
