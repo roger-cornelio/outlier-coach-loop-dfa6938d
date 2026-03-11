@@ -166,7 +166,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     }
     if (event.estado) setEstado(event.estado);
     if (event.cidade) setCidade(event.cidade);
-    setEntryMode('details');
+
+    // Official events with complete data → confirm mode (read-only)
+    const isComplete = event.nome && event.data_evento && event.cidade;
+    setEntryMode(isComplete ? 'confirm' : 'details');
   };
 
   const handleRequestReview = async (_event: DiscoveredEvent) => {
