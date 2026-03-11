@@ -17,6 +17,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAthleteRaces, type AthleteRace } from '@/hooks/useAthleteRaces';
 import { toast } from 'sonner';
+import { deduplicateRaceName } from '@/utils/raceNameDedup';
 
 export interface Prova {
   id: string;
