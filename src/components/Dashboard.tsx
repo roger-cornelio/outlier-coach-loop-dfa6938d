@@ -197,7 +197,7 @@ export function Dashboard() {
     if (!provaAlvo) return null;
     const daysUntil = differenceInDays(parseISO(provaAlvo.race_date), new Date());
     return {
-      nome: provaAlvo.nome,
+      nome: deduplicateRaceName(provaAlvo.nome),
       race_date: provaAlvo.race_date,
       categoria: provaAlvo.categoria,
       daysUntil,
