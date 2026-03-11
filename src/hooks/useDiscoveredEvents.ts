@@ -73,6 +73,14 @@ export function useDiscoveredEvents() {
         query = query.eq('estado', filters.estado);
       }
 
+      if (filters.pais) {
+        query = query.eq('pais', filters.pais);
+      }
+
+      if (filters.pais_neq) {
+        query = query.neq('pais', filters.pais_neq);
+      }
+
       if (filters.origem_principal) {
         query = query.eq('origem_principal', filters.origem_principal);
       }
