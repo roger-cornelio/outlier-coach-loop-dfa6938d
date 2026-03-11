@@ -1,1 +1,0 @@
-DELETE FROM discovered_events WHERE created_by IS NULL;
