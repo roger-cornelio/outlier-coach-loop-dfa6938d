@@ -35,6 +35,8 @@ interface SearchFilters {
   tipo_evento?: string;
   cidade?: string;
   estado?: string;
+  pais?: string;
+  pais_neq?: string;
   status_validacao?: string;
   origem_principal?: string;
 }
