@@ -34,7 +34,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
     const filters: Record<string, string | undefined> = {
       query: query || undefined,
       tipo_evento: tipoEvento !== 'TODAS' ? tipoEvento : undefined,
-      estado: (regiao === 'BRASIL' && estado) ? estado : undefined,
+      estado: (regiao === 'BRASIL' && estado && estado !== 'ALL') ? estado : undefined,
     };
     if (regiao === 'BRASIL') filters.pais = 'BR';
     if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
