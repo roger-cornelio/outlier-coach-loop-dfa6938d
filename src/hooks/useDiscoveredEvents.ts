@@ -47,9 +47,11 @@ export function useDiscoveredEvents() {
   const searchEvents = useCallback(async (filters: SearchFilters) => {
     setLoading(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
       let query = supabase
         .from('discovered_events')
         .select('*')
+        .gte('data_evento', today)
         .order('data_evento', { ascending: true });
 
       // For non-admin, only show validated events by default
