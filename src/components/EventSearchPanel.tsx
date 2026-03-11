@@ -127,7 +127,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent className="bg-background border z-50 max-h-60">
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="ALL">Todos</SelectItem>
               {ESTADOS.map(uf => (
                 <SelectItem key={uf} value={uf}>{uf}</SelectItem>
               ))}
