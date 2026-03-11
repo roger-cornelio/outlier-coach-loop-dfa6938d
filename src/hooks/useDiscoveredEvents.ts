@@ -35,6 +35,8 @@ interface SearchFilters {
   tipo_evento?: string;
   cidade?: string;
   estado?: string;
+  pais?: string;
+  pais_neq?: string;
   status_validacao?: string;
   origem_principal?: string;
 }
@@ -69,6 +71,14 @@ export function useDiscoveredEvents() {
 
       if (filters.estado) {
         query = query.eq('estado', filters.estado);
+      }
+
+      if (filters.pais) {
+        query = query.eq('pais', filters.pais);
+      }
+
+      if (filters.pais_neq) {
+        query = query.neq('pais', filters.pais_neq);
       }
 
       if (filters.origem_principal) {

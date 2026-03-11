@@ -3,7 +3,7 @@
  * Shows validated events, pending events, and manual fallback
  */
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Filter, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Building2, Globe, ShieldAlert, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Building2, Globe, ShieldAlert, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,73 +26,104 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
   const { events, loading, searchEvents } = useDiscoveredEvents();
   const [query, setQuery] = useState('');
   const [tipoEvento, setTipoEvento] = useState('TODAS');
+  const [regiao, setRegiao] = useState('TODAS'); // TODAS | BRASIL | INTERNACIONAL
   const [estado, setEstado] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const buildFilters = useCallback(() => {
+    const filters: Record<string, string | undefined> = {
+      query: query || undefined,
+      tipo_evento: tipoEvento !== 'TODAS' ? tipoEvento : undefined,
+      estado: (regiao === 'BRASIL' && estado) ? estado : undefined,
+    };
+    if (regiao === 'BRASIL') filters.pais = 'BR';
+    if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
+    return filters;
+  }, [query, tipoEvento, regiao, estado]);
 
   const handleSearch = useCallback(() => {
     setHasSearched(true);
-    searchEvents({
-      query: query || undefined,
-      tipo_evento: tipoEvento !== 'TODAS' ? tipoEvento : undefined,
-      estado: estado || undefined,
-      // Show all statuses for search results (admin sees all, user sees validated)
-    });
-  }, [query, tipoEvento, estado, searchEvents]);
+    searchEvents(buildFilters());
+  }, [buildFilters, searchEvents]);
 
-  // Auto-search on mount to show available events
+  // Auto-search on mount
   useEffect(() => {
     searchEvents({});
     setHasSearched(true);
   }, [searchEvents]);
 
-  // Debounced search on query change
+  // Debounced search on filter change
   useEffect(() => {
-    if (!query && !estado && tipoEvento === 'TODAS') return;
-    const timer = setTimeout(handleSearch, 500);
+    const timer = setTimeout(handleSearch, 400);
     return () => clearTimeout(timer);
-  }, [query, tipoEvento, estado, handleSearch]);
+  }, [query, tipoEvento, regiao, estado, handleSearch]);
+
+  // Reset estado when leaving Brasil filter
+  useEffect(() => {
+    if (regiao !== 'BRASIL') setEstado('');
+  }, [regiao]);
+
+  const activeFilterCount = [
+    tipoEvento !== 'TODAS',
+    regiao !== 'TODAS',
+    estado !== '',
+  ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Search bar */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar prova por nome, cidade ou organizador"
-            className="pl-9"
-          />
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setShowFilters(!showFilters)}
-          className={showFilters ? 'bg-accent' : ''}
-        >
-          <Filter className="w-4 h-4" />
-        </Button>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar prova por nome, cidade ou organizador"
+          className="pl-9"
+        />
       </div>
 
-      {/* Filters */}
-      {showFilters && (
-        <div className="flex flex-wrap gap-2">
-          <Select value={tipoEvento} onValueChange={setTipoEvento}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border z-50">
-              <SelectItem value="TODAS">Todas</SelectItem>
-              <SelectItem value="OFICIAL">Oficial HYROX</SelectItem>
-              <SelectItem value="PARALELA">Paralela</SelectItem>
-              <SelectItem value="SIMULADO">Simulado</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {/* Tipo */}
+        {(['TODAS', 'OFICIAL', 'PARALELA', 'SIMULADO'] as const).map(tipo => (
+          <button
+            key={tipo}
+            onClick={() => setTipoEvento(tipo)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+              tipoEvento === tipo
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+            }`}
+          >
+            {tipo === 'TODAS' ? 'Todas' : TIPO_EVENTO_LABELS[tipo] || tipo}
+          </button>
+        ))}
+      </div>
 
+      <div className="flex flex-wrap gap-1.5">
+        {/* Região */}
+        {([
+          { key: 'TODAS', label: '🌍 Todos' },
+          { key: 'BRASIL', label: '🇧🇷 Brasil' },
+          { key: 'INTERNACIONAL', label: '✈️ Internacional' },
+        ] as const).map(r => (
+          <button
+            key={r.key}
+            onClick={() => setRegiao(r.key)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+              regiao === r.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+
+        {/* Estado (only when Brasil) */}
+        {regiao === 'BRASIL' && (
           <Select value={estado} onValueChange={setEstado}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[110px] h-7 text-xs rounded-full">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent className="bg-background border z-50 max-h-60">
@@ -102,8 +133,8 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Loading */}
       {loading && (
@@ -200,16 +231,10 @@ function EventCard({ event, onSelect, onRequestReview }: {
                 {format(parseISO(event.data_evento), "dd/MM/yyyy")}
               </span>
             )}
-            {(event.cidade || event.estado) && (
+            {(event.cidade || event.estado || event.pais) && (
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
-                {[event.cidade, event.estado].filter(Boolean).join(', ')}
-              </span>
-            )}
-            {event.organizador && (
-              <span className="flex items-center gap-1">
-                <Building2 className="w-3 h-3" />
-                {event.organizador}
+                {[event.cidade, event.estado, event.pais !== 'BR' ? event.pais : null].filter(Boolean).join(', ')}
               </span>
             )}
             {event.origem_principal && (
