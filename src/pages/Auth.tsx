@@ -64,7 +64,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
   
   // Hidden QA trigger - 5 clicks on logo
   const logoClickCount = useRef(0);
-  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+  const logoClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const handleLogoClick = () => {
     // Only in dev/preview

@@ -582,7 +582,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
 
                               {/* DEV GUARD: Log legacy fields if present (dev only) */}
                               {(() => {
-                                if (process.env.NODE_ENV === 'development') {
+                                if (import.meta.env.DEV) {
                                   const legacyInstruction = (block as any).instruction;
                                   const legacyInstructions = (block as any).instructions;
                                   if (legacyInstruction || (legacyInstructions && legacyInstructions.length > 0)) {
