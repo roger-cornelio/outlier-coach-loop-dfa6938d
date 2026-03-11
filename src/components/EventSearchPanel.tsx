@@ -231,16 +231,10 @@ function EventCard({ event, onSelect, onRequestReview }: {
                 {format(parseISO(event.data_evento), "dd/MM/yyyy")}
               </span>
             )}
-            {(event.cidade || event.estado) && (
+            {(event.cidade || event.estado || event.pais) && (
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
-                {[event.cidade, event.estado].filter(Boolean).join(', ')}
-              </span>
-            )}
-            {event.organizador && (
-              <span className="flex items-center gap-1">
-                <Building2 className="w-3 h-3" />
-                {event.organizador}
+                {[event.cidade, event.estado, event.pais !== 'BR' ? event.pais : null].filter(Boolean).join(', ')}
               </span>
             )}
             {event.origem_principal && (
