@@ -85,17 +85,17 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
       {/* Filter chips */}
       <div className="flex flex-wrap gap-1.5">
         {/* Tipo */}
-        {(['TODAS', 'OFICIAL', 'PARALELA', 'SIMULADO'] as const).map(tipo => (
+        {(['OFICIAL', 'PARALELA'] as const).map(tipo => (
           <button
             key={tipo}
-            onClick={() => setTipoEvento(tipo)}
+            onClick={() => setTipoEvento(prev => prev === tipo ? 'TODAS' : tipo)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
               tipoEvento === tipo
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
             }`}
           >
-            {tipo === 'TODAS' ? 'Todas' : TIPO_EVENTO_LABELS[tipo] || tipo}
+            {TIPO_EVENTO_LABELS[tipo] || tipo}
           </button>
         ))}
       </div>
