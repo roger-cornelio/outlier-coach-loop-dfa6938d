@@ -3,7 +3,7 @@
  * Shows validated events, pending events, and manual fallback
  */
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Filter, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Building2, Globe, ShieldAlert, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Building2, Globe, ShieldAlert, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
