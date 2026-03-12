@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw, Brain } from 'lucide-react';
+import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -420,16 +420,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             showFullAnalysis={showFullAnalysis}
           />
 
-          {/* AI text fallback when texto_ia is missing but other data exists */}
-          {!selectedResumo.texto_ia && (diagnosticos.length > 0 || splits.length > 0) && (
-            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center space-y-2">
-              <Brain className="w-7 h-7 text-muted-foreground/50 mx-auto" />
-              <p className="text-sm font-medium text-muted-foreground">Análise IA indisponível para esta prova</p>
-              <p className="text-xs text-muted-foreground/70">
-                A análise textual não foi gerada durante a importação. Tente recarregar o diagnóstico.
-              </p>
-            </div>
-          )}
 
           {showFullAnalysis && diagnosticos.length > 0 && (
             <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
