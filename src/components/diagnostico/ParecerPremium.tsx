@@ -57,7 +57,7 @@ export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnaly
               Parecer OUTLIER
             </h3>
             <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-              {hasClaudeAnalysis ? 'Análise por IA · Treinador de Elite' : 'Inteligência de Performance · Dados Reais'}
+              {hasClaudeAnalysis ? 'Análise Avançada · Treinador de Elite' : 'Inteligência de Performance · Dados Reais'}
             </p>
           </div>
         </div>

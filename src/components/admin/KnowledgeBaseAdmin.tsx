@@ -848,7 +848,7 @@ export function KnowledgeBaseAdmin() {
               Critérios de Análise
             </DialogTitle>
             <DialogDescription className="text-left">
-              Selecione em quais análises o artigo <strong>"{criteriaTarget?.title}"</strong> deve ser utilizado pela IA.
+              Selecione em quais análises o artigo <strong>"{criteriaTarget?.title}"</strong> deve ser utilizado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 max-h-80 overflow-y-auto py-2">

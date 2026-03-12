@@ -100,7 +100,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
               Raio Tático Outlier
             </h3>
             <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase ml-auto">
-              Gerado por Outlier AI
+              Gerado por Outlier
             </span>
           </div>
           <div className="prose prose-sm max-w-none parecer-markdown">
