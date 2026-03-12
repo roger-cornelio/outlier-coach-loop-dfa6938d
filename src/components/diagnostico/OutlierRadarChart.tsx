@@ -1,49 +1,44 @@
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import type { DiagnosticoMelhoria } from './types';
+import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
 interface Props {
-  diagnosticos: DiagnosticoMelhoria[];
+  scores: CalculatedScore[];
 }
 
 interface CategoryDef {
   label: string;
-  keywords: string[];
+  metrics: string[];
 }
 
 const CATEGORIES: CategoryDef[] = [
-  { label: 'Cardio', keywords: ['run', 'rowing', 'row'] },
-  { label: 'Força', keywords: ['sled push', 'sled pull'] },
-  { label: 'Potência', keywords: ['wall ball'] },
-  { label: 'Anaeróbica', keywords: ['ski', 'bbj', 'burpee'] },
-  { label: 'Core', keywords: ['sandbag', 'farmers', 'farmer'] },
-  { label: 'Eficiência', keywords: ['roxzone', 'rox zone'] },
+  { label: 'Cardio', metrics: ['run_avg', 'row'] },
+  { label: 'Força', metrics: ['sled_push', 'sled_pull'] },
+  { label: 'Potência', metrics: ['wallballs'] },
+  { label: 'Anaeróbica', metrics: ['ski', 'bbj'] },
+  { label: 'Core', metrics: ['sandbag', 'farmers'] },
+  { label: 'Eficiência', metrics: ['roxzone'] },
 ];
 
-function matchCategory(movement: string, keywords: string[]): boolean {
-  const m = movement.toLowerCase();
-  return keywords.some(k => m.includes(k));
-}
+function buildRadarData(scores: CalculatedScore[]) {
+  const scoreMap = new Map(scores.map(s => [s.metric, s.percentile_value]));
 
-function buildRadarData(diagnosticos: DiagnosticoMelhoria[]) {
   return CATEGORIES.map(cat => {
-    const matched = diagnosticos.filter(d => matchCategory(d.movement, cat.keywords));
-    let score: number;
-    if (matched.length > 0) {
-      const avg = matched.reduce((sum, d) => sum + d.percentage, 0) / matched.length;
-      score = Math.max(0, Math.min(100, 100 - avg));
-    } else {
-      // fallback: average of all
-      const allAvg = diagnosticos.reduce((sum, d) => sum + d.percentage, 0) / (diagnosticos.length || 1);
-      score = Math.max(0, Math.min(100, 100 - allAvg));
-    }
-    return { category: cat.label, score: Math.round(score) };
+    const values = cat.metrics
+      .map(m => scoreMap.get(m))
+      .filter((v): v is number => v != null);
+
+    const score = values.length > 0
+      ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+      : 50;
+
+    return { category: cat.label, score: Math.max(0, Math.min(100, score)) };
   });
 }
 
-export default function OutlierRadarChart({ diagnosticos }: Props) {
-  if (diagnosticos.length === 0) return null;
+export default function OutlierRadarChart({ scores }: Props) {
+  if (scores.length === 0) return null;
 
-  const data = buildRadarData(diagnosticos);
+  const data = buildRadarData(scores);
 
   return (
     <div className="space-y-2">

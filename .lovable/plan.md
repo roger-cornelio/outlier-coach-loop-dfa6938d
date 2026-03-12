@@ -1,33 +1,32 @@
 
 
-## Conectar OutlierRadarChart aos Percentis Reais
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-### Mudanças
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-**1. `src/components/diagnostico/OutlierRadarChart.tsx`** — Reescrever
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-- Trocar props de `diagnosticos: DiagnosticoMelhoria[]` para `scores: CalculatedScore[]`
-- Remover toda lógica de keywords/string-matching
-- Novo mapeamento direto por metric name:
+### Alterações
 
-```text
-Cardio     → avg(run_avg, row)
-Força      → avg(sled_push, sled_pull)
-Potência   → wallballs
-Anaeróbica → avg(ski, bbj)
-Core       → avg(sandbag, farmers)
-Eficiência → roxzone
-```
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-- Score = `percentile_value` direto (já 0-100), fallback 50 se métrica ausente
-- Zero mudanças visuais (cores, grid, layout mantidos)
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-**2. `src/components/RoxCoachDashboard.tsx`** — Editar
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-- Importar `useDiagnosticScores` e `CalculatedScore`
-- Chamar `useDiagnosticScores()` no componente
-- Passar `scores` para `OutlierRadarChart` em vez de `diagnosticos`
-- Condicionar renderização do radar em `diagnosticScores.hasData` (independente de `diagnosticos.length`)
-
-2 arquivos editados, zero mudanças visuais.
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 

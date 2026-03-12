@@ -22,6 +22,7 @@ import OutlierRadarChart from './diagnostico/OutlierRadarChart';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
@@ -30,6 +31,7 @@ interface RoxCoachDashboardProps {
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
   const { user } = useAuth();
   const currentCoachStyle = useOutlierStore((s) => s.coachStyle);
+  const diagnosticScores = useDiagnosticScores();
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
@@ -438,9 +440,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           />
 
 
-          {showFullAnalysis && diagnosticos.length > 0 && (
+          {showFullAnalysis && diagnosticScores.hasData && (
             <>
-              <OutlierRadarChart diagnosticos={diagnosticos} />
+              <OutlierRadarChart scores={diagnosticScores.scores} />
 
               <Collapsible defaultOpen={false}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/30 transition-colors [&[data-state=open]>svg]:rotate-180">
