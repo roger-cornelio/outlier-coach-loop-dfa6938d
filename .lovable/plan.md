@@ -1,32 +1,42 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Radar Chart de 6 Eixos + Accordion
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### Componentes
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+**1. Novo: `src/components/diagnostico/OutlierRadarChart.tsx`**
 
-### Alterações
+Radar de 6 eixos usando `recharts`. Recebe `diagnosticos: DiagnosticoMelhoria[]` como prop.
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+Mapeamento de movements para categorias:
+- **Cardio**: média de movements contendo "run" e "rowing"
+- **Força**: média de "sled push" e "sled pull"
+- **Potência**: "wall balls"
+- **Anaeróbica**: média de "ski erg" e "burpee broad jump" (ou "bbj")
+- **Core**: média de "sandbag lunges" e "farmers carry"
+- **Eficiência**: "roxzone" (fallback: média geral)
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+Score = `Math.max(0, Math.min(100, 100 - percentage))`.
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+Design: `ResponsiveContainer` 300px height, `PolarGrid` stroke `#374151`, `PolarAngleAxis` tick fill `#e5e7eb` size 12, `Radar` stroke/fill `#f97316` fillOpacity 0.4, `PolarRadiusAxis` hidden. Subtítulo centralizado acima.
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+**2. Modificar: `src/components/RoxCoachDashboard.tsx`**
+
+Dentro do bloco `showFullAnalysis && diagnosticos.length > 0`:
+
+```text
+Antes:
+  DeepAnalysisBlock
+  ImprovementTable
+
+Depois:
+  OutlierRadarChart          ← novo, sempre visível no topo
+  Collapsible "Análise por estação"
+    └─ DeepAnalysisBlock     ← mantido intacto
+    └─ ImprovementTable      ← mantida intacta
+```
+
+Usar `Collapsible` + `CollapsibleTrigger` + `CollapsibleContent` (já importável de `@/components/ui/collapsible`) com chevron animado e título "Análise por estação".
+
+2 arquivos: 1 novo + 1 editado.
 
