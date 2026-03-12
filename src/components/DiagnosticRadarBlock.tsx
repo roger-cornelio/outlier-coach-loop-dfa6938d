@@ -1699,6 +1699,95 @@ export function DiagnosticRadarBlock({
   const [showStationDetails, setShowStationDetails] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
+  // Coach Insights (AI-generated copy, cached in diagnostico_resumo.coach_insights)
+  interface CoachInsights {
+    limitador_descricao: string;
+    ganho_acao: string;
+    ganho_descricao: string;
+    proximos_passos: string[];
+  }
+  const [coachInsights, setCoachInsights] = useState<CoachInsights | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const insightsFetchedRef = useRef<string | null>(null);
+
+  // Fetch or load cached coach insights when mainLimiter is available
+  useEffect(() => {
+    if (!hasData || !profile?.user_id) return;
+
+    const limiterMetric = scores.length > 0
+      ? [...scores].sort((a, b) => a.percentile_value - b.percentile_value)[0]?.metric
+      : null;
+    if (!limiterMetric) return;
+
+    // Prevent duplicate fetches for same user
+    const fetchKey = `${profile.user_id}-${limiterMetric}`;
+    if (insightsFetchedRef.current === fetchKey) return;
+    insightsFetchedRef.current = fetchKey;
+
+    const loadInsights = async () => {
+      try {
+        // 1. Check cache in diagnostico_resumo
+        const { data: resumos } = await supabase
+          .from('diagnostico_resumo')
+          .select('id, coach_insights')
+          .eq('atleta_id', profile.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const resumo = resumos?.[0];
+        if (resumo?.coach_insights) {
+          setCoachInsights(resumo.coach_insights as unknown as CoachInsights);
+          return;
+        }
+
+        // 2. Generate via edge function
+        setLoadingInsights(true);
+        const limiterName = METRIC_LABELS[limiterMetric] || limiterMetric;
+        const limiterPercentile = scores.find(s => s.metric === limiterMetric)?.percentile_value || 0;
+
+        const splitsPayload = scores.map(s => ({
+          metric: s.metric,
+          name: METRIC_LABELS[s.metric] || s.metric,
+          percentile: s.percentile_value,
+          time_sec: s.raw_time_sec,
+        }));
+
+        const coachStyle = profile ? (profile as any).coach_style || 'PULSE' : 'PULSE';
+
+        const { data, error } = await supabase.functions.invoke('generate-coach-insights', {
+          body: {
+            athlete_name: profile.name || 'Atleta',
+            main_limiter_name: limiterName,
+            main_limiter_percentile: limiterPercentile,
+            splits: splitsPayload,
+            coach_style: coachStyle,
+          },
+        });
+
+        if (error || !data?.insights) {
+          console.warn('[CoachInsights] Generation failed:', error || data?.error);
+          return;
+        }
+
+        setCoachInsights(data.insights);
+
+        // 3. Cache in DB
+        if (resumo?.id) {
+          await supabase
+            .from('diagnostico_resumo')
+            .update({ coach_insights: data.insights } as any)
+            .eq('id', resumo.id);
+        }
+      } catch (err) {
+        console.warn('[CoachInsights] Error:', err);
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+
+    loadInsights();
+  }, [hasData, profile?.user_id, scores]);
+
   // Derived data
   const athleteName = profile?.name?.toUpperCase() || 'ATLETA';
   const athleteCategory = useMemo(() => {
