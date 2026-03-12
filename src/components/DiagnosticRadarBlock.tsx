@@ -69,12 +69,13 @@ const STATUS_SUMMARY: Record<string, string> = {
 };
 
 const RADAR_AXES = [
-{ key: 'run_avg', name: 'Resistência Cardiovascular', shortName: 'Cardio' },
-{ key: 'sled_push', name: 'Força & Resistência Muscular', shortName: 'Força' },
-{ key: 'ski', name: 'Potência & Vigor', shortName: 'Potência' },
-{ key: 'row', name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
-{ key: 'roxzone', name: 'Core & Estabilidade', shortName: 'Core' },
-{ key: 'wallballs', name: 'Coordenação sob Fadiga', shortName: 'Eficiência' }];
+  { metrics: ['run_avg', 'row'], name: 'Resistência Cardiovascular', shortName: 'Cardio' },
+  { metrics: ['sled_push', 'sled_pull'], name: 'Força & Resistência Muscular', shortName: 'Força' },
+  { metrics: ['wallballs'], name: 'Potência & Vigor', shortName: 'Potência' },
+  { metrics: ['ski', 'bbj'], name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
+  { metrics: ['sandbag', 'farmers'], name: 'Core & Estabilidade', shortName: 'Core' },
+  { metrics: ['roxzone'], name: 'Coordenação sob Fadiga', shortName: 'Eficiência' },
+];
 
 
 // ============================================
@@ -1737,9 +1738,15 @@ export function DiagnosticRadarBlock({
   const hasMoreStations = affectedStations.length > 2;
 
   const radarData = useMemo(() => {
+    const scoreMap = new Map(scores.map(s => [s.metric, s.percentile_value]));
     return RADAR_AXES.map((axis) => {
-      const score = scores.find((s) => s.metric === axis.key);
-      return { name: axis.name, shortName: axis.shortName, value: score?.percentile_value || 50, fullMark: 100 };
+      const values = axis.metrics
+        .map(m => scoreMap.get(m))
+        .filter((v): v is number => v != null);
+      const avg = values.length > 0
+        ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+        : 50;
+      return { name: axis.name, shortName: axis.shortName, value: Math.max(0, Math.min(100, avg)), fullMark: 100 };
     });
   }, [scores]);
 
