@@ -371,7 +371,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
           diagnosticos={diagnosticos}
           athleteName={selectedResumo.nome_atleta}
           division={selectedResumo.divisao}
-          coachStyle={useOutlierStore.getState().coachStyle || 'PULSE'}
+          coachStyle={currentCoachStyle || 'PULSE'}
         />
       )}
 
