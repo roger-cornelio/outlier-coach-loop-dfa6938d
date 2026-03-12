@@ -47,9 +47,9 @@ export default function PerformanceHighlights({ resumo }: Props) {
           </p>
         </div>
 
-        {stats.map(({ key, label, icon: Icon }) => {
+        {stats.map(({ key, label, icon: Icon, isRank }) => {
           const raw = resumo[key as keyof DiagnosticoResumo] as string | null;
-          const display = extractNumeric(raw);
+          const display = isRank ? extractRank(raw) : extractNumeric(raw);
           return (
             <div
               key={key}
