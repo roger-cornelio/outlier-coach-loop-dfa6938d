@@ -17,6 +17,7 @@ import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
+import { useOutlierStore } from '@/store/outlierStore';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
@@ -24,6 +25,7 @@ interface RoxCoachDashboardProps {
 
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
   const { user } = useAuth();
+  const currentCoachStyle = useOutlierStore((s) => s.coachStyle);
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
@@ -362,6 +364,17 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         );
       })()}
 
+      {/* Projeção de Evolução - logo abaixo da prova atual */}
+      {selectedResumo?.finish_time && diagnosticos.length > 0 && (
+        <EvolutionProjectionCard
+          finishTime={selectedResumo.finish_time}
+          diagnosticos={diagnosticos}
+          athleteName={selectedResumo.nome_atleta}
+          division={selectedResumo.divisao}
+          coachStyle={currentCoachStyle || 'PULSE'}
+        />
+      )}
+
       {/* Loading skeletons */}
       {loading && (
         <div className="space-y-4">
@@ -425,10 +438,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
           )}
 
-          {/* Projeção de Evolução - usa dados da prova selecionada */}
-          {selectedResumo?.finish_time && diagnosticos.length > 0 && (
-            <EvolutionProjectionCard finishTime={selectedResumo.finish_time} diagnosticos={diagnosticos} />
-          )}
 
           {/* Actions */}
           <div className="flex items-center justify-between gap-2 pt-2">

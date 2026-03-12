@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.proxy-roxcoach]
 verify_jwt = false
+
+[functions.generate-evolution-projection]
+verify_jwt = false
