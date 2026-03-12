@@ -74,7 +74,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
       <div className="space-y-4 rounded-2xl border border-primary/20 bg-card p-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-          Outlier AI analisando sua prova...
+          Outlier analisando sua prova...
         </div>
         <Skeleton className="h-5 w-full" />
         <Skeleton className="h-5 w-[90%]" />
