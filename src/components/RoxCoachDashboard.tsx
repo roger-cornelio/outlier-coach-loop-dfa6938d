@@ -22,6 +22,7 @@ import OutlierRadarChart from './diagnostico/OutlierRadarChart';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
+import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
