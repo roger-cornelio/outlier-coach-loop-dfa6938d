@@ -11,7 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2 } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock } from 'lucide-react';
+import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { supabase } from '@/integrations/supabase/client';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
@@ -1671,6 +1672,15 @@ export function DiagnosticRadarBlock({
     eliteTarget?.targetLabel,
   ]);
 
+  // Evolution projection — compact strip for dashboard header
+  const evolutionProjection = useMemo(() => {
+    const currentTime = validatingCompetition?.time_in_seconds;
+    const targetSec = eliteTarget?.targetSeconds;
+    if (!currentTime || !targetSec || currentTime <= targetSec) return null;
+    const gapSec = currentTime - targetSec;
+    return calculateEvolutionTimeframe(currentTime, gapSec);
+  }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds]);
+
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
     try {return localStorage.getItem('outlier-advanced-mode') === 'true';} catch {return false;}
@@ -1839,6 +1849,21 @@ export function DiagnosticRadarBlock({
           </div>
         )}
 
+        {/* Projeção de Evolução — strip compacta */}
+        {evolutionProjection && performanceSnapshot.currentTime && (
+          <div className="mx-3 mb-2 flex items-center gap-2.5 p-2.5 bg-primary/[0.06] border border-primary/15 rounded-xl">
+            <Clock className="w-4 h-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> · Projeção:{' '}
+                <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
+                <span className="text-muted-foreground/60"> · {evolutionProjection.ratePerMonth}s/mês</span>
+              </p>
+            </div>
+            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider shrink-0">{evolutionProjection.tierLabel}</span>
+          </div>
+        )}
+
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
         <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
         <MobileBottlenecksBlock scores={scores} />
@@ -1940,6 +1965,21 @@ export function DiagnosticRadarBlock({
           </div>
         )}
       </motion.div>
+
+      {/* Projeção de Evolução — strip compacta (desktop) */}
+      {evolutionProjection && performanceSnapshot.currentTime && (
+        <div className="flex items-center gap-3 p-3 bg-primary/[0.06] border border-primary/15 rounded-xl">
+          <Clock className="w-4.5 h-4.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> para meta {performanceSnapshot.targetLabel} · Projeção:{' '}
+              <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
+              <span className="text-muted-foreground/60"> · ganho estimado {evolutionProjection.ratePerMonth}s/mês</span>
+            </p>
+          </div>
+          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider shrink-0 border border-border/20 px-2 py-0.5 rounded-full">{evolutionProjection.tierLabel}</span>
+        </div>
+      )}
 
       {/* BLOCO 2.5: JORNADA OUTLIER */}
       {(() => {
