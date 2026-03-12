@@ -39,5 +39,8 @@ verify_jwt = false
 [functions.search-hyrox-athlete]
 verify_jwt = false
 
+[functions.generate-diagnostic-ai]
+verify_jwt = false
+
 [functions.proxy-roxcoach]
 verify_jwt = false

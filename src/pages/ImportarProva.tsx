@@ -347,7 +347,28 @@ export default function ImportarProva() {
       supabase.from('tempos_splits').delete().eq('atleta_id', user.id),
     ]);
 
-    await supabase.from('diagnostico_resumo').insert(parsed.resumoRow);
+    // Generate AI analysis with Claude (non-blocking — fallback to no texto_ia)
+    let textoIa: string | null = parsed.resumoRow.texto_ia;
+    try {
+      const { data: aiData } = await supabase.functions.invoke('generate-diagnostic-ai', {
+        body: {
+          athlete_name: parsed.resumoRow.nome_atleta || profile?.name || 'Atleta',
+          event_name: parsed.resumoRow.evento || 'HYROX',
+          division: parsed.resumoRow.divisao || 'Open',
+          finish_time: parsed.resumoRow.finish_time || '--:--',
+          splits_data: parsed.splitRows,
+          diagnostic_data: parsed.diagRows,
+        },
+      });
+      if (aiData?.texto_ia) {
+        textoIa = aiData.texto_ia;
+        console.log('[saveDiagnosticData] Claude AI text generated successfully');
+      }
+    } catch (aiErr) {
+      console.warn('[saveDiagnosticData] AI generation failed (non-critical):', aiErr);
+    }
+
+    await supabase.from('diagnostico_resumo').insert({ ...parsed.resumoRow, texto_ia: textoIa });
     if (parsed.diagRows.length > 0) {
       await supabase.from('diagnostico_melhoria').insert(parsed.diagRows);
     }
