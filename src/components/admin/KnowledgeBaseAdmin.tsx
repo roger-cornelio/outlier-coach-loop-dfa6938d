@@ -197,7 +197,7 @@ export function KnowledgeBaseAdmin() {
       setFileUrl(publicUrl);
       setFilePath(path);
 
-      setUploadProgress("Analisando conteúdo com IA...");
+      setUploadProgress("Analisando conteúdo...");
 
       // Call edge function to parse
       const { data: parseData, error: parseError } = await supabase.functions.invoke(
@@ -772,7 +772,7 @@ export function KnowledgeBaseAdmin() {
               <div className="space-y-2">
                 <Label>Critérios de Análise (opcional)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Selecione em quais análises do app este artigo deve ser usado como referência pela IA.
+                  Selecione em quais análises do app este artigo deve ser usado como referência.
                   Se nenhum critério for selecionado, o artigo ficará apenas na biblioteca.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
@@ -848,7 +848,7 @@ export function KnowledgeBaseAdmin() {
               Critérios de Análise
             </DialogTitle>
             <DialogDescription className="text-left">
-              Selecione em quais análises o artigo <strong>"{criteriaTarget?.title}"</strong> deve ser utilizado pela IA.
+              Selecione em quais análises o artigo <strong>"{criteriaTarget?.title}"</strong> deve ser utilizado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 max-h-80 overflow-y-auto py-2">
