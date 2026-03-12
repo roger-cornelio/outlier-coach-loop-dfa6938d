@@ -12,6 +12,7 @@ import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
+import DeepAnalysisBlock from './diagnostico/DeepAnalysisBlock';
 import ParecerPremium from './diagnostico/ParecerPremium';
 import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
@@ -435,7 +436,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
 
           {showFullAnalysis && diagnosticos.length > 0 && (
-            <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+            <>
+              <DeepAnalysisBlock
+                resumo={selectedResumo}
+                diagnosticos={diagnosticos}
+                splits={splits}
+              />
+              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+            </>
           )}
 
 

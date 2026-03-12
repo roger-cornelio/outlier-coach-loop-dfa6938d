@@ -1,0 +1,1 @@
+ALTER TABLE public.diagnostico_resumo ADD COLUMN IF NOT EXISTS texto_ia_completo text DEFAULT NULL;
