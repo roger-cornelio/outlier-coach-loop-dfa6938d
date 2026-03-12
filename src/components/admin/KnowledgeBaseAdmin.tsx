@@ -197,7 +197,7 @@ export function KnowledgeBaseAdmin() {
       setFileUrl(publicUrl);
       setFilePath(path);
 
-      setUploadProgress("Analisando conteúdo com IA...");
+      setUploadProgress("Analisando conteúdo...");
 
       // Call edge function to parse
       const { data: parseData, error: parseError } = await supabase.functions.invoke(
