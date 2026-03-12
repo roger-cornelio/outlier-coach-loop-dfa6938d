@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw, Brain } from 'lucide-react';
+import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
