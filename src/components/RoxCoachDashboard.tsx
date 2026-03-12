@@ -31,6 +31,7 @@ interface RoxCoachDashboardProps {
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
   const { user } = useAuth();
   const currentCoachStyle = useOutlierStore((s) => s.coachStyle);
+  const diagnosticScores = useDiagnosticScores();
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
