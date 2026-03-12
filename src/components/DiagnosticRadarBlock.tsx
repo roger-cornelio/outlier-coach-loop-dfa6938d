@@ -1738,9 +1738,15 @@ export function DiagnosticRadarBlock({
   const hasMoreStations = affectedStations.length > 2;
 
   const radarData = useMemo(() => {
+    const scoreMap = new Map(scores.map(s => [s.metric, s.percentile_value]));
     return RADAR_AXES.map((axis) => {
-      const score = scores.find((s) => s.metric === axis.key);
-      return { name: axis.name, shortName: axis.shortName, value: score?.percentile_value || 50, fullMark: 100 };
+      const values = axis.metrics
+        .map(m => scoreMap.get(m))
+        .filter((v): v is number => v != null);
+      const avg = values.length > 0
+        ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+        : 50;
+      return { name: axis.name, shortName: axis.shortName, value: Math.max(0, Math.min(100, avg)), fullMark: 100 };
     });
   }, [scores]);
 
