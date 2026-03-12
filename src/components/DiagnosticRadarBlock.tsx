@@ -1835,7 +1835,10 @@ export function DiagnosticRadarBlock({
       const avg = values.length > 0
         ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
         : 50;
-      return { name: axis.name, shortName: axis.shortName, value: Math.max(0, Math.min(100, avg)), fullMark: 100 };
+      const clamped = Math.max(0, Math.min(100, avg));
+      // Visual floor: prevents low percentiles from collapsing to center (FIFA/NBA2K pattern)
+      const visualValue = Math.round(25 + clamped * 0.75);
+      return { name: axis.name, shortName: axis.shortName, value: clamped, visualValue, fullMark: 100 };
     });
   }, [scores]);
 
