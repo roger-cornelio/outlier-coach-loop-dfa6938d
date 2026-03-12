@@ -1849,6 +1849,21 @@ export function DiagnosticRadarBlock({
           </div>
         )}
 
+        {/* Projeção de Evolução — strip compacta */}
+        {evolutionProjection && performanceSnapshot.currentTime && (
+          <div className="mx-3 mb-2 flex items-center gap-2.5 p-2.5 bg-primary/[0.06] border border-primary/15 rounded-xl">
+            <Clock className="w-4 h-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> · Projeção:{' '}
+                <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
+                <span className="text-muted-foreground/60"> · {evolutionProjection.ratePerMonth}s/mês</span>
+              </p>
+            </div>
+            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider shrink-0">{evolutionProjection.tierLabel}</span>
+          </div>
+        )}
+
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
         <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
         <MobileBottlenecksBlock scores={scores} />
