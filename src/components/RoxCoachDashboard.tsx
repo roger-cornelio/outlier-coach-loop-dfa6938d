@@ -361,6 +361,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             )}
           </div>
         );
+      })()}
+
       {/* Projeção de Evolução - logo abaixo da prova atual */}
       {selectedResumo?.finish_time && diagnosticos.length > 0 && (
         <EvolutionProjectionCard
