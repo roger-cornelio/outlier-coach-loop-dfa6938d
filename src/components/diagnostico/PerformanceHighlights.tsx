@@ -5,18 +5,26 @@ interface Props {
   resumo: DiagnosticoResumo;
 }
 
-/** Extract only the numeric/time portion from a string (e.g. "21st in Age Group" → "21") */
+/** Extract only the numeric/time portion from a string (e.g. "01:02:33" → "01:02:33") */
 function extractNumeric(val: string | null | undefined): string {
   if (!val) return '—';
   const match = val.match(/^[\d:]+/);
   return match ? match[0] : val.replace(/[^\d:.,]/g, '') || '—';
 }
 
+/** Extract rank as plain integer, stripping thousand separators (e.g. "1,305th" → "1305") */
+function extractRank(val: string | null | undefined): string {
+  if (!val) return '—';
+  const cleaned = val.replace(/[.,]/g, '');
+  const match = cleaned.match(/\d+/);
+  return match ? match[0] : '—';
+}
+
 const stats = [
-  { key: 'posicao_categoria', label: 'Rank Categoria', icon: Medal },
-  { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin },
-  { key: 'run_total', label: 'Run Total', icon: Timer },
-  { key: 'workout_total', label: 'Workout Total', icon: Dumbbell },
+  { key: 'posicao_categoria', label: 'Rank Categoria', icon: Medal, isRank: true },
+  { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin, isRank: true },
+  { key: 'run_total', label: 'Run Total', icon: Timer, isRank: false },
+  { key: 'workout_total', label: 'Workout Total', icon: Dumbbell, isRank: false },
 ] as const;
 
 export default function PerformanceHighlights({ resumo }: Props) {
@@ -39,9 +47,9 @@ export default function PerformanceHighlights({ resumo }: Props) {
           </p>
         </div>
 
-        {stats.map(({ key, label, icon: Icon }) => {
+        {stats.map(({ key, label, icon: Icon, isRank }) => {
           const raw = resumo[key as keyof DiagnosticoResumo] as string | null;
-          const display = extractNumeric(raw);
+          const display = isRank ? extractRank(raw) : extractNumeric(raw);
           return (
             <div
               key={key}
