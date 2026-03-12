@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-evolution-projection]
 verify_jwt = false
+
+[functions.generate-deep-analysis]
+verify_jwt = false

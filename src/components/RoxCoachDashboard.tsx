@@ -436,7 +436,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
 
           {showFullAnalysis && diagnosticos.length > 0 && (
-            <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+            <>
+              <DeepAnalysisBlock
+                resumo={selectedResumo}
+                diagnosticos={diagnosticos}
+                splits={splits}
+              />
+              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+            </>
           )}
 
 
