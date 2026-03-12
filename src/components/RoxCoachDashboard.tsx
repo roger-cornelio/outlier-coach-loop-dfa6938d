@@ -17,6 +17,7 @@ import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
+import { useOutlierStore } from '@/store/outlierStore';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
