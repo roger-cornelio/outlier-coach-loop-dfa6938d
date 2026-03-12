@@ -1251,7 +1251,7 @@ function MobilePhysiologicalModal({
               <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                 <PolarGrid stroke="hsl(var(--foreground))" strokeOpacity={0.12} gridType="circle" radialLines />
                 <PolarAngleAxis dataKey="shortName" tick={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }} tickLine={false} />
-                <Radar name="Perfil" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.4} dot={false} />
+                <Radar name="Perfil" dataKey="visualValue" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.4} dot={false} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -1835,7 +1835,10 @@ export function DiagnosticRadarBlock({
       const avg = values.length > 0
         ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
         : 50;
-      return { name: axis.name, shortName: axis.shortName, value: Math.max(0, Math.min(100, avg)), fullMark: 100 };
+      const clamped = Math.max(0, Math.min(100, avg));
+      // Visual floor: prevents low percentiles from collapsing to center (FIFA/NBA2K pattern)
+      const visualValue = Math.round(25 + clamped * 0.75);
+      return { name: axis.name, shortName: axis.shortName, value: clamped, visualValue, fullMark: 100 };
     });
   }, [scores]);
 
@@ -2241,7 +2244,7 @@ export function DiagnosticRadarBlock({
                     <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                       <PolarGrid stroke="hsl(var(--foreground))" strokeOpacity={0.12} gridType="circle" radialLines />
                       <PolarAngleAxis dataKey="shortName" tick={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }} tickLine={false} />
-                      <Radar name="Perfil Fisiológico" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.4} dot={false} />
+                      <Radar name="Perfil Fisiológico" dataKey="visualValue" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.4} dot={false} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>

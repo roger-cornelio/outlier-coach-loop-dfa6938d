@@ -31,7 +31,11 @@ function buildRadarData(scores: CalculatedScore[]) {
       ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
       : 50;
 
-    return { category: cat.label, score: Math.max(0, Math.min(100, score)) };
+    const clamped = Math.max(0, Math.min(100, score));
+    // Visual floor: prevents low percentiles from collapsing to center (FIFA/NBA2K pattern)
+    const visualScore = Math.round(25 + clamped * 0.75);
+
+    return { category: cat.label, score: clamped, visualScore };
   });
 }
 
@@ -52,7 +56,7 @@ export default function OutlierRadarChart({ scores }: Props) {
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
           <Radar
             name="Score"
-            dataKey="score"
+            dataKey="visualScore"
             stroke="#f97316"
             fill="#f97316"
             fillOpacity={0.4}
