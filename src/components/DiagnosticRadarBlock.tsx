@@ -2283,7 +2283,11 @@ export function DiagnosticRadarBlock({
                   <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
                   <p className="text-base font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
                   {mainLimiter ?
-                  <p className="text-xs text-foreground/70 mt-1">Abaixo de {mainLimiter.relativePerformance}% da categoria</p> :
+                  <p className="text-xs text-foreground/70 mt-1">
+                    {loadingInsights ? (
+                      <span className="inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analisando...</span>
+                    ) : coachInsights?.limitador_descricao || `Abaixo de ${mainLimiter.relativePerformance}% da categoria`}
+                  </p> :
                   <p className="text-xs text-foreground/70 mt-1">Registre uma prova para ver seu limitador.</p>
                   }
                 </div>
@@ -2291,8 +2295,12 @@ export function DiagnosticRadarBlock({
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
                   {mainLimiter ?
                   <>
-                      <p className="text-sm text-foreground">Corrigindo {mainLimiter.name} →</p>
-                      <p className="text-xs text-foreground/70 mt-1">Zona competitiva superior da categoria</p>
+                      <p className="text-sm text-foreground">
+                        {coachInsights?.ganho_acao || `Corrigindo ${mainLimiter.name} →`}
+                      </p>
+                      <p className="text-xs text-foreground/70 mt-1">
+                        {coachInsights?.ganho_descricao || 'Zona competitiva superior da categoria'}
+                      </p>
                     </> :
                   <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
                   }
@@ -2300,8 +2308,8 @@ export function DiagnosticRadarBlock({
                 <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
                   <ul className="space-y-1 mb-4">
-                    {topStations.map((station, index) =>
-                    <li key={index} className="text-sm text-foreground">• {station.name}</li>
+                    {(coachInsights?.proximos_passos || topStations.map(s => s.name)).map((step, index) =>
+                    <li key={index} className="text-sm text-foreground">• {step}</li>
                     )}
                   </ul>
                 </div>
@@ -2314,12 +2322,12 @@ export function DiagnosticRadarBlock({
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 text-sm text-foreground/90 leading-relaxed">
                     <div className="border-l-2 border-red-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-red-400 text-xs uppercase">Limitador — Análise completa</p>
-                      <p>{mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.</p>
+                      <p>{coachInsights?.limitador_descricao || `${mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.`}</p>
                       <p>Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados.</p>
                     </div>
                     <div className="border-l-2 border-emerald-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-emerald-400 text-xs uppercase">Projeção</p>
-                      <p>Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}.</p>
+                      <p>{coachInsights?.ganho_descricao || `Ao corrigir este limitador, sua performance tende a se deslocar para a zona competitiva superior da categoria ${athleteCategory}.`}</p>
                     </div>
                     <div className="border-l-2 border-amber-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-amber-400 text-xs uppercase">Impacto na prova</p>
