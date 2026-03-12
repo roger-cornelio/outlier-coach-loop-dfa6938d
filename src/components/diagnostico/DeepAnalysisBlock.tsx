@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Loader2, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,11 @@ interface Props {
 export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Props) {
   const [texto, setTexto] = useState<string | null>((resumo as any).texto_ia_completo || null);
   const [loading, setLoading] = useState(false);
+
+  // Sync cache when resumo changes (e.g. switching between provas)
+  useEffect(() => {
+    setTexto((resumo as any).texto_ia_completo || null);
+  }, [resumo.id]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -43,7 +48,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
 
       const generatedText = data?.texto;
       if (!generatedText) {
-        toast.error('A IA não retornou análise. Tente novamente.');
+        toast.error('Falha na análise. Tente novamente.');
         return;
       }
 
@@ -55,7 +60,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         .update({ texto_ia_completo: generatedText } as any)
         .eq('id', resumo.id);
 
-      toast.success('Raio-X Tático gerado com sucesso!');
+      toast.success('Raio Tático gerado!');
     } catch (err) {
       console.error('[DeepAnalysis] Error:', err);
       toast.error('Erro ao gerar análise. Tente novamente.');
@@ -69,7 +74,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
       <div className="space-y-4 rounded-2xl border border-primary/20 bg-card p-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-          Gerando Raio-X Tático com IA...
+          Outlier AI analisando sua prova...
         </div>
         <Skeleton className="h-5 w-full" />
         <Skeleton className="h-5 w-[90%]" />
@@ -90,12 +95,12 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-primary/[0.06] blur-3xl pointer-events-none" />
         <div className="relative p-6 space-y-2">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <BrainCircuit className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
-              Raio-X Tático
+              Raio Tático Outlier
             </h3>
             <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase ml-auto">
-              Análise por IA · Head Coach de Elite
+              Gerado por Outlier AI
             </span>
           </div>
           <div className="prose prose-sm max-w-none parecer-markdown">
@@ -141,15 +146,15 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
     );
   }
 
-  // Show generate button
+  // Show generate button only when no cached result exists
   return (
     <div className="flex justify-center">
       <Button
         onClick={handleGenerate}
         className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold py-6 text-base rounded-xl shadow-lg shadow-primary/20"
       >
-        <Sparkles className="w-5 h-5" />
-        Gerar Raio-X Tático com IA
+        <BrainCircuit className="w-5 h-5" />
+        Gerar Raio Tático Outlier
       </Button>
     </div>
   );
