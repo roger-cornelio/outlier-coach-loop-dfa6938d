@@ -56,7 +56,7 @@ export default function OutlierRadarChart({ scores }: Props) {
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
           <Radar
             name="Score"
-            dataKey="score"
+            dataKey="visualScore"
             stroke="#f97316"
             fill="#f97316"
             fillOpacity={0.4}
