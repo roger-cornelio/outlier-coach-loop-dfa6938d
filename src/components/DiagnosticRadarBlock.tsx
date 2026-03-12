@@ -69,12 +69,13 @@ const STATUS_SUMMARY: Record<string, string> = {
 };
 
 const RADAR_AXES = [
-{ key: 'run_avg', name: 'Resistência Cardiovascular', shortName: 'Cardio' },
-{ key: 'sled_push', name: 'Força & Resistência Muscular', shortName: 'Força' },
-{ key: 'ski', name: 'Potência & Vigor', shortName: 'Potência' },
-{ key: 'row', name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
-{ key: 'roxzone', name: 'Core & Estabilidade', shortName: 'Core' },
-{ key: 'wallballs', name: 'Coordenação sob Fadiga', shortName: 'Eficiência' }];
+  { metrics: ['run_avg', 'row'], name: 'Resistência Cardiovascular', shortName: 'Cardio' },
+  { metrics: ['sled_push', 'sled_pull'], name: 'Força & Resistência Muscular', shortName: 'Força' },
+  { metrics: ['wallballs'], name: 'Potência & Vigor', shortName: 'Potência' },
+  { metrics: ['ski', 'bbj'], name: 'Capacidade Anaeróbica', shortName: 'Anaeróbica' },
+  { metrics: ['sandbag', 'farmers'], name: 'Core & Estabilidade', shortName: 'Core' },
+  { metrics: ['roxzone'], name: 'Coordenação sob Fadiga', shortName: 'Eficiência' },
+];
 
 
 // ============================================
