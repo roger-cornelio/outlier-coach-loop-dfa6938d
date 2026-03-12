@@ -69,7 +69,8 @@ serve(async (req) => {
 Extract ALL available data from the HTML of a HYROX result detail page:
 
 1. EVENT NAME: e.g. "HYROX São Paulo 2026", "HYROX World Championship Nice"
-2. EVENT YEAR: just the year number, e.g. 2025
+2. EVENT DATE: the specific date of the event in YYYY-MM-DD format (look for date fields, event date headers, or any date near the event name). If only month/year available, use the 15th as day. If only year, use June 15.
+3. EVENT YEAR: just the year number, e.g. 2025
 3. RACE CATEGORY / DIVISION: "OPEN" or "PRO" (look for "HYROX" = OPEN, "HYROX PRO" = PRO in division/category fields)
 4. FINAL/TOTAL TIME: the overall finish time, convert to seconds
 5. SPLITS: Individual station times AND running times
