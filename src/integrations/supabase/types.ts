@@ -773,6 +773,7 @@ export type Database = {
       diagnostico_resumo: {
         Row: {
           atleta_id: string
+          coach_insights: Json | null
           created_at: string
           divisao: string | null
           evento: string | null
@@ -790,6 +791,7 @@ export type Database = {
         }
         Insert: {
           atleta_id: string
+          coach_insights?: Json | null
           created_at?: string
           divisao?: string | null
           evento?: string | null
@@ -807,6 +809,7 @@ export type Database = {
         }
         Update: {
           atleta_id?: string
+          coach_insights?: Json | null
           created_at?: string
           divisao?: string | null
           evento?: string | null
