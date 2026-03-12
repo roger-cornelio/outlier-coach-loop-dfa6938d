@@ -1,0 +1,1 @@
+ALTER TABLE public.diagnostico_resumo ADD COLUMN IF NOT EXISTS coach_insights jsonb DEFAULT NULL;

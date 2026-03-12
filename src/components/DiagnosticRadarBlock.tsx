@@ -1699,6 +1699,95 @@ export function DiagnosticRadarBlock({
   const [showStationDetails, setShowStationDetails] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
+  // Coach Insights (AI-generated copy, cached in diagnostico_resumo.coach_insights)
+  interface CoachInsights {
+    limitador_descricao: string;
+    ganho_acao: string;
+    ganho_descricao: string;
+    proximos_passos: string[];
+  }
+  const [coachInsights, setCoachInsights] = useState<CoachInsights | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const insightsFetchedRef = useRef<string | null>(null);
+
+  // Fetch or load cached coach insights when mainLimiter is available
+  useEffect(() => {
+    if (!hasData || !profile?.user_id) return;
+
+    const limiterMetric = scores.length > 0
+      ? [...scores].sort((a, b) => a.percentile_value - b.percentile_value)[0]?.metric
+      : null;
+    if (!limiterMetric) return;
+
+    // Prevent duplicate fetches for same user
+    const fetchKey = `${profile.user_id}-${limiterMetric}`;
+    if (insightsFetchedRef.current === fetchKey) return;
+    insightsFetchedRef.current = fetchKey;
+
+    const loadInsights = async () => {
+      try {
+        // 1. Check cache in diagnostico_resumo
+        const { data: resumos } = await supabase
+          .from('diagnostico_resumo')
+          .select('id, coach_insights')
+          .eq('atleta_id', profile.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const resumo = resumos?.[0];
+        if (resumo?.coach_insights) {
+          setCoachInsights(resumo.coach_insights as unknown as CoachInsights);
+          return;
+        }
+
+        // 2. Generate via edge function
+        setLoadingInsights(true);
+        const limiterName = METRIC_LABELS[limiterMetric] || limiterMetric;
+        const limiterPercentile = scores.find(s => s.metric === limiterMetric)?.percentile_value || 0;
+
+        const splitsPayload = scores.map(s => ({
+          metric: s.metric,
+          name: METRIC_LABELS[s.metric] || s.metric,
+          percentile: s.percentile_value,
+          time_sec: s.raw_time_sec,
+        }));
+
+        const coachStyle = profile ? (profile as any).coach_style || 'PULSE' : 'PULSE';
+
+        const { data, error } = await supabase.functions.invoke('generate-coach-insights', {
+          body: {
+            athlete_name: profile.name || 'Atleta',
+            main_limiter_name: limiterName,
+            main_limiter_percentile: limiterPercentile,
+            splits: splitsPayload,
+            coach_style: coachStyle,
+          },
+        });
+
+        if (error || !data?.insights) {
+          console.warn('[CoachInsights] Generation failed:', error || data?.error);
+          return;
+        }
+
+        setCoachInsights(data.insights);
+
+        // 3. Cache in DB
+        if (resumo?.id) {
+          await supabase
+            .from('diagnostico_resumo')
+            .update({ coach_insights: data.insights } as any)
+            .eq('id', resumo.id);
+        }
+      } catch (err) {
+        console.warn('[CoachInsights] Error:', err);
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+
+    loadInsights();
+  }, [hasData, profile?.user_id, scores]);
+
   // Derived data
   const athleteName = profile?.name?.toUpperCase() || 'ATLETA';
   const athleteCategory = useMemo(() => {
@@ -2194,7 +2283,11 @@ export function DiagnosticRadarBlock({
                   <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
                   <p className="text-base font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
                   {mainLimiter ?
-                  <p className="text-xs text-foreground/70 mt-1">Abaixo de {mainLimiter.relativePerformance}% da categoria</p> :
+                  <p className="text-xs text-foreground/70 mt-1">
+                    {loadingInsights ? (
+                      <span className="inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analisando...</span>
+                    ) : coachInsights?.limitador_descricao || `Abaixo de ${mainLimiter.relativePerformance}% da categoria`}
+                  </p> :
                   <p className="text-xs text-foreground/70 mt-1">Registre uma prova para ver seu limitador.</p>
                   }
                 </div>
@@ -2202,8 +2295,12 @@ export function DiagnosticRadarBlock({
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
                   {mainLimiter ?
                   <>
-                      <p className="text-sm text-foreground">Corrigindo {mainLimiter.name} →</p>
-                      <p className="text-xs text-foreground/70 mt-1">Zona competitiva superior da categoria</p>
+                      <p className="text-sm text-foreground">
+                        {coachInsights?.ganho_acao || `Corrigindo ${mainLimiter.name} →`}
+                      </p>
+                      <p className="text-xs text-foreground/70 mt-1">
+                        {coachInsights?.ganho_descricao || 'Zona competitiva superior da categoria'}
+                      </p>
                     </> :
                   <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
                   }
@@ -2211,8 +2308,8 @@ export function DiagnosticRadarBlock({
                 <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
                   <ul className="space-y-1 mb-4">
-                    {topStations.map((station, index) =>
-                    <li key={index} className="text-sm text-foreground">• {station.name}</li>
+                    {(coachInsights?.proximos_passos || topStations.map(s => s.name)).map((step, index) =>
+                    <li key={index} className="text-sm text-foreground">• {step}</li>
                     )}
                   </ul>
                 </div>
@@ -2225,12 +2322,12 @@ export function DiagnosticRadarBlock({
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 text-sm text-foreground/90 leading-relaxed">
                     <div className="border-l-2 border-red-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-red-400 text-xs uppercase">Limitador — Análise completa</p>
-                      <p>{mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.</p>
+                      <p>{coachInsights?.limitador_descricao || `${mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.`}</p>
                       <p>Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados.</p>
                     </div>
                     <div className="border-l-2 border-emerald-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-emerald-400 text-xs uppercase">Projeção</p>
-                      <p>Ao corrigir este limitador, sua performance tende a se deslocar para a <span className="font-semibold text-emerald-500">zona competitiva superior</span> da categoria {athleteCategory}.</p>
+                      <p>{coachInsights?.ganho_descricao || `Ao corrigir este limitador, sua performance tende a se deslocar para a zona competitiva superior da categoria ${athleteCategory}.`}</p>
                     </div>
                     <div className="border-l-2 border-amber-800/50 pl-3 space-y-2">
                       <p className="font-semibold text-amber-400 text-xs uppercase">Impacto na prova</p>
