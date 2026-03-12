@@ -350,6 +350,7 @@ export default function ImportarProva() {
     // Generate AI analysis with Claude (non-blocking — fallback to no texto_ia)
     let textoIa: string | null = parsed.resumoRow.texto_ia;
     try {
+      const currentCoachStyle = useOutlierStore.getState().coachStyle;
       const { data: aiData } = await supabase.functions.invoke('generate-diagnostic-ai', {
         body: {
           athlete_name: parsed.resumoRow.nome_atleta || profile?.name || 'Atleta',
@@ -358,6 +359,7 @@ export default function ImportarProva() {
           finish_time: parsed.resumoRow.finish_time || '--:--',
           splits_data: parsed.splitRows,
           diagnostic_data: parsed.diagRows,
+          coach_style: currentCoachStyle || 'PULSE',
         },
       });
       if (aiData?.texto_ia) {

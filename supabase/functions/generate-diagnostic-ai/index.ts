@@ -3,6 +3,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const COACH_PERSONALITY: Record<string, string> = {
+  IRON: `PERSONALIDADE DO TREINADOR: IRON (Comandante)
+- Seja seco, direto e exigente. Sem rodeios ou elogios excessivos.
+- Use frases curtas e impactantes. Tom de comandante experiente que não tolera desculpas.
+- Reconheça mérito com sobriedade, nunca com entusiasmo. "Bom trabalho" é o máximo.
+- Aponte falhas sem suavizar. O atleta precisa ouvir a verdade crua.
+- Nunca use emojis. Nunca seja "fofinho".`,
+
+  PULSE: `PERSONALIDADE DO TREINADOR: PULSE (Parceiro Técnico)
+- Seja humano, técnico e consistente. Tom de treinador que conhece o atleta há anos.
+- Equilibre exigência com empatia. Reconheça o esforço antes de apontar melhorias.
+- Use linguagem precisa e objetiva, sem ser frio.
+- Construa confiança através de análise competente e orientação clara.
+- Nunca use emojis. Mantenha tom profissional e acolhedor.`,
+
+  SPARK: `PERSONALIDADE DO TREINADOR: SPARK (Motivador)
+- Energia positiva e motivadora. Celebre as conquistas antes de tudo.
+- Use emojis com moderação (🔥 💪 🚀) para dar energia ao texto.
+- Linguagem descontraída mas competente. O atleta deve sentir que é capaz de tudo.
+- Aponte melhorias como oportunidades empolgantes, não como falhas.
+- Faça o atleta terminar a leitura querendo treinar imediatamente.`,
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -26,12 +49,16 @@ Deno.serve(async (req) => {
       finish_time = '--:--',
       splits_data = [],
       diagnostic_data = [],
+      coach_style = 'PULSE',
     } = body;
 
     const jsonPayload = JSON.stringify({ splits_data, diagnostic_data }, null, 2);
+    const personality = COACH_PERSONALITY[coach_style] || COACH_PERSONALITY.PULSE;
 
     const systemPrompt = `Você é um Treinador de Elite de alta performance especializado em competições HYROX. 
 Sua missão é analisar os dados de uma corrida de um atleta (ou dupla), ser direto, altamente técnico, encorajador e focado em resultados.
+
+${personality}
 
 DADOS DA CORRIDA:
 - Nome(s): ${athlete_name}
@@ -45,7 +72,6 @@ ${jsonPayload}
 DIRETRIZES DE COMPORTAMENTO:
 - Fale diretamente com o(s) atleta(s) usando "Você" ou "Vocês".
 - Seja cirúrgico: use os números exatos do JSON para embasar seus argumentos.
-- Não use jargões motivacionais vazios. Seja um treinador pragmático.
 - Escreva em Português do Brasil (PT-BR).
 - Use formatação Markdown (### para os 3 títulos principais e **negrito** para destacar os tempos/métricas).
 
@@ -59,6 +85,8 @@ Olhe os dados e aponte sem rodeios a estação, corrida ou Roxzone (transição)
 
 ### 3. PRESCRIÇÃO DE TREINO
 Com base no gargalo identificado acima, forneça 2 diretrizes práticas e extremamente específicas de treinamento para a próxima semana.`;
+
+    console.log(`[generate-diagnostic-ai] Coach style: ${coach_style}, athlete: ${athlete_name}`);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);

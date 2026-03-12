@@ -1,38 +1,32 @@
 
 
-## Plano: Adaptar o Diagnóstico IA para Respeitar o Coach Style (IRON/PULSE/SPARK)
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
-### O que muda
+### Problema
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
-A Edge Function `generate-diagnostic-ai` atualmente usa um tom fixo ("Treinador de Elite pragmático"). Vamos adicionar personalidade variável baseada no `coachStyle` do atleta, seguindo o mesmo padrão já usado em `generate-workout-feedback`.
+### Solução
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-### Mudanças
+### Alterações
 
-**1. Edge Function `generate-diagnostic-ai/index.ts`**
-- Aceitar novo campo `coach_style` no body (default: `'PULSE'`)
-- Adicionar bloco de personalidade ao system prompt baseado no estilo:
-  - **IRON**: Tom de comandante — direto, seco, verdade crua, sem firulas
-  - **PULSE**: Tom de parceiro — humano, técnico, consistente (comportamento atual, mantido como default)
-  - **SPARK**: Tom motivador — energia positiva, celebra progresso, leve
-- Inserir as diretrizes de personalidade antes das diretrizes de comportamento existentes
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-**2. Frontend `ImportarProva.tsx`**
-- Já tem acesso ao store via `useOutlierStore` (linha 106)
-- Extrair `coachStyle` do store e passar como `coach_style` na chamada da edge function
-- Fallback para `'PULSE'` se não definido
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
 
-### Exemplo de injeção no prompt
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
 
-```text
-PERSONALIDADE DO TREINADOR: IRON
-- Seja seco, direto e exigente. Sem rodeios ou elogios excessivos.
-- Use frases curtas e impactivas. Tom de comandante experiente.
-- Reconheça mérito com sobriedade, nunca com entusiasmo.
-
-[...rest of existing prompt...]
-```
-
-### Arquivos afetados
-- `supabase/functions/generate-diagnostic-ai/index.ts` — adicionar mapa de personalidades e injetar no prompt
-- `src/pages/ImportarProva.tsx` — passar `coach_style` na chamada
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
