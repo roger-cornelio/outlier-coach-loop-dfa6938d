@@ -106,6 +106,7 @@ Return ONLY valid JSON.`
                 type: "object",
                 properties: {
                   event_name: { type: "string", description: "Event name with location, e.g. HYROX Rio de Janeiro 2025" },
+                  event_date: { type: "string", description: "Event date in YYYY-MM-DD format, e.g. 2025-03-15" },
                   event_year: { type: "number", description: "Year of the event, e.g. 2025" },
                   race_category: { type: "string", enum: ["OPEN", "PRO"], description: "Race division" },
                   time_in_seconds: { type: "number", description: "Total/final time in seconds" },

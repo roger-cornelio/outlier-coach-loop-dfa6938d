@@ -231,7 +231,7 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
       user_id: user.id,
       result_type: 'prova_oficial',
       event_name: scrapedEventName,
-      event_date: `${eventYear}-01-01`,
+      event_date: scrapeData.event_date || `${eventYear}-06-15`,
       time_in_seconds: totalSeconds,
       screenshot_url: result.result_url,
       race_category: scrapedRaceCategory,

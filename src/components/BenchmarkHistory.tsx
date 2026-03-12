@@ -139,19 +139,26 @@ export function BenchmarkHistory({ filterType = 'all' }: BenchmarkHistoryProps) 
       const { data, error } = await query;
       
       if (error) throw error;
-      // Sort: most recent first using source_index (higher = more recent), fallback to event_date/created_at
+      // Sort: most recent first — real dates take priority, then source_index, then created_at
+      const isPlaceholderDate = (d: string | null) => !d || /^\d{4}-01-01$/.test(d);
       const sorted = (data || []).sort((a: any, b: any) => {
-        // If both have source_index, use it (higher = more recent)
+        const aReal = !isPlaceholderDate(a.event_date);
+        const bReal = !isPlaceholderDate(b.event_date);
+        // Both have real dates → chronological DESC
+        if (aReal && bReal) {
+          return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
+        }
+        // Real date wins over placeholder
+        if (aReal && !bReal) return -1;
+        if (!aReal && bReal) return 1;
+        // Both placeholders → use source_index DESC
         if (a.source_index != null && b.source_index != null) {
           return b.source_index - a.source_index;
         }
-        // source_index takes priority over no source_index
         if (a.source_index != null && b.source_index == null) return -1;
         if (a.source_index == null && b.source_index != null) return 1;
-        // Fallback to date
-        const dateA = a.event_date || a.created_at;
-        const dateB = b.event_date || b.created_at;
-        return new Date(dateB).getTime() - new Date(dateA).getTime();
+        // Final fallback: created_at DESC
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
       setExternalResults(sorted as ExternalResult[]);
     } catch (err) {
