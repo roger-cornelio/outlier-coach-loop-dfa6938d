@@ -1,32 +1,42 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Alinhar Mapeamento dos Dois Radars
 
 ### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+Os dois radars (Dashboard e Diagnóstico) usam mapeamentos diferentes para os mesmos 6 eixos, gerando inconsistência visual.
 
 ### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+Unificar ambos usando o mapeamento agrupado do OutlierRadarChart (que é fisiologicamente mais coerente):
 
-### Alterações
+```text
+Cardio     → avg(run_avg, row)
+Força      → avg(sled_push, sled_pull)
+Potência   → wallballs
+Anaeróbica → avg(ski, bbj)
+Core       → avg(sandbag, farmers)
+Eficiência → roxzone
+```
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+### Mudanças
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+**1. `src/components/DiagnosticRadarBlock.tsx`** — Atualizar `RADAR_AXES` e `radarData`
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+Trocar a constante `RADAR_AXES` (linhas 71-77) de mapeamento 1:1 para mapeamento agrupado:
 
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+```typescript
+const RADAR_AXES = [
+  { shortName: 'Cardio', name: 'Resistência Cardiovascular', metrics: ['run_avg', 'row'] },
+  { shortName: 'Força', name: 'Força & Resistência Muscular', metrics: ['sled_push', 'sled_pull'] },
+  { shortName: 'Potência', name: 'Potência & Vigor', metrics: ['wallballs'] },
+  { shortName: 'Anaeróbica', name: 'Capacidade Anaeróbica', metrics: ['ski', 'bbj'] },
+  { shortName: 'Core', name: 'Core & Estabilidade', metrics: ['sandbag', 'farmers'] },
+  { shortName: 'Eficiência', name: 'Coordenação sob Fadiga', metrics: ['roxzone'] },
+];
+```
+
+Atualizar o `useMemo` de `radarData` (linha 1739-1743) para calcular a média dos percentis agrupados em vez de buscar 1 métrica.
+
+**2. Verificar `mainLimiter` e `affectedStations`** — Esses usam `scores` diretamente (métrica individual), não o radar agrupado, então continuam corretos e intocados.
+
+Resultado: ambos os radars mostrarão exatamente o mesmo perfil fisiológico.
 
