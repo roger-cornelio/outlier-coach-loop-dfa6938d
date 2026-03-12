@@ -772,7 +772,7 @@ export function KnowledgeBaseAdmin() {
               <div className="space-y-2">
                 <Label>Critérios de Análise (opcional)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Selecione em quais análises do app este artigo deve ser usado como referência pela IA.
+                  Selecione em quais análises do app este artigo deve ser usado como referência.
                   Se nenhum critério for selecionado, o artigo ficará apenas na biblioteca.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
