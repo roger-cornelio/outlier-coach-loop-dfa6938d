@@ -785,6 +785,7 @@ export type Database = {
           source_url: string | null
           temporada: string | null
           texto_ia: string | null
+          texto_ia_completo: string | null
           workout_total: string | null
         }
         Insert: {
@@ -801,6 +802,7 @@ export type Database = {
           source_url?: string | null
           temporada?: string | null
           texto_ia?: string | null
+          texto_ia_completo?: string | null
           workout_total?: string | null
         }
         Update: {
@@ -817,6 +819,7 @@ export type Database = {
           source_url?: string | null
           temporada?: string | null
           texto_ia?: string | null
+          texto_ia_completo?: string | null
           workout_total?: string | null
         }
         Relationships: []
