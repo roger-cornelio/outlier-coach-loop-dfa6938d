@@ -440,12 +440,22 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {showFullAnalysis && diagnosticos.length > 0 && (
             <>
-              <DeepAnalysisBlock
-                resumo={selectedResumo}
-                diagnosticos={diagnosticos}
-                splits={splits}
-              />
-              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+              <OutlierRadarChart diagnosticos={diagnosticos} />
+
+              <Collapsible defaultOpen={false}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/30 transition-colors [&[data-state=open]>svg]:rotate-180">
+                  Análise por estação
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-3">
+                  <DeepAnalysisBlock
+                    resumo={selectedResumo}
+                    diagnosticos={diagnosticos}
+                    splits={splits}
+                  />
+                  <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
+                </CollapsibleContent>
+              </Collapsible>
             </>
           )}
 
