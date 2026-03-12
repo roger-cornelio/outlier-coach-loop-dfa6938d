@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key não configurada' }), {
+      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY não configurada' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -59,17 +59,19 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 55000);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Gere o Raio-X Tático completo com base nos dados fornecidos.' },
+        ],
         max_tokens: 1500,
-        messages: [{ role: 'user', content: systemPrompt }],
       }),
       signal: controller.signal,
     });
@@ -78,7 +80,19 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[generate-deep-analysis] Anthropic error ${response.status}: ${errText}`);
+      console.error(`[generate-deep-analysis] Gateway error ${response.status}: ${errText}`);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'Rate limit excedido, tente novamente em alguns segundos.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'Créditos insuficientes para IA.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       return new Response(JSON.stringify({ error: `Erro na API de IA: ${response.status}` }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -86,7 +100,7 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
     }
 
     const result = await response.json();
-    const text = result?.content?.[0]?.text || '';
+    const text = result?.choices?.[0]?.message?.content || '';
 
     console.log(`[generate-deep-analysis] Generated ${text.length} chars for ${athlete_name}`);
 

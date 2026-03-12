@@ -1,25 +1,32 @@
 
 
-## Correção: Migrar `generate-deep-analysis` para Lovable AI Gateway
+## Plano: Painel Admin "Motor Físico" para Movement Patterns
 
 ### Problema
-Os logs mostram:
-```
-Anthropic error 404: model: claude-3-5-sonnet-20241022
-```
-O modelo foi descontinuado. A API retorna 404, o frontend recebe erro e mostra "A IA não retornou análise."
+Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
 
 ### Solução
-Migrar de Anthropic API direta → Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`), usando `LOVABLE_API_KEY` (já configurada) e modelo `google/gemini-2.5-flash`.
+Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
 
-### Mudança
+### Alterações
 
-**`supabase/functions/generate-deep-analysis/index.ts`**
-- Trocar `ANTHROPIC_API_KEY` → `LOVABLE_API_KEY`
-- Trocar endpoint `api.anthropic.com` → `ai.gateway.lovable.dev/v1/chat/completions`
-- Trocar formato Anthropic → formato OpenAI (messages com system + user)
-- Modelo: `google/gemini-2.5-flash`
-- Extrair resposta de `choices[0].message.content` em vez de `content[0].text`
+**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
+- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
+- Edição inline nos campos numéricos com botão Salvar por linha
+- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
+- Fetch direto da tabela `movement_patterns` via Supabase client
+- Update via `.update()` — RLS já permite admins
 
-1 arquivo afetado. Prompt e lógica de cache permanecem iguais.
+**2. Atualizar `src/pages/AdminPortal.tsx`**
+- Adicionar `"movementPatterns"` ao tipo `AdminView`
+- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
+- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+
+**3. Sem migração necessária**
+- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
+
+### Design
+- Cards/tabela no dark mode, consistente com os outros painéis admin
+- Inputs numéricos compactos com labels de unidade (%, m, s)
+- Accent laranja nos botões de ação
 
