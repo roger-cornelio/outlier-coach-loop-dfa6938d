@@ -1966,6 +1966,21 @@ export function DiagnosticRadarBlock({
         )}
       </motion.div>
 
+      {/* Projeção de Evolução — strip compacta (desktop) */}
+      {evolutionProjection && performanceSnapshot.currentTime && (
+        <div className="flex items-center gap-3 p-3 bg-primary/[0.06] border border-primary/15 rounded-xl">
+          <Clock className="w-4.5 h-4.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> para meta {performanceSnapshot.targetLabel} · Projeção:{' '}
+              <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
+              <span className="text-muted-foreground/60"> · ganho estimado {evolutionProjection.ratePerMonth}s/mês</span>
+            </p>
+          </div>
+          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider shrink-0 border border-border/20 px-2 py-0.5 rounded-full">{evolutionProjection.tierLabel}</span>
+        </div>
+      )}
+
       {/* BLOCO 2.5: JORNADA OUTLIER */}
       {(() => {
         const journey = journeyData;
