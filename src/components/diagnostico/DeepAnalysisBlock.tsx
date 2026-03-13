@@ -60,7 +60,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         .update({ texto_ia_completo: generatedText } as any)
         .eq('id', resumo.id);
 
-      toast.success('Raio Tático gerado!');
+      toast.success('Raio X gerado!');
     } catch (err) {
       console.error('[DeepAnalysis] Error:', err);
       toast.error('Erro ao gerar análise. Tente novamente.');
