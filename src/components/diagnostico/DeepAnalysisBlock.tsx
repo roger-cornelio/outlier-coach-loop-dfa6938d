@@ -97,7 +97,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
           <div className="flex items-center gap-2 mb-4">
             <BrainCircuit className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
-              Raio Tático Outlier
+              Raio X Outlier
             </h3>
             <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase ml-auto">
               Gerado por Outlier
