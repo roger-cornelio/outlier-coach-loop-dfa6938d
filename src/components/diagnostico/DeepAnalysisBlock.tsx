@@ -60,7 +60,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         .update({ texto_ia_completo: generatedText } as any)
         .eq('id', resumo.id);
 
-      toast.success('Raio Tático gerado!');
+      toast.success('Raio X gerado!');
     } catch (err) {
       console.error('[DeepAnalysis] Error:', err);
       toast.error('Erro ao gerar análise. Tente novamente.');
@@ -97,7 +97,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
           <div className="flex items-center gap-2 mb-4">
             <BrainCircuit className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
-              Raio Tático Outlier
+              Raio X Outlier
             </h3>
             <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase ml-auto">
               Gerado por Outlier
@@ -154,7 +154,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold py-6 text-base rounded-xl shadow-lg shadow-primary/20"
       >
         <BrainCircuit className="w-5 h-5" />
-        Gerar Raio Tático Outlier
+        Gerar Raio X Outlier
       </Button>
     </div>
   );
