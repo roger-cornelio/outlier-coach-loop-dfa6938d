@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
+import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
