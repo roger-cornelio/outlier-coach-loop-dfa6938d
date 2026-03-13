@@ -251,6 +251,18 @@ export function SimulatorScreen() {
         </div>
       )}
 
+      {/* Compare button */}
+      {simulations.length >= 1 && (
+        <Button
+          variant="outline"
+          onClick={() => setViewState('compare')}
+          className="w-full gap-2"
+        >
+          <ArrowRightLeft className="w-4 h-4" />
+          Comparar Simulados
+        </Button>
+      )}
+
       {/* Setup modal */}
       <SimulatorSetupModal
         open={viewState === 'setup'}
