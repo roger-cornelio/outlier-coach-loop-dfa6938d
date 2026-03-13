@@ -1608,6 +1608,7 @@ export type Database = {
       simulations: {
         Row: {
           athlete_id: string
+          coach_insights: string | null
           created_at: string
           division: string
           id: string
@@ -1617,6 +1618,7 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          coach_insights?: string | null
           created_at?: string
           division?: string
           id?: string
@@ -1626,6 +1628,7 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          coach_insights?: string | null
           created_at?: string
           division?: string
           id?: string
