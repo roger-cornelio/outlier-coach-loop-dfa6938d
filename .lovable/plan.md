@@ -1,32 +1,28 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Simulados: De Modal para Accordion Inline (Comparação Fácil)
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### O que muda
+Trocar o `SimulationDetailModal` (Dialog) por cards expansíveis inline usando `Collapsible`. Cada simulado na lista pode ser aberto/fechado independentemente, permitindo abrir vários ao mesmo tempo para comparar lado a lado.
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+### Implementação
 
-### Alterações
+**1. `SimulatorScreen.tsx`**
+- Remover estados `selectedSim`, `detailOpen` e o `<SimulationDetailModal />`
+- Trocar `simulations.map` de Card clicável → `Collapsible` com toggle
+- Estado: `expandedIds: Set<string>` para controlar quais estão abertos (múltiplos simultâneos)
+- Header do card: manter layout atual (ícone troféu, divisão, data, tempo) + ChevronDown que rotaciona
+- `CollapsibleContent`: renderizar inline os stats (Tempo Total / Roxzone) + tabela de splits (mesmo conteúdo do modal atual)
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+**2. `SimulationDetailModal.tsx`**
+- Manter arquivo mas não será mais usado pelo SimulatorScreen (pode ser removido ou mantido para reuso futuro)
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
+**3. UX**
+- Clicar no card expande/colapsa abaixo
+- Múltiplos podem ficar abertos ao mesmo tempo → comparação visual direta
+- Animação suave via Collapsible + framer-motion
+- Zero mudança nos dados ou lógica de fetch
 
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
-
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### Arquivos modificados
+- `src/components/simulator/SimulatorScreen.tsx`
 
