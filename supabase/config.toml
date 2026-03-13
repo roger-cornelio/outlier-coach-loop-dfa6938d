@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.generate-coach-insights]
 verify_jwt = false
+
+[functions.generate-simulado-comparison]
+verify_jwt = false

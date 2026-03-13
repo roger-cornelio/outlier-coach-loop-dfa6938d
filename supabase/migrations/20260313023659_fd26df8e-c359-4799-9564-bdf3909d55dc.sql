@@ -1,0 +1,1 @@
+ALTER TABLE public.simulations ADD COLUMN coach_insights text;

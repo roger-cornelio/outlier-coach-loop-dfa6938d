@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
+import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,7 +31,7 @@ interface SimulationRecord {
   splits_data: SplitData[];
 }
 
-type ViewState = 'list' | 'setup' | 'active';
+type ViewState = 'list' | 'setup' | 'active' | 'compare';
 
 export function SimulatorScreen() {
   const { user } = useAuth();
@@ -118,6 +119,16 @@ export function SimulatorScreen() {
         division={activeDivision}
         onFinish={handleFinishRace}
         onCancel={handleCancelRace}
+      />
+    );
+  }
+
+  if (viewState === 'compare') {
+    return (
+      <SimuladosComparisonView
+        simulations={simulations}
+        onBack={() => setViewState('list')}
+        onSimulationUpdated={fetchSimulations}
       />
     );
   }
@@ -238,6 +249,18 @@ export function SimulatorScreen() {
             );
           })}
         </div>
+      )}
+
+      {/* Compare button */}
+      {simulations.length >= 1 && (
+        <Button
+          variant="outline"
+          onClick={() => setViewState('compare')}
+          className="w-full gap-2"
+        >
+          <ArrowRightLeft className="w-4 h-4" />
+          Comparar Simulados
+        </Button>
       )}
 
       {/* Setup modal */}
