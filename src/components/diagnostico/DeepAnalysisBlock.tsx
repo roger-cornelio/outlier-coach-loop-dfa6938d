@@ -154,7 +154,7 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold py-6 text-base rounded-xl shadow-lg shadow-primary/20"
       >
         <BrainCircuit className="w-5 h-5" />
-        Gerar Raio Tático Outlier
+        Gerar Raio X Outlier
       </Button>
     </div>
   );
