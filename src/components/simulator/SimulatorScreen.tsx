@@ -2,16 +2,24 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Trophy, Calendar, Clock, ChevronRight, Loader2 } from 'lucide-react';
+import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { formatTime } from './simulatorConstants';
+import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
-import { SimulationDetailModal } from './SimulationDetailModal';
 import { ActiveSimulator } from './ActiveSimulator';
+import { getHyroxIcon } from './HyroxStationIcons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+interface SplitData {
+  phase: number;
+  label: string;
+  time_seconds: number;
+  type: string;
+}
 
 interface SimulationRecord {
   id: string;
@@ -19,7 +27,7 @@ interface SimulationRecord {
   division: string;
   total_time: number;
   roxzone_time: number;
-  splits_data: any[];
+  splits_data: SplitData[];
 }
 
 type ViewState = 'list' | 'setup' | 'active';
@@ -30,8 +38,16 @@ export function SimulatorScreen() {
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<ViewState>('list');
   const [activeDivision, setActiveDivision] = useState('');
-  const [selectedSim, setSelectedSim] = useState<SimulationRecord | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const fetchSimulations = async () => {
     if (!user) return;
@@ -85,10 +101,9 @@ export function SimulatorScreen() {
     setViewState('list');
     await fetchSimulations();
 
-    // Open detail of the just-finished simulation
+    // Auto-expand the just-finished simulation
     if (inserted) {
-      setSelectedSim(inserted as unknown as SimulationRecord);
-      setDetailOpen(true);
+      setExpandedIds(new Set([inserted.id]));
     }
   };
 
@@ -97,7 +112,6 @@ export function SimulatorScreen() {
     toast.info('Simulado encerrado. Como a prova não foi concluída, os tempos não foram salvos no seu histórico.', { duration: 5000 });
   };
 
-  // Active simulator is fullscreen overlay
   if (viewState === 'active') {
     return (
       <ActiveSimulator
@@ -136,40 +150,93 @@ export function SimulatorScreen() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {simulations.map((sim, i) => (
-            <motion.div
-              key={sim.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <Card
-                className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => { setSelectedSim(sim); setDetailOpen(true); }}
+          {simulations.map((sim, i) => {
+            const isOpen = expandedIds.has(sim.id);
+            const splits = (sim.splits_data || []) as SplitData[];
+
+            return (
+              <motion.div
+                key={sim.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Trophy className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{sim.division}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(sim.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                <Collapsible open={isOpen} onOpenChange={() => toggleExpanded(sim.id)}>
+                  <Card className="overflow-hidden">
+                    <CollapsibleTrigger className="w-full p-4 cursor-pointer hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Trophy className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 text-left">
+                            <p className="font-medium text-sm truncate">{sim.division}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(sim.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono font-bold text-primary">{formatTime(sim.total_time)}</p>
+                          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <p className="font-mono font-bold text-primary">{formatTime(sim.total_time)}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent>
+                      <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
+                            <Clock className="w-4 h-4 mx-auto mb-1 text-primary" />
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo Total</p>
+                            <p className="text-xl font-bold font-mono text-primary">{formatTime(sim.total_time)}</p>
+                          </div>
+                          <div className="bg-accent/5 border border-accent/10 rounded-lg p-3 text-center">
+                            <ArrowRightLeft className="w-4 h-4 mx-auto mb-1 text-accent" />
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Roxzone</p>
+                            <p className="text-xl font-bold font-mono text-accent">{formatTime(sim.roxzone_time)}</p>
+                          </div>
+                        </div>
+
+                        {/* Splits */}
+                        {splits.length > 0 && (
+                          <div className="rounded-lg border border-border overflow-hidden">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-muted/50">
+                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">#</th>
+                                  <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Fase</th>
+                                  <th className="text-right py-2 px-3 font-medium text-muted-foreground text-xs">Tempo</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {splits.map((split, j) => (
+                                  <tr key={j} className={`border-t border-border/50 ${split.type === 'run' ? 'bg-blue-500/5' : ''}`}>
+                                    <td className="py-1.5 px-3 text-muted-foreground text-xs">{j + 1}</td>
+                                    <td className="py-1.5 px-3">
+                                      <div className="flex items-center gap-2 text-xs">
+                                        {getHyroxIcon(HYROX_PHASES[split.phase]?.icon || split.type, 'sm')}
+                                        {split.label}
+                                      </div>
+                                    </td>
+                                    <td className="py-1.5 px-3 text-right font-mono font-medium text-xs">
+                                      {formatTime(split.time_seconds)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
@@ -178,13 +245,6 @@ export function SimulatorScreen() {
         open={viewState === 'setup'}
         onClose={() => setViewState('list')}
         onStart={handleStartRace}
-      />
-
-      {/* Detail modal */}
-      <SimulationDetailModal
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        simulation={selectedSim}
       />
     </div>
   );
