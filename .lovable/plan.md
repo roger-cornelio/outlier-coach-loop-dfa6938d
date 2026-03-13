@@ -1,32 +1,21 @@
 
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+## Migrar `generate-simulado-comparison` para Claude 3.5 Sonnet
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+### Motivação
+Usuário prefere qualidade do Claude para análises textuais em PT-BR. A `ANTHROPIC_API_KEY` já está configurada.
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+### Mudança
 
-### Alterações
+**Arquivo**: `supabase/functions/generate-simulado-comparison/index.ts`
 
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
+- Trocar chamada de `https://ai.gateway.lovable.dev/v1/chat/completions` → `https://api.anthropic.com/v1/messages`
+- Usar `ANTHROPIC_API_KEY` em vez de `LOVABLE_API_KEY`
+- Adaptar payload: formato OpenAI (`messages[].role`) → formato Anthropic (`messages[]` com system separado)
+- Modelo: `claude-3-5-sonnet-20241022`
+- Manter mesmo system prompt, mesma lógica de erro (429/402), mesmo response shape `{ analysis: text }`
+- `max_tokens: 1500`, timeout de 30s via AbortController
 
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
-
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
-
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
+### Arquivos
+- `supabase/functions/generate-simulado-comparison/index.ts`
 
