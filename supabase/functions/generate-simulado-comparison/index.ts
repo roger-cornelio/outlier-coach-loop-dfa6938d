@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     const isComparison = !!simulado_b;
@@ -58,28 +58,21 @@ ${isComparison ? `ESTRUTURA PARA COMPARAÇÃO DE DOIS SIMULADOS:
       ? `Analise a EVOLUÇÃO entre estes dois simulados:\n\nSIMULADO BASE (A) - ${simulado_a.division} - ${simulado_a.date}:\nTempo Total: ${simulado_a.total_time}s\nRoxzone: ${simulado_a.roxzone_time}s\nSplits: ${JSON.stringify(simulado_a.splits)}\n\nSIMULADO COMPARATIVO (B) - ${simulado_b.division} - ${simulado_b.date}:\nTempo Total: ${simulado_b.total_time}s\nRoxzone: ${simulado_b.roxzone_time}s\nSplits: ${JSON.stringify(simulado_b.splits)}`
       : `Analise este simulado individual:\n\nSIMULADO - ${simulado_a.division} - ${simulado_a.date}:\nTempo Total: ${simulado_a.total_time}s\nRoxzone: ${simulado_a.roxzone_time}s\nSplits: ${JSON.stringify(simulado_a.splits)}`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20240620",
-        max_tokens: 1500,
-        system: systemPrompt,
+        model: "google/gemini-2.5-pro",
         messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
+        stream: false,
       }),
-      signal: controller.signal,
     });
-
-    clearTimeout(timeout);
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -95,7 +88,7 @@ ${isComparison ? `ESTRUTURA PARA COMPARAÇÃO DE DOIS SIMULADOS:
         );
       }
       const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: "Erro ao gerar diagnóstico. Tente novamente." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -103,7 +96,7 @@ ${isComparison ? `ESTRUTURA PARA COMPARAÇÃO DE DOIS SIMULADOS:
     }
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || "Não foi possível gerar o diagnóstico.";
+    const text = data.choices?.[0]?.message?.content || "Não foi possível gerar o diagnóstico.";
 
     return new Response(
       JSON.stringify({ analysis: text }),
@@ -111,12 +104,6 @@ ${isComparison ? `ESTRUTURA PARA COMPARAÇÃO DE DOIS SIMULADOS:
     );
   } catch (e) {
     console.error("generate-simulado-comparison error:", e);
-    if (e instanceof DOMException && e.name === "AbortError") {
-      return new Response(
-        JSON.stringify({ error: "Timeout: a análise demorou demais. Tente novamente." }),
-        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
