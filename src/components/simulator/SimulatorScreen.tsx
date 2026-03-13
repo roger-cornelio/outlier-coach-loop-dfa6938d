@@ -31,7 +31,7 @@ interface SimulationRecord {
   splits_data: SplitData[];
 }
 
-type ViewState = 'list' | 'setup' | 'active';
+type ViewState = 'list' | 'setup' | 'active' | 'compare';
 
 export function SimulatorScreen() {
   const { user } = useAuth();
