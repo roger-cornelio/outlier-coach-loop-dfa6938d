@@ -123,6 +123,16 @@ export function SimulatorScreen() {
     );
   }
 
+  if (viewState === 'compare') {
+    return (
+      <SimuladosComparisonView
+        simulations={simulations}
+        onBack={() => setViewState('list')}
+        onSimulationUpdated={fetchSimulations}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* CTA */}
