@@ -319,6 +319,16 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
+            {/* Projeção de Evolução - entre prova atual e outras provas, apenas para a última */}
+            {latestResumo.finish_time && diagnosticos.length > 0 && (
+              <EvolutionProjectionCard
+                finishTime={latestResumo.finish_time}
+                diagnosticos={diagnosticos}
+                athleteName={latestResumo.nome_atleta}
+                division={latestResumo.divisao}
+                coachStyle={currentCoachStyle || 'PULSE'}
+              />
+            )}
 
             {olderResumos.length > 0 && (
               <div className="space-y-2">
@@ -370,16 +380,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         );
       })()}
 
-      {/* Projeção de Evolução - logo abaixo da prova atual */}
-      {selectedResumo?.finish_time && diagnosticos.length > 0 && (
-        <EvolutionProjectionCard
-          finishTime={selectedResumo.finish_time}
-          diagnosticos={diagnosticos}
-          athleteName={selectedResumo.nome_atleta}
-          division={selectedResumo.divisao}
-          coachStyle={currentCoachStyle || 'PULSE'}
-        />
-      )}
 
       {/* Loading skeletons */}
       {loading && (
