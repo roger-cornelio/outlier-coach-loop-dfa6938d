@@ -448,31 +448,35 @@ function isPureExerciseLine(line: string): boolean {
 // Adjetivos simples como "leve", "tranquilo" são OK.
 
 function isTrainingStimulus(line: string): boolean {
+  const cachedResult = _trainingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
     _log('[isTrainingStimulus] → FALSE (linha com narrativa):', line);
+    _trainingCache.set(line, false);
     return false;
   }
   
   // ⏱️ TEMPO: min, minutes, ', minutos, até X minutos
-  if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) return true;
-  if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) return true;
+  if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // 📏 DISTÂNCIA: m, km, metros
-  if (/\d+\s*(?:m|km|metros?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:m|km|metros?)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // 🔁 REPETIÇÃO / VOLUME: reps, rounds, EMOM, AMRAP, For Time
-  if (/\d+\s*(?:reps?|rounds?|rodadas?)\b/i.test(line)) return true;
-  if (/\b(?:emom|amrap|for\s*time|tabata)\b/i.test(line)) return true;
+  if (/\d+\s*(?:reps?|rounds?|rodadas?)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:emom|amrap|for\s*time|tabata)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // ❤️ ZONA / ESFORÇO: Zona, FC, PSE, RPE
-  if (/\b(?:zona|zone)\s*\d/i.test(line)) return true;
-  if (/\b(?:fc|hr)\s*[:=]?\s*\d/i.test(line)) return true;
-  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
+  if (/\b(?:zona|zone)\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:fc|hr)\s*[:=]?\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // Faixa de valores (30-40, 30–40)
-  if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) return true;
+  if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   return false;
 }
