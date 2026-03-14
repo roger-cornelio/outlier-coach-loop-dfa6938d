@@ -66,8 +66,15 @@ DADOS DA CORRIDA:
 - Divisão: ${division}
 - Tempo Final: ${finish_time}
 
-TABELA DE SPLITS E DIAGNÓSTICO VS TOP 1%:
+TABELA DE SPLITS E DIAGNÓSTICO:
 ${jsonPayload}
+
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Converta TODOS os tempos absolutos e diferenças (gaps) para o formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
+- Para converter: divida os segundos por 60 para obter minutos e use o resto como segundos. Ex: 328s → 5min 28s → "05:28".
+
+BENCHMARKING REALISTA:
+- NÃO compare o atleta automaticamente com o "Top 1%". Compare-o com um alvo realista: a média do PERCENTIL IMEDIATAMENTE ACIMA dele (ex: se ele é Top 40%, compare com o Top 20%). Os tempos de referência devem ser críveis e calculados com base na média competitiva real da divisão dele.
 
 DIRETRIZES DE COMPORTAMENTO:
 - Fale diretamente com o(s) atleta(s) usando "Você" ou "Vocês".
@@ -78,13 +85,14 @@ DIRETRIZES DE COMPORTAMENTO:
 ESTRUTURA OBRIGATÓRIA DA RESPOSTA EM MARKDOWN:
 
 ### 1. LEITURA DA MÁQUINA
-Dê os parabéns pelo tempo total. Identifique imediatamente a estação ou corrida onde a performance foi mais dominante (mais próxima do Top 1% ou com o melhor tempo). Faça-os sentirem que têm potencial de pódio.
+Dê os parabéns pelo tempo total. Identifique imediatamente a estação ou corrida onde a performance foi mais dominante (mais próxima do percentil alvo ou com o melhor tempo relativo). Faça-os sentirem que têm potencial de evolução clara.
 
 ### 2. O GARGALO TÁTICO
-Olhe os dados e aponte sem rodeios a estação, corrida ou Roxzone (transição) que mais prejudicou o tempo final. Ex: "Seu Sled Push sugou 2 minutos a mais do que o aceitável...". Explique o impacto disso.
+Olhe os dados e aponte sem rodeios a estação, corrida ou Roxzone (transição) que mais prejudicou o tempo final. Explique o impacto disso usando tempos em MM:SS.
+Inclua uma análise de PACE: sabendo que o total de corrida na HYROX é 8km, calcule o Pace Médio (Running Total ÷ 8). Critique a variação entre o split de corrida mais rápido e o mais lento, e instrua sobre o benefício de uma Estratégia de Pace Constante.
 
 ### 3. PRESCRIÇÃO DE TREINO
-Com base no gargalo identificado acima, forneça 2 diretrizes práticas e extremamente específicas de treinamento para a próxima semana.`;
+Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extremamente específicas de treinamento. Uma delas deve incluir o Pace Alvo (min/km) que o atleta precisa sustentar para atingir o tempo de corrida do percentil acima.`;
 
     console.log(`[generate-diagnostic-ai] Coach style: ${coach_style}, athlete: ${athlete_name}`);
 

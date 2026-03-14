@@ -45,6 +45,13 @@ DADOS:
 - Pior Estação (Limitador Principal): ${main_limiter_name} (percentil ${main_limiter_percentile}%)
 - Splits da Prova: ${splitsJson}
 
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Converta TODOS os tempos absolutos e diferenças (gaps) para o formato humano MM:SS (ex: "05:28").
+- Para converter: divida os segundos por 60 para obter minutos e use o resto como segundos.
+
+BENCHMARKING REALISTA:
+- NÃO compare o atleta com o "Top 1%" — isso é irrealista. Compare-o com o PERCENTIL IMEDIATAMENTE ACIMA dele (ex: se ele é Top 40%, o alvo é o Top 20%). Foque na evolução gradual e tangível.
+
 DIRETRIZES:
 - Use tom técnico, direto e focado em alta performance. Sem frescura.
 - O JSON de saída NÃO pode ter marcação markdown, apenas o objeto puro.
@@ -52,9 +59,9 @@ DIRETRIZES:
 
 SAÍDA OBRIGATÓRIA (Formato JSON exato):
 {
-  "limitador_descricao": "Texto curto do impacto real. Ex: Sugou 2min a mais do que devia e quebrou seu ritmo de corrida.",
+  "limitador_descricao": "Texto curto do impacto real com tempos em MM:SS. Ex: Sugou 02:00 a mais do que devia e quebrou seu ritmo de corrida.",
   "ganho_acao": "Ação direta. Ex: Destravar a técnica do Sled Pull →",
-  "ganho_descricao": "O que ele ganha. Ex: Te coloca no Top 10% e preserva a lombar para o restante da prova.",
+  "ganho_descricao": "O que ele ganha com tempos em MM:SS. Ex: Te coloca no Top 20% e preserva a lombar para o restante da prova.",
   "proximos_passos": ["Foco brutal em força de tração", "Recuperação ativa na transição"]
 }`;
 
@@ -71,7 +78,7 @@ SAÍDA OBRIGATÓRIA (Formato JSON exato):
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Gere os insights do coach com base nos dados fornecidos. Retorne APENAS o JSON puro, sem markdown.' },
+          { role: 'user', content: 'Gere os insights do coach com base nos dados fornecidos. Retorne APENAS o JSON puro, sem markdown. Todos os tempos devem estar em MM:SS.' },
         ],
         max_tokens: 500,
       }),
