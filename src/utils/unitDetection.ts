@@ -98,6 +98,10 @@ const EFFORT_PATTERNS = [
  * REGRA: Qualquer linha com unidade reconhecida é EXERCISE válido
  */
 export function detectUnits(line: string): UnitDetectionResult {
+  // Cache hit → retorno O(1)
+  const cached = _unitsCache.get(line);
+  if (cached) return cached;
+
   const trimmed = line.trim();
   const units: DetectedUnit[] = [];
   const rawMatches: string[] = [];
