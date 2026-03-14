@@ -1445,30 +1445,46 @@ function StarRating({ count }: { count: number; colorClass?: string }) {
 
 function TrainingPrioritiesBlock({
   scores,
+  diagMelhorias,
   onViewAll,
 }: {
   scores: CalculatedScore[];
+  diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
 
   const worstStations = useMemo(() => {
+    // Build a lookup map from diagMelhorias metric → improvement_value
+    const melhoriaMap = new Map<string, number>();
+    if (diagMelhorias) {
+      for (const m of diagMelhorias) {
+        if (m.metric && m.improvement_value > 0) {
+          melhoriaMap.set(m.metric.toLowerCase(), m.improvement_value);
+        }
+      }
+    }
+
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
       .slice(0, showAll ? scores.length : 3)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
-        const insights = METRIC_INSIGHTS[s.metric] || ['-vs Elite'];
-        const insight = insights[0];
+        // Try to find real gap from diagMelhorias
+        const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
+        const insight = realGap != null && realGap > 0
+          ? formatGapLabel(realGap)
+          : (s.percentile_value >= 50 ? '✓ Meta batida' : `P${s.percentile_value}`);
         return {
           metric: s.metric,
           label: METRIC_LABELS[s.metric] || s.metric,
           stars,
           insight,
           percentile: s.percentile_value,
+          isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll]);
+  }, [scores, showAll, diagMelhorias]);
 
   const totalBad = useMemo(
     () => scores.filter((s) => s.percentile_value < 50).length,
