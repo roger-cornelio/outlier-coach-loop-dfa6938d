@@ -2205,10 +2205,14 @@ export function DiagnosticRadarBlock({
                       <div className="absolute inset-0 rounded-full overflow-hidden">
                         <motion.div initial={{ width: 0 }} animate={{ width: `${progressToTarget}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }} className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
                       </div>
+                      <TooltipProvider delayDuration={200}>
                       {milestones.map((ms) => {
                       const Icon = ms.icon;
+                      const milestonePercent = Math.round(ms.position);
                       return (
                         <div key={ms.index} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10" style={{ left: `${ms.position}%` }}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                             <button
                               onClick={() => {
                                 if (ms.completed) {
@@ -2229,8 +2233,14 @@ export function DiagnosticRadarBlock({
                             >
                               {ms.completed ? <Check className="w-3.5 h-3.5" /> : ms.unlocked ? <Icon className="w-3.5 h-3.5" /> : <Lock className="w-2.5 h-2.5" />}
                             </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {ms.completed ? `✓ Benchmark ${ms.index + 1} — Concluído` : `${milestonePercent}% — Benchmark ${ms.index + 1}`}
+                            </TooltipContent>
+                          </Tooltip>
                           </div>);
                     })}
+                      </TooltipProvider>
                       {isCapped && <div className="absolute top-0 h-full w-px bg-destructive" style={{ left: `${journey.capPercent}%` }} />}
                     </div>
                     {isCapped &&
