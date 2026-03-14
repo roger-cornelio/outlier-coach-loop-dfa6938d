@@ -2619,12 +2619,29 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
-    // MVP0 PATCH D: Debug para confirmar regras
-    const isExercise = isExercisePatternLine(line);
+    // ════════════════════════════════════════════════════════════════════════════
+    // MVP0 PATCH: DETECTAR MISTURA TREINO + COMENTÁRIO (ESTRUTURA INVÁLIDA)
+    // ════════════════════════════════════════════════════════════════════════════
+    // Moved here AFTER all structural early-exits (separator, day, rest, optional, format)
+    // to avoid running ~30 regex on lines already classified
+    // ════════════════════════════════════════════════════════════════════════════
+    if (!inCommentTagMode && !inTrainingTagMode) {
+      const hasMeasure = hasMeasurableStimulus(line);
+      const hasSubjective = isSubjectiveLine(line);
+      if (hasMeasure && hasSubjective) {
+        const warningMsg = `Linha ${lineNumber}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}" - Mistura treino + comentário. Separe em TREINO: e COMENTÁRIO:`;
+        _log('[STRUCTURE_WARNING]', warningMsg);
+        result.structureWarnings?.push(warningMsg);
+        if (currentDayEntry) {
+          currentDayEntry.alerts.push('Estrutura inválida: mistura de treino + comentário detectada');
+        }
+      }
+    }
+
+    // MVP0 PATCH D: Lazy evaluation — isHeading only computed here, isExercise not needed (inline regex used below)
     const isHeading = isHeadingLine(line);
     _log('[PARSER DEBUG]', {
       linhaOriginal: line,
-      isExerciseLine: isExercise,
       isHeadingLine: isHeading,
       currentOptional,
       isInsideBlock,
