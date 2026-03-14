@@ -367,12 +367,39 @@ REGRAS do JSON:
     }
 
     const result = await response.json();
-    const text = result?.choices?.[0]?.message?.content || '';
+    const rawText = result?.choices?.[0]?.message?.content || '';
 
-    console.log(`[generate-deep-analysis] Generated ${text.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)}`);
+    // Parse structured JSON block from the response
+    let prioridadesTreino: any[] | null = null;
+    let direcionamentoText: string | null = null;
+    let cleanText = rawText;
+
+    const jsonBlockMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      try {
+        const parsed = JSON.parse(jsonBlockMatch[1]);
+        if (Array.isArray(parsed.prioridades_treino)) {
+          prioridadesTreino = parsed.prioridades_treino;
+        }
+        if (typeof parsed.direcionamento === 'string' && parsed.direcionamento.trim()) {
+          direcionamentoText = parsed.direcionamento.trim();
+        }
+      } catch (e) {
+        console.warn('[generate-deep-analysis] Failed to parse structured JSON block:', e);
+      }
+      // Remove JSON block from the visible text
+      cleanText = rawText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+    }
+
+    console.log(`[generate-deep-analysis] Generated ${cleanText.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)} | prioridades=${prioridadesTreino?.length ?? 0}`);
 
     return new Response(
-      JSON.stringify({ texto: text, perfil_fisiologico: perfilFisiologico }),
+      JSON.stringify({
+        texto: cleanText,
+        perfil_fisiologico: perfilFisiologico,
+        prioridades_treino: prioridadesTreino,
+        direcionamento: direcionamentoText,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
