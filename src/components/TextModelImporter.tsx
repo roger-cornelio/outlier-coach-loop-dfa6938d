@@ -1343,7 +1343,7 @@ BLOCO: DESCANSO
                                     const hasMore = displayData.exerciseLines.length > 5;
                                     
                                     return (
-                                      <div className="text-sm space-y-1 text-foreground/80">
+                                      <div className="text-sm space-y-0.5 text-foreground/80 leading-snug">
                                         {/* Estrutura - Badge visual */}
                                         {displayData.structureDescription && (
                                           <div className="mb-2">
