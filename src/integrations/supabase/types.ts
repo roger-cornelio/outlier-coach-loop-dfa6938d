@@ -775,6 +775,7 @@ export type Database = {
           atleta_id: string
           coach_insights: Json | null
           created_at: string
+          direcionamento: string | null
           divisao: string | null
           evento: string | null
           finish_time: string | null
@@ -783,6 +784,7 @@ export type Database = {
           perfil_fisiologico: Json | null
           posicao_categoria: string | null
           posicao_geral: string | null
+          prioridades_treino: Json | null
           run_total: string | null
           source_url: string | null
           temporada: string | null
@@ -794,6 +796,7 @@ export type Database = {
           atleta_id: string
           coach_insights?: Json | null
           created_at?: string
+          direcionamento?: string | null
           divisao?: string | null
           evento?: string | null
           finish_time?: string | null
@@ -802,6 +805,7 @@ export type Database = {
           perfil_fisiologico?: Json | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
+          prioridades_treino?: Json | null
           run_total?: string | null
           source_url?: string | null
           temporada?: string | null
@@ -813,6 +817,7 @@ export type Database = {
           atleta_id?: string
           coach_insights?: Json | null
           created_at?: string
+          direcionamento?: string | null
           divisao?: string | null
           evento?: string | null
           finish_time?: string | null
@@ -821,6 +826,7 @@ export type Database = {
           perfil_fisiologico?: Json | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
+          prioridades_treino?: Json | null
           run_total?: string | null
           source_url?: string | null
           temporada?: string | null
