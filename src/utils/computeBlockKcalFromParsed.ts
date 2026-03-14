@@ -62,6 +62,12 @@ interface BiometricData {
   idade?: number;
 }
 
+/** Garante peso válido (>0) para evitar cálculos zerados */
+function safePesoKg(peso: number | null | undefined): number {
+  if (!peso || peso <= 0 || !Number.isFinite(peso)) return 75;
+  return peso;
+}
+
 function computeExerciseKcal(
   exercise: ParsedExercise,
   biometrics: BiometricData,
@@ -118,7 +124,10 @@ function computeExerciseKcal(
     kcal *= intensityMultiplier;
   }
 
-  return { kcal: Math.round(kcal), durationSec: Math.round(durationSec) };
+  // Guard contra NaN/Infinity (CENÁRIO 1)
+  const safeKcal = Number.isFinite(kcal) ? Math.round(kcal) : 0;
+  const safeDuration = Number.isFinite(durationSec) ? Math.round(durationSec) : 0;
+  return { kcal: safeKcal, durationSec: safeDuration };
 }
 
 function getIntensityMultiplier(type?: string, value?: number): number {
@@ -146,9 +155,12 @@ export function computeBlockMetrics(
   parsedExercises: ParsedExercise[],
   biometrics: BiometricData,
 ): ComputedBlockMetrics {
-  if (!parsedExercises || parsedExercises.length === 0) {
+  if (!parsedExercises || !Array.isArray(parsedExercises) || parsedExercises.length === 0) {
     return {};
   }
+
+  // Blindar peso (CENÁRIO 1: NaN silencioso)
+  const safeBiometrics = { ...biometrics, pesoKg: safePesoKg(biometrics.pesoKg) };
 
   let totalKcal = 0;
   let totalDurationSec = 0;
@@ -158,7 +170,7 @@ export function computeBlockMetrics(
   let intensityCount = 0;
 
   for (const exercise of parsedExercises) {
-    const { kcal, durationSec } = computeExerciseKcal(exercise, biometrics);
+    const { kcal, durationSec } = computeExerciseKcal(exercise, safeBiometrics);
     totalKcal += kcal;
     totalDurationSec += durationSec;
     totalSets += exercise.sets || 0;

@@ -313,7 +313,12 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
         setProgramName('');
         setSelectedWeek(null);
       } else {
-        setError('Erro ao salvar no banco de dados.');
+        // CENÁRIO 2/3: Se Gatekeeper bloqueou, salvar dados pendentes para bypass
+        setPendingGatekeeperSave({ 
+          title, 
+          workouts: parsedWorkouts, 
+          weekStart: selectedWeek?.startDate || null 
+        });
       }
     } catch (err) {
       console.error('[CoachSpreadsheetTab] Error saving:', err);
