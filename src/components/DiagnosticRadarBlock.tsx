@@ -1440,10 +1440,12 @@ function StarRating({ count }: { count: number; colorClass?: string }) {
 function TrainingPrioritiesBlock({
   scores,
   diagMelhorias,
+  prioridadesIA,
   onViewAll,
 }: {
   scores: CalculatedScore[];
   diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
+  prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -1459,12 +1461,50 @@ function TrainingPrioritiesBlock({
       }
     }
 
+    // Try to use IA-generated priorities with cross-validation
+    if (prioridadesIA && prioridadesIA.length > 0) {
+      // Validate each item against real diagMelhorias data
+      const validMetrics = new Set(
+        (diagMelhorias || []).map(m => m.metric.toLowerCase())
+      );
+      // Also accept metrics from scores as valid
+      for (const s of scores) {
+        validMetrics.add(s.metric.toLowerCase());
+      }
+
+      const validated = prioridadesIA.filter(p =>
+        p.metric && validMetrics.has(p.metric.toLowerCase())
+      );
+
+      // If more than 50% were invalid, discard IA data entirely
+      if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
+        const items = validated
+          .sort((a, b) => b.nivel_urgencia - a.nivel_urgencia)
+          .slice(0, showAll ? validated.length : 3)
+          .map(p => {
+            const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            const insight = realGap != null && realGap > 0
+              ? formatGapLabel(realGap)
+              : `Urgência ${p.nivel_urgencia}/5`;
+            return {
+              metric: p.metric,
+              label: METRIC_LABELS[p.metric] || p.exercicio || p.metric,
+              stars: { count: Math.min(5, Math.max(1, p.nivel_urgencia)) },
+              insight,
+              percentile: 0,
+              isMetBatida: false,
+            };
+          });
+        return items;
+      }
+    }
+
+    // Fallback: heuristic based on percentiles
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
       .slice(0, showAll ? scores.length : 3)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
-        // Try to find real gap from diagMelhorias
         const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
         const insight = realGap != null && realGap > 0
           ? formatGapLabel(realGap)
@@ -1478,7 +1518,7 @@ function TrainingPrioritiesBlock({
           isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll, diagMelhorias]);
+  }, [scores, showAll, diagMelhorias, prioridadesIA]);
 
   const totalBad = useMemo(
     () => scores.filter((s) => s.percentile_value < 50).length,
@@ -1573,23 +1613,35 @@ export function DiagnosticRadarBlock({
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
 
-  // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
+  // Fetch diagnostico_melhoria + prioridades_treino/direcionamento for the latest resumo
   const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
+  const [prioridadesIA, setPrioridadesIA] = useState<{ exercicio: string; nivel_urgencia: number; metric: string }[] | null>(null);
+  const [direcionamentoIA, setDirecionamentoIA] = useState<string | null>(null);
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
       // Get latest resumo — atleta_id stores auth.uid(), NOT profile.id
       const { data: resumos } = await supabase
         .from('diagnostico_resumo')
-        .select('id')
+        .select('id, prioridades_treino, direcionamento')
         .eq('atleta_id', profile.user_id)
         .order('created_at', { ascending: false })
         .limit(1);
       if (!resumos?.length) return;
+      const resumo = resumos[0];
+
+      // Cache prioridades_treino and direcionamento from DB
+      if ((resumo as any).prioridades_treino) {
+        setPrioridadesIA((resumo as any).prioridades_treino);
+      }
+      if ((resumo as any).direcionamento) {
+        setDirecionamentoIA((resumo as any).direcionamento);
+      }
+
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
         .select('improvement_value, movement, metric')
-        .eq('resumo_id', resumos[0].id);
+        .eq('resumo_id', resumo.id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
   }, [profile?.user_id]);
@@ -1912,9 +1964,12 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
+    // Priority 1: IA-generated direcionamento from cache
+    if (direcionamentoIA && direcionamentoIA.trim().length > 0) return direcionamentoIA;
+    // Priority 2: heuristic fallback
     if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
     return `O foco do próximo ciclo será ${mainLimiter.name.toLowerCase()}, visando maior consistência nas estações onde hoje ocorre a maior perda de rendimento.`;
-  }, [mainLimiter]);
+  }, [mainLimiter, direcionamentoIA]);
 
   // Loading state
   if (loading) {
@@ -2035,7 +2090,7 @@ export function DiagnosticRadarBlock({
         )}
 
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
-        <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
+        <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} prioridadesIA={prioridadesIA} onViewAll={onStartWorkout} />
         <MobileBottlenecksBlock scores={scores} />
         <MobileNextStepBlock scores={scores} journeyData={journeyData} />
         <MobilePhysiologicalModal
@@ -2290,7 +2345,7 @@ export function DiagnosticRadarBlock({
 
       {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
       {/* BLOCO PRIORIDADES DE TREINO */}
-      <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
+      <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} prioridadesIA={prioridadesIA} onViewAll={onStartWorkout} />
 
       {/* BLOCO 6: PERFIL FISIOLÓGICO */}
       <TooltipProvider>

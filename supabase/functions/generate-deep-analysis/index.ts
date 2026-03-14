@@ -300,7 +300,24 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 3. **Variação de Splits**: Critique construtivamente a diferença entre o split de corrida mais rápido e o mais lento. Instrua sobre o benefício de uma Estratégia de Pace Constante.)
 
 ### 📋 PROTOCOLO DE CHOQUE (Próximas 4 semanas)
-(Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).`;
+(Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).
+
+IMPORTANTE — DADOS ESTRUTURADOS OBRIGATÓRIOS:
+Após o texto markdown completo, adicione um bloco JSON cercado por \`\`\`json e \`\`\` com EXATAMENTE esta estrutura:
+{
+  "prioridades_treino": [
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 5, "metric": "sled_push" },
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 4, "metric": "wallballs" },
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 3, "metric": "run_avg" }
+  ],
+  "direcionamento": "Uma frase de impacto (max 2 linhas) descrevendo o foco principal do próximo ciclo de treino, personalizada para este atleta."
+}
+
+REGRAS do JSON:
+- prioridades_treino: liste de 3 a 5 exercícios ordenados do mais urgente ao menos urgente.
+- nivel_urgencia: inteiro de 1 (baixa) a 5 (crítica).
+- metric: DEVE ser uma das seguintes chaves válidas: run_avg, roxzone, ski, sled_push, sled_pull, bbj, row, farmers, sandbag, wallballs. Use APENAS métricas que existam nos dados fornecidos (diagnosticos).
+- direcionamento: frase concisa e motivacional sobre o foco do ciclo.`;
 
     // ── 9. Call LLM ───────────────────────────────────────────────────
     const controller = new AbortController();
@@ -350,12 +367,39 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
     }
 
     const result = await response.json();
-    const text = result?.choices?.[0]?.message?.content || '';
+    const rawText = result?.choices?.[0]?.message?.content || '';
 
-    console.log(`[generate-deep-analysis] Generated ${text.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)}`);
+    // Parse structured JSON block from the response
+    let prioridadesTreino: any[] | null = null;
+    let direcionamentoText: string | null = null;
+    let cleanText = rawText;
+
+    const jsonBlockMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      try {
+        const parsed = JSON.parse(jsonBlockMatch[1]);
+        if (Array.isArray(parsed.prioridades_treino)) {
+          prioridadesTreino = parsed.prioridades_treino;
+        }
+        if (typeof parsed.direcionamento === 'string' && parsed.direcionamento.trim()) {
+          direcionamentoText = parsed.direcionamento.trim();
+        }
+      } catch (e) {
+        console.warn('[generate-deep-analysis] Failed to parse structured JSON block:', e);
+      }
+      // Remove JSON block from the visible text
+      cleanText = rawText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+    }
+
+    console.log(`[generate-deep-analysis] Generated ${cleanText.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)} | prioridades=${prioridadesTreino?.length ?? 0}`);
 
     return new Response(
-      JSON.stringify({ texto: text, perfil_fisiologico: perfilFisiologico }),
+      JSON.stringify({
+        texto: cleanText,
+        perfil_fisiologico: perfilFisiologico,
+        prioridades_treino: prioridadesTreino,
+        direcionamento: direcionamentoText,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
