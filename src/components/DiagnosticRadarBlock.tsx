@@ -1486,13 +1486,27 @@ function TrainingPrioritiesBlock({
           .slice(0, showAll ? validated.length : 3)
           .map(p => {
             const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            const pct = percentageMap.get(p.metric.toLowerCase());
             const insight = realGap != null && realGap > 0
               ? formatGapLabel(realGap)
               : `Urgência ${p.nivel_urgencia}/5`;
+            // Use percentage (FOCO) for stars when available, otherwise fall back to nivel_urgencia
+            let starCount: number;
+            if (pct != null) {
+              // Faixas fixas baseadas no FOCO %
+              if (pct > 20) starCount = 0;
+              else if (pct > 10) starCount = 1;
+              else if (pct > 5) starCount = 2;
+              else if (pct > 2) starCount = 3;
+              else if (pct > 1) starCount = 4;
+              else starCount = 5;
+            } else {
+              starCount = Math.min(5, Math.max(1, p.nivel_urgencia));
+            }
             return {
               metric: p.metric,
               label: METRIC_LABELS[p.metric] || p.exercicio || p.metric,
-              stars: { count: Math.min(5, Math.max(1, p.nivel_urgencia)) },
+              stars: { count: starCount },
               insight,
               percentile: 0,
               isMetBatida: false,
