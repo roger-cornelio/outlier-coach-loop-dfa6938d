@@ -1673,14 +1673,14 @@ export function DiagnosticRadarBlock({
     eliteTarget?.targetLabel,
   ]);
 
-  // Evolution projection — compact strip for dashboard header
+  // Evolution projection — compact strip based on diagnostic gaps (weak stations)
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    const targetSec = eliteTarget?.targetSeconds;
-    if (!currentTime || !targetSec || currentTime <= targetSec) return null;
-    const gapSec = currentTime - targetSec;
-    return calculateEvolutionTimeframe(currentTime, gapSec);
-  }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds]);
+    if (!currentTime || scores.length === 0) return null;
+    const totalGap = calculateProjectedGain(scores);
+    if (totalGap <= 0) return null;
+    return calculateEvolutionTimeframe(currentTime, totalGap);
+  }, [validatingCompetition?.time_in_seconds, scores]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
