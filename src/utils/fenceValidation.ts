@@ -400,14 +400,14 @@ function dedupeFenceTagsPerBlock(text: string): string {
  * - Sem isso: BLOQUEIA publicação
  */
 export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
-  console.log("[FENCE_IN_TAG_COUNTS]", {
+  _log("[FENCE_IN_TAG_COUNTS]", {
     treino: (text.match(/\[TREINO\]/gi) || []).length,
     comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
   });
 
   const fenceOutText = dedupeFenceTagsPerBlock(text);
 
-  console.log("[FENCE_OUT_TAG_COUNTS]", {
+  _log("[FENCE_OUT_TAG_COUNTS]", {
     treino: (fenceOutText.match(/\[TREINO\]/gi) || []).length,
     comentario: (fenceOutText.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
   });
