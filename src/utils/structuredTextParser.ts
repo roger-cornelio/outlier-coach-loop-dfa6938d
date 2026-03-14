@@ -2490,29 +2490,6 @@ export function parseStructuredText(text: string): ParseResult {
     // Reset de modo ao encontrar novo bloco ou dia
     // (handled below when detecting day/heading)
     
-    // ════════════════════════════════════════════════════════════════════════════
-    // MVP0 PATCH: DETECTAR MISTURA TREINO + COMENTÁRIO (ESTRUTURA INVÁLIDA)
-    // ════════════════════════════════════════════════════════════════════════════
-    // REGRA ANTI-BURRO: Se a linha tem medida mensurável E texto subjetivo,
-    // gerar aviso de estrutura inválida. O sistema NÃO tenta interpretar.
-    // O coach DEVE separar em TREINO: + COMENTÁRIO:
-    // EXCEÇÃO: Se estamos dentro de modo [COMENTÁRIO], não gerar warning
-    // ════════════════════════════════════════════════════════════════════════════
-    const hasMeasure = hasMeasurableStimulus(line);
-    const hasSubjective = isSubjectiveLine(line);
-    
-    // Só gerar warning se NÃO estamos em modo de tags
-    if (hasMeasure && hasSubjective && !inCommentTagMode && !inTrainingTagMode) {
-      const warningMsg = `Linha ${lineNumber}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}" - Mistura treino + comentário. Separe em TREINO: e COMENTÁRIO:`;
-      _log('[STRUCTURE_WARNING]', warningMsg);
-      result.structureWarnings?.push(warningMsg);
-      
-      // Adicionar ao alerta do dia atual também
-      if (currentDayEntry) {
-        currentDayEntry.alerts.push('Estrutura inválida: mistura de treino + comentário detectada');
-      }
-    }
-
     // Separador explícito ⸻ ou variações (---, ———) → fim do bloco atual
     if (isBlockSeparator(line)) {
       _log('[PARSER] Separador de bloco detectado:', line);

@@ -96,9 +96,9 @@ export function detectUnits(line: string): UnitDetectionResult {
   
   // 1. Detectar TEMPO
   for (const pattern of TIME_PATTERNS) {
-    const regex = new RegExp(pattern.source, pattern.flags);
+    pattern.lastIndex = 0;
     let match;
-    while ((match = regex.exec(trimmed)) !== null) {
+    while ((match = pattern.exec(trimmed)) !== null) {
       const raw = match[0];
       if (!rawMatches.includes(raw)) {
         rawMatches.push(raw);
@@ -115,9 +115,9 @@ export function detectUnits(line: string): UnitDetectionResult {
   
   // 2. Detectar DISTÂNCIA
   for (const pattern of DISTANCE_PATTERNS) {
-    const regex = new RegExp(pattern.source, pattern.flags);
+    pattern.lastIndex = 0;
     let match;
-    while ((match = regex.exec(trimmed)) !== null) {
+    while ((match = pattern.exec(trimmed)) !== null) {
       const raw = match[0];
       if (!rawMatches.includes(raw)) {
         rawMatches.push(raw);
@@ -134,9 +134,9 @@ export function detectUnits(line: string): UnitDetectionResult {
   
   // 3. Detectar REPS/ESTRUTURA
   for (const pattern of REPS_STRUCTURE_PATTERNS) {
-    const regex = new RegExp(pattern.source, pattern.flags);
+    pattern.lastIndex = 0;
     let match;
-    while ((match = regex.exec(trimmed)) !== null) {
+    while ((match = pattern.exec(trimmed)) !== null) {
       const raw = match[0];
       if (!rawMatches.includes(raw)) {
         rawMatches.push(raw);
@@ -153,9 +153,9 @@ export function detectUnits(line: string): UnitDetectionResult {
   
   // 4. Detectar ESFORÇO
   for (const pattern of EFFORT_PATTERNS) {
-    const regex = new RegExp(pattern.source, pattern.flags);
+    pattern.lastIndex = 0;
     let match;
-    while ((match = regex.exec(trimmed)) !== null) {
+    while ((match = pattern.exec(trimmed)) !== null) {
       const raw = match[0];
       if (!rawMatches.includes(raw)) {
         rawMatches.push(raw);

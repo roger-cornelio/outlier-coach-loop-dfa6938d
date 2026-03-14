@@ -257,12 +257,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
           );
           workerRef.current = worker;
 
-          // 8s hard timeout — terminates the worker thread
+          // 15s hard timeout — terminates the worker thread
           workerTimeoutRef.current = setTimeout(() => {
             worker.terminate();
             workerRef.current = null;
-            reject(new Error('Parser timeout: excedeu 8s. Tente reduzir o texto.'));
-          }, 8000);
+            reject(new Error('Parser timeout: excedeu 15s. Tente reduzir o texto.'));
+          }, 15000);
 
           worker.onmessage = (event) => {
             clearTimeout(workerTimeoutRef.current!);
