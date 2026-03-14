@@ -609,6 +609,7 @@ function isPrescriptionLine(line: string): boolean {
     return true;
   }
   
+  _prescriptionCache.set(line, false);
   return false;
 }
 
