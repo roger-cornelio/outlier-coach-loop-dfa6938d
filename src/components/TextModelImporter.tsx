@@ -758,6 +758,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const success = await onSaveAndGoToPrograms(effectiveDays, title, weekStart);
       if (success) {
         clearDraft();
+      } else {
+        toast({
+          title: 'Erro ao salvar',
+          description: 'Não foi possível salvar o treino. Verifique sua conexão e tente novamente.',
+          variant: 'destructive',
+        });
       }
     }
   };
