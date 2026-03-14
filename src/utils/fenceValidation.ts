@@ -546,7 +546,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       treinoTagLineIdx = i;
       inTrainingSection = true;
       inCommentSection = false;
-      console.log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
+      _log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
       continue;
     }
 
