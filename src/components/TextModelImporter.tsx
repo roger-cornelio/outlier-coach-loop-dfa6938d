@@ -863,7 +863,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               placeholder="Cole aqui o treino da semana inteira (SEGUNDA a DOMINGO)…"
-              className="min-h-[200px] text-sm"
+              className="min-h-[45vh] md:min-h-[55vh] text-sm"
             />
             
             <button
