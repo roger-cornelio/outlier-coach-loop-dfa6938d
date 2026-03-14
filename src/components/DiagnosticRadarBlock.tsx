@@ -1444,7 +1444,7 @@ function TrainingPrioritiesBlock({
   onViewAll,
 }: {
   scores: CalculatedScore[];
-  diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
+  diagMelhorias?: { improvement_value: number; movement: string; metric: string; percentage: number }[];
   prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
