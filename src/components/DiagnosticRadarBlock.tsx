@@ -1885,14 +1885,20 @@ export function DiagnosticRadarBlock({
   }, [scores]);
 
   const vo2maxEstimate = useMemo(() => {
+    // Prioridade: dados determinísticos (Dexheimer 2020) cacheados no banco
+    if (perfilFisiologico?.vo2_max) return perfilFisiologico.vo2_max;
+    // Fallback heurístico para atletas que ainda não geraram Raio X
     const runScore = scores.find((s) => s.metric === 'run_avg');
     if (!runScore) return null;
     const base = 45;
     const delta = (runScore.percentile_value - 50) * 0.3;
     return Math.round(base + delta);
-  }, [scores]);
+  }, [scores, perfilFisiologico]);
 
   const lactateThresholdEstimate = useMemo(() => {
+    // Prioridade: dados determinísticos cacheados no banco
+    if (perfilFisiologico?.limiar_lactato) return perfilFisiologico.limiar_lactato;
+    // Fallback heurístico
     const runScore = scores.find((s) => s.metric === 'run_avg');
     if (!runScore) return null;
     const baseSeconds = 330;
@@ -1901,7 +1907,7 @@ export function DiagnosticRadarBlock({
     const mins = Math.floor(totalSeconds / 60);
     const secs = Math.round(totalSeconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }, [scores]);
+  }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
     if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
