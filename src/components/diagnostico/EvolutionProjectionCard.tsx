@@ -15,6 +15,7 @@ interface Props {
   athleteName?: string | null;
   division?: string | null;
   coachStyle?: string;
+  totalGapOverride?: number;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -24,12 +25,12 @@ const TIER_COLORS: Record<string, string> = {
   Elite: 'bg-primary text-primary-foreground',
 };
 
-export default function EvolutionProjectionCard({ finishTime, diagnosticos, athleteName, division, coachStyle }: Props) {
+export default function EvolutionProjectionCard({ finishTime, diagnosticos, athleteName, division, coachStyle, totalGapOverride }: Props) {
   const [aiText, setAiText] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
   const currentSeconds = finishTime ? timeToSeconds(finishTime) : 0;
-  const totalGap = diagnosticos.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+  const totalGap = totalGapOverride ?? diagnosticos.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
 
   const evolution = useMemo(() => {
     if (currentSeconds <= 0 || totalGap <= 0) return null;

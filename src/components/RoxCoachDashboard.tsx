@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Zap, Trash2, Loader2, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
+import { timeToSeconds } from './diagnostico/types';
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
@@ -23,6 +24,11 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { ChevronDown } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
+import { useAthleteStatus } from '@/hooks/useAthleteStatus';
+import { useTopPercent } from '@/hooks/useTopPercent';
+import { useTargetTimes } from '@/hooks/useTargetTimes';
+import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
+import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 
 interface RoxCoachDashboardProps {
   refreshKey?: number;
@@ -31,7 +37,30 @@ interface RoxCoachDashboardProps {
 export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardProps) {
   const { user } = useAuth();
   const currentCoachStyle = useOutlierStore((s) => s.coachStyle);
+  const athleteConfig = useOutlierStore((s) => s.athleteConfig);
   const diagnosticScores = useDiagnosticScores();
+  const { status, validatingCompetition } = useAthleteStatus();
+  const { getOfficialCompetitions } = useBenchmarkResults();
+  const adminTarget = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
+  const topPercentData = useTopPercent(
+    validatingCompetition?.time_in_seconds,
+    athleteConfig?.sexo || 'masculino',
+    athleteConfig?.idade,
+  );
+
+  const eliteTarget = useMemo(() => {
+    const isOpen = status === 'open';
+    if (isOpen && topPercentData.metaProSeconds) {
+      return { targetSeconds: topPercentData.metaProSeconds, targetLabel: 'PRO' };
+    }
+    if (topPercentData.metaEliteSeconds) {
+      return { targetSeconds: topPercentData.metaEliteSeconds, targetLabel: 'ELITE' };
+    }
+    if (adminTarget) return adminTarget;
+    const gender = athleteConfig?.sexo || 'masculino';
+    return getEliteTargetSeconds(status, gender);
+  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds, topPercentData.metaProSeconds]);
+
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
@@ -400,15 +429,23 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             </div>
 
             {/* Projeção de Evolução - SEMPRE baseada na última prova (latestResumo) */}
-            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (
-              <EvolutionProjectionCard
-                finishTime={latestResumo.finish_time}
-                diagnosticos={latestDiagnosticos}
-                athleteName={latestResumo.nome_atleta}
-                division={latestResumo.divisao}
-                coachStyle={currentCoachStyle || 'PULSE'}
-              />
-            )}
+            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (() => {
+              const currentTimeSec = timeToSeconds(latestResumo.finish_time!);
+              const targetSec = eliteTarget?.targetSeconds ?? null;
+              const computedGap = (currentTimeSec && targetSec && currentTimeSec > targetSec)
+                ? currentTimeSec - targetSec
+                : undefined;
+              return (
+                <EvolutionProjectionCard
+                  finishTime={latestResumo.finish_time}
+                  diagnosticos={latestDiagnosticos}
+                  athleteName={latestResumo.nome_atleta}
+                  division={latestResumo.divisao}
+                  coachStyle={currentCoachStyle || 'PULSE'}
+                  totalGapOverride={computedGap}
+                />
+              );
+            })()}
           </div>
         );
       })()}
