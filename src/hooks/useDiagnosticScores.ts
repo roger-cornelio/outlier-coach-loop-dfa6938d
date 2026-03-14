@@ -87,6 +87,19 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
         }));
 
         setScores(typedScores);
+
+        // 3. Fetch perfil_fisiologico from diagnostico_resumo (cached deterministic data)
+        const { data: resumoData } = await supabase
+          .from('diagnostico_resumo')
+          .select('perfil_fisiologico')
+          .eq('atleta_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (resumoData?.perfil_fisiologico) {
+          setPerfilFisiologico(resumoData.perfil_fisiologico as unknown as PerfilFisiologico);
+        }
       } catch (err) {
         console.error('[DiagnosticScores] Error fetching data:', err);
       } finally {
