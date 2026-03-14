@@ -22,6 +22,13 @@
 import type { StructureIssue, IssueSeverity } from './structuredTextParser';
 
 // ════════════════════════════════════════════════════════════════════════════════
+// DEBUG GUARD: Logs de alto volume DESLIGADOS por padrão
+// Ativar apenas com VITE_DEBUG_PARSER=true em dev
+// ════════════════════════════════════════════════════════════════════════════════
+const DEBUG_FENCE = import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true';
+const _log = DEBUG_FENCE ? console.log.bind(console) : (() => {}) as (...args: any[]) => void;
+
+// ════════════════════════════════════════════════════════════════════════════════
 // TIPOS
 // ════════════════════════════════════════════════════════════════════════════════
 
