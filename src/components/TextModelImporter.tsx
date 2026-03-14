@@ -834,23 +834,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
               </Button>
               
               {/* AUTOFORMAT BUTTON - Adiciona hífens automaticamente */}
-              {rawText.trim() && (() => {
-                const preview = previewAutoFormatChanges(rawText);
-                if (!preview.hasChanges) return null;
-                return (
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      const formatted = autoFormatDSL(rawText);
-                      setRawText(formatted);
-                    }}
-                    title="Autoformatar adiciona hífen em exercícios dentro de blocos estruturados"
-                  >
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Autoformatar ({preview.changesCount})
-                  </Button>
-                );
-              })()}
+              {autoFormatPreview.hasChanges && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const formatted = autoFormatDSL(rawText);
+                    setRawText(formatted);
+                  }}
+                  title="Autoformatar adiciona hífen em exercícios dentro de blocos estruturados"
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Autoformatar ({autoFormatPreview.changesCount})
+                </Button>
+              )}
               
               {rawText.trim() && (
                 <Button variant="outline" onClick={handleClear}>
