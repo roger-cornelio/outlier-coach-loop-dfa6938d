@@ -1666,7 +1666,7 @@ export function DiagnosticRadarBlock({
 
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
-        .select('improvement_value, movement, metric')
+        .select('improvement_value, movement, metric, percentage')
         .eq('resumo_id', resumo.id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
