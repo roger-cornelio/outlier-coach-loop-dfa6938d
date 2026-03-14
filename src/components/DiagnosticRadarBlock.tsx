@@ -1440,10 +1440,12 @@ function StarRating({ count }: { count: number; colorClass?: string }) {
 function TrainingPrioritiesBlock({
   scores,
   diagMelhorias,
+  prioridadesIA,
   onViewAll,
 }: {
   scores: CalculatedScore[];
   diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
+  prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -1459,12 +1461,50 @@ function TrainingPrioritiesBlock({
       }
     }
 
+    // Try to use IA-generated priorities with cross-validation
+    if (prioridadesIA && prioridadesIA.length > 0) {
+      // Validate each item against real diagMelhorias data
+      const validMetrics = new Set(
+        (diagMelhorias || []).map(m => m.metric.toLowerCase())
+      );
+      // Also accept metrics from scores as valid
+      for (const s of scores) {
+        validMetrics.add(s.metric.toLowerCase());
+      }
+
+      const validated = prioridadesIA.filter(p =>
+        p.metric && validMetrics.has(p.metric.toLowerCase())
+      );
+
+      // If more than 50% were invalid, discard IA data entirely
+      if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
+        const items = validated
+          .sort((a, b) => b.nivel_urgencia - a.nivel_urgencia)
+          .slice(0, showAll ? validated.length : 3)
+          .map(p => {
+            const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            const insight = realGap != null && realGap > 0
+              ? formatGapLabel(realGap)
+              : `Urgência ${p.nivel_urgencia}/5`;
+            return {
+              metric: p.metric,
+              label: METRIC_LABELS[p.metric] || p.exercicio || p.metric,
+              stars: { count: Math.min(5, Math.max(1, p.nivel_urgencia)) },
+              insight,
+              percentile: 0,
+              isMetBatida: false,
+            };
+          });
+        return items;
+      }
+    }
+
+    // Fallback: heuristic based on percentiles
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
       .slice(0, showAll ? scores.length : 3)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
-        // Try to find real gap from diagMelhorias
         const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
         const insight = realGap != null && realGap > 0
           ? formatGapLabel(realGap)
@@ -1478,7 +1518,7 @@ function TrainingPrioritiesBlock({
           isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll, diagMelhorias]);
+  }, [scores, showAll, diagMelhorias, prioridadesIA]);
 
   const totalBad = useMemo(
     () => scores.filter((s) => s.percentile_value < 50).length,
