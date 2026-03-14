@@ -170,7 +170,7 @@ export function computeBlockMetrics(
   let intensityCount = 0;
 
   for (const exercise of parsedExercises) {
-    const { kcal, durationSec } = computeExerciseKcal(exercise, biometrics);
+    const { kcal, durationSec } = computeExerciseKcal(exercise, safeBiometrics);
     totalKcal += kcal;
     totalDurationSec += durationSec;
     totalSets += exercise.sets || 0;

@@ -245,6 +245,16 @@ Return a JSON object with tool calling. For each block, return the blockId and p
     let parsed: { results: BlockResult[] };
     try {
       parsed = JSON.parse(toolCall.function.arguments);
+      // CENÁRIO 5: Blindagem contra estrutura inválida
+      if (!parsed.results || !Array.isArray(parsed.results)) {
+        console.error("AI returned invalid structure (results not array):", JSON.stringify(parsed).slice(0, 500));
+        parsed = { results: [] };
+      }
+      // Garantir que cada resultado tenha parsedExercises como array
+      parsed.results = parsed.results.map((r: any) => ({
+        ...r,
+        parsedExercises: Array.isArray(r.parsedExercises) ? r.parsedExercises : [],
+      }));
     } catch (e) {
       console.error("Failed to parse AI response:", toolCall.function.arguments);
       return new Response(
@@ -255,7 +265,7 @@ Return a JSON object with tool calling. For each block, return the blockId and p
 
     // Map results back to blocks, marking status
     const results: BlockResult[] = blocks.map((inputBlock) => {
-      const aiResult = parsed.results?.find((r) => r.blockId === inputBlock.blockId);
+      const aiResult = parsed.results.find((r) => r.blockId === inputBlock.blockId);
       if (!aiResult) {
         return {
           blockId: inputBlock.blockId,
