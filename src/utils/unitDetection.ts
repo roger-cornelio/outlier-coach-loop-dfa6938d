@@ -68,7 +68,7 @@ const DISTANCE_PATTERNS = [
 // REPETIÇÕES / ESTRUTURA
 const REPS_STRUCTURE_PATTERNS = [
   // Números + movimento: "10 burpees", "12 push-ups"
-  /^(\d+)\s+(?:[a-záéíóúàêâôûãõ]+)/i,
+  /^(\d+)\s+(?:[a-záéíóúàêâôûãõ]+)/gi,
   // Formatos: "5x5", "4x8"
   /(\d+)\s*x\s*(\d+)/gi,
   // Rounds: "3 rounds", "4 séries"
@@ -122,6 +122,8 @@ export function detectUnits(line: string): UnitDetectionResult {
           raw,
         });
       }
+      if (!pattern.global) break;
+      if (match[0].length === 0) pattern.lastIndex++;
     }
   }
   
@@ -141,6 +143,8 @@ export function detectUnits(line: string): UnitDetectionResult {
           raw,
         });
       }
+      if (!pattern.global) break;
+      if (match[0].length === 0) pattern.lastIndex++;
     }
   }
   
@@ -160,6 +164,8 @@ export function detectUnits(line: string): UnitDetectionResult {
           raw,
         });
       }
+      if (!pattern.global) break;
+      if (match[0].length === 0) pattern.lastIndex++;
     }
   }
   
@@ -179,6 +185,8 @@ export function detectUnits(line: string): UnitDetectionResult {
           raw,
         });
       }
+      if (!pattern.global) break;
+      if (match[0].length === 0) pattern.lastIndex++;
     }
   }
   
