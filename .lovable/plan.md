@@ -1,33 +1,95 @@
+## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
-# Melhorias Visuais Impactantes — "Análise Última Prova"
+---
 
-## Problema
-As alterações anteriores (p-5, leading-relaxed) são micro-ajustes de espaçamento que não produzem diferença visual perceptível. O atleta não nota mudança.
+### Fase 1 (Infraestrutura) ✅
 
-## Proposta de Mudanças Reais
+1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
+2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
+3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
+4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
+5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
 
-### 1. Cards com mais presença visual
-- Adicionar `shadow-lg` ou `shadow-md` nos 3 cards (Limitador, Ganho Potencial, Próximo Passo)
-- Aumentar o `border` lateral de `border` para `border-l-4` com a cor semântica (vermelho, verde, âmbar) — cria uma faixa lateral forte que diferencia cada card
-- Fundo mais contrastante: de `bg-red-950/80` para `bg-red-950/60` com `backdrop-blur-sm`
+### Fase 2 (Integração) ✅
 
-### 2. Título do limitador com mais destaque
-- Nome da estação (ex: "Wall Balls") com `text-xl font-bold` em vez de `text-lg`
-- Label "LIMITADOR" com badge colorido em vez de texto simples
+6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
+7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
+8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
+9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
+10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
 
-### 3. Seção de análise detalhada mais estruturada
-- O bloco expandido ("Ocultar detalhes") usa `border-l-2` com `pl-3` — aumentar para `border-l-3` com `pl-4` e adicionar fundo sutil (`bg-card/30`) para separar visualmente do conteúdo principal
-- Separadores entre as seções (Limitador completo, Projeção, Impacto)
+### Fase 2.5 (Blindagem Anti-Freeze) ✅
 
-### 4. Bloco "Direcionamento" (card âmbar inferior)
-- Adicionar ícone (ex: `Compass` ou `ArrowRight`) ao lado do título "Próximo Passo"
-- Bullets com ícone em vez de "•" textual
+11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
+12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
+13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
+14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
+15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
 
-### 5. Espaçamento entre cards
-- De `space-y-4` para `space-y-5` (mais respiro entre os blocos)
-- Container interno com `p-4` em vez de `px-2 pb-3`
+### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
 
-### Arquivos alterados
-- `src/components/DiagnosticRadarBlock.tsx` (linhas 2370-2440)
+16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
+17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
+18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
+19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
+20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
+21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
 
+### Arquitetura do Fluxo
+
+```
+Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
+  ├── Sucesso → Exibe resultado parseado ✅
+  └── Timeout/Erro → UI destrava + erro amigável ✅
+
+Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
+  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
+  └── Falha → Modal Gatekeeper
+       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
+       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
+            └── Bypass → try/finally garante isSavingToDb resetado ✅
+```
+
+### Performance do Parser Local (Fase 2.6)
+
+```
+Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
+                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
+                   
+Reset automático no início de cada parseStructuredText() → sem vazamento de memória
+```
+
+### Próximos passos opcionais (Fase 3):
+- Retry automático em background para blocos bypassed
+- Dashboard de qualidade de escrita do coach
+- Cache de dicionário na edge function (Deno KV)
+- Feedback loop para exercícios não reconhecidos
+
+### Fase 3: Refatoração UI/UX Dashboard + Integridade de Dados ✅
+
+**Frente 1 — Integridade de Dados** ✅
+- Removido `METRIC_INSIGHTS` (mock hardcoded com textos falsos como "-1m45 vs Elite")
+- Expandida query de `diagMelhorias` para incluir `movement` e `metric`
+- Gap real formatado dinamicamente: `↓ 45s` (< 60s), `↓ 01:15` (≥ 60s), `✓ Meta batida` (sem gap)
+- Sem referências a "vs Elite" (anti-metalinguagem)
+
+**Frente 2 — Estrelas com cor única** ✅
+- `percentileToStars` simplificado: retorna apenas `{ count }`, sem `colorClass`
+- `StarRating` usa `text-primary` para preenchidas, `text-muted-foreground/20` para vazias
+- Layout `justify-between` com gap alinhado à direita em `tabular-nums`
+
+**Frente 3 — Gráfico de Barras** ✅
+- Altura aumentada de `h-2.5` para `h-4`
+- Data labels: tempo real (`raw_time_sec` formatado MM:SS) como label principal, percentil como fallback
+- Empty state: barra fantasma `bg-muted/5` com traço "—" (sem texto "Sem dados")
+- Bordas arredondadas `rounded-r-md`
+
+**Frente 4 — Blocos Textuais** ✅
+- Cores semânticas mantidas (vermelho/verde/âmbar)
+- Padding aumentado de `p-4` para `p-5`
+- Título do limitador: `text-lg font-bold`
+- Textos descritivos: `leading-relaxed` + `mt-1.5`
+- Espaçamento entre cards: `space-y-4`
+- Próximos passos: `leading-relaxed` + `text-foreground/90`

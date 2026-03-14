@@ -2370,65 +2370,85 @@ export function DiagnosticRadarBlock({
           </CollapsibleTrigger>
           <CollapsibleContent>
             {hasData ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-4">
-                <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
-                  <p className="text-lg font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 pb-4 space-y-5">
+                {/* Card: Limitador */}
+                <div className="rounded-xl border-l-4 border-l-red-500 bg-red-950/60 border border-red-800/20 p-5 shadow-lg backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-extrabold uppercase tracking-wider mb-3">
+                    <AlertTriangle className="w-3 h-3" />
+                    Limitador
+                  </span>
+                  <p className="text-xl font-bold text-foreground mt-1">{mainLimiter?.name || 'Análise não disponível'}</p>
                   {mainLimiter ?
-                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
+                  <p className="text-sm text-foreground/70 mt-2 leading-relaxed">
                     {loadingInsights ? (
                       <span className="inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analisando...</span>
                     ) : coachInsights?.limitador_descricao || `Abaixo de ${mainLimiter.relativePerformance}% da categoria`}
                   </p> :
-                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">Registre uma prova para ver seu limitador.</p>
+                  <p className="text-sm text-foreground/70 mt-2 leading-relaxed">Registre uma prova para ver seu limitador.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
+
+                {/* Card: Ganho Potencial */}
+                <div className="rounded-xl border-l-4 border-l-emerald-500 bg-emerald-950/60 border border-emerald-800/20 p-5 shadow-lg backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider mb-3">
+                    <TrendingUp className="w-3 h-3" />
+                    Ganho Potencial
+                  </span>
                   {mainLimiter ?
                   <>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-base font-semibold text-foreground mt-1">
                         {coachInsights?.ganho_acao || `Corrigindo ${mainLimiter.name} →`}
                       </p>
-                      <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
+                      <p className="text-sm text-foreground/70 mt-2 leading-relaxed">
                         {coachInsights?.ganho_descricao || 'Zona competitiva superior da categoria'}
                       </p>
                     </> :
-                  <p className="text-xs text-foreground/70 leading-relaxed">Ganhos estimados disponíveis após 2 provas.</p>
+                  <p className="text-sm text-foreground/70 mt-1 leading-relaxed">Ganhos estimados disponíveis após 2 provas.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
-                  <ul className="space-y-1.5 mb-4">
+
+                {/* Card: Próximo Passo */}
+                <div className="rounded-xl border-l-4 border-l-amber-500 bg-amber-950/60 border border-amber-800/20 p-5 shadow-lg backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-extrabold uppercase tracking-wider mb-3">
+                    <Crosshair className="w-3 h-3" />
+                    Próximo Passo
+                  </span>
+                  <ul className="space-y-2 mt-1">
                     {(coachInsights?.proximos_passos || topStations.map(s => s.name)).map((step, index) =>
-                    <li key={index} className="text-sm text-foreground/90 leading-relaxed">• {step}</li>
+                    <li key={index} className="flex items-start gap-2 text-sm text-foreground/90 leading-relaxed">
+                      <ChevronRight className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                      <span>{step}</span>
+                    </li>
                     )}
                   </ul>
                 </div>
+
+                {/* Toggle análise detalhada */}
                 <button
                   onClick={() => setShowDetailedAnalysis(!showDetailedAnalysis)}
                   className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-2 text-center">
                   {showDetailedAnalysis ? 'Ocultar detalhes ▾' : 'Ver análise detalhada ▸'}
                 </button>
+
                 {showDetailedAnalysis &&
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 text-sm text-foreground/90 leading-relaxed">
-                    <div className="border-l-2 border-red-800/50 pl-3 space-y-2">
-                      <p className="font-semibold text-red-400 text-xs uppercase">Limitador — Análise completa</p>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 text-sm text-foreground/90 leading-relaxed">
+                    <div className="border-l-[3px] border-red-700/60 pl-4 py-2 rounded-r-lg bg-card/30 space-y-2">
+                      <p className="font-semibold text-red-400 text-xs uppercase tracking-wide">Limitador — Análise completa</p>
                       <p>{coachInsights?.limitador_descricao || `${mainLimiter?.name} foi identificado como o principal fator limitante da sua performance atual, onde a exigência de sustentação de força sob fadiga é determinante.`}</p>
                       <p>Nessa variável específica, você performou abaixo de <span className="font-semibold text-destructive">{mainLimiter?.relativePerformance || 0}%</span> dos atletas da sua categoria, o que compromete drasticamente seus resultados.</p>
                     </div>
-                    <div className="border-l-2 border-emerald-800/50 pl-3 space-y-2">
-                      <p className="font-semibold text-emerald-400 text-xs uppercase">Projeção</p>
+                    <div className="border-l-[3px] border-emerald-700/60 pl-4 py-2 rounded-r-lg bg-card/30 space-y-2">
+                      <p className="font-semibold text-emerald-400 text-xs uppercase tracking-wide">Projeção</p>
                       <p>{coachInsights?.ganho_descricao || `Ao corrigir este limitador, sua performance tende a se deslocar para a zona competitiva superior da categoria ${athleteCategory}.`}</p>
                     </div>
-                    <div className="border-l-2 border-amber-800/50 pl-3 space-y-2">
-                      <p className="font-semibold text-amber-400 text-xs uppercase">Impacto na prova</p>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="border-l-[3px] border-amber-700/60 pl-4 py-2 rounded-r-lg bg-card/30 space-y-2">
+                      <p className="font-semibold text-amber-400 text-xs uppercase tracking-wide">Impacto na prova</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
                         {affectedStations.map((station, index) =>
-                      <span key={index} className="text-xs px-2 py-1 rounded bg-background/50 border border-border/20">{station.name}</span>
+                      <span key={index} className="text-xs px-2.5 py-1 rounded-full bg-background/50 border border-border/20 font-medium">{station.name}</span>
                       )}
                       </div>
-                      <p className="text-xs text-muted-foreground">Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Sob fadiga acumulada, essas estações tendem a sofrer queda acelerada de eficiência.</p>
                     </div>
                   </motion.div>
                 }
