@@ -460,7 +460,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
             lineNumber: blockStartLine + idx,
             text: trimmed,
           });
-          console.log('[NON_EXECUTABLE] Linha bloqueante detectada:', trimmed);
+          _log('[NON_EXECUTABLE] Linha bloqueante detectada:', trimmed);
         }
       });
 
