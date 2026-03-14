@@ -330,7 +330,7 @@ export function WeeklyTrainingView() {
                   {block.type !== 'notas' && (
                     <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
                       {/* Blindagem UX: se bloco foi bypassed, mostrar ícone info com tooltip */}
-                      {(block.parseStatus === 'bypassed' || block.parseStatus === 'failed') && block.type !== 'notas' ? (
+                      {(block.parseStatus === 'bypassed' || block.parseStatus === 'failed') ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
