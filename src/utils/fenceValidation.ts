@@ -469,7 +469,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
 
       // BLOCK_TAG_AUDIT (por bloco)
-      console.log("[BLOCK_TAG_AUDIT]", {
+      _log("[BLOCK_TAG_AUDIT]", {
         blockTitle: currentBlockTitle,
         treinoCount: treinoTagCount,
         comentarioCount: comentarioTagCount,
