@@ -426,7 +426,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             </motion.div>
           )}
 
-          <PerformanceHighlights resumo={selectedResumo} />
+          <PerformanceHighlights resumo={selectedResumo} splits={splits} />
           
           {/* Split times - now always rendered (component handles empty state) */}
           <SplitTimesGrid splits={splits} />
