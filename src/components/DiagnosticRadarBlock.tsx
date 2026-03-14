@@ -486,6 +486,7 @@ interface DiagnosticRadarBlockProps {
   onStartWorkout?: () => void;
   provaAlvo?: RaceInfo | null;
   provaAlvoTargetTime?: string | null;
+  perfilFisiologico?: PerfilFisiologico | null;
 }
 
 // ============================================
