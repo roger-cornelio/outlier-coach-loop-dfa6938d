@@ -18,6 +18,8 @@
  * OBJETIVO:
  * - Reduzir erros de "hífen faltando" sem heurística
  * - 100% determinístico: mesma entrada = mesma saída
+ * 
+ * PERFORMANCE: O(n) single-pass via pré-computação de flags
  */
 
 // Padrões de linha estrutural que NÃO devem receber hífen
@@ -63,38 +65,62 @@ function shouldIgnoreLine(line: string): boolean {
 }
 
 /**
- * Verifica se estamos dentro de um bloco com estrutura
+ * Pré-computa flags de "dentro de bloco estruturado" para todas as linhas.
+ * Single-pass forward O(n) — substitui o antigo isInsideStructuredBlock O(n²).
  */
-function isInsideStructuredBlock(lines: string[], currentIndex: number): boolean {
-  let lastBlockIndex = -1;
-  let hasStructureInBlock = false;
+function computeStructuredBlockFlags(lines: string[]): boolean[] {
+  const flags = new Array<boolean>(lines.length).fill(false);
   
-  // Procurar o último BLOCO: antes da linha atual
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    const line = lines[i].trim();
+  let inBlock = false;
+  let hasStructureInCurrentBlock = false;
+  // Índice da primeira linha após o último "BLOCO:" encontrado
+  let blockContentStart = -1;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
     
-    if (/^BLOCO:\s*/i.test(line)) {
-      lastBlockIndex = i;
-      break;
+    // Novo DIA: reseta contexto
+    if (/^DIA:\s*/i.test(trimmed)) {
+      // Se o bloco anterior tinha estrutura, marcar retroativamente
+      if (inBlock && hasStructureInCurrentBlock && blockContentStart >= 0) {
+        for (let j = blockContentStart; j < i; j++) {
+          flags[j] = true;
+        }
+      }
+      inBlock = false;
+      hasStructureInCurrentBlock = false;
+      blockContentStart = -1;
+      continue;
     }
-    if (/^DIA:\s*/i.test(line)) {
-      // Novo dia antes de encontrar bloco = não está em bloco
-      break;
+    
+    // Novo BLOCO: reseta contexto de bloco (mas mantém DIA)
+    if (/^BLOCO:\s*/i.test(trimmed)) {
+      // Finalizar bloco anterior se tinha estrutura
+      if (inBlock && hasStructureInCurrentBlock && blockContentStart >= 0) {
+        for (let j = blockContentStart; j < i; j++) {
+          flags[j] = true;
+        }
+      }
+      inBlock = true;
+      hasStructureInCurrentBlock = false;
+      blockContentStart = i + 1;
+      continue;
+    }
+    
+    // Detectar estrutura **...**
+    if (inBlock && /^\*\*[^*]+\*\*$/.test(trimmed)) {
+      hasStructureInCurrentBlock = true;
     }
   }
   
-  if (lastBlockIndex === -1) return false;
-  
-  // Verificar se entre o bloco e a linha atual existe uma estrutura **...**
-  for (let i = lastBlockIndex; i <= currentIndex; i++) {
-    const line = lines[i].trim();
-    if (/^\*\*[^*]+\*\*$/.test(line)) {
-      hasStructureInBlock = true;
-      break;
+  // Finalizar último bloco se tinha estrutura
+  if (inBlock && hasStructureInCurrentBlock && blockContentStart >= 0) {
+    for (let j = blockContentStart; j < lines.length; j++) {
+      flags[j] = true;
     }
   }
   
-  return hasStructureInBlock;
+  return flags;
 }
 
 /**
@@ -106,6 +132,7 @@ function isInsideStructuredBlock(lines: string[], currentIndex: number): boolean
  */
 export function autoFormatDSL(rawText: string): string {
   const lines = rawText.split('\n');
+  const structuredFlags = computeStructuredBlockFlags(lines);
   const formattedLines: string[] = [];
   let changesCount = 0;
   
@@ -119,8 +146,8 @@ export function autoFormatDSL(rawText: string): string {
       continue;
     }
     
-    // Verificar se está dentro de bloco estruturado
-    if (isInsideStructuredBlock(lines, i)) {
+    // Verificar se está dentro de bloco estruturado (O(1) lookup)
+    if (structuredFlags[i]) {
       // Adicionar hífen preservando indentação
       const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
       formattedLines.push(`${leadingWhitespace}- ${trimmed}`);
@@ -141,6 +168,8 @@ export function autoFormatDSL(rawText: string): string {
 /**
  * Verifica se o texto tem linhas que seriam formatadas pelo autoformat
  * Útil para mostrar preview antes de aplicar
+ * 
+ * PERFORMANCE: O(n) via pré-computação de flags
  */
 export function previewAutoFormatChanges(rawText: string): {
   hasChanges: boolean;
@@ -148,6 +177,7 @@ export function previewAutoFormatChanges(rawText: string): {
   affectedLines: { lineNumber: number; original: string; formatted: string }[];
 } {
   const lines = rawText.split('\n');
+  const structuredFlags = computeStructuredBlockFlags(lines);
   const affectedLines: { lineNumber: number; original: string; formatted: string }[] = [];
   
   for (let i = 0; i < lines.length; i++) {
@@ -156,7 +186,7 @@ export function previewAutoFormatChanges(rawText: string): {
     
     if (shouldIgnoreLine(trimmed)) continue;
     
-    if (isInsideStructuredBlock(lines, i)) {
+    if (structuredFlags[i]) {
       const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
       affectedLines.push({
         lineNumber: i + 1,
