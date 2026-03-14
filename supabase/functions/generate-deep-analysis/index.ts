@@ -1,8 +1,75 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────
+function timeToSeconds(t: string): number {
+  if (!t || typeof t !== 'string') return 0;
+  const parts = t.trim().split(':').map(Number);
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] || 0;
+}
+
+function secondsToTime(sec: number): string {
+  if (sec == null || isNaN(sec) || sec < 0) return '00:00';
+  if (sec >= 3600) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.round(sec % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function clamp(min: number, max: number, val: number): number {
+  return Math.max(min, Math.min(max, val));
+}
+
+// ── Split → Metric dictionary ────────────────────────────────────────
+const SPLIT_TO_METRIC: Record<string, string> = {
+  'Ski Erg': 'ski',
+  'Sled Push': 'sled_push',
+  'Sled Pull': 'sled_pull',
+  'Burpees Broad Jump': 'bbj',
+  'Rowing': 'row',
+  'Farmers Carry': 'farmers',
+  'Sandbag Lunges': 'sandbag',
+  'Wall Balls': 'wallballs',
+  'Roxzone': 'roxzone',
+};
+
+// ── Division mapping ─────────────────────────────────────────────────
+function mapDivision(div: string): { division: string; gender?: string } {
+  const d = (div || '').toLowerCase().trim();
+  if (d.includes('pro')) return { division: 'HYROX PRO' };
+  return { division: 'HYROX' };
+}
+
+function sexToGender(sexo: string): string {
+  return sexo === 'masculino' ? 'M' : 'F';
+}
+
+// ── Radar score from P10/P90 ─────────────────────────────────────────
+function percentileScore(athleteSec: number, p10: number, p90: number): number {
+  if (p90 === p10) return 50;
+  // P10 = best (lower time), P90 = worst → score 100 when at P10, 0 when at P90
+  return clamp(0, 100, Math.round(100 - ((athleteSec - p10) / (p90 - p10)) * 100));
+}
+
+function avgScores(scores: number[]): number {
+  const valid = scores.filter(s => s >= 0);
+  if (valid.length === 0) return 50;
+  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -17,8 +84,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Supabase service role client ──────────────────────────────────
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
     const body = await req.json();
     const {
+      atleta_id,
       athlete_name = 'Atleta',
       finish_time = '--:--',
       division = 'Open',
@@ -26,16 +99,169 @@ Deno.serve(async (req) => {
       splits = [],
     } = body;
 
+    // ── 1. Fetch athlete profile ──────────────────────────────────────
+    let sexo: string | null = null;
+    let peso: number | null = null;
+
+    if (atleta_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('sexo, peso, name')
+        .eq('user_id', atleta_id)
+        .maybeSingle();
+
+      if (profile) {
+        sexo = profile.sexo;
+        peso = profile.peso;
+        // Use profile name as fallback
+        if (athlete_name === 'Atleta' && profile.name) {
+          body.athlete_name_resolved = profile.name;
+        }
+      }
+    }
+
+    if (!sexo) {
+      return new Response(
+        JSON.stringify({
+          error: 'O sexo do atleta é obrigatório para o cálculo clínico. Atualize suas configurações.',
+          code: 'MISSING_SEX',
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const resolvedName = body.athlete_name_resolved || athlete_name;
+    const gender = sexToGender(sexo);
+
+    // ── 2. Fetch percentile bands ─────────────────────────────────────
+    const { division: dbDivision } = mapDivision(division);
+    const { data: bands } = await supabase
+      .from('percentile_bands')
+      .select('metric, p10_sec, p90_sec')
+      .eq('division', dbDivision)
+      .eq('gender', gender)
+      .eq('is_active', true);
+
+    const bandMap: Record<string, { p10: number; p90: number }> = {};
+    if (bands) {
+      for (const b of bands) {
+        bandMap[b.metric] = { p10: b.p10_sec, p90: b.p90_sec };
+      }
+    }
+
+    // ── 3. Build athlete times from splits ────────────────────────────
+    const athleteTimes: Record<string, number> = {};
+    const runningSplits: { index: number; sec: number }[] = [];
+
+    for (const s of splits) {
+      const name = s.split_name as string;
+      const sec = timeToSeconds(s.time);
+      if (sec <= 0) continue;
+
+      // Map station splits
+      const metric = SPLIT_TO_METRIC[name];
+      if (metric) {
+        athleteTimes[metric] = sec;
+      }
+
+      // Collect running splits
+      const runMatch = name.match(/^Running\s+(\d+)$/i);
+      if (runMatch) {
+        runningSplits.push({ index: parseInt(runMatch[1]), sec });
+      }
+    }
+
+    // Compute run_avg if we have running data
+    if (runningSplits.length > 0) {
+      const totalRunSec = runningSplits.reduce((a, r) => a + r.sec, 0);
+      athleteTimes['run_avg'] = Math.round(totalRunSec / runningSplits.length);
+    }
+
+    // ── 4. Critical Speed (CS) ────────────────────────────────────────
+    // Use last 3 available running splits (fatigue state)
+    runningSplits.sort((a, b) => a.index - b.index);
+    const lastN = runningSplits.slice(-Math.min(3, runningSplits.length));
+    const speeds = lastN.map(r => (r.sec > 0 ? 1000 / r.sec : 0)).filter(v => v > 0);
+    const cs = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
+
+    // ── 5. VO2max (Dexheimer 2020) ────────────────────────────────────
+    const sexoNum = sexo === 'masculino' ? 1 : 0;
+    const vo2max = cs > 0 ? Math.round((8.449 * cs) + (4.387 * sexoNum) + 14.683) : null;
+
+    // ── 6. Lactate Threshold ──────────────────────────────────────────
+    const limiarSec = cs > 0 ? Math.round(1000 / cs) : null;
+    const limiarPace = limiarSec ? secondsToTime(limiarSec) : null;
+
+    // ── 7. Radar 6 axes ───────────────────────────────────────────────
+    function metricScore(metric: string): number {
+      const t = athleteTimes[metric];
+      const band = bandMap[metric];
+      if (t == null || !band) return -1; // no data
+      return percentileScore(t, band.p10, band.p90);
+    }
+
+    const radarCardio = avgScores([metricScore('run_avg'), metricScore('ski'), metricScore('row')]);
+    const radarForca = avgScores([metricScore('sled_push'), metricScore('sled_pull')]);
+    const radarPotencia = avgScores([metricScore('wallballs'), metricScore('bbj')]);
+    const radarCore = avgScores([metricScore('sandbag'), metricScore('farmers')]);
+
+    // Anaeróbica = exclusively roxzone score
+    const roxScore = metricScore('roxzone');
+    const radarAnaerobica = roxScore >= 0 ? roxScore : 50;
+
+    // Eficiência = rhythm breakage Running 1 vs Running 8
+    const run1 = runningSplits.find(r => r.index === 1);
+    const run8 = runningSplits.find(r => r.index === 8);
+    let radarEficiencia = 50; // neutral if missing
+    if (run1 && run8 && run1.sec > 0) {
+      radarEficiencia = Math.round(
+        100 - clamp(0, 100, (Math.abs(run8.sec - run1.sec) / run1.sec) * 100),
+      );
+    }
+
+    const radar = {
+      cardio: radarCardio,
+      forca: radarForca,
+      potencia: radarPotencia,
+      anaerobica: radarAnaerobica,
+      core: radarCore,
+      eficiencia: radarEficiencia,
+    };
+
+    const perfilFisiologico = {
+      vo2_max: vo2max,
+      limiar_lactato: limiarPace,
+      radar,
+    };
+
+    // ── 8. Build system prompt ────────────────────────────────────────
     const splitsJson = JSON.stringify({ diagnosticos, splits }, null, 2);
+
+    const physioBlock = `
+PERFIL FISIOLÓGICO PRÉ-CALCULADO (DETERMINÍSTICO — NÃO RECALCULE):
+- VO2 Max Estimado: ${vo2max ?? 'N/A'} ml/kg/min (Dexheimer et al., 2020)
+- Limiar de Lactato (LT2): ${limiarPace ?? 'N/A'} min/km
+- Velocidade Crítica: ${cs > 0 ? cs.toFixed(2) : 'N/A'} m/s
+- Radar: Cardio=${radar.cardio}, Força=${radar.forca}, Potência=${radar.potencia}, Anaeróbica=${radar.anaerobica}, Core=${radar.core}, Eficiência=${radar.eficiencia}
+${peso ? `- Peso corporal: ${peso}kg` : ''}
+
+Inclua uma breve interpretação fisiológica destes números na seção ANÁLISE BIOMECÂNICA.
+NÃO recalcule estes valores. Use-os como fatos imutáveis.
+`;
 
     const systemPrompt = `Você é um Head Coach de Elite focado na biomecânica e estratégia da HYROX.
 Sua missão é fazer uma dissecagem profunda (Raio-X) da corrida do atleta (ou dupla).
 
 DADOS DO ATLETA:
-- Nome: ${athlete_name} | Tempo: ${finish_time} | Divisão: ${division}
+- Nome: ${resolvedName} | Tempo: ${finish_time} | Divisão: ${division}
 
 DADOS DOS SPLITS:
 ${splitsJson}
+
+${physioBlock}
 
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
 - NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
@@ -59,7 +285,7 @@ CONCISÃO E FOCO:
 ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 
 ### 🔬 ANÁLISE BIOMECÂNICA E RITMO
-(Faça uma análise geral de como o atleta lidou com o volume da prova. O ritmo de corrida foi consistente? A Roxzone sugere muita quebra de ritmo ou transição lenta?)
+(Faça uma análise geral de como o atleta lidou com o volume da prova. O ritmo de corrida foi consistente? A Roxzone sugere muita quebra de ritmo ou transição lenta? Inclua a interpretação fisiológica do VO2max, Limiar de Lactato e Velocidade Crítica fornecidos acima.)
 
 ### 📉 ONDE A PROVA FOI DECIDIDA (Gargalos Críticos)
 (Aprofunde-se nas 2-3 estações com maior defasagem em relação ao percentil alvo. Não apenas cite os números, mas explique o provável motivo físico/técnico: falta de força nas pernas, pegada fraca, etc.)
@@ -76,6 +302,7 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 ### 📋 PROTOCOLO DE CHOQUE (Próximas 4 semanas)
 (Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).`;
 
+    // ── 9. Call LLM ───────────────────────────────────────────────────
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 55000);
 
@@ -89,7 +316,10 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Gere o Raio-X Tático completo com base nos dados fornecidos. Lembre-se: todos os tempos em MM:SS, sem mostrar cálculos, e análise de pace obrigatória.' },
+          {
+            role: 'user',
+            content: 'Gere o Raio-X Tático completo com base nos dados fornecidos. Lembre-se: todos os tempos em MM:SS, sem mostrar cálculos, e análise de pace obrigatória. Interprete os dados fisiológicos pré-calculados como fatos.',
+          },
         ],
         max_tokens: 4000,
       }),
@@ -122,12 +352,15 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
     const result = await response.json();
     const text = result?.choices?.[0]?.message?.content || '';
 
-    console.log(`[generate-deep-analysis] Generated ${text.length} chars for ${athlete_name}`);
+    console.log(`[generate-deep-analysis] Generated ${text.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)}`);
 
-    return new Response(JSON.stringify({ texto: text }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ texto: text, perfil_fisiologico: perfilFisiologico }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[generate-deep-analysis] Error: ${message}`);

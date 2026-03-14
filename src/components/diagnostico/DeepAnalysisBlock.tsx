@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader2, BrainCircuit } from 'lucide-react';
+import { Loader2, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,18 +15,25 @@ interface Props {
 
 export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Props) {
   const [texto, setTexto] = useState<string | null>((resumo as any).texto_ia_completo || null);
+  const [perfilFisio, setPerfilFisio] = useState<any>((resumo as any).perfil_fisiologico || null);
   const [loading, setLoading] = useState(false);
 
   // Sync cache when resumo changes (e.g. switching between provas)
   useEffect(() => {
     setTexto((resumo as any).texto_ia_completo || null);
+    setPerfilFisio((resumo as any).perfil_fisiologico || null);
   }, [resumo.id]);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
+      // Get current user id to send as atleta_id
+      const { data: { user } } = await supabase.auth.getUser();
+      const atletaId = user?.id;
+
       const { data, error } = await supabase.functions.invoke('generate-deep-analysis', {
         body: {
+          atleta_id: atletaId,
           athlete_name: resumo.nome_atleta || 'Atleta',
           finish_time: resumo.finish_time || '--:--',
           division: resumo.divisao || 'Open',
@@ -44,7 +51,20 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         },
       });
 
-      if (error) throw error;
+      // Handle 400 error (missing sex)
+      if (error) {
+        const errorBody = typeof error === 'object' && (error as any)?.context?.body
+          ? JSON.parse(new TextDecoder().decode((error as any).context.body))
+          : null;
+
+        if (errorBody?.code === 'MISSING_SEX') {
+          toast.error('Preencha o sexo nas Configurações do perfil para gerar o Raio X.', {
+            duration: 6000,
+          });
+          return;
+        }
+        throw error;
+      }
 
       const generatedText = data?.texto;
       if (!generatedText) {
@@ -52,12 +72,18 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
         return;
       }
 
-      setTexto(generatedText);
+      const generatedPerfil = data?.perfil_fisiologico || null;
 
-      // Save to DB to cache
+      setTexto(generatedText);
+      setPerfilFisio(generatedPerfil);
+
+      // Save to DB to cache (both texto and perfil_fisiologico)
       await supabase
         .from('diagnostico_resumo')
-        .update({ texto_ia_completo: generatedText } as any)
+        .update({
+          texto_ia_completo: generatedText,
+          perfil_fisiologico: generatedPerfil,
+        } as any)
         .eq('id', resumo.id);
 
       toast.success('Raio X gerado!');
