@@ -1444,19 +1444,22 @@ function TrainingPrioritiesBlock({
   onViewAll,
 }: {
   scores: CalculatedScore[];
-  diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
+  diagMelhorias?: { improvement_value: number; movement: string; metric: string; percentage: number }[];
   prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
 
   const worstStations = useMemo(() => {
-    // Build a lookup map from diagMelhorias metric → improvement_value
+    // Build lookup maps from diagMelhorias
     const melhoriaMap = new Map<string, number>();
+    const percentageMap = new Map<string, number>();
     if (diagMelhorias) {
       for (const m of diagMelhorias) {
-        if (m.metric && m.improvement_value > 0) {
-          melhoriaMap.set(m.metric.toLowerCase(), m.improvement_value);
+        if (m.metric) {
+          const key = m.metric.toLowerCase();
+          if (m.improvement_value > 0) melhoriaMap.set(key, m.improvement_value);
+          percentageMap.set(key, m.percentage ?? 0);
         }
       }
     }
@@ -1483,13 +1486,27 @@ function TrainingPrioritiesBlock({
           .slice(0, showAll ? validated.length : 3)
           .map(p => {
             const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            const pct = percentageMap.get(p.metric.toLowerCase());
             const insight = realGap != null && realGap > 0
               ? formatGapLabel(realGap)
               : `Urgência ${p.nivel_urgencia}/5`;
+            // Use percentage (FOCO) for stars when available, otherwise fall back to nivel_urgencia
+            let starCount: number;
+            if (pct != null) {
+              // Faixas fixas baseadas no FOCO %
+              if (pct > 20) starCount = 0;
+              else if (pct > 10) starCount = 1;
+              else if (pct > 5) starCount = 2;
+              else if (pct > 2) starCount = 3;
+              else if (pct > 1) starCount = 4;
+              else starCount = 5;
+            } else {
+              starCount = Math.min(5, Math.max(1, p.nivel_urgencia));
+            }
             return {
               metric: p.metric,
               label: METRIC_LABELS[p.metric] || p.exercicio || p.metric,
-              stars: { count: Math.min(5, Math.max(1, p.nivel_urgencia)) },
+              stars: { count: starCount },
               insight,
               percentile: 0,
               isMetBatida: false,
@@ -1509,10 +1526,16 @@ function TrainingPrioritiesBlock({
 
       if (sliced.length > 0) {
         return sliced.map(d => {
-          // Stars: 0 for worst (max gap), 5 for best (no gap)
-          const starCount = d.improvement_value <= 0
-            ? 5
-            : Math.round(5 * (1 - d.improvement_value / maxGap));
+          const pct = d.percentage ?? 0;
+          // Faixas fixas baseadas no FOCO %
+          let starCount: number;
+          if (d.improvement_value <= 0) starCount = 5; // Meta batida
+          else if (pct > 20) starCount = 0;
+          else if (pct > 10) starCount = 1;
+          else if (pct > 5) starCount = 2;
+          else if (pct > 2) starCount = 3;
+          else if (pct > 1) starCount = 4;
+          else starCount = 5;
           return {
             metric: d.metric,
             label: METRIC_LABELS[d.metric] || d.movement || d.metric,
@@ -1640,7 +1663,7 @@ export function DiagnosticRadarBlock({
   const isMobile = useIsMobile();
 
   // Fetch diagnostico_melhoria + prioridades_treino/direcionamento for the latest resumo
-  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
+  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string; percentage: number }[]>([]);
   const [prioridadesIA, setPrioridadesIA] = useState<{ exercicio: string; nivel_urgencia: number; metric: string }[] | null>(null);
   const [direcionamentoIA, setDirecionamentoIA] = useState<string | null>(null);
   useEffect(() => {
@@ -1666,7 +1689,7 @@ export function DiagnosticRadarBlock({
 
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
-        .select('improvement_value, movement, metric')
+        .select('improvement_value, movement, metric, percentage')
         .eq('resumo_id', resumo.id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
