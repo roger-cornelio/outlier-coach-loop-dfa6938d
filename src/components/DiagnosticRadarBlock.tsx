@@ -871,15 +871,22 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
         // Shield shows active (colored) if outlier OR unlocked by category
         const showActive = isOutlierAtLevel || isUnlockedByCategory;
 
+        // Determine if this is the athlete's current active level
+        const isCurrent = categoryIdx === index;
+
         return (
-          <div key={levelKey} className="flex flex-col items-center flex-1">
+          <div key={levelKey} className={cn(
+            "flex flex-col items-center flex-1 rounded-xl p-2 transition-all duration-300",
+            isCurrent && "border border-primary ring-1 ring-primary/30",
+            !showActive && "opacity-40"
+          )}>
             <div className="w-[7rem] h-[7rem] sm:w-[9rem] sm:h-[9rem] flex items-center justify-center">
               <ShieldCrest
                 level={levelKey}
                 active={showActive}
                 fillPercent={shieldFillPercent}
                 className={`w-full h-full object-contain transition-all duration-300 ${
-                  !showActive ? 'opacity-35 grayscale-[30%]' : ''
+                  !showActive ? 'grayscale-[30%]' : ''
                 }`}
               />
             </div>
