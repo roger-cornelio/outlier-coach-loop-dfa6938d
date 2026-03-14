@@ -1976,7 +1976,7 @@ export function DiagnosticRadarBlock({
                 <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((1 / evolutionProjection.months) * 100, 100)}%` }} />
               </div>
               <p className="text-[10px] text-muted-foreground text-center">
-                Cada mês representa ~{Math.round(Math.min((evolutionProjection.ratePerMonth / (evolutionProjection.months * evolutionProjection.ratePerMonth)) * 100, 100))}% do gap total
+                Cada mês representa ~{Math.round(Math.min((1 / evolutionProjection.months) * 100, 100))}% do gap total
               </p>
             </div>
           </div>
