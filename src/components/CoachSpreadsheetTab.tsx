@@ -159,8 +159,15 @@ interface CoachSpreadsheetTabProps {
 
 export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
-  const { saveWorkout: saveToDb } = useCoachWorkouts();
+  const { saveWorkout: saveToDb, forceSaveWorkout, gatekeeperResult, clearGatekeeperResult } = useCoachWorkouts();
   const { clearDraft } = useCoachDraft();
+
+  // Estado para dados pendentes do Gatekeeper (para retry/bypass)
+  const [pendingGatekeeperSave, setPendingGatekeeperSave] = useState<{
+    title: string;
+    workouts: DayWorkout[];
+    weekStart: string | null;
+  } | null>(null);
   
   // ESTADO LOCAL APENAS - nunca depende do banco
   const [spreadsheetText, setSpreadsheetText] = useState('');
