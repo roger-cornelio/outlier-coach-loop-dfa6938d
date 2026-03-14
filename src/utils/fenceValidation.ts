@@ -273,7 +273,7 @@ function detectHumanText(line: string): string | null {
   // Verificar indicadores de texto humano
   for (const indicator of HUMAN_TEXT_INDICATORS) {
     if (indicator.test(trimmed)) {
-      console.log('[detectHumanText] → BLOQUEADO (texto humano):', trimmed, '|', indicator.reason);
+      _log('[detectHumanText] → BLOQUEADO (texto humano):', trimmed, '|', indicator.reason);
       return indicator.reason;
     }
   }
