@@ -1000,16 +1000,53 @@ BLOCO: DESCANSO
     return (
       <div className="space-y-4">
         {/* HEADER COM BOTÃO VOLTAR */}
-        <Card className="border-green-500/30">
+        <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={goBackToImport} className="h-8 w-8 p-0">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                Edição do Treino
-              </CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={goBackToImport} className="h-8 w-8 p-0">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                  Edição do Treino
+                </CardTitle>
+              </div>
+              {/* Badge de cobertura — inline, minimalista, sempre visível */}
+              {coverageReport && coverageReport.totalExercises > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs px-3 py-1 cursor-default ${
+                          coverageReport.successRate >= 90
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                        }`}
+                      >
+                        {coverageReport.successRate >= 90 ? '🎯' : '⚠️'}{' '}
+                        {coverageReport.recognizedMetrics}/{coverageReport.totalExercises} ({coverageReport.successRate}%)
+                      </Badge>
+                    </TooltipTrigger>
+                    {coverageReport.unmatchedLines.length > 0 && (
+                      <TooltipContent side="bottom" className="max-w-sm">
+                        <p className="font-semibold mb-1">Linhas sem métricas detectadas:</p>
+                        <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                          {coverageReport.unmatchedLines.slice(0, 10).map((line, i) => (
+                            <li key={i} className="truncate">• {line}</li>
+                          ))}
+                          {coverageReport.unmatchedLines.length > 10 && (
+                            <li className="text-muted-foreground">
+                              +{coverageReport.unmatchedLines.length - 10} mais...
+                            </li>
+                          )}
+                        </ul>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               Revise e ajuste os blocos. Defina a categoria e marque o WOD principal.
