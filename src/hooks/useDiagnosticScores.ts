@@ -36,6 +36,7 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
   const [loading, setLoading] = useState(true);
   const [lastResultId, setLastResultId] = useState<string | null>(null);
   const [lastResultDate, setLastResultDate] = useState<string | null>(null);
+  const [perfilFisiologico, setPerfilFisiologico] = useState<PerfilFisiologico | null>(null);
 
   useEffect(() => {
     async function fetchDiagnosticData() {
