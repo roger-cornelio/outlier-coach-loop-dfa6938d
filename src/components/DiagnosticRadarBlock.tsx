@@ -2069,7 +2069,7 @@ export function DiagnosticRadarBlock({
         {!performanceSnapshot.currentTime ? (
           <ImportProvaInlineCTA />
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2 p-3 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 p-4 bg-muted/10 border border-border/20 rounded-xl shadow-sm sm:grid-cols-4">
             <div className="flex flex-col items-center text-center gap-0.5">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Timer className="w-3.5 h-3.5" />
