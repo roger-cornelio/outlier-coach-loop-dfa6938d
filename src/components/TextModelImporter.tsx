@@ -22,7 +22,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -150,6 +150,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
+
+  // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
+  const autoFormatPreview = useMemo(() => {
+    if (!rawText.trim()) return { hasChanges: false, changesCount: 0, affectedLines: [] };
+    return previewAutoFormatChanges(rawText);
+  }, [rawText]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LOAD WORKOUT FOR EDIT (from Programações tab)
@@ -828,23 +834,19 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
               </Button>
               
               {/* AUTOFORMAT BUTTON - Adiciona hífens automaticamente */}
-              {rawText.trim() && (() => {
-                const preview = previewAutoFormatChanges(rawText);
-                if (!preview.hasChanges) return null;
-                return (
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      const formatted = autoFormatDSL(rawText);
-                      setRawText(formatted);
-                    }}
-                    title="Autoformatar adiciona hífen em exercícios dentro de blocos estruturados"
-                  >
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Autoformatar ({preview.changesCount})
-                  </Button>
-                );
-              })()}
+              {autoFormatPreview.hasChanges && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const formatted = autoFormatDSL(rawText);
+                    setRawText(formatted);
+                  }}
+                  title="Autoformatar adiciona hífen em exercícios dentro de blocos estruturados"
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Autoformatar ({autoFormatPreview.changesCount})
+                </Button>
+              )}
               
               {rawText.trim() && (
                 <Button variant="outline" onClick={handleClear}>
@@ -855,7 +857,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             </div>
             
             {/* Microcopy - Dica de autoformat */}
-            {rawText.trim() && previewAutoFormatChanges(rawText).hasChanges && (
+            {autoFormatPreview.hasChanges && (
               <p className="text-xs text-muted-foreground">
                 💡 <strong>Autoformatar</strong> adiciona hífen em exercícios dentro de blocos estruturados (**ROUNDS**, **EMOM**, etc.)
               </p>
