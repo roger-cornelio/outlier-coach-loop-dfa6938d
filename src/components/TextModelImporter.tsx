@@ -423,7 +423,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       } as ParseResult;
       setParsedResult(fallbackResult, []);
     } finally {
-      clearTimeout(safetyTimeout);
       setIsParsing(false);
     }
   };
