@@ -1990,7 +1990,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coach_athlete_overview: {
+        Row: {
+          account_status: string | null
+          altura: number | null
+          athlete_email: string | null
+          athlete_id: string | null
+          athlete_name: string | null
+          coach_id: string | null
+          days_inactive: number | null
+          has_plan_this_week: number | null
+          last_active_at: string | null
+          peso: number | null
+          sexo: string | null
+          total_benchmarks: number | null
+          training_level: string | null
+          workouts_last_7_days: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_admin_allowlist: { Args: { _email: string }; Returns: boolean }
