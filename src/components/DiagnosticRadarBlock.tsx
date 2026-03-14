@@ -2326,6 +2326,45 @@ export function DiagnosticRadarBlock({
                 </div>
               </div>
             </div>
+
+            {/* Botão discreto — referência bibliográfica */}
+            <div className="flex justify-center mt-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                    <BookOpen className="w-3 h-3" />
+                    Como calculamos?
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-sm font-display leading-snug">Como o Outlier calcula o seu Perfil Fisiológico?</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-foreground/80">Nossas estimativas são construídas sobre duas camadas de ciência do esporte:</p>
+
+                    <div className="space-y-1.5">
+                      <p className="text-foreground/90 font-semibold">1. A Fisiologia da Prova</p>
+                      <p>Conforme mapeado em estudos recentes e específicos da modalidade, como o <em>"Acute physiological responses in Hyrox©"</em>, a corrida de fitness híbrido impõe um estresse sistêmico massivo, operando acima de 80% da frequência cardíaca máxima. A prova funciona como um verdadeiro teste de exaustão em campo.</p>
+                      <a href="https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2024.1396079/full" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline text-[10px]">
+                        <ExternalLink className="w-3 h-3" />
+                        Frontiers in Physiology, 2024
+                      </a>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-foreground/90 font-semibold">2. O Modelo Matemático HIFT</p>
+                      <p>Como o HYROX é classificado cientificamente como um Treinamento Funcional de Alta Intensidade (HIFT), nosso algoritmo utiliza a equação de regressão linear validada por Dexheimer et al. (2020) para atletas da mesma categoria. Cruzamos a sua Velocidade Crítica — a quebra e sustentação do seu pace de corrida nas últimas estações sob altíssima fadiga — com seus dados biométricos para extrair uma predição clínica fiel do seu VO₂ Máximo e Pace de Limiar de Lactato (LT2), sem a necessidade de exames de sangue ou máscara de oxigênio.</p>
+                      <a href="https://pubmed.ncbi.nlm.nih.gov/32698256/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline text-[10px]">
+                        <ExternalLink className="w-3 h-3" />
+                        Dexheimer et al., J Sports Sci Med, 2020
+                      </a>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
           </div>
           {hasData && (
             <CollapsibleContent>
