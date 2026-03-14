@@ -37,10 +37,16 @@ DADOS DO ATLETA:
 DADOS DOS SPLITS:
 ${splitsJson}
 
-DIRETRIZES:
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Converta TODOS os tempos absolutos e diferenças (gaps) para o formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
+- Para converter: divida os segundos por 60 para obter minutos e use o resto como segundos. Ex: 328s → 5min 28s → "05:28".
 - Escreva em PT-BR usando formatação Markdown (use ### para os títulos).
 - Seja denso e analítico: fale sobre pacing (ritmo), fadiga acumulada, gestão de energia e tempo de transição (Roxzone).
 - Use os dados matemáticos do JSON para comprovar suas teses.
+
+BENCHMARKING REALISTA:
+- NÃO compare o atleta com o "Top 1%" — isso é irrealista para a maioria. Em vez disso, compare-o com a média do PERCENTIL IMEDIATAMENTE ACIMA dele (ex: se ele é Top 40%, compare com a média do Top 20%; se é Top 70%, compare com Top 50%). Isso cria metas tangíveis e motivadoras.
+- Os tempos de referência devem ser críveis e calculados com base na média competitiva real da divisão dele.
 
 ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 
@@ -48,10 +54,17 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 (Faça uma análise geral de como o atleta lidou com o volume da prova. O ritmo de corrida foi consistente? A Roxzone sugere muita quebra de ritmo ou transição lenta?)
 
 ### 📉 ONDE A PROVA FOI DECIDIDA (Gargalos Críticos)
-(Aprofunde-se nas estações com maior % de defasagem em relação ao Top 1%. Não apenas cite os números, mas explique o provável motivo físico/técnico: falta de força nas pernas, pegada fraca, etc.)
+(Aprofunde-se nas estações com maior % de defasagem em relação ao percentil alvo realista (não Top 1%). Não apenas cite os números, mas explique o provável motivo físico/técnico: falta de força nas pernas, pegada fraca, etc.)
 
 ### 📈 ONDE VOCÊ MOSTROU FORÇA (Destaques)
 (Identifique e elogie as estações onde o atleta bateu a meta, chegou perto ou teve a melhor performance relativa).
+
+### 🏃 ANÁLISE DE PACE
+(O volume total de corrida na HYROX é 8km. Calcule e apresente:
+1. **Pace Médio Realizado**: Running Total ÷ 8 = pace em min/km.
+2. **Pace Alvo**: Qual deveria ser o pace constante para atingir o tempo de corrida do percentil acima.
+3. **Variação de Splits**: Critique construtivamente a diferença entre o split de corrida mais rápido e o mais lento. Instrua sobre o benefício de uma Estratégia de Pace Constante.
+Ex: "Seu pace médio foi de 5:14/km devido à quebra no final. Para atingir o tempo alvo de 36:24, você precisa travar um pace constante de 4:33/km desde a primeira corrida.")
 
 ### 📋 PROTOCOLO DE CHOQUE (Próximas 4 semanas)
 (Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).`;
@@ -69,9 +82,9 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Gere o Raio-X Tático completo com base nos dados fornecidos.' },
+          { role: 'user', content: 'Gere o Raio-X Tático completo com base nos dados fornecidos. Lembre-se: todos os tempos em MM:SS, comparação com percentil realista (não Top 1%), e análise de pace obrigatória.' },
         ],
-        max_tokens: 1500,
+        max_tokens: 2000,
       }),
       signal: controller.signal,
     });
