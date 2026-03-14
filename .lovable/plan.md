@@ -1,39 +1,41 @@
-## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 IMPLEMENTADAS
+Objetivo: eliminar o “travamento na versão de programador” atacando os 3 gargalos reais que achei no código atual: spam de logs em hot-path, warning de key duplicada no render e timeout assíncrono incompleto no Gatekeeper.
 
----
+1) Diagnóstico confirmado no código
+- `src/components/StructuredWorkoutEditor.tsx`: há logs dentro de render/map (`[RENDER_BLOCK]`) + `AnimatePresence` com múltiplos filhos sem `key`, e o console já mostra warning de key duplicada.
+- `src/utils/fenceValidation.ts`: dezenas de `console.log` não protegidos dentro de loops de parsing/validação (altíssimo custo em textos grandes).
+- `src/hooks/useCoachWorkouts.ts`: `AbortController` é criado, mas o `signal` não é usado no `supabase.functions.invoke`; na prática, esse “timeout” pode não interromper chamadas penduradas.
+- `src/components/TextModelImporter.tsx`: já melhorou com `useMemo`, mas ainda pode sofrer em textos grandes sem debounce do preview.
 
-### Fase 1 (Infraestrutura) ✅
+2) Correções que vou implementar (ordem de impacto)
+- Hot-path logging guard:
+  - Criar padrão de logger com flag (`import.meta.env.DEV && VITE_DEBUG_PARSER === 'true'`) e trocar logs de alto volume por no-op fora de debug.
+  - Aplicar em: `fenceValidation.ts`, `StructuredWorkoutEditor.tsx`, `CoachSpreadsheetTab.tsx`, `useCoachDraft.ts`, `dslAutoFormat.ts`.
+  - Manter `console.error` apenas para falhas reais.
+- React reconciliation fix:
+  - Adicionar `key` explícita em cada child de `AnimatePresence` no `StructuredWorkoutEditor`.
+  - Revisar chaves de listas para fallback composto (`day + block.id + index`) onde houver risco de colisão.
+- Timeout robusto no Gatekeeper:
+  - Trocar lógica atual por `Promise.race` real em `callParseWorkoutBlocks` (retorno de erro controlado em 15s).
+  - Garantir reset de loading em todos os caminhos de cancelamento/erro/retry.
+- Alívio de validação no import:
+  - Debounce (~300ms) no `previewAutoFormatChanges` para textos longos (ex.: >100 linhas), mantendo resposta imediata em textos curtos.
 
-1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
-2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
-3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
-4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
-5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
+3) Critérios de aceite (QA)
+- Sem warning “Encountered two children with the same key” no console ao usar editor estruturado.
+- Clicar em “Validar texto” não congela UI em textos longos (spinner aparece e UI permanece responsiva).
+- Em falha de backend, modal abre em até 15s e botão de salvar volta ao estado normal ao fechar/cancelar.
+- Sem flood de logs por render/linha quando debug não está explicitamente ativo.
 
-### Fase 2 (Integração) ✅
+4) Arquivos alvo
+- `src/components/StructuredWorkoutEditor.tsx`
+- `src/utils/fenceValidation.ts`
+- `src/hooks/useCoachWorkouts.ts`
+- `src/components/TextModelImporter.tsx`
+- `src/components/CoachSpreadsheetTab.tsx`
+- `src/hooks/useCoachDraft.ts`
+- `src/utils/dslAutoFormat.ts`
 
-6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
-7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
-8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
-9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
-10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
-
-### Arquitetura do Fluxo
-
-```
-Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
-  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
-  └── Falha → Modal Gatekeeper
-       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
-       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
-            └── Bypass → Preserva dados parciais, marca blocos como 'bypassed'
-                 └── Atleta vê tooltip "i" nos blocos sem métricas
-```
-
-### Próximos passos opcionais (Fase 3):
-- Retry automático em background para blocos bypassed
-- Dashboard de qualidade de escrita do coach
-- Cache de dicionário na edge function (Deno KV)
-- Feedback loop para exercícios não reconhecidos
+5) Risco e compatibilidade
+- Risco baixo/médio: mudanças focadas em performance/estabilidade, sem alterar regra de negócio.
+- Compatível com o fluxo atual (Coach salva → Gatekeeper → persistência → visualização do atleta); apenas remove travas e pendências silenciosas.
