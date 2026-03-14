@@ -1886,27 +1886,28 @@ export function DiagnosticRadarBlock({
   }, [scores]);
 
   const vo2maxEstimate = useMemo(() => {
-    // Prioridade: dados determinísticos (Dexheimer 2020) cacheados no banco
+    // Prioridade 1: cache determinístico do banco (Dexheimer 2020)
     if (perfilFisiologico?.vo2_max) return perfilFisiologico.vo2_max;
-    // Fallback heurístico para atletas que ainda não geraram Raio X
+    // Prioridade 2: calcular deterministicamente com raw_time_sec disponível
     const runScore = scores.find((s) => s.metric === 'run_avg');
-    if (!runScore) return null;
-    const base = 45;
-    const delta = (runScore.percentile_value - 50) * 0.3;
-    return Math.round(base + delta);
-  }, [scores, perfilFisiologico]);
+    if (!runScore || !runScore.raw_time_sec) return null;
+    // CS (Critical Speed) = 1000m / tempo médio por km (em segundos) → m/s
+    const cs = 1000 / runScore.raw_time_sec;
+    const sexoNum = athleteConfig?.sexo === 'feminino' ? 0 : 1;
+    // Dexheimer 2020: VO2max = 8.449 * CS + 4.387 * sexo + 14.683
+    return Math.round((8.449 * cs) + (4.387 * sexoNum) + 14.683);
+  }, [scores, perfilFisiologico, athleteConfig?.sexo]);
 
   const lactateThresholdEstimate = useMemo(() => {
-    // Prioridade: dados determinísticos cacheados no banco
+    // Prioridade 1: cache determinístico do banco
     if (perfilFisiologico?.limiar_lactato) return perfilFisiologico.limiar_lactato;
-    // Fallback heurístico
+    // Prioridade 2: calcular deterministicamente — Limiar ≈ pace no CS
     const runScore = scores.find((s) => s.metric === 'run_avg');
-    if (!runScore) return null;
-    const baseSeconds = 330;
-    const delta = (runScore.percentile_value - 50) * 2;
-    const totalSeconds = Math.max(baseSeconds - delta, 180);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.round(totalSeconds % 60);
+    if (!runScore || !runScore.raw_time_sec) return null;
+    const cs = 1000 / runScore.raw_time_sec;
+    const paceSeconds = Math.round(1000 / cs); // segundos por km
+    const mins = Math.floor(paceSeconds / 60);
+    const secs = paceSeconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, [scores, perfilFisiologico]);
 
