@@ -17,6 +17,14 @@
 
 export type UnitConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
+// ============================================
+// CACHE DE MEMOIZAÇÃO — evita re-execução de regex para a mesma linha
+// ============================================
+const _unitsCache = new Map<string, UnitDetectionResult>();
+
+/** Limpa o cache de detecção de unidades (chamar no início de cada parse session) */
+export const resetUnitsCache = () => _unitsCache.clear();
+
 export interface UnitDetectionResult {
   hasRecognizedUnit: boolean;
   confidence: UnitConfidence;
