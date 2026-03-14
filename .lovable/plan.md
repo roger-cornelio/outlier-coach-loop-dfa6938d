@@ -1,6 +1,6 @@
 ## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 IMPLEMENTADAS
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) IMPLEMENTADAS
 
 ---
 
@@ -20,16 +20,27 @@
 9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
 10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
 
+### Fase 2.5 (Blindagem Anti-Freeze) ✅
+
+11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
+12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
+13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
+14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
+15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
+
 ### Arquitetura do Fluxo
 
 ```
+Coach clica "Validar" → Web Worker (thread separada) → timeout 8s
+  ├── Sucesso → Exibe resultado parseado ✅
+  └── Timeout/Erro → UI destrava + erro amigável ✅
+
 Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
   ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
   └── Falha → Modal Gatekeeper
        ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
        └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
-            └── Bypass → Preserva dados parciais, marca blocos como 'bypassed'
-                 └── Atleta vê tooltip "i" nos blocos sem métricas
+            └── Bypass → try/finally garante isSavingToDb resetado ✅
 ```
 
 ### Próximos passos opcionais (Fase 3):
