@@ -1,62 +1,68 @@
+## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
-# Relatório de Comissionamento Semântico do Parser
+---
 
-## Resumo
+### Fase 1 (Infraestrutura) ✅
 
-Criar uma função utilitária `calculateParsingCoverage` e integrá-la no fluxo pós-parse do `TextModelImporter`, exibindo um badge de cobertura na Tela 2 (Edição) e um `console.table` detalhado no DevTools.
+1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
+2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
+3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
+4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
+5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
 
-## Arquitetura
+### Fase 2 (Integração) ✅
 
-```text
-parseStructuredText (Worker)
-        │
-        ▼
-  handleParse (TextModelImporter)
-        │
-        ├── convertToDayWorkout[]
-        │
-        ▼
-  calculateParsingCoverage(parseResult, workouts)
-        │
-        ├── console.table (DevTools)
-        └── setCoverageReport (state → Badge na UI)
+6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
+7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
+8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
+9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
+10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
+
+### Fase 2.5 (Blindagem Anti-Freeze) ✅
+
+11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
+12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
+13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
+14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
+15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
+
+### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
+
+16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
+17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
+18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
+19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
+20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
+21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
+
+### Arquitetura do Fluxo
+
+```
+Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
+  ├── Sucesso → Exibe resultado parseado ✅
+  └── Timeout/Erro → UI destrava + erro amigável ✅
+
+Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
+  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
+  └── Falha → Modal Gatekeeper
+       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
+       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
+            └── Bypass → try/finally garante isSavingToDb resetado ✅
 ```
 
-## Implementação
+### Performance do Parser Local (Fase 2.6)
 
-### 1. Novo arquivo: `src/utils/parsingCoverage.ts`
+```
+Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
+                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
+                   
+Reset automático no início de cada parseStructuredText() → sem vazamento de memória
+```
 
-Função `calculateParsingCoverage(parseResult: ParseResult, workouts: DayWorkout[])`:
-
-- **Varredura**: Itera sobre `parseResult.days[].blocks[].lines[]` filtrando apenas `type === 'exercise'`
-- **totalExercises**: Contagem de todas as linhas classificadas como exercício
-- **recognizedMetrics**: Para cada linha de exercício, chama `detectUnits(line.text)` e conta quantas retornam `hasRecognizedUnit === true` (TIME, DISTANCE, REPS ou EFFORT detectados)
-- **mappedToDatabase**: Não será incluído nesta fase — o mapeamento de slugs via `global_exercises` é feito pela Edge Function `parse-workout-blocks` (IA), que roda depois da publicação, não durante o parse local. Incluir aqui exigiria uma query async ao banco durante o parse, o que viola o design síncrono. Será adicionado como campo futuro.
-- **Retorno**: `{ totalExercises, recognizedMetrics, unrecognized, successRate, unmatchedLines: string[] }`
-- **console.table**: Imprime tabela formatada com as métricas e lista as linhas sem métricas para auditoria
-
-### 2. Integração no `TextModelImporter.tsx`
-
-- Após o parse com sucesso (linha ~394, dentro do `if (result.success)`), chamar `calculateParsingCoverage(result, workouts)`
-- Armazenar resultado em `useState` local: `coverageReport`
-- Limpar ao voltar para import (`goBackToImport`)
-
-### 3. Badge na UI (Tela 2 — Edição)
-
-- Posicionar entre os metadados obrigatórios (semana/nome) e o Accordion de dias (linha ~1051)
-- Badge sutil com fundo verde/âmbar conforme taxa:
-  - `≥ 90%` → verde: "🎯 Inteligência Outlier: X/Y exercícios interpretados (Z%)"
-  - `< 90%` → âmbar: "⚠️ Inteligência Outlier: X/Y exercícios interpretados (Z%)"
-- Desaparece automaticamente após 15s via `setTimeout` (temporário conforme solicitado)
-- Tooltip com detalhes das linhas não reconhecidas
-
-### 4. Sem alteração no Worker ou no parser
-
-A função é chamada **depois** do parse, na thread principal, usando o resultado já pronto. Zero impacto em performance.
-
-## Escopo excluído (futuro)
-
-- `mappedToDatabase`: requer query ao banco de `global_exercises` — será adicionado quando o fluxo de parse-IA (Edge Function) rodar inline
-- Persistência do relatório em banco — apenas console + UI temporária nesta fase
-
+### Próximos passos opcionais (Fase 3):
+- Retry automático em background para blocos bypassed
+- Dashboard de qualidade de escrita do coach
+- Cache de dicionário na edge function (Deno KV)
+- Feedback loop para exercícios não reconhecidos

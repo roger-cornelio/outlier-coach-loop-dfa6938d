@@ -75,6 +75,7 @@ import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
+import { calculateParsingCoverage, type CoverageReport } from '@/utils/parsingCoverage';
 
 interface TextModelImporterProps {
   onSaveAndGoToPrograms?: (workouts: DayWorkout[], title: string, weekStart: string | null) => Promise<boolean>;
@@ -151,6 +152,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [highlightedBlock, setHighlightedBlock] = useState<{ dayIndex: number; blockIndex?: number } | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
+  const [coverageReport, setCoverageReport] = useState<CoverageReport | null>(null);
+  const [showCoverageBadge, setShowCoverageBadge] = useState(false);
 
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
   const autoFormatPreview = useMemo(() => {
@@ -392,6 +395,11 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       }
       
       if (result.success && result.days.length > 0) {
+        // Relatório de Comissionamento Semântico
+        const coverage = calculateParsingCoverage(result);
+        setCoverageReport(coverage);
+        setShowCoverageBadge(true);
+
         patchDraft({
           parseResult: result,
           parsedDays: workouts,
@@ -1048,6 +1056,60 @@ BLOCO: DESCANSO
                 />
               </div>
             </div>
+
+            {/* Badge de Comissionamento Semântico */}
+            {coverageReport && showCoverageBadge && coverageReport.totalExercises > 0 && (
+              <AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border cursor-default transition-colors ${
+                            coverageReport.successRate >= 90
+                              ? 'bg-accent/10 border-accent/30 text-accent-foreground'
+                              : 'bg-destructive/10 border-destructive/30 text-destructive'
+                          }`}
+                        >
+                          <span>{coverageReport.successRate >= 90 ? '🎯' : '⚠️'}</span>
+                          <span>
+                            Inteligência Outlier: {coverageReport.recognizedMetrics}/{coverageReport.totalExercises} exercícios interpretados
+                            ({coverageReport.successRate}%)
+                          </span>
+                          <button
+                            onClick={() => setShowCoverageBadge(false)}
+                            className="ml-2 text-muted-foreground hover:text-foreground text-xs"
+                            aria-label="Fechar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </TooltipTrigger>
+                      {coverageReport.unmatchedLines.length > 0 && (
+                        <TooltipContent side="bottom" className="max-w-sm">
+                          <p className="font-semibold mb-1">Linhas sem métricas detectadas:</p>
+                          <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                            {coverageReport.unmatchedLines.slice(0, 10).map((line, i) => (
+                              <li key={i} className="truncate">• {line}</li>
+                            ))}
+                            {coverageReport.unmatchedLines.length > 10 && (
+                              <li className="text-muted-foreground">
+                                +{coverageReport.unmatchedLines.length - 10} mais...
+                              </li>
+                            )}
+                          </ul>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </motion.div>
+              </AnimatePresence>
+            )}
 
             {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
             <TooltipProvider>
