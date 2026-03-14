@@ -75,6 +75,7 @@ import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
+import { calculateParsingCoverage, type CoverageReport } from '@/utils/parsingCoverage';
 
 interface TextModelImporterProps {
   onSaveAndGoToPrograms?: (workouts: DayWorkout[], title: string, weekStart: string | null) => Promise<boolean>;
