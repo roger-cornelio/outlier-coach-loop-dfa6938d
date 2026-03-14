@@ -73,16 +73,20 @@ export default function DeepAnalysisBlock({ resumo, diagnosticos, splits }: Prop
       }
 
       const generatedPerfil = data?.perfil_fisiologico || null;
+      const generatedPrioridades = data?.prioridades_treino || null;
+      const generatedDirecionamento = data?.direcionamento || null;
 
       setTexto(generatedText);
       setPerfilFisio(generatedPerfil);
 
-      // Save to DB to cache (both texto and perfil_fisiologico)
+      // Save to DB to cache (all fields)
       await supabase
         .from('diagnostico_resumo')
         .update({
           texto_ia_completo: generatedText,
           perfil_fisiologico: generatedPerfil,
+          prioridades_treino: generatedPrioridades,
+          direcionamento: generatedDirecionamento,
         } as any)
         .eq('id', resumo.id);
 

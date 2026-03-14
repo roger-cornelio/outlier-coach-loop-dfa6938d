@@ -1573,23 +1573,35 @@ export function DiagnosticRadarBlock({
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
 
-  // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
+  // Fetch diagnostico_melhoria + prioridades_treino/direcionamento for the latest resumo
   const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
+  const [prioridadesIA, setPrioridadesIA] = useState<{ exercicio: string; nivel_urgencia: number; metric: string }[] | null>(null);
+  const [direcionamentoIA, setDirecionamentoIA] = useState<string | null>(null);
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
       // Get latest resumo — atleta_id stores auth.uid(), NOT profile.id
       const { data: resumos } = await supabase
         .from('diagnostico_resumo')
-        .select('id')
+        .select('id, prioridades_treino, direcionamento')
         .eq('atleta_id', profile.user_id)
         .order('created_at', { ascending: false })
         .limit(1);
       if (!resumos?.length) return;
+      const resumo = resumos[0];
+
+      // Cache prioridades_treino and direcionamento from DB
+      if ((resumo as any).prioridades_treino) {
+        setPrioridadesIA((resumo as any).prioridades_treino);
+      }
+      if ((resumo as any).direcionamento) {
+        setDirecionamentoIA((resumo as any).direcionamento);
+      }
+
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
         .select('improvement_value, movement, metric')
-        .eq('resumo_id', resumos[0].id);
+        .eq('resumo_id', resumo.id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
   }, [profile?.user_id]);
