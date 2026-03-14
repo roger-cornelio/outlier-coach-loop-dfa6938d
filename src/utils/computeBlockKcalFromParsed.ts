@@ -118,7 +118,10 @@ function computeExerciseKcal(
     kcal *= intensityMultiplier;
   }
 
-  return { kcal: Math.round(kcal), durationSec: Math.round(durationSec) };
+  // Guard contra NaN/Infinity (CENÁRIO 1)
+  const safeKcal = Number.isFinite(kcal) ? Math.round(kcal) : 0;
+  const safeDuration = Number.isFinite(durationSec) ? Math.round(durationSec) : 0;
+  return { kcal: safeKcal, durationSec: safeDuration };
 }
 
 function getIntensityMultiplier(type?: string, value?: number): number {
