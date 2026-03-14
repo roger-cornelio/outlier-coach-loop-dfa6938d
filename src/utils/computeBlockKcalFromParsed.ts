@@ -155,9 +155,12 @@ export function computeBlockMetrics(
   parsedExercises: ParsedExercise[],
   biometrics: BiometricData,
 ): ComputedBlockMetrics {
-  if (!parsedExercises || parsedExercises.length === 0) {
+  if (!parsedExercises || !Array.isArray(parsedExercises) || parsedExercises.length === 0) {
     return {};
   }
+
+  // Blindar peso (CENÁRIO 1: NaN silencioso)
+  const safeBiometrics = { ...biometrics, pesoKg: safePesoKg(biometrics.pesoKg) };
 
   let totalKcal = 0;
   let totalDurationSec = 0;
