@@ -1417,18 +1417,16 @@ function MobileAdvancedDataSection({
 // TRAINING PRIORITIES BLOCK
 // ============================================
 
-const METRIC_INSIGHTS: Record<string, string[]> = {
-  run_avg:   ['-1m45 vs Elite', '+2min média', 'Cardio crítico'],
-  sled_push: ['-55s vs Elite', 'Força limitante', '+40s média'],
-  sled_pull: ['-1m10 vs Elite', 'Perda por fadiga', '+52s média'],
-  bbj:       ['+38s média', 'Técnica inconsistente', '-45s vs Elite'],
-  ski:       ['-50s vs Elite', 'Potência baixa', '+35s média'],
-  row:       ['+48s média', '-1m vs Elite', 'Anaeróbico crítico'],
-  roxzone:   ['2 pausas', 'Core limitante', '+30s média'],
-  farmers:   ['+42s média', 'Grip falha', '-55s vs Elite'],
-  sandbag:   ['+52s média', '-1m05 vs Elite', 'Ritmo irregular'],
-  wallballs: ['2 pausas', '+45s média', '-50s vs Elite'],
-};
+// METRIC_INSIGHTS mock removed — gap values are now derived from real diagMelhorias data
+
+/** Format a gap in seconds to a human-readable string */
+function formatGapLabel(gapSec: number): string {
+  if (gapSec <= 0) return '✓ Meta batida';
+  if (gapSec < 60) return `↓ ${Math.round(gapSec)}s`;
+  const mins = Math.floor(gapSec / 60);
+  const secs = Math.round(gapSec % 60);
+  return `↓ ${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 function StarRating({ count, colorClass }: { count: number; colorClass: string }) {
   return (
