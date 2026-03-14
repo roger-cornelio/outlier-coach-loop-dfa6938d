@@ -28,6 +28,7 @@ import { WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { WorkoutParseValidationModal } from '@/components/WorkoutParseValidationModal';
 import { useCoachDraft } from '@/hooks/useCoachDraft';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
@@ -159,8 +160,15 @@ interface CoachSpreadsheetTabProps {
 
 export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
-  const { saveWorkout: saveToDb } = useCoachWorkouts();
+  const { saveWorkout: saveToDb, forceSaveWorkout, gatekeeperResult, clearGatekeeperResult } = useCoachWorkouts();
   const { clearDraft } = useCoachDraft();
+
+  // Estado para dados pendentes do Gatekeeper (para retry/bypass)
+  const [pendingGatekeeperSave, setPendingGatekeeperSave] = useState<{
+    title: string;
+    workouts: DayWorkout[];
+    weekStart: string | null;
+  } | null>(null);
   
   // ESTADO LOCAL APENAS - nunca depende do banco
   const [spreadsheetText, setSpreadsheetText] = useState('');
@@ -361,6 +369,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
   };
 
   return (
+    <>
     <Tabs defaultValue="structured" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="structured" className="flex items-center gap-2">
@@ -412,12 +421,16 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
               const workoutId = await saveToDb(title, workouts, 'draft', 0, weekStart);
               if (workoutId) {
                 setSuccess('Treino salvo como rascunho! Veja na aba Programações.');
-                // Limpar estados locais
                 setParsedWorkouts(null);
                 setSpreadsheetText('');
                 setProgramName('');
                 setSelectedWeek(null);
                 return true;
+              }
+              // Se workoutId é null, verificar se Gatekeeper bloqueou
+              if (!workoutId) {
+                // Salvar dados pendentes para retry/bypass
+                setPendingGatekeeperSave({ title, workouts, weekStart });
               }
               return false;
             } catch (err) {
@@ -803,5 +816,34 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
       />
       </TabsContent>
     </Tabs>
+
+      {/* Gatekeeper Validation Modal */}
+      <WorkoutParseValidationModal
+        open={!!gatekeeperResult && !gatekeeperResult.success}
+        errorType={gatekeeperResult?.errorType || 'parse_failure'}
+        failedBlocks={gatekeeperResult?.failedBlocks || []}
+        onClose={() => {
+          clearGatekeeperResult();
+          setPendingGatekeeperSave(null);
+        }}
+        onForceBypass={async () => {
+          if (pendingGatekeeperSave) {
+            setIsSavingToDb(true);
+            const { title, workouts, weekStart } = pendingGatekeeperSave;
+            const workoutId = await forceSaveWorkout(title, workouts, 'draft', 0, weekStart);
+            if (workoutId) {
+              setSuccess('Treino salvo (sem estimativas nos blocos não reconhecidos).');
+              setParsedWorkouts(null);
+              setSpreadsheetText('');
+              setProgramName('');
+              setSelectedWeek(null);
+            }
+            setIsSavingToDb(false);
+          }
+          clearGatekeeperResult();
+          setPendingGatekeeperSave(null);
+        }}
+      />
+    </>
   );
 }
