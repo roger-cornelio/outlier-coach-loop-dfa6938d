@@ -36,6 +36,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
+  const [latestDiagnosticos, setLatestDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
@@ -85,7 +86,38 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchResumos();
   }, [user, refreshKey, localRefresh]);
 
-  // Fetch detail data when selectedResumoId changes
+  // Fetch diagnosticos da última prova (para projeção de evolução — sempre fixa)
+  useEffect(() => {
+    if (!user || allResumos.length === 0) {
+      setLatestDiagnosticos([]);
+      return;
+    }
+    const latestId = allResumos[0]?.id;
+    if (!latestId) return;
+
+    async function fetchLatestDiag() {
+      const { data } = await supabase
+        .from('diagnostico_melhoria')
+        .select('*')
+        .eq('resumo_id', latestId);
+      
+      if (data && data.length > 0) {
+        setLatestDiagnosticos(data as DiagnosticoMelhoria[]);
+      } else {
+        // Fallback legacy
+        const { data: fallback } = await supabase
+          .from('diagnostico_melhoria')
+          .select('*')
+          .eq('atleta_id', user!.id)
+          .is('resumo_id', null);
+        setLatestDiagnosticos((fallback as DiagnosticoMelhoria[]) || []);
+      }
+    }
+
+    fetchLatestDiag();
+  }, [user, allResumos]);
+
+
   useEffect(() => {
     if (!user || !selectedResumoId) {
       setSplits([]);
@@ -367,11 +399,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* Projeção de Evolução - após prova atual */}
-            {latestResumo.finish_time && diagnosticos.length > 0 && (
+            {/* Projeção de Evolução - SEMPRE baseada na última prova (latestResumo) */}
+            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (
               <EvolutionProjectionCard
                 finishTime={latestResumo.finish_time}
-                diagnosticos={diagnosticos}
+                diagnosticos={latestDiagnosticos}
                 athleteName={latestResumo.nome_atleta}
                 division={latestResumo.divisao}
                 coachStyle={currentCoachStyle || 'PULSE'}
