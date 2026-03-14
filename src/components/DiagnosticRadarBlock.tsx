@@ -1673,14 +1673,14 @@ export function DiagnosticRadarBlock({
     eliteTarget?.targetLabel,
   ]);
 
-  // Evolution projection — compact strip for dashboard header
+  // Evolution projection — compact strip based on diagnostic gaps (weak stations)
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    const targetSec = eliteTarget?.targetSeconds;
-    if (!currentTime || !targetSec || currentTime <= targetSec) return null;
-    const gapSec = currentTime - targetSec;
-    return calculateEvolutionTimeframe(currentTime, gapSec);
-  }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds]);
+    if (!currentTime || scores.length === 0) return null;
+    const totalGap = calculateProjectedGain(scores);
+    if (totalGap <= 0) return null;
+    return calculateEvolutionTimeframe(currentTime, totalGap);
+  }, [validatingCompetition?.time_in_seconds, scores]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
@@ -2071,7 +2071,7 @@ export function DiagnosticRadarBlock({
           <Clock className="w-4.5 h-4.5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> para meta {performanceSnapshot.targetLabel} · Projeção:{' '}
+              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> de melhoria identificada · Projeção:{' '}
               <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
               <span className="text-muted-foreground/60"> · ganho estimado {evolutionProjection.ratePerMonth}s/mês</span>
             </p>
