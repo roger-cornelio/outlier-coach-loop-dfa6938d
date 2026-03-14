@@ -1565,6 +1565,7 @@ export function DiagnosticRadarBlock({
   onStartWorkout,
   provaAlvo,
   provaAlvoTargetTime,
+  perfilFisiologico,
 }: DiagnosticRadarBlockProps) {
   const { profile } = useAuth();
   const { status, outlierScore, validatingCompetition } = useAthleteStatus();
