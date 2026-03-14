@@ -2701,7 +2701,7 @@ export function parseStructuredText(text: string): ParseResult {
     }
 
     // MVP0 PATCH D: Lazy evaluation — isHeading only computed here, isExercise not needed (inline regex used below)
-    const isHeading = isHeadingLine(line);
+    const isHeading = isHeadingLineInLoop(line);
     _log('[PARSER DEBUG]', {
       linhaOriginal: line,
       isHeadingLine: isHeading,
