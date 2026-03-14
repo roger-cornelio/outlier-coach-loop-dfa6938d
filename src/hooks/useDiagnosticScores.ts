@@ -14,12 +14,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
+export interface PerfilFisiologico {
+  vo2_max?: number;
+  limiar_lactato?: string;
+  critical_speed_m_s?: number;
+  radar?: Record<string, number>;
+}
+
 export interface DiagnosticScoresResult {
   scores: CalculatedScore[];
   loading: boolean;
   hasData: boolean;
   lastResultId: string | null;
   lastResultDate: string | null;
+  perfilFisiologico: PerfilFisiologico | null;
 }
 
 export function useDiagnosticScores(): DiagnosticScoresResult {
