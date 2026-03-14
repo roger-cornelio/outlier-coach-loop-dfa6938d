@@ -871,15 +871,22 @@ function JourneyShieldsRow({ journeyData }: { journeyData: ReturnType<typeof use
         // Shield shows active (colored) if outlier OR unlocked by category
         const showActive = isOutlierAtLevel || isUnlockedByCategory;
 
+        // Determine if this is the athlete's current active level
+        const isCurrent = categoryIdx === index;
+
         return (
-          <div key={levelKey} className="flex flex-col items-center flex-1">
+          <div key={levelKey} className={cn(
+            "flex flex-col items-center flex-1 rounded-xl p-2 transition-all duration-300",
+            isCurrent && "border border-primary ring-1 ring-primary/30",
+            !showActive && "opacity-40"
+          )}>
             <div className="w-[7rem] h-[7rem] sm:w-[9rem] sm:h-[9rem] flex items-center justify-center">
               <ShieldCrest
                 level={levelKey}
                 active={showActive}
                 fillPercent={shieldFillPercent}
                 className={`w-full h-full object-contain transition-all duration-300 ${
-                  !showActive ? 'opacity-35 grayscale-[30%]' : ''
+                  !showActive ? 'grayscale-[30%]' : ''
                 }`}
               />
             </div>
@@ -2069,7 +2076,7 @@ export function DiagnosticRadarBlock({
         {!performanceSnapshot.currentTime ? (
           <ImportProvaInlineCTA />
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2 p-3 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 p-4 bg-muted/10 border border-border/20 rounded-xl shadow-sm sm:grid-cols-4">
             <div className="flex flex-col items-center text-center gap-0.5">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Timer className="w-3.5 h-3.5" />
@@ -2115,11 +2122,11 @@ export function DiagnosticRadarBlock({
             </div>
             <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-loose">
             🎯 A ciência do esporte projeta que a eliminação deste gap de{' '}
-            <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> exigirá um ciclo de
+            <span className="font-bold text-primary">{evolutionProjection.gapFormatted}</span> exigirá um ciclo de
             treinamento contínuo de aproximadamente{' '}
-            <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>.
+            <span className="font-bold text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</span>.
           </p>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -2188,7 +2195,14 @@ export function DiagnosticRadarBlock({
               <>
                   <div className="mb-4">
                     <div className="text-center mb-1">
-                      <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                      {progressToTarget === 0 ? (
+                        <div className="py-2 space-y-1">
+                          <span className="text-lg font-bold text-primary font-display tracking-wide">INICIE SUA JORNADA</span>
+                          <p className="text-xs text-muted-foreground">Aguardando 1º Benchmark para destravar progresso</p>
+                        </div>
+                      ) : (
+                        <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
@@ -2198,10 +2212,14 @@ export function DiagnosticRadarBlock({
                       <div className="absolute inset-0 rounded-full overflow-hidden">
                         <motion.div initial={{ width: 0 }} animate={{ width: `${progressToTarget}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }} className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
                       </div>
+                      <TooltipProvider delayDuration={200}>
                       {milestones.map((ms) => {
                       const Icon = ms.icon;
+                      const milestonePercent = Math.round(ms.position);
                       return (
                         <div key={ms.index} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10" style={{ left: `${ms.position}%` }}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                             <button
                               onClick={() => {
                                 if (ms.completed) {
@@ -2222,8 +2240,14 @@ export function DiagnosticRadarBlock({
                             >
                               {ms.completed ? <Check className="w-3.5 h-3.5" /> : ms.unlocked ? <Icon className="w-3.5 h-3.5" /> : <Lock className="w-2.5 h-2.5" />}
                             </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {ms.completed ? `✓ Benchmark ${ms.index + 1} — Concluído` : `${milestonePercent}% — Benchmark ${ms.index + 1}`}
+                            </TooltipContent>
+                          </Tooltip>
                           </div>);
                     })}
+                      </TooltipProvider>
                       {isCapped && <div className="absolute top-0 h-full w-px bg-destructive" style={{ left: `${journey.capPercent}%` }} />}
                     </div>
                     {isCapped &&

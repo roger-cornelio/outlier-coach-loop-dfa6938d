@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
+  ChevronRight,
   Trophy, 
   Target, 
   Dumbbell, 
@@ -127,11 +128,14 @@ export function NextLevelModal({ journeyProgress }: NextLevelModalProps) {
                 <ArrowRight className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Próximo nível</span>
               </div>
-              <span className={`text-xs font-display font-extrabold tracking-wider px-3 py-1 rounded-full border ${
-                LEVEL_TEXT_COLORS[targetLevelKey]
-              } ${LEVEL_BG[targetLevelKey]}`}>
-                {targetLevelLabel}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-display font-extrabold tracking-wider px-3 py-1 rounded-full border ${
+                  LEVEL_TEXT_COLORS[targetLevelKey]
+                } ${LEVEL_BG[targetLevelKey]}`}>
+                  {targetLevelLabel}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
             </>
           )}
         </button>
