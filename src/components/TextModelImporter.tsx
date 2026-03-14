@@ -1374,6 +1374,23 @@ BLOCO: DESCANSO
               </Accordion>
             </TooltipProvider>
 
+            {/* SEMANA DE REFERÊNCIA — abaixo dos blocos */}
+            <div className="space-y-2 pt-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                Semana de Referência (obrigatório)
+              </Label>
+              <WeekPeriodSelector
+                selectedWeek={weekId}
+                onWeekSelect={(week) => setWeekId(week)}
+              />
+              {!weekId && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Selecione a semana para salvar ou publicar
+                </p>
+              )}
+            </div>
+
             {/* ALERTA DE ERRO DE VALIDAÇÃO PARA PREVIEW */}
             {previewValidationError && (
               <motion.div
