@@ -380,16 +380,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         );
       })()}
 
-      {/* Projeção de Evolução - logo abaixo da prova atual */}
-      {selectedResumo?.finish_time && diagnosticos.length > 0 && (
-        <EvolutionProjectionCard
-          finishTime={selectedResumo.finish_time}
-          diagnosticos={diagnosticos}
-          athleteName={selectedResumo.nome_atleta}
-          division={selectedResumo.divisao}
-          coachStyle={currentCoachStyle || 'PULSE'}
-        />
-      )}
 
       {/* Loading skeletons */}
       {loading && (
