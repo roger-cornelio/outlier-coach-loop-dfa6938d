@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, Loader2 } from 'lucide-react';
+import { Target, TrendingUp, Loader2, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { timeToSeconds, secondsToTime } from './types';
@@ -86,7 +86,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
   if (!finishTime || diagnosticos.length === 0 || !evolution) return null;
 
   const { months, tierLabel, ratePerMonth, gapFormatted } = evolution;
-  const oneMonthProgress = Math.min((ratePerMonth / totalGap) * 100, 100);
+  
 
   return (
     <motion.div
@@ -126,19 +126,23 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </p>
           )}
 
-          {/* Progress bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                Ganho mensal: {ratePerMonth}s/mês
-              </span>
-              <span>~{months} {months === 1 ? 'mês' : 'meses'} para meta</span>
+          {/* Metric boxes */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-foreground">{gapFormatted}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
             </div>
-            <Progress value={oneMonthProgress} className="h-2" />
-            <p className="text-[11px] text-muted-foreground text-center">
-              Cada mês representa ~{Math.round(oneMonthProgress)}% do gap total
-            </p>
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-primary">{ratePerMonth}s</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
+            </div>
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                {months}
+              </div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{months === 1 ? 'mês' : 'meses'}</div>
+            </div>
           </div>
         </CardContent>
       </Card>
