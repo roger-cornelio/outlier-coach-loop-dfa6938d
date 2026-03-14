@@ -780,6 +780,7 @@ export type Database = {
           finish_time: string | null
           id: string
           nome_atleta: string | null
+          perfil_fisiologico: Json | null
           posicao_categoria: string | null
           posicao_geral: string | null
           run_total: string | null
@@ -798,6 +799,7 @@ export type Database = {
           finish_time?: string | null
           id?: string
           nome_atleta?: string | null
+          perfil_fisiologico?: Json | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
           run_total?: string | null
@@ -816,6 +818,7 @@ export type Database = {
           finish_time?: string | null
           id?: string
           nome_atleta?: string | null
+          perfil_fisiologico?: Json | null
           posicao_categoria?: string | null
           posicao_geral?: string | null
           run_total?: string | null

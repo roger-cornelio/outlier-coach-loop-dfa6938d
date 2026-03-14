@@ -93,3 +93,47 @@ Reset automático no início de cada parseStructuredText() → sem vazamento de 
 - Textos descritivos: `leading-relaxed` + `mt-1.5`
 - Espaçamento entre cards: `space-y-4`
 - Próximos passos: `leading-relaxed` + `text-foreground/90`
+
+### Fase 4: Perfil Fisiológico Determinístico ✅
+
+**Objetivo**: Eliminar alucinações matemáticas do LLM — todo cálculo clínico é feito em TypeScript na Edge Function.
+
+**Passo 1 — Migração SQL** ✅
+- Coluna `perfil_fisiologico JSONB DEFAULT NULL` adicionada em `diagnostico_resumo`
+- Política de UPDATE para `authenticated` WHERE `auth.uid() = atleta_id`
+
+**Passo 2 — Edge Function `generate-deep-analysis`** ✅
+- Supabase Service Role Client para queries privilegiadas
+- Busca `sexo` e `peso` em `profiles` via `atleta_id`; retorna HTTP 400 se `sexo` null
+- Dicionário estrito split_name → metric (`'Ski Erg'→ski`, `'Rowing'→row`, etc.)
+- Mapeamento de division (`Open→HYROX`, `Pro→HYROX PRO`) + gender derivado do sexo
+- **Velocidade Crítica (CS)**: Média das velocidades (1000/sec) dos últimos 3 Running splits
+- **VO2max (Dexheimer 2020)**: `Math.round((8.449 * CS) + (4.387 * sexo_num) + 14.683)`
+- **Limiar de Lactato**: `1000 / CS` → formato MM:SS
+- **Radar 6 eixos (0-100)**: Score = `clamp(0, 100, 100 - ((atleta - p10) / (p90 - p10)) * 100)`
+  - Cardio: run_avg, ski, row
+  - Força: sled_push, sled_pull
+  - Potência: wallballs, bbj
+  - Core: sandbag, farmers
+  - Anaeróbica: roxzone (exclusivo)
+  - Eficiência: `100 - clamp(0,100, (abs(run8-run1)/run1)*100)`
+- Injeção no System Prompt como fatos imutáveis (bloco `PERFIL FISIOLÓGICO PRÉ-CALCULADO`)
+- Resposta expandida: `{ texto, perfil_fisiologico: { vo2_max, limiar_lactato, radar } }`
+
+**Passo 3 — Frontend `DeepAnalysisBlock.tsx`** ✅
+- Payload envia `atleta_id` (obtido via `supabase.auth.getUser()`)
+- Tratamento de erro 400 (`MISSING_SEX`) com toast orientando a preencher configurações
+- Cache expandido: `.update({ texto_ia_completo, perfil_fisiologico })` no `diagnostico_resumo`
+- Estado inicial lê `resumo.perfil_fisiologico` e `resumo.texto_ia_completo`
+
+**Arquitetura do Fluxo**
+```
+Atleta clica "Gerar Raio X"
+  → Edge Function recebe atleta_id + splits + diagnosticos
+  → Service Role busca profiles.sexo/peso + percentile_bands
+  → TypeScript calcula CS, VO2max, Limiar, Radar (determinístico)
+  → Valores injetados no System Prompt como fatos imutáveis
+  → LLM gera texto interpretativo (nunca calcula números)
+  → Retorna { texto, perfil_fisiologico }
+  → Frontend cacheia ambos no diagnostico_resumo
+```
