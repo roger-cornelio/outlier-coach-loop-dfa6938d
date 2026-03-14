@@ -478,6 +478,7 @@ function isTrainingStimulus(line: string): boolean {
   // Faixa de valores (30-40, 30–40)
   if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) { _trainingCache.set(line, true); return true; }
   
+  _trainingCache.set(line, false);
   return false;
 }
 
