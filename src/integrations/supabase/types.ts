@@ -1108,28 +1108,34 @@ export type Database = {
       }
       global_exercises: {
         Row: {
+          aliases: string[] | null
           created_at: string
           default_female_weight_kg: number | null
           default_male_weight_kg: number | null
           id: string
           movement_pattern_id: string
           name: string
+          slug: string | null
         }
         Insert: {
+          aliases?: string[] | null
           created_at?: string
           default_female_weight_kg?: number | null
           default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id: string
           name: string
+          slug?: string | null
         }
         Update: {
+          aliases?: string[] | null
           created_at?: string
           default_female_weight_kg?: number | null
           default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id?: string
           name?: string
+          slug?: string | null
         }
         Relationships: [
           {
@@ -1224,6 +1230,7 @@ export type Database = {
       }
       movement_patterns: {
         Row: {
+          aliases: string[] | null
           created_at: string
           default_distance_meters: number
           default_seconds_per_rep: number | null
@@ -1233,9 +1240,11 @@ export type Database = {
           id: string
           moved_mass_percentage: number
           name: string
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          aliases?: string[] | null
           created_at?: string
           default_distance_meters?: number
           default_seconds_per_rep?: number | null
@@ -1245,9 +1254,11 @@ export type Database = {
           id?: string
           moved_mass_percentage?: number
           name: string
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          aliases?: string[] | null
           created_at?: string
           default_distance_meters?: number
           default_seconds_per_rep?: number | null
@@ -1257,6 +1268,7 @@ export type Database = {
           id?: string
           moved_mass_percentage?: number
           name?: string
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
