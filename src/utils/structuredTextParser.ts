@@ -44,8 +44,25 @@
  */
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { detectUnits, hasRecognizedUnit, type UnitConfidence } from './unitDetection';
+import { detectUnits, hasRecognizedUnit, resetUnitsCache, type UnitConfidence } from './unitDetection';
 import { extractInlineComments } from './blockDisplayUtils';
+
+// ════════════════════════════════════════════════════════════════════════════
+// CACHES DE MEMOIZAÇÃO — elimina redundância de regex (chamadas repetidas para mesma linha)
+// ════════════════════════════════════════════════════════════════════════════
+const _narrativeCache = new Map<string, boolean>();
+const _measurableCache = new Map<string, boolean>();
+const _trainingCache = new Map<string, boolean>();
+const _prescriptionCache = new Map<string, boolean>();
+const _headingCache = new Map<string, boolean>();
+
+const resetParserCaches = () => {
+  _narrativeCache.clear();
+  _measurableCache.clear();
+  _trainingCache.clear();
+  _prescriptionCache.clear();
+  _headingCache.clear();
+};
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEBUG FLAG — set to true to enable verbose parser logs (PERFORMANCE IMPACT!)
