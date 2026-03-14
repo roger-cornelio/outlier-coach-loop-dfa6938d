@@ -185,6 +185,8 @@ export function detectUnits(line: string): UnitDetectionResult {
           raw,
         });
       }
+      if (!pattern.global) break;
+      if (match[0].length === 0) pattern.lastIndex++;
     }
   }
   
