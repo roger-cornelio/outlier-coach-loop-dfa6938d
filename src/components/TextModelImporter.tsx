@@ -1113,9 +1113,9 @@ BLOCO: DESCANSO
                     <AccordionItem 
                       key={day.day || `day-${dayIndex}`} 
                       value={`day-${dayIndex}`}
-                      className="border-2 border-border rounded-2xl overflow-hidden shadow-md bg-card"
+                      className="border border-border/50 rounded-2xl overflow-hidden shadow-sm bg-card"
                     >
-                      <AccordionTrigger className="px-5 py-5 min-h-[72px] hover:no-underline hover:bg-secondary/30">
+                      <AccordionTrigger className="px-5 py-4 min-h-[64px] hover:no-underline hover:bg-muted/40">
                         <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
                           <span className="font-bold text-lg uppercase tracking-wide text-foreground">
                             {dayName}
