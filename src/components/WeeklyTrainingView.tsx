@@ -14,6 +14,7 @@ import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blo
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
+import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
