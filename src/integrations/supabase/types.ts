@@ -1180,6 +1180,48 @@ export type Database = {
         }
         Relationships: []
       }
+      intensity_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kcal_multiplier: number
+          label: string
+          rest_multiplier: number
+          rule_key: string
+          rule_type: string
+          tempo_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kcal_multiplier?: number
+          label: string
+          rest_multiplier?: number
+          rule_key: string
+          rule_type: string
+          tempo_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kcal_multiplier?: number
+          label?: string
+          rest_multiplier?: number
+          rule_key?: string
+          rule_type?: string
+          tempo_multiplier?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       level_time_thresholds: {
         Row: {
           age_max: number
