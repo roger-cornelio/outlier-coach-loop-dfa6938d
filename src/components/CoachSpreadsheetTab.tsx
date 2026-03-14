@@ -815,5 +815,33 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
       />
       </TabsContent>
     </Tabs>
+
+    {/* Gatekeeper Validation Modal */}
+    <WorkoutParseValidationModal
+      open={!!gatekeeperResult && !gatekeeperResult.success}
+      errorType={gatekeeperResult?.errorType || 'parse_failure'}
+      failedBlocks={gatekeeperResult?.failedBlocks || []}
+      onClose={() => {
+        clearGatekeeperResult();
+        setPendingGatekeeperSave(null);
+      }}
+      onForceBypass={async () => {
+        if (pendingGatekeeperSave) {
+          setIsSavingToDb(true);
+          const { title, workouts, weekStart } = pendingGatekeeperSave;
+          const workoutId = await forceSaveWorkout(title, workouts, 'draft', 0, weekStart);
+          if (workoutId) {
+            setSuccess('Treino salvo (sem estimativas nos blocos não reconhecidos).');
+            setParsedWorkouts(null);
+            setSpreadsheetText('');
+            setProgramName('');
+            setSelectedWeek(null);
+          }
+          setIsSavingToDb(false);
+        }
+        clearGatekeeperResult();
+        setPendingGatekeeperSave(null);
+      }}
+    />
   );
 }
