@@ -1694,19 +1694,24 @@ export function DiagnosticRadarBlock({
     eliteTarget?.targetLabel,
   ]);
 
-  // Evolution projection — compact strip based on diagnostic gaps (weak stations)
-  // Fallback: if diagMelhorias is empty but scores exist, derive gap from scores below P50
+  // Evolution projection — uses the same gap as the header "Ganho" (currentTime - targetSec)
+  // Fallback chain: header gap → diagMelhorias sum → scores estimate
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
     if (!currentTime) return null;
 
+    const targetSec = eliteTarget?.targetSeconds ?? null;
+
     let totalGap: number;
 
-    if (diagMelhorias.length > 0) {
-      // Primary: use diagnostico_melhoria data
+    if (currentTime && targetSec && currentTime > targetSec) {
+      // Primary: same calculation as header "Ganho" = currentTime - targetSec
+      totalGap = currentTime - targetSec;
+    } else if (diagMelhorias.length > 0) {
+      // Fallback 1: sum of improvement_value from diagnostico_melhoria
       totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
     } else if (scores.length > 0) {
-      // Fallback: estimate gap from scores below P50
+      // Fallback 2: estimate gap from scores below P50
       totalGap = calculateProjectedGain(scores);
     } else {
       return null;
@@ -1714,7 +1719,7 @@ export function DiagnosticRadarBlock({
 
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
-  }, [validatingCompetition?.time_in_seconds, diagMelhorias, scores]);
+  }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds, diagMelhorias, scores]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
