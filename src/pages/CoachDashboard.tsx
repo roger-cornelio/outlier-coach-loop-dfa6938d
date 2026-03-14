@@ -627,27 +627,27 @@ export default function CoachDashboard() {
       {/* Navegação por Tabs */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} mb-6`}>
-            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Visão Geral</span>
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar mb-6 gap-1">
+            <TabsTrigger value="visao-geral" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <Eye className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Visão Geral</span>
             </TabsTrigger>
-            <TabsTrigger value="atletas" className="gap-1.5 text-xs sm:text-sm">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Atletas</span>
+            <TabsTrigger value="atletas" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <Users className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Atletas</span>
             </TabsTrigger>
-            <TabsTrigger value="importar" className="gap-1.5 text-xs sm:text-sm">
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Importar</span>
+            <TabsTrigger value="importar" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <Upload className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Importar</span>
             </TabsTrigger>
-            <TabsTrigger value="programacoes" className="gap-1.5 text-xs sm:text-sm">
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">Programações</span>
+            <TabsTrigger value="programacoes" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <Calendar className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Programações</span>
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="parametros" className="gap-1.5 text-xs sm:text-sm">
-                <Settings2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Parâmetros</span>
+              <TabsTrigger value="parametros" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+                <Settings2 className="w-4 h-4 shrink-0" />
+                <span className="hidden xs:inline sm:inline truncate">Parâmetros</span>
               </TabsTrigger>
             )}
           </TabsList>
