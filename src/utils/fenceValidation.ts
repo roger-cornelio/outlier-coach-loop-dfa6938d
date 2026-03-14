@@ -512,7 +512,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     if (dayDetected) {
       flushBlock();
       currentDay = dayDetected;
-      console.log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
+      _log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
 
