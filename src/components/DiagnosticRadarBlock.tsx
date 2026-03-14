@@ -1676,8 +1676,8 @@ export function DiagnosticRadarBlock({
   // Evolution projection — compact strip based on diagnostic gaps (weak stations)
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    if (!currentTime || scores.length === 0) return null;
-    const totalGap = calculateProjectedGain(scores);
+    if (!currentTime || diagnosticos.length === 0) return null;
+    const totalGap = diagnosticos.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
   }, [validatingCompetition?.time_in_seconds, scores]);
