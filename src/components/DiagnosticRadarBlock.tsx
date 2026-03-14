@@ -1428,13 +1428,13 @@ function formatGapLabel(gapSec: number): string {
   return `↓ ${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-function StarRating({ count, colorClass }: { count: number; colorClass: string }) {
+function StarRating({ count }: { count: number; colorClass?: string }) {
   return (
-    <span className={`flex items-center gap-0.5 ${colorClass} shrink-0`}>
+    <span className="flex items-center gap-0.5 shrink-0">
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className="w-3 h-3"
+          className={`w-3 h-3 ${i < count ? 'text-primary' : 'text-muted-foreground/20'}`}
           fill={i < count ? 'currentColor' : 'none'}
           strokeWidth={i < count ? 0 : 1.5}
         />
