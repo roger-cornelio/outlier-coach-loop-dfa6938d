@@ -234,12 +234,21 @@ export function WeeklyTrainingView() {
               }
               
               const blockEstimate = workoutEstimation?.blocks[index];
-              const estimatedKcal = blockEstimate?.estimatedKcal || 0;
               
-              // Usar TimeMeta como fonte de verdade para tempo
+              // PRIORIDADE: usar parsedExercises quando disponíveis (dados da IA)
+              const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+              const parsedMetrics = hasParsedData 
+                ? computeBlockMetrics(block.parsedExercises!, { pesoKg: biometrics.peso || 75, sexo: biometrics.sexo as any })
+                : null;
+              
+              const estimatedKcal = parsedMetrics?.estimatedKcal || blockEstimate?.estimatedKcal || 0;
+              
+              // Usar TimeMeta como fonte de verdade para tempo, com fallback para parsed
               const timeMeta = getBlockTimeMeta(block);
-              const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
-              const isEstimated = timeMeta.source !== 'CONFIRMED';
+              const estimatedMinutes = parsedMetrics?.estimatedDurationSec 
+                ? Math.round(parsedMetrics.estimatedDurationSec / 60) 
+                : Math.round(timeMeta.durationSecUsed / 60);
+              const isEstimated = !hasParsedData && timeMeta.source !== 'CONFIRMED';
 
               // Tempo registrado disponível no WOD principal
               const isMainWod = block.isMainWod;
