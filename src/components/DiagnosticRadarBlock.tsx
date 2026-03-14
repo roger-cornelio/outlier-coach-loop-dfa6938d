@@ -1572,13 +1572,13 @@ export function DiagnosticRadarBlock({
   // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
   const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number }[]>([]);
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.user_id) return;
     (async () => {
-      // Get latest resumo
+      // Get latest resumo — atleta_id stores auth.uid(), NOT profile.id
       const { data: resumos } = await supabase
         .from('diagnostico_resumo')
         .select('id')
-        .eq('atleta_id', profile.id)
+        .eq('atleta_id', profile.user_id)
         .order('created_at', { ascending: false })
         .limit(1);
       if (!resumos?.length) return;
@@ -1588,7 +1588,7 @@ export function DiagnosticRadarBlock({
         .eq('resumo_id', resumos[0].id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
-  }, [profile?.id]);
+  }, [profile?.user_id]);
   const { getOfficialCompetitions } = useBenchmarkResults();
 
   // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
@@ -1695,13 +1695,26 @@ export function DiagnosticRadarBlock({
   ]);
 
   // Evolution projection — compact strip based on diagnostic gaps (weak stations)
+  // Fallback: if diagMelhorias is empty but scores exist, derive gap from scores below P50
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    if (!currentTime || diagMelhorias.length === 0) return null;
-    const totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+    if (!currentTime) return null;
+
+    let totalGap: number;
+
+    if (diagMelhorias.length > 0) {
+      // Primary: use diagnostico_melhoria data
+      totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+    } else if (scores.length > 0) {
+      // Fallback: estimate gap from scores below P50
+      totalGap = calculateProjectedGain(scores);
+    } else {
+      return null;
+    }
+
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
-  }, [validatingCompetition?.time_in_seconds, diagMelhorias]);
+  }, [validatingCompetition?.time_in_seconds, diagMelhorias, scores]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
