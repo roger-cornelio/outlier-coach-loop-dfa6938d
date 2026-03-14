@@ -120,10 +120,9 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </p>
           ) : (
             <p className="text-sm text-muted-foreground leading-relaxed">
-              🎯 A ciência do esporte projeta que a eliminação deste gap de{' '}
-              <strong className="text-foreground">{gapFormatted}</strong> exigirá um ciclo de
-              treinamento contínuo de aproximadamente{' '}
-              <strong className="text-primary">{months} {months === 1 ? 'mês' : 'meses'}</strong>.
+              🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
+              <strong className="text-foreground">{gapFormatted}</strong> do seu tempo em aproximadamente{' '}
+              <strong className="text-primary">{months} {months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
             </p>
           )}
 
