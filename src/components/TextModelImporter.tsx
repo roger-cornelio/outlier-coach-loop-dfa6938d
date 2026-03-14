@@ -857,7 +857,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             </div>
             
             {/* Microcopy - Dica de autoformat */}
-            {rawText.trim() && previewAutoFormatChanges(rawText).hasChanges && (
+            {autoFormatPreview.hasChanges && (
               <p className="text-xs text-muted-foreground">
                 💡 <strong>Autoformatar</strong> adiciona hífen em exercícios dentro de blocos estruturados (**ROUNDS**, **EMOM**, etc.)
               </p>
