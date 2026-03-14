@@ -2090,7 +2090,7 @@ export function DiagnosticRadarBlock({
         )}
 
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
-        <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
+        <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} prioridadesIA={prioridadesIA} onViewAll={onStartWorkout} />
         <MobileBottlenecksBlock scores={scores} />
         <MobileNextStepBlock scores={scores} journeyData={journeyData} />
         <MobilePhysiologicalModal
