@@ -115,6 +115,7 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
     loading,
     hasData: scores.length > 0,
     lastResultId,
-    lastResultDate
+    lastResultDate,
+    perfilFisiologico,
   };
 }
