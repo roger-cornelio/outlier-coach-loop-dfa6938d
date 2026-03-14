@@ -30,6 +30,7 @@ import {
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
+import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';

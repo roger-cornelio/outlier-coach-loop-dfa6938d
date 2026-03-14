@@ -2049,6 +2049,25 @@ export type Database = {
           status: string
         }[]
       }
+      get_coach_overview: {
+        Args: { _coach_id: string }
+        Returns: {
+          account_status: string
+          altura: number
+          athlete_email: string
+          athlete_id: string
+          athlete_name: string
+          coach_id: string
+          days_inactive: number
+          has_plan_this_week: number
+          last_active_at: string
+          peso: number
+          sexo: string
+          total_benchmarks: number
+          training_level: string
+          workouts_last_7_days: number
+        }[]
+      }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
