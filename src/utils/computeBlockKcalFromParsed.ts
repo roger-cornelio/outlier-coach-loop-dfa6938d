@@ -62,6 +62,12 @@ interface BiometricData {
   idade?: number;
 }
 
+/** Garante peso válido (>0) para evitar cálculos zerados */
+function safePesoKg(peso: number | null | undefined): number {
+  if (!peso || peso <= 0 || !Number.isFinite(peso)) return 75;
+  return peso;
+}
+
 function computeExerciseKcal(
   exercise: ParsedExercise,
   biometrics: BiometricData,
