@@ -1,68 +1,28 @@
-## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
----
+## Minha Avaliação do Plano Proposto
 
-### Fase 1 (Infraestrutura) ✅
+### O que está excelente
 
-1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
-2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
-3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
-4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
-5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
+**Frente 1 (Integridade de Dados)** é a mudança mais importante de todas. O `METRIC_INSIGHTS` hardcoded é um problema sério — o atleta vê "-1m45 vs Elite" que não tem relação nenhuma com os dados reais dele. Remover isso e substituir por gaps calculados dinamicamente é obrigatório. Concordo 100%.
 
-### Fase 2 (Integração) ✅
+**Frente 2 (Estrelas)** também faz sentido. O sistema multicolorido (verde/azul/amarelo/laranja/vermelho) compete visualmente com o resto do dashboard. Uma cor única premium para estrelas preenchidas cria uma hierarquia visual mais limpa e profissional.
 
-6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
-7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
-8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
-9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
-10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
+### Onde eu faria diferente
 
-### Fase 2.5 (Blindagem Anti-Freeze) ✅
+**Frente 3 (Gráfico de Barras)** — concordo com data labels, mas com uma ressalva importante: as barras hoje mostram **percentis** (0-100%), não tempos absolutos. Mostrar "72%" ao lado da barra é útil, mas mostrar o tempo real (ex: "04:50") seria muito mais valioso para o atleta. O tipo `CalculatedScore` já tem `raw_time_sec`, então é viável. Minha sugestão: mostrar o **tempo real formatado** como label principal e o percentil como informação secundária.
 
-11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
-12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
-13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
-14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
-15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
+**Frente 4 (Blocos Textuais)** — a proposta sugere trocar as cores semânticas atuais (vermelho para limitador, verde para ganho potencial) por um cinza neutro (`bg-[#1A1A1A]`). Eu **discordo** dessa mudança. As cores semânticas comunicam urgência e tipo de informação instantaneamente. Vermelho sutil no limitador diz "atenção aqui" sem o atleta precisar ler. Trocar por cinza neutro remove essa camada de comunicação. Minha sugestão: **manter as cores semânticas** e apenas melhorar tipografia (espaçamento, line-height, peso da fonte do título).
 
-### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
+### Sugestões adicionais
 
-16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
-17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
-18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
-19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
-20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
-21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
+1. **Anti-Metalinguagem**: O plano menciona "vs Elite" nos gaps formatados. Isso contradiz a regra de anti-metalinguagem que já existe nas Edge Functions — o atleta não deveria ver referências a níveis competitivos. O gap deveria aparecer apenas como "↓ 45s" sem mencionar contra quem.
 
-### Arquitetura do Fluxo
+2. **Ordem de prioridade na execução**: Eu faria Frente 1 primeiro (é um bug de dados, não estética), depois Frente 2+3 juntas (são visuais complementares), e Frente 4 por último (menor impacto).
 
-```
-Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
-  ├── Sucesso → Exibe resultado parseado ✅
-  └── Timeout/Erro → UI destrava + erro amigável ✅
+3. **Empty state das barras**: Em vez de "Sem dados" em texto, uma barra fantasma com 5% de opacidade e um traço ("—") comunica a ausência sem parecer erro. Texto "Sem dados" pode assustar o atleta achando que algo deu errado.
 
-Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
-  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
-  └── Falha → Modal Gatekeeper
-       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
-       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
-            └── Bypass → try/finally garante isSavingToDb resetado ✅
-```
+### Resumo
 
-### Performance do Parser Local (Fase 2.6)
+O plano é sólido e bem direcionado. As 4 frentes atacam problemas reais. Minhas únicas divergências são: manter cores semânticas nos cards textuais (Frente 4) e mostrar tempos reais em vez de percentis nas barras (Frente 3). O resto está pronto para implementar.
 
-```
-Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
-                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
-                   
-Reset automático no início de cada parseStructuredText() → sem vazamento de memória
-```
-
-### Próximos passos opcionais (Fase 3):
-- Retry automático em background para blocos bypassed
-- Dashboard de qualidade de escrita do coach
-- Cache de dicionário na edge function (Deno KV)
-- Feedback loop para exercícios não reconhecidos
