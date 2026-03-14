@@ -1352,11 +1352,7 @@ function MobileAdvancedDataSection({
                   <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
                       <ChevronRight className="w-3 h-3 text-amber-500 shrink-0" />
                       <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-                      <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                        {Array.from({ length: 5 }).map((_, si) =>
-                      <Star key={si} className="w-3 h-3" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                      )}
-                      </span>
+                      <StarRating count={stars.count} />
                     </li>);
 
               })}
