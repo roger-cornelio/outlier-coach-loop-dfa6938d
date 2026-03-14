@@ -6,7 +6,7 @@
  */
 
 import type { ParseResult, ParsedLine } from './structuredTextParser';
-import { detectUnits, hasRecognizedUnit } from './unitDetection';
+import { detectUnits } from './unitDetection';
 
 export interface CoverageReport {
   totalExercises: number;
