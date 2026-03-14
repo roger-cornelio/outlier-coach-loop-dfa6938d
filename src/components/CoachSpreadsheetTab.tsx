@@ -834,16 +834,21 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
         onForceBypass={async () => {
           if (pendingGatekeeperSave) {
             setIsSavingToDb(true);
-            const { title, workouts, weekStart } = pendingGatekeeperSave;
-            const workoutId = await forceSaveWorkout(title, workouts, 'draft', 0, weekStart);
-            if (workoutId) {
-              setSuccess('Treino salvo (sem estimativas nos blocos não reconhecidos).');
-              setParsedWorkouts(null);
-              setSpreadsheetText('');
-              setProgramName('');
-              setSelectedWeek(null);
+            try {
+              const { title, workouts, weekStart } = pendingGatekeeperSave;
+              const workoutId = await forceSaveWorkout(title, workouts, 'draft', 0, weekStart);
+              if (workoutId) {
+                setSuccess('Treino salvo (sem estimativas nos blocos não reconhecidos).');
+                setParsedWorkouts(null);
+                setSpreadsheetText('');
+                setProgramName('');
+                setSelectedWeek(null);
+              }
+            } catch (err) {
+              console.error('[CoachSpreadsheetTab] Bypass save error:', err);
+            } finally {
+              setIsSavingToDb(false);
             }
-            setIsSavingToDb(false);
           }
           clearGatekeeperResult();
           setPendingGatekeeperSave(null);
