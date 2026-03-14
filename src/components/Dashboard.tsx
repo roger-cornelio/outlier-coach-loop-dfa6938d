@@ -350,6 +350,7 @@ export function Dashboard() {
             onStartWorkout={handleStartWorkout}
             provaAlvo={provaAlvoInfo}
             provaAlvoTargetTime={provaAlvoTargetTime}
+            perfilFisiologico={diagnosticScores.perfilFisiologico}
           />
         </section>
 

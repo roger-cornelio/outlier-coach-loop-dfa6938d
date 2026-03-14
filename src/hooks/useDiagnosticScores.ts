@@ -14,12 +14,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
+export interface PerfilFisiologico {
+  vo2_max?: number;
+  limiar_lactato?: string;
+  critical_speed_m_s?: number;
+  radar?: Record<string, number>;
+}
+
 export interface DiagnosticScoresResult {
   scores: CalculatedScore[];
   loading: boolean;
   hasData: boolean;
   lastResultId: string | null;
   lastResultDate: string | null;
+  perfilFisiologico: PerfilFisiologico | null;
 }
 
 export function useDiagnosticScores(): DiagnosticScoresResult {
@@ -28,6 +36,7 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
   const [loading, setLoading] = useState(true);
   const [lastResultId, setLastResultId] = useState<string | null>(null);
   const [lastResultDate, setLastResultDate] = useState<string | null>(null);
+  const [perfilFisiologico, setPerfilFisiologico] = useState<PerfilFisiologico | null>(null);
 
   useEffect(() => {
     async function fetchDiagnosticData() {
@@ -78,6 +87,19 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
         }));
 
         setScores(typedScores);
+
+        // 3. Fetch perfil_fisiologico from diagnostico_resumo (cached deterministic data)
+        const { data: resumoData } = await supabase
+          .from('diagnostico_resumo')
+          .select('perfil_fisiologico')
+          .eq('atleta_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (resumoData?.perfil_fisiologico) {
+          setPerfilFisiologico(resumoData.perfil_fisiologico as unknown as PerfilFisiologico);
+        }
       } catch (err) {
         console.error('[DiagnosticScores] Error fetching data:', err);
       } finally {
@@ -93,6 +115,7 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
     loading,
     hasData: scores.length > 0,
     lastResultId,
-    lastResultDate
+    lastResultDate,
+    perfilFisiologico,
   };
 }
