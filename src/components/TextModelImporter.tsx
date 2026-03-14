@@ -22,7 +22,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
