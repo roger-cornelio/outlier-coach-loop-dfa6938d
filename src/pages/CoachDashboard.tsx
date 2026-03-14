@@ -345,8 +345,10 @@ export default function CoachDashboard() {
   // Renderizar conteúdo baseado na tab selecionada
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'visao-geral':
+        return <CoachOverviewTab />;
+
       case 'atletas':
-        return (
           <>
             {/* QA Diagnostic Panel */}
             {isQAActive && (
