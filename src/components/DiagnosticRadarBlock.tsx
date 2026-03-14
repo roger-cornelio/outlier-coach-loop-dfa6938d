@@ -1422,11 +1422,11 @@ function formatGapLabel(gapSec: number): string {
 
 function StarRating({ count }: { count: number; colorClass?: string }) {
   return (
-    <span className="flex items-center gap-0.5 shrink-0">
+    <span className="flex items-center gap-1 shrink-0">
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`w-3 h-3 ${i < count ? 'text-primary' : 'text-muted-foreground/20'}`}
+          className={`w-4 h-4 ${i < count ? 'text-primary' : 'text-muted-foreground/20'}`}
           fill={i < count ? 'currentColor' : 'none'}
           strokeWidth={i < count ? 0 : 1.5}
         />
@@ -1514,15 +1514,15 @@ function TrainingPrioritiesBlock({
         </div>
 
         {/* List */}
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {worstStations.map((station, i) => (
             <li
               key={station.metric}
-              className="flex items-center justify-between gap-2 text-xs"
+              className="flex items-center justify-between gap-3 text-sm"
             >
               {/* Left: rank + name */}
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                <span className="w-4 text-xs font-bold text-muted-foreground tabular-nums shrink-0">
                   {i + 1}.
                 </span>
                 <span className="font-semibold text-foreground/90 truncate">
@@ -1530,15 +1530,8 @@ function TrainingPrioritiesBlock({
                 </span>
               </div>
 
-              {/* Right: stars + gap */}
-              <div className="flex items-center gap-2 shrink-0">
-                <StarRating count={station.stars.count} />
-                <span className={`text-[10px] min-w-[70px] text-right tabular-nums ${
-                  station.isMetBatida ? 'text-emerald-400/70' : 'text-muted-foreground'
-                }`}>
-                  {station.insight}
-                </span>
-              </div>
+              {/* Right: stars only */}
+              <StarRating count={station.stars.count} />
             </li>
           ))}
         </ul>
