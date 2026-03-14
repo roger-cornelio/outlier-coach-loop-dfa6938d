@@ -1501,23 +1501,25 @@ function TrainingPrioritiesBlock({
 
     // Fallback 1: use diagMelhorias sorted by improvement_value (same source as Parecer Outlier)
     if (diagMelhorias && diagMelhorias.length > 0) {
-      const sorted = [...diagMelhorias]
-        .filter(d => d.improvement_value > 0)
-        .sort((a, b) => b.improvement_value - a.improvement_value)
-        .slice(0, showAll ? diagMelhorias.length : 3);
+      const allSorted = [...diagMelhorias]
+        .sort((a, b) => b.improvement_value - a.improvement_value);
+      const maxGap = allSorted[0]?.improvement_value || 1;
+      
+      const sliced = showAll ? allSorted : allSorted.filter(d => d.improvement_value > 0).slice(0, 3);
 
-      if (sorted.length > 0) {
-        return sorted.map(d => {
-          const scoreMatch = scores.find(s => s.metric.toLowerCase() === d.metric.toLowerCase());
-          const percentile = scoreMatch?.percentile_value ?? 0;
-          const stars = percentileToStars(percentile);
+      if (sliced.length > 0) {
+        return sliced.map(d => {
+          // Stars: 0 for worst (max gap), 5 for best (no gap)
+          const starCount = d.improvement_value <= 0
+            ? 5
+            : Math.round(5 * (1 - d.improvement_value / maxGap));
           return {
             metric: d.metric,
             label: METRIC_LABELS[d.metric] || d.movement || d.metric,
-            stars,
-            insight: formatGapLabel(d.improvement_value),
-            percentile,
-            isMetBatida: false,
+            stars: { count: Math.min(5, Math.max(0, starCount)) },
+            insight: d.improvement_value > 0 ? formatGapLabel(d.improvement_value) : '✓ Meta batida',
+            percentile: 0,
+            isMetBatida: d.improvement_value <= 0,
           };
         });
       }
