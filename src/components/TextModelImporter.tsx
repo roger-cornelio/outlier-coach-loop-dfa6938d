@@ -217,6 +217,17 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   // PARSING E VALIDAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
   
+  const workerRef = useRef<Worker | null>(null);
+  const workerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup worker on unmount
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+      if (workerTimeoutRef.current) clearTimeout(workerTimeoutRef.current);
+    };
+  }, []);
+
   const handleParse = async () => {
     if (isParsing) return; // prevent double-click
 
@@ -226,12 +237,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setIsParsing(true);
     const t0 = performance.now();
 
-    // Safety-net: força UI destravar após 5s independente do parser (single-thread safe)
-    const safetyTimeout = setTimeout(() => {
-      console.warn('[SAFETY_NET] Parser excedeu 5s — destravando UI');
-      setIsParsing(false);
-    }, 5000);
-
     try {
       const textForParse = textareaValue;
 
@@ -239,17 +244,51 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const inputValidation = validateCoachInput(textareaValue);
       const daysDetected = dayValidation.daysFound.length;
 
-      // Parse com timeout de 3s — parser roda em macrotask (setTimeout 0)
+      // Parse via Web Worker — isolado em thread separada com timeout de 8s
       let result: ParseResult;
       try {
-        result = await Promise.race([
-          new Promise<ParseResult>((resolve) =>
-            setTimeout(() => resolve(parseStructuredText(textForParse)), 0)
-          ),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Parser timeout: demorou mais de 3s. Tente reduzir o texto.')), 3000)
-          ),
-        ]);
+        result = await new Promise<ParseResult>((resolve, reject) => {
+          // Terminate previous worker if any
+          if (workerRef.current) workerRef.current.terminate();
+          if (workerTimeoutRef.current) clearTimeout(workerTimeoutRef.current);
+
+          const worker = new Worker(
+            new URL('../workers/structuredParser.worker.ts', import.meta.url),
+            { type: 'module' }
+          );
+          workerRef.current = worker;
+
+          // 8s hard timeout — terminates the worker thread
+          workerTimeoutRef.current = setTimeout(() => {
+            worker.terminate();
+            workerRef.current = null;
+            reject(new Error('Parser timeout: excedeu 8s. Tente reduzir o texto.'));
+          }, 8000);
+
+          worker.onmessage = (event) => {
+            clearTimeout(workerTimeoutRef.current!);
+            workerTimeoutRef.current = null;
+            worker.terminate();
+            workerRef.current = null;
+
+            const { success, result: parsed, error } = event.data;
+            if (success) {
+              resolve(parsed);
+            } else {
+              reject(new Error(error || 'Erro desconhecido no parser'));
+            }
+          };
+
+          worker.onerror = (err) => {
+            clearTimeout(workerTimeoutRef.current!);
+            workerTimeoutRef.current = null;
+            worker.terminate();
+            workerRef.current = null;
+            reject(new Error(`Worker error: ${err.message}`));
+          };
+
+          worker.postMessage({ text: textForParse });
+        });
       } catch (parseErr) {
         console.error('[VALIDATE_CRASH] Parser threw or timed out:', parseErr);
         const fallbackResult = {
