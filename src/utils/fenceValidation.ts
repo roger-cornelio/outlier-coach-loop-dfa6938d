@@ -743,7 +743,7 @@ export function validateFence(text: string): FenceValidationResult {
     if (/^\[TREINO\]/i.test(trimmed)) {
       treinoTagCount++;
       treinoTagLineIdx = i;
-      console.log('[validateFence] [TAG] TREINO detectado no bloco', currentBlockTitle, '→ count=', treinoTagCount);
+      _log('[validateFence] [TAG] TREINO detectado no bloco', currentBlockTitle, '→ count=', treinoTagCount);
     }
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
       comentarioTagCount++;
