@@ -2141,20 +2141,22 @@ export function DiagnosticRadarBlock({
             treinamento contínuo de aproximadamente{' '}
             <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>.
           </p>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                Ganho mensal: {evolutionProjection.ratePerMonth}s/mês
-              </span>
-              <span>~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'} para meta</span>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-foreground">{evolutionProjection.gapFormatted}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((1 / evolutionProjection.months) * 100, 100)}%` }} />
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-primary">{evolutionProjection.ratePerMonth}s</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
             </div>
-            <p className="text-[11px] text-muted-foreground text-center">
-              Cada mês representa ~{Math.round(Math.min((1 / evolutionProjection.months) * 100, 100))}% do gap total
-            </p>
+            <div className="bg-secondary/40 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                {evolutionProjection.months}
+              </div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{evolutionProjection.months === 1 ? 'mês' : 'meses'}</div>
+            </div>
           </div>
         </div>
       )}

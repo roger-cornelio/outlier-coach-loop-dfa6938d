@@ -86,7 +86,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
   if (!finishTime || diagnosticos.length === 0 || !evolution) return null;
 
   const { months, tierLabel, ratePerMonth, gapFormatted } = evolution;
-  const oneMonthProgress = Math.min((ratePerMonth / totalGap) * 100, 100);
+  
 
   return (
     <motion.div
