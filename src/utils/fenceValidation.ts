@@ -536,7 +536,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       comentarioTagLineIdx = -1;
       currentTrainLines = [];
       currentCommentLines = [];
-      console.log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
+      _log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
 
