@@ -349,6 +349,7 @@ export default function CoachDashboard() {
         return <CoachOverviewTab />;
 
       case 'atletas':
+        return (
           <>
             {/* QA Diagnostic Panel */}
             {isQAActive && (
