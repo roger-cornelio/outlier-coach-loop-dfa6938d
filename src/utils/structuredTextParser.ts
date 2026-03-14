@@ -340,10 +340,12 @@ function isNarrativeLine(line: string): boolean {
   for (const pattern of NARRATIVE_PATTERNS) {
     if (pattern.test(lower)) {
       _log('[isNarrativeLine] → TRUE (narrativa detectada):', line);
+      _narrativeCache.set(line, true);
       return true;
     }
   }
   
+  _narrativeCache.set(line, false);
   return false;
 }
 
