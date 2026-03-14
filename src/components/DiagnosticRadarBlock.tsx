@@ -1526,10 +1526,16 @@ function TrainingPrioritiesBlock({
 
       if (sliced.length > 0) {
         return sliced.map(d => {
-          // Stars: 0 for worst (max gap), 5 for best (no gap)
-          const starCount = d.improvement_value <= 0
-            ? 5
-            : Math.round(5 * (1 - d.improvement_value / maxGap));
+          const pct = d.percentage ?? 0;
+          // Faixas fixas baseadas no FOCO %
+          let starCount: number;
+          if (d.improvement_value <= 0) starCount = 5; // Meta batida
+          else if (pct > 20) starCount = 0;
+          else if (pct > 10) starCount = 1;
+          else if (pct > 5) starCount = 2;
+          else if (pct > 2) starCount = 3;
+          else if (pct > 1) starCount = 4;
+          else starCount = 5;
           return {
             metric: d.metric,
             label: METRIC_LABELS[d.metric] || d.movement || d.metric,
