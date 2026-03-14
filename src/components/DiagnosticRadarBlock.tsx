@@ -2071,7 +2071,7 @@ export function DiagnosticRadarBlock({
           <Clock className="w-4.5 h-4.5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> para meta {performanceSnapshot.targetLabel} · Projeção:{' '}
+              Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> de melhoria identificada · Projeção:{' '}
               <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
               <span className="text-muted-foreground/60"> · ganho estimado {evolutionProjection.ratePerMonth}s/mês</span>
             </p>
