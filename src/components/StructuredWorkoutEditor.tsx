@@ -238,15 +238,17 @@ export function StructuredWorkoutEditor({
     // - Nenhum erro nos dias com conteúdo
     const canPublish = daysWithContent.length >= 1 && selectedWeek !== null && errorsInContentDays === 0;
 
-    // Log de diagnóstico
-    console.log("[PUBLISH_GUARD]", {
-      daysWithContent: daysWithContent.length,
-      daysEmpty: daysEmpty.length,
-      errorsInContentDays,
-      daysWithMissingCategory,
-      daysWithoutMain,
-      canPublish,
-    });
+    // Log de diagnóstico (apenas em debug)
+    if (import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true') {
+      console.log("[PUBLISH_GUARD]", {
+        daysWithContent: daysWithContent.length,
+        daysEmpty: daysEmpty.length,
+        errorsInContentDays,
+        daysWithMissingCategory,
+        daysWithoutMain,
+        canPublish,
+      });
+    }
 
     return {
       dayValidations,
