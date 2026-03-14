@@ -1570,7 +1570,7 @@ export function DiagnosticRadarBlock({
   const isMobile = useIsMobile();
 
   // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
-  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number }[]>([]);
+  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
@@ -1584,7 +1584,7 @@ export function DiagnosticRadarBlock({
       if (!resumos?.length) return;
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
-        .select('improvement_value')
+        .select('improvement_value, movement, metric')
         .eq('resumo_id', resumos[0].id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
