@@ -1526,25 +1526,27 @@ function TrainingPrioritiesBlock({
           {worstStations.map((station, i) => (
             <li
               key={station.metric}
-              className="flex items-center gap-2.5 text-xs"
+              className="flex items-center justify-between gap-2 text-xs"
             >
-              {/* Rank number */}
-              <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
-                {i + 1}.
-              </span>
+              {/* Left: rank + name */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                  {i + 1}.
+                </span>
+                <span className="font-semibold text-foreground/90 truncate">
+                  {station.label}
+                </span>
+              </div>
 
-              {/* Station name */}
-              <span className="flex-1 font-semibold text-foreground/90 truncate">
-                {station.label}
-              </span>
-
-              {/* Stars */}
-              <StarRating count={station.stars.count} colorClass={station.stars.colorClass} />
-
-              {/* Insight */}
-              <span className="text-[10px] text-muted-foreground/80 shrink-0 min-w-[70px] text-right tabular-nums">
-                {station.insight}
-              </span>
+              {/* Right: stars + gap */}
+              <div className="flex items-center gap-2 shrink-0">
+                <StarRating count={station.stars.count} />
+                <span className={`text-[10px] min-w-[70px] text-right tabular-nums ${
+                  station.isMetBatida ? 'text-emerald-400/70' : 'text-muted-foreground'
+                }`}>
+                  {station.insight}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
