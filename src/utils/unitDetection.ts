@@ -68,7 +68,7 @@ const DISTANCE_PATTERNS = [
 // REPETIÇÕES / ESTRUTURA
 const REPS_STRUCTURE_PATTERNS = [
   // Números + movimento: "10 burpees", "12 push-ups"
-  /^(\d+)\s+(?:[a-záéíóúàêâôûãõ]+)/i,
+  /^(\d+)\s+(?:[a-záéíóúàêâôûãõ]+)/gi,
   // Formatos: "5x5", "4x8"
   /(\d+)\s*x\s*(\d+)/gi,
   // Rounds: "3 rounds", "4 séries"
