@@ -224,6 +224,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setIsParsing(true);
     const t0 = performance.now();
 
+    // Safety-net: força UI destravar após 5s independente do parser (single-thread safe)
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[SAFETY_NET] Parser excedeu 5s — destravando UI');
+      setIsParsing(false);
+    }, 5000);
+
     try {
       const textForParse = textareaValue;
 
@@ -232,7 +238,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const daysDetected = dayValidation.daysFound.length;
 
       // Parse com timeout de 3s — parser roda em macrotask (setTimeout 0)
-      // para que o Promise.race timeout realmente funcione com parser síncrono
       let result: ParseResult;
       try {
         result = await Promise.race([
