@@ -1499,7 +1499,31 @@ function TrainingPrioritiesBlock({
       }
     }
 
-    // Fallback: heuristic based on percentiles
+    // Fallback 1: use diagMelhorias sorted by improvement_value (same source as Parecer Outlier)
+    if (diagMelhorias && diagMelhorias.length > 0) {
+      const sorted = [...diagMelhorias]
+        .filter(d => d.improvement_value > 0)
+        .sort((a, b) => b.improvement_value - a.improvement_value)
+        .slice(0, showAll ? diagMelhorias.length : 3);
+
+      if (sorted.length > 0) {
+        return sorted.map(d => {
+          const scoreMatch = scores.find(s => s.metric.toLowerCase() === d.metric.toLowerCase());
+          const percentile = scoreMatch?.percentile_value ?? 0;
+          const stars = percentileToStars(percentile);
+          return {
+            metric: d.metric,
+            label: METRIC_LABELS[d.metric] || d.movement || d.metric,
+            stars,
+            insight: formatGapLabel(d.improvement_value),
+            percentile,
+            isMetBatida: false,
+          };
+        });
+      }
+    }
+
+    // Fallback 2 (último recurso): heuristic based on percentiles
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
       .slice(0, showAll ? scores.length : 3)
