@@ -2188,7 +2188,14 @@ export function DiagnosticRadarBlock({
               <>
                   <div className="mb-4">
                     <div className="text-center mb-1">
-                      <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                      {progressToTarget === 0 ? (
+                        <div className="py-2 space-y-1">
+                          <span className="text-lg font-bold text-primary font-display tracking-wide">INICIE SUA JORNADA</span>
+                          <p className="text-xs text-muted-foreground">Aguardando 1º Benchmark para destravar progresso</p>
+                        </div>
+                      ) : (
+                        <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
