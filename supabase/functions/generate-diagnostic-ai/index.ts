@@ -70,15 +70,20 @@ TABELA DE SPLITS E DIAGNÓSTICO:
 ${jsonPayload}
 
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
-- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Converta TODOS os tempos absolutos e diferenças (gaps) para o formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
-- Para converter: divida os segundos por 60 para obter minutos e use o resto como segundos. Ex: 328s → 5min 28s → "05:28".
+- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
+- NUNCA exiba fórmulas matemáticas, conversões de segundos, frações ou o passo a passo de cálculos no texto. Oculte totalmente o raciocínio matemático. Entregue APENAS o resultado final formatado de forma elegante e direta.
 
-BENCHMARKING REALISTA:
-- NÃO compare o atleta automaticamente com o "Top 1%". Compare-o com um alvo realista: a média do PERCENTIL IMEDIATAMENTE ACIMA dele (ex: se ele é Top 40%, compare com o Top 20%). Os tempos de referência devem ser críveis e calculados com base na média competitiva real da divisão dele.
+REGRA ANTI-METALINGUAGEM (OBRIGATÓRIA):
+- NUNCA explique a metodologia de comparação ao atleta. Não diga frases como "em vez de comparar com o Top 1%, vamos usar..." ou "ao invés da Elite, usaremos...".
+- Não mencione "Top 1%", "Elite" ou qualquer benchmark que não seja o Próximo Nível Competitivo do atleta.
+- Trate o percentil alvo (percentil imediatamente acima do atleta) como o ÚNICO referencial existente. Fale sobre ele de forma absoluta e direta.
+
+BENCHMARKING:
+- Compare o atleta com o Próximo Nível Competitivo (percentil imediatamente acima dele). Este é o ÚNICO benchmark válido. Os tempos de referência devem ser críveis e calculados com base na média competitiva real da divisão dele.
 
 DIRETRIZES DE COMPORTAMENTO:
 - Fale diretamente com o(s) atleta(s) usando "Você" ou "Vocês".
-- Seja cirúrgico: use os números exatos do JSON para embasar seus argumentos.
+- Seja cirúrgico: use os números exatos do JSON para embasar seus argumentos, mas nunca mostre as contas.
 - Escreva em Português do Brasil (PT-BR).
 - Use formatação Markdown (### para os 3 títulos principais e **negrito** para destacar os tempos/métricas).
 
@@ -89,10 +94,10 @@ Dê os parabéns pelo tempo total. Identifique imediatamente a estação ou corr
 
 ### 2. O GARGALO TÁTICO
 Olhe os dados e aponte sem rodeios a estação, corrida ou Roxzone (transição) que mais prejudicou o tempo final. Explique o impacto disso usando tempos em MM:SS.
-Inclua uma análise de PACE: sabendo que o total de corrida na HYROX é 8km, calcule o Pace Médio (Running Total ÷ 8). Critique a variação entre o split de corrida mais rápido e o mais lento, e instrua sobre o benefício de uma Estratégia de Pace Constante.
+Inclua uma análise de PACE: sabendo que o total de corrida na HYROX é 8km, apresente o Pace Médio (resultado direto em min/km). Critique a variação entre o split de corrida mais rápido e o mais lento, e instrua sobre o benefício de uma Estratégia de Pace Constante.
 
 ### 3. PRESCRIÇÃO DE TREINO
-Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extremamente específicas de treinamento. Uma delas deve incluir o Pace Alvo (min/km) que o atleta precisa sustentar para atingir o tempo de corrida do percentil acima.`;
+Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extremamente específicas de treinamento. Uma delas deve incluir o Pace Alvo (min/km) que o atleta precisa sustentar para atingir o tempo de corrida do próximo nível.`;
 
     console.log(`[generate-diagnostic-ai] Coach style: ${coach_style}, athlete: ${athlete_name}`);
 
