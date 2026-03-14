@@ -420,12 +420,16 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
               const workoutId = await saveToDb(title, workouts, 'draft', 0, weekStart);
               if (workoutId) {
                 setSuccess('Treino salvo como rascunho! Veja na aba Programações.');
-                // Limpar estados locais
                 setParsedWorkouts(null);
                 setSpreadsheetText('');
                 setProgramName('');
                 setSelectedWeek(null);
                 return true;
+              }
+              // Se workoutId é null, verificar se Gatekeeper bloqueou
+              if (!workoutId) {
+                // Salvar dados pendentes para retry/bypass
+                setPendingGatekeeperSave({ title, workouts, weekStart });
               }
               return false;
             } catch (err) {
