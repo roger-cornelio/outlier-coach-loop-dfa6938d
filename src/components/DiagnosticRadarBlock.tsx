@@ -1697,11 +1697,11 @@ export function DiagnosticRadarBlock({
   // Evolution projection — compact strip based on diagnostic gaps (weak stations)
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    if (!currentTime || diagnosticos.length === 0) return null;
-    const totalGap = diagnosticos.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+    if (!currentTime || diagMelhorias.length === 0) return null;
+    const totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
-  }, [validatingCompetition?.time_in_seconds, scores]);
+  }, [validatingCompetition?.time_in_seconds, diagMelhorias]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
