@@ -1568,6 +1568,27 @@ export function DiagnosticRadarBlock({
   const { athleteConfig } = useOutlierStore();
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
+
+  // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
+  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number }[]>([]);
+  useEffect(() => {
+    if (!profile?.id) return;
+    (async () => {
+      // Get latest resumo
+      const { data: resumos } = await supabase
+        .from('diagnostico_resumo')
+        .select('id')
+        .eq('atleta_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!resumos?.length) return;
+      const { data: melhorias } = await supabase
+        .from('diagnostico_melhoria')
+        .select('improvement_value')
+        .eq('resumo_id', resumos[0].id);
+      if (melhorias) setDiagMelhorias(melhorias);
+    })();
+  }, [profile?.id]);
   const { getOfficialCompetitions } = useBenchmarkResults();
 
   // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
@@ -1676,11 +1697,11 @@ export function DiagnosticRadarBlock({
   // Evolution projection — compact strip based on diagnostic gaps (weak stations)
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    if (!currentTime || scores.length === 0) return null;
-    const totalGap = calculateProjectedGain(scores);
+    if (!currentTime || diagMelhorias.length === 0) return null;
+    const totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
-  }, [validatingCompetition?.time_in_seconds, scores]);
+  }, [validatingCompetition?.time_in_seconds, diagMelhorias]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
