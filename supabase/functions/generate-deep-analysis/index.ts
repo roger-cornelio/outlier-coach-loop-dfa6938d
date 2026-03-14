@@ -300,7 +300,24 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 3. **Variação de Splits**: Critique construtivamente a diferença entre o split de corrida mais rápido e o mais lento. Instrua sobre o benefício de uma Estratégia de Pace Constante.)
 
 ### 📋 PROTOCOLO DE CHOQUE (Próximas 4 semanas)
-(Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).`;
+(Prescreva um bloco de 3 diretrizes técnicas e físicas pesadas para corrigir os gargalos identificados e transformar as fraquezas em força).
+
+IMPORTANTE — DADOS ESTRUTURADOS OBRIGATÓRIOS:
+Após o texto markdown completo, adicione um bloco JSON cercado por \`\`\`json e \`\`\` com EXATAMENTE esta estrutura:
+{
+  "prioridades_treino": [
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 5, "metric": "sled_push" },
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 4, "metric": "wallballs" },
+    { "exercicio": "Nome do exercício/estação", "nivel_urgencia": 3, "metric": "run_avg" }
+  ],
+  "direcionamento": "Uma frase de impacto (max 2 linhas) descrevendo o foco principal do próximo ciclo de treino, personalizada para este atleta."
+}
+
+REGRAS do JSON:
+- prioridades_treino: liste de 3 a 5 exercícios ordenados do mais urgente ao menos urgente.
+- nivel_urgencia: inteiro de 1 (baixa) a 5 (crítica).
+- metric: DEVE ser uma das seguintes chaves válidas: run_avg, roxzone, ski, sled_push, sled_pull, bbj, row, farmers, sandbag, wallballs. Use APENAS métricas que existam nos dados fornecidos (diagnosticos).
+- direcionamento: frase concisa e motivacional sobre o foco do ciclo.`;
 
     // ── 9. Call LLM ───────────────────────────────────────────────────
     const controller = new AbortController();
