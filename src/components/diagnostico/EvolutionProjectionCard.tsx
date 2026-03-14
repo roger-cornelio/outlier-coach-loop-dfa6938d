@@ -15,6 +15,7 @@ interface Props {
   athleteName?: string | null;
   division?: string | null;
   coachStyle?: string;
+  totalGapOverride?: number;
 }
 
 const TIER_COLORS: Record<string, string> = {
