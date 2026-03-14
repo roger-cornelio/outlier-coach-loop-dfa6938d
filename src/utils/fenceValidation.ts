@@ -22,6 +22,13 @@
 import type { StructureIssue, IssueSeverity } from './structuredTextParser';
 
 // ════════════════════════════════════════════════════════════════════════════════
+// DEBUG GUARD: Logs de alto volume DESLIGADOS por padrão
+// Ativar apenas com VITE_DEBUG_PARSER=true em dev
+// ════════════════════════════════════════════════════════════════════════════════
+const DEBUG_FENCE = import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true';
+const _log = DEBUG_FENCE ? console.log.bind(console) : (() => {}) as (...args: any[]) => void;
+
+// ════════════════════════════════════════════════════════════════════════════════
 // TIPOS
 // ════════════════════════════════════════════════════════════════════════════════
 
@@ -259,14 +266,14 @@ function detectHumanText(line: string): string | null {
   
   // Se a linha contém padrões permitidos de treino, NÃO bloquear
   if (isAllowedTrainingLine(trimmed)) {
-    console.log('[detectHumanText] → null (padrão de treino permitido):', trimmed);
+    _log('[detectHumanText] → null (padrão de treino permitido):', trimmed);
     return null;
   }
   
   // Verificar indicadores de texto humano
   for (const indicator of HUMAN_TEXT_INDICATORS) {
     if (indicator.test(trimmed)) {
-      console.log('[detectHumanText] → BLOQUEADO (texto humano):', trimmed, '|', indicator.reason);
+      _log('[detectHumanText] → BLOQUEADO (texto humano):', trimmed, '|', indicator.reason);
       return indicator.reason;
     }
   }
@@ -393,14 +400,14 @@ function dedupeFenceTagsPerBlock(text: string): string {
  * - Sem isso: BLOQUEIA publicação
  */
 export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
-  console.log("[FENCE_IN_TAG_COUNTS]", {
+  _log("[FENCE_IN_TAG_COUNTS]", {
     treino: (text.match(/\[TREINO\]/gi) || []).length,
     comentario: (text.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
   });
 
   const fenceOutText = dedupeFenceTagsPerBlock(text);
 
-  console.log("[FENCE_OUT_TAG_COUNTS]", {
+  _log("[FENCE_OUT_TAG_COUNTS]", {
     treino: (fenceOutText.match(/\[TREINO\]/gi) || []).length,
     comentario: (fenceOutText.match(/\[COMENT[ÁA]RIO\]/gi) || []).length,
   });
@@ -453,7 +460,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
             lineNumber: blockStartLine + idx,
             text: trimmed,
           });
-          console.log('[NON_EXECUTABLE] Linha bloqueante detectada:', trimmed);
+          _log('[NON_EXECUTABLE] Linha bloqueante detectada:', trimmed);
         }
       });
 
@@ -462,7 +469,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
         treinoTagLineIdx > -1 && comentarioTagLineIdx > -1 && comentarioTagLineIdx < treinoTagLineIdx;
 
       // BLOCK_TAG_AUDIT (por bloco)
-      console.log("[BLOCK_TAG_AUDIT]", {
+      _log("[BLOCK_TAG_AUDIT]", {
         blockTitle: currentBlockTitle,
         treinoCount: treinoTagCount,
         comentarioCount: comentarioTagCount,
@@ -505,7 +512,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
     if (dayDetected) {
       flushBlock();
       currentDay = dayDetected;
-      console.log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
+      _log('[parseBlocksWithFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
 
@@ -529,7 +536,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       comentarioTagLineIdx = -1;
       currentTrainLines = [];
       currentCommentLines = [];
-      console.log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
+      _log('[parseBlocksWithFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
 
@@ -539,7 +546,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       treinoTagLineIdx = i;
       inTrainingSection = true;
       inCommentSection = false;
-      console.log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
+      _log('[parseBlocksWithFence] [TAG] TREINO no bloco', currentBlockTitle, '→ count=', treinoTagCount);
       continue;
     }
 
@@ -549,7 +556,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       comentarioTagLineIdx = i;
       inTrainingSection = false;
       inCommentSection = true;
-      console.log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
+      _log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
       continue;
     }
 
@@ -708,7 +715,7 @@ export function validateFence(text: string): FenceValidationResult {
     if (dayDetected) {
       checkAndFlushBlock();
       currentDay = dayDetected;
-      console.log('[validateFence] Dia detectado:', dayDetected.name, '→ estado resetado');
+      _log('[validateFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
     
@@ -728,7 +735,7 @@ export function validateFence(text: string): FenceValidationResult {
       comentarioTagCount = 0;
       treinoTagLineIdx = -1;
       comentarioTagLineIdx = -1;
-      console.log('[validateFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
+      _log('[validateFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
     
@@ -736,12 +743,12 @@ export function validateFence(text: string): FenceValidationResult {
     if (/^\[TREINO\]/i.test(trimmed)) {
       treinoTagCount++;
       treinoTagLineIdx = i;
-      console.log('[validateFence] [TAG] TREINO detectado no bloco', currentBlockTitle, '→ count=', treinoTagCount);
+      _log('[validateFence] [TAG] TREINO detectado no bloco', currentBlockTitle, '→ count=', treinoTagCount);
     }
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
       comentarioTagCount++;
       comentarioTagLineIdx = i;
-      console.log('[validateFence] [TAG] COMENTÁRIO detectado no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
+      _log('[validateFence] [TAG] COMENTÁRIO detectado no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
     }
   }
   

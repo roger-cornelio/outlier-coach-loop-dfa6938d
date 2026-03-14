@@ -238,15 +238,17 @@ export function StructuredWorkoutEditor({
     // - Nenhum erro nos dias com conteúdo
     const canPublish = daysWithContent.length >= 1 && selectedWeek !== null && errorsInContentDays === 0;
 
-    // Log de diagnóstico
-    console.log("[PUBLISH_GUARD]", {
-      daysWithContent: daysWithContent.length,
-      daysEmpty: daysEmpty.length,
-      errorsInContentDays,
-      daysWithMissingCategory,
-      daysWithoutMain,
-      canPublish,
-    });
+    // Log de diagnóstico (apenas em debug)
+    if (import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true') {
+      console.log("[PUBLISH_GUARD]", {
+        daysWithContent: daysWithContent.length,
+        daysEmpty: daysEmpty.length,
+        errorsInContentDays,
+        daysWithMissingCategory,
+        daysWithoutMain,
+        canPublish,
+      });
+    }
 
     return {
       dayValidations,
@@ -492,6 +494,7 @@ export function StructuredWorkoutEditor({
       <AnimatePresence>
         {error && (
           <motion.div
+            key="error-msg"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -506,6 +509,7 @@ export function StructuredWorkoutEditor({
 
         {success && (
           <motion.div
+            key="success-msg"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -521,6 +525,7 @@ export function StructuredWorkoutEditor({
         {/* Alerta de blocos sem categoria */}
         {validation.daysWithMissingCategory > 0 && (
           <motion.div
+            key="missing-category-alert"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -538,6 +543,7 @@ export function StructuredWorkoutEditor({
         {/* Alerta de dias sem WOD Principal */}
         {validation.daysWithoutMain > 0 && (
           <motion.div
+            key="missing-main-alert"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -555,6 +561,7 @@ export function StructuredWorkoutEditor({
         {/* Alerta de múltiplos WOD Principal no mesmo dia */}
         {validation.daysWithMultipleMain > 0 && (
           <motion.div
+            key="multiple-main-wod-alert"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -740,12 +747,6 @@ export function StructuredWorkoutEditor({
                       )}
 
                       {day.blocks.map((block) => {
-                        // [RENDER_BLOCK] Log obrigatório - bloco SEMPRE renderizado
-                        console.log(
-                          `[RENDER_BLOCK] title="${
-                            (block.title || "").replace(/^[=<>-]+\s*/, "") || "Bloco"
-                          }" rendered=true`,
-                        );
 
                         // ═══════════════════════════════════════════════════════════
                         // NOTAS/COMENTÁRIO: Renderização visual discreta
