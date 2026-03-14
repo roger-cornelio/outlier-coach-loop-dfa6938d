@@ -2061,6 +2061,10 @@ function isExercisePatternLine(line: string): boolean {
 }
 
 export function parseStructuredText(text: string): ParseResult {
+  // ═══ RESET DE CACHES — limpa memória de sessões anteriores ═══
+  resetUnitsCache();
+  resetParserCaches();
+  
   _log('[PARSER] === parseStructuredText INICIADO ===');
   _log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
   const lines = text.split('\n');
