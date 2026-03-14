@@ -702,11 +702,11 @@ function RequirementsChecklist({ journeyData, compact, showNextLevelButton }: Re
 // HELPER: percentileToStars
 // ============================================
 function percentileToStars(p: number) {
-  if (p >= 80) return { count: 5, colorClass: 'text-green-500' };
-  if (p >= 60) return { count: 4, colorClass: 'text-blue-500' };
-  if (p >= 40) return { count: 3, colorClass: 'text-yellow-500' };
-  if (p >= 20) return { count: 2, colorClass: 'text-orange-500' };
-  return { count: 1, colorClass: 'text-red-500' };
+  if (p >= 80) return { count: 5 };
+  if (p >= 60) return { count: 4 };
+  if (p >= 40) return { count: 3 };
+  if (p >= 20) return { count: 2 };
+  return { count: 1 };
 }
 
 // ============================================
@@ -1121,14 +1121,10 @@ function MobileBottlenecksBlock({
         {visibleBottlenecks.map((m, i) => {
           const stars = percentileToStars(m.percentile_value);
           return (
-            <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
-              <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-              <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                {Array.from({ length: 5 }).map((_, si) =>
-                <Star key={si} className="w-2.5 h-2.5" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                )}
-              </span>
-            </li>);
+             <li key={i} className="flex items-center justify-between gap-2 text-xs text-foreground/80">
+               <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
+               <StarRating count={stars.count} />
+             </li>);
 
         })}
       </ul>
@@ -1356,11 +1352,7 @@ function MobileAdvancedDataSection({
                   <li key={i} className="flex items-center gap-2 text-xs text-foreground/80">
                       <ChevronRight className="w-3 h-3 text-amber-500 shrink-0" />
                       <span className="flex-1 font-semibold">{METRIC_LABELS[m.metric] || m.metric}</span>
-                      <span className={`flex items-center gap-0.5 ${stars.colorClass}`}>
-                        {Array.from({ length: 5 }).map((_, si) =>
-                      <Star key={si} className="w-3 h-3" fill={si < stars.count ? 'currentColor' : 'none'} strokeWidth={si < stars.count ? 0 : 1.5} />
-                      )}
-                      </span>
+                      <StarRating count={stars.count} />
                     </li>);
 
               })}
@@ -1417,26 +1409,24 @@ function MobileAdvancedDataSection({
 // TRAINING PRIORITIES BLOCK
 // ============================================
 
-const METRIC_INSIGHTS: Record<string, string[]> = {
-  run_avg:   ['-1m45 vs Elite', '+2min média', 'Cardio crítico'],
-  sled_push: ['-55s vs Elite', 'Força limitante', '+40s média'],
-  sled_pull: ['-1m10 vs Elite', 'Perda por fadiga', '+52s média'],
-  bbj:       ['+38s média', 'Técnica inconsistente', '-45s vs Elite'],
-  ski:       ['-50s vs Elite', 'Potência baixa', '+35s média'],
-  row:       ['+48s média', '-1m vs Elite', 'Anaeróbico crítico'],
-  roxzone:   ['2 pausas', 'Core limitante', '+30s média'],
-  farmers:   ['+42s média', 'Grip falha', '-55s vs Elite'],
-  sandbag:   ['+52s média', '-1m05 vs Elite', 'Ritmo irregular'],
-  wallballs: ['2 pausas', '+45s média', '-50s vs Elite'],
-};
+// METRIC_INSIGHTS mock removed — gap values are now derived from real diagMelhorias data
 
-function StarRating({ count, colorClass }: { count: number; colorClass: string }) {
+/** Format a gap in seconds to a human-readable string */
+function formatGapLabel(gapSec: number): string {
+  if (gapSec <= 0) return '✓ Meta batida';
+  if (gapSec < 60) return `↓ ${Math.round(gapSec)}s`;
+  const mins = Math.floor(gapSec / 60);
+  const secs = Math.round(gapSec % 60);
+  return `↓ ${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function StarRating({ count }: { count: number; colorClass?: string }) {
   return (
-    <span className={`flex items-center gap-0.5 ${colorClass} shrink-0`}>
+    <span className="flex items-center gap-0.5 shrink-0">
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className="w-3 h-3"
+          className={`w-3 h-3 ${i < count ? 'text-primary' : 'text-muted-foreground/20'}`}
           fill={i < count ? 'currentColor' : 'none'}
           strokeWidth={i < count ? 0 : 1.5}
         />
@@ -1447,30 +1437,46 @@ function StarRating({ count, colorClass }: { count: number; colorClass: string }
 
 function TrainingPrioritiesBlock({
   scores,
+  diagMelhorias,
   onViewAll,
 }: {
   scores: CalculatedScore[];
+  diagMelhorias?: { improvement_value: number; movement: string; metric: string }[];
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
 
   const worstStations = useMemo(() => {
+    // Build a lookup map from diagMelhorias metric → improvement_value
+    const melhoriaMap = new Map<string, number>();
+    if (diagMelhorias) {
+      for (const m of diagMelhorias) {
+        if (m.metric && m.improvement_value > 0) {
+          melhoriaMap.set(m.metric.toLowerCase(), m.improvement_value);
+        }
+      }
+    }
+
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
       .slice(0, showAll ? scores.length : 3)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
-        const insights = METRIC_INSIGHTS[s.metric] || ['-vs Elite'];
-        const insight = insights[0];
+        // Try to find real gap from diagMelhorias
+        const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
+        const insight = realGap != null && realGap > 0
+          ? formatGapLabel(realGap)
+          : (s.percentile_value >= 50 ? '✓ Meta batida' : `P${s.percentile_value}`);
         return {
           metric: s.metric,
           label: METRIC_LABELS[s.metric] || s.metric,
           stars,
           insight,
           percentile: s.percentile_value,
+          isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll]);
+  }, [scores, showAll, diagMelhorias]);
 
   const totalBad = useMemo(
     () => scores.filter((s) => s.percentile_value < 50).length,
@@ -1512,25 +1518,27 @@ function TrainingPrioritiesBlock({
           {worstStations.map((station, i) => (
             <li
               key={station.metric}
-              className="flex items-center gap-2.5 text-xs"
+              className="flex items-center justify-between gap-2 text-xs"
             >
-              {/* Rank number */}
-              <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
-                {i + 1}.
-              </span>
+              {/* Left: rank + name */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-4 text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                  {i + 1}.
+                </span>
+                <span className="font-semibold text-foreground/90 truncate">
+                  {station.label}
+                </span>
+              </div>
 
-              {/* Station name */}
-              <span className="flex-1 font-semibold text-foreground/90 truncate">
-                {station.label}
-              </span>
-
-              {/* Stars */}
-              <StarRating count={station.stars.count} colorClass={station.stars.colorClass} />
-
-              {/* Insight */}
-              <span className="text-[10px] text-muted-foreground/80 shrink-0 min-w-[70px] text-right tabular-nums">
-                {station.insight}
-              </span>
+              {/* Right: stars + gap */}
+              <div className="flex items-center gap-2 shrink-0">
+                <StarRating count={station.stars.count} />
+                <span className={`text-[10px] min-w-[70px] text-right tabular-nums ${
+                  station.isMetBatida ? 'text-emerald-400/70' : 'text-muted-foreground'
+                }`}>
+                  {station.insight}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
@@ -1570,7 +1578,7 @@ export function DiagnosticRadarBlock({
   const isMobile = useIsMobile();
 
   // Fetch diagnostico_melhoria for the latest resumo (same source as EvolutionProjectionCard)
-  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number }[]>([]);
+  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
@@ -1584,7 +1592,7 @@ export function DiagnosticRadarBlock({
       if (!resumos?.length) return;
       const { data: melhorias } = await supabase
         .from('diagnostico_melhoria')
-        .select('improvement_value')
+        .select('improvement_value, movement, metric')
         .eq('resumo_id', resumos[0].id);
       if (melhorias) setDiagMelhorias(melhorias);
     })();
@@ -2024,7 +2032,7 @@ export function DiagnosticRadarBlock({
         )}
 
         {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
-        <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
+        <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
         <MobileBottlenecksBlock scores={scores} />
         <MobileNextStepBlock scores={scores} journeyData={journeyData} />
         <MobilePhysiologicalModal
@@ -2279,7 +2287,7 @@ export function DiagnosticRadarBlock({
 
       {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
       {/* BLOCO PRIORIDADES DE TREINO */}
-      <TrainingPrioritiesBlock scores={scores} onViewAll={onStartWorkout} />
+      <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
 
       {/* BLOCO 6: PERFIL FISIOLÓGICO */}
       <TooltipProvider>
@@ -2362,38 +2370,38 @@ export function DiagnosticRadarBlock({
           </CollapsibleTrigger>
           <CollapsibleContent>
             {hasData ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-3">
-                <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-4">
+                <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
-                  <p className="text-base font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
+                  <p className="text-lg font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
                   {mainLimiter ?
-                  <p className="text-xs text-foreground/70 mt-1">
+                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
                     {loadingInsights ? (
                       <span className="inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analisando...</span>
                     ) : coachInsights?.limitador_descricao || `Abaixo de ${mainLimiter.relativePerformance}% da categoria`}
                   </p> :
-                  <p className="text-xs text-foreground/70 mt-1">Registre uma prova para ver seu limitador.</p>
+                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">Registre uma prova para ver seu limitador.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-4">
+                <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
                   {mainLimiter ?
                   <>
-                      <p className="text-sm text-foreground">
+                      <p className="text-sm font-semibold text-foreground">
                         {coachInsights?.ganho_acao || `Corrigindo ${mainLimiter.name} →`}
                       </p>
-                      <p className="text-xs text-foreground/70 mt-1">
+                      <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
                         {coachInsights?.ganho_descricao || 'Zona competitiva superior da categoria'}
                       </p>
                     </> :
-                  <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
+                  <p className="text-xs text-foreground/70 leading-relaxed">Ganhos estimados disponíveis após 2 provas.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
+                <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
-                  <ul className="space-y-1 mb-4">
+                  <ul className="space-y-1.5 mb-4">
                     {(coachInsights?.proximos_passos || topStations.map(s => s.name)).map((step, index) =>
-                    <li key={index} className="text-sm text-foreground">• {step}</li>
+                    <li key={index} className="text-sm text-foreground/90 leading-relaxed">• {step}</li>
                     )}
                   </ul>
                 </div>
