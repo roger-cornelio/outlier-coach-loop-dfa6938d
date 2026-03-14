@@ -1501,23 +1501,25 @@ function TrainingPrioritiesBlock({
 
     // Fallback 1: use diagMelhorias sorted by improvement_value (same source as Parecer Outlier)
     if (diagMelhorias && diagMelhorias.length > 0) {
-      const sorted = [...diagMelhorias]
-        .filter(d => d.improvement_value > 0)
-        .sort((a, b) => b.improvement_value - a.improvement_value)
-        .slice(0, showAll ? diagMelhorias.length : 3);
+      const allSorted = [...diagMelhorias]
+        .sort((a, b) => b.improvement_value - a.improvement_value);
+      const maxGap = allSorted[0]?.improvement_value || 1;
+      
+      const sliced = showAll ? allSorted : allSorted.filter(d => d.improvement_value > 0).slice(0, 3);
 
-      if (sorted.length > 0) {
-        return sorted.map(d => {
-          const scoreMatch = scores.find(s => s.metric.toLowerCase() === d.metric.toLowerCase());
-          const percentile = scoreMatch?.percentile_value ?? 0;
-          const stars = percentileToStars(percentile);
+      if (sliced.length > 0) {
+        return sliced.map(d => {
+          // Stars: 0 for worst (max gap), 5 for best (no gap)
+          const starCount = d.improvement_value <= 0
+            ? 5
+            : Math.round(5 * (1 - d.improvement_value / maxGap));
           return {
             metric: d.metric,
             label: METRIC_LABELS[d.metric] || d.movement || d.metric,
-            stars,
-            insight: formatGapLabel(d.improvement_value),
-            percentile,
-            isMetBatida: false,
+            stars: { count: Math.min(5, Math.max(0, starCount)) },
+            insight: d.improvement_value > 0 ? formatGapLabel(d.improvement_value) : '✓ Meta batida',
+            percentile: 0,
+            isMetBatida: d.improvement_value <= 0,
           };
         });
       }
@@ -1544,9 +1546,9 @@ function TrainingPrioritiesBlock({
       });
   }, [scores, showAll, diagMelhorias, prioridadesIA]);
 
-  const totalBad = useMemo(
-    () => scores.filter((s) => s.percentile_value < 50).length,
-    [scores]
+  const totalStations = useMemo(
+    () => diagMelhorias?.length || scores.length,
+    [diagMelhorias, scores]
   );
 
   if (scores.length === 0) {
@@ -1603,12 +1605,12 @@ function TrainingPrioritiesBlock({
         </ul>
 
         {/* Footer: Ver todas */}
-        {totalBad > 3 && (
+        {totalStations > 3 && (
           <button
             onClick={() => setShowAll(!showAll)}
             className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 pt-2.5 border-t border-border/20 text-center"
           >
-            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalBad}) ▾`}
+            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalStations}) ▾`}
           </button>
         )}
       </div>
