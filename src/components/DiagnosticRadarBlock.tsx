@@ -2113,10 +2113,9 @@ export function DiagnosticRadarBlock({
               <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              🎯 A ciência do esporte projeta que a eliminação deste gap de{' '}
-              <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> exigirá um ciclo de
-              treinamento contínuo de aproximadamente{' '}
-              <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>.
+              🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
+              <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> do seu tempo em aproximadamente{' '}
+              <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
