@@ -2370,38 +2370,38 @@ export function DiagnosticRadarBlock({
           </CollapsibleTrigger>
           <CollapsibleContent>
             {hasData ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-3">
-                <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 pb-3 space-y-4">
+                <div className="rounded-lg bg-red-950/80 border border-red-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Limitador</p>
-                  <p className="text-base font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
+                  <p className="text-lg font-bold text-foreground">{mainLimiter?.name || 'Análise não disponível'}</p>
                   {mainLimiter ?
-                  <p className="text-xs text-foreground/70 mt-1">
+                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
                     {loadingInsights ? (
                       <span className="inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analisando...</span>
                     ) : coachInsights?.limitador_descricao || `Abaixo de ${mainLimiter.relativePerformance}% da categoria`}
                   </p> :
-                  <p className="text-xs text-foreground/70 mt-1">Registre uma prova para ver seu limitador.</p>
+                  <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">Registre uma prova para ver seu limitador.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-4">
+                <div className="rounded-lg bg-emerald-950/80 border border-emerald-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Ganho Potencial</p>
                   {mainLimiter ?
                   <>
-                      <p className="text-sm text-foreground">
+                      <p className="text-sm font-semibold text-foreground">
                         {coachInsights?.ganho_acao || `Corrigindo ${mainLimiter.name} →`}
                       </p>
-                      <p className="text-xs text-foreground/70 mt-1">
+                      <p className="text-xs text-foreground/70 mt-1.5 leading-relaxed">
                         {coachInsights?.ganho_descricao || 'Zona competitiva superior da categoria'}
                       </p>
                     </> :
-                  <p className="text-xs text-foreground/70">Ganhos estimados disponíveis após 2 provas.</p>
+                  <p className="text-xs text-foreground/70 leading-relaxed">Ganhos estimados disponíveis após 2 provas.</p>
                   }
                 </div>
-                <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-4">
+                <div className="rounded-lg bg-amber-950/80 border border-amber-800/30 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">Próximo Passo</p>
-                  <ul className="space-y-1 mb-4">
+                  <ul className="space-y-1.5 mb-4">
                     {(coachInsights?.proximos_passos || topStations.map(s => s.name)).map((step, index) =>
-                    <li key={index} className="text-sm text-foreground">• {step}</li>
+                    <li key={index} className="text-sm text-foreground/90 leading-relaxed">• {step}</li>
                     )}
                   </ul>
                 </div>
