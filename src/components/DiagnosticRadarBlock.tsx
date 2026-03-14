@@ -2115,11 +2115,11 @@ export function DiagnosticRadarBlock({
             </div>
             <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-loose">
             🎯 A ciência do esporte projeta que a eliminação deste gap de{' '}
-            <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> exigirá um ciclo de
+            <span className="font-bold text-primary">{evolutionProjection.gapFormatted}</span> exigirá um ciclo de
             treinamento contínuo de aproximadamente{' '}
-            <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>.
+            <span className="font-bold text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</span>.
           </p>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
