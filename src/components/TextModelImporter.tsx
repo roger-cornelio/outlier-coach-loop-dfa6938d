@@ -32,6 +32,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
+import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
 import { StructureBadge, CommentSubBlock } from './DSLBlockRenderer';
