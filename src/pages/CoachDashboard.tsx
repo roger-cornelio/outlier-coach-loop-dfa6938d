@@ -627,7 +627,11 @@ export default function CoachDashboard() {
       {/* Navegação por Tabs */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} mb-6`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} mb-6`}>
+            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Visão Geral</span>
+            </TabsTrigger>
             <TabsTrigger value="atletas" className="gap-1.5 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Atletas</span>
