@@ -742,12 +742,6 @@ export function StructuredWorkoutEditor({
                       )}
 
                       {day.blocks.map((block) => {
-                        // [RENDER_BLOCK] Log obrigatório - bloco SEMPRE renderizado
-                        console.log(
-                          `[RENDER_BLOCK] title="${
-                            (block.title || "").replace(/^[=<>-]+\s*/, "") || "Bloco"
-                          }" rendered=true`,
-                        );
 
                         // ═══════════════════════════════════════════════════════════
                         // NOTAS/COMENTÁRIO: Renderização visual discreta
