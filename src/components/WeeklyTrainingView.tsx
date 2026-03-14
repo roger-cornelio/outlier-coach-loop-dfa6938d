@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
@@ -17,6 +17,7 @@ import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -328,25 +329,44 @@ export function WeeklyTrainingView() {
                   {/* Block Stats */}
                   {block.type !== 'notas' && (
                     <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {isEstimated ? '~' : ''}
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {formatEstimatedTime(estimatedMinutes)}
-                        </span>
-                        {isEstimated && (
-                          <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                        )}
-                      </div>
-                      {biometrics.isValid && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Flame className="w-4 h-4 text-orange-500" />
-                          <span className="text-orange-500 font-medium">
-                            {formatEstimatedKcal(estimatedKcal)}
-                          </span>
-                        </div>
+                      {/* Blindagem UX: se bloco foi bypassed, mostrar ícone info com tooltip */}
+                      {(block.parseStatus === 'bypassed' || block.parseStatus === 'failed') ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 text-sm cursor-help">
+                                <Info className="w-4 h-4 text-muted-foreground/50" />
+                                <span className="text-muted-foreground/50">--</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">O detalhamento deste bloco não permitiu estimar tempo e calorias.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              {isEstimated ? '~' : ''}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {formatEstimatedTime(estimatedMinutes)}
+                            </span>
+                            {isEstimated && (
+                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                            )}
+                          </div>
+                          {biometrics.isValid && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Flame className="w-4 h-4 text-orange-500" />
+                              <span className="text-orange-500 font-medium">
+                                {formatEstimatedKcal(estimatedKcal)}
+                              </span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

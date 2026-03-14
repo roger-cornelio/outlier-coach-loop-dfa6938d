@@ -7,6 +7,11 @@
  * 
  * REGRA MVP0: Benchmark só pode ser definido por ADMIN.
  * Coach não pode salvar isBenchmark - campo é automaticamente removido.
+ * 
+ * GATEKEEPER: Validação síncrona via IA antes do salvamento.
+ * - Cenário A (parse_failure): IA rodou mas não encontrou exercícios → modal laranja
+ * - Cenário B (infra_failure): Timeout/erro de rede → modal vermelho
+ * - Preservação parcial: blocos que parsearam com sucesso mantêm dados
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -14,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
+import type { GatekeeperErrorType, FailedBlock } from '@/components/WorkoutParseValidationModal';
 
 export type WorkoutStatus = 'draft' | 'published' | 'archived';
 
@@ -26,7 +32,15 @@ export interface CoachWorkout {
   status: WorkoutStatus;
   created_at: string;
   updated_at: string;
-  week_start: string | null; // Segunda-feira da semana de referência (campo canônico)
+  week_start: string | null;
+}
+
+/** Resultado da validação Gatekeeper */
+export interface GatekeeperResult {
+  success: boolean;
+  errorType?: GatekeeperErrorType;
+  failedBlocks: FailedBlock[];
+  enrichedWorkouts: DayWorkout[];
 }
 
 interface UseCoachWorkoutsReturn {
@@ -35,18 +49,18 @@ interface UseCoachWorkoutsReturn {
   loading: boolean;
   error: string | null;
   
+  // Gatekeeper state
+  gatekeeperResult: GatekeeperResult | null;
+  clearGatekeeperResult: () => void;
+  
   // Actions para coach
   saveWorkout: (title: string, workoutData: DayWorkout[], status?: WorkoutStatus, price?: number, weekStart?: string | null) => Promise<string | null>;
+  /** Forçar salvamento ignorando validação (bypass consciente) */
+  forceSaveWorkout: (title: string, workoutData: DayWorkout[], status?: WorkoutStatus, price?: number, weekStart?: string | null) => Promise<string | null>;
   updateWorkout: (id: string, updates: Partial<Pick<CoachWorkout, 'title' | 'workout_json' | 'status' | 'price'>>) => Promise<boolean>;
   publishWorkout: (id: string) => Promise<boolean>;
   archiveWorkout: (id: string) => Promise<boolean>;
   deleteWorkout: (id: string) => Promise<boolean>;
-  
-  /**
-   * REPUBLICAR: Duplica um treino publicado como RASCUNHO
-   * O treino original continua ativo para o atleta
-   * Coach edita o rascunho e publica quando quiser
-   */
   duplicateAsDraft: (id: string) => Promise<string | null>;
   
   // Actions para atleta
@@ -56,28 +70,161 @@ interface UseCoachWorkoutsReturn {
   refetch: () => Promise<void>;
 }
 
+const PARSE_TIMEOUT_MS = 15_000;
+
 /**
  * REGRA MVP0: Remove isBenchmark de todos os blocos se não for admin
- * Protege contra manipulação via payload do cliente
  */
 function stripBenchmarkIfNotAdmin(
   workoutData: DayWorkout[],
   isAdmin: boolean
 ): DayWorkout[] {
-  if (isAdmin) {
-    // Admin pode definir benchmark - não modifica nada
-    return workoutData;
-  }
+  if (isAdmin) return workoutData;
 
-  // Coach: remover isBenchmark de todos os blocos
   return workoutData.map(day => ({
     ...day,
     blocks: day.blocks.map(block => {
-      // Remover isBenchmark do bloco
       const { isBenchmark, ...cleanBlock } = block as WorkoutBlock & { isBenchmark?: boolean };
       return cleanBlock;
     }),
   }));
+}
+
+/**
+ * Chama a Edge Function parse-workout-blocks com timeout
+ */
+async function callParseWorkoutBlocks(
+  blocks: { blockId: string; blockType: string; content: string }[]
+): Promise<{ results?: any[]; error?: string; errorType?: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PARSE_TIMEOUT_MS);
+
+  try {
+    const { data, error } = await supabase.functions.invoke('parse-workout-blocks', {
+      body: { blocks },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (error) {
+      console.error('[Gatekeeper] Edge function error:', error);
+      return { error: error.message || 'Edge function error', errorType: 'infra' };
+    }
+
+    if (data?.error) {
+      return { error: data.error, errorType: data.errorType || 'infra' };
+    }
+
+    return { results: data?.results || [] };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      return { error: 'Timeout após 15 segundos', errorType: 'infra' };
+    }
+    return { error: err.message || 'Unknown error', errorType: 'infra' };
+  }
+}
+
+/**
+ * Valida blocos via IA e retorna resultado do Gatekeeper
+ * Preservação parcial: blocos que parsearam com sucesso mantêm dados
+ */
+async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResult> {
+  // Coletar blocos que precisam de validação (excluir notas e dias de descanso)
+  const blocksToValidate: { blockId: string; blockType: string; content: string; dayIndex: number; blockIndex: number }[] = [];
+  
+  workoutData.forEach((day, dayIdx) => {
+    if (day.isRestDay) return;
+    day.blocks.forEach((block, blockIdx) => {
+      if (block.type === 'notas') return;
+      blocksToValidate.push({
+        blockId: block.id,
+        blockType: block.type,
+        content: block.content || '',
+        dayIndex: dayIdx,
+        blockIndex: blockIdx,
+      });
+    });
+  });
+
+  if (blocksToValidate.length === 0) {
+    // Nenhum bloco para validar (todos são notas/descanso)
+    return { success: true, failedBlocks: [], enrichedWorkouts: workoutData };
+  }
+
+  const response = await callParseWorkoutBlocks(
+    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content }))
+  );
+
+  if (response.error) {
+    // Cenário B: Erro de infraestrutura
+    return {
+      success: false,
+      errorType: 'infra_failure',
+      failedBlocks: blocksToValidate.map(b => ({
+        blockId: b.blockId,
+        blockTitle: workoutData[b.dayIndex].blocks[b.blockIndex].title || `Bloco ${b.blockIndex + 1}`,
+        blockType: workoutData[b.dayIndex].blocks[b.blockIndex].type,
+        reason: response.error!,
+      })),
+      enrichedWorkouts: workoutData,
+    };
+  }
+
+  // Processar resultados - preservação parcial
+  const failedBlocks: FailedBlock[] = [];
+  const enrichedWorkouts = workoutData.map((day, dayIdx) => ({
+    ...day,
+    blocks: day.blocks.map((block, blockIdx) => {
+      const validationEntry = blocksToValidate.find(
+        b => b.dayIndex === dayIdx && b.blockIndex === blockIdx
+      );
+      if (!validationEntry) return block; // Bloco isento (notas/descanso)
+
+      const result = response.results?.find((r: any) => r.blockId === block.id);
+      
+      if (!result || result.parseStatus === 'failed') {
+        // IA não conseguiu parsear
+        failedBlocks.push({
+          blockId: block.id,
+          blockTitle: block.title || `Bloco ${blockIdx + 1}`,
+          blockType: block.type,
+          reason: result?.error || 'Sem resposta da IA',
+        });
+        return { ...block, parseStatus: 'failed' as const, parsedAt: new Date().toISOString() };
+      }
+
+      if (result.parsedExercises.length === 0) {
+        // Cenário A: IA rodou mas não encontrou exercícios
+        failedBlocks.push({
+          blockId: block.id,
+          blockTitle: block.title || `Bloco ${blockIdx + 1}`,
+          blockType: block.type,
+          reason: 'Nenhum exercício reconhecido',
+        });
+        return { ...block, parsedExercises: [], parseStatus: 'failed' as const, parsedAt: new Date().toISOString() };
+      }
+
+      // Sucesso: enriquecer bloco com dados parseados
+      return {
+        ...block,
+        parsedExercises: result.parsedExercises,
+        parseStatus: 'completed' as const,
+        parsedAt: new Date().toISOString(),
+      };
+    }),
+  }));
+
+  if (failedBlocks.length > 0) {
+    return {
+      success: false,
+      errorType: 'parse_failure',
+      failedBlocks,
+      enrichedWorkouts,
+    };
+  }
+
+  return { success: true, failedBlocks: [], enrichedWorkouts };
 }
 
 export function useCoachWorkouts(): UseCoachWorkoutsReturn {
@@ -85,8 +232,11 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
   const [workouts, setWorkouts] = useState<CoachWorkout[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gatekeeperResult, setGatekeeperResult] = useState<GatekeeperResult | null>(null);
 
   const canManageWorkouts = isCoach || isAdmin || isSuperAdmin;
+
+  const clearGatekeeperResult = useCallback(() => setGatekeeperResult(null), []);
 
   // Fetch coach's own workouts
   const fetchCoachWorkouts = useCallback(async () => {
@@ -107,7 +257,6 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
 
       if (fetchError) throw fetchError;
 
-      // Parse workout_json for each workout
       const parsed = (data || []).map((w) => ({
         ...w,
         status: w.status as WorkoutStatus,
@@ -124,15 +273,14 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     }
   }, [profile?.id, canManageWorkouts]);
 
-  // Auto-fetch on mount for coaches
   useEffect(() => {
     if (canManageWorkouts && profile?.id) {
       fetchCoachWorkouts();
     }
   }, [canManageWorkouts, profile?.id, fetchCoachWorkouts]);
 
-  // Save new workout
-  const saveWorkout = useCallback(async (
+  /** Persistir treino no banco (sem validação - usado internamente) */
+  const persistWorkout = useCallback(async (
     title: string,
     workoutData: DayWorkout[],
     status: WorkoutStatus = 'draft',
@@ -144,17 +292,10 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       return null;
     }
 
-    setLoading(true);
-    setError(null);
-
     try {
-      // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
       const sanitizedWorkouts = stripBenchmarkIfNotAdmin(workoutData, isAdmin || isSuperAdmin);
-      
-      // NORMALIZAÇÃO: Garantir que durationSec seja persistido
       const normalizedWorkouts = normalizeWorkoutsForPersistence(sanitizedWorkouts);
       
-      // Cast workout_json to any to bypass strict JSON type checking
       const insertPayload: Record<string, unknown> = {
         coach_id: profile.id,
         title,
@@ -163,7 +304,6 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
         price,
       };
       
-      // Adicionar week_start se fornecido
       if (weekStart) {
         insertPayload.week_start = weekStart;
       }
@@ -176,18 +316,99 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
 
       if (insertError) throw insertError;
 
-      // Refresh list
       await fetchCoachWorkouts();
-
       return data?.id || null;
     } catch (err) {
       console.error('[useCoachWorkouts] Error saving workout:', err);
       setError(err instanceof Error ? err.message : 'Erro ao salvar treino');
       return null;
+    }
+  }, [profile?.id, fetchCoachWorkouts, isAdmin, isSuperAdmin]);
+
+  /**
+   * SAVE COM GATEKEEPER: Validação síncrona bloqueante
+   * 1. Trava a UI (loading)
+   * 2. Chama parse-workout-blocks
+   * 3. Se falhar → retorna null e seta gatekeeperResult para exibir modal
+   * 4. Se sucesso → salva com dados enriquecidos
+   */
+  const saveWorkout = useCallback(async (
+    title: string,
+    workoutData: DayWorkout[],
+    status: WorkoutStatus = 'draft',
+    price: number = 0,
+    weekStart: string | null = null
+  ): Promise<string | null> => {
+    setLoading(true);
+    setError(null);
+    setGatekeeperResult(null);
+
+    try {
+      // Rodar Gatekeeper
+      const result = await runGatekeeper(workoutData);
+
+      if (!result.success) {
+        // Gatekeeper bloqueou - exibir modal
+        setGatekeeperResult(result);
+        setLoading(false);
+        return null;
+      }
+
+      // Gatekeeper aprovou - salvar com dados enriquecidos
+      const savedId = await persistWorkout(title, result.enrichedWorkouts, status, price, weekStart);
+      return savedId;
+    } catch (err) {
+      console.error('[useCoachWorkouts] Gatekeeper error:', err);
+      setError(err instanceof Error ? err.message : 'Erro na validação');
+      return null;
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, fetchCoachWorkouts]);
+  }, [persistWorkout]);
+
+  /**
+   * FORCE SAVE: Bypass consciente do Gatekeeper
+   * Preserva parsedExercises dos blocos que foram parseados com sucesso
+   * Marca blocos que falharam com parseStatus: 'bypassed'
+   */
+  const forceSaveWorkout = useCallback(async (
+    title: string,
+    workoutData: DayWorkout[],
+    status: WorkoutStatus = 'draft',
+    price: number = 0,
+    weekStart: string | null = null
+  ): Promise<string | null> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Se temos resultado do gatekeeper, usar os dados enriquecidos (preservação parcial)
+      let dataToSave = workoutData;
+      
+      if (gatekeeperResult?.enrichedWorkouts) {
+        // Marcar blocos que falharam como 'bypassed' em vez de 'failed'
+        dataToSave = gatekeeperResult.enrichedWorkouts.map(day => ({
+          ...day,
+          blocks: day.blocks.map(block => {
+            if (block.parseStatus === 'failed') {
+              return { ...block, parseStatus: 'bypassed' as const };
+            }
+            return block;
+          }),
+        }));
+      }
+
+      const savedId = await persistWorkout(title, dataToSave, status, price, weekStart);
+      setGatekeeperResult(null);
+      return savedId;
+    } catch (err) {
+      console.error('[useCoachWorkouts] Force save error:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao forçar salvamento');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [persistWorkout, gatekeeperResult]);
 
   // Update existing workout
   const updateWorkout = useCallback(async (
@@ -204,9 +425,7 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       if (updates.status !== undefined) updatePayload.status = updates.status;
       if (updates.price !== undefined) updatePayload.price = updates.price;
       if (updates.workout_json !== undefined) {
-        // REGRA MVP0: Coach não pode salvar benchmark - remover do payload
         const sanitizedWorkouts = stripBenchmarkIfNotAdmin(updates.workout_json, isAdmin || isSuperAdmin);
-        // NORMALIZAÇÃO: Garantir que durationSec seja persistido
         const normalizedWorkouts = normalizeWorkoutsForPersistence(sanitizedWorkouts);
         updatePayload.workout_json = normalizedWorkouts as unknown as Record<string, unknown>;
       }
@@ -227,28 +446,23 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     } finally {
       setLoading(false);
     }
-  }, [fetchCoachWorkouts]);
+  }, [fetchCoachWorkouts, isAdmin, isSuperAdmin]);
 
-  // Publish workout (sets status=published, price=0)
   const publishWorkout = useCallback(async (id: string): Promise<boolean> => {
     return updateWorkout(id, { status: 'published', price: 0 });
   }, [updateWorkout]);
 
-  // Archive workout
   const archiveWorkout = useCallback(async (id: string): Promise<boolean> => {
     return updateWorkout(id, { status: 'archived' });
   }, [updateWorkout]);
 
-  // Delete workout (also removes associated athlete_plans)
   const deleteWorkout = useCallback(async (id: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
     try {
-      // Find workout to get coach_id and week_start for cascade cleanup
       const workout = workouts.find(w => w.id === id);
       
-      // If published, also delete athlete_plans for this coach+week
       if (workout && workout.status === 'published' && workout.week_start && profile?.id) {
         const { error: plansDeleteError } = await supabase
           .from('athlete_plans')
@@ -258,7 +472,6 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
 
         if (plansDeleteError) {
           console.error('[useCoachWorkouts] Error deleting athlete_plans:', plansDeleteError);
-          // Continue with workout deletion even if plans cleanup fails
         }
       }
 
@@ -280,10 +493,8 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     }
   }, [fetchCoachWorkouts, workouts, profile?.id]);
 
-  // Fetch available workouts for athletes (published + free)
   const fetchAvailableWorkouts = useCallback(async (): Promise<DayWorkout[]> => {
     try {
-      // RLS policy already filters: status='published' AND price=0
       const { data, error: fetchError } = await supabase
         .from('workouts')
         .select('workout_json, updated_at')
@@ -306,7 +517,6 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
     }
   }, []);
 
-  // Duplicate workout as draft (for safe editing of published workouts)
   const duplicateAsDraft = useCallback(async (id: string): Promise<string | null> => {
     const workout = workouts.find(w => w.id === id);
     if (!workout) {
@@ -314,16 +524,19 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       return null;
     }
 
-    // Create a copy as draft with "(Edição)" suffix
     const newTitle = `${workout.title} (Edição)`;
-    return saveWorkout(newTitle, workout.workout_json, 'draft', 0);
-  }, [workouts, saveWorkout]);
+    // Duplicação usa persistWorkout direto (sem Gatekeeper, pois os dados já foram validados)
+    return persistWorkout(newTitle, workout.workout_json, 'draft', 0);
+  }, [workouts, persistWorkout]);
 
   return {
     workouts,
     loading,
     error,
+    gatekeeperResult,
+    clearGatekeeperResult,
     saveWorkout,
+    forceSaveWorkout,
     updateWorkout,
     publishWorkout,
     archiveWorkout,

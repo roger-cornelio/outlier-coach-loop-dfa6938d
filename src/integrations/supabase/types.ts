@@ -1108,28 +1108,34 @@ export type Database = {
       }
       global_exercises: {
         Row: {
+          aliases: string[] | null
           created_at: string
           default_female_weight_kg: number | null
           default_male_weight_kg: number | null
           id: string
           movement_pattern_id: string
           name: string
+          slug: string | null
         }
         Insert: {
+          aliases?: string[] | null
           created_at?: string
           default_female_weight_kg?: number | null
           default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id: string
           name: string
+          slug?: string | null
         }
         Update: {
+          aliases?: string[] | null
           created_at?: string
           default_female_weight_kg?: number | null
           default_male_weight_kg?: number | null
           id?: string
           movement_pattern_id?: string
           name?: string
+          slug?: string | null
         }
         Relationships: [
           {
@@ -1171,6 +1177,48 @@ export type Database = {
           percentile_set_id_used?: string
           percentile_value?: number
           raw_time_sec?: number
+        }
+        Relationships: []
+      }
+      intensity_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kcal_multiplier: number
+          label: string
+          rest_multiplier: number
+          rule_key: string
+          rule_type: string
+          tempo_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kcal_multiplier?: number
+          label: string
+          rest_multiplier?: number
+          rule_key: string
+          rule_type: string
+          tempo_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kcal_multiplier?: number
+          label?: string
+          rest_multiplier?: number
+          rule_key?: string
+          rule_type?: string
+          tempo_multiplier?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1224,6 +1272,7 @@ export type Database = {
       }
       movement_patterns: {
         Row: {
+          aliases: string[] | null
           created_at: string
           default_distance_meters: number
           default_seconds_per_rep: number | null
@@ -1233,9 +1282,11 @@ export type Database = {
           id: string
           moved_mass_percentage: number
           name: string
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          aliases?: string[] | null
           created_at?: string
           default_distance_meters?: number
           default_seconds_per_rep?: number | null
@@ -1245,9 +1296,11 @@ export type Database = {
           id?: string
           moved_mass_percentage?: number
           name: string
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          aliases?: string[] | null
           created_at?: string
           default_distance_meters?: number
           default_seconds_per_rep?: number | null
@@ -1257,6 +1310,7 @@ export type Database = {
           id?: string
           moved_mass_percentage?: number
           name?: string
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []

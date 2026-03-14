@@ -124,6 +124,44 @@ export interface WorkoutBlock {
   updatedAt?: string; // ISO timestamp of last update
   // Coach override for benchmark times (takes priority over generated ranges)
   benchmarkTimeOverride?: LevelTargetRanges;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Parser IA: Dados estruturados extraídos pela Edge Function parse-workout-blocks
+  // ═══════════════════════════════════════════════════════════════════════════
+  parsedExercises?: ParsedExercise[];
+  computedMetrics?: ComputedBlockMetrics;
+  parseStatus?: 'completed' | 'failed' | 'bypassed';
+  parsedAt?: string; // ISO timestamp
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ParsedExercise: Exercício estruturado extraído pela IA
+// ═══════════════════════════════════════════════════════════════════════════
+export interface ParsedExercise {
+  slug: string; // Identificador único do exercício (ex: 'front_squat')
+  name: string; // Nome legível (ex: 'Front Squat')
+  movementPatternSlug?: string; // Padrão biomecânico (ex: 'squat')
+  sets?: number;
+  reps?: number;
+  durationSeconds?: number; // Para exercícios baseados em tempo
+  distanceMeters?: number; // Para corrida, remo, etc.
+  loadKg?: number; // Carga em kg
+  loadDisplay?: string; // Texto livre de carga (ex: 'RPE 8', 'Moderado')
+  intensityType?: 'pse' | 'zone' | 'percentage' | 'rpe';
+  intensityValue?: number;
+  restSeconds?: number;
+  notes?: string; // Notas adicionais do exercício
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ComputedBlockMetrics: Métricas calculadas a partir dos ParsedExercises
+// ═══════════════════════════════════════════════════════════════════════════
+export interface ComputedBlockMetrics {
+  estimatedKcal?: number;
+  estimatedDurationSec?: number;
+  totalSets?: number;
+  totalReps?: number;
+  avgIntensity?: number;
+  computedAt?: string; // ISO timestamp
 }
 
 // Performance classification buckets
