@@ -1061,40 +1061,19 @@ BLOCO: DESCANSO
               />
             )}
 
-            {/* METADADOS OBRIGATÓRIOS: Semana + Nome */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* SELETOR DE SEMANA - OBRIGATÓRIO */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                  Semana de Referência (obrigatório)
-                </Label>
-                <WeekPeriodSelector
-                  selectedWeek={weekId}
-                  onWeekSelect={(week) => setWeekId(week)}
-                />
-                {!weekId && (
-                  <p className="text-xs text-amber-600">
-                    ⚠️ Selecione a semana para salvar ou publicar
-                  </p>
-                )}
-              </div>
-              
-              {/* NOME DA PROGRAMAÇÃO */}
-              <div className="space-y-2">
-                <Label htmlFor="program-name-edit" className="text-sm font-medium">
-                  Nome da Programação (opcional)
-                </Label>
-                <Input
-                  id="program-name-edit"
-                  value={programName}
-                  onChange={(e) => setProgramName(e.target.value)}
-                  placeholder="Ex: Semana de força"
-                />
-              </div>
+            {/* NOME DA PROGRAMAÇÃO — destaque acima dos blocos */}
+            <div className="space-y-1.5">
+              <Label htmlFor="program-name-edit" className="text-base font-semibold text-foreground">
+                Nome da Programação
+              </Label>
+              <Input
+                id="program-name-edit"
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                placeholder="Ex: Semana de força"
+                className="text-lg h-12 font-medium"
+              />
             </div>
-
-            {/* Badge movido para o header — espaço removido aqui */}
 
             {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
             <TooltipProvider>
@@ -1394,6 +1373,23 @@ BLOCO: DESCANSO
                 })}
               </Accordion>
             </TooltipProvider>
+
+            {/* SEMANA DE REFERÊNCIA — abaixo dos blocos */}
+            <div className="space-y-2 pt-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                Semana de Referência (obrigatório)
+              </Label>
+              <WeekPeriodSelector
+                selectedWeek={weekId}
+                onWeekSelect={(week) => setWeekId(week)}
+              />
+              {!weekId && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Selecione a semana para salvar ou publicar
+                </p>
+              )}
+            </div>
 
             {/* ALERTA DE ERRO DE VALIDAÇÃO PARA PREVIEW */}
             {previewValidationError && (
