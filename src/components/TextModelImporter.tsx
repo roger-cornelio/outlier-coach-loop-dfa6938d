@@ -151,6 +151,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
 
+  // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
+  const autoFormatPreview = useMemo(() => {
+    if (!rawText.trim()) return { hasChanges: false, changesCount: 0, affectedLines: [] };
+    return previewAutoFormatChanges(rawText);
+  }, [rawText]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // LOAD WORKOUT FOR EDIT (from Programações tab)
   // ═══════════════════════════════════════════════════════════════════════════
