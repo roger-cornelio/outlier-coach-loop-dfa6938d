@@ -52,20 +52,53 @@ export function useCoachOverview() {
         return;
       }
 
-      // Query the view directly via RPC-free approach
+      // Query the view via raw SQL since it's not in generated types
       const { data, error: queryError } = await supabase
-        .from('coach_athlete_overview' as any)
-        .select('*')
-        .eq('coach_id', user.id);
+        .rpc('get_coach_overview' as any, { _coach_id: user.id });
 
       if (queryError) {
-        console.error('[useCoachOverview] Query error:', queryError);
-        setError(queryError.message);
-        setAthletes([]);
+        // Fallback: query coach_athletes + profiles directly
+        console.warn('[useCoachOverview] View query failed, using fallback:', queryError.message);
+        const { data: links } = await supabase
+          .from('coach_athletes')
+          .select('athlete_id')
+          .eq('coach_id', user.id);
+        
+        if (!links || links.length === 0) {
+          setAthletes([]);
+          return;
+        }
+
+        const athleteIds = links.map(l => l.athlete_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, name, email, sexo, status, last_active_at, peso, altura, training_level, created_at')
+          .in('user_id', athleteIds);
+
+        const fallbackAthletes: AthleteOverview[] = (profiles || []).map(p => ({
+          coach_id: user.id,
+          athlete_id: p.user_id,
+          athlete_name: p.name,
+          athlete_email: p.email,
+          sexo: p.sexo,
+          account_status: p.status || 'active',
+          last_active_at: p.last_active_at,
+          peso: p.peso ? Number(p.peso) : null,
+          altura: p.altura,
+          training_level: p.training_level,
+          days_inactive: p.last_active_at 
+            ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
+            : Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000),
+          workouts_last_7_days: 0,
+          has_plan_this_week: 0,
+          total_benchmarks: 0,
+        }));
+
+        setAthletes(fallbackAthletes);
         return;
       }
 
-      setAthletes((data as AthleteOverview[]) || []);
+      setAthletes((data as unknown as AthleteOverview[]) || []);
     } catch (err) {
       console.error('[useCoachOverview] Error:', err);
       setError(String(err));
