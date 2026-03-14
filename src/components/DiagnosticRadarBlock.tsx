@@ -1695,13 +1695,26 @@ export function DiagnosticRadarBlock({
   ]);
 
   // Evolution projection — compact strip based on diagnostic gaps (weak stations)
+  // Fallback: if diagMelhorias is empty but scores exist, derive gap from scores below P50
   const evolutionProjection = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds;
-    if (!currentTime || diagMelhorias.length === 0) return null;
-    const totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+    if (!currentTime) return null;
+
+    let totalGap: number;
+
+    if (diagMelhorias.length > 0) {
+      // Primary: use diagnostico_melhoria data
+      totalGap = diagMelhorias.reduce((sum, d) => sum + (d.improvement_value || 0), 0);
+    } else if (scores.length > 0) {
+      // Fallback: estimate gap from scores below P50
+      totalGap = calculateProjectedGain(scores);
+    } else {
+      return null;
+    }
+
     if (totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentTime, totalGap);
-  }, [validatingCompetition?.time_in_seconds, diagMelhorias]);
+  }, [validatingCompetition?.time_in_seconds, diagMelhorias, scores]);
 
   // Advanced mode (mobile only, persisted)
   const [advancedMode, setAdvancedMode] = useState(() => {
