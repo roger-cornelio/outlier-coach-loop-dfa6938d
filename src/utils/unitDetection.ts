@@ -185,12 +185,17 @@ export function detectUnits(line: string): UnitDetectionResult {
   // 5. Calcular confiança
   const confidence = calculateConfidence(units, trimmed);
   
-  return {
+  const result: UnitDetectionResult = {
     hasRecognizedUnit: units.length > 0,
     confidence,
     units,
     rawMatches,
   };
+  
+  // Salvar no cache antes de retornar
+  _unitsCache.set(line, result);
+  
+  return result;
 }
 
 // ============================================
