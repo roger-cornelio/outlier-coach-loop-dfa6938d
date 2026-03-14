@@ -702,11 +702,11 @@ function RequirementsChecklist({ journeyData, compact, showNextLevelButton }: Re
 // HELPER: percentileToStars
 // ============================================
 function percentileToStars(p: number) {
-  if (p >= 80) return { count: 5, colorClass: 'text-green-500' };
-  if (p >= 60) return { count: 4, colorClass: 'text-blue-500' };
-  if (p >= 40) return { count: 3, colorClass: 'text-yellow-500' };
-  if (p >= 20) return { count: 2, colorClass: 'text-orange-500' };
-  return { count: 1, colorClass: 'text-red-500' };
+  if (p >= 80) return { count: 5 };
+  if (p >= 60) return { count: 4 };
+  if (p >= 40) return { count: 3 };
+  if (p >= 20) return { count: 2 };
+  return { count: 1 };
 }
 
 // ============================================
