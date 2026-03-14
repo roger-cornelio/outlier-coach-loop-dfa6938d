@@ -28,6 +28,7 @@ import { WeekPeriod } from './WeekPeriodSelector';
 import { StructuredWorkoutEditor } from './StructuredWorkoutEditor';
 import { TextModelImporter } from './TextModelImporter';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { WorkoutParseValidationModal } from '@/components/WorkoutParseValidationModal';
 import { useCoachDraft } from '@/hooks/useCoachDraft';
 import { getActiveParams } from '@/config/outlierParams';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
