@@ -525,6 +525,7 @@ export function StructuredWorkoutEditor({
         {/* Alerta de blocos sem categoria */}
         {validation.daysWithMissingCategory > 0 && (
           <motion.div
+            key="missing-category-alert"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
