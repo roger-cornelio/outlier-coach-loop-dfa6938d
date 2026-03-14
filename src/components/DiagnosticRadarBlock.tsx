@@ -1451,12 +1451,15 @@ function TrainingPrioritiesBlock({
   const [showAll, setShowAll] = useState(false);
 
   const worstStations = useMemo(() => {
-    // Build a lookup map from diagMelhorias metric → improvement_value
+    // Build lookup maps from diagMelhorias
     const melhoriaMap = new Map<string, number>();
+    const percentageMap = new Map<string, number>();
     if (diagMelhorias) {
       for (const m of diagMelhorias) {
-        if (m.metric && m.improvement_value > 0) {
-          melhoriaMap.set(m.metric.toLowerCase(), m.improvement_value);
+        if (m.metric) {
+          const key = m.metric.toLowerCase();
+          if (m.improvement_value > 0) melhoriaMap.set(key, m.improvement_value);
+          percentageMap.set(key, m.percentage ?? 0);
         }
       }
     }
