@@ -55,8 +55,8 @@ function KPICard({
 }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
-    <Card className={`border ${borderClass} bg-card`}>
-      <CardContent className="p-4">
+    <Card className={`border ${borderClass} bg-card min-w-0`}>
+      <CardContent className="p-3 sm:p-4">
         <div className="flex items-center justify-between mb-2">
           <span className={`text-xs font-medium uppercase tracking-wider ${colorClass}`}>{label}</span>
           <Icon className={`w-4 h-4 ${colorClass}`} />
