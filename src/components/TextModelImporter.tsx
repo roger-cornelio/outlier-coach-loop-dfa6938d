@@ -32,6 +32,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { BlockEditorModal } from './BlockEditorModal';
+import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
 import { StructureBadge, CommentSubBlock } from './DSLBlockRenderer';
@@ -101,6 +102,7 @@ function deriveWeekPeriod(weekStart: string): WeekPeriod {
 }
 
 export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, initialWorkout, onClearInitialWorkout }: TextModelImporterProps) {
+  const { toast } = useToast();
   // ═══════════════════════════════════════════════════════════════════════════
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -224,6 +226,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setIsParsing(true);
     const t0 = performance.now();
 
+    // Safety-net: força UI destravar após 5s independente do parser (single-thread safe)
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[SAFETY_NET] Parser excedeu 5s — destravando UI');
+      setIsParsing(false);
+    }, 5000);
+
     try {
       const textForParse = textareaValue;
 
@@ -232,7 +240,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const daysDetected = dayValidation.daysFound.length;
 
       // Parse com timeout de 3s — parser roda em macrotask (setTimeout 0)
-      // para que o Promise.race timeout realmente funcione com parser síncrono
       let result: ParseResult;
       try {
         result = await Promise.race([
@@ -377,6 +384,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       } as ParseResult;
       setParsedResult(fallbackResult, []);
     } finally {
+      clearTimeout(safetyTimeout);
       setIsParsing(false);
     }
   };
@@ -752,6 +760,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       const success = await onSaveAndGoToPrograms(effectiveDays, title, weekStart);
       if (success) {
         clearDraft();
+      } else {
+        toast({
+          title: 'Erro ao salvar',
+          description: 'Não foi possível salvar o treino. Verifique sua conexão e tente novamente.',
+          variant: 'destructive',
+        });
       }
     }
   };

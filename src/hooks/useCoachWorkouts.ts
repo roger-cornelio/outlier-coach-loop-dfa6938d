@@ -360,7 +360,20 @@ export function useCoachWorkouts(): UseCoachWorkoutsReturn {
       return savedId;
     } catch (err) {
       console.error('[useCoachWorkouts] Gatekeeper error:', err);
-      setError(err instanceof Error ? err.message : 'Erro na validação');
+      const errMsg = err instanceof Error ? err.message : 'Erro na validação';
+      setError(errMsg);
+      // Bug fix: setar gatekeeperResult para abrir modal vermelho (Cenário B)
+      setGatekeeperResult({
+        success: false,
+        errorType: 'infra_failure',
+        failedBlocks: [{
+          blockId: 'global',
+          blockTitle: 'Erro de infraestrutura',
+          blockType: 'unknown',
+          reason: errMsg,
+        }],
+        enrichedWorkouts: workoutData,
+      });
       return null;
     } finally {
       setLoading(false);
