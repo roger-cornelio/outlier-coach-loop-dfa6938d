@@ -1414,23 +1414,26 @@ BLOCO: DESCANSO
               </motion.div>
             )}
 
-            {/* BOTÕES DE NAVEGAÇÃO */}
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={goBackToImport} className="flex-1">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Editar texto
-              </Button>
-              <Button
-                onClick={handleGoToPreview}
-                className="flex-1"
-                disabled={!parseResult?.success}
-              >
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Ver preview
-              </Button>
-            </div>
           </CardContent>
         </Card>
+
+        {/* STICKY ACTION BAR — Glassmorphism */}
+        <div className="sticky bottom-0 z-10 px-4 py-3 -mx-4 backdrop-blur-md bg-background/80 border-t border-border/50">
+          <div className="flex gap-3 max-w-full">
+            <Button variant="outline" onClick={goBackToImport} className="flex-1">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Editar texto
+            </Button>
+            <Button
+              onClick={handleGoToPreview}
+              className="flex-1"
+              disabled={!parseResult?.success}
+            >
+              <ArrowRight className="w-4 h-4 mr-2" />
+              Ver preview
+            </Button>
+          </div>
+        </div>
 
         {/* MODAL DE EDIÇÃO DE BLOCO */}
         <BlockEditorModal
