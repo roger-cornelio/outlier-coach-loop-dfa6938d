@@ -32,8 +32,8 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
           exerciseLines.push(line.text);
 
-          const units = detectUnits(line.text);
-          if (hasRecognizedUnit(units)) {
+          const result = detectUnits(line.text);
+          if (result.hasRecognizedUnit) {
             recognizedMetrics++;
           } else {
             unmatchedLines.push(line.text);
