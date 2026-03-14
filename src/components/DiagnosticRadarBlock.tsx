@@ -1546,9 +1546,9 @@ function TrainingPrioritiesBlock({
       });
   }, [scores, showAll, diagMelhorias, prioridadesIA]);
 
-  const totalBad = useMemo(
-    () => scores.filter((s) => s.percentile_value < 50).length,
-    [scores]
+  const totalStations = useMemo(
+    () => diagMelhorias?.length || scores.length,
+    [diagMelhorias, scores]
   );
 
   if (scores.length === 0) {
