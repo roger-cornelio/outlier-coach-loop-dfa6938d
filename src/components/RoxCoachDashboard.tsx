@@ -36,6 +36,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
+  const [latestDiagnosticos, setLatestDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
