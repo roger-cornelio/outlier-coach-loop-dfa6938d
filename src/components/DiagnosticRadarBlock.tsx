@@ -1605,12 +1605,12 @@ function TrainingPrioritiesBlock({
         </ul>
 
         {/* Footer: Ver todas */}
-        {totalBad > 3 && (
+        {totalStations > 3 && (
           <button
             onClick={() => setShowAll(!showAll)}
             className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 pt-2.5 border-t border-border/20 text-center"
           >
-            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalBad}) ▾`}
+            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalStations}) ▾`}
           </button>
         )}
       </div>
