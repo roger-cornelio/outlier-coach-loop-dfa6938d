@@ -17,6 +17,14 @@
 
 export type UnitConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
+// ============================================
+// CACHE DE MEMOIZAÇÃO — evita re-execução de regex para a mesma linha
+// ============================================
+const _unitsCache = new Map<string, UnitDetectionResult>();
+
+/** Limpa o cache de detecção de unidades (chamar no início de cada parse session) */
+export const resetUnitsCache = () => _unitsCache.clear();
+
 export interface UnitDetectionResult {
   hasRecognizedUnit: boolean;
   confidence: UnitConfidence;
@@ -90,6 +98,10 @@ const EFFORT_PATTERNS = [
  * REGRA: Qualquer linha com unidade reconhecida é EXERCISE válido
  */
 export function detectUnits(line: string): UnitDetectionResult {
+  // Cache hit → retorno O(1)
+  const cached = _unitsCache.get(line);
+  if (cached) return cached;
+
   const trimmed = line.trim();
   const units: DetectedUnit[] = [];
   const rawMatches: string[] = [];
@@ -173,12 +185,17 @@ export function detectUnits(line: string): UnitDetectionResult {
   // 5. Calcular confiança
   const confidence = calculateConfidence(units, trimmed);
   
-  return {
+  const result: UnitDetectionResult = {
     hasRecognizedUnit: units.length > 0,
     confidence,
     units,
     rawMatches,
   };
+  
+  // Salvar no cache antes de retornar
+  _unitsCache.set(line, result);
+  
+  return result;
 }
 
 // ============================================

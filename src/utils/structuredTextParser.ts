@@ -44,8 +44,25 @@
  */
 
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { detectUnits, hasRecognizedUnit, type UnitConfidence } from './unitDetection';
+import { detectUnits, hasRecognizedUnit, resetUnitsCache, type UnitConfidence } from './unitDetection';
 import { extractInlineComments } from './blockDisplayUtils';
+
+// ════════════════════════════════════════════════════════════════════════════
+// CACHES DE MEMOIZAÇÃO — elimina redundância de regex (chamadas repetidas para mesma linha)
+// ════════════════════════════════════════════════════════════════════════════
+const _narrativeCache = new Map<string, boolean>();
+const _measurableCache = new Map<string, boolean>();
+const _trainingCache = new Map<string, boolean>();
+const _prescriptionCache = new Map<string, boolean>();
+const _headingCache = new Map<string, boolean>();
+
+const resetParserCaches = () => {
+  _narrativeCache.clear();
+  _measurableCache.clear();
+  _trainingCache.clear();
+  _prescriptionCache.clear();
+  _headingCache.clear();
+};
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEBUG FLAG — set to true to enable verbose parser logs (PERFORMANCE IMPACT!)
@@ -315,16 +332,20 @@ const SIMPLE_ADJECTIVES_OK = [
 // Adjetivos simples ("leve", "tranquilo") NÃO são narrativa.
 // ============================================
 function isNarrativeLine(line: string): boolean {
+  const cachedResult = _narrativeCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
   const lower = line.toLowerCase();
   
   // Verificar padrões de narrativa explicativa
   for (const pattern of NARRATIVE_PATTERNS) {
     if (pattern.test(lower)) {
       _log('[isNarrativeLine] → TRUE (narrativa detectada):', line);
+      _narrativeCache.set(line, true);
       return true;
     }
   }
   
+  _narrativeCache.set(line, false);
   return false;
 }
 
@@ -350,34 +371,38 @@ function isSubjectiveLine(line: string): boolean {
 // SEM texto subjetivo misturado
 // ============================================
 export function hasMeasurableStimulus(line: string): boolean {
+  const cachedResult = _measurableCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // Tempo: min, ', ''
-  if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) return true;
+  if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Distância: km, m
-  if (/\d+\s*(?:km|m)\b/i.test(line)) return true;
+  if (/\d+\s*(?:km|m)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Reps/Rounds/Sets
-  if (/\d+\s*(?:reps?|rounds?|rodadas?|sets?|séries?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:reps?|rounds?|rodadas?|sets?|séries?)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Formatos conhecidos
-  if (/\b(?:emom|amrap|for\s*time|tabata|rft)\b/i.test(line)) return true;
+  if (/\b(?:emom|amrap|for\s*time|tabata|rft)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Padrão sets x reps
-  if (/\d+\s*x\s*\d+/i.test(line)) return true;
+  if (/\d+\s*x\s*\d+/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Carga: %, kg, lb
-  if (/\d+\s*(?:%|kg|lb)\b/i.test(line)) return true;
+  if (/\d+\s*(?:%|kg|lb)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Intensidade: PSE, RPE, Zona, Z1-Z5
-  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
-  if (/\b(?:zona|zone|z)\s*\d/i.test(line)) return true;
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) { _measurableCache.set(line, true); return true; }
+  if (/\b(?:zona|zone|z)\s*\d/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Pace: 5:00/km
-  if (/\d+:\d{2}\s*\/?\s*km/i.test(line)) return true;
+  if (/\d+:\d{2}\s*\/?\s*km/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Calorias
-  if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
+  _measurableCache.set(line, false);
   return false;
 }
 
@@ -423,32 +448,37 @@ function isPureExerciseLine(line: string): boolean {
 // Adjetivos simples como "leve", "tranquilo" são OK.
 
 function isTrainingStimulus(line: string): boolean {
+  const cachedResult = _trainingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
     _log('[isTrainingStimulus] → FALSE (linha com narrativa):', line);
+    _trainingCache.set(line, false);
     return false;
   }
   
   // ⏱️ TEMPO: min, minutes, ', minutos, até X minutos
-  if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) return true;
-  if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) return true;
+  if (/\d+\s*(?:min|minutos?|minutes?|')\b/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/até\s*\d+\s*(?:min|minutos?)/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // 📏 DISTÂNCIA: m, km, metros
-  if (/\d+\s*(?:m|km|metros?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:m|km|metros?)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // 🔁 REPETIÇÃO / VOLUME: reps, rounds, EMOM, AMRAP, For Time
-  if (/\d+\s*(?:reps?|rounds?|rodadas?)\b/i.test(line)) return true;
-  if (/\b(?:emom|amrap|for\s*time|tabata)\b/i.test(line)) return true;
+  if (/\d+\s*(?:reps?|rounds?|rodadas?)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:emom|amrap|for\s*time|tabata)\b/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // ❤️ ZONA / ESFORÇO: Zona, FC, PSE, RPE
-  if (/\b(?:zona|zone)\s*\d/i.test(line)) return true;
-  if (/\b(?:fc|hr)\s*[:=]?\s*\d/i.test(line)) return true;
-  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
+  if (/\b(?:zona|zone)\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:fc|hr)\s*[:=]?\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) { _trainingCache.set(line, true); return true; }
   
   // Faixa de valores (30-40, 30–40)
-  if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) return true;
+  if (/\d+\s*[-–]\s*\d+\s*(?:min|'|m|km)/i.test(line)) { _trainingCache.set(line, true); return true; }
   
+  _trainingCache.set(line, false);
   return false;
 }
 
@@ -555,10 +585,14 @@ export function isCardioBlock(blockType: string, blockTitle: string, blockConten
 // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa!
 
 function isPrescriptionLine(line: string): boolean {
+  const cachedResult = _prescriptionCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // MVP0 CIRÚRGICO: Só bloqueia narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
     _log('[isPrescriptionLine] → FALSE (linha com narrativa):', line);
+    _prescriptionCache.set(line, false);
     return false;
   }
   
@@ -571,9 +605,11 @@ function isPrescriptionLine(line: string): boolean {
   // REGRA CRÍTICA: Tempo ou distância SOZINHOS já caracterizam treino
   // "45 min" = treino válido, "10km" = treino válido
   if (hasMeasurableTime || hasMeasurableDistance) {
+    _prescriptionCache.set(line, true);
     return true;
   }
   
+  _prescriptionCache.set(line, false);
   return false;
 }
 
@@ -1868,6 +1904,28 @@ function isRestDayCandidateLine(line: string): boolean {
 // MVP0 PATCH: DESCANSO INTRA-BLOCO NUNCA É HEADING
 // MVP0 PATCH: "OPCIONAL" NUNCA É HEADING
 function isHeadingLine(line: string): boolean {
+  const cachedResult = _headingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
+  const result = _isHeadingLineCore(line, false);
+  _headingCache.set(line, result);
+  return result;
+}
+
+/**
+ * Versão otimizada para o loop principal: pula checagens de rest/optional/restCandidate
+ * já feitas antes (e que deram false, pois o loop fez `continue` se true).
+ */
+function isHeadingLineInLoop(line: string): boolean {
+  const cachedResult = _headingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
+  const result = _isHeadingLineCore(line, true);
+  _headingCache.set(line, result);
+  return result;
+}
+
+function _isHeadingLineCore(line: string, skipPreChecks: boolean): boolean {
   // NORMALIZAR QUOTES PRIMEIRO
   const normalized = normalizeQuotes(line);
   const trimmed = normalized.trim();
@@ -1877,36 +1935,36 @@ function isHeadingLine(line: string): boolean {
   
   // ════════════════════════════════════════════════════════════════════════════
   // REGRA ABSOLUTA 0: ESTRUTURAS ENTRE ** ** NUNCA SÃO HEADINGS
-  // Ex: **3 ROUNDS**, **EMOM 30**, **FOR TIME** → são estruturas do bloco
   // ════════════════════════════════════════════════════════════════════════════
   if (/^\*\*.*\*\*$/.test(trimmed)) {
     _log('[isHeadingLine] → STRUCTURE_LINE (** **), retorna false (nunca é heading)');
     return false;
   }
   
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 1: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
-  // Verifica PRIMEIRO, antes de qualquer outra regra
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isRestInstructionLineGlobal(trimmed)) {
-    _log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
-    return false;
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 2: "OPCIONAL" NUNCA É HEADING
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isOptionalMarkerLine(trimmed)) {
-    _log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
-    return false;
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 3: CANDIDATO A DIA DE DESCANSO NUNCA É HEADING
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isRestDayCandidateLine(trimmed)) {
-    _log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
-    return false;
+  if (!skipPreChecks) {
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 1: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestInstructionLineGlobal(trimmed)) {
+      _log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
+      return false;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 2: "OPCIONAL" NUNCA É HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isOptionalMarkerLine(trimmed)) {
+      _log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
+      return false;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 3: CANDIDATO A DIA DE DESCANSO NUNCA É HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestDayCandidateLine(trimmed)) {
+      _log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
+      return false;
+    }
   }
   
   // BLACKLIST: NUNCA é heading
@@ -2003,6 +2061,10 @@ function isExercisePatternLine(line: string): boolean {
 }
 
 export function parseStructuredText(text: string): ParseResult {
+  // ═══ RESET DE CACHES — limpa memória de sessões anteriores ═══
+  resetUnitsCache();
+  resetParserCaches();
+  
   _log('[PARSER] === parseStructuredText INICIADO ===');
   _log('[PARSER] Texto recebido (primeiros 500 chars):', text.substring(0, 500));
   const lines = text.split('\n');
@@ -2639,7 +2701,7 @@ export function parseStructuredText(text: string): ParseResult {
     }
 
     // MVP0 PATCH D: Lazy evaluation — isHeading only computed here, isExercise not needed (inline regex used below)
-    const isHeading = isHeadingLine(line);
+    const isHeading = isHeadingLineInLoop(line);
     _log('[PARSER DEBUG]', {
       linhaOriginal: line,
       isHeadingLine: isHeading,

@@ -1,38 +1,68 @@
+## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
-## O que foi feito até agora e o que falta
+---
 
-### O que JÁ melhorou (rodada anterior)
+### Fase 1 (Infraestrutura) ✅
 
-Duas coisas foram aplicadas com sucesso:
+1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
+2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
+3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
+4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
+5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
 
-1. **Mais tempo antes de dar erro** — O limite de espera passou de 8 para 15 segundos. Como o processamento roda em segundo plano (não trava a tela), isso dá mais fôlego para textos longos.
+### Fase 2 (Integração) ✅
 
-2. **Eliminação de trabalho duplicado na detecção de unidades** — Antes, cada vez que o sistema precisava identificar metros, minutos ou repetições numa linha, ele recriava as "regras de busca" do zero na memória. Agora ele reutiliza as regras já prontas. Isso é como a diferença entre reimprimir um formulário cada vez que precisa preencher um vs. usar o mesmo formulário várias vezes.
+6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
+7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
+8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
+9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
+10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
 
-### O que NÃO foi feito ainda (o plano de cache/memória)
+### Fase 2.5 (Blindagem Anti-Freeze) ✅
 
-A otimização mais importante — a **memória de curto prazo** — **ainda não foi implementada**. Procurei no código e não encontrei nenhum sinal dela.
+11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
+12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
+13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
+14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
+15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
 
-Hoje o sistema funciona assim: imagine que ele precisa classificar a linha "10 burpees". Ele analisa essa linha e conclui "é um exercício". Dois passos depois, outro módulo precisa saber a mesma coisa sobre a mesma linha... e ele analisa tudo de novo do zero. Isso acontece 3 a 5 vezes para cada linha.
+### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
 
-Para um treino com 200 linhas, isso significa que ele faz **36.000 a 40.000 verificações**, quando só precisaria de **8.000 a 10.000** se "lembrasse" dos resultados anteriores.
+16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
+17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
+18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
+19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
+20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
+21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
 
-### Vai funcionar?
+### Arquitetura do Fluxo
 
-**Sim, com alta confiança.** A técnica proposta (memoização) é um padrão clássico de engenharia de software. O princípio é simples:
+```
+Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
+  ├── Sucesso → Exibe resultado parseado ✅
+  └── Timeout/Erro → UI destrava + erro amigável ✅
 
-- O texto não muda durante o processamento
-- Se a resposta para "10 burpees é exercício?" já foi calculada, guardar o resultado e devolver instantaneamente da próxima vez
-- No final do processamento, apagar toda a memória temporária (para não acumular lixo)
+Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
+  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
+  └── Falha → Modal Gatekeeper
+       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
+       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
+            └── Bypass → try/finally garante isSavingToDb resetado ✅
+```
 
-Não muda nenhuma regra de como o treino é interpretado. Muda apenas a velocidade com que o sistema chega à mesma resposta.
+### Performance do Parser Local (Fase 2.6)
 
-### Próximo passo
+```
+Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
+                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
+                   
+Reset automático no início de cada parseStructuredText() → sem vazamento de memória
+```
 
-Implementar o sistema de cache (memória temporária) em dois arquivos:
-- **Detecção de unidades** — guardar resultado de "essa linha tem metros/minutos/reps?"
-- **Parser principal** — guardar resultado de 5 classificações caras (é narrativa? tem estímulo? é prescrição? é cabeçalho? é treino?)
-
-Isso deve reduzir o tempo de processamento em aproximadamente **75%**, resolvendo o timeout mesmo para textos muito longos.
-
+### Próximos passos opcionais (Fase 3):
+- Retry automático em background para blocos bypassed
+- Dashboard de qualidade de escrita do coach
+- Cache de dicionário na edge function (Deno KV)
+- Feedback loop para exercícios não reconhecidos
