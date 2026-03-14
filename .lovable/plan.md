@@ -1,32 +1,21 @@
+## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
+### Status: ✅ FASE 1 IMPLEMENTADA
 
-## Plano: Painel Admin "Motor Físico" para Movement Patterns
+### O que foi implementado:
 
-### Problema
-Não existe nenhuma tela no Admin Portal para visualizar ou editar as constantes biomecânicas da tabela `movement_patterns`. O admin não tem visibilidade sobre a calibração do motor de Kcal e Tempo.
+1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
+2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
+3. ✅ **Data seed**: Slugs e aliases populados em todos os 17 movement_patterns e 43 global_exercises
+4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
+5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling para structured output, few-shot examples, fallback biomecânico, regra anti-alucinação
+6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante com Gatekeeper, diferenciação cenário A (parse_failure) vs B (infra_failure), preservação parcial de blocos, `forceSaveWorkout` para bypass consciente
+7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (culpa coach) vs vermelho (culpa infra), listagem de blocos com falha, botões "Corrigir texto" e "Forçar salvamento sem cálculos"
+8. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Ícone "i" com tooltip explicativo para blocos sem métricas (parseStatus === 'bypassed' ou 'failed')
 
-### Solução
-Adicionar uma nova aba **"Motor Físico"** no sidebar do Admin Portal com uma tabela editável mostrando todos os movement patterns.
+### Próximos passos (Fase 2 - quando solicitado):
 
-### Alterações
-
-**1. Novo componente: `src/components/admin/MovementPatternsAdmin.tsx`**
-- Tabela com colunas: Nome, Tipo Fórmula, Massa Movida (%), Distância (m), Coef. Fricção, Eficiência, TUT (s/rep)
-- Edição inline nos campos numéricos com botão Salvar por linha
-- Badges coloridos para `formula_type` (vertical_work = azul, horizontal_friction = laranja, metabolic = cinza)
-- Fetch direto da tabela `movement_patterns` via Supabase client
-- Update via `.update()` — RLS já permite admins
-
-**2. Atualizar `src/pages/AdminPortal.tsx`**
-- Adicionar `"movementPatterns"` ao tipo `AdminView`
-- Novo item no sidebar: ícone `Calculator`, label "Motor Físico", descrição "Constantes biomecânicas do motor de Kcal"
-- Adicionar case no `renderAdminView()` para renderizar `<MovementPatternsAdmin />`
-
-**3. Sem migração necessária**
-- Schema e RLS já existem. Admin já tem permissão ALL na tabela.
-
-### Design
-- Cards/tabela no dark mode, consistente com os outros painéis admin
-- Inputs numéricos compactos com labels de unidade (%, m, s)
-- Accent laranja nos botões de ação
-
+- Integrar o `WorkoutParseValidationModal` no fluxo do `TextModelImporter` / editor do coach
+- Criar `computeBlockKcalFromParsed.ts` para cálculos de kcal a partir dos `parsedExercises` + `movement_patterns`
+- Consumir `parsedExercises` na `WeeklyTrainingView` para exibir kcal/tempo reais em vez dos estimados
+- Testar end-to-end o fluxo completo coach→save→gatekeeper→atleta
