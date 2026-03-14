@@ -63,7 +63,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
-  parseStructuredText, 
   getDayName,
   isInvalidBlockTitle,
   normalizeText,
