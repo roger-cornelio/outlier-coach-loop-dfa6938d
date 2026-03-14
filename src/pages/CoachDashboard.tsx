@@ -74,7 +74,7 @@ export default function CoachDashboard() {
   const [lastFetchOk, setLastFetchOk] = useState<boolean | null>(null);
   
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('importar');
+  const [activeTab, setActiveTab] = useState('visao-geral');
   const [editingWorkout, setEditingWorkout] = useState<CoachWorkout | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
     linksCount: null,
