@@ -1,6 +1,6 @@
 ## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) IMPLEMENTADAS
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
 ---
 
@@ -28,10 +28,19 @@
 14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
 15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
 
+### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
+
+16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
+17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
+18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
+19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
+20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
+21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
+
 ### Arquitetura do Fluxo
 
 ```
-Coach clica "Validar" → Web Worker (thread separada) → timeout 8s
+Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
   ├── Sucesso → Exibe resultado parseado ✅
   └── Timeout/Erro → UI destrava + erro amigável ✅
 
@@ -41,6 +50,15 @@ Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-bloc
        ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
        └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
             └── Bypass → try/finally garante isSavingToDb resetado ✅
+```
+
+### Performance do Parser Local (Fase 2.6)
+
+```
+Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
+                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
+                   
+Reset automático no início de cada parseStructuredText() → sem vazamento de memória
 ```
 
 ### Próximos passos opcionais (Fase 3):
