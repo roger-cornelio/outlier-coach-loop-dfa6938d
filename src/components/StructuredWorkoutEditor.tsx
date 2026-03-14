@@ -494,6 +494,7 @@ export function StructuredWorkoutEditor({
       <AnimatePresence>
         {error && (
           <motion.div
+            key="error-msg"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -508,6 +509,7 @@ export function StructuredWorkoutEditor({
 
         {success && (
           <motion.div
+            key="success-msg"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
