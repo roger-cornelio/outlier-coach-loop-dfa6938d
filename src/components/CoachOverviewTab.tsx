@@ -55,14 +55,14 @@ function KPICard({
 }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
-    <Card className={`border ${borderClass} bg-card`}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className={`text-xs font-medium uppercase tracking-wider ${colorClass}`}>{label}</span>
-          <Icon className={`w-4 h-4 ${colorClass}`} />
+    <Card className={`border ${borderClass} bg-card min-w-0`}>
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <span className={`text-[10px] sm:text-xs font-medium uppercase tracking-wider ${colorClass} truncate`}>{label}</span>
+          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${colorClass}`} />
         </div>
-        <p className={`text-3xl font-bold ${colorClass}`}>{count}</p>
-        <p className="text-xs text-muted-foreground mt-1">{pct}% dos atletas</p>
+        <p className={`text-2xl sm:text-3xl font-bold ${colorClass}`}>{count}</p>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{pct}% dos atletas</p>
       </CardContent>
     </Card>
   );
@@ -103,7 +103,7 @@ function AthleteRow({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
+      className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
       onClick={onClick}
     >
       <UserAvatar

@@ -734,4 +734,13 @@ html, body {
     @apply text-[10px] font-bold uppercase tracking-wide;
     @apply bg-primary text-primary-foreground rounded-full;
   }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
