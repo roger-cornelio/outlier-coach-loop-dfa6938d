@@ -1640,7 +1640,7 @@ export function DiagnosticRadarBlock({
   const isMobile = useIsMobile();
 
   // Fetch diagnostico_melhoria + prioridades_treino/direcionamento for the latest resumo
-  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string }[]>([]);
+  const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string; percentage: number }[]>([]);
   const [prioridadesIA, setPrioridadesIA] = useState<{ exercicio: string; nivel_urgencia: number; metric: string }[] | null>(null);
   const [direcionamentoIA, setDirecionamentoIA] = useState<string | null>(null);
   useEffect(() => {
