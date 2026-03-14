@@ -1223,29 +1223,49 @@ BLOCO: DESCANSO
                                 <div 
                                   key={blockIndex}
                                   id={`block-${dayIndex}-${blockIndex}`}
-                                  className={`p-4 rounded-xl border-2 ${
+                                  className={`p-4 rounded-2xl transition-all ${
                                     block.isMainWod 
-                                      ? 'border-primary/50 bg-primary/5' 
+                                      ? 'bg-primary/5 ring-1 ring-primary/20 shadow-sm' 
                                       : hasValidationErrors
-                                        ? 'border-amber-500/50 bg-amber-500/5'
-                                        : 'border-border bg-card'
+                                        ? 'bg-amber-500/5 ring-1 ring-amber-500/20'
+                                        : 'bg-muted/30'
                                   } ${highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex ? 'ring-2 ring-primary' : ''}`}
                                 >
                                   {/* Header do bloco COM CONTROLES */}
                                   <div className="flex items-center gap-2 flex-wrap mb-3">
-                                    {/* Título editável */}
+                                    {/* Estrela Principal integrada ao título */}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
+                                          className={`flex-shrink-0 transition-colors ${
+                                            block.isMainWod
+                                              ? 'text-primary'
+                                              : 'text-muted-foreground/40 hover:text-muted-foreground'
+                                          }`}
+                                        >
+                                          <Star className={`w-4 h-4 ${block.isMainWod ? 'fill-current' : ''}`} />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Marcar como WOD principal do dia</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+
+                                    {/* Título editável — ghost input */}
                                     <Input
                                       value={displayTitle}
                                       onChange={(e) => changeBlockTitle(dayIndex, blockIndex, e.target.value)}
-                                      className={`h-8 w-[200px] text-sm font-semibold ${hasTitleError ? 'border-amber-500' : ''}`}
+                                      className={`h-7 w-[180px] text-sm font-semibold border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-input ${hasTitleError ? 'border-amber-500' : ''}`}
                                     />
                                     
-                                    {/* Seletor de categoria */}
+                                    {/* Seletor de categoria — discreto */}
                                     <Select
                                       value={block.type || ''}
                                       onValueChange={(value) => changeBlockType(dayIndex, blockIndex, value)}
                                     >
-                                      <SelectTrigger className={`h-8 w-[160px] text-xs ${!block.type ? 'border-amber-500' : ''}`}>
+                                      <SelectTrigger className={`h-7 w-[140px] text-xs border-transparent bg-transparent hover:bg-muted/50 ${!block.type ? 'border-amber-500/50 bg-amber-500/5' : ''}`}>
                                         <SelectValue placeholder="Categoria" />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -1256,27 +1276,6 @@ BLOCO: DESCANSO
                                         ))}
                                       </SelectContent>
                                     </Select>
-                                    
-                                    {/* Badge WOD Principal */}
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                            block.isMainWod
-                                              ? 'bg-primary text-primary-foreground'
-                                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                                          }`}
-                                        >
-                                          <Star className={`w-3 h-3 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                          Principal
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Marcar como WOD principal do dia</p>
-                                      </TooltipContent>
-                                    </Tooltip>
 
                                     {/* Labels de erro de validação para Preview */}
                                     {hasPreviewError && (
