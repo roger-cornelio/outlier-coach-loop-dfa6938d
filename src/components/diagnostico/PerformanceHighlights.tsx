@@ -1,8 +1,10 @@
-import { Trophy, MapPin, Dumbbell, Timer, Flag, Medal } from 'lucide-react';
-import type { DiagnosticoResumo } from './types';
+import { Trophy, MapPin, Dumbbell, Timer, Flag, Medal, Zap } from 'lucide-react';
+import type { DiagnosticoResumo, Split } from './types';
+import { timeToSeconds, secondsToTime } from './types';
 
 interface Props {
   resumo: DiagnosticoResumo;
+  splits?: Split[];
 }
 
 /** Extract only the numeric/time portion from a string (e.g. "01:02:33" → "01:02:33") */
@@ -20,51 +22,89 @@ function extractRank(val: string | null | undefined): string {
   return match ? match[0] : '—';
 }
 
-const stats = [
-  { key: 'posicao_categoria', label: 'Rank Categoria', icon: Medal, isRank: true },
-  { key: 'posicao_geral', label: 'Rank Geral', icon: MapPin, isRank: true },
-  { key: 'run_total', label: 'Run Total', icon: Timer, isRank: false },
-  { key: 'workout_total', label: 'Workout Total', icon: Dumbbell, isRank: false },
-] as const;
+/** Extract roxzone time from splits */
+function getRoxzoneTime(splits: Split[]): string {
+  const roxSplit = splits.find(s =>
+    s.split_name.toLowerCase().includes('roxzone') || s.split_name.toLowerCase().includes('rox zone')
+  );
+  if (roxSplit) return extractNumeric(roxSplit.time);
+  return '—';
+}
 
-export default function PerformanceHighlights({ resumo }: Props) {
+export default function PerformanceHighlights({ resumo, splits = [] }: Props) {
+  const roxzone = getRoxzoneTime(splits);
+
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+      <h3 className="text-base font-bold text-foreground flex items-center gap-2 uppercase tracking-wide">
         <Trophy className="w-5 h-5 text-primary" />
         Resultado Oficial
       </h3>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {/* Finish Time — hero card */}
-        <div className="col-span-2 lg:col-span-1 bg-primary/10 border-2 border-primary rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1">
+      {/* Row 1: Hero metrics — Finish Time, Rank Categoria, Rank Geral */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-primary/10 border-2 border-primary rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1">
           <div className="flex items-center gap-1.5 text-primary">
             <Flag className="w-4 h-4" />
             <span className="text-[10px] font-medium uppercase tracking-wide">Finish Time</span>
           </div>
-          <p className="text-2xl font-extrabold text-primary">
+          <p className="text-3xl font-extrabold text-primary">
             {resumo.finish_time || '—'}
           </p>
         </div>
 
-        {stats.map(({ key, label, icon: Icon, isRank }) => {
-          const raw = resumo[key as keyof DiagnosticoResumo] as string | null;
-          const display = isRank ? extractRank(raw) : extractNumeric(raw);
-          return (
-            <div
-              key={key}
-              className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1"
-            >
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Icon className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-medium uppercase tracking-wide">{label}</span>
-              </div>
-              <p className="text-2xl font-extrabold text-primary">
-                {display}
-              </p>
-            </div>
-          );
-        })}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Medal className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Rank Categoria</span>
+          </div>
+          <p className="text-3xl font-extrabold text-primary">
+            {extractRank(resumo.posicao_categoria)}
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <MapPin className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Rank Geral</span>
+          </div>
+          <p className="text-3xl font-extrabold text-primary">
+            {extractRank(resumo.posicao_geral)}
+          </p>
+        </div>
+      </div>
+
+      {/* Row 2: Time breakdowns — Run Total, Workout Total, Roxzone */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-card border border-border rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Timer className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Run Total</span>
+          </div>
+          <p className="text-xl font-bold text-primary">
+            {extractNumeric(resumo.run_total)}
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Dumbbell className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Workout Total</span>
+          </div>
+          <p className="text-xl font-bold text-primary">
+            {extractNumeric(resumo.workout_total)}
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Zap className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Roxzone</span>
+          </div>
+          <p className="text-xl font-bold text-primary">
+            {roxzone}
+          </p>
+        </div>
       </div>
     </div>
   );
