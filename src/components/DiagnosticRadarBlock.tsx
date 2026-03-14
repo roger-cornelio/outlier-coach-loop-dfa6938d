@@ -2345,7 +2345,7 @@ export function DiagnosticRadarBlock({
 
       {/* Blocos sempre visíveis — mostram empty state quando sem dados */}
       {/* BLOCO PRIORIDADES DE TREINO */}
-      <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} onViewAll={onStartWorkout} />
+      <TrainingPrioritiesBlock scores={scores} diagMelhorias={diagMelhorias} prioridadesIA={prioridadesIA} onViewAll={onStartWorkout} />
 
       {/* BLOCO 6: PERFIL FISIOLÓGICO */}
       <TooltipProvider>
