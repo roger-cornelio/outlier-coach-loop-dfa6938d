@@ -735,7 +735,7 @@ export function validateFence(text: string): FenceValidationResult {
       comentarioTagCount = 0;
       treinoTagLineIdx = -1;
       comentarioTagLineIdx = -1;
-      console.log('[validateFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
+      _log('[validateFence] [BLOCK_START]', trimmed, '→ tagMode resetado');
       continue;
     }
     
