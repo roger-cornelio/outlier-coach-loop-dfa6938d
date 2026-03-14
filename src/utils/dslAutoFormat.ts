@@ -158,10 +158,10 @@ export function autoFormatDSL(rawText: string): string {
   }
   
   // Log para debug
-  if (changesCount > 0) {
+  if (changesCount > 0 && import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true') {
     console.log(`[AUTOFORMAT] Adicionados ${changesCount} hífens`);
   }
-  
+
   return formattedLines.join('\n');
 }
 

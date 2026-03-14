@@ -96,15 +96,17 @@ function stripBenchmarkIfNotAdmin(
 async function callParseWorkoutBlocks(
   blocks: { blockId: string; blockType: string; content: string }[]
 ): Promise<{ results?: any[]; error?: string; errorType?: string }> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), PARSE_TIMEOUT_MS);
-
   try {
-    const { data, error } = await supabase.functions.invoke('parse-workout-blocks', {
-      body: { blocks },
-    });
+    const result = await Promise.race([
+      supabase.functions.invoke('parse-workout-blocks', {
+        body: { blocks },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), PARSE_TIMEOUT_MS)
+      ),
+    ]);
 
-    clearTimeout(timeoutId);
+    const { data, error } = result as { data: any; error: any };
 
     if (error) {
       console.error('[Gatekeeper] Edge function error:', error);
@@ -117,8 +119,7 @@ async function callParseWorkoutBlocks(
 
     return { results: data?.results || [] };
   } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
+    if (err.message === 'TIMEOUT') {
       return { error: 'Timeout após 15 segundos', errorType: 'infra' };
     }
     return { error: err.message || 'Unknown error', errorType: 'infra' };

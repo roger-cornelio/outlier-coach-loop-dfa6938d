@@ -748,7 +748,7 @@ export function validateFence(text: string): FenceValidationResult {
     if (/^\[COMENT[ÁA]RIO\]/i.test(trimmed)) {
       comentarioTagCount++;
       comentarioTagLineIdx = i;
-      console.log('[validateFence] [TAG] COMENTÁRIO detectado no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
+      _log('[validateFence] [TAG] COMENTÁRIO detectado no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
     }
   }
   
