@@ -266,7 +266,7 @@ function detectHumanText(line: string): string | null {
   
   // Se a linha contém padrões permitidos de treino, NÃO bloquear
   if (isAllowedTrainingLine(trimmed)) {
-    console.log('[detectHumanText] → null (padrão de treino permitido):', trimmed);
+    _log('[detectHumanText] → null (padrão de treino permitido):', trimmed);
     return null;
   }
   
