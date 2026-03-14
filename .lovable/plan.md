@@ -1,68 +1,29 @@
-## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
----
+# Unificar Ganho e Projeção de Evolução
 
-### Fase 1 (Infraestrutura) ✅
+## Problema
+O cabeçalho mostra "Ganho = 6m21s" (gap até PRO) e a Projeção mostra "gap de 6min 15s" (soma dos improvement_value por estação). São cálculos independentes que confundem o atleta quando aparecem juntos.
 
-1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
-2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
-3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
-4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
-5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
+## Solução
+Unificar a fonte de dados: a Projeção de Evolução deve usar o **mesmo gap do cabeçalho** (tempo atual − meta PRO/ELITE) como referência principal, em vez da soma dos improvement_value.
 
-### Fase 2 (Integração) ✅
+### Alteração em `DiagnosticRadarBlock.tsx`
 
-6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
-7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
-8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
-9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
-10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
+1. **evolutionProjection**: trocar a fonte do `totalGap` de `diagMelhorias.reduce(...)` para `currentTime - targetSec` (mesma conta do "Ganho" no cabeçalho)
+2. **Fallback**: se não houver `eliteTarget`, manter o cálculo atual por `diagMelhorias` como fallback
+3. O `gapFormatted` na Projeção passará a exibir exatamente o mesmo valor que o "Ganho"
 
-### Fase 2.5 (Blindagem Anti-Freeze) ✅
+### Alteração em `EvolutionProjectionCard.tsx`
+- Aceitar `totalGapOverride` como prop opcional para receber o gap já calculado do dashboard
+- Se presente, usar esse valor em vez de recalcular internamente
 
-11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
-12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
-13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
-14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
-15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
+### Resultado
+- Cabeçalho e Projeção mostram o mesmo número (6m21s = 6m21s)
+- Zero confusão visual para o atleta
+- Lógica interna de meses/taxa permanece idêntica
 
-### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
+### Arquivos alterados
+- `src/components/DiagnosticRadarBlock.tsx`
+- `src/components/diagnostico/EvolutionProjectionCard.tsx`
 
-16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
-17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
-18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
-19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
-20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
-21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
-
-### Arquitetura do Fluxo
-
-```
-Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
-  ├── Sucesso → Exibe resultado parseado ✅
-  └── Timeout/Erro → UI destrava + erro amigável ✅
-
-Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
-  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
-  └── Falha → Modal Gatekeeper
-       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
-       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
-            └── Bypass → try/finally garante isSavingToDb resetado ✅
-```
-
-### Performance do Parser Local (Fase 2.6)
-
-```
-Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
-                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
-                   
-Reset automático no início de cada parseStructuredText() → sem vazamento de memória
-```
-
-### Próximos passos opcionais (Fase 3):
-- Retry automático em background para blocos bypassed
-- Dashboard de qualidade de escrita do coach
-- Cache de dicionário na edge function (Deno KV)
-- Feedback loop para exercícios não reconhecidos
