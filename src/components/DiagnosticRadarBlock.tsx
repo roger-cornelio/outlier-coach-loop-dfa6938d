@@ -21,6 +21,7 @@ import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { PerformanceStatusCard } from './dashboard/PerformanceStatusCard';
 import { getScoreDescription, getScoreColorClass } from '@/utils/outlierScoring';
 import { type CalculatedScore } from '@/utils/hyroxPercentileCalculator';
+import { type PerfilFisiologico } from '@/hooks/useDiagnosticScores';
 import { formatOfficialTime } from '@/utils/athleteStatusSystem';
 import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
