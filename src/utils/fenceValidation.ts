@@ -556,7 +556,7 @@ export function parseBlocksWithFence(text: string): ParsedFenceBlock[] {
       comentarioTagLineIdx = i;
       inTrainingSection = false;
       inCommentSection = true;
-      console.log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
+      _log('[parseBlocksWithFence] [TAG] COMENTÁRIO no bloco', currentBlockTitle, '→ count=', comentarioTagCount);
       continue;
     }
 
