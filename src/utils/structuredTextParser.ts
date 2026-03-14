@@ -332,6 +332,8 @@ const SIMPLE_ADJECTIVES_OK = [
 // Adjetivos simples ("leve", "tranquilo") NÃO são narrativa.
 // ============================================
 function isNarrativeLine(line: string): boolean {
+  const cachedResult = _narrativeCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
   const lower = line.toLowerCase();
   
   // Verificar padrões de narrativa explicativa
