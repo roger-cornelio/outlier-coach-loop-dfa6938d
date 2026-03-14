@@ -1990,7 +1990,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coach_athlete_overview: {
+        Row: {
+          account_status: string | null
+          altura: number | null
+          athlete_email: string | null
+          athlete_id: string | null
+          athlete_name: string | null
+          coach_id: string | null
+          days_inactive: number | null
+          has_plan_this_week: number | null
+          last_active_at: string | null
+          peso: number | null
+          sexo: string | null
+          total_benchmarks: number | null
+          training_level: string | null
+          workouts_last_7_days: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_admin_allowlist: { Args: { _email: string }; Returns: boolean }
@@ -2029,6 +2047,25 @@ export type Database = {
           created_at: string
           has_password: boolean
           status: string
+        }[]
+      }
+      get_coach_overview: {
+        Args: { _coach_id: string }
+        Returns: {
+          account_status: string
+          altura: number
+          athlete_email: string
+          athlete_id: string
+          athlete_name: string
+          coach_id: string
+          days_inactive: number
+          has_plan_this_week: number
+          last_active_at: string
+          peso: number
+          sexo: string
+          total_benchmarks: number
+          training_level: string
+          workouts_last_7_days: number
         }[]
       }
       get_profile_id: { Args: { _user_id: string }; Returns: string }

@@ -25,11 +25,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar
+  AlertTriangle, Upload, Calendar, Eye
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
+import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
@@ -73,7 +74,7 @@ export default function CoachDashboard() {
   const [lastFetchOk, setLastFetchOk] = useState<boolean | null>(null);
   
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('importar');
+  const [activeTab, setActiveTab] = useState('visao-geral');
   const [editingWorkout, setEditingWorkout] = useState<CoachWorkout | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
     linksCount: null,
@@ -344,6 +345,9 @@ export default function CoachDashboard() {
   // Renderizar conteúdo baseado na tab selecionada
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'visao-geral':
+        return <CoachOverviewTab />;
+
       case 'atletas':
         return (
           <>
@@ -623,7 +627,11 @@ export default function CoachDashboard() {
       {/* Navegação por Tabs */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} mb-6`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} mb-6`}>
+            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Visão Geral</span>
+            </TabsTrigger>
             <TabsTrigger value="atletas" className="gap-1.5 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Atletas</span>
