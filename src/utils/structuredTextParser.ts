@@ -371,34 +371,38 @@ function isSubjectiveLine(line: string): boolean {
 // SEM texto subjetivo misturado
 // ============================================
 export function hasMeasurableStimulus(line: string): boolean {
+  const cachedResult = _measurableCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // Tempo: min, ', ''
-  if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) return true;
+  if (/\d+\s*(?:min|minutos?|minutes?|'(?!')|'')\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Distância: km, m
-  if (/\d+\s*(?:km|m)\b/i.test(line)) return true;
+  if (/\d+\s*(?:km|m)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Reps/Rounds/Sets
-  if (/\d+\s*(?:reps?|rounds?|rodadas?|sets?|séries?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:reps?|rounds?|rodadas?|sets?|séries?)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Formatos conhecidos
-  if (/\b(?:emom|amrap|for\s*time|tabata|rft)\b/i.test(line)) return true;
+  if (/\b(?:emom|amrap|for\s*time|tabata|rft)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Padrão sets x reps
-  if (/\d+\s*x\s*\d+/i.test(line)) return true;
+  if (/\d+\s*x\s*\d+/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Carga: %, kg, lb
-  if (/\d+\s*(?:%|kg|lb)\b/i.test(line)) return true;
+  if (/\d+\s*(?:%|kg|lb)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Intensidade: PSE, RPE, Zona, Z1-Z5
-  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) return true;
-  if (/\b(?:zona|zone|z)\s*\d/i.test(line)) return true;
+  if (/\b(?:pse|rpe)\s*[:=]?\s*\d/i.test(line)) { _measurableCache.set(line, true); return true; }
+  if (/\b(?:zona|zone|z)\s*\d/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Pace: 5:00/km
-  if (/\d+:\d{2}\s*\/?\s*km/i.test(line)) return true;
+  if (/\d+:\d{2}\s*\/?\s*km/i.test(line)) { _measurableCache.set(line, true); return true; }
   
   // Calorias
-  if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) return true;
+  if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
+  _measurableCache.set(line, false);
   return false;
 }
 
