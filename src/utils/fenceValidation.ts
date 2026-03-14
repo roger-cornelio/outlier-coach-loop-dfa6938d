@@ -715,7 +715,7 @@ export function validateFence(text: string): FenceValidationResult {
     if (dayDetected) {
       checkAndFlushBlock();
       currentDay = dayDetected;
-      console.log('[validateFence] Dia detectado:', dayDetected.name, '→ estado resetado');
+      _log('[validateFence] Dia detectado:', dayDetected.name, '→ estado resetado');
       continue;
     }
     
