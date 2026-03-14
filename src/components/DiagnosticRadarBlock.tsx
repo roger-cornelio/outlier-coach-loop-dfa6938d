@@ -1948,18 +1948,37 @@ export function DiagnosticRadarBlock({
           </div>
         )}
 
-        {/* Projeção de Evolução — strip compacta */}
+        {/* Projeção de Evolução — card completo (mobile) */}
         {evolutionProjection && performanceSnapshot.currentTime && (
-          <div className="mx-3 mb-2 flex items-center gap-2.5 p-2.5 bg-primary/[0.06] border border-primary/15 rounded-xl">
-            <Clock className="w-4 h-4 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                Gap de <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> · Projeção:{' '}
-                <strong className="text-primary">~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>
-                <span className="text-muted-foreground/60"> · {evolutionProjection.ratePerMonth}s/mês</span>
+          <div className="mx-3 mb-2 border border-primary/20 bg-card rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-primary" />
+                <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wide">Projeção de Evolução</h3>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              🎯 A ciência do esporte projeta que a eliminação deste gap de{' '}
+              <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> exigirá um ciclo de
+              treinamento contínuo de aproximadamente{' '}
+              <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong>.
+            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  Ganho mensal: {evolutionProjection.ratePerMonth}s/mês
+                </span>
+                <span>~{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'} para meta</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((evolutionProjection.ratePerMonth / (performanceSnapshot.currentTime - (performanceSnapshot.currentTime - 1))) * 100, Math.min((evolutionProjection.ratePerMonth / (evolutionProjection.months * evolutionProjection.ratePerMonth)) * 100, 100))}%` }} />
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                Cada mês representa ~{Math.round(Math.min((evolutionProjection.ratePerMonth / (evolutionProjection.months * evolutionProjection.ratePerMonth)) * 100, 100))}% do gap total
               </p>
             </div>
-            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider shrink-0">{evolutionProjection.tierLabel}</span>
           </div>
         )}
 
