@@ -1,39 +1,50 @@
-## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
-### Status: ✅ FASE 1 + FASE 2 IMPLEMENTADAS
+
+## Verificação Completa — Diagnóstico Confirmado ✓
+
+Inspecionei todo o código dos 3 arquivos. Os 3 bugs estão confirmados e as correções propostas vão resolver o problema.
+
+### Bug 1 — `useCoachWorkouts.ts` (linhas 361-364) ✓ CONFIRMADO
+```typescript
+// ATUAL — catch silencioso:
+catch (err) {
+  setError(err instanceof Error ? err.message : 'Erro na validação');
+  return null; // ← gatekeeperResult NUNCA é setado → modal não abre
+}
+```
+**Correção**: Adicionar `setGatekeeperResult({ success: false, errorType: 'infra_failure', failedBlocks: [], enrichedWorkouts: workoutData })` no catch. O modal vermelho abre e oferece bypass.
+
+### Bug 2 — `TextModelImporter.tsx` (linhas 238-245) ✓ CONFIRMADO
+```typescript
+// ATUAL — timeout falso:
+result = await Promise.race([
+  new Promise(resolve => setTimeout(() => resolve(parseStructuredText(text)), 0)), // ← síncrono bloqueia a thread
+  new Promise((_, reject) => setTimeout(() => reject(...), 3000)), // ← nunca executa enquanto parser roda
+]);
+```
+**Correção**: Adicionar um `setTimeout` independente de 5s que força `setIsParsing(false)` como safety net. Se o parser resolver antes, `clearTimeout` cancela. A UI SEMPRE destrava.
+
+### Bug 3 — `TextModelImporter.tsx` (linhas 751-756) ✓ CONFIRMADO
+```typescript
+// ATUAL — sem feedback:
+const success = await onSaveAndGoToPrograms(effectiveDays, title, weekStart);
+if (success) { clearDraft(); }
+// ← se success=false, NENHUM feedback visual
+```
+**Correção**: Adicionar `else` com `toast.error` ou `setPreviewValidationError` para informar o coach.
+
+### Bug 4 (wiring) — `CoachSpreadsheetTab.tsx` (linhas 826-849) ✓ JÁ FUNCIONA
+O modal já está conectado corretamente via `gatekeeperResult`. O problema real era que `gatekeeperResult` nunca era setado no catch (Bug 1). Corrigindo Bug 1, o modal vai abrir normalmente. Nenhuma mudança necessária aqui.
 
 ---
 
-### Fase 1 (Infraestrutura) ✅
+### Resumo das Mudanças
 
-1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
-2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
-3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
-4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
-5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
+| Arquivo | Mudança | Risco |
+|---------|---------|-------|
+| `useCoachWorkouts.ts` | catch seta `gatekeeperResult` com `infra_failure` | Baixo |
+| `TextModelImporter.tsx` | Safety-net timeout 5s + feedback no save falho | Baixo |
+| `CoachSpreadsheetTab.tsx` | Nenhuma (wiring já correto) | — |
 
-### Fase 2 (Integração) ✅
+3 edições cirúrgicas, zero mudança de regra de negócio. Resolve o infinite loading em todos os cenários: CORS, timeout, parser travado e exceção inesperada.
 
-6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
-7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
-8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
-9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
-10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
-
-### Arquitetura do Fluxo
-
-```
-Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
-  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
-  └── Falha → Modal Gatekeeper
-       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
-       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
-            └── Bypass → Preserva dados parciais, marca blocos como 'bypassed'
-                 └── Atleta vê tooltip "i" nos blocos sem métricas
-```
-
-### Próximos passos opcionais (Fase 3):
-- Retry automático em background para blocos bypassed
-- Dashboard de qualidade de escrita do coach
-- Cache de dicionário na edge function (Deno KV)
-- Feedback loop para exercícios não reconhecidos
