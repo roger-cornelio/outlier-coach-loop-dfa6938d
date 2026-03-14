@@ -6,6 +6,7 @@
  * - Mesma escala visual para todas
  * - Sem ranking ou comparação com outros atletas
  * - Destaque visual apenas para pontos críticos
+ * - Data labels com tempo real (raw_time_sec) quando disponível
  */
 
 import { motion } from 'framer-motion';
@@ -35,18 +36,36 @@ function getBarColor(value: number): string {
   return 'hsl(var(--primary))'; // Normal - cor primária
 }
 
+/** Format seconds to MM:SS or HH:MM:SS */
+function formatTimeSec(sec: number): string {
+  if (!sec || sec <= 0) return '—';
+  if (sec >= 3600) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.round(sec % 60);
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function DiagnosticStationsBars({ scores }: DiagnosticStationsBarsProps) {
   // Criar mapa de scores para lookup rápido
-  const scoreMap = new Map<string, number>();
+  const scoreMap = new Map<string, CalculatedScore>();
   scores.forEach(s => {
-    scoreMap.set(s.metric, s.percentile_value);
+    scoreMap.set(s.metric, s);
   });
 
   // Montar dados das barras
-  const barsData = STATIONS.map(station => ({
-    ...station,
-    value: scoreMap.get(station.key) ?? 0,
-  }));
+  const barsData = STATIONS.map(station => {
+    const score = scoreMap.get(station.key);
+    return {
+      ...station,
+      value: score?.percentile_value ?? 0,
+      rawTimeSec: score?.raw_time_sec ?? 0,
+    };
+  });
 
   return (
     <motion.div
@@ -73,22 +92,34 @@ export function DiagnosticStationsBars({ scores }: DiagnosticStationsBarsProps) 
               {station.label}
             </span>
             
-            {/* Barra de progresso */}
-            <div className="flex-1 h-2.5 bg-muted/30 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${station.value}%` }}
-                transition={{ 
-                  duration: 0.5, 
-                  delay: 0.08 + (0.03 * index),
-                  ease: 'easeOut' 
-                }}
-                className="h-full rounded-full"
-                style={{ 
-                  backgroundColor: getBarColor(station.value),
-                  opacity: station.value > 0 ? 1 : 0.15
-                }}
-              />
+            {/* Barra de progresso + data label */}
+            <div className="flex-1 flex items-center gap-2">
+              <div className="flex-1 h-4 bg-muted/20 rounded-r-md overflow-hidden">
+                {station.value > 0 ? (
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${station.value}%` }}
+                    transition={{ 
+                      duration: 0.5, 
+                      delay: 0.08 + (0.03 * index),
+                      ease: 'easeOut' 
+                    }}
+                    className="h-full rounded-r-md"
+                    style={{ backgroundColor: getBarColor(station.value) }}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-muted/5 rounded-r-md" />
+                )}
+              </div>
+              
+              {/* Data label: tempo real se disponível, senão percentil ou traço */}
+              <span className="text-[10px] tabular-nums text-muted-foreground shrink-0 min-w-[42px] text-right">
+                {station.rawTimeSec > 0
+                  ? formatTimeSec(station.rawTimeSec)
+                  : station.value > 0
+                    ? `${station.value}%`
+                    : '—'}
+              </span>
             </div>
           </motion.div>
         ))}
