@@ -369,6 +369,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
   };
 
   return (
+    <>
     <Tabs defaultValue="structured" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="structured" className="flex items-center gap-2">
