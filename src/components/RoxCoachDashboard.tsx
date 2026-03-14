@@ -399,11 +399,11 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* Projeção de Evolução - após prova atual */}
-            {latestResumo.finish_time && diagnosticos.length > 0 && (
+            {/* Projeção de Evolução - SEMPRE baseada na última prova (latestResumo) */}
+            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (
               <EvolutionProjectionCard
                 finishTime={latestResumo.finish_time}
-                diagnosticos={diagnosticos}
+                diagnosticos={latestDiagnosticos}
                 athleteName={latestResumo.nome_atleta}
                 division={latestResumo.divisao}
                 coachStyle={currentCoachStyle || 'PULSE'}
