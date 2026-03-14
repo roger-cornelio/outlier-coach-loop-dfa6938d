@@ -103,7 +103,7 @@ function AthleteRow({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
+      className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
       onClick={onClick}
     >
       <UserAvatar
