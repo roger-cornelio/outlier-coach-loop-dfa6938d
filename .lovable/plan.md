@@ -1,38 +1,68 @@
+## Plano Consolidado Final: Parser IA com Gatekeeper Rigoroso
 
+### Status: ✅ FASE 1 + FASE 2 + FASE 2.5 (BLINDAGEM) + FASE 2.6 (MEMOIZAÇÃO) IMPLEMENTADAS
 
-# Ajuste Fino dos Prompts — Anti-Metalinguagem, Ocultação de Cálculos e Anti-Truncamento
+---
 
-## 3 Problemas Identificados
+### Fase 1 (Infraestrutura) ✅
 
-1. **Metalinguagem**: A IA explica a metodologia ao atleta ("em vez do Top 1%, vamos usar o Top 20%")
-2. **Cálculos expostos**: A IA mostra o passo a passo matemático ("2515 / 8 = 314.375s")
-3. **Truncamento**: O texto do `generate-deep-analysis` é cortado por `max_tokens` insuficiente
+1. ✅ **Migração SQL**: `slug` (unique) + `aliases` (text[]) em `movement_patterns` e `global_exercises` com índices GIN
+2. ✅ **Migração SQL**: tabela `intensity_rules` com RLS + seed (PSE 6-10, Zonas 1-5)
+3. ✅ **Data seed**: Slugs e aliases populados em 17 movement_patterns e 43 global_exercises
+4. ✅ **Tipos** (`src/types/outlier.ts`): `ParsedExercise`, `ComputedBlockMetrics`, campos `parsedExercises`, `computedMetrics`, `parseStatus`, `parsedAt` em `WorkoutBlock`
+5. ✅ **Edge Function** `parse-workout-blocks`: Gemini 2.5 Flash via Lovable AI Gateway com dicionário dinâmico, tool calling, few-shot, anti-alucinação
 
-## Alterações por Arquivo
+### Fase 2 (Integração) ✅
 
-### 1. `generate-deep-analysis/index.ts`
-- **Seção REGRAS** — adicionar 3 novas regras:
-  - **Anti-Metalinguagem**: "NUNCA explique a metodologia de comparação. Não mencione 'Top 1%', 'Elite' ou qualquer outro benchmark que não seja o próximo nível do atleta. Trate o percentil alvo como o ÚNICO referencial existente."
-  - **No Math UI**: "NUNCA exiba fórmulas, conversões de segundos, frações ou passo a passo de cálculos. Entregue APENAS o resultado final formatado."
-  - **Concisão**: "Seja cirúrgico e objetivo. Na seção de Gargalos, aprofunde APENAS nos 2-3 maiores. Para estações com defasagem insignificante, seja breve ou omita."
-- **Seção BENCHMARKING** — reescrever sem mencionar "Top 1%": "Compare o atleta com o Próximo Nível Competitivo (percentil imediatamente acima). Este é o ÚNICO benchmark válido."
-- **Seção ### 📉 Gargalos** — remover "(não Top 1%)"
-- **User message** — remover "(não Top 1%)"
-- **max_tokens**: 2000 → 4000
-- Remover a linha de exemplo de conversão ("Para converter: divida os segundos por 60...")
+6. ✅ **Hook** `useCoachWorkouts.ts`: Save síncrono bloqueante + Gatekeeper (cenário A/B) + preservação parcial + `forceSaveWorkout` + `gatekeeperResult` state
+7. ✅ **Modal Gatekeeper** (`WorkoutParseValidationModal.tsx`): Modal laranja (coach) vs vermelho (infra), bypass consciente
+8. ✅ **Integração** `CoachSpreadsheetTab.tsx`: Modal wired ao fluxo de save, com `pendingGatekeeperSave` para retry/bypass
+9. ✅ **Utilitário** `computeBlockKcalFromParsed.ts`: Motor de cálculo de kcal/tempo usando fórmulas biomecânicas (vertical_work, horizontal_friction, metabolic) + multiplicadores de intensidade
+10. ✅ **UI Atleta** (`WeeklyTrainingView.tsx`): Prioriza `parsedExercises` para kcal/tempo real, fallback para estimativas legadas, ícone "i" com tooltip para blocos sem métricas
 
-### 2. `generate-diagnostic-ai/index.ts`
-- **Seção REGRAS** — adicionar Anti-Metalinguagem e No Math UI (mesmas regras)
-- **Seção BENCHMARKING** — reescrever sem "Top 1%", usar "Próximo Nível Competitivo"
-- Remover linha de exemplo de conversão
+### Fase 2.5 (Blindagem Anti-Freeze) ✅
 
-### 3. `generate-coach-insights/index.ts`
-- **Seção REGRAS** — adicionar Anti-Metalinguagem e No Math UI
-- **Seção BENCHMARKING** — reescrever sem "Top 1%"
-- Remover linha de exemplo de conversão
+11. ✅ **Web Worker** (`src/workers/structuredParser.worker.ts`): Parser isolado em thread separada — UI nunca congela
+12. ✅ **TextModelImporter.tsx**: Worker com timeout de 8s + `worker.terminate()` + `try/finally` consistente + toast de erro no save falho
+13. ✅ **useCoachWorkouts.ts**: Catch mapeia exceções inesperadas para `gatekeeperResult { errorType: 'infra_failure' }` — modal vermelho sempre abre
+14. ✅ **CoachSpreadsheetTab.tsx**: `onForceBypass` envolvido em `try/finally` — `isSavingToDb` nunca fica travado
+15. ✅ **CORS Edge Function**: Já correto (headers extendidos incluindo `x-supabase-client-*`) — sem alteração necessária
 
-## O que NÃO muda
-- Zero alteração em tabelas, front-end, tipos ou estrutura JSON
-- Modelos de IA, CORS e error handling intocados
-- Regras de formatação MM:SS e Pace permanecem
+### Fase 2.6 (Memoização — Eliminação de Redundância) ✅
 
+16. ✅ **Cache unitDetection.ts**: `_unitsCache` Map + `resetUnitsCache()` — `detectUnits()` retorna O(1) para linhas já analisadas
+17. ✅ **Caches structuredTextParser.ts**: 5 Maps (`_narrativeCache`, `_measurableCache`, `_trainingCache`, `_prescriptionCache`, `_headingCache`) + `resetParserCaches()`
+18. ✅ **Funções memoizadas**: `isNarrativeLine`, `hasMeasurableStimulus`, `isTrainingStimulus`, `isPrescriptionLine`, `isHeadingLine` — todas com cache lookup/store
+19. ✅ **`isHeadingLineInLoop`**: Versão otimizada que pula checagens de rest/optional/restCandidate (já descartadas pelo loop principal via `continue`)
+20. ✅ **Reset global**: `parseStructuredText()` chama `resetUnitsCache()` + `resetParserCaches()` na primeira linha — zero vazamento entre sessões
+21. ✅ **Impacto**: Redução estimada de ~75% nas execuções de regex (40.000 → ~10.000 para 200 linhas). Zero mudança funcional.
+
+### Arquitetura do Fluxo
+
+```
+Coach clica "Validar" → Web Worker (thread separada) → timeout 15s
+  ├── Sucesso → Exibe resultado parseado ✅
+  └── Timeout/Erro → UI destrava + erro amigável ✅
+
+Coach clica "Salvar" → UI trava (loading) → Edge Function parse-workout-blocks (Gemini 2.5 Flash)
+  ├── Sucesso → Salva no banco com parsedExercises enriquecidos ✅
+  └── Falha → Modal Gatekeeper
+       ├── Cenário A (laranja): "Texto não reconhecido" → Coach corrige ou força bypass
+       └── Cenário B (vermelho): "Motor indisponível" → Coach tenta novamente ou força bypass
+            └── Bypass → try/finally garante isSavingToDb resetado ✅
+```
+
+### Performance do Parser Local (Fase 2.6)
+
+```
+Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no cache
+                   → 2ª-5ª chamada: O(1) lookup no Map → resultado retornado instantaneamente
+                   
+Reset automático no início de cada parseStructuredText() → sem vazamento de memória
+```
+
+### Próximos passos opcionais (Fase 3):
+- Retry automático em background para blocos bypassed
+- Dashboard de qualidade de escrita do coach
+- Cache de dicionário na edge function (Deno KV)
+- Feedback loop para exercícios não reconhecidos

@@ -46,11 +46,15 @@ DADOS:
 - Splits da Prova: ${splitsJson}
 
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
-- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Converta TODOS os tempos absolutos e diferenças (gaps) para o formato humano MM:SS (ex: "05:28").
-- Para converter: divida os segundos por 60 para obter minutos e use o resto como segundos.
+- NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28").
+- NUNCA exiba fórmulas matemáticas, conversões de segundos, frações ou o passo a passo de cálculos. Entregue APENAS o resultado final formatado.
 
-BENCHMARKING REALISTA:
-- NÃO compare o atleta com o "Top 1%" — isso é irrealista. Compare-o com o PERCENTIL IMEDIATAMENTE ACIMA dele (ex: se ele é Top 40%, o alvo é o Top 20%). Foque na evolução gradual e tangível.
+REGRA ANTI-METALINGUAGEM (OBRIGATÓRIA):
+- NUNCA explique a metodologia de comparação. Não mencione "Top 1%", "Elite" ou qualquer benchmark que não seja o próximo nível do atleta.
+- Trate o percentil alvo como o ÚNICO referencial existente. Vá direto ao ponto, falando apenas sobre o gap para o próximo nível e os tempos alvo.
+
+BENCHMARKING:
+- Compare o atleta com o Próximo Nível Competitivo (percentil imediatamente acima dele). Este é o ÚNICO benchmark válido.
 
 DIRETRIZES:
 - Use tom técnico, direto e focado em alta performance. Sem frescura.
@@ -61,7 +65,7 @@ SAÍDA OBRIGATÓRIA (Formato JSON exato):
 {
   "limitador_descricao": "Texto curto do impacto real com tempos em MM:SS. Ex: Sugou 02:00 a mais do que devia e quebrou seu ritmo de corrida.",
   "ganho_acao": "Ação direta. Ex: Destravar a técnica do Sled Pull →",
-  "ganho_descricao": "O que ele ganha com tempos em MM:SS. Ex: Te coloca no Top 20% e preserva a lombar para o restante da prova.",
+  "ganho_descricao": "O que ele ganha com tempos em MM:SS. Ex: Te coloca no próximo nível e preserva a lombar para o restante da prova.",
   "proximos_passos": ["Foco brutal em força de tração", "Recuperação ativa na transição"]
 }`;
 
