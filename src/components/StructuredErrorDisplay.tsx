@@ -2,22 +2,19 @@
  * StructuredErrorDisplay - Componente de exibição padronizada de erros
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * MVP0 — PADRONIZAÇÃO GLOBAL DE ERROS
+ * MVP0 — PADRONIZAÇÃO GLOBAL DE ERROS (FACE-LIFT PREMIUM)
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * ESTRUTURA OBRIGATÓRIA DE TODA MENSAGEM DE ERRO:
- * - 🔴 Erro de estrutura — {DIA_DA_SEMANA}
- * - Linha {NÚMERO_DA_LINHA}
- * - 📌 O que aconteceu
- * - 🛠️ O que fazer agora
- * - 🎯 Próximo passo
- * 
- * NOTA: "Exemplo correto" foi removido — o ensino acontece no "Modelo Recomendado" (input)
+ * ESTRUTURA:
+ * - Header compacto: severity icon + título + dia (1 linha)
+ * - Detalhes colapsáveis via Collapsible (fechado por padrão)
+ * - Modelo recomendado: card fixo, sempre fechado
  */
 
-import { AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Lightbulb } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Lightbulb, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   formatStructureIssue, 
   type FormattedError,
@@ -38,96 +35,97 @@ interface SingleErrorProps {
 function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
   const formatted = formatStructureIssue(issue);
   const isError = formatted.severity === 'ERROR';
+  const [isOpen, setIsOpen] = useState(false);
   
   return (
-    <div 
-      className={`p-4 rounded-lg border-2 space-y-3 ${
-        isError 
-          ? 'bg-destructive/5 border-destructive/30' 
-          : 'bg-amber-500/5 border-amber-500/30'
-      }`}
-    >
-      {/* Header: Tipo de erro + Dia + Linha */}
-      <div className="flex items-start gap-2">
-        {isError ? (
-          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-        ) : (
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        )}
-        <div className="flex-1">
-          <p className={`font-semibold text-sm ${isError ? 'text-destructive' : 'text-amber-700'}`}>
-            {isError ? '🔴' : '🟡'} Erro de estrutura — {formatted.dayName}
-            {formatted.blockTitle && ` · Bloco: ${formatted.blockTitle}`}
-          </p>
-          {formatted.lineNumber && (
-            <p className={`text-xs ${isError ? 'text-destructive/80' : 'text-amber-600/80'}`}>
-              Linha {formatted.lineNumber}
-            </p>
-          )}
-        </div>
-      </div>
-      
-      {/* Linha problemática */}
-      {formatted.lineText && (
-        <div className="bg-muted/40 px-3 py-2 rounded border border-border/50">
-          <p className="text-xs text-muted-foreground italic font-mono break-all">
-            "{formatted.lineText.length > 100 ? formatted.lineText.substring(0, 100) + '...' : formatted.lineText}"
-          </p>
-        </div>
-      )}
-      
-      {/* 📌 O que aconteceu */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-foreground/80">📌 O que aconteceu</p>
-        <p className="text-sm text-foreground/90">
-          {formatted.whatHappened}
-        </p>
-      </div>
-      
-      {/* 🛠️ O que fazer agora */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-foreground/80">🛠️ O que fazer agora</p>
-        <p className="text-sm text-foreground/90">
-          👉 {formatted.whatToDo}
-        </p>
-      </div>
-      
-      {/* 🎯 Próximo passo + Botão Ir para bloco */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-        <p className="text-xs text-muted-foreground">
-          🎯 Depois de ajustar, clique em <span className="font-medium">Validar e Visualizar</span> novamente.
-        </p>
-        
-        {formatted.dayIndex !== undefined && onScrollToBlock && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onScrollToBlock(formatted.dayIndex!, formatted.blockIndex)}
-            className="h-7 text-xs gap-1.5 flex-shrink-0"
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div 
+        className={`rounded-xl border overflow-hidden transition-colors ${
+          isError 
+            ? 'bg-destructive/5 border-destructive/20' 
+            : 'bg-amber-500/5 border-amber-500/20'
+        }`}
+      >
+        {/* Header compacto — 1 linha */}
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-muted/30 transition-colors text-left"
           >
-            <ArrowRight className="w-3 h-3" />
-            Ir para o bloco
-          </Button>
-        )}
+            {isError ? (
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            )}
+            <span className={`text-sm font-medium flex-1 ${isError ? 'text-destructive' : 'text-amber-700'}`}>
+              {formatted.dayName}
+              {formatted.blockTitle && ` · ${formatted.blockTitle}`}
+              {formatted.lineNumber && (
+                <span className="text-muted-foreground font-normal ml-1.5">
+                  (linha {formatted.lineNumber})
+                </span>
+              )}
+            </span>
+            
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {formatted.dayIndex !== undefined && onScrollToBlock && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onScrollToBlock(formatted.dayIndex!, formatted.blockIndex);
+                  }}
+                  className="h-6 px-2 text-xs gap-1"
+                >
+                  <ArrowRight className="w-3 h-3" />
+                  Ir
+                </Button>
+              )}
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        
+        {/* Detalhes colapsáveis */}
+        <CollapsibleContent>
+          <div className="px-3 pb-3 space-y-2 border-t border-border/30">
+            {/* Linha problemática */}
+            {formatted.lineText && (
+              <div className="mt-2 bg-muted/40 px-2.5 py-1.5 rounded-lg">
+                <p className="text-xs text-muted-foreground italic font-mono truncate">
+                  "{formatted.lineText.length > 100 ? formatted.lineText.substring(0, 100) + '...' : formatted.lineText}"
+                </p>
+              </div>
+            )}
+            
+            {/* 📌 O que aconteceu */}
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground">📌 O que aconteceu</p>
+              <p className="text-xs text-foreground/80 mt-0.5">{formatted.whatHappened}</p>
+            </div>
+            
+            {/* 🛠️ O que fazer */}
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground">🛠️ O que fazer</p>
+              <p className="text-xs text-foreground/80 mt-0.5">👉 {formatted.whatToDo}</p>
+            </div>
+            
+            {/* 🎯 Próximo passo */}
+            <p className="text-[11px] text-muted-foreground pt-1 border-t border-border/30">
+              🎯 Ajuste e clique em <span className="font-medium">Validar e Visualizar</span>.
+            </p>
+          </div>
+        </CollapsibleContent>
       </div>
-    </div>
+    </Collapsible>
   );
 }
 
 /**
  * Bloco "Modelo Recomendado" - CONSTANTE FIXA (MVP0)
- * 
- * ═══════════════════════════════════════════════════════════════════════════════
- * CONTRATO DE PRODUTO (INVIOLÁVEL):
- * - Texto é FIXO e IMUTÁVEL em runtime
- * - NÃO depende de props, estado, erros ou contexto
- * - Card inicia SEMPRE FECHADO
- * - Abertura APENAS por clique manual do usuário
- * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-// CONSTANTE FIXA — Modelo determinístico oficial (única versão permitida)
-// O motor NÃO interpreta texto. Ele APENAS classifica por MARCADOR.
 const MODEL_RECOMMENDED_TEMPLATE = `SEGUNDA
 
 NOME_DO_BLOCO
@@ -151,9 +149,7 @@ NOME_DO_BLOCO
 > COMENTÁRIO
 > <observação do coach>`;
 
-interface RecommendedModelBlockProps {
-  // Props removidas intencionalmente — modelo é FIXO e não depende de contexto
-}
+interface RecommendedModelBlockProps {}
 
 export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -171,83 +167,59 @@ export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
   };
 
   return (
-    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 overflow-hidden">
-      {/* Header clicável — ÚNICA forma de abrir o card */}
+    <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
       <button
         type="button"
         onClick={handleToggle}
-        className="w-full p-3 flex items-center justify-between hover:bg-primary/10 transition-colors"
+        className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-primary/10 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm text-primary">
-            🧩 Modelo recomendado (à prova de erro)
+          <Lightbulb className="w-4 h-4 text-primary" />
+          <span className="font-medium text-sm text-primary">
+            Modelo recomendado
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleCopy}
-            className="h-7 text-xs gap-1.5"
+            className="h-6 text-xs gap-1 px-2"
           >
             {copied ? (
-              <>
-                <Check className="w-3 h-3" />
-                Copiado
-              </>
+              <><Check className="w-3 h-3" /> Copiado</>
             ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                Copiar
-              </>
+              <><Copy className="w-3 h-3" /> Copiar</>
             )}
           </Button>
-          <span className={`text-xs text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-            ▼
-          </span>
+          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </button>
       
-      {/* Conteúdo expandível — texto FIXO, não muda */}
       {isExpanded && (
-        <div className="p-4 pt-0 space-y-4">
-          {/* Template FIXO copiável */}
-          <div className="p-3 rounded bg-muted/50 border border-border">
+        <div className="px-3 pb-3 space-y-3 border-t border-border/30">
+          <div className="mt-2 p-2.5 rounded-lg bg-muted/50 border border-border/50">
             <pre className="text-xs text-foreground whitespace-pre-wrap font-mono leading-relaxed">
               {MODEL_RECOMMENDED_TEMPLATE}
             </pre>
           </div>
           
-          {/* Marcadores obrigatórios */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground/80">🔒 Marcadores obrigatórios</p>
-            <div className="text-xs text-foreground/70 space-y-1.5 pl-2 font-mono">
-              <p><span className="font-semibold text-primary">=</span> TREINO → início do bloco de treino</p>
-              <p><span className="font-semibold text-primary">-</span> item de treino → cada exercício</p>
-              <p><span className="font-semibold text-primary">&gt;</span> COMENTÁRIO → observação do coach</p>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-semibold text-muted-foreground">🔒 Marcadores</p>
+            <div className="text-xs text-foreground/70 space-y-1 pl-2 font-mono">
+              <p><span className="font-semibold text-primary">=</span> TREINO → bloco de treino</p>
+              <p><span className="font-semibold text-primary">-</span> item → exercício</p>
+              <p><span className="font-semibold text-primary">&gt;</span> COMENTÁRIO → observação</p>
             </div>
           </div>
           
-          {/* Métricas aceitas */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground/80">📏 Métricas obrigatórias por modalidade</p>
-            <div className="text-xs text-foreground/70 space-y-1.5 pl-2">
-              <p><span className="font-medium">🏃 Corrida:</span> tempo (30 min), distância (5 km), intensidade (Z2, PSE 5, pace 5:00/km)</p>
-              <p><span className="font-medium">🏋️ Força:</span> séries x reps (5x5), carga (75% ou 60 kg), rest (2:00)</p>
-              <p><span className="font-medium">🔥 Metcon:</span> formato (EMOM 12, AMRAP 15, For Time), reps explícitas</p>
-              <p><span className="font-medium">🧘 Acessórios:</span> tempo (3 min) ou reps (2x15)</p>
-            </div>
-          </div>
-          
-          {/* Regras determinísticas */}
-          <div className="space-y-2 pt-2 border-t border-border/50">
-            <p className="text-xs font-semibold text-destructive/80">⚠️ Regras absolutas</p>
-            <div className="text-xs text-foreground/70 space-y-1 pl-2">
-              <p>• Linha de treino SEM métrica = erro</p>
-              <p>• Comentário SEM marcador <span className="font-mono">&gt;</span> = erro</p>
-              <p>• Texto sem marcador segue o marcador anterior</p>
-              <p>• O sistema não move texto entre treino e comentário</p>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-semibold text-muted-foreground">📏 Métricas por modalidade</p>
+            <div className="text-[11px] text-foreground/70 space-y-1 pl-2">
+              <p><span className="font-medium">🏃 Corrida:</span> tempo, distância, intensidade</p>
+              <p><span className="font-medium">🏋️ Força:</span> séries x reps, carga, rest</p>
+              <p><span className="font-medium">🔥 Metcon:</span> formato (EMOM, AMRAP, For Time)</p>
+              <p><span className="font-medium">🧘 Acessórios:</span> tempo ou reps</p>
             </div>
           </div>
         </div>
@@ -264,24 +236,23 @@ export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredEr
   if (issues.length === 0) return null;
   
   return (
-    <div className={`p-4 rounded-xl border-2 space-y-4 ${
+    <div className={`rounded-xl border space-y-2 p-3 ${
       hasErrors 
-        ? 'bg-destructive/10 border-destructive/40' 
-        : 'bg-amber-500/10 border-amber-500/40'
+        ? 'bg-destructive/5 border-destructive/20' 
+        : 'bg-amber-500/5 border-amber-500/20'
     }`}>
-      {/* Header resumo */}
-      <div className="flex items-center gap-2">
-        <AlertCircle className={`w-5 h-5 ${hasErrors ? 'text-destructive' : 'text-amber-600'}`} />
-        <span className={`font-semibold text-sm ${hasErrors ? 'text-destructive' : 'text-amber-700'}`}>
+      {/* Header resumo compacto */}
+      <div className="flex items-center gap-2 px-1">
+        <AlertCircle className={`w-4 h-4 flex-shrink-0 ${hasErrors ? 'text-destructive' : 'text-amber-600'}`} />
+        <span className={`font-medium text-sm ${hasErrors ? 'text-destructive' : 'text-amber-700'}`}>
           {errorCount > 0 && `${errorCount} erro${errorCount > 1 ? 's' : ''}`}
-          {errorCount > 0 && warningCount > 0 && ' / '}
+          {errorCount > 0 && warningCount > 0 && ' · '}
           {warningCount > 0 && `${warningCount} aviso${warningCount > 1 ? 's' : ''}`}
-          {' de estrutura'}
         </span>
       </div>
       
-      {/* Lista de erros */}
-      <div className="space-y-3">
+      {/* Lista de erros compactos */}
+      <div className="space-y-1.5">
         {issues.map((issue, idx) => (
           <SingleError 
             key={idx} 
@@ -291,16 +262,12 @@ export function StructuredErrorDisplay({ issues, onScrollToBlock }: StructuredEr
         ))}
       </div>
       
-      {/* Footer informativo */}
-      {hasErrors ? (
-        <p className="text-xs text-destructive/80 font-medium pt-2 border-t border-destructive/20">
-          🚫 Corrija os erros acima para poder publicar o treino.
-        </p>
-      ) : (
-        <p className="text-xs text-amber-600/80 font-medium pt-2 border-t border-amber-500/20">
-          ⚠️ Avisos não bloqueiam o salvamento. Você pode ajustar depois.
-        </p>
-      )}
+      {/* Footer */}
+      <p className={`text-[11px] px-1 ${hasErrors ? 'text-destructive/70' : 'text-amber-600/70'}`}>
+        {hasErrors 
+          ? '🚫 Corrija os erros para publicar.'
+          : '⚠️ Avisos não bloqueiam o salvamento.'}
+      </p>
     </div>
   );
 }
