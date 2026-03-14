@@ -1904,6 +1904,28 @@ function isRestDayCandidateLine(line: string): boolean {
 // MVP0 PATCH: DESCANSO INTRA-BLOCO NUNCA É HEADING
 // MVP0 PATCH: "OPCIONAL" NUNCA É HEADING
 function isHeadingLine(line: string): boolean {
+  const cachedResult = _headingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
+  const result = _isHeadingLineCore(line, false);
+  _headingCache.set(line, result);
+  return result;
+}
+
+/**
+ * Versão otimizada para o loop principal: pula checagens de rest/optional/restCandidate
+ * já feitas antes (e que deram false, pois o loop fez `continue` se true).
+ */
+function isHeadingLineInLoop(line: string): boolean {
+  const cachedResult = _headingCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
+  const result = _isHeadingLineCore(line, true);
+  _headingCache.set(line, result);
+  return result;
+}
+
+function _isHeadingLineCore(line: string, skipPreChecks: boolean): boolean {
   // NORMALIZAR QUOTES PRIMEIRO
   const normalized = normalizeQuotes(line);
   const trimmed = normalized.trim();
@@ -1913,36 +1935,36 @@ function isHeadingLine(line: string): boolean {
   
   // ════════════════════════════════════════════════════════════════════════════
   // REGRA ABSOLUTA 0: ESTRUTURAS ENTRE ** ** NUNCA SÃO HEADINGS
-  // Ex: **3 ROUNDS**, **EMOM 30**, **FOR TIME** → são estruturas do bloco
   // ════════════════════════════════════════════════════════════════════════════
   if (/^\*\*.*\*\*$/.test(trimmed)) {
     _log('[isHeadingLine] → STRUCTURE_LINE (** **), retorna false (nunca é heading)');
     return false;
   }
   
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 1: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
-  // Verifica PRIMEIRO, antes de qualquer outra regra
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isRestInstructionLineGlobal(trimmed)) {
-    _log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
-    return false;
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 2: "OPCIONAL" NUNCA É HEADING
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isOptionalMarkerLine(trimmed)) {
-    _log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
-    return false;
-  }
-  
-  // ════════════════════════════════════════════════════════════════════════════
-  // REGRA ABSOLUTA 3: CANDIDATO A DIA DE DESCANSO NUNCA É HEADING
-  // ════════════════════════════════════════════════════════════════════════════
-  if (isRestDayCandidateLine(trimmed)) {
-    _log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
-    return false;
+  if (!skipPreChecks) {
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 1: DESCANSO INTRA-BLOCO NUNCA PODE SER HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestInstructionLineGlobal(trimmed)) {
+      _log('[isHeadingLine] → REST_INSTRUCTION, retorna false (nunca é heading)');
+      return false;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 2: "OPCIONAL" NUNCA É HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isOptionalMarkerLine(trimmed)) {
+      _log('[isHeadingLine] → OPTIONAL_MARKER, retorna false (nunca é heading)');
+      return false;
+    }
+    
+    // ════════════════════════════════════════════════════════════════════════════
+    // REGRA ABSOLUTA 3: CANDIDATO A DIA DE DESCANSO NUNCA É HEADING
+    // ════════════════════════════════════════════════════════════════════════════
+    if (isRestDayCandidateLine(trimmed)) {
+      _log('[isHeadingLine] → REST_DAY_CANDIDATE, retorna false (não é heading)');
+      return false;
+    }
   }
   
   // BLACKLIST: NUNCA é heading
