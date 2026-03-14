@@ -585,10 +585,14 @@ export function isCardioBlock(blockType: string, blockTitle: string, blockConten
 // MVP0 CIRÚRGICO: Só bloqueia se tiver narrativa explicativa!
 
 function isPrescriptionLine(line: string): boolean {
+  const cachedResult = _prescriptionCache.get(line);
+  if (cachedResult !== undefined) return cachedResult;
+  
   // MVP0 CIRÚRGICO: Só bloqueia narrativa explicativa
   // Adjetivos simples são OK!
   if (isNarrativeLine(line)) {
     _log('[isPrescriptionLine] → FALSE (linha com narrativa):', line);
+    _prescriptionCache.set(line, false);
     return false;
   }
   
@@ -601,6 +605,7 @@ function isPrescriptionLine(line: string): boolean {
   // REGRA CRÍTICA: Tempo ou distância SOZINHOS já caracterizam treino
   // "45 min" = treino válido, "10km" = treino válido
   if (hasMeasurableTime || hasMeasurableDistance) {
+    _prescriptionCache.set(line, true);
     return true;
   }
   
