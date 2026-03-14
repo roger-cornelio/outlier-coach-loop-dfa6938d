@@ -1964,9 +1964,12 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
+    // Priority 1: IA-generated direcionamento from cache
+    if (direcionamentoIA && direcionamentoIA.trim().length > 0) return direcionamentoIA;
+    // Priority 2: heuristic fallback
     if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
     return `O foco do próximo ciclo será ${mainLimiter.name.toLowerCase()}, visando maior consistência nas estações onde hoje ocorre a maior perda de rendimento.`;
-  }, [mainLimiter]);
+  }, [mainLimiter, direcionamentoIA]);
 
   // Loading state
   if (loading) {
