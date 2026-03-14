@@ -66,3 +66,30 @@ Reset automático no início de cada parseStructuredText() → sem vazamento de 
 - Dashboard de qualidade de escrita do coach
 - Cache de dicionário na edge function (Deno KV)
 - Feedback loop para exercícios não reconhecidos
+
+### Fase 3: Refatoração UI/UX Dashboard + Integridade de Dados ✅
+
+**Frente 1 — Integridade de Dados** ✅
+- Removido `METRIC_INSIGHTS` (mock hardcoded com textos falsos como "-1m45 vs Elite")
+- Expandida query de `diagMelhorias` para incluir `movement` e `metric`
+- Gap real formatado dinamicamente: `↓ 45s` (< 60s), `↓ 01:15` (≥ 60s), `✓ Meta batida` (sem gap)
+- Sem referências a "vs Elite" (anti-metalinguagem)
+
+**Frente 2 — Estrelas com cor única** ✅
+- `percentileToStars` simplificado: retorna apenas `{ count }`, sem `colorClass`
+- `StarRating` usa `text-primary` para preenchidas, `text-muted-foreground/20` para vazias
+- Layout `justify-between` com gap alinhado à direita em `tabular-nums`
+
+**Frente 3 — Gráfico de Barras** ✅
+- Altura aumentada de `h-2.5` para `h-4`
+- Data labels: tempo real (`raw_time_sec` formatado MM:SS) como label principal, percentil como fallback
+- Empty state: barra fantasma `bg-muted/5` com traço "—" (sem texto "Sem dados")
+- Bordas arredondadas `rounded-r-md`
+
+**Frente 4 — Blocos Textuais** ✅
+- Cores semânticas mantidas (vermelho/verde/âmbar)
+- Padding aumentado de `p-4` para `p-5`
+- Título do limitador: `text-lg font-bold`
+- Textos descritivos: `leading-relaxed` + `mt-1.5`
+- Espaçamento entre cards: `space-y-4`
+- Próximos passos: `leading-relaxed` + `text-foreground/90`
