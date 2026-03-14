@@ -278,7 +278,55 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
         return (
           <div className="space-y-4">
-            {/* PROVA ATUAL */}
+            {/* OUTRAS PROVAS — secundárias, antes da prova atual */}
+            {olderResumos.length > 0 && (
+              <div className="space-y-1.5">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  Outras Provas
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {olderResumos.map((resumo) => {
+                    const isActive = resumo.id === selectedResumoId;
+                    const location = extractLocation(resumo.evento);
+                    const season = extractSeason(resumo.temporada, resumo.evento);
+
+                    return (
+                      <motion.button
+                        key={resumo.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => setSelectedResumoId(resumo.id)}
+                        className={`flex-shrink-0 flex flex-col items-start gap-1 px-3 py-2 rounded-lg border transition-all text-left min-w-[140px] ${
+                          isActive
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                            : 'border-border/50 bg-card/50 hover:border-primary/40 hover:bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-primary/60 flex-shrink-0" />
+                          <span className={`text-[11px] font-bold truncate ${isActive ? 'text-primary' : 'text-foreground/80'}`}>
+                            {location || 'Prova'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                          <span className="text-[10px] text-muted-foreground/60 truncate">
+                            {season} {resumo.divisao ? `· ${resumo.divisao}` : ''}
+                          </span>
+                        </div>
+                        {resumo.finish_time && (
+                          <span className={`text-xs font-extrabold ${isActive ? 'text-primary' : 'text-foreground/70'}`}>
+                            {resumo.finish_time}
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* PROVA ATUAL — destaque principal */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
@@ -319,7 +367,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* Projeção de Evolução - entre prova atual e outras provas, apenas para a última */}
+            {/* Projeção de Evolução - após prova atual */}
             {latestResumo.finish_time && diagnosticos.length > 0 && (
               <EvolutionProjectionCard
                 finishTime={latestResumo.finish_time}
@@ -328,53 +376,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 division={latestResumo.divisao}
                 coachStyle={currentCoachStyle || 'PULSE'}
               />
-            )}
-
-            {olderResumos.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Outras Provas
-                </h3>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {olderResumos.map((resumo) => {
-                    const isActive = resumo.id === selectedResumoId;
-                    const location = extractLocation(resumo.evento);
-                    const season = extractSeason(resumo.temporada, resumo.evento);
-
-                    return (
-                      <motion.button
-                        key={resumo.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        onClick={() => setSelectedResumoId(resumo.id)}
-                        className={`flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-xl border transition-all text-left min-w-[150px] ${
-                          isActive
-                            ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                            : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
-                          <span className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                            {location || 'Prova'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-[11px] text-muted-foreground truncate">
-                            {season} {resumo.divisao ? `· ${resumo.divisao}` : ''}
-                          </span>
-                        </div>
-                        {resumo.finish_time && (
-                          <span className={`text-sm font-extrabold ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                            {resumo.finish_time}
-                          </span>
-                        )}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
             )}
           </div>
         );
