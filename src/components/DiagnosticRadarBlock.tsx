@@ -1448,7 +1448,7 @@ function TrainingPrioritiesBlock({
   prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  // Show all non-5-star items (no toggle needed)
 
   const worstStations = useMemo(() => {
     // Build lookup maps from diagMelhorias
@@ -1483,7 +1483,14 @@ function TrainingPrioritiesBlock({
       if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
         const items = validated
           .sort((a, b) => b.nivel_urgencia - a.nivel_urgencia)
-          .slice(0, showAll ? validated.length : 3)
+          .filter(p => {
+            const pct = percentageMap.get(p.metric.toLowerCase());
+            // Pre-filter: skip items that would get 5 stars
+            if (pct != null && pct <= 1) return false;
+            const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            if (realGap != null && realGap <= 0) return false;
+            return true;
+          })
           .map(p => {
             const realGap = melhoriaMap.get(p.metric.toLowerCase());
             const pct = percentageMap.get(p.metric.toLowerCase());
@@ -1522,7 +1529,7 @@ function TrainingPrioritiesBlock({
         .sort((a, b) => b.improvement_value - a.improvement_value);
       const maxGap = allSorted[0]?.improvement_value || 1;
       
-      const sliced = showAll ? allSorted : allSorted.filter(d => d.improvement_value > 0).slice(0, 3);
+      const sliced = allSorted.filter(d => d.improvement_value > 0);
 
       if (sliced.length > 0) {
         return sliced.map(d => {
@@ -1551,7 +1558,7 @@ function TrainingPrioritiesBlock({
     // Fallback 2 (último recurso): heuristic based on percentiles
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
-      .slice(0, showAll ? scores.length : 3)
+      .filter(s => percentileToStars(s.percentile_value).count < 5)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
         const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
@@ -1567,12 +1574,7 @@ function TrainingPrioritiesBlock({
           isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll, diagMelhorias, prioridadesIA]);
-
-  const totalStations = useMemo(
-    () => diagMelhorias?.length || scores.length,
-    [diagMelhorias, scores]
-  );
+  }, [scores, diagMelhorias, prioridadesIA]);
 
   if (scores.length === 0) {
     return (
@@ -1627,15 +1629,6 @@ function TrainingPrioritiesBlock({
           ))}
         </ul>
 
-        {/* Footer: Ver todas */}
-        {totalStations > 3 && (
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 pt-2.5 border-t border-border/20 text-center"
-          >
-            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalStations}) ▾`}
-          </button>
-        )}
       </div>
     </motion.div>
   );
