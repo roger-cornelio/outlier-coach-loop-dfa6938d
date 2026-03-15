@@ -259,22 +259,24 @@ function EventCard({ event, onSelect, onRequestReview }: {
             )}
           </div>
 
-          {/* Confidence bar */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  event.grau_confianca >= 70 ? 'bg-green-500' :
-                  event.grau_confianca >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${event.grau_confianca}%` }}
-              />
+          {/* Confidence bar — hide for own manual events */}
+          {!isOwnManual && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    event.grau_confianca >= 70 ? 'bg-green-500' :
+                    event.grau_confianca >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${event.grau_confianca}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground w-8 text-right">{event.grau_confianca}%</span>
             </div>
-            <span className="text-[10px] text-muted-foreground w-8 text-right">{event.grau_confianca}%</span>
-          </div>
+          )}
 
-          {/* Insufficient data warning */}
-          {isPending && (
+          {/* Insufficient data warning — hide for own manual events */}
+          {isPending && !isOwnManual && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-2 text-xs text-yellow-700 dark:text-yellow-400 flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
@@ -285,7 +287,7 @@ function EventCard({ event, onSelect, onRequestReview }: {
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            {isValidated ? (
+            {(isValidated || isOwnManual) ? (
               <Button size="sm" className="flex-1 h-8 text-xs" onClick={onSelect}>
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                 Selecionar
