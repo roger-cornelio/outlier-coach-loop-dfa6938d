@@ -22,7 +22,8 @@ interface TargetSplitsTableProps {
 }
 
 export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps) {
-  const [targetInput, setTargetInput] = useState(finishTime || '01:08:00');
+  const initialTarget = finishTime || '01:08:00';
+  const [targetInput, setTargetInput] = useState(initialTarget);
 
   // Derive real PRs from splits
   const prSplits = useMemo(() => {
