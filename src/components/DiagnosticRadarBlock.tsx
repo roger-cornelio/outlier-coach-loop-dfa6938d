@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users } from 'lucide-react';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
+import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
