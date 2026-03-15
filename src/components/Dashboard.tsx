@@ -407,13 +407,23 @@ export function Dashboard() {
         canGoToNext={canNavigateToFuture}
       />
 
-      {/* Level Up Modal */}
+      {/* Level Up Modal (conquista OUTLIER) */}
       {newLevel && (
         <LevelUpModal
           isOpen={showLevelUpModal}
           newStatus={newLevel}
           isOutlier={journeyProgress.isOutlier}
           onContinue={acknowledgeLevel}
+        />
+      )}
+
+      {/* Race Import Modal (categoria sem brasão) */}
+      {raceImportLevel && (
+        <LevelUpModal
+          isOpen={!!raceImportLevel}
+          newStatus={raceImportLevel}
+          isOutlier={false}
+          onContinue={() => setRaceImportLevel(null)}
         />
       )}
     </div>
