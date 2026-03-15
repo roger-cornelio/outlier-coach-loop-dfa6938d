@@ -14,7 +14,9 @@ import {
   formatEvolutionTime, parseTimeInput, resolveSplitKey,
 } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Crosshair, Download, Lock } from 'lucide-react';
+import { Crosshair, Lock, Map } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RacePlanCard, type RacePlanRow } from './RacePlanCard';
 
 interface TargetSplitsTableProps {
   splits?: Split[];
