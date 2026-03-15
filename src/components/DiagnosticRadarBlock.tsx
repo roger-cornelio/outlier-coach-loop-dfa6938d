@@ -1448,7 +1448,7 @@ function TrainingPrioritiesBlock({
   prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  // Show all non-5-star items (no toggle needed)
 
   const worstStations = useMemo(() => {
     // Build lookup maps from diagMelhorias
