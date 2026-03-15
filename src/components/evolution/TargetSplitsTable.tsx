@@ -52,10 +52,6 @@ export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps
     return mapped;
   }, [splits]);
 
-  // Update targetInput when finishTime prop changes
-  useMemo(() => {
-    if (finishTime) setTargetInput(finishTime);
-  }, [finishTime]);
 
   const targetSec = useMemo(() => parseTimeInput(targetInput), [targetInput]);
   const stations = Object.keys(ELITE_WEIGHTS);
