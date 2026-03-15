@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
 import { SimulatorScreen } from './simulator/SimulatorScreen';
+import { FatigueIndexCard } from './evolution/FatigueIndexCard';
+import { TargetSplitsTable } from './evolution/TargetSplitsTable';
 
 export function BenchmarksScreen() {
   const {
