@@ -473,22 +473,9 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
               </Popover>
             </div>
 
-            {/* Parceiro de dupla — aparece automaticamente se categoria é Doubles */}
             {isDupla && (
               <div className="space-y-2">
-                <Label>Parceiro(a) de dupla</Label>
-                <Select value={partnerId} onValueChange={setPartnerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu parceiro(a)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    {MOCK_ATLETAS.map(atleta => (
-                      <SelectItem key={atleta.id} value={atleta.id}>
-                        {atleta.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PartnerSelector value={partnerData} onChange={setPartnerData} />
                 <p className="text-xs text-muted-foreground flex items-start gap-1.5 mt-2">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   Ao vincular sua dupla, seu coach poderá sincronizar os treinos para ambos.
