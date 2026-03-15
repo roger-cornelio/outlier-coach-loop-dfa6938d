@@ -2101,12 +2101,15 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
-    // Priority 1: IA-generated direcionamento from cache
-    if (direcionamentoIA && direcionamentoIA.trim().length > 0) return direcionamentoIA;
-    // Priority 2: heuristic fallback
-    if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
-    return `O foco do próximo ciclo será ${mainLimiter.name.toLowerCase()}, visando maior consistência nas estações onde hoje ocorre a maior perda de rendimento.`;
-  }, [mainLimiter, direcionamentoIA]);
+    // Periodização OUTLIER: texto baseado nos gargalos reais (affectedStations)
+    const gaps = affectedStations.slice(0, 3);
+    if (gaps.length === 0) return 'Os treinos serão focados em desenvolver todas as capacidades de forma equilibrada.';
+    const names = gaps.map(g => g.name);
+    const joined = names.length === 1
+      ? names[0]
+      : names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1];
+    return `Os treinos para a próxima semana serão focados em ${joined}, os pontos com maior potencial de evolução no seu perfil.`;
+  }, [affectedStations]);
 
   // Loading state
   if (loading) {
@@ -2582,10 +2585,10 @@ export function DiagnosticRadarBlock({
 
 
 
-      {/* BLOCO 8: DIRECIONAMENTO DO TREINO */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-3">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Direcionamento</p>
-        <p className="text-xs text-foreground/90 leading-relaxed">{hasData ? trainingFocus : 'Lance seu primeiro simulado para receber direcionamento personalizado de treino.'}</p>
+      {/* BLOCO 8: PERIODIZAÇÃO OUTLIER */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-gradient-to-r from-primary/10 to-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-4">
+        <p className="text-[11px] font-display text-primary uppercase tracking-widest mb-1.5">Periodização OUTLIER</p>
+        <p className="text-xs text-foreground/90 leading-relaxed">{hasData ? trainingFocus : 'Importe sua primeira prova para receber periodização personalizada.'}</p>
       </motion.div>
 
       {/* BLOCO 9: CTA FINAL */}
