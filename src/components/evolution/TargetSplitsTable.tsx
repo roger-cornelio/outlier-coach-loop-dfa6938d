@@ -126,7 +126,7 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
               <TableHeader>
                 <TableRow className="border-border/10 hover:bg-transparent">
                   <TableHead className="text-xs h-9">Estação</TableHead>
-                  <TableHead className="text-xs h-9 text-right">PR Atual</TableHead>
+                  <TableHead className="text-xs h-9 text-right">Última Prova</TableHead>
                   <TableHead className="text-xs h-9 text-right">Target</TableHead>
                   <TableHead className="text-xs h-9 text-right">Diferença</TableHead>
                 </TableRow>
