@@ -224,10 +224,12 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                       'flex items-center gap-2'
                     )}
                   >
-                    {config.nextLabel
+                    {isOutlier && config.nextLabel
                       ? `Avançar para ${config.nextLabel}`
-                      : `Você é ${config.label} OUTLIER`}
-                    {config.nextLabel && <ChevronRight className="w-5 h-5" />}
+                      : isOutlier
+                        ? `Você é ${config.label} OUTLIER`
+                        : 'Continuar'}
+                    {isOutlier && config.nextLabel && <ChevronRight className="w-5 h-5" />}
                   </Button>
                 </motion.div>
               )}
