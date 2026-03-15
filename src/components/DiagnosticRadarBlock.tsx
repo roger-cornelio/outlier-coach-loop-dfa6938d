@@ -2101,15 +2101,18 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
-    // Periodização OUTLIER: usa worstStations (mesma fonte da tabela de prioridades)
-    const gaps = worstStations.filter(s => s.stars.count < 5).slice(0, 3);
+    // Periodização OUTLIER: mesma fonte que TrainingPrioritiesBlock (diagMelhorias sorted by improvement_value)
+    const gaps = [...(diagMelhorias || [])]
+      .filter(d => d.improvement_value > 0)
+      .sort((a, b) => b.improvement_value - a.improvement_value)
+      .slice(0, 3);
     if (gaps.length === 0) return 'Os treinos serão focados em desenvolver todas as capacidades de forma equilibrada.';
-    const names = gaps.map(g => g.label);
+    const names = gaps.map(g => METRIC_LABELS[g.metric] || g.movement || g.metric);
     const joined = names.length === 1
       ? names[0]
       : names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1];
     return `Os treinos para a próxima semana serão focados em ${joined}, os pontos com maior potencial de evolução no seu perfil.`;
-  }, [worstStations]);
+  }, [diagMelhorias]);
 
   // Loading state
   if (loading) {
