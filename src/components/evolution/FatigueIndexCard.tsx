@@ -7,9 +7,10 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { formatEvolutionTime } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Activity, Lock } from 'lucide-react';
+import { Activity, Lock, Info } from 'lucide-react';
 
 interface FatigueIndexCardProps {
   splits?: Split[];
@@ -67,13 +68,13 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
   const runAnalysis = useMemo(() => {
     if (!splits || splits.length === 0) return null;
 
-    const chartData: { name: string; pace: number; label: string }[] = [];
+    const allRuns: { name: string; pace: number; label: string }[] = [];
     for (let i = 1; i <= 8; i++) {
       const split = splits.find(s => s.split_name === `Running ${i}`);
       if (split) {
         const sec = timeToSeconds(split.time);
         if (sec > 0) {
-          chartData.push({
+          allRuns.push({
             name: `Run ${i}`,
             pace: sec,
             label: formatEvolutionTime(sec),
@@ -82,12 +83,29 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
       }
     }
 
-    if (chartData.length < 8) return null;
+    if (allRuns.length < 8) return null;
 
-    const run1 = chartData[0].pace;
-    const middleRuns = chartData.slice(1, 7);
-    const avgMiddle = middleRuns.reduce((a, b) => a + b.pace, 0) / middleRuns.length;
-    const variation = Math.max(0, Number((((avgMiddle - run1) / run1) * 100).toFixed(1)));
+    // Run 2 = Pace Base (ritmo estabelecido após o Ski Erg)
+    const baseRun = allRuns.find(d => d.name === 'Run 2')?.pace || 0;
+
+    // Runs 3-7 = média de fadiga
+    const fatigueRuns = allRuns.filter(d =>
+      ['Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
+    );
+    const avgFatigue = fatigueRuns.length > 0
+      ? fatigueRuns.reduce((a, b) => a + b.pace, 0) / fatigueRuns.length
+      : 0;
+
+    let variation = 0;
+    if (baseRun > 0 && avgFatigue > 0) {
+      variation = ((avgFatigue - baseRun) / baseRun) * 100;
+    }
+    variation = Math.max(0, Number(variation.toFixed(1)));
+
+    // Gráfico: apenas Runs 2-7
+    const chartData = allRuns.filter(d =>
+      ['Run 2', 'Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
+    );
 
     return { chartData, variation };
   }, [splits]);
@@ -114,9 +132,24 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="w-5 h-5 text-amber-500" />
           Resistência sob Fadiga
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-sm" side="top">
+              <p>
+                O Índice de Quebra compara o seu <strong>Pace Base (Corrida 2)</strong> com a média de fadiga <strong>(Corridas 3 a 7)</strong>.
+              </p>
+              <p className="mt-2 text-muted-foreground text-xs">
+                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo da prova.
+              </p>
+            </PopoverContent>
+          </Popover>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Análise da degradação de pace ao longo das 8 corridas
+          Degradação de pace nas corridas 2 a 7
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -168,8 +201,8 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
 
         <div className="bg-muted/10 border border-border/10 rounded-lg p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Sua corrida quebra <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> após 
-            as estações de força. {variation > 12 
+            Seu pace degrada <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> entre 
+            a Corrida 2 (pace base) e a média das Corridas 3-7. {variation > 12 
               ? 'Foco recomendado em resistência muscular e gestão de ritmo.' 
               : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
