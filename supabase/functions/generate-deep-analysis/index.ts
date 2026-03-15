@@ -295,8 +295,11 @@ ${splitsJson}
 
 ${physioBlock}
 
+${paceBlock}
+
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
 - NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
+- REGRA CRÍTICA: NUNCA use o formato 00:MM:SS (com zeros na casa das horas) para tempos menores que 1 hora. Use APENAS MM:SS. Exemplo: "05:28" (correto), NUNCA "00:05:28" (errado). "41:55" (correto), NUNCA "00:41:55" (errado). "00:27" para 27 segundos (correto), NUNCA "00:00:27" (errado).
 - NUNCA exiba fórmulas matemáticas, conversões de segundos, frações ou o passo a passo de cálculos no texto. Oculte totalmente o raciocínio matemático. Entregue APENAS o resultado final formatado de forma elegante e direta.
 - Escreva em PT-BR usando formatação Markdown (use ### para os títulos).
 - Seja denso e analítico: fale sobre pacing (ritmo), fadiga acumulada, gestão de energia e tempo de transição (Roxzone).
