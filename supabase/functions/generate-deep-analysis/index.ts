@@ -426,6 +426,9 @@ REGRAS do JSON:
       cleanText = rawText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
     }
 
+    // Post-processing: strip 00:MM:SS → MM:SS for times under 1 hour
+    cleanText = cleanText.replace(/\b00:(\d{2}:\d{2})\b/g, '$1');
+
     console.log(`[generate-deep-analysis] Generated ${cleanText.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)} | prioridades=${prioridadesTreino?.length ?? 0}`);
 
     return new Response(
