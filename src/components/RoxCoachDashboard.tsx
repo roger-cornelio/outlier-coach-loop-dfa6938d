@@ -448,13 +448,13 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             <>
               <ImprovementTable diagnosticos={diagnosticos} splits={splits} metricScores={diagnosticScores.scores} />
 
+              <FatigueIndexCard splits={splits} />
+
               <DeepAnalysisBlock
                 resumo={selectedResumo}
                 diagnosticos={diagnosticos}
                 splits={splits}
               />
-
-              <FatigueIndexCard splits={splits} />
             </>
           )}
 
