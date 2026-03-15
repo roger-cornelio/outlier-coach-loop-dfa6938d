@@ -7,9 +7,10 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { formatEvolutionTime } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Activity, Lock } from 'lucide-react';
+import { Activity, Lock, Info } from 'lucide-react';
 
 interface FatigueIndexCardProps {
   splits?: Split[];
