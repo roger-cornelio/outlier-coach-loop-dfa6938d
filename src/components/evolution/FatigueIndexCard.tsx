@@ -124,28 +124,26 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/20">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-amber-500" />
-          Resistência sob Fadiga
+          <CardTitle className="text-base">Resistência sob Fadiga</CardTitle>
           <Popover>
-            <PopoverTrigger asChild>
-              <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
-                <Info className="w-3.5 h-3.5" />
-              </button>
+            <PopoverTrigger>
+              <Info className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
             </PopoverTrigger>
-            <PopoverContent className="w-80 text-sm" side="top">
+            <PopoverContent className="w-80 text-sm border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" side="top">
               <p>
-                O Índice de Quebra compara o seu <strong>Pace Base (Corrida 2)</strong> com a média de fadiga <strong>(Corridas 3 a 7)</strong>.
+                O Índice de Quebra mede a <strong>variação entre o melhor e o pior pace</strong> nas <strong>Corridas 2 a 7</strong>.
               </p>
               <p className="mt-2 text-muted-foreground text-xs">
-                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo da prova.
+                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada e diferenças de percurso) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo do "miolo" da prova.
               </p>
             </PopoverContent>
           </Popover>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        </div>
+        <CardDescription>
           Degradação de pace nas corridas 2 a 7
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-4">
