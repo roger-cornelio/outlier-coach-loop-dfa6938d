@@ -204,6 +204,13 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
           </p>
         </div>
 
+        {/* Destaque educacional */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+          <p className="text-xs text-primary font-semibold leading-relaxed text-center">
+            ⚡ Quanto menor o Índice de Quebra, mais consistente você é — e melhor será seu resultado final.
+          </p>
+        </div>
+
         {/* Bloco de Insight Outlier */}
         <div className="mt-2 bg-muted/30 border border-border/50 rounded-lg p-4 flex items-start gap-3">
           <div className="bg-primary/10 p-2 rounded-full shrink-0">
