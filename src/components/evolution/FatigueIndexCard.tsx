@@ -10,7 +10,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { formatEvolutionTime } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Activity, Lock, Info } from 'lucide-react';
+import { Activity, Lock, Info, Zap } from 'lucide-react';
+import { CardDescription } from '@/components/ui/card';
 
 interface FatigueIndexCardProps {
   splits?: Split[];
