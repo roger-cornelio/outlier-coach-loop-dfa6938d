@@ -105,6 +105,7 @@ export function Dashboard() {
   
   // Detectar subida de nível para exibir modal
   const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
+  const journeyProgress = useJourneyProgress();
   
   const navigate = useNavigate();
   
