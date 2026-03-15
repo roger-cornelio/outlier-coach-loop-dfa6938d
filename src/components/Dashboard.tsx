@@ -107,6 +107,9 @@ export function Dashboard() {
   const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
   const journeyProgress = useJourneyProgress();
   
+  // Estado para modal de categoria ao importar prova
+  const [raceImportLevel, setRaceImportLevel] = useState<import('@/types/outlier').AthleteStatus | null>(null);
+  
   const navigate = useNavigate();
   
   // Dia atual para buscar treino do dia
