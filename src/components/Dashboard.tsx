@@ -394,6 +394,7 @@ export function Dashboard() {
         <LevelUpModal
           isOpen={showLevelUpModal}
           newStatus={newLevel}
+          isOutlier={journeyProgress.isOutlier}
           onContinue={acknowledgeLevel}
         />
       )}
