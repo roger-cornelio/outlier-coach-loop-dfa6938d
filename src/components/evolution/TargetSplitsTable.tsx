@@ -27,6 +27,7 @@ interface TargetSplitsTableProps {
 export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTableProps) {
   const initialTarget = finishTime || '01:08:00';
   const [targetInput, setTargetInput] = useState(initialTarget);
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   // Mapeia splits reais do banco para chaves internas usando aliases
   const prSplits = useMemo(() => {
