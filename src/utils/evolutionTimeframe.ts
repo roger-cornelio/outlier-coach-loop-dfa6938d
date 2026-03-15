@@ -40,13 +40,16 @@ export function calculateEvolutionTimeframe(
   const rawMonths = gapSecondsToImprove / ratePerMonth;
   const months = Math.ceil(rawMonths);
 
+  // Recalcular rate ajustado para que rate × months == gap (conta de padaria fecha)
+  const adjustedRate = Math.ceil(gapSecondsToImprove / months);
+
   const gapMinutes = Math.floor(gapSecondsToImprove / 60);
   const gapSecs = Math.round(gapSecondsToImprove % 60);
   const gapFormatted = gapSecs > 0
     ? `${gapMinutes}min ${gapSecs}s`
     : `${gapMinutes} minutos`;
 
-  return { months, tierLabel, ratePerMonth, gapFormatted };
+  return { months, tierLabel, ratePerMonth: adjustedRate, gapFormatted };
 }
 
 /**

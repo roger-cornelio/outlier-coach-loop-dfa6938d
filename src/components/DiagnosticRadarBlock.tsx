@@ -1017,8 +1017,8 @@ function MobilePathToEliteCard({
                   <p className="text-[11px] font-semibold text-foreground">
                     Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                  <p className="text-[10px] text-muted-foreground/70">
+                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                   </p>
                 </div>
               </div>
@@ -1897,8 +1897,8 @@ export function DiagnosticRadarBlock({
       }
     }
 
-    let evolutionValue = '—';
-    let evolutionClass = 'text-muted-foreground';
+    let evolutionValue = 'Aguardando';
+    let evolutionClass = 'text-muted-foreground/50 text-[8px]';
     if (currentTime && previousTime) {
       const diff = currentTime - previousTime;
       if (diff === 0) {
@@ -2307,9 +2307,7 @@ export function DiagnosticRadarBlock({
               <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
-              <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> do seu tempo em aproximadamente{' '}
-              <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
+              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
@@ -2405,8 +2403,8 @@ export function DiagnosticRadarBlock({
                 <p className="text-sm font-semibold text-foreground text-center">
                   Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
                 </p>
-                <p className="text-xs text-muted-foreground text-center">
-                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                <p className="text-xs text-muted-foreground/70 text-center">
+                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                 </p>
               </div>
             </div>
@@ -2465,9 +2463,7 @@ export function DiagnosticRadarBlock({
             <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
-            <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> do seu tempo em aproximadamente{' '}
-            <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
+            🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
           </p>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
