@@ -1604,9 +1604,9 @@ function TrainingPrioritiesBlock({
           </span>
         </div>
 
-        {/* List */}
+        {/* List — hide 5-star items (meta batida / no priority) */}
         <ul className="space-y-2.5">
-          {worstStations.map((station, i) => (
+          {worstStations.filter(s => s.stars.count < 5).map((station, i) => (
             <li
               key={station.metric}
               className="flex items-center justify-between gap-3 text-sm"
