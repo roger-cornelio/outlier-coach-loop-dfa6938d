@@ -36,12 +36,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const diagnosticScores = useDiagnosticScores();
   const { status, validatingCompetition } = useAthleteStatus();
   const { getOfficialCompetitions } = useBenchmarkResults();
-  const adminTarget = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
-  const topPercentData = useTopPercent(
-    validatingCompetition?.time_in_seconds,
-    athleteConfig?.sexo || 'masculino',
-    athleteConfig?.idade,
-  );
 
 
 
