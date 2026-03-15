@@ -301,7 +301,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
           <div className="mt-2">
             <ManualEventForm
               onSubmit={handleManualSubmit}
-              onBack={() => setEntryMode('choose')}
+              onBack={() => setEntryMode('search')}
               isSubmitting={isSubmittingManual}
             />
           </div>
