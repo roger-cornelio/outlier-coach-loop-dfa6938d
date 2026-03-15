@@ -1,7 +1,7 @@
 /**
- * TargetSplitsTable — Tabela interativa de target splits
- * Input de tempo total alvo → recalcula splits por estação
- * Conectado aos dados reais de tempos_splits
+ * TargetSplitsTable — GPS da Prova
+ * 17 linhas na sequência cronológica HYROX (8 corridas + 8 estações + Roxzone)
+ * Matching robusto via aliases para qualquer variação de escrita do banco
  */
 
 import { useState, useMemo } from 'react';
@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  ELITE_WEIGHTS, STATION_LABELS, 
-  formatEvolutionTime, parseTimeInput 
+import {
+  ELITE_WEIGHTS_INDIVIDUAL, STATION_LABELS, TARGET_SPLITS_ORDER,
+  formatEvolutionTime, parseTimeInput, resolveSplitKey,
 } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
 import { Crosshair, Download, Lock } from 'lucide-react';
@@ -25,55 +25,46 @@ export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps
   const initialTarget = finishTime || '01:08:00';
   const [targetInput, setTargetInput] = useState(initialTarget);
 
-  // Derive real PRs from splits
+  // Mapeia splits reais do banco para chaves internas usando aliases
   const prSplits = useMemo(() => {
     if (!splits || splits.length === 0) return null;
 
     const mapped: Record<string, number> = {};
-    let runTotal = 0;
 
     splits.forEach(s => {
       const sec = timeToSeconds(s.time);
-      const name = s.split_name;
-
-      if (name.startsWith('Running')) runTotal += sec;
-      else if (name === 'Ski Erg') mapped.ski = sec;
-      else if (name === 'Sled Push') mapped.sled_push = sec;
-      else if (name === 'Sled Pull') mapped.sled_pull = sec;
-      else if (name === 'Burpee Broad Jump') mapped.bbj = sec;
-      else if (name === 'Rowing') mapped.row = sec;
-      else if (name === 'Farmers Carry') mapped.farmers = sec;
-      else if (name === 'Sandbag Lunges') mapped.sandbag = sec;
-      else if (name === 'Wall Balls') mapped.wall_balls = sec;
-      else if (name === 'Roxzone') mapped.roxzone = sec;
+      const key = resolveSplitKey(s.split_name);
+      if (key) {
+        mapped[key] = sec;
+      }
     });
 
-    mapped.run_total = runTotal;
-    return mapped;
+    return Object.keys(mapped).length > 0 ? mapped : null;
   }, [splits]);
 
-
   const targetSec = useMemo(() => parseTimeInput(targetInput), [targetInput]);
-  const stations = Object.keys(ELITE_WEIGHTS);
 
   const rows = useMemo(() => {
     if (!targetSec || targetSec <= 0 || !prSplits) return null;
-    return stations.map((key) => {
-      const weight = ELITE_WEIGHTS[key];
+    return TARGET_SPLITS_ORDER.map((key) => {
+      const weight = ELITE_WEIGHTS_INDIVIDUAL[key];
       const targetSplit = Math.round(targetSec * weight);
       const currentPR = prSplits[key] || 0;
       const diff = currentPR - targetSplit;
+      const isRun = key.startsWith('run_');
       return {
         key,
-        label: STATION_LABELS[key],
+        label: STATION_LABELS[key] || key,
         currentPR,
         targetSplit,
         diff,
         paceNeeded: diff > 0 ? `-${formatEvolutionTime(diff)}` : `+${formatEvolutionTime(Math.abs(diff))}`,
         isAhead: diff <= 0,
+        hasPR: currentPR > 0,
+        isRun,
       };
     });
-  }, [targetSec, stations, prSplits]);
+  }, [targetSec, prSplits]);
 
   if (!prSplits) {
     return (
@@ -96,7 +87,7 @@ export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps
           Target Splits
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Defina seu tempo-alvo e veja o split necessário em cada estação
+          Defina seu tempo-alvo e veja o split necessário em cada estação — sequência oficial HYROX
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -128,16 +119,23 @@ export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
-                  <TableRow key={r.key} className="border-border/10">
-                    <TableCell className="text-xs py-2 font-medium">{r.label}</TableCell>
+                  <TableRow
+                    key={r.key}
+                    className={`border-border/10 ${r.isRun ? 'bg-muted/5' : ''}`}
+                  >
+                    <TableCell className={`text-xs py-2 font-medium ${r.isRun ? 'text-muted-foreground' : ''}`}>
+                      {r.label}
+                    </TableCell>
                     <TableCell className="text-xs py-2 text-right font-mono text-muted-foreground">
-                      {formatEvolutionTime(r.currentPR)}
+                      {r.hasPR ? formatEvolutionTime(r.currentPR) : '—'}
                     </TableCell>
                     <TableCell className="text-xs py-2 text-right font-mono font-bold text-amber-500">
                       {formatEvolutionTime(r.targetSplit)}
                     </TableCell>
-                    <TableCell className={`text-xs py-2 text-right font-mono font-semibold ${r.isAhead ? 'text-emerald-500' : 'text-red-400'}`}>
-                      {r.paceNeeded}
+                    <TableCell className={`text-xs py-2 text-right font-mono font-semibold ${
+                      !r.hasPR ? 'text-muted-foreground' : r.isAhead ? 'text-emerald-500' : 'text-red-400'
+                    }`}>
+                      {r.hasPR ? r.paceNeeded : '—'}
                     </TableCell>
                   </TableRow>
                 ))}

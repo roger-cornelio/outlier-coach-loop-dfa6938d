@@ -16,8 +16,18 @@ export const ELITE_WEIGHTS: Record<string, number> = {
   roxzone: 0.04,
 };
 
+// Pesos individuais por corrida (8 corridas, peso igual = 0.50 / 8)
+export const ELITE_WEIGHTS_INDIVIDUAL: Record<string, number> = {
+  run_1: 0.0625, run_2: 0.0625, run_3: 0.0625, run_4: 0.0625,
+  run_5: 0.0625, run_6: 0.0625, run_7: 0.0625, run_8: 0.0625,
+  ski: 0.06, sled_push: 0.04, sled_pull: 0.05, bbj: 0.07,
+  row: 0.06, farmers: 0.05, sandbag: 0.07, wall_balls: 0.06, roxzone: 0.04,
+};
+
 export const STATION_LABELS: Record<string, string> = {
   run_total: 'Corrida Total',
+  run_1: 'Corrida 1', run_2: 'Corrida 2', run_3: 'Corrida 3', run_4: 'Corrida 4',
+  run_5: 'Corrida 5', run_6: 'Corrida 6', run_7: 'Corrida 7', run_8: 'Corrida 8',
   ski: 'Ski Erg',
   sled_push: 'Sled Push',
   sled_pull: 'Sled Pull',
@@ -28,6 +38,50 @@ export const STATION_LABELS: Record<string, string> = {
   wall_balls: 'Wall Balls',
   roxzone: 'Roxzone',
 };
+
+/** Sequência cronológica oficial HYROX: corrida → estação alternadas */
+export const TARGET_SPLITS_ORDER: string[] = [
+  'run_1', 'ski', 'run_2', 'sled_push', 'run_3', 'sled_pull', 'run_4', 'bbj',
+  'run_5', 'row', 'run_6', 'farmers', 'run_7', 'sandbag', 'run_8', 'wall_balls', 'roxzone',
+];
+
+/** Aliases robustos: mapeiam nomes do banco para chaves internas */
+export const SPLIT_ALIASES: Record<string, string[]> = {
+  run_1: ['Running 1', 'Run 1', 'Corrida 1'],
+  run_2: ['Running 2', 'Run 2', 'Corrida 2'],
+  run_3: ['Running 3', 'Run 3', 'Corrida 3'],
+  run_4: ['Running 4', 'Run 4', 'Corrida 4'],
+  run_5: ['Running 5', 'Run 5', 'Corrida 5'],
+  run_6: ['Running 6', 'Run 6', 'Corrida 6'],
+  run_7: ['Running 7', 'Run 7', 'Corrida 7'],
+  run_8: ['Running 8', 'Run 8', 'Corrida 8'],
+  ski: ['Ski Erg', 'SkiErg', 'Ski'],
+  sled_push: ['Sled Push', 'SledPush'],
+  sled_pull: ['Sled Pull', 'SledPull'],
+  bbj: ['Burpee Broad Jump', 'Burpees Broad Jump', 'BBJ', 'Burpee Broad Jumps'],
+  row: ['Rowing', 'Row', 'Remo'],
+  farmers: ['Farmers Carry', "Farmer's Carry", 'Farmer Carry'],
+  sandbag: ['Sandbag Lunges', 'Sandbag Lunge', 'Sandbag'],
+  wall_balls: ['Wall Balls', 'Wall Ball', 'Wallballs', 'WallBalls'],
+  roxzone: ['Roxzone', 'Rox Zone'],
+};
+
+/** Resolve um split_name do banco para a chave interna usando aliases + fallback parcial */
+export function resolveSplitKey(splitName: string): string | null {
+  const normalized = splitName.trim().toLowerCase();
+  for (const [key, aliases] of Object.entries(SPLIT_ALIASES)) {
+    for (const alias of aliases) {
+      if (alias.toLowerCase() === normalized) return key;
+    }
+  }
+  // Fallback: partial includes
+  for (const [key, aliases] of Object.entries(SPLIT_ALIASES)) {
+    for (const alias of aliases) {
+      if (normalized.includes(alias.toLowerCase()) || alias.toLowerCase().includes(normalized)) return key;
+    }
+  }
+  return null;
+}
 
 // Dados mockados de pódio — granularidade: evento + divisão + age_group
 export const MOCK_PODIUM_TIMES: Record<string, number> = {
