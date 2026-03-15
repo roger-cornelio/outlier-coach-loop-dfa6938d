@@ -1483,7 +1483,14 @@ function TrainingPrioritiesBlock({
       if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
         const items = validated
           .sort((a, b) => b.nivel_urgencia - a.nivel_urgencia)
-          .slice(0, showAll ? validated.length : 3)
+          .filter(p => {
+            const pct = percentageMap.get(p.metric.toLowerCase());
+            // Pre-filter: skip items that would get 5 stars
+            if (pct != null && pct <= 1) return false;
+            const realGap = melhoriaMap.get(p.metric.toLowerCase());
+            if (realGap != null && realGap <= 0) return false;
+            return true;
+          })
           .map(p => {
             const realGap = melhoriaMap.get(p.metric.toLowerCase());
             const pct = percentageMap.get(p.metric.toLowerCase());
