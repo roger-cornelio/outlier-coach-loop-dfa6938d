@@ -226,8 +226,8 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
           {/* Metric boxes */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-foreground">{gapFormatted}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
+              <div className="text-lg font-bold text-foreground">{resultadoEsperado}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-primary">{ratePerMonth}s</div>
