@@ -1610,9 +1610,19 @@ function TrainingPrioritiesBlock({
         validMetrics.add(s.metric.toLowerCase());
       }
 
-      const validated = normalizedIA.filter(p =>
+      const validatedRaw = normalizedIA.filter(p =>
         p.metric && validMetrics.has(p.metric)
       );
+
+      // Deduplicate by normalized metric — keep highest urgency
+      const validatedMap = new Map<string, typeof validatedRaw[0]>();
+      for (const item of validatedRaw) {
+        const existing = validatedMap.get(item.metric);
+        if (!existing || item.nivel_urgencia > existing.nivel_urgencia) {
+          validatedMap.set(item.metric, item);
+        }
+      }
+      const validated = Array.from(validatedMap.values());
 
       // If more than 50% were invalid, discard IA data entirely
       if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
@@ -1656,10 +1666,20 @@ function TrainingPrioritiesBlock({
     // Fallback 1: use diagMelhorias sorted by improvement_value (same source as Parecer Outlier)
     if (diagMelhorias && diagMelhorias.length > 0) {
       // Normalize metrics in diagMelhorias
-      const normalizedDiag = diagMelhorias.map(d => ({
+      const normalizedDiagRaw = diagMelhorias.map(d => ({
         ...d,
         metric: normalizeMetric(d.metric),
       }));
+
+      // Deduplicate by normalized metric — keep highest improvement_value
+      const diagMap = new Map<string, typeof normalizedDiagRaw[0]>();
+      for (const item of normalizedDiagRaw) {
+        const existing = diagMap.get(item.metric);
+        if (!existing || item.improvement_value > existing.improvement_value) {
+          diagMap.set(item.metric, item);
+        }
+      }
+      const normalizedDiag = Array.from(diagMap.values());
 
       const allSorted = [...normalizedDiag]
         .sort((a, b) => b.improvement_value - a.improvement_value);
