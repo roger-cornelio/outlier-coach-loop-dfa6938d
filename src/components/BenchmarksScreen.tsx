@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
