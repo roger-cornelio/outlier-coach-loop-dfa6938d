@@ -73,8 +73,8 @@ const navItems: NavItem[] = [
   },
   { 
     title: 'Evolução', 
-    view: 'benchmarks', 
-    icon: Trophy 
+    view: 'evolution', 
+    icon: TrendingUp 
   },
   { 
     title: 'Configurações', 
