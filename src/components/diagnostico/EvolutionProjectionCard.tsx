@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, Loader2, Calendar } from 'lucide-react';
+import { Target, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-
 import { Card, CardContent } from '@/components/ui/card';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { timeToSeconds, secondsToTime } from './types';
 import type { DiagnosticoMelhoria } from './types';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 interface Props {
   finishTime: string | null;
@@ -25,6 +25,24 @@ const TIER_COLORS: Record<string, string> = {
   Elite: 'bg-primary text-primary-foreground',
 };
 
+function formatSecondsToHHMM(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+function buildProjectionData(currentSeconds: number, ratePerMonth: number) {
+  const points = [];
+  for (let month = 0; month <= 12; month++) {
+    const projected = Math.max(3600, currentSeconds - (ratePerMonth * month));
+    points.push({
+      month: `M${month}`,
+      tempo: Math.round(projected),
+    });
+  }
+  return points;
+}
+
 export default function EvolutionProjectionCard({ finishTime, diagnosticos, athleteName, division, coachStyle, totalGapOverride }: Props) {
   const [aiText, setAiText] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
@@ -36,6 +54,16 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
     if (currentSeconds <= 0 || totalGap <= 0) return null;
     return calculateEvolutionTimeframe(currentSeconds, totalGap);
   }, [currentSeconds, totalGap]);
+
+  const chartData = useMemo(() => {
+    if (!evolution || currentSeconds <= 0) return [];
+    return buildProjectionData(currentSeconds, evolution.ratePerMonth);
+  }, [currentSeconds, evolution]);
+
+  const targetSeconds = useMemo(() => {
+    if (!evolution || currentSeconds <= 0) return 0;
+    return Math.max(3600, currentSeconds - totalGap);
+  }, [currentSeconds, totalGap, evolution]);
 
   const top3Gaps = useMemo(() => {
     return [...diagnosticos]
@@ -83,11 +111,17 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
     generateAiProjection();
   }, [finishTime, totalGap, coachStyle]);
 
-  // Early returns AFTER all hooks
   if (!finishTime || diagnosticos.length === 0 || !evolution) return null;
 
-  const { months, tierLabel, ratePerMonth, gapFormatted } = evolution;
-  
+  const { tierLabel, ratePerMonth, gapFormatted } = evolution;
+
+  const projectedAt12 = Math.max(3600, currentSeconds - (ratePerMonth * 12));
+  const gainIn12 = currentSeconds - projectedAt12;
+  const gainFormatted = (() => {
+    const m = Math.floor(gainIn12 / 60);
+    const s = Math.round(gainIn12 % 60);
+    return s > 0 ? `${m}min ${s}s` : `${m} minutos`;
+  })();
 
   return (
     <motion.div
@@ -108,7 +142,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </Badge>
           </div>
 
-          {/* AI-generated message or loading */}
+          {/* Copy / AI text */}
           {loadingAi ? (
             <div className="flex items-center gap-2 py-3 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -120,8 +154,71 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </p>
           ) : (
             <p className="text-sm text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
+              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, essa é a evolução esperada nos próximos 12 meses
             </p>
+          )}
+
+          {/* 12-month evolution chart */}
+          {chartData.length > 0 && (
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="evolutionGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(val: number) => formatSecondsToHHMM(val)}
+                    domain={['dataMin - 60', 'dataMax + 60']}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                    formatter={(value: number) => [formatSecondsToHHMM(value), 'Tempo']}
+                    labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`}
+                  />
+                  {targetSeconds > 0 && (
+                    <ReferenceLine
+                      y={targetSeconds}
+                      stroke="hsl(var(--primary))"
+                      strokeDasharray="4 4"
+                      opacity={0.6}
+                      label={{
+                        value: `Meta ${formatSecondsToHHMM(targetSeconds)}`,
+                        fill: 'hsl(var(--primary))',
+                        fontSize: 10,
+                        position: 'right',
+                      }}
+                    />
+                  )}
+                  <Area
+                    type="monotone"
+                    dataKey="tempo"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#evolutionGradient)"
+                    dot={{ fill: 'hsl(var(--primary))', r: 2 }}
+                    activeDot={{ r: 4, fill: 'hsl(var(--primary))' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
 
           {/* Metric boxes */}
@@ -135,11 +232,8 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                {months}
-              </div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{months === 1 ? 'mês' : 'meses'}</div>
+              <div className="text-lg font-bold text-foreground">{gainFormatted}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
             </div>
           </div>
         </CardContent>
