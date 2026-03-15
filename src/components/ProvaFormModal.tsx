@@ -58,14 +58,6 @@ const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT
 
 const DOUBLES_CATEGORIES = ['HYROX_DOUBLES', 'HYROX_PRO_DOUBLES'];
 
-const MOCK_ATLETAS = [
-  { id: 'athlete-1', name: 'João Silva' },
-  { id: 'athlete-2', name: 'Maria Santos' },
-  { id: 'athlete-3', name: 'Pedro Oliveira' },
-  { id: 'athlete-4', name: 'Ana Costa' },
-  { id: 'athlete-5', name: 'Lucas Ferreira' },
-];
-
 type EntryMode = 'search' | 'manual' | 'details' | 'confirm';
 
 interface ProvaFormModalProps {
