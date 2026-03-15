@@ -46,8 +46,16 @@ export const MOCK_CURRENT_PRS: Record<string, number> = {
 // Runs mockados (8 runs em segundos)
 export const MOCK_RUNS: number[] = [214, 232, 248, 265, 289, 312, 358, 427];
 
-// Dados mockados de pódio
-export const MOCK_PODIUM_TIME_SEC = 4200; // 01:10:00
+// Dados mockados de pódio — granularidade: evento + divisão + age_group
+export const MOCK_PODIUM_TIMES: Record<string, number> = {
+  'SP_PRO_30_34': 4200, // 01:10:00
+  'SP_PRO_25_29': 4100,
+  'SP_PRO_35_39': 4300,
+};
+export const MOCK_USER_AGE_GROUP = 'PRO 30-34';
+export const MOCK_USER_AGE_GROUP_KEY = 'SP_PRO_30_34';
+// Backward compat alias
+export const MOCK_PODIUM_TIME_SEC = MOCK_PODIUM_TIMES[MOCK_USER_AGE_GROUP_KEY];
 export const MOCK_CURRENT_TIME_SEC = 4797; // ~01:19:57
 
 /** Formata segundos em MM:SS ou HH:MM:SS */

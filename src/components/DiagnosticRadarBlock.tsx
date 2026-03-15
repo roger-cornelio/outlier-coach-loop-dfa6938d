@@ -2391,10 +2391,11 @@ export function DiagnosticRadarBlock({
                 )}
               </div>
               {/* Podium prediction — desktop */}
+              {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
               <div className="max-w-md mx-auto bg-muted/10 border border-border/10 rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Proximidade ao pódio</span>
-                  <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
+                    <span>Proximidade ao pódio ({userCategory})</span>
+                    <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
                 </div>
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/20">
                   <div 
@@ -2403,12 +2404,13 @@ export function DiagnosticRadarBlock({
                   />
                 </div>
                 <p className="text-sm font-semibold text-foreground text-center">
-                  Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                  Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio na categoria {userCategory}.
                 </p>
                 <p className="text-xs text-muted-foreground/70 text-center">
-                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
+                  👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                 </p>
               </div>
+              ); })()}
             </div>
           );
         })()}
