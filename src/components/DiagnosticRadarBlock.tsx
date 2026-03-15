@@ -1002,10 +1002,11 @@ function MobilePathToEliteCard({
                     </>
                   )}
                 </div>
-                {/* Podium prediction */}
+          {/* Podium prediction */}
+                {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
                 <div className="bg-muted/10 border border-border/10 rounded-lg p-2.5 space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Proximidade ao pódio</span>
+                    <span>Proximidade ao pódio ({userCategory})</span>
                     <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
                   </div>
                   <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
@@ -1015,12 +1016,13 @@ function MobilePathToEliteCard({
                     />
                   </div>
                   <p className="text-[11px] font-semibold text-foreground">
-                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio na categoria {userCategory}.
                   </p>
                   <p className="text-[10px] text-muted-foreground/70">
-                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
+                    👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                   </p>
                 </div>
+                ); })()}
               </div>
             );
           })()}
