@@ -10,7 +10,7 @@
 
 import { useState, useMemo } from 'react';
 import { Target, Orbit, Users, Info, Search, PenLine } from 'lucide-react';
-import { format } from 'date-fns';
+import { PartnerSelector, type PartnerData } from '@/components/PartnerSelector';
 import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
