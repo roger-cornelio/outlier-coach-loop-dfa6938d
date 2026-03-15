@@ -106,49 +106,72 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
               )}
             </AnimatePresence>
 
-            {/* Shield — Big, pulsating, glowing */}
-            <AnimatePresence>
-              {showContent && (
-                <motion.div
-                  initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 120,
-                    damping: 14,
-                    delay: 0.25,
-                  }}
-                  className="relative mb-10"
-                >
-                  {/* Multi-layer glow */}
+            {/* OUTLIER: Shield pulsante com glow */}
+            {isOutlier && (
+              <AnimatePresence>
+                {showContent && (
                   <motion.div
-                    className="absolute inset-0 -m-20 rounded-full blur-[100px]"
-                    style={{ backgroundColor: `hsl(${config.accentHsl} / 0.35)` }}
-                    animate={{ scale: [1, 1.15, 1], opacity: [0.35, 0.5, 0.35] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 -m-12 rounded-full blur-2xl"
-                    style={{ backgroundColor: `hsl(${config.accentHsl} / 0.2)` }}
-                    animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.35, 0.2] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                  />
-
-                  {/* Shield image — pulsating */}
-                  <motion.div
-                    className="relative w-56 h-56 md:w-72 md:h-72"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.25 }}
+                    className="relative mb-10"
                   >
-                    <ShieldCrest
-                      level={config.levelKey}
-                      active={true}
-                      className="w-full h-full object-contain drop-shadow-2xl"
+                    <motion.div
+                      className="absolute inset-0 -m-20 rounded-full blur-[100px]"
+                      style={{ backgroundColor: `hsl(${config.accentHsl} / 0.35)` }}
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.35, 0.5, 0.35] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                     />
+                    <motion.div
+                      className="absolute inset-0 -m-12 rounded-full blur-2xl"
+                      style={{ backgroundColor: `hsl(${config.accentHsl} / 0.2)` }}
+                      animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.35, 0.2] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                    />
+                    <motion.div
+                      className="relative w-56 h-56 md:w-72 md:h-72"
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <ShieldCrest
+                        level={config.levelKey}
+                        active={true}
+                        className="w-full h-full object-contain drop-shadow-2xl"
+                      />
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* CATEGORIA: Título grande sem brasão */}
+            {!isOutlier && (
+              <AnimatePresence>
+                {showContent && (
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.25 }}
+                    className="relative mb-10"
+                  >
+                    <motion.div
+                      className="absolute inset-0 -m-16 rounded-full blur-[80px]"
+                      style={{ backgroundColor: `hsl(${config.accentHsl} / 0.25)` }}
+                      animate={{ scale: [1, 1.1, 1], opacity: [0.25, 0.4, 0.25] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <motion.h1
+                      className="relative text-7xl md:text-9xl font-black text-white uppercase tracking-tighter italic"
+                      style={{ textShadow: `0 0 60px hsl(${config.accentHsl} / 0.4)` }}
+                      animate={{ scale: [1, 1.03, 1] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      {config.label}
+                    </motion.h1>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
 
             {/* Level Label */}
             <AnimatePresence>
@@ -197,7 +220,7 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                     </>
                   ) : (
                     <p className="text-base text-white/50 font-light italic">
-                      Sua categoria foi atualizada. Continue treinando para conquistar o título OUTLIER.
+                      Continue treinando para conquistar o título OUTLIER.
                     </p>
                   )}
                 </motion.div>
@@ -224,12 +247,10 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                       'flex items-center gap-2'
                     )}
                   >
-                    {isOutlier && config.nextLabel
-                      ? `Avançar para ${config.nextLabel}`
-                      : isOutlier
-                        ? `Você é ${config.label} OUTLIER`
-                        : 'Continuar'}
-                    {isOutlier && config.nextLabel && <ChevronRight className="w-5 h-5" />}
+                    {isOutlier
+                      ? (config.nextLabel ? `Avançar para ${config.nextLabel}` : `Você é ${config.label} OUTLIER`)
+                      : `Avançar para ${config.label} OUTLIER`}
+                    <ChevronRight className="w-5 h-5" />
                   </Button>
                 </motion.div>
               )}
