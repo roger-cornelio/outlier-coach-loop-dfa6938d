@@ -15,6 +15,8 @@ import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import DeepAnalysisBlock from './diagnostico/DeepAnalysisBlock';
 import ParecerPremium from './diagnostico/ParecerPremium';
+import { FatigueIndexCard } from './evolution/FatigueIndexCard';
+import { TargetSplitsTable } from './evolution/TargetSplitsTable';
 
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
@@ -451,6 +453,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 diagnosticos={diagnosticos}
                 splits={splits}
               />
+
+              <FatigueIndexCard />
+              <TargetSplitsTable />
             </>
           )}
 
