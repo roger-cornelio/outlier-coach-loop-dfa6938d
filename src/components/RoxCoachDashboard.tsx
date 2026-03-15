@@ -426,24 +426,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* Projeção de Evolução - SEMPRE baseada na última prova (latestResumo) */}
-            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (() => {
-              const currentTimeSec = timeToSeconds(latestResumo.finish_time!);
-              const targetSec = eliteTarget?.targetSeconds ?? null;
-              const computedGap = (currentTimeSec && targetSec && currentTimeSec > targetSec)
-                ? currentTimeSec - targetSec
-                : undefined;
-              return (
-                <EvolutionProjectionCard
-                  finishTime={latestResumo.finish_time}
-                  diagnosticos={latestDiagnosticos}
-                  athleteName={latestResumo.nome_atleta}
-                  division={latestResumo.divisao}
-                  coachStyle={currentCoachStyle || 'PULSE'}
-                  totalGapOverride={computedGap}
-                />
-              );
-            })()}
           </div>
         );
       })()}
