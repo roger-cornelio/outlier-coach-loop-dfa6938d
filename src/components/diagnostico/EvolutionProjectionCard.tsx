@@ -192,7 +192,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [formatSecondsToHHMM(value), 'Tempo']}
+                    formatter={(value: number) => [formatSecondsToHHMMSS(value), 'Tempo']}
                     labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`}
                   />
                   {targetSeconds > 0 && (
