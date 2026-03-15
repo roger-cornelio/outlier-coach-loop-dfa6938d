@@ -147,29 +147,23 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
                       {r.hasPR ? r.paceNeeded : '—'}
                     </TableCell>
                   </TableRow>
-                {/* Total row */}
-                {(() => {
-                  const totalPR = rows.reduce((sum, r) => sum + r.currentPR, 0);
-                  const totalTarget = rows.reduce((sum, r) => sum + r.targetSplit, 0);
-                  const totalDiff = totalPR - totalTarget;
-                  const hasAnyPR = rows.some(r => r.hasPR);
-                  return (
-                    <TableRow className="border-t-2 border-border/30 bg-muted/10">
-                      <TableCell className="text-xs py-2 font-bold">Total</TableCell>
-                      <TableCell className="text-xs py-2 text-right font-mono font-bold text-foreground">
-                        {hasAnyPR ? formatEvolutionTime(totalPR) : '—'}
-                      </TableCell>
-                      <TableCell className="text-xs py-2 text-right font-mono font-bold text-amber-500">
-                        {formatEvolutionTime(totalTarget)}
-                      </TableCell>
-                      <TableCell className={`text-xs py-2 text-right font-mono font-bold ${
-                        !hasAnyPR ? 'text-muted-foreground' : totalDiff <= 0 ? 'text-emerald-500' : 'text-red-400'
-                      }`}>
-                        {hasAnyPR ? (totalDiff > 0 ? `-${formatEvolutionTime(totalDiff)}` : `+${formatEvolutionTime(Math.abs(totalDiff))}`) : '—'}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })()}
+                ))}
+                {totals && (
+                  <TableRow className="border-t-2 border-border/30 bg-muted/10">
+                    <TableCell className="text-xs py-2 font-bold">Total</TableCell>
+                    <TableCell className="text-xs py-2 text-right font-mono font-bold text-foreground">
+                      {totals.hasAnyPR ? formatEvolutionTime(totals.totalPR) : '—'}
+                    </TableCell>
+                    <TableCell className="text-xs py-2 text-right font-mono font-bold text-amber-500">
+                      {formatEvolutionTime(totals.totalTarget)}
+                    </TableCell>
+                    <TableCell className={`text-xs py-2 text-right font-mono font-bold ${
+                      !totals.hasAnyPR ? 'text-muted-foreground' : totals.diff <= 0 ? 'text-emerald-500' : 'text-red-400'
+                    }`}>
+                      {totals.hasAnyPR ? (totals.diff > 0 ? `-${formatEvolutionTime(totals.diff)}` : `+${formatEvolutionTime(Math.abs(totals.diff))}`) : '—'}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
