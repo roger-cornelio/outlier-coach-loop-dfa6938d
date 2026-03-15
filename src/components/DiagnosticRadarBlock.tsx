@@ -2386,8 +2386,8 @@ export function DiagnosticRadarBlock({
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground">{evolutionProjection.gapFormatted}</div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
+                <div className="text-sm font-bold text-foreground">{resultadoEsperadoFormatted}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
               </div>
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
                 <div className="text-sm font-bold text-primary">{evolutionProjection.ratePerMonth}s</div>
