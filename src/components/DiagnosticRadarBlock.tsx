@@ -2101,15 +2101,15 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
-    // Periodização OUTLIER: texto baseado nos gargalos reais (worstStations)
-    const gaps = worstStations.filter(s => s.stars < 5).slice(0, 3);
+    // Periodização OUTLIER: texto baseado nos gargalos reais (affectedStations)
+    const gaps = affectedStations.slice(0, 3);
     if (gaps.length === 0) return 'Os treinos serão focados em desenvolver todas as capacidades de forma equilibrada.';
     const names = gaps.map(g => g.name);
     const joined = names.length === 1
       ? names[0]
       : names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1];
     return `Os treinos para a próxima semana serão focados em ${joined}, os pontos com maior potencial de evolução no seu perfil.`;
-  }, [worstStations]);
+  }, [affectedStations]);
 
   // Loading state
   if (loading) {
