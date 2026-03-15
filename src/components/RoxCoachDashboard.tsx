@@ -23,9 +23,6 @@ import OutlierRadarChart from './diagnostico/OutlierRadarChart';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { useTopPercent } from '@/hooks/useTopPercent';
-import { useTargetTimes } from '@/hooks/useTargetTimes';
-import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 
 interface RoxCoachDashboardProps {
