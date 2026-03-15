@@ -1448,7 +1448,7 @@ function TrainingPrioritiesBlock({
   prioridadesIA?: { exercicio: string; nivel_urgencia: number; metric: string }[] | null;
   onViewAll?: () => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  const showAll = true; // Always show all stations (filtered by <5 stars in render)
 
   const worstStations = useMemo(() => {
     // Build lookup maps from diagMelhorias
@@ -1627,15 +1627,6 @@ function TrainingPrioritiesBlock({
           ))}
         </ul>
 
-        {/* Footer: Ver todas */}
-        {totalStations > 3 && (
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 pt-2.5 border-t border-border/20 text-center"
-          >
-            {showAll ? 'Mostrar menos ▴' : `Ver todas (${totalStations}) ▾`}
-          </button>
-        )}
       </div>
     </motion.div>
   );
