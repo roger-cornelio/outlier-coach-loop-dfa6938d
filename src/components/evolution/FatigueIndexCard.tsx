@@ -68,13 +68,13 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
   const runAnalysis = useMemo(() => {
     if (!splits || splits.length === 0) return null;
 
-    const chartData: { name: string; pace: number; label: string }[] = [];
+    const allRuns: { name: string; pace: number; label: string }[] = [];
     for (let i = 1; i <= 8; i++) {
       const split = splits.find(s => s.split_name === `Running ${i}`);
       if (split) {
         const sec = timeToSeconds(split.time);
         if (sec > 0) {
-          chartData.push({
+          allRuns.push({
             name: `Run ${i}`,
             pace: sec,
             label: formatEvolutionTime(sec),
@@ -83,12 +83,29 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
       }
     }
 
-    if (chartData.length < 8) return null;
+    if (allRuns.length < 8) return null;
 
-    const run1 = chartData[0].pace;
-    const middleRuns = chartData.slice(1, 7);
-    const avgMiddle = middleRuns.reduce((a, b) => a + b.pace, 0) / middleRuns.length;
-    const variation = Math.max(0, Number((((avgMiddle - run1) / run1) * 100).toFixed(1)));
+    // Run 2 = Pace Base (ritmo estabelecido após o Ski Erg)
+    const baseRun = allRuns.find(d => d.name === 'Run 2')?.pace || 0;
+
+    // Runs 3-7 = média de fadiga
+    const fatigueRuns = allRuns.filter(d =>
+      ['Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
+    );
+    const avgFatigue = fatigueRuns.length > 0
+      ? fatigueRuns.reduce((a, b) => a + b.pace, 0) / fatigueRuns.length
+      : 0;
+
+    let variation = 0;
+    if (baseRun > 0 && avgFatigue > 0) {
+      variation = ((avgFatigue - baseRun) / baseRun) * 100;
+    }
+    variation = Math.max(0, Number(variation.toFixed(1)));
+
+    // Gráfico: apenas Runs 2-7
+    const chartData = allRuns.filter(d =>
+      ['Run 2', 'Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
+    );
 
     return { chartData, variation };
   }, [splits]);
