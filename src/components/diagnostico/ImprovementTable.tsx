@@ -52,7 +52,7 @@ function getRoxzoneFromSplits(splits: Split[]): number {
   return 0;
 }
 
-export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
+export default function ImprovementTable({ diagnosticos, splits = [], metricScores = [] }: Props) {
   if (diagnosticos.length === 0) return null;
 
   // Build rows, injecting Roxzone from splits if missing
@@ -60,18 +60,45 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
   if (!hasRoxzone(diagnosticos) && splits.length > 0) {
     const roxzoneSec = getRoxzoneFromSplits(splits);
     if (roxzoneSec > 0) {
+      // Try to get roxzone reference from frozen metric scores
+      const roxzoneScore = metricScores.find(s => s.metric === 'roxzone');
+      
+      // Calculate a reference (Meta OUTLIER) for roxzone
+      // Use percentile to estimate: if athlete is at P50 (420s), top reference ~P10 (270s)
+      // Simple heuristic: reference = raw_time * (percentile / 100) factor
+      let roxzoneRef = 0;
+      if (roxzoneScore && roxzoneScore.percentile_value > 0) {
+        // Use a ratio based on the other stations' avg improvement (~30-40% reduction for top)
+        // More accurately: estimate top_1 as ~60-70% of athlete time based on percentile position
+        const avgRatio = rows.length > 0
+          ? rows.reduce((sum, d) => sum + (d.top_1 > 0 && d.your_score > 0 ? d.top_1 / d.your_score : 0), 0) / rows.filter(d => d.top_1 > 0 && d.your_score > 0).length
+          : 0.65;
+        roxzoneRef = Math.round(roxzoneSec * (avgRatio > 0 ? avgRatio : 0.65));
+      }
+
+      const improvementVal = roxzoneRef > 0 ? Math.max(0, roxzoneSec - roxzoneRef) : 0;
+
       rows.push({
         id: 'roxzone-computed',
         movement: 'Roxzone Time',
         metric: 'time',
         value: 0,
         your_score: roxzoneSec,
-        top_1: 0,
-        improvement_value: 0,
-        percentage: 0,
+        top_1: roxzoneRef,
+        improvement_value: improvementVal,
+        percentage: 0, // Will be recalculated below
         total_improvement: 0,
       });
     }
+  }
+
+  // Recalculate percentages for all rows based on total improvement
+  const totalImprovement = rows.reduce((sum, d) => sum + d.improvement_value, 0);
+  if (totalImprovement > 0) {
+    rows = rows.map(d => ({
+      ...d,
+      percentage: d.improvement_value > 0 ? (d.improvement_value / totalImprovement) * 100 : d.percentage,
+    }));
   }
 
   const totalYou = rows.reduce((sum, d) => sum + d.your_score, 0);
