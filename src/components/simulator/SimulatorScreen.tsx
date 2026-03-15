@@ -152,21 +152,24 @@ export function SimulatorScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Saved Race Plan */}
-      {racePlan && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Seu Plano de Prova</p>
-            <RacePlanCard
-              targetTime={racePlan.targetTime}
-              rows={racePlan.rows}
-              totalTarget={racePlan.totalTarget}
-              showCopyButton={false}
-              compact
+      {/* Calculadora de Pace — usa último simulado */}
+      {simulations.length > 0 && (() => {
+        const lastSim = simulations[0];
+        const splits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
+          id: String(i),
+          split_name: s.type === 'roxzone' ? 'Roxzone' : (PHASE_TO_SPLIT_NAME[s.phase] || s.label),
+          time: secondsToTimeStr(s.time_seconds),
+        }));
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <TargetSplitsTable
+              splits={splits}
+              finishTime={formatTime(lastSim.total_time)}
+              title="Calculadora de Pace Ideal"
             />
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        );
+      })()}
 
       {/* CTA */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
