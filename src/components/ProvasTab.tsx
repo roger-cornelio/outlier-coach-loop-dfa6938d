@@ -91,6 +91,33 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
 
+  // ── Fetch splits for TargetSplitsTable ──
+  const [splits, setSplits] = useState<Split[]>([]);
+  const [finishTime, setFinishTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      // Get latest resumo
+      const { data: resumo } = await supabase
+        .from('diagnostico_resumo')
+        .select('id, finish_time')
+        .eq('atleta_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (resumo) {
+        setFinishTime(resumo.finish_time);
+        const { data: splitsData } = await supabase
+          .from('tempos_splits')
+          .select('split_name, time')
+          .eq('resumo_id', resumo.id);
+        if (splitsData) setSplits(splitsData as Split[]);
+      }
+    })();
+  }, [user, refreshKey]);
+
   // ── Search state ──
   const profileName = profile?.name || '';
   const [searchQuery, setSearchQuery] = useState(profileName);
