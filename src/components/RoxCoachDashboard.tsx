@@ -15,7 +15,7 @@ import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import DeepAnalysisBlock from './diagnostico/DeepAnalysisBlock';
 import ParecerPremium from './diagnostico/ParecerPremium';
-import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
+
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
