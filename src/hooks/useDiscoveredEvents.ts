@@ -123,6 +123,7 @@ export function useDiscoveredEvents() {
     const eventPayload = {
       id: eventId,
       nome: eventData.nome,
+      tipo_evento: 'PARALELA',
       data_evento: eventData.data_evento || null,
       cidade: eventData.cidade || null,
       estado: eventData.estado || null,
