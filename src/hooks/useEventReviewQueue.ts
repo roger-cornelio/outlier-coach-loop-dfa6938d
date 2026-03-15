@@ -195,5 +195,30 @@ export function useEventReviewQueue() {
     return !error;
   }, []);
 
-  return { items, loading, fetchQueue, approveEvent, rejectEvent, markDuplicate, updateEventType };
+  const updateEvent = useCallback(async (eventId: string, updates: {
+    nome?: string;
+    data_evento?: string;
+    cidade?: string;
+    estado?: string;
+    organizador?: string;
+    tipo_evento?: string;
+    url_origem?: string;
+    url_inscricao?: string;
+    admin_notes?: string;
+  }) => {
+    const { error } = await supabase
+      .from('discovered_events')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', eventId);
+    return !error;
+  }, []);
+
+  const deleteEvent = useCallback(async (queueItemId: string, eventId: string) => {
+    // Delete queue item first, then the event
+    await supabase.from('event_review_queue').delete().eq('id', queueItemId);
+    const { error } = await supabase.from('discovered_events').delete().eq('id', eventId);
+    return !error;
+  }, []);
+
+  return { items, loading, fetchQueue, approveEvent, rejectEvent, markDuplicate, updateEventType, updateEvent, deleteEvent };
 }
