@@ -766,9 +766,6 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
         )}
       </div>
 
-      {/* ── HISTORY (Prova Atual) ── */}
-      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
-
       {/* ── Calculadora de Pace Ideal ── */}
       <TargetSplitsTable splits={splits} finishTime={finishTime} title="Calculadora de Pace Ideal" />
     </div>
