@@ -76,7 +76,7 @@ interface ProvaFormModalProps {
 }
 
 export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormModalProps) {
-  const [entryMode, setEntryMode] = useState<EntryMode>('choose');
+  const [entryMode, setEntryMode] = useState<EntryMode>('search');
   const [selectedEvent, setSelectedEvent] = useState<DiscoveredEvent | null>(null);
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const { requestEventReview } = useDiscoveredEvents();
