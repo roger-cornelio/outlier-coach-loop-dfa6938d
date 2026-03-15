@@ -231,6 +231,38 @@ Deno.serve(async (req) => {
       eficiencia: radarEficiencia,
     };
 
+    // ── 7b. Pre-calculate pace (deterministic) ─────────────────────────
+    let paceBlock = '';
+    if (runningSplits.length > 0) {
+      const totalRunSec = runningSplits.reduce((a, r) => a + r.sec, 0);
+      const athletePaceSec = totalRunSec / 8; // 8km total
+      const athletePaceFormatted = secondsToTime(Math.round(athletePaceSec));
+
+      const runBand = bandMap['run_avg'];
+      if (runBand) {
+        // p10 = best avg per 1km split; target pace = that value directly
+        const targetPaceSec = runBand.p10;
+        const targetPaceFormatted = secondsToTime(targetPaceSec);
+        const paceDiffSec = Math.round(athletePaceSec - targetPaceSec);
+
+        paceBlock = `
+PACE PRÉ-CALCULADO (NÃO RECALCULE — USE ESTES VALORES EXATOS):
+- Pace Médio Realizado: ${athletePaceFormatted} min/km
+- Pace Alvo (Próximo Nível): ${targetPaceFormatted} min/km
+- Defasagem Exata: ${Math.abs(paceDiffSec)} segundos por km ${paceDiffSec > 0 ? '(atleta mais lento)' : paceDiffSec < 0 ? '(atleta mais rápido que o alvo)' : '(no alvo)'}
+
+Na seção ANÁLISE DE PACE, use EXATAMENTE estes valores. Escreva obrigatoriamente:
+"pace médio defasado em exatos ${Math.abs(paceDiffSec)} segundos por quilômetro em relação ao nível alvo."
+`;
+      } else {
+        paceBlock = `
+PACE PRÉ-CALCULADO:
+- Pace Médio Realizado: ${athletePaceFormatted} min/km
+- Pace Alvo: Dados de referência indisponíveis para esta divisão/gênero.
+`;
+      }
+    }
+
     const perfilFisiologico = {
       vo2_max: vo2max,
       limiar_lactato: limiarPace,
