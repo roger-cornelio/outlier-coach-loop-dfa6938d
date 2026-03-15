@@ -12,9 +12,25 @@ import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
-import { RacePlanCard, type RacePlanRow } from '@/components/evolution/RacePlanCard';
+import { TargetSplitsTable } from '@/components/evolution/TargetSplitsTable';
+import { type Split } from '@/components/diagnostico/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+const PHASE_TO_SPLIT_NAME: Record<number, string> = {
+  0: 'Running 1', 1: 'Ski Erg', 2: 'Running 2', 3: 'Sled Push',
+  4: 'Running 3', 5: 'Sled Pull', 6: 'Running 4', 7: 'Burpee Broad Jump',
+  8: 'Running 5', 9: 'Rowing', 10: 'Running 6', 11: 'Farmers Carry',
+  12: 'Running 7', 13: 'Sandbag Lunges', 14: 'Running 8', 15: 'Wall Balls',
+};
+
+function secondsToTimeStr(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
 
 interface SplitData {
   phase: number;
@@ -41,24 +57,6 @@ export function SimulatorScreen() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [activeDivision, setActiveDivision] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-
-  // Load saved race plan from localStorage
-  const [racePlan, setRacePlan] = useState<{ targetTime: string; rows: RacePlanRow[]; totalTarget: number } | null>(null);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('outlier_race_plan');
-      if (saved) setRacePlan(JSON.parse(saved));
-    } catch { /* ignore */ }
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'outlier_race_plan' && e.newValue) {
-        try { setRacePlan(JSON.parse(e.newValue)); } catch { /* ignore */ }
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -154,21 +152,24 @@ export function SimulatorScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Saved Race Plan */}
-      {racePlan && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Seu Plano de Prova</p>
-            <RacePlanCard
-              targetTime={racePlan.targetTime}
-              rows={racePlan.rows}
-              totalTarget={racePlan.totalTarget}
-              showCopyButton={false}
-              compact
+      {/* Calculadora de Pace — usa último simulado */}
+      {simulations.length > 0 && (() => {
+        const lastSim = simulations[0];
+        const splits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
+          id: String(i),
+          split_name: s.type === 'roxzone' ? 'Roxzone' : (PHASE_TO_SPLIT_NAME[s.phase] || s.label),
+          time: secondsToTimeStr(s.time_seconds),
+        }));
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <TargetSplitsTable
+              splits={splits}
+              finishTime={formatTime(lastSim.total_time)}
+              title="Calculadora de Pace Ideal"
             />
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        );
+      })()}
 
       {/* CTA */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
