@@ -2135,18 +2135,10 @@ export function DiagnosticRadarBlock({
   }
 
   // ============================================
-  // DESKTOP / ADVANCED MODE — FULL LAYOUT (unchanged)
+  // DESKTOP — FULL LAYOUT
   // ============================================
   return (
     <div className="space-y-3">
-      
-      {/* Mobile advanced mode toggle (shown at top when in advanced mode) */}
-      {isMobile && advancedMode &&
-      <div className="flex items-center justify-end gap-2 px-1">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Modo avançado</span>
-          <Switch checked={advancedMode} onCheckedChange={setAdvancedMode} className="scale-75" />
-        </div>
-      }
 
       {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
