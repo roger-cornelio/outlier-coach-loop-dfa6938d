@@ -202,7 +202,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                       strokeDasharray="4 4"
                       opacity={0.6}
                       label={{
-                        value: `Meta ${formatSecondsToHHMM(targetSeconds)}`,
+                        value: `Meta ${formatSecondsToHHMMSS(targetSeconds)}`,
                         fill: 'hsl(var(--primary))',
                         fontSize: 10,
                         position: 'right',
