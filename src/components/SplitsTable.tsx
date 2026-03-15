@@ -21,6 +21,8 @@ interface SplitsTableProps {
     wallballs_sec: number | null;
   };
   totalTimeSeconds: number;
+  /** Individual splits from tempos_splits (keys: run_1..run_8, ski, sled_push, etc.) */
+  individualSplits?: Record<string, number>;
 }
 
 function formatTime(seconds: number): string {
@@ -34,48 +36,74 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * HYROX race order: Run 1 → Ski → Run 2 → Sled Push → Run 3 → Sled Pull → 
- * Run 4 → Burpee BJ → Run 5 → Row → Run 6 → Farmers → Run 7 → Sandbag → Run 8 → Wall Balls
+ * HYROX race order with individual split keys for runs and stations.
  */
-const RACE_ORDER: { label: string; key: string; type: 'run' | 'station' | 'roxzone' }[] = [
-  { label: 'Run 1', key: 'run_avg_sec', type: 'run' },
-  { label: 'Ski Erg', key: 'ski_sec', type: 'station' },
-  { label: 'Run 2', key: 'run_avg_sec', type: 'run' },
-  { label: 'Sled Push', key: 'sled_push_sec', type: 'station' },
-  { label: 'Run 3', key: 'run_avg_sec', type: 'run' },
-  { label: 'Sled Pull', key: 'sled_pull_sec', type: 'station' },
-  { label: 'Run 4', key: 'run_avg_sec', type: 'run' },
-  { label: 'Burpee Broad Jump', key: 'bbj_sec', type: 'station' },
-  { label: 'Run 5', key: 'run_avg_sec', type: 'run' },
-  { label: 'Row', key: 'row_sec', type: 'station' },
-  { label: 'Run 6', key: 'run_avg_sec', type: 'run' },
-  { label: 'Farmers Carry', key: 'farmers_sec', type: 'station' },
-  { label: 'Run 7', key: 'run_avg_sec', type: 'run' },
-  { label: 'Sandbag Lunges', key: 'sandbag_sec', type: 'station' },
-  { label: 'Run 8', key: 'run_avg_sec', type: 'run' },
-  { label: 'Wall Balls', key: 'wallballs_sec', type: 'station' },
+const RACE_ORDER: { label: string; individualKey: string; fallbackKey: string; type: 'run' | 'station' }[] = [
+  { label: 'Run 1', individualKey: 'run_1', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Ski Erg', individualKey: 'ski', fallbackKey: 'ski_sec', type: 'station' },
+  { label: 'Run 2', individualKey: 'run_2', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Sled Push', individualKey: 'sled_push', fallbackKey: 'sled_push_sec', type: 'station' },
+  { label: 'Run 3', individualKey: 'run_3', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Sled Pull', individualKey: 'sled_pull', fallbackKey: 'sled_pull_sec', type: 'station' },
+  { label: 'Run 4', individualKey: 'run_4', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Burpee Broad Jump', individualKey: 'bbj', fallbackKey: 'bbj_sec', type: 'station' },
+  { label: 'Run 5', individualKey: 'run_5', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Row', individualKey: 'row', fallbackKey: 'row_sec', type: 'station' },
+  { label: 'Run 6', individualKey: 'run_6', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Farmers Carry', individualKey: 'farmers', fallbackKey: 'farmers_sec', type: 'station' },
+  { label: 'Run 7', individualKey: 'run_7', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Sandbag Lunges', individualKey: 'sandbag', fallbackKey: 'sandbag_sec', type: 'station' },
+  { label: 'Run 8', individualKey: 'run_8', fallbackKey: 'run_avg_sec', type: 'run' },
+  { label: 'Wall Balls', individualKey: 'wallballs', fallbackKey: 'wallballs_sec', type: 'station' },
 ];
 
-export function SplitsTable({ splits, totalTimeSeconds }: SplitsTableProps) {
-  const { rows, totalRun, totalStations, totalRoxzone } = useMemo(() => {
-    const rows: SplitRow[] = RACE_ORDER.map(item => ({
-      label: item.label,
-      time_sec: splits[item.key as keyof typeof splits] ?? null,
-      type: item.type,
-    }));
+export function SplitsTable({ splits, totalTimeSeconds, individualSplits }: SplitsTableProps) {
+  const { rows, totalRun, totalStations, totalRoxzone, hasIndividualRuns } = useMemo(() => {
+    const hasIndividualRuns = !!(individualSplits && individualSplits['run_1']);
 
-    const runAvg = splits.run_avg_sec ?? 0;
-    const totalRun = runAvg * 8;
+    const rows: SplitRow[] = RACE_ORDER.map(item => {
+      // For individual splits: use direct value for that key
+      if (individualSplits && individualSplits[item.individualKey] != null) {
+        return {
+          label: item.label,
+          time_sec: individualSplits[item.individualKey],
+          type: item.type,
+        };
+      }
+      // Fallback: use benchmark_results columns
+      return {
+        label: item.label,
+        time_sec: splits[item.fallbackKey as keyof typeof splits] ?? null,
+        type: item.type,
+      };
+    });
+
+    // Calculate total run
+    let totalRun = 0;
+    if (hasIndividualRuns) {
+      for (let i = 1; i <= 8; i++) {
+        totalRun += individualSplits![`run_${i}`] ?? 0;
+      }
+    } else {
+      totalRun = (splits.run_avg_sec ?? 0) * 8;
+    }
 
     const stationKeys = ['ski_sec', 'sled_push_sec', 'sled_pull_sec', 'bbj_sec', 'row_sec', 'farmers_sec', 'sandbag_sec', 'wallballs_sec'] as const;
-    const totalStations = stationKeys.reduce((sum, k) => sum + (splits[k] ?? 0), 0);
+    
+    // For stations, prefer individual splits too
+    let totalStations = 0;
+    const stationIndividualKeys = ['ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'];
+    for (let i = 0; i < stationKeys.length; i++) {
+      const indVal = individualSplits?.[stationIndividualKeys[i]];
+      totalStations += indVal ?? (splits[stationKeys[i]] ?? 0);
+    }
 
-    const totalRoxzone = splits.roxzone_sec ?? 0;
+    const totalRoxzone = individualSplits?.['roxzone'] ?? splits.roxzone_sec ?? 0;
 
-    return { rows, totalRun, totalStations, totalRoxzone };
-  }, [splits]);
+    return { rows, totalRun, totalStations, totalRoxzone, hasIndividualRuns };
+  }, [splits, individualSplits]);
 
-  const hasAnyData = Object.values(splits).some(v => v !== null && v > 0);
+  const hasAnyData = rows.some(r => r.time_sec !== null && r.time_sec > 0);
 
   if (!hasAnyData) {
     return (
@@ -93,7 +121,6 @@ export function SplitsTable({ splits, totalTimeSeconds }: SplitsTableProps) {
 
   return (
     <div className="space-y-3">
-      {/* Splits table */}
       <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>

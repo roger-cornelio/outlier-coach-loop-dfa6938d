@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Loader2, Check, AlertTriangle, Timer } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, Check, AlertTriangle, Timer } from 'lucide-react';
 import { SplitsTable } from './SplitsTable';
 import { LevelBenchmarkComparison } from './LevelBenchmarkComparison';
 import { useHyroxMetricScores } from '@/hooks/useHyroxMetricScores';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { timeToSeconds } from './diagnostico/types';
 
 interface HyroxAnalysisCardProps {
   resultId: string;
@@ -32,11 +30,27 @@ interface BenchmarkSplits {
   wallballs_sec: number | null;
 }
 
-/**
- * HyroxAnalysisCard - Displays splits table for HYROX analysis
- * 
- * Reads split times directly from benchmark_results columns (scraped from print).
- */
+/** Map tempos_splits split_name to our internal keys */
+const SPLIT_NAME_MAP: Record<string, string> = {
+  'Running 1': 'run_1',
+  'Running 2': 'run_2',
+  'Running 3': 'run_3',
+  'Running 4': 'run_4',
+  'Running 5': 'run_5',
+  'Running 6': 'run_6',
+  'Running 7': 'run_7',
+  'Running 8': 'run_8',
+  'Ski Erg': 'ski',
+  'Sled Push': 'sled_push',
+  'Sled Pull': 'sled_pull',
+  'Burpees Broad Jump': 'bbj',
+  'Rowing': 'row',
+  'Farmers Carry': 'farmers',
+  'Sandbag Lunges': 'sandbag',
+  'Wall Balls': 'wallballs',
+  'Roxzone': 'roxzone',
+};
+
 export function HyroxAnalysisCard({
   resultId,
   totalTimeSeconds,
@@ -44,11 +58,11 @@ export function HyroxAnalysisCard({
   raceCategory
 }: HyroxAnalysisCardProps) {
   const [splits, setSplits] = useState<BenchmarkSplits | null>(null);
+  const [individualSplits, setIndividualSplits] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const division = raceCategory === 'PRO' ? 'HYROX PRO' : 'HYROX';
-
   const { scores } = useHyroxMetricScores(resultId);
 
   useEffect(() => {
@@ -56,14 +70,46 @@ export function HyroxAnalysisCard({
       setLoading(true);
       setError(null);
       try {
-        const { data, error: fetchError } = await supabase
+        // 1. Fetch benchmark_results splits (fallback)
+        const { data: brData, error: brError } = await supabase
           .from('benchmark_results')
-          .select('run_avg_sec, roxzone_sec, ski_sec, sled_push_sec, sled_pull_sec, bbj_sec, row_sec, farmers_sec, sandbag_sec, wallballs_sec')
+          .select('run_avg_sec, roxzone_sec, ski_sec, sled_push_sec, sled_pull_sec, bbj_sec, row_sec, farmers_sec, sandbag_sec, wallballs_sec, user_id')
           .eq('id', resultId)
           .single();
 
-        if (fetchError) throw fetchError;
-        setSplits(data as BenchmarkSplits);
+        if (brError) throw brError;
+        setSplits(brData as BenchmarkSplits);
+
+        // 2. Try to fetch individual splits from tempos_splits via the athlete's latest resumo
+        if (brData?.user_id) {
+          const { data: resumoData } = await supabase
+            .from('diagnostico_resumo')
+            .select('id')
+            .eq('atleta_id', brData.user_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (resumoData?.id) {
+            const { data: splitsData } = await supabase
+              .from('tempos_splits')
+              .select('split_name, time')
+              .eq('resumo_id', resumoData.id);
+
+            if (splitsData && splitsData.length > 0) {
+              const mapped: Record<string, number> = {};
+              for (const s of splitsData) {
+                const key = SPLIT_NAME_MAP[s.split_name];
+                if (key && s.time) {
+                  mapped[key] = timeToSeconds(s.time);
+                }
+              }
+              if (Object.keys(mapped).length > 0) {
+                setIndividualSplits(mapped);
+              }
+            }
+          }
+        }
       } catch (err: any) {
         console.error('[HYROX_CARD] Error fetching splits:', err);
         setError('Erro ao carregar tempos parciais.');
@@ -105,7 +151,6 @@ export function HyroxAnalysisCard({
           animate={{ opacity: 1, y: 0 }}
           className="p-4 rounded-lg bg-secondary/30 border border-border"
         >
-          {/* Header */}
           <div className="flex items-center gap-2 mb-3">
             <Timer className="w-5 h-5 text-primary" />
             <h4 className="font-display text-base">Tempos & Parciais</h4>
@@ -115,12 +160,14 @@ export function HyroxAnalysisCard({
             </div>
           </div>
 
-          {/* Splits Table */}
           {splits && (
-            <SplitsTable splits={splits} totalTimeSeconds={totalTimeSeconds} />
+            <SplitsTable
+              splits={splits}
+              totalTimeSeconds={totalTimeSeconds}
+              individualSplits={individualSplits ?? undefined}
+            />
           )}
 
-          {/* Level benchmark comparison */}
           {scores && scores.length > 0 && (
             <div className="mt-4">
               <LevelBenchmarkComparison
