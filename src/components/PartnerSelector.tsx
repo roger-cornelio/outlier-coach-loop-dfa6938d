@@ -43,17 +43,15 @@ export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
     async function loadAthletes() {
       setLoading(true);
       try {
-        // Use a broad search to get all athletes (the RPC returns up to 20 per call)
-        // We'll query profiles directly for the full list
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('user_id, name, email')
-          .order('name', { ascending: true });
+        // Use RPC that excludes coaches/admins — only returns athletes
+        const { data, error } = await supabase.rpc('search_public_athletes', {
+          search_term: '',
+        });
 
         if (!error && data) {
-          const athletes: RegisteredPartner[] = data.map(p => ({
-            id: p.user_id,
-            name: p.name || p.email?.split('@')[0] || 'Sem nome',
+          const athletes: RegisteredPartner[] = (data as any[]).map(p => ({
+            id: p.id,
+            name: p.name || 'Sem nome',
           }));
           setAllAthletes(athletes);
         }
