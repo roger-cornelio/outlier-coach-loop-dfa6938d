@@ -16,6 +16,7 @@ import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmi
 import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
 import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin";
 import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
+import { CRMAdmin } from "@/components/admin/CRMAdmin";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,11 +39,12 @@ import {
   Gauge,
   BookOpen,
   Calculator,
-  Grid3X3
+  Grid3X3,
+  Contact
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm";
 
 interface NavItem {
   id: AdminView;
@@ -123,6 +125,12 @@ const navItems: NavItem[] = [
     label: "Parâmetros", 
     icon: <Settings2 className="w-5 h-5" />,
     description: "Configurações do sistema"
+  },
+  {
+    id: "crm",
+    label: "CRM",
+    icon: <Contact className="w-5 h-5" />,
+    description: "Clientes e leads"
   },
   {
     id: "demoLevelUp",
@@ -236,6 +244,8 @@ const AdminPortal = () => {
         return <MovementPatternsAdmin />;
       case "stationValence":
         return <StationValenceAdmin />;
+      case "crm":
+        return <CRMAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
       default:

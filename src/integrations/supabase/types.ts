@@ -691,6 +691,30 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_clientes: {
+        Row: {
+          created_at: string
+          id: string
+          instagram: string | null
+          nome: string
+          telefone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          nome: string
+          telefone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          nome?: string
+          telefone?: string
+        }
+        Relationships: []
+      }
       custom_exercises: {
         Row: {
           coach_id: string
