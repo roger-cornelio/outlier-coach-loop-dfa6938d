@@ -2021,7 +2021,7 @@ export function DiagnosticRadarBlock({
   // ============================================
   // MOBILE SIMPLIFIED VIEW
   // ============================================
-  if (isMobile && !advancedMode) {
+  if (isMobile) {
     return (
       <div className="space-y-3">
         {/* Bloco 1: Caminho para Elite */}
