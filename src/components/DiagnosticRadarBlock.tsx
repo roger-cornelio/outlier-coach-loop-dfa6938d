@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users } from 'lucide-react';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { supabase } from '@/integrations/supabase/client';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
@@ -475,6 +475,7 @@ interface RaceInfo {
   race_date: string;
   categoria: string;
   daysUntil: number;
+  partner_name?: string | null;
 }
 
 interface DiagnosticRadarBlockProps {
@@ -972,7 +973,7 @@ function MobilePathToEliteCard({
 
           {/* Prova Alvo inline */}
           {provaAlvo && (
-            <div className="flex items-center gap-2 mt-2 text-xs">
+            <div className="flex items-center gap-2 mt-2 text-xs flex-wrap">
               <Target className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
               <span className="text-border/40">·</span>
@@ -982,6 +983,13 @@ function MobilePathToEliteCard({
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta</span>
                   <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+                </>
+              )}
+              {provaAlvo.partner_name && (
+                <>
+                  <span className="text-border/40">·</span>
+                  <Users className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
                 </>
               )}
             </div>
@@ -2150,7 +2158,7 @@ export function DiagnosticRadarBlock({
 
         {/* Prova Alvo inline — desktop */}
         {provaAlvo && (
-          <div className="flex items-center justify-center gap-2 text-sm mb-3">
+          <div className="flex items-center justify-center gap-2 text-sm mb-3 flex-wrap">
             <Target className="w-4 h-4 text-primary shrink-0" />
             <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
             <span className="text-border/40">·</span>
@@ -2160,6 +2168,13 @@ export function DiagnosticRadarBlock({
                 <span className="text-border/40">·</span>
                 <span className="text-muted-foreground">Meta</span>
                 <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+              </>
+            )}
+            {provaAlvo.partner_name && (
+              <>
+                <span className="text-border/40">·</span>
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
               </>
             )}
           </div>

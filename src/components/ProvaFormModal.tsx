@@ -10,6 +10,7 @@
 
 import { useState, useMemo } from 'react';
 import { Target, Orbit, Users, Info, Search, PenLine } from 'lucide-react';
+import { PartnerSelector, type PartnerData } from '@/components/PartnerSelector';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -58,14 +59,6 @@ const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT
 
 const DOUBLES_CATEGORIES = ['HYROX_DOUBLES', 'HYROX_PRO_DOUBLES'];
 
-const MOCK_ATLETAS = [
-  { id: 'athlete-1', name: 'João Silva' },
-  { id: 'athlete-2', name: 'Maria Santos' },
-  { id: 'athlete-3', name: 'Pedro Oliveira' },
-  { id: 'athlete-4', name: 'Ana Costa' },
-  { id: 'athlete-5', name: 'Lucas Ferreira' },
-];
-
 type EntryMode = 'search' | 'manual' | 'details' | 'confirm';
 
 interface ProvaFormModalProps {
@@ -89,7 +82,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
 
   const [categoria, setCategoria] = useState('');
   const [data, setData] = useState<Date | undefined>();
-  const [partnerId, setPartnerId] = useState('');
+  const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
 
   const isAlvo = type === 'ALVO';
   const isDupla = DOUBLES_CATEGORIES.includes(categoria);
@@ -149,7 +142,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     setCityOpen(false);
     setCategoria('');
     setData(undefined);
-    setPartnerId('');
+    setPartnerData(null);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -218,7 +211,6 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     if (!nomeBase.trim() || !categoria || !data || !cidade) return;
 
     const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
-    const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
 
     onSave({
       type,
@@ -226,8 +218,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
       categoria,
       data,
       participationType,
-      partnerAthleteId: isDupla ? partnerId : undefined,
-      partnerAthleteName: isDupla ? partner?.name : undefined,
+      partnerAthleteId: isDupla && partnerData?.type === 'registered' ? partnerData.id : undefined,
+      partnerAthleteName: isDupla ? partnerData?.name : undefined,
+      partnerPhone: isDupla && partnerData?.type === 'external' ? partnerData.phone : undefined,
+      partnerInstagram: isDupla && partnerData?.type === 'external' ? partnerData.instagram : undefined,
     });
 
     resetAll();
@@ -237,7 +231,6 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     if (!selectedEvent || !categoria || !data) return;
 
     const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
-    const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
 
     onSave({
       type,
@@ -245,8 +238,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
       categoria,
       data,
       participationType,
-      partnerAthleteId: isDupla ? partnerId : undefined,
-      partnerAthleteName: isDupla ? partner?.name : undefined,
+      partnerAthleteId: isDupla && partnerData?.type === 'registered' ? partnerData.id : undefined,
+      partnerAthleteName: isDupla ? partnerData?.name : undefined,
+      partnerPhone: isDupla && partnerData?.type === 'external' ? partnerData.phone : undefined,
+      partnerInstagram: isDupla && partnerData?.type === 'external' ? partnerData.instagram : undefined,
     });
 
     resetAll();
@@ -330,21 +325,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
             </div>
 
             {isDupla && (
-              <div className="space-y-2">
-                <Label>Parceiro(a) de dupla</Label>
-                <Select value={partnerId} onValueChange={setPartnerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu parceiro(a)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    {MOCK_ATLETAS.map(atleta => (
-                      <SelectItem key={atleta.id} value={atleta.id}>
-                        {atleta.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <PartnerSelector value={partnerData} onChange={setPartnerData} />
             )}
 
             <div className="flex gap-3 pt-2">
@@ -492,22 +473,9 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
               </Popover>
             </div>
 
-            {/* Parceiro de dupla — aparece automaticamente se categoria é Doubles */}
             {isDupla && (
               <div className="space-y-2">
-                <Label>Parceiro(a) de dupla</Label>
-                <Select value={partnerId} onValueChange={setPartnerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu parceiro(a)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    {MOCK_ATLETAS.map(atleta => (
-                      <SelectItem key={atleta.id} value={atleta.id}>
-                        {atleta.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PartnerSelector value={partnerData} onChange={setPartnerData} />
                 <p className="text-xs text-muted-foreground flex items-start gap-1.5 mt-2">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   Ao vincular sua dupla, seu coach poderá sincronizar os treinos para ambos.

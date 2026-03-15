@@ -98,7 +98,9 @@ export type Database = {
           id: string
           nome: string
           participation_type: string
+          partner_instagram: string | null
           partner_name: string | null
+          partner_phone: string | null
           race_date: string
           race_type: string
           updated_at: string
@@ -110,7 +112,9 @@ export type Database = {
           id?: string
           nome: string
           participation_type?: string
+          partner_instagram?: string | null
           partner_name?: string | null
+          partner_phone?: string | null
           race_date: string
           race_type?: string
           updated_at?: string
@@ -122,7 +126,9 @@ export type Database = {
           id?: string
           nome?: string
           participation_type?: string
+          partner_instagram?: string | null
           partner_name?: string | null
+          partner_phone?: string | null
           race_date?: string
           race_type?: string
           updated_at?: string
