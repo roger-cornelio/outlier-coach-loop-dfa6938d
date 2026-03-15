@@ -9,6 +9,7 @@ import type { AthleteStatus } from '@/types/outlier';
 interface LevelUpModalProps {
   isOpen: boolean;
   newStatus: AthleteStatus;
+  isOutlier?: boolean;
   onContinue: () => void;
 }
 
