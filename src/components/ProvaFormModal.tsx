@@ -81,7 +81,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
 
   const [categoria, setCategoria] = useState('');
   const [data, setData] = useState<Date | undefined>();
-  const [partnerId, setPartnerId] = useState('');
+  const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
 
   const isAlvo = type === 'ALVO';
   const isDupla = DOUBLES_CATEGORIES.includes(categoria);
