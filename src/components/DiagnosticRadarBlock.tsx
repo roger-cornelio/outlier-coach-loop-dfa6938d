@@ -2158,7 +2158,7 @@ export function DiagnosticRadarBlock({
 
         {/* Prova Alvo inline — desktop */}
         {provaAlvo && (
-          <div className="flex items-center justify-center gap-2 text-sm mb-3">
+          <div className="flex items-center justify-center gap-2 text-sm mb-3 flex-wrap">
             <Target className="w-4 h-4 text-primary shrink-0" />
             <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
             <span className="text-border/40">·</span>
@@ -2168,6 +2168,13 @@ export function DiagnosticRadarBlock({
                 <span className="text-border/40">·</span>
                 <span className="text-muted-foreground">Meta</span>
                 <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+              </>
+            )}
+            {provaAlvo.partner_name && (
+              <>
+                <span className="text-border/40">·</span>
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
               </>
             )}
           </div>
