@@ -22,9 +22,14 @@ interface TargetSplitsTableProps {
   splits?: Split[];
   finishTime?: string | null;
   title?: string;
+  prColumnLabel?: string;
+  targetColumnLabel?: string;
+  emptyMessage?: string;
+  /** Warning banner shown above the table */
+  warningMessage?: string;
 }
 
-export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTableProps) {
+export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, targetColumnLabel, emptyMessage, warningMessage }: TargetSplitsTableProps) {
   const initialTarget = finishTime || '01:08:00';
   const [targetInput, setTargetInput] = useState(initialTarget);
   const [showPlanModal, setShowPlanModal] = useState(false);
