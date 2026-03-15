@@ -530,7 +530,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
                 type="button"
                 variant="outline"
                 className="flex-1"
-                onClick={() => setEntryMode('choose')}
+                onClick={() => setEntryMode('search')}
               >
                 Voltar
               </Button>
