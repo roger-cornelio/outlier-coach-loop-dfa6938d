@@ -285,35 +285,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Choose entry mode */}
-        {entryMode === 'choose' && (
-          <div className="space-y-3 mt-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-auto py-4"
-              onClick={() => setEntryMode('search')}
-            >
-              <Search className="w-5 h-5 text-primary shrink-0" />
-              <div className="text-left">
-                <div className="font-medium text-sm">Selecionar prova encontrada</div>
-                <div className="text-xs text-muted-foreground">Buscar em provas oficiais, paralelas e simulados</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-auto py-4"
-              onClick={() => setEntryMode('manual')}
-            >
-              <PenLine className="w-5 h-5 text-muted-foreground shrink-0" />
-              <div className="text-left">
-                <div className="font-medium text-sm">Cadastrar manualmente</div>
-                <div className="text-xs text-muted-foreground">Inserir dados da prova que você conhece</div>
-              </div>
-            </Button>
-          </div>
-        )}
-
-        {/* Step 2a: Search */}
+        {/* Step: Search */}
         {entryMode === 'search' && (
           <div className="mt-2">
             <EventSearchPanel
