@@ -132,9 +132,24 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="w-5 h-5 text-amber-500" />
           Resistência sob Fadiga
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-sm" side="top">
+              <p>
+                O Índice de Quebra compara o seu <strong>Pace Base (Corrida 2)</strong> com a média de fadiga <strong>(Corridas 3 a 7)</strong>.
+              </p>
+              <p className="mt-2 text-muted-foreground text-xs">
+                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo da prova.
+              </p>
+            </PopoverContent>
+          </Popover>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Análise da degradação de pace ao longo das 8 corridas
+          Degradação de pace nas corridas 2 a 7
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
