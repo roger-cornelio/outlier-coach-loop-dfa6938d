@@ -76,6 +76,7 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
     return { totalPR, totalTarget, diff, hasAnyPR };
   }, [rows]);
 
+  if (!prSplits) {
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/20">
         <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
