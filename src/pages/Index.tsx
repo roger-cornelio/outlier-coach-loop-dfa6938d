@@ -251,6 +251,7 @@ const Index = () => {
     feedback: PerformanceFeedback,
     admin: AdminSpreadsheet,
     benchmarks: BenchmarksScreen,
+    evolution: EvolutionTab,
     coachPerformance: CoachPerformance,
     coachApplication: CoachApplicationPage,
   } as const;

@@ -12,7 +12,7 @@
 import { 
   LayoutDashboard, 
   Calendar, 
-  Trophy,
+  TrendingUp,
   Settings,
   ChevronLeft,
   ChevronRight,

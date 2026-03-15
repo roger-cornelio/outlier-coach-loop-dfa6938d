@@ -14,7 +14,7 @@ import {
   X, 
   LayoutDashboard, 
   Calendar, 
-  Trophy, 
+  TrendingUp, 
   Settings, 
   LogOut,
   Loader2,
