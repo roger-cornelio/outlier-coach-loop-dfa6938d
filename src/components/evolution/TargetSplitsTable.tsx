@@ -14,7 +14,9 @@ import {
   formatEvolutionTime, parseTimeInput, resolveSplitKey,
 } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Crosshair, Download, Lock } from 'lucide-react';
+import { Crosshair, Lock, Map } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RacePlanCard, type RacePlanRow } from './RacePlanCard';
 
 interface TargetSplitsTableProps {
   splits?: Split[];
@@ -25,6 +27,7 @@ interface TargetSplitsTableProps {
 export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTableProps) {
   const initialTarget = finishTime || '01:08:00';
   const [targetInput, setTargetInput] = useState(initialTarget);
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   // Mapeia splits reais do banco para chaves internas usando aliases
   const prSplits = useMemo(() => {
@@ -178,10 +181,47 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
           </p>
         )}
 
-        <Button variant="outline" size="sm" className="w-full border-border/20 text-muted-foreground" disabled>
-          <Download className="w-4 h-4 mr-1" />
-          Exportar Target
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-border/20 gap-2"
+          onClick={() => {
+            if (!rows) return;
+            const planRows: RacePlanRow[] = rows.map(r => ({
+              key: r.key,
+              label: r.label,
+              targetSplit: r.targetSplit,
+              isRun: r.isRun,
+            }));
+            const totalT = planRows.reduce((s, r) => s + r.targetSplit, 0);
+            localStorage.setItem('outlier_race_plan', JSON.stringify({
+              targetTime: targetInput,
+              rows: planRows,
+              totalTarget: totalT,
+            }));
+            setShowPlanModal(true);
+          }}
+          disabled={!rows}
+        >
+          <Map className="w-4 h-4" />
+          Gerar Plano de Prova
         </Button>
+
+        {/* Plan Modal */}
+        <Dialog open={showPlanModal} onOpenChange={setShowPlanModal}>
+          <DialogContent className="max-w-md p-4 bg-background">
+            <DialogHeader>
+              <DialogTitle className="text-base">Plano de Prova</DialogTitle>
+            </DialogHeader>
+            {rows && (
+              <RacePlanCard
+                targetTime={targetInput}
+                rows={rows.map(r => ({ key: r.key, label: r.label, targetSplit: r.targetSplit, isRun: r.isRun }))}
+                totalTarget={rows.reduce((s, r) => s + r.targetSplit, 0)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

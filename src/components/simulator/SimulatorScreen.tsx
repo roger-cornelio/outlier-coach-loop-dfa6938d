@@ -12,6 +12,7 @@ import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
+import { RacePlanCard, type RacePlanRow } from '@/components/evolution/RacePlanCard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -40,6 +41,24 @@ export function SimulatorScreen() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [activeDivision, setActiveDivision] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Load saved race plan from localStorage
+  const [racePlan, setRacePlan] = useState<{ targetTime: string; rows: RacePlanRow[]; totalTarget: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('outlier_race_plan');
+      if (saved) setRacePlan(JSON.parse(saved));
+    } catch { /* ignore */ }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'outlier_race_plan' && e.newValue) {
+        try { setRacePlan(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -135,6 +154,22 @@ export function SimulatorScreen() {
 
   return (
     <div className="space-y-6">
+      {/* Saved Race Plan */}
+      {racePlan && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Seu Plano de Prova</p>
+            <RacePlanCard
+              targetTime={racePlan.targetTime}
+              rows={racePlan.rows}
+              totalTarget={racePlan.totalTarget}
+              showCopyButton={false}
+              compact
+            />
+          </div>
+        </motion.div>
+      )}
+
       {/* CTA */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Button
