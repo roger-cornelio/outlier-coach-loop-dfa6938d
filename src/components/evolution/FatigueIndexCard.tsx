@@ -195,12 +195,27 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
         <div className="bg-muted/10 border border-border/10 rounded-lg p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
             Seu pace degrada <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> entre 
-            a Corrida 2 (pace base) e a média das Corridas 3-7. {variation > 12 
+            o melhor e o pior split nas Corridas 2 a 7. {variation > 12 
               ? 'Foco recomendado em resistência muscular e gestão de ritmo.' 
               : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
                 : 'Excelente consistência de pace. Nível elite de gestão de fadiga.'}
           </p>
+        </div>
+
+        {/* Bloco de Insight Outlier */}
+        <div className="mt-2 bg-muted/30 border border-border/50 rounded-lg p-4 flex items-start gap-3">
+          <div className="bg-primary/10 p-2 rounded-full shrink-0">
+            <Zap className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-1">
+              Filosofia de Elite
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Na HYROX, a consistência vence a velocidade cega. Este índice não julga o quão rápido você corre, mas o quão inabalável você se mantém sob fadiga extrema. Atletas de alta performance não têm picos de velocidade — eles têm a ausência de quebras.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
