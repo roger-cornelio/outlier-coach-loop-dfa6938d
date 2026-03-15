@@ -144,7 +144,7 @@ export function useDiscoveredEvents() {
       id: eventId,
       nome: eventData.nome,
       slug: null,
-      tipo_evento: 'OFICIAL',
+      tipo_evento: 'PARALELA',
       data_evento: eventData.data_evento || null,
       cidade: eventData.cidade || null,
       estado: eventData.estado || null,
