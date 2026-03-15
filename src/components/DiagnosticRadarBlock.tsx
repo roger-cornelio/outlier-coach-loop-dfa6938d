@@ -2011,6 +2011,16 @@ export function DiagnosticRadarBlock({
     return s > 0 ? `${m}min ${s}s` : `${m} min`;
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
 
+  const resultadoEsperadoFormatted = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
+    const currentSec = validatingCompetition.time_in_seconds;
+    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const h = Math.floor(projectedAt12 / 3600);
+    const m = Math.floor((projectedAt12 % 3600) / 60);
+    const s = Math.round(projectedAt12 % 60);
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
   const projectionTargetSec = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return 0;
     const currentSec = validatingCompetition.time_in_seconds;
@@ -2376,8 +2386,8 @@ export function DiagnosticRadarBlock({
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground">{evolutionProjection.gapFormatted}</div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
+                <div className="text-sm font-bold text-foreground">{resultadoEsperadoFormatted}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
               </div>
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
                 <div className="text-sm font-bold text-primary">{evolutionProjection.ratePerMonth}s</div>
@@ -2547,8 +2557,8 @@ export function DiagnosticRadarBlock({
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={{ stroke: 'hsl(var(--border))' }} tickLine={false} />
-                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(val: number) => { const h = Math.floor(val / 3600); const m = Math.floor((val % 3600) / 60); return `${h}:${String(m).padStart(2, '0')}`; }} domain={['dataMin - 60', 'dataMax + 60']} />
-                  <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => { const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); return [`${h}:${String(m).padStart(2, '0')}`, 'Tempo']; }} labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`} />
+                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(val: number) => { const h = Math.floor(val / 3600); const m = Math.floor((val % 3600) / 60); const s = Math.round(val % 60); return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }} domain={['dataMin - 60', 'dataMax + 60']} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => { const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); const s = Math.round(value % 60); return [`${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`, 'Tempo']; }} labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`} />
                   {projectionTargetSec > 0 && (
                     <ReferenceLine y={projectionTargetSec} stroke="hsl(var(--primary))" strokeDasharray="4 4" opacity={0.6} label={{ value: `Meta`, fill: 'hsl(var(--primary))', fontSize: 10, position: 'right' }} />
                   )}
@@ -2560,8 +2570,8 @@ export function DiagnosticRadarBlock({
 
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-foreground">{evolutionProjection.gapFormatted}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
+              <div className="text-lg font-bold text-foreground">{resultadoEsperadoFormatted}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-primary">{evolutionProjection.ratePerMonth}s</div>

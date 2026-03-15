@@ -25,10 +25,11 @@ const TIER_COLORS: Record<string, string> = {
   Elite: 'bg-primary text-primary-foreground',
 };
 
-function formatSecondsToHHMM(sec: number): string {
+function formatSecondsToHHMMSS(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  return `${h}:${String(m).padStart(2, '0')}`;
+  const s = Math.round(sec % 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function buildProjectionData(currentSeconds: number, ratePerMonth: number) {
@@ -122,6 +123,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
     const s = Math.round(gainIn12 % 60);
     return s > 0 ? `${m}min ${s}s` : `${m} minutos`;
   })();
+  const resultadoEsperado = formatSecondsToHHMMSS(projectedAt12);
 
   return (
     <motion.div
@@ -180,7 +182,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val: number) => formatSecondsToHHMM(val)}
+                    tickFormatter={(val: number) => formatSecondsToHHMMSS(val)}
                     domain={['dataMin - 60', 'dataMax + 60']}
                   />
                   <Tooltip
@@ -190,7 +192,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [formatSecondsToHHMM(value), 'Tempo']}
+                    formatter={(value: number) => [formatSecondsToHHMMSS(value), 'Tempo']}
                     labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`}
                   />
                   {targetSeconds > 0 && (
@@ -200,7 +202,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                       strokeDasharray="4 4"
                       opacity={0.6}
                       label={{
-                        value: `Meta ${formatSecondsToHHMM(targetSeconds)}`,
+                        value: `Meta ${formatSecondsToHHMMSS(targetSeconds)}`,
                         fill: 'hsl(var(--primary))',
                         fontSize: 10,
                         position: 'right',
@@ -224,8 +226,8 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
           {/* Metric boxes */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-foreground">{gapFormatted}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Gap total</div>
+              <div className="text-lg font-bold text-foreground">{resultadoEsperado}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-primary">{ratePerMonth}s</div>
