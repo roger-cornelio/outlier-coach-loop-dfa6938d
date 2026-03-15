@@ -26,6 +26,7 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
+import { useJourneyProgress } from '@/hooks/useJourneyProgress';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
@@ -104,6 +105,7 @@ export function Dashboard() {
   
   // Detectar subida de nível para exibir modal
   const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
+  const journeyProgress = useJourneyProgress();
   
   const navigate = useNavigate();
   
@@ -392,6 +394,7 @@ export function Dashboard() {
         <LevelUpModal
           isOpen={showLevelUpModal}
           newStatus={newLevel}
+          isOutlier={journeyProgress.isOutlier}
           onContinue={acknowledgeLevel}
         />
       )}

@@ -9,6 +9,7 @@ import type { AthleteStatus } from '@/types/outlier';
 interface LevelUpModalProps {
   isOpen: boolean;
   newStatus: AthleteStatus;
+  isOutlier?: boolean;
   onContinue: () => void;
 }
 
@@ -54,7 +55,7 @@ function CelebrationParticles({ accentHsl }: { accentHsl: string }) {
   );
 }
 
-export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProps) {
+export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue }: LevelUpModalProps) {
   const [showContent, setShowContent] = useState(false);
   const config = STATUS_CONFIG[newStatus];
 
@@ -100,7 +101,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   transition={{ delay: 0.1 }}
                   className="text-xs font-medium text-white/50 uppercase tracking-[0.3em] mb-8"
                 >
-                  Novo Status Alcançado
+                  {isOutlier ? 'Novo Status Alcançado' : 'Nova Categoria'}
                 </motion.p>
               )}
             </AnimatePresence>
@@ -158,7 +159,7 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   transition={{ delay: 0.5 }}
                   className="text-3xl md:text-5xl font-display font-bold text-white uppercase tracking-wide mb-4"
                 >
-                  {config.label} OUTLIER
+                  {isOutlier ? `${config.label} OUTLIER` : `Categoria ${config.label}`}
                 </motion.h1>
               )}
             </AnimatePresence>
@@ -185,12 +186,20 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                   transition={{ delay: 0.65 }}
                   className="mb-12 space-y-1"
                 >
-                  <p className="text-base text-white/40 font-light italic">
-                    Você não está na média.
-                  </p>
-                  <p className="text-lg text-white/70 font-semibold italic">
-                    Você está fora da curva.
-                  </p>
+                  {isOutlier ? (
+                    <>
+                      <p className="text-base text-white/40 font-light italic">
+                        Você não está na média.
+                      </p>
+                      <p className="text-lg text-white/70 font-semibold italic">
+                        Você está fora da curva.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-base text-white/50 font-light italic">
+                      Sua categoria foi atualizada. Continue treinando para conquistar o título OUTLIER.
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -215,10 +224,12 @@ export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProp
                       'flex items-center gap-2'
                     )}
                   >
-                    {config.nextLabel
+                    {isOutlier && config.nextLabel
                       ? `Avançar para ${config.nextLabel}`
-                      : `Você é ${config.label} OUTLIER`}
-                    {config.nextLabel && <ChevronRight className="w-5 h-5" />}
+                      : isOutlier
+                        ? `Você é ${config.label} OUTLIER`
+                        : 'Continuar'}
+                    {isOutlier && config.nextLabel && <ChevronRight className="w-5 h-5" />}
                   </Button>
                 </motion.div>
               )}
