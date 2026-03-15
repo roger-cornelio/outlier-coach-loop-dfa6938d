@@ -29,23 +29,6 @@ export const STATION_LABELS: Record<string, string> = {
   roxzone: 'Roxzone',
 };
 
-// PRs mockados por estação (em segundos)
-export const MOCK_CURRENT_PRS: Record<string, number> = {
-  run_total: 2400, // 40:00
-  ski: 310,        // 05:10
-  sled_push: 210,  // 03:30
-  sled_pull: 250,  // 04:10
-  bbj: 360,        // 06:00
-  row: 300,        // 05:00
-  farmers: 260,    // 04:20
-  sandbag: 380,    // 06:20
-  wall_balls: 320, // 05:20
-  roxzone: 210,    // 03:30
-};
-
-// Runs mockados (8 runs em segundos)
-export const MOCK_RUNS: number[] = [214, 232, 248, 265, 289, 312, 358, 427];
-
 // Dados mockados de pódio — granularidade: evento + divisão + age_group
 export const MOCK_PODIUM_TIMES: Record<string, number> = {
   'SP_PRO_30_34': 4200, // 01:10:00

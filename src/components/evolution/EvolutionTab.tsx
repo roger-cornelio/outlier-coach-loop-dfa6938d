@@ -5,9 +5,15 @@
 
 import { FatigueIndexCard } from './FatigueIndexCard';
 import { TargetSplitsTable } from './TargetSplitsTable';
+import { type Split } from '@/components/diagnostico/types';
 import { TrendingUp } from 'lucide-react';
 
-export function EvolutionTab() {
+interface EvolutionTabProps {
+  splits?: Split[];
+  finishTime?: string | null;
+}
+
+export function EvolutionTab({ splits, finishTime }: EvolutionTabProps) {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
@@ -24,10 +30,10 @@ export function EvolutionTab() {
       {/* Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="lg:col-span-2">
-          <FatigueIndexCard />
+          <FatigueIndexCard splits={splits} />
         </div>
         <div className="lg:col-span-2">
-          <TargetSplitsTable />
+          <TargetSplitsTable splits={splits} finishTime={finishTime} />
         </div>
       </div>
     </div>
