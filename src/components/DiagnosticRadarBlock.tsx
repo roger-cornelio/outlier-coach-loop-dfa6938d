@@ -1905,63 +1905,62 @@ export function DiagnosticRadarBlock({
 
   const performanceSnapshot = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds ?? null;
-    const previousTime = previousCompetition?.time_in_seconds ?? null;
-    const targetSec = eliteTarget?.targetSeconds ?? null;
-    const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
+    const proReqSec = topPercentData.metaProSeconds ?? null;
+    const eliteReqSec = topPercentData.metaEliteSeconds ?? null;
 
-    let metaValue = '—';
-    let metaClass = 'text-foreground';
-    if (currentTime && targetSec) {
-      const delta = currentTime - targetSec;
-      if (delta <= 0) {
-        metaValue = `${formatOfficialTime(targetSec)} ✔`;
-        metaClass = 'text-emerald-400';
-      } else {
-        metaValue = formatOfficialTime(targetSec);
-        metaClass = 'text-amber-400';
-      }
+    // Determine current and next status labels + requirement values
+    let currentStatusLabel = 'OPEN';
+    let nextStatusLabel = 'PRO';
+    let currentReqSec: number | null = proReqSec;
+    let nextReqSec: number | null = eliteReqSec;
+
+    if (status === 'pro') {
+      currentStatusLabel = 'PRO';
+      nextStatusLabel = 'ELITE';
+      currentReqSec = proReqSec;
+      nextReqSec = eliteReqSec;
+    } else if (status === 'elite') {
+      currentStatusLabel = 'ELITE';
+      nextStatusLabel = 'ELITE';
+      currentReqSec = eliteReqSec;
+      nextReqSec = eliteReqSec;
     }
 
-    let gainValue = '—';
-    let gainClass = 'text-muted-foreground';
-    if (currentTime && targetSec) {
-      const gainSeconds = Math.max(currentTime - targetSec, 0);
-      if (gainSeconds <= 0) {
-        gainValue = 'Meta atingida';
-        gainClass = 'text-emerald-400';
-      } else {
-        gainValue = `↓ ${formatDeltaTime(gainSeconds)}`;
-        gainClass = 'text-primary';
-      }
-    }
+    // Format requirement values
+    const currentReqValue = currentReqSec ? formatOfficialTime(currentReqSec) : '—';
+    const nextReqValue = nextReqSec ? formatOfficialTime(nextReqSec) : '—';
 
-    let evolutionValue = 'Aguardando';
-    let evolutionClass = 'text-muted-foreground/50 text-[8px]';
-    if (currentTime && previousTime) {
-      const diff = currentTime - previousTime;
-      if (diff === 0) {
-        evolutionValue = '0s';
+    // GAP = difference between current requirement and next requirement
+    let gapValue = '—';
+    let gapClass = 'text-muted-foreground';
+    if (status === 'elite') {
+      gapValue = 'Meta atingida';
+      gapClass = 'text-emerald-400';
+    } else if (currentReqSec && nextReqSec) {
+      const gapSec = currentReqSec - nextReqSec;
+      if (gapSec <= 0) {
+        gapValue = 'Meta atingida';
+        gapClass = 'text-emerald-400';
       } else {
-        evolutionValue = diff < 0 ? `↓ ${formatDeltaTime(diff)}` : `↑ ${formatDeltaTime(diff)}`;
-        evolutionClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
+        gapValue = `↓ ${formatDeltaTime(gapSec)}`;
+        gapClass = 'text-primary';
       }
     }
 
     return {
       currentTime,
-      targetLabel,
-      metaValue,
-      metaClass,
-      gainValue,
-      gainClass,
-      evolutionValue,
-      evolutionClass,
+      currentStatusLabel,
+      nextStatusLabel,
+      currentReqValue,
+      nextReqValue,
+      gapValue,
+      gapClass,
     };
   }, [
     validatingCompetition?.time_in_seconds,
-    previousCompetition?.time_in_seconds,
-    eliteTarget?.targetSeconds,
-    eliteTarget?.targetLabel,
+    topPercentData.metaProSeconds,
+    topPercentData.metaEliteSeconds,
+    status,
   ]);
 
   // Evolution projection — uses the same gap as the header "Ganho" (currentTime - targetSec)
@@ -2333,40 +2332,40 @@ export function DiagnosticRadarBlock({
         {/* Barra de métricas da prova mais recente */}
         {performanceSnapshot.currentTime && (
           <div className="mx-3 mb-3 mt-1 grid grid-cols-2 gap-1.5 p-2.5 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
-            {/* Tempo da prova */}
+            {/* Última prova */}
             <div className="flex flex-col items-center text-center gap-0.5">
               <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
                 <Timer className="w-3 h-3" />
-                <span>Tempo prova</span>
+                <span>Última prova</span>
               </div>
               <span className="font-bold text-xs text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
             </div>
 
-            {/* Meta */}
+            {/* Status Atual */}
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
                 <Target className="w-3 h-3" />
-                <span>Requisito {performanceSnapshot.targetLabel}</span>
+                <span>Status Atual : {performanceSnapshot.currentStatusLabel}</span>
               </div>
-              <span className={cn('font-bold text-xs', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
+              <span className="font-bold text-xs text-foreground">{performanceSnapshot.currentReqValue}</span>
             </div>
 
-            {/* Ganho potencial */}
+            {/* Próximo Status */}
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                <Crown className="w-3 h-3" />
+                <span>Próximo : {performanceSnapshot.nextStatusLabel}</span>
+              </div>
+              <span className="font-bold text-xs text-foreground">{performanceSnapshot.nextReqValue}</span>
+            </div>
+
+            {/* GAP */}
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
                 <Zap className="w-3 h-3" />
-                <span>Ganho</span>
+                <span>GAP</span>
               </div>
-              <span className={cn('font-bold text-xs', performanceSnapshot.gainClass)}>{performanceSnapshot.gainValue}</span>
-            </div>
-
-            {/* Evolução */}
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                <TrendingUp className="w-3 h-3" />
-                <span>Evolução</span>
-              </div>
-              <span className={cn('font-bold text-xs', performanceSnapshot.evolutionClass)}>{performanceSnapshot.evolutionValue}</span>
+              <span className={cn('font-bold text-xs', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
             </div>
           </div>
         )}
@@ -2498,7 +2497,7 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-col items-center text-center gap-0.5">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Timer className="w-3.5 h-3.5" />
-                <span>Tempo prova</span>
+                <span>Última prova</span>
               </div>
               <span className="font-bold text-sm text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
             </div>
@@ -2506,25 +2505,25 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Target className="w-3.5 h-3.5" />
-                <span>Requisito {performanceSnapshot.targetLabel}</span>
+                <span>Status Atual : {performanceSnapshot.currentStatusLabel}</span>
               </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
+              <span className="font-bold text-sm text-foreground">{performanceSnapshot.currentReqValue}</span>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <Crown className="w-3.5 h-3.5" />
+                <span>Próximo : {performanceSnapshot.nextStatusLabel}</span>
+              </div>
+              <span className="font-bold text-sm text-foreground">{performanceSnapshot.nextReqValue}</span>
             </div>
 
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Zap className="w-3.5 h-3.5" />
-                <span>Ganho</span>
+                <span>GAP</span>
               </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.gainClass)}>{performanceSnapshot.gainValue}</span>
-            </div>
-
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>Evolução</span>
-              </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.evolutionClass)}>{performanceSnapshot.evolutionValue}</span>
+              <span className={cn('font-bold text-sm', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
             </div>
           </div>
         )}
