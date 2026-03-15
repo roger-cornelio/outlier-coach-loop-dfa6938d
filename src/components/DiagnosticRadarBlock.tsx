@@ -1905,63 +1905,62 @@ export function DiagnosticRadarBlock({
 
   const performanceSnapshot = useMemo(() => {
     const currentTime = validatingCompetition?.time_in_seconds ?? null;
-    const previousTime = previousCompetition?.time_in_seconds ?? null;
-    const targetSec = eliteTarget?.targetSeconds ?? null;
-    const targetLabel = eliteTarget?.targetLabel ?? 'ELITE';
+    const proReqSec = topPercentData.metaProSeconds ?? null;
+    const eliteReqSec = topPercentData.metaEliteSeconds ?? null;
 
-    let metaValue = '—';
-    let metaClass = 'text-foreground';
-    if (currentTime && targetSec) {
-      const delta = currentTime - targetSec;
-      if (delta <= 0) {
-        metaValue = `${formatOfficialTime(targetSec)} ✔`;
-        metaClass = 'text-emerald-400';
-      } else {
-        metaValue = formatOfficialTime(targetSec);
-        metaClass = 'text-amber-400';
-      }
+    // Determine current and next status labels + requirement values
+    let currentStatusLabel = 'OPEN';
+    let nextStatusLabel = 'PRO';
+    let currentReqSec: number | null = proReqSec;
+    let nextReqSec: number | null = eliteReqSec;
+
+    if (status === 'pro') {
+      currentStatusLabel = 'PRO';
+      nextStatusLabel = 'ELITE';
+      currentReqSec = proReqSec;
+      nextReqSec = eliteReqSec;
+    } else if (status === 'elite') {
+      currentStatusLabel = 'ELITE';
+      nextStatusLabel = 'ELITE';
+      currentReqSec = eliteReqSec;
+      nextReqSec = eliteReqSec;
     }
 
-    let gainValue = '—';
-    let gainClass = 'text-muted-foreground';
-    if (currentTime && targetSec) {
-      const gainSeconds = Math.max(currentTime - targetSec, 0);
-      if (gainSeconds <= 0) {
-        gainValue = 'Meta atingida';
-        gainClass = 'text-emerald-400';
-      } else {
-        gainValue = `↓ ${formatDeltaTime(gainSeconds)}`;
-        gainClass = 'text-primary';
-      }
-    }
+    // Format requirement values
+    const currentReqValue = currentReqSec ? formatOfficialTime(currentReqSec) : '—';
+    const nextReqValue = nextReqSec ? formatOfficialTime(nextReqSec) : '—';
 
-    let evolutionValue = 'Aguardando';
-    let evolutionClass = 'text-muted-foreground/50 text-[8px]';
-    if (currentTime && previousTime) {
-      const diff = currentTime - previousTime;
-      if (diff === 0) {
-        evolutionValue = '0s';
+    // GAP = difference between current requirement and next requirement
+    let gapValue = '—';
+    let gapClass = 'text-muted-foreground';
+    if (status === 'elite') {
+      gapValue = 'Meta atingida';
+      gapClass = 'text-emerald-400';
+    } else if (currentReqSec && nextReqSec) {
+      const gapSec = currentReqSec - nextReqSec;
+      if (gapSec <= 0) {
+        gapValue = 'Meta atingida';
+        gapClass = 'text-emerald-400';
       } else {
-        evolutionValue = diff < 0 ? `↓ ${formatDeltaTime(diff)}` : `↑ ${formatDeltaTime(diff)}`;
-        evolutionClass = diff < 0 ? 'text-emerald-400' : 'text-amber-400';
+        gapValue = `↓ ${formatDeltaTime(gapSec)}`;
+        gapClass = 'text-primary';
       }
     }
 
     return {
       currentTime,
-      targetLabel,
-      metaValue,
-      metaClass,
-      gainValue,
-      gainClass,
-      evolutionValue,
-      evolutionClass,
+      currentStatusLabel,
+      nextStatusLabel,
+      currentReqValue,
+      nextReqValue,
+      gapValue,
+      gapClass,
     };
   }, [
     validatingCompetition?.time_in_seconds,
-    previousCompetition?.time_in_seconds,
-    eliteTarget?.targetSeconds,
-    eliteTarget?.targetLabel,
+    topPercentData.metaProSeconds,
+    topPercentData.metaEliteSeconds,
+    status,
   ]);
 
   // Evolution projection — uses the same gap as the header "Ganho" (currentTime - targetSec)
