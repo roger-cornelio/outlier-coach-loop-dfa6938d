@@ -1817,14 +1817,6 @@ export function DiagnosticRadarBlock({
     return calculateEvolutionTimeframe(currentTime, totalGap);
   }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds, diagMelhorias, scores]);
 
-  // Advanced mode (mobile only, persisted)
-  const [advancedMode, setAdvancedMode] = useState(() => {
-    try {return localStorage.getItem('outlier-advanced-mode') === 'true';} catch {return false;}
-  });
-
-  useEffect(() => {
-    try {localStorage.setItem('outlier-advanced-mode', String(advancedMode));} catch {}
-  }, [advancedMode]);
 
   const hasData = hasDataProp && scores.length > 0;
 
