@@ -66,7 +66,7 @@ const MOCK_ATLETAS = [
   { id: 'athlete-5', name: 'Lucas Ferreira' },
 ];
 
-type EntryMode = 'choose' | 'search' | 'manual' | 'details' | 'confirm';
+type EntryMode = 'search' | 'manual' | 'details' | 'confirm';
 
 interface ProvaFormModalProps {
   open: boolean;
