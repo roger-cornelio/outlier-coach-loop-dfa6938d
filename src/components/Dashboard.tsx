@@ -201,6 +201,7 @@ export function Dashboard() {
       race_date: provaAlvo.race_date,
       categoria: provaAlvo.categoria,
       daysUntil,
+      partner_name: provaAlvo.partner_name,
     };
   }, [provaAlvo]);
 
