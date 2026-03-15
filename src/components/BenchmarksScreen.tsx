@@ -171,12 +171,6 @@ export function BenchmarksScreen() {
                 <BenchmarkHistory key={`benchmarks-${refreshKey}`} filterType="benchmark" />
               </TabsContent>
 
-              <TabsContent value="analise">
-                <div className="space-y-6">
-                  <FatigueIndexCard />
-                  <TargetSplitsTable />
-                </div>
-              </TabsContent>
             </Tabs>
           </motion.div>
         </div>

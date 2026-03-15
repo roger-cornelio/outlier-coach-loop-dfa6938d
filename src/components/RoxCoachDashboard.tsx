@@ -453,6 +453,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 diagnosticos={diagnosticos}
                 splits={splits}
               />
+
+              <FatigueIndexCard />
+              <TargetSplitsTable />
             </>
           )}
 
