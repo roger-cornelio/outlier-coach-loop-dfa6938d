@@ -120,9 +120,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </p>
           ) : (
             <p className="text-sm text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
-              <strong className="text-foreground">{gapFormatted}</strong> do seu tempo em aproximadamente{' '}
-              <strong className="text-primary">{months} {months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
+              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
             </p>
           )}
 

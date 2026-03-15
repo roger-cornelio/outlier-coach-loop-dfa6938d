@@ -1897,8 +1897,8 @@ export function DiagnosticRadarBlock({
       }
     }
 
-    let evolutionValue = '—';
-    let evolutionClass = 'text-muted-foreground';
+    let evolutionValue = 'Aguardando';
+    let evolutionClass = 'text-muted-foreground/50 text-[8px]';
     if (currentTime && previousTime) {
       const diff = currentTime - previousTime;
       if (diff === 0) {
