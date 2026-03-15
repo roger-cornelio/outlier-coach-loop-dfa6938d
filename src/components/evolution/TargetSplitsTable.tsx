@@ -97,7 +97,9 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
           {title || 'Target Splits'}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Defina seu tempo-alvo e veja o split necessário em cada estação — sequência oficial HYROX
+          {finishTime
+            ? `Sua prova atual: ${finishTime} · Defina seu tempo-alvo abaixo`
+            : 'Defina seu tempo-alvo e veja o split necessário em cada estação'}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
