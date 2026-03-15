@@ -2130,14 +2130,6 @@ export function DiagnosticRadarBlock({
           vo2maxEstimate={vo2maxEstimate}
           lactateThresholdEstimate={lactateThresholdEstimate} />
 
-        {/* Dados avançados (toggle) */}
-        <div className="flex items-center justify-end gap-2 px-1">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Avançado</span>
-          <Switch
-            checked={advancedMode}
-            onCheckedChange={setAdvancedMode}
-            className="scale-75" />
-        </div>
       </div>);
 
   }
