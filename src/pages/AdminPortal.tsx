@@ -39,7 +39,8 @@ import {
   Gauge,
   BookOpen,
   Calculator,
-  Grid3X3
+  Grid3X3,
+  Contact
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
