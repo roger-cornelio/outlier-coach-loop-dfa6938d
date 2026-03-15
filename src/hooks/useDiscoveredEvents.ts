@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { calculateConfidence, generateSearchSuggestions } from '@/utils/eventConfidence';
+import { calculateConfidence } from '@/utils/eventConfidence';
 
 export interface DiscoveredEvent {
   id: string;
