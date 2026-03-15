@@ -52,6 +52,8 @@ export function useAthleteRaces() {
     race_date: string;
     participation_type: 'INDIVIDUAL' | 'DUPLA';
     partner_name?: string;
+    partner_phone?: string;
+    partner_instagram?: string;
   }) => {
     if (!user?.id) return null;
 
