@@ -285,28 +285,40 @@ function DuplasTab() {
   const fetchDuplas = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch DUPLA races with athlete profile info
-      const { data, error } = await supabase
+      const { data: races, error } = await supabase
         .from("athlete_races")
-        .select("id, nome, categoria, race_date, race_type, partner_name, partner_phone, partner_instagram, participation_type, user_id, profiles!inner(name, email)")
+        .select("id, nome, categoria, race_date, race_type, partner_name, partner_phone, partner_instagram, participation_type, user_id")
         .eq("participation_type", "DUPLA")
         .order("race_date", { ascending: true });
 
       if (error) throw error;
+      if (!races || races.length === 0) { setRows([]); return; }
 
-      const mapped: DuplaRow[] = (data ?? []).map((r: any) => ({
-        id: r.id,
-        nome: r.nome,
-        categoria: r.categoria,
-        race_date: r.race_date,
-        race_type: r.race_type,
-        partner_name: r.partner_name,
-        partner_phone: r.partner_phone,
-        partner_instagram: r.partner_instagram,
-        participation_type: r.participation_type,
-        athlete_name: r.profiles?.name || "—",
-        athlete_email: r.profiles?.email || "—",
-      }));
+      // Fetch profiles for all user_ids
+      const userIds = [...new Set(races.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, name, email")
+        .in("user_id", userIds);
+
+      const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+
+      const mapped: DuplaRow[] = races.map((r) => {
+        const prof = profileMap.get(r.user_id);
+        return {
+          id: r.id,
+          nome: r.nome,
+          categoria: r.categoria,
+          race_date: r.race_date,
+          race_type: r.race_type,
+          partner_name: r.partner_name,
+          partner_phone: r.partner_phone,
+          partner_instagram: r.partner_instagram,
+          participation_type: r.participation_type,
+          athlete_name: prof?.name || "—",
+          athlete_email: prof?.email || "—",
+        };
+      });
 
       setRows(mapped);
     } catch (err: any) {
