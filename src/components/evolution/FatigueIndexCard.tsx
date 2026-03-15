@@ -201,8 +201,8 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
 
         <div className="bg-muted/10 border border-border/10 rounded-lg p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Sua corrida quebra <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> após 
-            as estações de força. {variation > 12 
+            Seu pace degrada <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> entre 
+            a Corrida 2 (pace base) e a média das Corridas 3-7. {variation > 12 
               ? 'Foco recomendado em resistência muscular e gestão de ritmo.' 
               : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
