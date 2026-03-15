@@ -1519,7 +1519,7 @@ function TrainingPrioritiesBlock({
               isMetBatida: false,
             };
           });
-        return items;
+        return items.filter(item => item.stars.count < 5);
       }
     }
 
