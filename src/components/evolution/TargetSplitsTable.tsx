@@ -67,6 +67,15 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
     });
   }, [targetSec, prSplits]);
 
+  const totals = useMemo(() => {
+    if (!rows) return null;
+    const totalPR = rows.reduce((s, r) => s + r.currentPR, 0);
+    const totalTarget = rows.reduce((s, r) => s + r.targetSplit, 0);
+    const diff = totalPR - totalTarget;
+    const hasAnyPR = rows.some(r => r.hasPR);
+    return { totalPR, totalTarget, diff, hasAnyPR };
+  }, [rows]);
+
   if (!prSplits) {
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/20">
@@ -140,6 +149,22 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
                     </TableCell>
                   </TableRow>
                 ))}
+                {totals && (
+                  <TableRow className="border-t-2 border-border/30 bg-muted/10">
+                    <TableCell className="text-xs py-2 font-bold">Total</TableCell>
+                    <TableCell className="text-xs py-2 text-right font-mono font-bold text-foreground">
+                      {totals.hasAnyPR ? formatEvolutionTime(totals.totalPR) : '—'}
+                    </TableCell>
+                    <TableCell className="text-xs py-2 text-right font-mono font-bold text-amber-500">
+                      {formatEvolutionTime(totals.totalTarget)}
+                    </TableCell>
+                    <TableCell className={`text-xs py-2 text-right font-mono font-bold ${
+                      !totals.hasAnyPR ? 'text-muted-foreground' : totals.diff <= 0 ? 'text-emerald-500' : 'text-red-400'
+                    }`}>
+                      {totals.hasAnyPR ? (totals.diff > 0 ? `-${formatEvolutionTime(totals.diff)}` : `+${formatEvolutionTime(Math.abs(totals.diff))}`) : '—'}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
