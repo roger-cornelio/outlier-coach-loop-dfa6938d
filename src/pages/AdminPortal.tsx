@@ -54,6 +54,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    id: "crm",
+    label: "CRM",
+    icon: <Contact className="w-5 h-5" />,
+    description: "Clientes e leads"
+  },
   { 
     id: "users", 
     label: "Usuários", 
@@ -127,12 +133,6 @@ const navItems: NavItem[] = [
     description: "Configurações do sistema"
   },
   {
-    id: "crm",
-    label: "CRM",
-    icon: <Contact className="w-5 h-5" />,
-    description: "Clientes e leads"
-  },
-  {
     id: "demoLevelUp",
     label: "Demo Level Up",
     icon: <Shield className="w-5 h-5" />,
@@ -141,7 +141,7 @@ const navItems: NavItem[] = [
 ];
 
 const AdminPortal = () => {
-  const [adminView, setAdminView] = useState<AdminView>("users");
+  const [adminView, setAdminView] = useState<AdminView>("crm");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, isAdmin, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
