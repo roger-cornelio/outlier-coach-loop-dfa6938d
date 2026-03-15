@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,10 +26,10 @@ serve(async (req) => {
     }
 
     const gapsDescription = gaps.map((g: any, i: number) => 
-      `${i + 1}. Movimento: ${g.movement || g.metric}, Métrica: ${g.metric}, Gap de melhoria: ${g.improvement_value}s`
+      `${i + 1}. Movimento: ${g.movement_label || g.movement || g.metric}, Gap de melhoria: ${g.improvement_value}s`
     ).join("\n");
 
-    const systemPrompt = `Você é um preparador físico especialista em HYROX e periodização esportiva. Gere EXATAMENTE 1-2 frases curtas sobre o foco de treino da próxima semana.
+    const systemPrompt = `Você é um preparador físico especialista em HYROX e periodização esportiva. Gere EXATAMENTE 1-2 frases curtas sobre o foco de treino do próximo ciclo.
 
 REGRAS ABSOLUTAS:
 - Use linguagem de periodização esportiva: valências físicas (resistência aeróbica, potência, força, capacidade anaeróbica, estabilidade de core, eficiência neuromuscular)
@@ -46,7 +46,8 @@ EXEMPLO BOM:
 "Os próximos treinos priorizarão o desenvolvimento de resistência aeróbica sob fadiga acumulada e potência de membros inferiores em regime de alta repetição — as capacidades com maior impacto direto no seu tempo final."
 
 EXEMPLO RUIM:
-"Os treinos terão foco em Ski Erg e Sandbag Lunges."`;
+"Os treinos terão foco em Ski Erg e Sandbag Lunges."
+"Os treinos terão foco em time e time."`;
 
     const userPrompt = `Baseado nos maiores gargalos de performance deste atleta HYROX:\n\n${gapsDescription}\n\nGere o texto de periodização (1-2 frases). Responda APENAS com o texto, sem introduções.`;
 
@@ -57,7 +58,7 @@ EXEMPLO RUIM:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

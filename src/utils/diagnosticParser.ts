@@ -5,6 +5,58 @@
 
 const SPLIT_NOISE = ['splits', 'total', 'average', 'station', 'movement', 'time', 'split', ''];
 
+/** Map movement names to canonical metric keys used by the system */
+const MOVEMENT_TO_METRIC: Record<string, string> = {
+  'run total': 'run_avg',
+  'run 1': 'run_avg',
+  'run 2': 'run_avg',
+  'run 3': 'run_avg',
+  'run 4': 'run_avg',
+  'run 5': 'run_avg',
+  'run 6': 'run_avg',
+  'run 7': 'run_avg',
+  'run 8': 'run_avg',
+  'running': 'run_avg',
+  'corrida': 'run_avg',
+  'roxzone': 'roxzone',
+  'rox zone': 'roxzone',
+  'ski erg': 'ski',
+  'skierg': 'ski',
+  'ski': 'ski',
+  'sled push': 'sled_push',
+  'sled pull': 'sled_pull',
+  'burpee broad jump': 'bbj',
+  'burpee broad jumps': 'bbj',
+  'bbj': 'bbj',
+  'rowing': 'row',
+  'row': 'row',
+  'remo': 'row',
+  "farmer's carry": 'farmers',
+  'farmers carry': 'farmers',
+  'farmer carry': 'farmers',
+  'farmers': 'farmers',
+  'sandbag lunges': 'sandbag',
+  'sandbag lunge': 'sandbag',
+  'sandbag': 'sandbag',
+  'wall balls': 'wallballs',
+  'wall ball': 'wallballs',
+  'wallballs': 'wallballs',
+};
+
+/** Normalize a movement name to a canonical metric key */
+function normalizeMetric(movement: string, rawMetric: string): string {
+  const movLower = (movement || '').trim().toLowerCase();
+  if (MOVEMENT_TO_METRIC[movLower]) return MOVEMENT_TO_METRIC[movLower];
+  // Try partial match
+  for (const [key, val] of Object.entries(MOVEMENT_TO_METRIC)) {
+    if (movLower.includes(key)) return val;
+  }
+  // If rawMetric is a known canonical key, use it
+  const knownMetrics = ['run_avg', 'roxzone', 'ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'];
+  if (knownMetrics.includes(rawMetric)) return rawMetric;
+  return rawMetric || 'time';
+}
+
 /** Parse a numeric value from potentially formatted strings like "87.5%" */
 function toNum(val: any): number {
   if (val == null || val === '') return 0;
@@ -130,7 +182,8 @@ export function parseDiagnosticResponse(
       const yourScore = parseScoreValue(rawYourScore);
       const top1 = parseScoreValue(rawTop1);
       const improvementValue = parseScoreValue(rawImprovement);
-      const metric = findValue(item, 'Metric', 'metric') || 'time';
+      const rawMetric = findValue(item, 'Metric', 'metric') || '';
+      const metric = normalizeMetric(movement, rawMetric);
       if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
       diagRows.push({
         atleta_id: userId,

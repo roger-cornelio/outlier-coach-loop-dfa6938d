@@ -2113,7 +2113,7 @@ export function DiagnosticRadarBlock({
     wallballs: 'potência de membros inferiores e resistência de ombro',
   };
 
-  // Deterministic fallback
+  // Deterministic fallback — uses movement labels, never raw metric keys
   const deterministicFocus = useMemo(() => {
     const gaps = [...(diagMelhorias || [])]
       .filter(d => d.improvement_value > 0)
@@ -2123,7 +2123,10 @@ export function DiagnosticRadarBlock({
     if (gaps.length === 0)
       return 'Foco em consolidação: desenvolvimento equilibrado de todas as valências.';
 
-    const focuses = gaps.map(g => METRIC_TRAINING_FOCUS[g.metric] || METRIC_LABELS[g.metric] || g.metric);
+    const focuses = gaps.map(g => {
+      // Priority: known training focus → known label → movement name (never raw metric key)
+      return METRIC_TRAINING_FOCUS[g.metric] || METRIC_LABELS[g.metric] || METRIC_LABELS[g.movement?.toLowerCase()] || g.movement || g.metric;
+    });
     const joined = focuses.length === 1 ? focuses[0] : `${focuses[0]} e ${focuses[1]}`;
 
     return `Os próximos treinos terão ênfase em ${joined} — os pontos com maior potencial de evolução identificados no seu diagnóstico.`;
@@ -2144,27 +2147,40 @@ export function DiagnosticRadarBlock({
       .filter(d => d.improvement_value > 0)
       .sort((a, b) => b.improvement_value - a.improvement_value)
       .slice(0, 3)
-      .map(g => ({ metric: g.metric, movement: g.movement, improvement_value: g.improvement_value }));
+      .map(g => ({
+        metric: g.metric,
+        movement: g.movement,
+        movement_label: METRIC_LABELS[g.metric] || g.movement,
+        improvement_value: g.improvement_value,
+      }));
 
     if (gaps.length === 0) {
       setTrainingFocus(deterministicFocus);
       return;
     }
 
-    periodizationFetched.current = true;
     setPeriodizationLoading(true);
 
-    supabase.functions.invoke('generate-periodization-text', { body: { gaps } })
-      .then(({ data, error }) => {
+    const fetchWithRetry = async (retries = 2): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-periodization-text', { body: { gaps } });
         if (error || !data?.texto) {
+          if (retries > 0) return fetchWithRetry(retries - 1);
           console.warn('Periodization AI fallback:', error);
           setTrainingFocus(deterministicFocus);
         } else {
           setTrainingFocus(data.texto);
+          periodizationFetched.current = true; // Only mark fetched on success
         }
-      })
-      .catch(() => setTrainingFocus(deterministicFocus))
-      .finally(() => setPeriodizationLoading(false));
+      } catch {
+        if (retries > 0) return fetchWithRetry(retries - 1);
+        setTrainingFocus(deterministicFocus);
+      } finally {
+        setPeriodizationLoading(false);
+      }
+    };
+
+    fetchWithRetry();
   }, [diagMelhorias, deterministicFocus]);
 
   // Loading state
