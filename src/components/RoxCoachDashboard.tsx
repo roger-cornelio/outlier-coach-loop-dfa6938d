@@ -46,18 +46,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     athleteConfig?.idade,
   );
 
-  const eliteTarget = useMemo(() => {
-    const isOpen = status === 'open';
-    if (isOpen && topPercentData.metaProSeconds) {
-      return { targetSeconds: topPercentData.metaProSeconds, targetLabel: 'PRO' };
-    }
-    if (topPercentData.metaEliteSeconds) {
-      return { targetSeconds: topPercentData.metaEliteSeconds, targetLabel: 'ELITE' };
-    }
-    if (adminTarget) return adminTarget;
-    const gender = athleteConfig?.sexo || 'masculino';
-    return getEliteTargetSeconds(status, gender);
-  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds, topPercentData.metaProSeconds]);
+
 
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
