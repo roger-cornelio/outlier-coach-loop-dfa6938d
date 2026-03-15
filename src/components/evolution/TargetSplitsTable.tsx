@@ -85,7 +85,7 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Crosshair className="w-5 h-5 text-amber-500" />
-          Target Splits
+          {title || 'Target Splits'}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Defina seu tempo-alvo e veja o split necessário em cada estação — sequência oficial HYROX
