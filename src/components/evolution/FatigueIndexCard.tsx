@@ -10,7 +10,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { formatEvolutionTime } from '@/utils/evolutionUtils';
 import { type Split, timeToSeconds } from '@/components/diagnostico/types';
-import { Activity, Lock, Info } from 'lucide-react';
+import { Activity, Lock, Info, Zap } from 'lucide-react';
+import { CardDescription } from '@/components/ui/card';
 
 interface FatigueIndexCardProps {
   splits?: Split[];
@@ -85,29 +86,23 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
 
     if (allRuns.length < 8) return null;
 
-    // Run 2 = Pace Base (ritmo estabelecido após o Ski Erg)
-    const baseRun = allRuns.find(d => d.name === 'Run 2')?.pace || 0;
-
-    // Runs 3-7 = média de fadiga
-    const fatigueRuns = allRuns.filter(d =>
-      ['Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
-    );
-    const avgFatigue = fatigueRuns.length > 0
-      ? fatigueRuns.reduce((a, b) => a + b.pace, 0) / fatigueRuns.length
-      : 0;
-
-    let variation = 0;
-    if (baseRun > 0 && avgFatigue > 0) {
-      variation = ((avgFatigue - baseRun) / baseRun) * 100;
-    }
-    variation = Math.max(0, Number(variation.toFixed(1)));
-
-    // Gráfico: apenas Runs 2-7
-    const chartData = allRuns.filter(d =>
+    // Runs 2-7: média de pace (exclui Run 1 = adrenalina, Run 8 = sprint final)
+    const coreRuns = allRuns.filter(d =>
       ['Run 2', 'Run 3', 'Run 4', 'Run 5', 'Run 6', 'Run 7'].includes(d.name)
     );
 
-    return { chartData, variation };
+    if (coreRuns.length < 6) return null;
+
+    const bestPace = Math.min(...coreRuns.map(r => r.pace));
+    const worstPace = Math.max(...coreRuns.map(r => r.pace));
+
+    let variation = 0;
+    if (bestPace > 0) {
+      variation = ((worstPace - bestPace) / bestPace) * 100;
+    }
+    variation = Math.max(0, Number(variation.toFixed(1)));
+
+    return { chartData: coreRuns, variation };
   }, [splits]);
 
   if (!runAnalysis) {
@@ -129,28 +124,26 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/20">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-amber-500" />
-          Resistência sob Fadiga
+          <CardTitle className="text-base">Resistência sob Fadiga</CardTitle>
           <Popover>
-            <PopoverTrigger asChild>
-              <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
-                <Info className="w-3.5 h-3.5" />
-              </button>
+            <PopoverTrigger>
+              <Info className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
             </PopoverTrigger>
-            <PopoverContent className="w-80 text-sm" side="top">
+            <PopoverContent className="w-80 text-sm border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" side="top">
               <p>
-                O Índice de Quebra compara o seu <strong>Pace Base (Corrida 2)</strong> com a média de fadiga <strong>(Corridas 3 a 7)</strong>.
+                O Índice de Quebra mede a <strong>variação entre o melhor e o pior pace</strong> nas <strong>Corridas 2 a 7</strong>.
               </p>
               <p className="mt-2 text-muted-foreground text-xs">
-                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo da prova.
+                *Excluímos a Corrida 1 (distorcida pela adrenalina da largada e diferenças de percurso) e a Corrida 8 (sprint final) para revelar a sua resistência real ao longo do "miolo" da prova.
               </p>
             </PopoverContent>
           </Popover>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        </div>
+        <CardDescription>
           Degradação de pace nas corridas 2 a 7
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -202,12 +195,27 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
         <div className="bg-muted/10 border border-border/10 rounded-lg p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
             Seu pace degrada <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> entre 
-            a Corrida 2 (pace base) e a média das Corridas 3-7. {variation > 12 
+            o melhor e o pior split nas Corridas 2 a 7. {variation > 12 
               ? 'Foco recomendado em resistência muscular e gestão de ritmo.' 
               : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
                 : 'Excelente consistência de pace. Nível elite de gestão de fadiga.'}
           </p>
+        </div>
+
+        {/* Bloco de Insight Outlier */}
+        <div className="mt-2 bg-muted/30 border border-border/50 rounded-lg p-4 flex items-start gap-3">
+          <div className="bg-primary/10 p-2 rounded-full shrink-0">
+            <Zap className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-1">
+              Filosofia de Elite
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Na HYROX, a consistência vence a velocidade cega. Este índice não julga o quão rápido você corre, mas o quão inabalável você se mantém sob fadiga extrema. Atletas de alta performance não têm picos de velocidade — eles têm a ausência de quebras.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
