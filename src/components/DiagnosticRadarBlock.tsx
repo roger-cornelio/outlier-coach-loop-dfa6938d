@@ -1558,7 +1558,7 @@ function TrainingPrioritiesBlock({
     // Fallback 2 (último recurso): heuristic based on percentiles
     return [...scores]
       .sort((a, b) => a.percentile_value - b.percentile_value)
-      .slice(0, showAll ? scores.length : 3)
+      .filter(s => percentileToStars(s.percentile_value).count < 5)
       .map((s) => {
         const stars = percentileToStars(s.percentile_value);
         const realGap = melhoriaMap.get(s.metric.toLowerCase()) || melhoriaMap.get(s.metric);
