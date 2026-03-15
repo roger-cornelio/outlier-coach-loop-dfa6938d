@@ -188,19 +188,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     try {
       const event = await requestEventReview(formData);
       if (event) {
-        if (event.status_validacao === 'VALIDADA') {
-          handleSelectEvent(event);
-          toast.success('Prova incluída e validada automaticamente!');
-        } else {
-          toast.success('Solicitação enviada para análise do Admin');
-          setNomeBase(formData.nome);
-          if (formData.data_evento) setData(new Date(formData.data_evento + 'T12:00:00'));
-          if (formData.estado) setEstado(formData.estado);
-          if (formData.cidade) setCidade(formData.cidade);
-          setEntryMode('details');
-        }
+        handleSelectEvent(event);
+        toast.success('Prova cadastrada com sucesso!');
       } else {
-        toast.error('Erro ao enviar solicitação');
+        toast.error('Erro ao cadastrar prova');
       }
     } finally {
       setIsSubmittingManual(false);

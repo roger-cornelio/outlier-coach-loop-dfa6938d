@@ -69,7 +69,7 @@ export function ManualEventForm({ onSubmit, onBack, isSubmitting }: ManualEventF
       </Button>
 
       <div className="text-sm text-muted-foreground">
-        Preencha o que souber. Se a prova não tiver dados mínimos, ela entrará para análise do admin.
+        Preencha os dados da prova. O cadastro é imediato e visível apenas para você.
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
