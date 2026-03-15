@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users } from 'lucide-react';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
@@ -1991,6 +1991,33 @@ export function DiagnosticRadarBlock({
     return calculateEvolutionTimeframe(currentTime, totalGap);
   }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds, diagMelhorias, scores]);
 
+  // 12-month projection chart data + gain
+  const projectionChartData = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return [];
+    const currentSec = validatingCompetition.time_in_seconds;
+    return Array.from({ length: 13 }, (_, i) => ({
+      month: `M${i}`,
+      tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
+    }));
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
+  const gain12mFormatted = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
+    const currentSec = validatingCompetition.time_in_seconds;
+    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const gain = currentSec - projectedAt12;
+    const m = Math.floor(gain / 60);
+    const s = Math.round(gain % 60);
+    return s > 0 ? `${m}min ${s}s` : `${m} min`;
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
+  const projectionTargetSec = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return 0;
+    const currentSec = validatingCompetition.time_in_seconds;
+    const totalGapSec = evolutionProjection.ratePerMonth * evolutionProjection.months;
+    return Math.max(3600, currentSec - totalGapSec);
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
 
   const hasData = hasDataProp && scores.length > 0;
 
@@ -2345,7 +2372,7 @@ export function DiagnosticRadarBlock({
               <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
+              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, essa é a evolução esperada nos próximos 12 meses
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
@@ -2357,11 +2384,8 @@ export function DiagnosticRadarBlock({
                 <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
               </div>
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground flex items-center justify-center gap-1">
-                  <Calendar className="w-3 h-3 text-muted-foreground" />
-                  {evolutionProjection.months}
-                </div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">{evolutionProjection.months === 1 ? 'mês' : 'meses'}</div>
+                <div className="text-sm font-bold text-foreground">{gain12mFormatted}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
               </div>
             </div>
           </div>
@@ -2507,8 +2531,33 @@ export function DiagnosticRadarBlock({
             <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
+            🎯 Com o método OUTLIER, baseado em fisiologia aplicada, essa é a evolução esperada nos próximos 12 meses
           </p>
+
+          {/* 12-month evolution chart */}
+          {projectionChartData.length > 0 && (
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={projectionChartData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="evolutionGradientInline" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={{ stroke: 'hsl(var(--border))' }} tickLine={false} />
+                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(val: number) => { const h = Math.floor(val / 3600); const m = Math.floor((val % 3600) / 60); return `${h}:${String(m).padStart(2, '0')}`; }} domain={['dataMin - 60', 'dataMax + 60']} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => { const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); return [`${h}:${String(m).padStart(2, '0')}`, 'Tempo']; }} labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`} />
+                  {projectionTargetSec > 0 && (
+                    <ReferenceLine y={projectionTargetSec} stroke="hsl(var(--primary))" strokeDasharray="4 4" opacity={0.6} label={{ value: `Meta`, fill: 'hsl(var(--primary))', fontSize: 10, position: 'right' }} />
+                  )}
+                  <Area type="monotone" dataKey="tempo" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#evolutionGradientInline)" dot={{ fill: 'hsl(var(--primary))', r: 2 }} activeDot={{ r: 4, fill: 'hsl(var(--primary))' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-foreground">{evolutionProjection.gapFormatted}</div>
@@ -2519,11 +2568,8 @@ export function DiagnosticRadarBlock({
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                {evolutionProjection.months}
-              </div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{evolutionProjection.months === 1 ? 'mês' : 'meses'}</div>
+              <div className="text-lg font-bold text-foreground">{gain12mFormatted}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
             </div>
           </div>
         </div>
