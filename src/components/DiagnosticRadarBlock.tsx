@@ -2372,7 +2372,7 @@ export function DiagnosticRadarBlock({
               <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
+              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, essa é a evolução esperada nos próximos 12 meses
             </p>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
@@ -2384,11 +2384,8 @@ export function DiagnosticRadarBlock({
                 <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
               </div>
               <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground flex items-center justify-center gap-1">
-                  <Calendar className="w-3 h-3 text-muted-foreground" />
-                  {evolutionProjection.months}
-                </div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">{evolutionProjection.months === 1 ? 'mês' : 'meses'}</div>
+                <div className="text-sm font-bold text-foreground">{gain12mFormatted}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
               </div>
             </div>
           </div>
