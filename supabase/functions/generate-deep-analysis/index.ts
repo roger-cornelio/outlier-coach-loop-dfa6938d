@@ -231,6 +231,38 @@ Deno.serve(async (req) => {
       eficiencia: radarEficiencia,
     };
 
+    // ── 7b. Pre-calculate pace (deterministic) ─────────────────────────
+    let paceBlock = '';
+    if (runningSplits.length > 0) {
+      const totalRunSec = runningSplits.reduce((a, r) => a + r.sec, 0);
+      const athletePaceSec = totalRunSec / 8; // 8km total
+      const athletePaceFormatted = secondsToTime(Math.round(athletePaceSec));
+
+      const runBand = bandMap['run_avg'];
+      if (runBand) {
+        // p10 = best avg per 1km split; target pace = that value directly
+        const targetPaceSec = runBand.p10;
+        const targetPaceFormatted = secondsToTime(targetPaceSec);
+        const paceDiffSec = Math.round(athletePaceSec - targetPaceSec);
+
+        paceBlock = `
+PACE PRÉ-CALCULADO (NÃO RECALCULE — USE ESTES VALORES EXATOS):
+- Pace Médio Realizado: ${athletePaceFormatted} min/km
+- Pace Alvo (Próximo Nível): ${targetPaceFormatted} min/km
+- Defasagem Exata: ${Math.abs(paceDiffSec)} segundos por km ${paceDiffSec > 0 ? '(atleta mais lento)' : paceDiffSec < 0 ? '(atleta mais rápido que o alvo)' : '(no alvo)'}
+
+Na seção ANÁLISE DE PACE, use EXATAMENTE estes valores. Escreva obrigatoriamente:
+"pace médio defasado em exatos ${Math.abs(paceDiffSec)} segundos por quilômetro em relação ao nível alvo."
+`;
+      } else {
+        paceBlock = `
+PACE PRÉ-CALCULADO:
+- Pace Médio Realizado: ${athletePaceFormatted} min/km
+- Pace Alvo: Dados de referência indisponíveis para esta divisão/gênero.
+`;
+      }
+    }
+
     const perfilFisiologico = {
       vo2_max: vo2max,
       limiar_lactato: limiarPace,
@@ -263,8 +295,11 @@ ${splitsJson}
 
 ${physioBlock}
 
+${paceBlock}
+
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
 - NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
+- REGRA CRÍTICA: NUNCA use o formato 00:MM:SS (com zeros na casa das horas) para tempos menores que 1 hora. Use APENAS MM:SS. Exemplo: "05:28" (correto), NUNCA "00:05:28" (errado). "41:55" (correto), NUNCA "00:41:55" (errado). "00:27" para 27 segundos (correto), NUNCA "00:00:27" (errado).
 - NUNCA exiba fórmulas matemáticas, conversões de segundos, frações ou o passo a passo de cálculos no texto. Oculte totalmente o raciocínio matemático. Entregue APENAS o resultado final formatado de forma elegante e direta.
 - Escreva em PT-BR usando formatação Markdown (use ### para os títulos).
 - Seja denso e analítico: fale sobre pacing (ritmo), fadiga acumulada, gestão de energia e tempo de transição (Roxzone).
@@ -390,6 +425,9 @@ REGRAS do JSON:
       // Remove JSON block from the visible text
       cleanText = rawText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
     }
+
+    // Post-processing: strip 00:MM:SS → MM:SS for times under 1 hour
+    cleanText = cleanText.replace(/\b00:(\d{2}:\d{2})\b/g, '$1');
 
     console.log(`[generate-deep-analysis] Generated ${cleanText.length} chars for ${resolvedName} | VO2max=${vo2max} CS=${cs.toFixed(2)} | prioridades=${prioridadesTreino?.length ?? 0}`);
 
