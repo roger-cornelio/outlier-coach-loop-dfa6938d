@@ -41,8 +41,9 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
       tipo_evento: tipoEvento,
     };
     if (tipoEvento === 'PARALELA') {
-      // Não oficiais: sempre Brasil, sem filtro de região
+      // Não oficiais: sempre Brasil, com filtro de estado opcional
       filters.pais = 'BR';
+      if (estado && estado !== 'ALL') filters.estado = estado;
     } else {
       // Oficiais: respeitar filtro de região
       if (regiao === 'BRASIL') {
