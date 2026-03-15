@@ -115,12 +115,10 @@ export function useDiscoveredEvents() {
     if (!user?.id) return null;
 
     const confidence = calculateConfidence(eventData);
-    const statusValidacao = confidence.meetsMinimum && confidence.score >= 70
-      ? 'VALIDADA'
-      : 'AGUARDANDO_AUTORIZACAO_ADMIN';
+    // Manual registrations by athletes are always auto-validated (private to creator)
+    const statusValidacao = 'VALIDADA';
 
     const eventId = crypto.randomUUID();
-    const logId = crypto.randomUUID();
 
     const eventPayload = {
       id: eventId,
@@ -140,38 +138,6 @@ export function useDiscoveredEvents() {
       .insert(eventPayload);
 
     if (eventError) return null;
-
-    await supabase
-      .from('event_discovery_logs')
-      .insert({
-        id: logId,
-        event_id: eventId,
-        termo_busca: eventData.termo_busca || eventData.nome,
-        origem: 'MANUAL',
-        raw_title: eventData.nome,
-        raw_text: eventData.observacao || null,
-        raw_url: eventData.url_origem || null,
-        cidade_detectada: eventData.cidade || null,
-        estado_detectado: eventData.estado || null,
-        data_detectada: eventData.data_evento || null,
-        score: confidence.score,
-        motivo_pendencia: confidence.pendencias,
-        requested_by: user.id,
-      });
-
-    if (statusValidacao === 'AGUARDANDO_AUTORIZACAO_ADMIN') {
-      const suggestions = generateSearchSuggestions(eventData.nome, eventData.cidade);
-
-      await supabase
-        .from('event_review_queue')
-        .insert({
-          event_id: eventId,
-          discovery_log_id: logId,
-          status_fila: 'PENDENTE',
-          motivo: confidence.pendencias.join(', '),
-          sugestoes_busca_json: suggestions,
-        });
-    }
 
     const eventResult: DiscoveredEvent = {
       id: eventId,
