@@ -2,7 +2,7 @@
  * ProvasTab - Aba de Provas Oficiais com busca HYROX (sem diagnóstico) + upload de screenshot
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Trophy, Check, CheckCheck, ShieldCheck, Loader2,
