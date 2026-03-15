@@ -31,7 +31,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
   const { events, loading, searchEvents } = useDiscoveredEvents();
   const [query, setQuery] = useState('');
   const [tipoEvento, setTipoEvento] = useState<TipoTab>('OFICIAL');
-  const [regiao, setRegiao] = useState<RegiaoFilter>('TODAS');
+  const [regiao, setRegiao] = useState<RegiaoFilter>('BRASIL');
   const [estado, setEstado] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -39,10 +39,16 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
     const filters: Record<string, string | undefined> = {
       query: query || undefined,
       tipo_evento: tipoEvento,
-      estado: (regiao === 'BRASIL' && estado && estado !== 'ALL') ? estado : undefined,
     };
-    if (regiao === 'BRASIL') filters.pais = 'BR';
-    if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
+    if (tipoEvento === 'PARALELA') {
+      // Não oficiais: sempre Brasil, sem filtro de região
+      filters.pais = 'BR';
+    } else {
+      // Oficiais: respeitar filtro de região
+      if (regiao === 'BRASIL') filters.pais = 'BR';
+      if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
+      if (regiao === 'BRASIL' && estado && estado !== 'ALL') filters.estado = estado;
+    }
     return filters;
   }, [query, tipoEvento, regiao, estado]);
 
@@ -53,7 +59,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
 
   // Auto-search on mount
   useEffect(() => {
-    searchEvents({ tipo_evento: 'OFICIAL' });
+    searchEvents({ tipo_evento: 'OFICIAL', pais: 'BR' });
     setHasSearched(true);
   }, [searchEvents]);
 
