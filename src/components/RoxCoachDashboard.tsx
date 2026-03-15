@@ -8,14 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
-import { timeToSeconds } from './diagnostico/types';
+
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
 import ImprovementTable from './diagnostico/ImprovementTable';
 import DeepAnalysisBlock from './diagnostico/DeepAnalysisBlock';
 import ParecerPremium from './diagnostico/ParecerPremium';
-import EvolutionProjectionCard from './diagnostico/EvolutionProjectionCard';
+
 import RoxCoachExtractor from './RoxCoachExtractor';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { motion } from 'framer-motion';
@@ -23,9 +23,6 @@ import OutlierRadarChart from './diagnostico/OutlierRadarChart';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
-import { useTopPercent } from '@/hooks/useTopPercent';
-import { useTargetTimes } from '@/hooks/useTargetTimes';
-import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 
 interface RoxCoachDashboardProps {
@@ -39,31 +36,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   const diagnosticScores = useDiagnosticScores();
   const { status, validatingCompetition } = useAthleteStatus();
   const { getOfficialCompetitions } = useBenchmarkResults();
-  const adminTarget = useTargetTimes(status, athleteConfig?.sexo || 'masculino');
-  const topPercentData = useTopPercent(
-    validatingCompetition?.time_in_seconds,
-    athleteConfig?.sexo || 'masculino',
-    athleteConfig?.idade,
-  );
 
-  const eliteTarget = useMemo(() => {
-    const isOpen = status === 'open';
-    if (isOpen && topPercentData.metaProSeconds) {
-      return { targetSeconds: topPercentData.metaProSeconds, targetLabel: 'PRO' };
-    }
-    if (topPercentData.metaEliteSeconds) {
-      return { targetSeconds: topPercentData.metaEliteSeconds, targetLabel: 'ELITE' };
-    }
-    if (adminTarget) return adminTarget;
-    const gender = athleteConfig?.sexo || 'masculino';
-    return getEliteTargetSeconds(status, gender);
-  }, [status, athleteConfig?.sexo, adminTarget, topPercentData.metaEliteSeconds, topPercentData.metaProSeconds]);
+
 
   const [allResumos, setAllResumos] = useState<DiagnosticoResumo[]>([]);
   const [selectedResumoId, setSelectedResumoId] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[]>([]);
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
-  const [latestDiagnosticos, setLatestDiagnosticos] = useState<DiagnosticoMelhoria[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
@@ -113,36 +93,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
     fetchResumos();
   }, [user, refreshKey, localRefresh]);
 
-  // Fetch diagnosticos da última prova (para projeção de evolução — sempre fixa)
-  useEffect(() => {
-    if (!user || allResumos.length === 0) {
-      setLatestDiagnosticos([]);
-      return;
-    }
-    const latestId = allResumos[0]?.id;
-    if (!latestId) return;
 
-    async function fetchLatestDiag() {
-      const { data } = await supabase
-        .from('diagnostico_melhoria')
-        .select('*')
-        .eq('resumo_id', latestId);
-      
-      if (data && data.length > 0) {
-        setLatestDiagnosticos(data as DiagnosticoMelhoria[]);
-      } else {
-        // Fallback legacy
-        const { data: fallback } = await supabase
-          .from('diagnostico_melhoria')
-          .select('*')
-          .eq('atleta_id', user!.id)
-          .is('resumo_id', null);
-        setLatestDiagnosticos((fallback as DiagnosticoMelhoria[]) || []);
-      }
-    }
 
-    fetchLatestDiag();
-  }, [user, allResumos]);
 
 
   useEffect(() => {
@@ -426,24 +378,6 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
               </motion.button>
             </div>
 
-            {/* Projeção de Evolução - SEMPRE baseada na última prova (latestResumo) */}
-            {latestResumo.finish_time && latestDiagnosticos.length > 0 && (() => {
-              const currentTimeSec = timeToSeconds(latestResumo.finish_time!);
-              const targetSec = eliteTarget?.targetSeconds ?? null;
-              const computedGap = (currentTimeSec && targetSec && currentTimeSec > targetSec)
-                ? currentTimeSec - targetSec
-                : undefined;
-              return (
-                <EvolutionProjectionCard
-                  finishTime={latestResumo.finish_time}
-                  diagnosticos={latestDiagnosticos}
-                  athleteName={latestResumo.nome_atleta}
-                  division={latestResumo.divisao}
-                  coachStyle={currentCoachStyle || 'PULSE'}
-                  totalGapOverride={computedGap}
-                />
-              );
-            })()}
           </div>
         );
       })()}
