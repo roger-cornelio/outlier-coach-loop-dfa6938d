@@ -123,6 +123,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
     const s = Math.round(gainIn12 % 60);
     return s > 0 ? `${m}min ${s}s` : `${m} minutos`;
   })();
+  const resultadoEsperado = formatSecondsToHHMMSS(projectedAt12);
 
   return (
     <motion.div
