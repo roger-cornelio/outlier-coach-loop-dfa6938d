@@ -28,7 +28,7 @@ import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Switch } from './ui/switch';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useOutlierStore } from '@/store/outlierStore';
@@ -1817,14 +1817,6 @@ export function DiagnosticRadarBlock({
     return calculateEvolutionTimeframe(currentTime, totalGap);
   }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds, diagMelhorias, scores]);
 
-  // Advanced mode (mobile only, persisted)
-  const [advancedMode, setAdvancedMode] = useState(() => {
-    try {return localStorage.getItem('outlier-advanced-mode') === 'true';} catch {return false;}
-  });
-
-  useEffect(() => {
-    try {localStorage.setItem('outlier-advanced-mode', String(advancedMode));} catch {}
-  }, [advancedMode]);
 
   const hasData = hasDataProp && scores.length > 0;
 
@@ -2029,7 +2021,7 @@ export function DiagnosticRadarBlock({
   // ============================================
   // MOBILE SIMPLIFIED VIEW
   // ============================================
-  if (isMobile && !advancedMode) {
+  if (isMobile) {
     return (
       <div className="space-y-3">
         {/* Bloco 1: Caminho para Elite */}
@@ -2138,31 +2130,15 @@ export function DiagnosticRadarBlock({
           vo2maxEstimate={vo2maxEstimate}
           lactateThresholdEstimate={lactateThresholdEstimate} />
 
-        {/* Dados avançados (toggle) */}
-        <div className="flex items-center justify-end gap-2 px-1">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Avançado</span>
-          <Switch
-            checked={advancedMode}
-            onCheckedChange={setAdvancedMode}
-            className="scale-75" />
-        </div>
       </div>);
 
   }
 
   // ============================================
-  // DESKTOP / ADVANCED MODE — FULL LAYOUT (unchanged)
+  // DESKTOP — FULL LAYOUT
   // ============================================
   return (
     <div className="space-y-3">
-      
-      {/* Mobile advanced mode toggle (shown at top when in advanced mode) */}
-      {isMobile && advancedMode &&
-      <div className="flex items-center justify-end gap-2 px-1">
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Modo avançado</span>
-          <Switch checked={advancedMode} onCheckedChange={setAdvancedMode} className="scale-75" />
-        </div>
-      }
 
       {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
