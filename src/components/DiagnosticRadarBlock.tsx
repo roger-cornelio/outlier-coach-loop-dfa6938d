@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users } from 'lucide-react';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
+import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
 import { ShieldCrest } from '@/components/ui/ShieldCrest';
@@ -1002,10 +1003,11 @@ function MobilePathToEliteCard({
                     </>
                   )}
                 </div>
-                {/* Podium prediction */}
+          {/* Podium prediction */}
+                {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
                 <div className="bg-muted/10 border border-border/10 rounded-lg p-2.5 space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Proximidade ao pódio</span>
+                    <span>Proximidade ao pódio ({userCategory})</span>
                     <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
                   </div>
                   <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
@@ -1015,12 +1017,13 @@ function MobilePathToEliteCard({
                     />
                   </div>
                   <p className="text-[11px] font-semibold text-foreground">
-                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio na categoria {userCategory}.
                   </p>
                   <p className="text-[10px] text-muted-foreground/70">
-                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
+                    👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                   </p>
                 </div>
+                ); })()}
               </div>
             );
           })()}
@@ -2389,10 +2392,11 @@ export function DiagnosticRadarBlock({
                 )}
               </div>
               {/* Podium prediction — desktop */}
+              {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
               <div className="max-w-md mx-auto bg-muted/10 border border-border/10 rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Proximidade ao pódio</span>
-                  <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
+                    <span>Proximidade ao pódio ({userCategory})</span>
+                    <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
                 </div>
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/20">
                   <div 
@@ -2401,12 +2405,13 @@ export function DiagnosticRadarBlock({
                   />
                 </div>
                 <p className="text-sm font-semibold text-foreground text-center">
-                  Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                  Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio na categoria {userCategory}.
                 </p>
                 <p className="text-xs text-muted-foreground/70 text-center">
-                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
+                  👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                 </p>
               </div>
+              ); })()}
             </div>
           );
         })()}
