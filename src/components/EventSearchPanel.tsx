@@ -1,9 +1,11 @@
 /**
  * EventSearchPanel — Assisted search for race registration
  * Shows validated events, pending events, and manual fallback
+ * 
+ * UI: Tabs (Oficial/Paralela) + Pills (Região) + Conditional Estado dropdown
  */
 import { useState, useCallback, useEffect } from 'react';
-import { Search, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Building2, Globe, ShieldAlert, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, AlertTriangle, CheckCircle2, Clock, MapPin, Calendar, Globe, ShieldAlert, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useDiscoveredEvents, type DiscoveredEvent } from '@/hooks/useDiscoveredEvents';
-import { TIPO_EVENTO_LABELS, STATUS_LABELS, ORIGEM_LABELS } from '@/utils/eventConfidence';
+import { TIPO_EVENTO_LABELS, ORIGEM_LABELS } from '@/utils/eventConfidence';
 
 interface EventSearchPanelProps {
   onSelectEvent: (event: DiscoveredEvent) => void;
@@ -22,18 +24,21 @@ interface EventSearchPanelProps {
 
 const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
+type TipoTab = 'OFICIAL' | 'PARALELA';
+type RegiaoFilter = 'TODAS' | 'BRASIL' | 'INTERNACIONAL';
+
 export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestReview }: EventSearchPanelProps) {
   const { events, loading, searchEvents } = useDiscoveredEvents();
   const [query, setQuery] = useState('');
-  const [tipoEvento, setTipoEvento] = useState('TODAS');
-  const [regiao, setRegiao] = useState('TODAS'); // TODAS | BRASIL | INTERNACIONAL
+  const [tipoEvento, setTipoEvento] = useState<TipoTab>('OFICIAL');
+  const [regiao, setRegiao] = useState<RegiaoFilter>('TODAS');
   const [estado, setEstado] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string | undefined> = {
       query: query || undefined,
-      tipo_evento: tipoEvento !== 'TODAS' ? tipoEvento : undefined,
+      tipo_evento: tipoEvento,
       estado: (regiao === 'BRASIL' && estado && estado !== 'ALL') ? estado : undefined,
     };
     if (regiao === 'BRASIL') filters.pais = 'BR';
@@ -48,7 +53,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
 
   // Auto-search on mount
   useEffect(() => {
-    searchEvents({});
+    searchEvents({ tipo_evento: 'OFICIAL' });
     setHasSearched(true);
   }, [searchEvents]);
 
@@ -63,11 +68,11 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
     if (regiao !== 'BRASIL') setEstado('');
   }, [regiao]);
 
-  const activeFilterCount = [
-    tipoEvento !== 'TODAS',
-    regiao !== 'TODAS',
-    estado !== '',
-  ].filter(Boolean).length;
+  const REGIAO_OPTIONS: { key: RegiaoFilter; label: string }[] = [
+    { key: 'TODAS', label: '🌍 Todos' },
+    { key: 'BRASIL', label: '🇧🇷 Brasil' },
+    { key: 'INTERNACIONAL', label: '✈️ Internacional' },
+  ];
 
   return (
     <div className="space-y-3">
@@ -82,35 +87,30 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
         />
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {/* Tipo */}
+      {/* Tabs: Oficial / Paralela */}
+      <div className="flex border-b border-border">
         {(['OFICIAL', 'PARALELA'] as const).map(tipo => (
           <button
             key={tipo}
-            onClick={() => setTipoEvento(prev => prev === tipo ? 'TODAS' : tipo)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+            onClick={() => setTipoEvento(tipo)}
+            className={`flex-1 py-2 text-sm font-medium text-center transition-colors border-b-2 ${
               tipoEvento === tipo
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {TIPO_EVENTO_LABELS[tipo] || tipo}
+            {tipo === 'OFICIAL' ? 'Oficial HYROX' : 'Não Oficial / Paralela'}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {/* Região */}
-        {([
-          { key: 'TODAS', label: '🌍 Todos' },
-          { key: 'BRASIL', label: '🇧🇷 Brasil' },
-          { key: 'INTERNACIONAL', label: '✈️ Internacional' },
-        ] as const).map(r => (
+      {/* Pills: Região + Estado condicional */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {REGIAO_OPTIONS.map(r => (
           <button
             key={r.key}
             onClick={() => setRegiao(r.key)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors border ${
               regiao === r.key
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
@@ -277,12 +277,10 @@ function EventCard({ event, onSelect, onRequestReview }: {
                 Selecionar
               </Button>
             ) : (
-              <>
-                <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={onRequestReview}>
-                  <ShieldAlert className="w-3.5 h-3.5 mr-1" />
-                  Solicitar análise
-                </Button>
-              </>
+              <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={onRequestReview}>
+                <ShieldAlert className="w-3.5 h-3.5 mr-1" />
+                Solicitar análise
+              </Button>
             )}
             {event.url_origem && (
               <Button
