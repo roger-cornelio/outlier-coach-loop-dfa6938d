@@ -54,6 +54,8 @@ export default function ProvaAlvo() {
       race_date: prova.data.toISOString().split('T')[0],
       participation_type: prova.participationType,
       partner_name: prova.partnerAthleteName,
+      partner_phone: prova.partnerPhone,
+      partner_instagram: prova.partnerInstagram,
     });
 
     if (result) {
