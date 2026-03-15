@@ -78,8 +78,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
   }, [regiao]);
 
   const REGIAO_OPTIONS: { key: RegiaoFilter; label: string }[] = [
-    { key: 'TODAS', label: '🌍 Todos' },
-    { key: 'BRASIL', label: '🇧🇷 Brasil' },
+    { key: 'BRASIL', label: 'Brasil' },
     { key: 'INTERNACIONAL', label: '✈️ Internacional' },
   ];
 
