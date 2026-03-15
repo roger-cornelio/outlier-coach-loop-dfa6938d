@@ -325,21 +325,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
             </div>
 
             {isDupla && (
-              <div className="space-y-2">
-                <Label>Parceiro(a) de dupla</Label>
-                <Select value={partnerId} onValueChange={setPartnerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu parceiro(a)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    {MOCK_ATLETAS.map(atleta => (
-                      <SelectItem key={atleta.id} value={atleta.id}>
-                        {atleta.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <PartnerSelector value={partnerData} onChange={setPartnerData} />
             )}
 
             <div className="flex gap-3 pt-2">
