@@ -2585,10 +2585,10 @@ export function DiagnosticRadarBlock({
 
 
 
-      {/* BLOCO 8: DIRECIONAMENTO DO TREINO */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-3">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Direcionamento</p>
-        <p className="text-xs text-foreground/90 leading-relaxed">{hasData ? trainingFocus : 'Lance seu primeiro simulado para receber direcionamento personalizado de treino.'}</p>
+      {/* BLOCO 8: PERIODIZAÇÃO OUTLIER */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-gradient-to-r from-primary/10 to-primary/5 border-l-4 border-l-primary rounded-lg px-4 py-4">
+        <p className="text-[11px] font-display text-primary uppercase tracking-widest mb-1.5">Periodização OUTLIER</p>
+        <p className="text-xs text-foreground/90 leading-relaxed">{hasData ? trainingFocus : 'Importe sua primeira prova para receber periodização personalizada.'}</p>
       </motion.div>
 
       {/* BLOCO 9: CTA FINAL */}
