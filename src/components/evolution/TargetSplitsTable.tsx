@@ -106,9 +106,9 @@ export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, ta
           <Crosshair className="w-5 h-5 text-amber-500" />
           {title || 'Target Splits'}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {finishTime
-            ? `Sua prova atual: ${finishTime} · Defina seu tempo-alvo abaixo`
+            ? <>Sua prova atual: <span className="font-bold text-foreground bg-primary/15 px-2 py-0.5 rounded-md border border-primary/25 tabular-nums">{finishTime}</span> <span className="text-xs">· Defina seu tempo-alvo abaixo</span></>
             : 'Defina seu tempo-alvo e veja o split necessário em cada estação'}
         </p>
       </CardHeader>
