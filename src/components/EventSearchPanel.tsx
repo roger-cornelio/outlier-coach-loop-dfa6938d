@@ -93,7 +93,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
         />
       </div>
 
-      {/* Tabs: Oficial / Paralela */}
+      {/* Tabs: Oficial / Não Oficial */}
       <div className="flex border-b border-border">
         {(['OFICIAL', 'PARALELA'] as const).map(tipo => (
           <button
@@ -105,42 +105,44 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tipo === 'OFICIAL' ? 'Oficial HYROX' : 'Não Oficial / Paralela'}
+            {tipo === 'OFICIAL' ? 'Oficial HYROX' : 'Não Oficial'}
           </button>
         ))}
       </div>
 
-      {/* Pills: Região + Estado condicional */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {REGIAO_OPTIONS.map(r => (
-          <button
-            key={r.key}
-            onClick={() => setRegiao(r.key)}
-            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-              regiao === r.key
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
+      {/* Pills: Região + Estado condicional — só para Oficial */}
+      {tipoEvento === 'OFICIAL' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {REGIAO_OPTIONS.map(r => (
+            <button
+              key={r.key}
+              onClick={() => setRegiao(r.key)}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                regiao === r.key
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
 
-        {/* Estado (only when Brasil) */}
-        {regiao === 'BRASIL' && (
-          <Select value={estado} onValueChange={setEstado}>
-            <SelectTrigger className="w-[110px] h-7 text-xs rounded-full">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border z-50 max-h-60">
-              <SelectItem value="ALL">Todos</SelectItem>
-              {ESTADOS.map(uf => (
-                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+          {/* Estado (only when Brasil) */}
+          {regiao === 'BRASIL' && (
+            <Select value={estado} onValueChange={setEstado}>
+              <SelectTrigger className="w-[110px] h-7 text-xs rounded-full">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50 max-h-60">
+                <SelectItem value="ALL">Todos</SelectItem>
+                {ESTADOS.map(uf => (
+                  <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
