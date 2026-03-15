@@ -2101,12 +2101,15 @@ export function DiagnosticRadarBlock({
   }, [scores, perfilFisiologico]);
 
   const trainingFocus = useMemo(() => {
-    // Priority 1: IA-generated direcionamento from cache
-    if (direcionamentoIA && direcionamentoIA.trim().length > 0) return direcionamentoIA;
-    // Priority 2: heuristic fallback
-    if (!mainLimiter) return 'Foco em desenvolver todas as capacidades de forma equilibrada.';
-    return `O foco do próximo ciclo será ${mainLimiter.name.toLowerCase()}, visando maior consistência nas estações onde hoje ocorre a maior perda de rendimento.`;
-  }, [mainLimiter, direcionamentoIA]);
+    // Periodização OUTLIER: texto baseado nos gargalos reais (worstStations)
+    const gaps = worstStations.filter(s => s.stars < 5).slice(0, 3);
+    if (gaps.length === 0) return 'Os treinos serão focados em desenvolver todas as capacidades de forma equilibrada.';
+    const names = gaps.map(g => g.name);
+    const joined = names.length === 1
+      ? names[0]
+      : names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1];
+    return `Os treinos para a próxima semana serão focados em ${joined}, os pontos com maior potencial de evolução no seu perfil.`;
+  }, [worstStations]);
 
   // Loading state
   if (loading) {
