@@ -972,28 +972,59 @@ function MobilePathToEliteCard({
           }
 
           {/* Prova Alvo inline */}
-          {provaAlvo && (
-            <div className="flex items-center gap-2 mt-2 text-xs flex-wrap">
-              <Target className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-              <span className="text-border/40">·</span>
-              <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
-              {provaAlvoTargetTime && (
-                <>
+          {provaAlvo && (() => {
+            const MOCK_PODIUM_SEC = 4200;
+            const MOCK_CURRENT_SEC = 4797;
+            const gapSec = MOCK_CURRENT_SEC - MOCK_PODIUM_SEC;
+            const progressPct = Math.min(100, Math.round((MOCK_PODIUM_SEC / MOCK_CURRENT_SEC) * 100));
+            const gapMin = Math.floor(gapSec / 60);
+            const gapS = gapSec % 60;
+            const gapFormatted = `${String(gapMin).padStart(2, '0')}:${String(gapS).padStart(2, '0')}`;
+            return (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <Target className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
                   <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">Meta</span>
-                  <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
-                </>
-              )}
-              {provaAlvo.partner_name && (
-                <>
-                  <span className="text-border/40">·</span>
-                  <Users className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
-                </>
-              )}
-            </div>
-          )}
+                  <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
+                  {provaAlvoTargetTime && (
+                    <>
+                      <span className="text-border/40">·</span>
+                      <span className="text-muted-foreground">Meta</span>
+                      <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+                    </>
+                  )}
+                  {provaAlvo.partner_name && (
+                    <>
+                      <span className="text-border/40">·</span>
+                      <Users className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
+                    </>
+                  )}
+                </div>
+                {/* Podium prediction */}
+                <div className="bg-muted/10 border border-border/10 rounded-lg p-2.5 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Proximidade ao pódio</span>
+                    <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
+                  </div>
+                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
+                    <div 
+                      className="h-full rounded-full bg-amber-500 transition-all duration-700" 
+                      style={{ width: `${progressPct}%` }} 
+                    />
+                  </div>
+                  <p className="text-[11px] font-semibold text-foreground">
+                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+          {!provaAlvo && null}
         </div>
 
         {/* META DE RESULTADO — "Estou aqui → Chego aqui" */}
