@@ -182,7 +182,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val: number) => formatSecondsToHHMM(val)}
+                    tickFormatter={(val: number) => formatSecondsToHHMMSS(val)}
                     domain={['dataMin - 60', 'dataMax + 60']}
                   />
                   <Tooltip
