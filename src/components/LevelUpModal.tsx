@@ -159,7 +159,7 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                   transition={{ delay: 0.5 }}
                   className="text-3xl md:text-5xl font-display font-bold text-white uppercase tracking-wide mb-4"
                 >
-                  {config.label} OUTLIER
+                  {isOutlier ? `${config.label} OUTLIER` : `Categoria ${config.label}`}
                 </motion.h1>
               )}
             </AnimatePresence>
