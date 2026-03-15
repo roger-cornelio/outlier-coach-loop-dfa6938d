@@ -137,6 +137,21 @@ export function Dashboard() {
     };
   }, []);
 
+  // Listen for race import event to show category modal
+  useEffect(() => {
+    const handleRaceImported = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const statusMap: Record<string, import('@/types/outlier').AthleteStatus> = {
+        open: 'open', pro: 'pro', elite: 'elite',
+      };
+      const mapped = statusMap[detail?.status] || status || 'open';
+      setRaceImportLevel(mapped);
+    };
+    
+    window.addEventListener('outlier:race-imported', handleRaceImported);
+    return () => window.removeEventListener('outlier:race-imported', handleRaceImported);
+  }, [status]);
+
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
   // Guard: aguardar hydration do Zustand para evitar loops
