@@ -1519,7 +1519,7 @@ function TrainingPrioritiesBlock({
               isMetBatida: false,
             };
           });
-        return items;
+        return items.filter(item => item.stars.count < 5);
       }
     }
 
@@ -1532,7 +1532,7 @@ function TrainingPrioritiesBlock({
       const sliced = allSorted.filter(d => d.improvement_value > 0);
 
       if (sliced.length > 0) {
-        return sliced.map(d => {
+        const mapped = sliced.map(d => {
           const pct = d.percentage ?? 0;
           // Faixas fixas baseadas no FOCO %
           let starCount: number;
@@ -1552,6 +1552,7 @@ function TrainingPrioritiesBlock({
             isMetBatida: d.improvement_value <= 0,
           };
         });
+        return mapped.filter(item => item.stars.count < 5);
       }
     }
 
