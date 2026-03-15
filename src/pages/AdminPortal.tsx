@@ -54,6 +54,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    id: "crm",
+    label: "CRM",
+    icon: <Contact className="w-5 h-5" />,
+    description: "Clientes e leads"
+  },
   { 
     id: "users", 
     label: "Usuários", 
@@ -125,12 +131,6 @@ const navItems: NavItem[] = [
     label: "Parâmetros", 
     icon: <Settings2 className="w-5 h-5" />,
     description: "Configurações do sistema"
-  },
-  {
-    id: "crm",
-    label: "CRM",
-    icon: <Contact className="w-5 h-5" />,
-    description: "Clientes e leads"
   },
   {
     id: "demoLevelUp",
