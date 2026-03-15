@@ -127,6 +127,12 @@ const navItems: NavItem[] = [
     description: "Configurações do sistema"
   },
   {
+    id: "crm",
+    label: "CRM",
+    icon: <Contact className="w-5 h-5" />,
+    description: "Clientes e leads"
+  },
+  {
     id: "demoLevelUp",
     label: "Demo Level Up",
     icon: <Shield className="w-5 h-5" />,
