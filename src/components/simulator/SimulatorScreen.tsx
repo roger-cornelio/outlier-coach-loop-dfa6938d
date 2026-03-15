@@ -42,6 +42,24 @@ export function SimulatorScreen() {
   const [activeDivision, setActiveDivision] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  // Load saved race plan from localStorage
+  const [racePlan, setRacePlan] = useState<{ targetTime: string; rows: RacePlanRow[]; totalTarget: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('outlier_race_plan');
+      if (saved) setRacePlan(JSON.parse(saved));
+    } catch { /* ignore */ }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'outlier_race_plan' && e.newValue) {
+        try { setRacePlan(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
