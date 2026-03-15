@@ -973,7 +973,7 @@ function MobilePathToEliteCard({
 
           {/* Prova Alvo inline */}
           {provaAlvo && (
-            <div className="flex items-center gap-2 mt-2 text-xs">
+            <div className="flex items-center gap-2 mt-2 text-xs flex-wrap">
               <Target className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
               <span className="text-border/40">·</span>
@@ -983,6 +983,13 @@ function MobilePathToEliteCard({
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">Meta</span>
                   <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+                </>
+              )}
+              {provaAlvo.partner_name && (
+                <>
+                  <span className="text-border/40">·</span>
+                  <Users className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
                 </>
               )}
             </div>
