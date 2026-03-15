@@ -140,7 +140,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
   }, [nomeBase, cidade, estado, data]);
 
   const resetAll = () => {
-    setEntryMode('choose');
+    setEntryMode('search');
     setSelectedEvent(null);
     setIsSubmittingManual(false);
     setNomeBase('');
