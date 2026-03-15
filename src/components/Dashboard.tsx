@@ -26,6 +26,7 @@ import { AthleteWeekDebugBar } from './AthleteWeekDebugBar';
 
 import { LevelUpModal } from './LevelUpModal';
 import { useLevelUpDetection } from '@/hooks/useLevelUpDetection';
+import { useJourneyProgress } from '@/hooks/useJourneyProgress';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
