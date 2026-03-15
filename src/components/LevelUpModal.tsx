@@ -55,7 +55,7 @@ function CelebrationParticles({ accentHsl }: { accentHsl: string }) {
   );
 }
 
-export function LevelUpModal({ isOpen, newStatus, onContinue }: LevelUpModalProps) {
+export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue }: LevelUpModalProps) {
   const [showContent, setShowContent] = useState(false);
   const config = STATUS_CONFIG[newStatus];
 
