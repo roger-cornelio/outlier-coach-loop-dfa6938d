@@ -12,7 +12,7 @@
 import { 
   LayoutDashboard, 
   Calendar, 
-  Trophy,
+  TrendingUp,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -84,8 +84,8 @@ export function AppSidebar() {
     },
     { 
       title: 'Evolução', 
-      view: 'benchmarks', 
-      icon: Trophy 
+      view: 'evolution', 
+      icon: TrendingUp 
     },
     { 
       title: 'Configurações', 
