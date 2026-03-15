@@ -1574,12 +1574,7 @@ function TrainingPrioritiesBlock({
           isMetBatida: insight.startsWith('✓'),
         };
       });
-  }, [scores, showAll, diagMelhorias, prioridadesIA]);
-
-  const totalStations = useMemo(
-    () => diagMelhorias?.length || scores.length,
-    [diagMelhorias, scores]
-  );
+  }, [scores, diagMelhorias, prioridadesIA]);
 
   if (scores.length === 0) {
     return (
