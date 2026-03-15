@@ -1552,6 +1552,7 @@ function TrainingPrioritiesBlock({
             isMetBatida: d.improvement_value <= 0,
           };
         });
+        return mapped.filter(item => item.stars.count < 5);
       }
     }
 
