@@ -182,7 +182,8 @@ export function parseDiagnosticResponse(
       const yourScore = parseScoreValue(rawYourScore);
       const top1 = parseScoreValue(rawTop1);
       const improvementValue = parseScoreValue(rawImprovement);
-      const metric = findValue(item, 'Metric', 'metric') || 'time';
+      const rawMetric = findValue(item, 'Metric', 'metric') || '';
+      const metric = normalizeMetric(movement, rawMetric);
       if (!movement || SPLIT_NOISE.includes(movement.toLowerCase().trim())) continue;
       diagRows.push({
         atleta_id: userId,
