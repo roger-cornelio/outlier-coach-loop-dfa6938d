@@ -2360,28 +2360,58 @@ export function DiagnosticRadarBlock({
         </div>
 
         {/* Prova Alvo inline — desktop */}
-        {provaAlvo && (
-          <div className="flex items-center justify-center gap-2 text-sm mb-3 flex-wrap">
-            <Target className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-            <span className="text-border/40">·</span>
-            <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
-            {provaAlvoTargetTime && (
-              <>
+        {provaAlvo && (() => {
+          const MOCK_PODIUM_SEC = 4200;
+          const MOCK_CURRENT_SEC = 4797;
+          const gapSec = MOCK_CURRENT_SEC - MOCK_PODIUM_SEC;
+          const progressPct = Math.min(100, Math.round((MOCK_PODIUM_SEC / MOCK_CURRENT_SEC) * 100));
+          const gapMin = Math.floor(gapSec / 60);
+          const gapS = gapSec % 60;
+          const gapFormatted = `${String(gapMin).padStart(2, '0')}:${String(gapS).padStart(2, '0')}`;
+          return (
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
+                <Target className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
                 <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">Meta</span>
-                <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
-              </>
-            )}
-            {provaAlvo.partner_name && (
-              <>
-                <span className="text-border/40">·</span>
-                <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
-              </>
-            )}
-          </div>
-        )}
+                <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
+                {provaAlvoTargetTime && (
+                  <>
+                    <span className="text-border/40">·</span>
+                    <span className="text-muted-foreground">Meta</span>
+                    <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
+                  </>
+                )}
+                {provaAlvo.partner_name && (
+                  <>
+                    <span className="text-border/40">·</span>
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
+                  </>
+                )}
+              </div>
+              {/* Podium prediction — desktop */}
+              <div className="max-w-md mx-auto bg-muted/10 border border-border/10 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Proximidade ao pódio</span>
+                  <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/20">
+                  <div 
+                    className="h-full rounded-full bg-amber-500 transition-all duration-700" 
+                    style={{ width: `${progressPct}%` }} 
+                  />
+                </div>
+                <p className="text-sm font-semibold text-foreground text-center">
+                  Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
+                </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
         {!provaAlvo && <div className="mb-3" />}
 
         {/* Barra de métricas — grid com tempo/meta/ganho/evolução */}
