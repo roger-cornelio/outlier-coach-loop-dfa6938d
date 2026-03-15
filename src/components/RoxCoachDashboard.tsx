@@ -512,9 +512,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {showFullAnalysis && diagnosticScores.hasData && (
             <>
-              <OutlierRadarChart scores={diagnosticScores.scores} />
-
-              <Collapsible defaultOpen={false}>
+               <Collapsible defaultOpen={false}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/30 transition-colors [&[data-state=open]>svg]:rotate-180">
                   Análise por estação
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
