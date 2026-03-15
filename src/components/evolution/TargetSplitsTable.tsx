@@ -67,7 +67,15 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
     });
   }, [targetSec, prSplits]);
 
-  if (!prSplits) {
+  const totals = useMemo(() => {
+    if (!rows) return null;
+    const totalPR = rows.reduce((s, r) => s + r.currentPR, 0);
+    const totalTarget = rows.reduce((s, r) => s + r.targetSplit, 0);
+    const diff = totalPR - totalTarget;
+    const hasAnyPR = rows.some(r => r.hasPR);
+    return { totalPR, totalTarget, diff, hasAnyPR };
+  }, [rows]);
+
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/20">
         <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
