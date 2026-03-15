@@ -24,8 +24,9 @@ function getFatigueColor(pct: number): { stroke: string; label: string; textClas
 }
 
 function GaugeSVG({ percentage }: { percentage: number }) {
-  const clampedPct = Math.min(Math.max(percentage, 0), 30);
-  const normalized = clampedPct / 30;
+  // Gauge proporcional de 0 a 100
+  const clampedPct = Math.min(Math.max(percentage, 0), 100);
+  const normalized = clampedPct / 100;
   const { stroke, label, textClass } = getFatigueColor(percentage);
   
   const radius = 60;
