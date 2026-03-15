@@ -1610,9 +1610,19 @@ function TrainingPrioritiesBlock({
         validMetrics.add(s.metric.toLowerCase());
       }
 
-      const validated = normalizedIA.filter(p =>
+      const validatedRaw = normalizedIA.filter(p =>
         p.metric && validMetrics.has(p.metric)
       );
+
+      // Deduplicate by normalized metric — keep highest urgency
+      const validatedMap = new Map<string, typeof validatedRaw[0]>();
+      for (const item of validatedRaw) {
+        const existing = validatedMap.get(item.metric);
+        if (!existing || item.nivel_urgencia > existing.nivel_urgencia) {
+          validatedMap.set(item.metric, item);
+        }
+      }
+      const validated = Array.from(validatedMap.values());
 
       // If more than 50% were invalid, discard IA data entirely
       if (validated.length > 0 && validated.length >= prioridadesIA.length * 0.5) {
