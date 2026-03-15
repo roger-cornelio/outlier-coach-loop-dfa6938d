@@ -16,6 +16,7 @@ import { OutlierBenchmarksAdmin } from "@/components/admin/OutlierBenchmarksAdmi
 import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
 import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin";
 import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
+import { CRMAdmin } from "@/components/admin/CRMAdmin";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
