@@ -1,13 +1,13 @@
 /**
- * PartnerSelector — Search registered OUTLIER users or register external partner
+ * PartnerSelector — List all registered OUTLIER athletes or register external partner
  */
-import { useState, useCallback } from 'react';
-import { Search, UserPlus, Users, Phone, Instagram } from 'lucide-react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Search, UserPlus, Users, Phone, Instagram, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
 
 interface RegisteredPartner {
   id: string;
@@ -28,10 +28,9 @@ interface PartnerSelectorProps {
 }
 
 export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<RegisteredPartner[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [allAthletes, setAllAthletes] = useState<RegisteredPartner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterTerm, setFilterTerm] = useState('');
   const [showExternalForm, setShowExternalForm] = useState(false);
 
   // External partner fields
@@ -39,38 +38,43 @@ export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
   const [extPhone, setExtPhone] = useState('');
   const [extInstagram, setExtInstagram] = useState('');
 
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim() || searchTerm.trim().length < 2) return;
-    setSearching(true);
-    setHasSearched(true);
-    try {
-      const { data, error } = await supabase.rpc('search_public_athletes', {
-        search_term: searchTerm.trim(),
-      });
-      if (!error && data) {
-        setResults(data as RegisteredPartner[]);
-      } else {
-        setResults([]);
-      }
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchTerm]);
+  // Load all athletes on mount
+  useEffect(() => {
+    async function loadAthletes() {
+      setLoading(true);
+      try {
+        // Use a broad search to get all athletes (the RPC returns up to 20 per call)
+        // We'll query profiles directly for the full list
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, name, email')
+          .order('name', { ascending: true });
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSearch();
+        if (!error && data) {
+          const athletes: RegisteredPartner[] = data.map(p => ({
+            id: p.user_id,
+            name: p.name || p.email?.split('@')[0] || 'Sem nome',
+          }));
+          setAllAthletes(athletes);
+        }
+      } catch {
+        setAllAthletes([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+    loadAthletes();
+  }, []);
+
+  // Filter athletes locally
+  const filteredAthletes = useMemo(() => {
+    if (!filterTerm.trim()) return allAthletes;
+    const term = filterTerm.toLowerCase();
+    return allAthletes.filter(a => a.name.toLowerCase().includes(term));
+  }, [allAthletes, filterTerm]);
 
   const handleSelectRegistered = (athlete: RegisteredPartner) => {
     onChange({ type: 'registered', id: athlete.id, name: athlete.name });
-    setResults([]);
-    setSearchTerm('');
-    setHasSearched(false);
   };
 
   const handleSaveExternal = () => {
@@ -86,9 +90,7 @@ export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
 
   const handleClear = () => {
     onChange(null);
-    setSearchTerm('');
-    setResults([]);
-    setHasSearched(false);
+    setFilterTerm('');
     setShowExternalForm(false);
     setExtName('');
     setExtPhone('');
@@ -125,7 +127,7 @@ export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
         <div className="flex items-center justify-between">
           <Label>Cadastrar parceiro(a)</Label>
           <Button variant="ghost" size="sm" onClick={() => setShowExternalForm(false)} className="text-xs">
-            Voltar à busca
+            Voltar à lista
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -175,52 +177,44 @@ export function PartnerSelector({ value, onChange }: PartnerSelectorProps) {
     );
   }
 
-  // Search mode
+  // List mode with filter
   return (
     <div className="space-y-2">
       <Label>Parceiro(a) de dupla</Label>
-      <div className="flex gap-2">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Buscar por nome ou email..."
-          className="flex-1"
+          value={filterTerm}
+          onChange={e => setFilterTerm(e.target.value)}
+          placeholder="Filtrar por nome..."
+          className="pl-9"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={handleSearch}
-          disabled={!searchTerm.trim() || searchTerm.trim().length < 2 || searching}
-        >
-          <Search className="w-4 h-4" />
-        </Button>
       </div>
 
-      {searching && (
-        <p className="text-xs text-muted-foreground">Buscando...</p>
-      )}
-
-      {hasSearched && !searching && results.length > 0 && (
-        <div className="border rounded-lg overflow-hidden divide-y">
-          {results.map(athlete => (
-            <button
-              key={athlete.id}
-              type="button"
-              className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors flex items-center gap-2"
-              onClick={() => handleSelectRegistered(athlete)}
-            >
-              <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="truncate">{athlete.name}</span>
-            </button>
-          ))}
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground ml-2">Carregando atletas...</span>
         </div>
-      )}
-
-      {hasSearched && !searching && results.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          Nenhum atleta encontrado com "{searchTerm}".
+      ) : filteredAthletes.length > 0 ? (
+        <ScrollArea className="h-[200px] border rounded-lg">
+          <div className="divide-y">
+            {filteredAthletes.map(athlete => (
+              <button
+                key={athlete.id}
+                type="button"
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                onClick={() => handleSelectRegistered(athlete)}
+              >
+                <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="truncate">{athlete.name}</span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      ) : (
+        <p className="text-xs text-muted-foreground py-2">
+          {filterTerm ? `Nenhum atleta encontrado com "${filterTerm}".` : 'Nenhum atleta cadastrado.'}
         </p>
       )}
 
