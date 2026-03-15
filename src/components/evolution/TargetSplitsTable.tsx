@@ -67,14 +67,16 @@ export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTab
     });
   }, [targetSec, prSplits]);
 
+  const finishTimeSec = useMemo(() => finishTime ? parseTimeInput(finishTime) : null, [finishTime]);
+
   const totals = useMemo(() => {
     if (!rows) return null;
-    const totalPR = rows.reduce((s, r) => s + r.currentPR, 0);
     const totalTarget = rows.reduce((s, r) => s + r.targetSplit, 0);
-    const diff = totalPR - totalTarget;
+    const officialPR = finishTimeSec || rows.reduce((s, r) => s + r.currentPR, 0);
+    const diff = officialPR - totalTarget;
     const hasAnyPR = rows.some(r => r.hasPR);
-    return { totalPR, totalTarget, diff, hasAnyPR };
-  }, [rows]);
+    return { totalPR: officialPR, totalTarget, diff, hasAnyPR };
+  }, [rows, finishTimeSec]);
 
   if (!prSplits) {
     return (
