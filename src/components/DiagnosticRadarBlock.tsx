@@ -2548,7 +2548,7 @@ export function DiagnosticRadarBlock({
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={{ stroke: 'hsl(var(--border))' }} tickLine={false} />
                   <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(val: number) => { const h = Math.floor(val / 3600); const m = Math.floor((val % 3600) / 60); return `${h}:${String(m).padStart(2, '0')}`; }} domain={['dataMin - 60', 'dataMax + 60']} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => { const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); return [`${h}:${String(m).padStart(2, '0')}`, 'Tempo']; }} labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => { const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); return [`${h}:${String(m).padStart(2, '0')}`, 'Tempo']; }} labelFormatter={(label: string) => `Mês ${label.replace('M', '')}`} />
                   {projectionTargetSec > 0 && (
                     <ReferenceLine y={projectionTargetSec} stroke="hsl(var(--primary))" strokeDasharray="4 4" opacity={0.6} label={{ value: `Meta`, fill: 'hsl(var(--primary))', fontSize: 10, position: 'right' }} />
                   )}
