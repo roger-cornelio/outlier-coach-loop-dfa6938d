@@ -101,7 +101,7 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                   transition={{ delay: 0.1 }}
                   className="text-xs font-medium text-white/50 uppercase tracking-[0.3em] mb-8"
                 >
-                  Novo Status Alcançado
+                  {isOutlier ? 'Novo Status Alcançado' : 'Nova Categoria'}
                 </motion.p>
               )}
             </AnimatePresence>
