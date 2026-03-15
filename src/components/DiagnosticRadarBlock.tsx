@@ -1017,8 +1017,8 @@ function MobilePathToEliteCard({
                   <p className="text-[11px] font-semibold text-foreground">
                     Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                  <p className="text-[10px] text-muted-foreground/70">
+                    👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                   </p>
                 </div>
               </div>
