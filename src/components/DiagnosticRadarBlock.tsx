@@ -477,6 +477,7 @@ interface RaceInfo {
   categoria: string;
   daysUntil: number;
   partner_name?: string | null;
+  participation_type?: string | null;
 }
 
 interface DiagnosticRadarBlockProps {
@@ -988,6 +989,10 @@ function MobilePathToEliteCard({
                   <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
                   <span className="text-border/40">·</span>
                   <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">{provaAlvo.categoria}</span>
+                  <span className="text-border/40">·</span>
+                  <span className="text-muted-foreground">{provaAlvo.participation_type === 'DUPLA' ? 'Doubles' : 'Single'}</span>
                   {provaAlvoTargetTime && (
                     <>
                       <span className="text-border/40">·</span>
@@ -2376,6 +2381,10 @@ export function DiagnosticRadarBlock({
                 <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
                 <span className="text-border/40">·</span>
                 <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.participation_type === 'DUPLA' ? 'Doubles' : 'Single'}</span>
                 {provaAlvoTargetTime && (
                   <>
                     <span className="text-border/40">·</span>
