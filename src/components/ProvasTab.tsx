@@ -22,6 +22,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
 import { BenchmarkHistory } from './BenchmarkHistory';
+import { TargetSplitsTable } from './evolution/TargetSplitsTable';
+import { type Split } from './diagnostico/types';
 import {
   calculateAndSaveHyroxPercentiles,
   hasExistingScores,
