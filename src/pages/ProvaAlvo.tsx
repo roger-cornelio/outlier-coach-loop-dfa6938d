@@ -28,6 +28,8 @@ export interface Prova {
   participationType: 'INDIVIDUAL' | 'DUPLA';
   partnerAthleteId?: string;
   partnerAthleteName?: string;
+  partnerPhone?: string;
+  partnerInstagram?: string;
   athleteId: string;
   coachId: string;
   createdAt: Date;
