@@ -3,10 +3,12 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DiagnosticoMelhoria, Split } from './types';
 import { secondsToTime, timeToSeconds } from './types';
+import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 
 interface Props {
   diagnosticos: DiagnosticoMelhoria[];
   splits?: Split[];
+  metricScores?: CalculatedScore[];
 }
 
 function PercentageBadge({ value }: { value: number }) {
