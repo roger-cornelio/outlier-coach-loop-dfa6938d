@@ -1,20 +1,18 @@
 /**
  * FatigueIndexCard — "Resistência sob Fadiga"
  * Gráfico de linha das 8 runs + Gauge semicircular SVG
+ * Conectado aos dados reais de tempos_splits
  */
 
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { MOCK_RUNS, formatEvolutionTime } from '@/utils/evolutionUtils';
-import { Activity } from 'lucide-react';
+import { formatEvolutionTime } from '@/utils/evolutionUtils';
+import { type Split, timeToSeconds } from '@/components/diagnostico/types';
+import { Activity, Lock } from 'lucide-react';
 
-function computeFatigueIndex(runs: number[]): number {
-  if (runs.length < 3) return 0;
-  const run1 = runs[0];
-  const mid = runs.slice(1, 7);
-  const avg = mid.reduce((a, b) => a + b, 0) / mid.length;
-  return ((avg - run1) / run1) * 100;
+interface FatigueIndexCardProps {
+  splits?: Split[];
 }
 
 function getFatigueColor(pct: number): { stroke: string; label: string; textClass: string } {
@@ -25,17 +23,16 @@ function getFatigueColor(pct: number): { stroke: string; label: string; textClas
 
 function GaugeSVG({ percentage }: { percentage: number }) {
   const clampedPct = Math.min(Math.max(percentage, 0), 30);
-  const normalized = clampedPct / 30; // 0-1 scale (30% = max on gauge)
+  const normalized = clampedPct / 30;
   const { stroke, label, textClass } = getFatigueColor(percentage);
   
   const radius = 60;
-  const circumference = Math.PI * radius; // semicircle
+  const circumference = Math.PI * radius;
   const dashOffset = circumference * (1 - normalized);
 
   return (
     <div className="flex flex-col items-center gap-1">
       <svg width="160" height="95" viewBox="0 0 160 95">
-        {/* Background arc */}
         <path
           d="M 15 85 A 65 65 0 0 1 145 85"
           fill="none"
@@ -44,7 +41,6 @@ function GaugeSVG({ percentage }: { percentage: number }) {
           strokeLinecap="round"
           opacity="0.2"
         />
-        {/* Colored arc */}
         <path
           d="M 15 85 A 65 65 0 0 1 145 85"
           fill="none"
@@ -55,7 +51,6 @@ function GaugeSVG({ percentage }: { percentage: number }) {
           strokeDashoffset={dashOffset}
           className="transition-all duration-1000 ease-out"
         />
-        {/* Center text */}
         <text x="80" y="70" textAnchor="middle" className="fill-foreground text-2xl font-bold" fontSize="24">
           {percentage.toFixed(1)}%
         </text>
@@ -68,16 +63,50 @@ function GaugeSVG({ percentage }: { percentage: number }) {
   );
 }
 
-export function FatigueIndexCard() {
-  const runs = MOCK_RUNS;
-  const fatigueIndex = useMemo(() => computeFatigueIndex(runs), [runs]);
-  const { textClass } = getFatigueColor(fatigueIndex);
+export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
+  const runAnalysis = useMemo(() => {
+    if (!splits || splits.length === 0) return null;
 
-  const chartData = runs.map((sec, i) => ({
-    name: `Run ${i + 1}`,
-    pace: sec,
-    label: formatEvolutionTime(sec),
-  }));
+    const chartData: { name: string; pace: number; label: string }[] = [];
+    for (let i = 1; i <= 8; i++) {
+      const split = splits.find(s => s.split_name === `Running ${i}`);
+      if (split) {
+        const sec = timeToSeconds(split.time);
+        if (sec > 0) {
+          chartData.push({
+            name: `Run ${i}`,
+            pace: sec,
+            label: formatEvolutionTime(sec),
+          });
+        }
+      }
+    }
+
+    if (chartData.length < 8) return null;
+
+    const run1 = chartData[0].pace;
+    const middleRuns = chartData.slice(1, 7);
+    const avgMiddle = middleRuns.reduce((a, b) => a + b.pace, 0) / middleRuns.length;
+    const variation = Math.max(0, Number((((avgMiddle - run1) / run1) * 100).toFixed(1)));
+
+    return { chartData, variation };
+  }, [splits]);
+
+  if (!runAnalysis) {
+    return (
+      <Card className="bg-card/80 backdrop-blur-sm border-border/20">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
+          <Lock className="w-8 h-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground text-center max-w-xs">
+            Aguardando dados de corrida completos. Conclua uma prova com todos os splits de corrida para gerar a análise de fadiga.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { chartData, variation } = runAnalysis;
+  const { textClass } = getFatigueColor(variation);
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/20">
@@ -91,9 +120,8 @@ export function FatigueIndexCard() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Layout: gauge + chart */}
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <GaugeSVG percentage={fatigueIndex} />
+          <GaugeSVG percentage={variation} />
           <div className="flex-1 w-full h-[160px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -138,13 +166,12 @@ export function FatigueIndexCard() {
           </div>
         </div>
 
-        {/* Insight text */}
         <div className="bg-muted/10 border border-border/10 rounded-lg p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Sua corrida quebra <span className={`font-bold ${textClass}`}>{fatigueIndex.toFixed(1)}%</span> após 
-            as estações de força. {fatigueIndex > 12 
+            Sua corrida quebra <span className={`font-bold ${textClass}`}>{variation.toFixed(1)}%</span> após 
+            as estações de força. {variation > 12 
               ? 'Foco recomendado em resistência muscular e gestão de ritmo.' 
-              : fatigueIndex > 5 
+              : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
                 : 'Excelente consistência de pace. Nível elite de gestão de fadiga.'}
           </p>

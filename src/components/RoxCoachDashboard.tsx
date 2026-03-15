@@ -454,8 +454,8 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
                 splits={splits}
               />
 
-              <FatigueIndexCard />
-              <TargetSplitsTable />
+              <FatigueIndexCard splits={splits} />
+              <TargetSplitsTable splits={splits} finishTime={selectedResumo?.finish_time} />
             </>
           )}
 

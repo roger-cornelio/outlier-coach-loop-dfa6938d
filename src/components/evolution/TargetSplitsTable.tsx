@@ -1,6 +1,7 @@
 /**
  * TargetSplitsTable — Tabela interativa de target splits
  * Input de tempo total alvo → recalcula splits por estação
+ * Conectado aos dados reais de tempos_splits
  */
 
 import { useState, useMemo } from 'react';
@@ -9,23 +10,61 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
-  ELITE_WEIGHTS, STATION_LABELS, MOCK_CURRENT_PRS, 
+  ELITE_WEIGHTS, STATION_LABELS, 
   formatEvolutionTime, parseTimeInput 
 } from '@/utils/evolutionUtils';
-import { Crosshair, Download } from 'lucide-react';
+import { type Split, timeToSeconds } from '@/components/diagnostico/types';
+import { Crosshair, Download, Lock } from 'lucide-react';
 
-export function TargetSplitsTable() {
-  const [targetInput, setTargetInput] = useState('01:08:00');
+interface TargetSplitsTableProps {
+  splits?: Split[];
+  finishTime?: string | null;
+}
+
+export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps) {
+  const [targetInput, setTargetInput] = useState(finishTime || '01:08:00');
+
+  // Derive real PRs from splits
+  const prSplits = useMemo(() => {
+    if (!splits || splits.length === 0) return null;
+
+    const mapped: Record<string, number> = {};
+    let runTotal = 0;
+
+    splits.forEach(s => {
+      const sec = timeToSeconds(s.time);
+      const name = s.split_name;
+
+      if (name.startsWith('Running')) runTotal += sec;
+      else if (name === 'Ski Erg') mapped.ski = sec;
+      else if (name === 'Sled Push') mapped.sled_push = sec;
+      else if (name === 'Sled Pull') mapped.sled_pull = sec;
+      else if (name === 'Burpee Broad Jump') mapped.bbj = sec;
+      else if (name === 'Rowing') mapped.row = sec;
+      else if (name === 'Farmers Carry') mapped.farmers = sec;
+      else if (name === 'Sandbag Lunges') mapped.sandbag = sec;
+      else if (name === 'Wall Balls') mapped.wall_balls = sec;
+      else if (name === 'Roxzone') mapped.roxzone = sec;
+    });
+
+    mapped.run_total = runTotal;
+    return mapped;
+  }, [splits]);
+
+  // Update targetInput when finishTime prop changes
+  useMemo(() => {
+    if (finishTime) setTargetInput(finishTime);
+  }, [finishTime]);
+
   const targetSec = useMemo(() => parseTimeInput(targetInput), [targetInput]);
-
   const stations = Object.keys(ELITE_WEIGHTS);
 
   const rows = useMemo(() => {
-    if (!targetSec || targetSec <= 0) return null;
+    if (!targetSec || targetSec <= 0 || !prSplits) return null;
     return stations.map((key) => {
       const weight = ELITE_WEIGHTS[key];
       const targetSplit = Math.round(targetSec * weight);
-      const currentPR = MOCK_CURRENT_PRS[key];
+      const currentPR = prSplits[key] || 0;
       const diff = currentPR - targetSplit;
       return {
         key,
@@ -37,7 +76,20 @@ export function TargetSplitsTable() {
         isAhead: diff <= 0,
       };
     });
-  }, [targetSec, stations]);
+  }, [targetSec, stations, prSplits]);
+
+  if (!prSplits) {
+    return (
+      <Card className="bg-card/80 backdrop-blur-sm border-border/20">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
+          <Lock className="w-8 h-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground text-center max-w-xs">
+            Aguardando diagnóstico. Importe uma prova para liberar a inteligência do Target Splits.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/20">
@@ -51,7 +103,6 @@ export function TargetSplitsTable() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Input de meta */}
         <div className="flex items-center gap-3">
           <label className="text-sm text-muted-foreground whitespace-nowrap">Tempo-alvo:</label>
           <Input
@@ -67,7 +118,6 @@ export function TargetSplitsTable() {
           )}
         </div>
 
-        {/* Tabela */}
         {rows ? (
           <div className="rounded-lg border border-border/15 overflow-hidden">
             <Table>
@@ -103,7 +153,6 @@ export function TargetSplitsTable() {
           </p>
         )}
 
-        {/* Export button */}
         <Button variant="outline" size="sm" className="w-full border-border/20 text-muted-foreground" disabled>
           <Download className="w-4 h-4 mr-1" />
           Exportar Target
