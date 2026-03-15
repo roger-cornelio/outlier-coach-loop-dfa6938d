@@ -45,9 +45,12 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
       filters.pais = 'BR';
     } else {
       // Oficiais: respeitar filtro de região
-      if (regiao === 'BRASIL') filters.pais = 'BR';
-      if (regiao === 'INTERNACIONAL') filters.pais_neq = 'BR';
-      if (regiao === 'BRASIL' && estado && estado !== 'ALL') filters.estado = estado;
+      if (regiao === 'BRASIL') {
+        filters.pais = 'BR';
+        if (estado && estado !== 'ALL') filters.estado = estado;
+      } else {
+        filters.pais_neq = 'BR';
+      }
     }
     return filters;
   }, [query, tipoEvento, regiao, estado]);
