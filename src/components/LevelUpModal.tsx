@@ -186,12 +186,20 @@ export function LevelUpModal({ isOpen, newStatus, isOutlier = false, onContinue 
                   transition={{ delay: 0.65 }}
                   className="mb-12 space-y-1"
                 >
-                  <p className="text-base text-white/40 font-light italic">
-                    Você não está na média.
-                  </p>
-                  <p className="text-lg text-white/70 font-semibold italic">
-                    Você está fora da curva.
-                  </p>
+                  {isOutlier ? (
+                    <>
+                      <p className="text-base text-white/40 font-light italic">
+                        Você não está na média.
+                      </p>
+                      <p className="text-lg text-white/70 font-semibold italic">
+                        Você está fora da curva.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-base text-white/50 font-light italic">
+                      Sua categoria foi atualizada. Continue treinando para conquistar o título OUTLIER.
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
