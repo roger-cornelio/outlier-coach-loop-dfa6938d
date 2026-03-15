@@ -112,7 +112,7 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
         ))}
       </div>
 
-      {/* Pills: Região + Estado condicional — só para Oficial */}
+      {/* Pills: Região + Estado condicional — para Oficial */}
       {tipoEvento === 'OFICIAL' && (
         <div className="flex items-center gap-2 flex-wrap">
           {REGIAO_OPTIONS.map(r => (
@@ -143,6 +143,23 @@ export function EventSearchPanel({ onSelectEvent, onRequestManual, onRequestRevi
               </SelectContent>
             </Select>
           )}
+        </div>
+      )}
+
+      {/* Estado filter for Não Oficial */}
+      {tipoEvento === 'PARALELA' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={estado} onValueChange={setEstado}>
+            <SelectTrigger className="w-[110px] h-7 text-xs rounded-full">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent className="bg-background border z-50 max-h-60">
+              <SelectItem value="ALL">Todos</SelectItem>
+              {ESTADOS.map(uf => (
+                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
