@@ -188,6 +188,11 @@ function ImportProvaInlineCTA() {
         });
         triggerExternalResultsRefresh();
         setState('done');
+        
+        // Dispatch event to trigger category modal
+        window.dispatchEvent(new CustomEvent('outlier:race-imported', { 
+          detail: { status: (existing.race_category || 'OPEN').toLowerCase() } 
+        }));
         return;
       }
 
