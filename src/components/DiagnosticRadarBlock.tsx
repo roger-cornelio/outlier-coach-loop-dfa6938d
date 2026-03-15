@@ -2100,18 +2100,32 @@ export function DiagnosticRadarBlock({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, [scores, perfilFisiologico]);
 
+  const METRIC_TRAINING_FOCUS: Record<string, string> = {
+    run_avg: 'resistência aeróbica e ritmo de corrida',
+    roxzone: 'transições e capacidade anaeróbica',
+    ski: 'potência de puxada e resistência cardiorrespiratória',
+    sled_push: 'força de empurrada e potência de membros inferiores',
+    sled_pull: 'força de puxada e grip',
+    bbj: 'potência explosiva e coordenação',
+    row: 'resistência de remada e eficiência cardiovascular',
+    farmers: 'força de grip e estabilidade de core',
+    sandbag: 'resistência muscular de membros inferiores',
+    wallballs: 'potência de membros inferiores e resistência de ombro',
+  };
+
   const trainingFocus = useMemo(() => {
-    // Periodização OUTLIER: mesma fonte que TrainingPrioritiesBlock (diagMelhorias sorted by improvement_value)
     const gaps = [...(diagMelhorias || [])]
       .filter(d => d.improvement_value > 0)
       .sort((a, b) => b.improvement_value - a.improvement_value)
-      .slice(0, 3);
-    if (gaps.length === 0) return 'Os treinos serão focados em desenvolver todas as capacidades de forma equilibrada.';
-    const names = gaps.map(g => METRIC_LABELS[g.metric] || g.movement || g.metric);
-    const joined = names.length === 1
-      ? names[0]
-      : names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1];
-    return `Os treinos para a próxima semana serão focados em ${joined}, os pontos com maior potencial de evolução no seu perfil.`;
+      .slice(0, 2);
+
+    if (gaps.length === 0)
+      return 'Foco em consolidação: desenvolvimento equilibrado de todas as valências.';
+
+    const focuses = gaps.map(g => METRIC_TRAINING_FOCUS[g.metric] || METRIC_LABELS[g.metric] || g.metric);
+    const joined = focuses.length === 1 ? focuses[0] : `${focuses[0]} e ${focuses[1]}`;
+
+    return `Os treinos da próxima semana terão ênfase em ${joined} — os pontos com maior potencial de evolução identificados no seu diagnóstico.`;
   }, [diagMelhorias]);
 
   // Loading state
