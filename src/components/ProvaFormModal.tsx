@@ -141,7 +141,7 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     setCityOpen(false);
     setCategoria('');
     setData(undefined);
-    setPartnerId('');
+    setPartnerData(null);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
