@@ -1529,7 +1529,7 @@ function TrainingPrioritiesBlock({
         .sort((a, b) => b.improvement_value - a.improvement_value);
       const maxGap = allSorted[0]?.improvement_value || 1;
       
-      const sliced = showAll ? allSorted : allSorted.filter(d => d.improvement_value > 0).slice(0, 3);
+      const sliced = allSorted.filter(d => d.improvement_value > 0);
 
       if (sliced.length > 0) {
         return sliced.map(d => {
