@@ -2463,9 +2463,7 @@ export function DiagnosticRadarBlock({
             <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            🎯 Com o método OUTLIER, baseado em fisiologia do esporte aplicada, você pode eliminar{' '}
-            <strong className="text-foreground">{evolutionProjection.gapFormatted}</strong> do seu tempo em aproximadamente{' '}
-            <strong className="text-primary">{evolutionProjection.months} {evolutionProjection.months === 1 ? 'mês' : 'meses'}</strong> de treino consistente.
+            🎯 Com o método OUTLIER, baseado em fisiologia aplicada, este é o ritmo de evolução necessário para atingir o próximo nível:
           </p>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
