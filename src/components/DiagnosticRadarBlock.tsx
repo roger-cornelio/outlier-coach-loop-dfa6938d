@@ -1991,6 +1991,33 @@ export function DiagnosticRadarBlock({
     return calculateEvolutionTimeframe(currentTime, totalGap);
   }, [validatingCompetition?.time_in_seconds, eliteTarget?.targetSeconds, diagMelhorias, scores]);
 
+  // 12-month projection chart data + gain
+  const projectionChartData = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return [];
+    const currentSec = validatingCompetition.time_in_seconds;
+    return Array.from({ length: 13 }, (_, i) => ({
+      month: `M${i}`,
+      tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
+    }));
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
+  const gain12mFormatted = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
+    const currentSec = validatingCompetition.time_in_seconds;
+    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const gain = currentSec - projectedAt12;
+    const m = Math.floor(gain / 60);
+    const s = Math.round(gain % 60);
+    return s > 0 ? `${m}min ${s}s` : `${m} min`;
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
+  const projectionTargetSec = useMemo(() => {
+    if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return 0;
+    const currentSec = validatingCompetition.time_in_seconds;
+    const totalGapSec = evolutionProjection.ratePerMonth * evolutionProjection.months;
+    return Math.max(3600, currentSec - totalGapSec);
+  }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
+
 
   const hasData = hasDataProp && scores.length > 0;
 
