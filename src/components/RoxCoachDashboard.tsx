@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { DiagnosticoResumo, Split, DiagnosticoMelhoria } from './diagnostico/types';
-import { timeToSeconds } from './diagnostico/types';
+
 import PerformanceHighlights from './diagnostico/PerformanceHighlights';
 
 import SplitTimesGrid from './diagnostico/SplitTimesGrid';
