@@ -427,7 +427,7 @@ function DuplasTab() {
 // ═══════════════════════════════════════════════════════════
 export function CRMAdmin() {
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full max-w-full">
       <h2 className="text-xl font-bold text-foreground">CRM</h2>
 
       <Tabs defaultValue="clientes" className="w-full">
@@ -442,11 +442,11 @@ export function CRMAdmin() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="clientes">
+        <TabsContent value="clientes" className="mt-4">
           <ClientesTab />
         </TabsContent>
 
-        <TabsContent value="duplas">
+        <TabsContent value="duplas" className="mt-4">
           <DuplasTab />
         </TabsContent>
       </Tabs>
