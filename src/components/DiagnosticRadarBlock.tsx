@@ -477,6 +477,7 @@ interface RaceInfo {
   categoria: string;
   daysUntil: number;
   partner_name?: string | null;
+  participation_type?: string | null;
 }
 
 interface DiagnosticRadarBlockProps {

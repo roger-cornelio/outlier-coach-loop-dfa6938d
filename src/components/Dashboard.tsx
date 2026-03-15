@@ -202,6 +202,7 @@ export function Dashboard() {
       categoria: provaAlvo.categoria,
       daysUntil,
       partner_name: provaAlvo.partner_name,
+      participation_type: provaAlvo.participation_type,
     };
   }, [provaAlvo]);
 
