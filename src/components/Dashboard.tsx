@@ -107,6 +107,9 @@ export function Dashboard() {
   const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
   const journeyProgress = useJourneyProgress();
   
+  // Estado para modal de categoria ao importar prova
+  const [raceImportLevel, setRaceImportLevel] = useState<import('@/types/outlier').AthleteStatus | null>(null);
+  
   const navigate = useNavigate();
   
   // Dia atual para buscar treino do dia
@@ -133,6 +136,21 @@ export function Dashboard() {
       window.removeEventListener('outlier:expand-weekly-view', handleExpandWeeklyView);
     };
   }, []);
+
+  // Listen for race import event to show category modal
+  useEffect(() => {
+    const handleRaceImported = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const statusMap: Record<string, import('@/types/outlier').AthleteStatus> = {
+        open: 'open', pro: 'pro', elite: 'elite',
+      };
+      const mapped = statusMap[detail?.status] || status || 'open';
+      setRaceImportLevel(mapped);
+    };
+    
+    window.addEventListener('outlier:race-imported', handleRaceImported);
+    return () => window.removeEventListener('outlier:race-imported', handleRaceImported);
+  }, [status]);
 
   // ============================================
   // REGRA CENTRAL: Aplicar/limpar treinos ao mudar semana
@@ -389,13 +407,23 @@ export function Dashboard() {
         canGoToNext={canNavigateToFuture}
       />
 
-      {/* Level Up Modal */}
+      {/* Level Up Modal (conquista OUTLIER) */}
       {newLevel && (
         <LevelUpModal
           isOpen={showLevelUpModal}
           newStatus={newLevel}
           isOutlier={journeyProgress.isOutlier}
           onContinue={acknowledgeLevel}
+        />
+      )}
+
+      {/* Race Import Modal (categoria sem brasão) */}
+      {raceImportLevel && (
+        <LevelUpModal
+          isOpen={!!raceImportLevel}
+          newStatus={raceImportLevel}
+          isOutlier={false}
+          onContinue={() => setRaceImportLevel(null)}
         />
       )}
     </div>

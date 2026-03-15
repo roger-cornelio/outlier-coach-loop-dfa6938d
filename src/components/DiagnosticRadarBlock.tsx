@@ -188,6 +188,11 @@ function ImportProvaInlineCTA() {
         });
         triggerExternalResultsRefresh();
         setState('done');
+        
+        // Dispatch event to trigger category modal
+        window.dispatchEvent(new CustomEvent('outlier:race-imported', { 
+          detail: { status: (existing.race_category || 'OPEN').toLowerCase() } 
+        }));
         return;
       }
 
@@ -351,6 +356,11 @@ function ImportProvaInlineCTA() {
       triggerExternalResultsRefresh();
       toast.success('Dados da prova atualizados.');
       setState('done');
+      
+      // Dispatch event to trigger category modal in Dashboard
+      window.dispatchEvent(new CustomEvent('outlier:race-imported', { 
+        detail: { status: raceCategory.toLowerCase() } 
+      }));
     } catch (err: any) {
       console.error('Quick import error:', err);
       setErrorMsg(err.message || 'Erro ao importar prova.');
