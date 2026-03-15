@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap } from 'lucide-react';
+import { ArrowLeft, Trophy, History, Medal, Timer, Trash2, Zap, TrendingUp } from 'lucide-react';
 import { useOutlierStore } from '@/store/outlierStore';
 import { BenchmarkHistory } from './BenchmarkHistory';
 import { EvolutionMilestones } from './EvolutionMilestones';
@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
 import { SimulatorScreen } from './simulator/SimulatorScreen';
+import { FatigueIndexCard } from './evolution/FatigueIndexCard';
+import { TargetSplitsTable } from './evolution/TargetSplitsTable';
 
 export function BenchmarksScreen() {
   const {
@@ -133,7 +135,7 @@ export function BenchmarksScreen() {
           {/* Tabs: Todos | Simulados | Provas | Diagnóstico */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Tabs defaultValue="diagnostico" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
                 <TabsTrigger value="diagnostico" className="gap-1 text-xs sm:text-sm sm:gap-2">
                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Diagnóstico</span>
@@ -153,6 +155,11 @@ export function BenchmarksScreen() {
                   <span className="hidden sm:inline">Benchmarks</span>
                   <span className="sm:hidden">Bench.</span>
                 </TabsTrigger>
+                <TabsTrigger value="analise" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Análise</span>
+                  <span className="sm:hidden">Anál.</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="diagnostico">
@@ -169,6 +176,13 @@ export function BenchmarksScreen() {
               
               <TabsContent value="benchmarks">
                 <BenchmarkHistory key={`benchmarks-${refreshKey}`} filterType="benchmark" />
+              </TabsContent>
+
+              <TabsContent value="analise">
+                <div className="space-y-6">
+                  <FatigueIndexCard />
+                  <TargetSplitsTable />
+                </div>
               </TabsContent>
             </Tabs>
           </motion.div>

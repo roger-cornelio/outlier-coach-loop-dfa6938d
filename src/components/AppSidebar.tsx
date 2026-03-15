@@ -83,9 +83,9 @@ export function AppSidebar() {
       icon: Stethoscope
     },
     { 
-      title: 'Evolução', 
-      view: 'evolution', 
-      icon: TrendingUp 
+    title: 'Evolução', 
+    view: 'benchmarks', 
+    icon: TrendingUp 
     },
     { 
       title: 'Configurações', 
