@@ -19,9 +19,10 @@ import { Crosshair, Download, Lock } from 'lucide-react';
 interface TargetSplitsTableProps {
   splits?: Split[];
   finishTime?: string | null;
+  title?: string;
 }
 
-export function TargetSplitsTable({ splits, finishTime }: TargetSplitsTableProps) {
+export function TargetSplitsTable({ splits, finishTime, title }: TargetSplitsTableProps) {
   const initialTarget = finishTime || '01:08:00';
   const [targetInput, setTargetInput] = useState(initialTarget);
 
