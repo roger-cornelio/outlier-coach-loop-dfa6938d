@@ -1458,6 +1458,34 @@ function TrainingPrioritiesBlock({
 }) {
   const showAll = true; // Always show all stations (filtered by <5 stars in render)
 
+  // Normalize metric aliases (IA may return wrong names)
+  const normalizeMetric = (raw: string): string => {
+    const lower = raw.toLowerCase().trim();
+    const ALIASES: Record<string, string> = {
+      'roxygen': 'roxzone',
+      'rox_zone': 'roxzone',
+      'rox zone': 'roxzone',
+      'run total': 'run_avg',
+      'run_total': 'run_avg',
+      'run': 'run_avg',
+      'corrida': 'run_avg',
+      'sled push': 'sled_push',
+      'sled pull': 'sled_pull',
+      'burpee broad jump': 'bbj',
+      'wall balls': 'wallballs',
+      'wall_balls': 'wallballs',
+      'farmer carry': 'farmers',
+      'farmers carry': 'farmers',
+      "farmer's carry": 'farmers',
+      'sandbag lunges': 'sandbag',
+      'sandbag lunge': 'sandbag',
+      'ski erg': 'ski',
+      'ski_erg': 'ski',
+      'remo': 'row',
+    };
+    return ALIASES[lower] || lower;
+  };
+
   const worstStations = useMemo(() => {
     // Build lookup maps from diagMelhorias
     const melhoriaMap = new Map<string, number>();
@@ -1465,26 +1493,86 @@ function TrainingPrioritiesBlock({
     if (diagMelhorias) {
       for (const m of diagMelhorias) {
         if (m.metric) {
-          const key = m.metric.toLowerCase();
+          const key = normalizeMetric(m.metric);
           if (m.improvement_value > 0) melhoriaMap.set(key, m.improvement_value);
           percentageMap.set(key, m.percentage ?? 0);
         }
       }
     }
 
+    // Helper: build a station item from scores (for injection)
+    function buildFromScore(s: CalculatedScore) {
+      const pct = percentageMap.get(s.metric);
+      const realGap = melhoriaMap.get(s.metric);
+      let starCount: number;
+      if (pct != null) {
+        if (pct > 20) starCount = 0;
+        else if (pct > 10) starCount = 1;
+        else if (pct > 5) starCount = 2;
+        else if (pct > 2) starCount = 3;
+        else if (pct > 1) starCount = 4;
+        else starCount = 5;
+      } else {
+        starCount = percentileToStars(s.percentile_value).count;
+      }
+      const insight = realGap != null && realGap > 0
+        ? formatGapLabel(realGap)
+        : (s.percentile_value >= 50 ? '✓ Meta batida' : `P${s.percentile_value}`);
+      return {
+        metric: s.metric,
+        label: METRIC_LABELS[s.metric] || s.metric,
+        stars: { count: starCount },
+        insight,
+        percentile: s.percentile_value,
+        isMetBatida: insight.startsWith('✓'),
+      };
+    }
+
+    // Helper: inject missing run_avg/roxzone from scores into an existing items list
+    function injectMissingMetrics(items: typeof result): typeof result {
+      const presentMetrics = new Set(items.map(i => normalizeMetric(i.metric)));
+      const REQUIRED_METRICS = ['run_avg', 'roxzone'];
+      for (const reqMetric of REQUIRED_METRICS) {
+        if (!presentMetrics.has(reqMetric)) {
+          const scoreEntry = scores.find(s => s.metric === reqMetric);
+          if (scoreEntry) {
+            items.push(buildFromScore(scoreEntry));
+          }
+        }
+      }
+      // Re-sort: lower stars = higher priority (show first)
+      items.sort((a, b) => a.stars.count - b.stars.count);
+      return items;
+    }
+
+    let result: {
+      metric: string;
+      label: string;
+      stars: { count: number };
+      insight: string;
+      percentile: number;
+      isMetBatida: boolean;
+    }[] = [];
+
     // Try to use IA-generated priorities with cross-validation
     if (prioridadesIA && prioridadesIA.length > 0) {
+      // Normalize IA metrics before validation
+      const normalizedIA = prioridadesIA.map(p => ({
+        ...p,
+        metric: normalizeMetric(p.metric),
+      }));
+
       // Validate each item against real diagMelhorias data
       const validMetrics = new Set(
-        (diagMelhorias || []).map(m => m.metric.toLowerCase())
+        (diagMelhorias || []).map(m => normalizeMetric(m.metric))
       );
       // Also accept metrics from scores as valid
       for (const s of scores) {
         validMetrics.add(s.metric.toLowerCase());
       }
 
-      const validated = prioridadesIA.filter(p =>
-        p.metric && validMetrics.has(p.metric.toLowerCase())
+      const validated = normalizedIA.filter(p =>
+        p.metric && validMetrics.has(p.metric)
       );
 
       // If more than 50% were invalid, discard IA data entirely
@@ -1493,15 +1581,15 @@ function TrainingPrioritiesBlock({
           .sort((a, b) => b.nivel_urgencia - a.nivel_urgencia)
           .slice(0, showAll ? validated.length : 3)
           .map(p => {
-            const realGap = melhoriaMap.get(p.metric.toLowerCase());
-            const pct = percentageMap.get(p.metric.toLowerCase());
+            const realGap = melhoriaMap.get(p.metric);
+            const pct = percentageMap.get(p.metric);
             const insight = realGap != null && realGap > 0
               ? formatGapLabel(realGap)
               : `Urgência ${p.nivel_urgencia}/5`;
-            // Use percentage (FOCO) for stars when available, otherwise fall back to nivel_urgencia
+            // Use percentage (FOCO) for stars when available, otherwise invert nivel_urgencia
+            // High urgency (5) = few stars (priority), low urgency (1) = many stars (ok)
             let starCount: number;
             if (pct != null) {
-              // Faixas fixas baseadas no FOCO %
               if (pct > 20) starCount = 0;
               else if (pct > 10) starCount = 1;
               else if (pct > 5) starCount = 2;
@@ -1509,7 +1597,8 @@ function TrainingPrioritiesBlock({
               else if (pct > 1) starCount = 4;
               else starCount = 5;
             } else {
-              starCount = Math.min(5, Math.max(1, p.nivel_urgencia));
+              // FIX: Invert urgency → stars (urgency 5 = 0 stars = highest priority shown)
+              starCount = Math.max(0, 5 - p.nivel_urgencia);
             }
             return {
               metric: p.metric,
@@ -1520,22 +1609,28 @@ function TrainingPrioritiesBlock({
               isMetBatida: false,
             };
           });
-        return items;
+        result = injectMissingMetrics(items);
+        return result;
       }
     }
 
     // Fallback 1: use diagMelhorias sorted by improvement_value (same source as Parecer Outlier)
     if (diagMelhorias && diagMelhorias.length > 0) {
-      const allSorted = [...diagMelhorias]
+      // Normalize metrics in diagMelhorias
+      const normalizedDiag = diagMelhorias.map(d => ({
+        ...d,
+        metric: normalizeMetric(d.metric),
+      }));
+
+      const allSorted = [...normalizedDiag]
         .sort((a, b) => b.improvement_value - a.improvement_value);
       const maxGap = allSorted[0]?.improvement_value || 1;
       
       const sliced = showAll ? allSorted : allSorted.filter(d => d.improvement_value > 0).slice(0, 3);
 
       if (sliced.length > 0) {
-        return sliced.map(d => {
+        const items = sliced.map(d => {
           const pct = d.percentage ?? 0;
-          // Faixas fixas baseadas no FOCO %
           let starCount: number;
           if (d.improvement_value <= 0) starCount = 5; // Meta batida
           else if (pct > 20) starCount = 0;
@@ -1553,6 +1648,8 @@ function TrainingPrioritiesBlock({
             isMetBatida: d.improvement_value <= 0,
           };
         });
+        result = injectMissingMetrics(items);
+        return result;
       }
     }
 
