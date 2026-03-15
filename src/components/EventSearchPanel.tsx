@@ -210,6 +210,7 @@ function EventCard({ event, onSelect, onRequestReview }: {
 }) {
   const isValidated = event.status_validacao === 'VALIDADA';
   const isPending = event.status_validacao === 'AGUARDANDO_AUTORIZACAO_ADMIN';
+  const isOwnManual = event.origem_principal === 'MANUAL';
 
   return (
     <Card className={isPending ? 'border-yellow-500/40 bg-yellow-500/5' : ''}>
