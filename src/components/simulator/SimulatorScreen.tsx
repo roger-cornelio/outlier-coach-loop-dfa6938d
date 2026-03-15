@@ -12,9 +12,25 @@ import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
-import { RacePlanCard, type RacePlanRow } from '@/components/evolution/RacePlanCard';
+import { TargetSplitsTable } from '@/components/evolution/TargetSplitsTable';
+import { type Split } from '@/components/diagnostico/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+const PHASE_TO_SPLIT_NAME: Record<number, string> = {
+  0: 'Running 1', 1: 'Ski Erg', 2: 'Running 2', 3: 'Sled Push',
+  4: 'Running 3', 5: 'Sled Pull', 6: 'Running 4', 7: 'Burpee Broad Jump',
+  8: 'Running 5', 9: 'Rowing', 10: 'Running 6', 11: 'Farmers Carry',
+  12: 'Running 7', 13: 'Sandbag Lunges', 14: 'Running 8', 15: 'Wall Balls',
+};
+
+function secondsToTimeStr(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
 
 interface SplitData {
   phase: number;
