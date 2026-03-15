@@ -12,6 +12,7 @@ import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
 import { getHyroxIcon } from './HyroxStationIcons';
+import { RacePlanCard, type RacePlanRow } from '@/components/evolution/RacePlanCard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
