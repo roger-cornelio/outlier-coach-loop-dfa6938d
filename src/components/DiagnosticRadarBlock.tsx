@@ -2497,7 +2497,7 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-col items-center text-center gap-0.5">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Timer className="w-3.5 h-3.5" />
-                <span>Tempo prova</span>
+                <span>Última prova</span>
               </div>
               <span className="font-bold text-sm text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
             </div>
@@ -2505,25 +2505,25 @@ export function DiagnosticRadarBlock({
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Target className="w-3.5 h-3.5" />
-                <span>Requisito {performanceSnapshot.targetLabel}</span>
+                <span>Status Atual : {performanceSnapshot.currentStatusLabel}</span>
               </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.metaClass)}>{performanceSnapshot.metaValue}</span>
+              <span className="font-bold text-sm text-foreground">{performanceSnapshot.currentReqValue}</span>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+                <Crown className="w-3.5 h-3.5" />
+                <span>Próximo : {performanceSnapshot.nextStatusLabel}</span>
+              </div>
+              <span className="font-bold text-sm text-foreground">{performanceSnapshot.nextReqValue}</span>
             </div>
 
             <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                 <Zap className="w-3.5 h-3.5" />
-                <span>Ganho</span>
+                <span>GAP</span>
               </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.gainClass)}>{performanceSnapshot.gainValue}</span>
-            </div>
-
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>Evolução</span>
-              </div>
-              <span className={cn('font-bold text-sm', performanceSnapshot.evolutionClass)}>{performanceSnapshot.evolutionValue}</span>
+              <span className={cn('font-bold text-sm', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
             </div>
           </div>
         )}
