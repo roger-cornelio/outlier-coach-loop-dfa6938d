@@ -25,10 +25,11 @@ const TIER_COLORS: Record<string, string> = {
   Elite: 'bg-primary text-primary-foreground',
 };
 
-function formatSecondsToHHMM(sec: number): string {
+function formatSecondsToHHMMSS(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  return `${h}:${String(m).padStart(2, '0')}`;
+  const s = Math.round(sec % 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function buildProjectionData(currentSeconds: number, ratePerMonth: number) {
