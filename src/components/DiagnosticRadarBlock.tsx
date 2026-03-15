@@ -2405,8 +2405,8 @@ export function DiagnosticRadarBlock({
                 <p className="text-sm font-semibold text-foreground text-center">
                   Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio.
                 </p>
-                <p className="text-xs text-muted-foreground text-center">
-                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapFormatted} na sua frente.
+                <p className="text-xs text-muted-foreground/70 text-center">
+                  👻 Se a prova fosse hoje, o 3º colocado chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                 </p>
               </div>
             </div>
