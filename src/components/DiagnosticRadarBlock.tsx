@@ -2113,7 +2113,8 @@ export function DiagnosticRadarBlock({
     wallballs: 'potência de membros inferiores e resistência de ombro',
   };
 
-  const trainingFocus = useMemo(() => {
+  // Deterministic fallback
+  const deterministicFocus = useMemo(() => {
     const gaps = [...(diagMelhorias || [])]
       .filter(d => d.improvement_value > 0)
       .sort((a, b) => b.improvement_value - a.improvement_value)
@@ -2125,8 +2126,46 @@ export function DiagnosticRadarBlock({
     const focuses = gaps.map(g => METRIC_TRAINING_FOCUS[g.metric] || METRIC_LABELS[g.metric] || g.metric);
     const joined = focuses.length === 1 ? focuses[0] : `${focuses[0]} e ${focuses[1]}`;
 
-    return `Os treinos da próxima semana terão ênfase em ${joined} — os pontos com maior potencial de evolução identificados no seu diagnóstico.`;
+    return `Os próximos treinos terão ênfase em ${joined} — os pontos com maior potencial de evolução identificados no seu diagnóstico.`;
   }, [diagMelhorias]);
+
+  const [trainingFocus, setTrainingFocus] = useState<string>('');
+  const [periodizationLoading, setPeriodizationLoading] = useState(false);
+  const periodizationFetched = useRef(false);
+
+  useEffect(() => {
+    if (periodizationFetched.current) return;
+    if (!diagMelhorias || diagMelhorias.length === 0) {
+      setTrainingFocus(deterministicFocus);
+      return;
+    }
+
+    const gaps = [...diagMelhorias]
+      .filter(d => d.improvement_value > 0)
+      .sort((a, b) => b.improvement_value - a.improvement_value)
+      .slice(0, 3)
+      .map(g => ({ metric: g.metric, movement: g.movement, improvement_value: g.improvement_value }));
+
+    if (gaps.length === 0) {
+      setTrainingFocus(deterministicFocus);
+      return;
+    }
+
+    periodizationFetched.current = true;
+    setPeriodizationLoading(true);
+
+    supabase.functions.invoke('generate-periodization-text', { body: { gaps } })
+      .then(({ data, error }) => {
+        if (error || !data?.texto) {
+          console.warn('Periodization AI fallback:', error);
+          setTrainingFocus(deterministicFocus);
+        } else {
+          setTrainingFocus(data.texto);
+        }
+      })
+      .catch(() => setTrainingFocus(deterministicFocus))
+      .finally(() => setPeriodizationLoading(false));
+  }, [diagMelhorias, deterministicFocus]);
 
   // Loading state
   if (loading) {

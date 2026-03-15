@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.sync-hyrox-events]
 verify_jwt = false
+
+[functions.generate-periodization-text]
+verify_jwt = false
