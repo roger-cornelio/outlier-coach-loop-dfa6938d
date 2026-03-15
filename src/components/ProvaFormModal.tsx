@@ -211,7 +211,6 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
     if (!nomeBase.trim() || !categoria || !data || !cidade) return;
 
     const participationType = isDupla ? 'DUPLA' as const : 'INDIVIDUAL' as const;
-    const partner = MOCK_ATLETAS.find(a => a.id === partnerId);
 
     onSave({
       type,
@@ -219,8 +218,10 @@ export function ProvaFormModal({ open, onOpenChange, type, onSave }: ProvaFormMo
       categoria,
       data,
       participationType,
-      partnerAthleteId: isDupla ? partnerId : undefined,
-      partnerAthleteName: isDupla ? partner?.name : undefined,
+      partnerAthleteId: isDupla && partnerData?.type === 'registered' ? partnerData.id : undefined,
+      partnerAthleteName: isDupla ? partnerData?.name : undefined,
+      partnerPhone: isDupla && partnerData?.type === 'external' ? partnerData.phone : undefined,
+      partnerInstagram: isDupla && partnerData?.type === 'external' ? partnerData.instagram : undefined,
     });
 
     resetAll();
