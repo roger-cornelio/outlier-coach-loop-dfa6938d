@@ -2,7 +2,7 @@
  * ProvasTab - Aba de Provas Oficiais com busca HYROX (sem diagnóstico) + upload de screenshot
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Trophy, Check, CheckCheck, ShieldCheck, Loader2,
@@ -22,6 +22,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { toast } from 'sonner';
 import { BenchmarkHistory } from './BenchmarkHistory';
+import { TargetSplitsTable } from './evolution/TargetSplitsTable';
+import { type Split } from './diagnostico/types';
 import {
   calculateAndSaveHyroxPercentiles,
   hasExistingScores,
@@ -88,6 +90,33 @@ function generateMetricsFromSplits(splits: Record<string, number>): MetricInput[
 export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
   const { user, profile } = useAuth();
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
+
+  // ── Fetch splits for TargetSplitsTable ──
+  const [splits, setSplits] = useState<Split[]>([]);
+  const [finishTime, setFinishTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      // Get latest resumo
+      const { data: resumo } = await supabase
+        .from('diagnostico_resumo')
+        .select('id, finish_time')
+        .eq('atleta_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (resumo) {
+        setFinishTime(resumo.finish_time);
+        const { data: splitsData } = await supabase
+          .from('tempos_splits')
+          .select('split_name, time')
+          .eq('resumo_id', resumo.id);
+        if (splitsData) setSplits(splitsData as Split[]);
+      }
+    })();
+  }, [user, refreshKey]);
 
   // ── Search state ──
   const profileName = profile?.name || '';
@@ -458,10 +487,7 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── HISTORY (imported races on top) ── */}
-      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
-
-      {/* ── SEARCH HYROX (below imported races) ── */}
+      {/* ── SEARCH HYROX (on top) ── */}
       <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -736,6 +762,12 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
           </div>
         )}
       </div>
+
+      {/* ── HISTORY (Prova Atual) ── */}
+      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
+
+      {/* ── Calculadora de Pace Ideal ── */}
+      <TargetSplitsTable splits={splits} finishTime={finishTime} title="Calculadora de Pace Ideal" />
     </div>
   );
 }
