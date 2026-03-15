@@ -487,7 +487,10 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── SEARCH HYROX (on top) ── */}
+      {/* ── HISTORY (Prova Atual) — always on top ── */}
+      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
+
+      {/* ── SEARCH HYROX ── */}
       <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -762,9 +765,6 @@ export function ProvasTab({ refreshKey, onResultAdded }: ProvasTabProps) {
           </div>
         )}
       </div>
-
-      {/* ── HISTORY (Prova Atual) ── */}
-      <BenchmarkHistory key={`provas-${refreshKey}`} filterType="prova_oficial" />
 
       {/* ── Calculadora de Pace Ideal ── */}
       <TargetSplitsTable splits={splits} finishTime={finishTime} title="Calculadora de Pace Ideal" />
