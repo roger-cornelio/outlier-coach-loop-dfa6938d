@@ -24,8 +24,9 @@ function getFatigueColor(pct: number): { stroke: string; label: string; textClas
 }
 
 function GaugeSVG({ percentage }: { percentage: number }) {
-  const clampedPct = Math.min(Math.max(percentage, 0), 30);
-  const normalized = clampedPct / 30;
+  // Gauge proporcional de 0 a 100
+  const clampedPct = Math.min(Math.max(percentage, 0), 100);
+  const normalized = clampedPct / 100;
   const { stroke, label, textClass } = getFatigueColor(percentage);
   
   const radius = 60;
@@ -200,6 +201,13 @@ export function FatigueIndexCard({ splits }: FatigueIndexCardProps) {
               : variation > 5 
                 ? 'Fadiga moderada — há espaço para melhoria na consistência de pace.'
                 : 'Excelente consistência de pace. Nível elite de gestão de fadiga.'}
+          </p>
+        </div>
+
+        {/* Destaque educacional */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+          <p className="text-xs text-primary font-semibold leading-relaxed text-center">
+            ⚡ Quanto menor o Índice de Quebra, mais consistente você é — e melhor será seu resultado final.
           </p>
         </div>
 
