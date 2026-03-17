@@ -75,7 +75,14 @@ import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
-import { calculateParsingCoverage, type CoverageReport } from '@/utils/parsingCoverage';
+import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine } from '@/utils/parsingCoverage';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface TextModelImporterProps {
   onSaveAndGoToPrograms?: (workouts: DayWorkout[], title: string, weekStart: string | null) => Promise<boolean>;
@@ -154,6 +161,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [templateCopied, setTemplateCopied] = useState(false);
   const [coverageReport, setCoverageReport] = useState<CoverageReport | null>(null);
   const [showCoverageBadge, setShowCoverageBadge] = useState(false);
+  const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
 
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
@@ -1014,40 +1022,86 @@ BLOCO: DESCANSO
                   Edição do Treino
                 </CardTitle>
               </div>
-              {/* Badge de cobertura — inline, minimalista, sempre visível */}
+              {/* Badge de cobertura — clicável, abre modal de detalhes */}
               {coverageReport && coverageReport.totalExercises > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs px-3 py-1 cursor-default ${
-                          coverageReport.successRate >= 90
-                            ? 'bg-primary/10 text-primary border-primary/20'
-                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                        }`}
-                      >
-                        {coverageReport.successRate >= 90 ? '🎯' : '⚠️'}{' '}
-                        {coverageReport.recognizedMetrics}/{coverageReport.totalExercises} ({coverageReport.successRate}%)
-                      </Badge>
-                    </TooltipTrigger>
-                    {coverageReport.unmatchedLines.length > 0 && (
-                      <TooltipContent side="bottom" className="max-w-sm">
-                        <p className="font-semibold mb-1">Linhas sem métricas detectadas:</p>
-                        <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
-                          {coverageReport.unmatchedLines.slice(0, 10).map((line, i) => (
-                            <li key={i} className="truncate">• {line}</li>
-                          ))}
-                          {coverageReport.unmatchedLines.length > 10 && (
-                            <li className="text-muted-foreground">
-                              +{coverageReport.unmatchedLines.length - 10} mais...
-                            </li>
-                          )}
-                        </ul>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
+                      coverageReport.successRate === 100
+                        ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                        : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+                    }`}
+                    onClick={() => setShowCoverageModal(true)}
+                  >
+                    {coverageReport.successRate === 100
+                      ? '🎯 100% interpretado'
+                      : `⚠️ ${coverageReport.unrecognized} linha${coverageReport.unrecognized > 1 ? 's' : ''} não interpretada${coverageReport.unrecognized > 1 ? 's' : ''}`
+                    }
+                  </Badge>
+
+                  {/* Modal de detalhes da interpretação */}
+                  <Dialog open={showCoverageModal} onOpenChange={setShowCoverageModal}>
+                    <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Detalhes da interpretação</DialogTitle>
+                        <DialogDescription>
+                          O sistema interpretou {coverageReport.recognizedMetrics} de {coverageReport.totalExercises} exercícios ({coverageReport.successRate}%)
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      {coverageReport.successRate === 100 ? (
+                        <div className="flex flex-col items-center gap-3 py-6">
+                          <CheckCircle className="h-10 w-10 text-primary" />
+                          <p className="text-sm text-center text-foreground/80">
+                            Todos os exercícios foram interpretados com sucesso! O sistema consegue estimar tempo e calorias para cada bloco.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            As linhas abaixo não possuem métricas mensuráveis (tempo, distância, repetições). O atleta verá o texto normalmente, mas sem estimativas automáticas de tempo/calorias.
+                          </p>
+
+                          {/* Agrupar por bloco */}
+                          {(() => {
+                            const grouped = new Map<string, UnmatchedLine[]>();
+                            for (const line of coverageReport.unmatchedLines) {
+                              const key = `Dia ${line.dayIndex + 1} — ${line.blockTitle}`;
+                              if (!grouped.has(key)) grouped.set(key, []);
+                              grouped.get(key)!.push(line);
+                            }
+                            return Array.from(grouped.entries()).map(([groupKey, lines]) => (
+                              <div key={groupKey} className="space-y-1.5">
+                                <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
+                                  {groupKey}
+                                </p>
+                                {lines.map((line, i) => (
+                                  <div
+                                    key={i}
+                                    className="text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
+                                  >
+                                    {line.text}
+                                  </div>
+                                ))}
+                              </div>
+                            ));
+                          })()}
+
+                          <p className="text-xs text-muted-foreground italic">
+                            Dica: adicione métricas como repetições, distância ou tempo para que o sistema interprete automaticamente.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end pt-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowCoverageModal(false)}>
+                          Entendi
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
