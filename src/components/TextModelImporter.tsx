@@ -1062,6 +1062,27 @@ BLOCO: DESCANSO
               />
             )}
 
+            {/* Avisos de typos detectados */}
+            {parseResult.typoWarnings && parseResult.typoWarnings.length > 0 && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  Possíveis erros de digitação
+                </div>
+                {parseResult.typoWarnings.map((tw, idx) => (
+                  <p key={idx} className="text-xs text-yellow-700 dark:text-yellow-300">
+                    <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
+                    {' → Você quis dizer '}
+                    <span className="font-semibold">"{tw.suggestion}"</span>?
+                    <span className="text-muted-foreground ml-1">(linha {tw.lineNumber})</span>
+                  </p>
+                ))}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Estes avisos não impedem o salvamento. Corrija se desejar.
+                </p>
+              </div>
+            )}
+
             {/* NOME DA PROGRAMAÇÃO — destaque acima dos blocos */}
             <div className="space-y-1.5">
               <Label htmlFor="program-name-edit" className="text-base font-semibold text-foreground">
