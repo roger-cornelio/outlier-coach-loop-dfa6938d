@@ -1081,9 +1081,25 @@ BLOCO: DESCANSO
                                 {lines.map((line, i) => (
                                   <div
                                     key={i}
-                                    className="text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
+                                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
                                   >
-                                    {line.text}
+                                    <span className="flex-1">{line.text}</span>
+                                    {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
+                                        ✓ Enviado
+                                      </Badge>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="shrink-0 text-xs h-7 px-2"
+                                        disabled={suggestSubmitting}
+                                        onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                      >
+                                        <Send className="w-3 h-3 mr-1" />
+                                        Sugerir
+                                      </Button>
+                                    )}
                                   </div>
                                 ))}
                               </div>
