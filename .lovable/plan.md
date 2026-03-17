@@ -61,6 +61,17 @@ Linha "10 Burpees" → 1ª chamada: ~30 regex executados → resultado salvo no 
 Reset automático no início de cada parseStructuredText() → sem vazamento de memória
 ```
 
+### Fase 4.5: Preservação de Linhas "Nx" Soltas + Display Completo ✅
+
+**Problema**: Coach escreveu "6x" sozinho (rounds não estruturados) → parser descartava a linha.
+
+**Correções**:
+- `structuredTextParser.ts`: Detecta `^\d+x$` como "UNSTRUCTURED_ROUNDS" → gera `typoWarning` sugerindo `**N ROUNDS**`, mas preserva a linha no bloco
+- `blockDisplayUtils.ts`: Fallback de exibição agora inclui **todas** as linhas não-vazias (não só as com `-`)
+- `TextModelImporter.tsx`: Warning amarelo já existente renderiza a sugestão automaticamente
+
+**Resultado**: Nenhuma informação perdida. Coach vê aviso educativo. Atleta vê todas as linhas.
+
 ### Próximos passos opcionais (Fase 3):
 - Retry automático em background para blocos bypassed
 - Dashboard de qualidade de escrita do coach
