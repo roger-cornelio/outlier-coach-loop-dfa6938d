@@ -2806,6 +2806,7 @@ export function parseStructuredText(text: string): ParseResult {
         isInsideBlock = true;
       }
       currentBlock.instructions.push(line);
+      currentBlock.rawLines.push(line);
       continue;
     }
 
