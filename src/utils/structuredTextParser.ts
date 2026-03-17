@@ -2212,6 +2212,7 @@ export function parseStructuredText(text: string): ParseResult {
     needsDaySelection: false,
     hasDayAnchors: dayValidation.hasDays,
     structureWarnings: [], // MVP0: Avisos de estrutura inválida
+    typoWarnings: [], // Avisos de possíveis erros de digitação
   };
 
   let currentDay: DayOfWeek | null = null;
