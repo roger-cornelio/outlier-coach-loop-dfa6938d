@@ -26,7 +26,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell } from 'lucide-react';
-import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel } from '@/utils/blockDisplayUtils';
+import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import type { WorkoutBlock } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { cn } from '@/lib/utils';
@@ -345,12 +345,21 @@ export function FullBlockRenderer({
         </div>
       )}
       
-      {/* Exercise Lines */}
+      {/* Exercise Lines (may contain __STRUCT: inline badges) */}
       <div className="space-y-1">
         {exerciseLines.length > 0 ? (
-          exerciseLines.map((line, idx) => (
-            <ExerciseLine key={idx} line={line} />
-          ))
+          exerciseLines.map((line, idx) => {
+            // Detect inline structure badges (__STRUCT:2 ROUNDS)
+            if (line.startsWith(STRUCT_LINE_PREFIX)) {
+              const structLabel = line.slice(STRUCT_LINE_PREFIX.length);
+              return (
+                <div key={idx} className="pt-3 pb-1">
+                  <StructureBadge structure={structLabel} />
+                </div>
+              );
+            }
+            return <ExerciseLine key={idx} line={line} />;
+          })
         ) : (
           <p className="text-xs text-muted-foreground/50 italic">
             Sem exercícios definidos.
