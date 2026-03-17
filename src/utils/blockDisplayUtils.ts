@@ -839,7 +839,8 @@ export function getBlockDisplayDataFromParsed(block: {
 }): BlockDisplayData {
   const exerciseLines: string[] = [];
   const coachNotes: string[] = [];
-  let structureDescription: string | null = null;
+  // Collect all structure labels to decide single vs inline
+  const allStructureLabels: { label: string; insertIndex: number }[] = [];
 
   // ════════════════════════════════════════════════════════════════════════════
   // PRIORIDADE 1: Se block.lines contém strings brutas (rawLines do coach),
@@ -857,7 +858,7 @@ export function getBlockDisplayDataFromParsed(block: {
       // Estrutura entre ** **
       const structLabel = normalizeStructureLabel(trimmed);
       if (structLabel) {
-        structureDescription = structLabel;
+        allStructureLabels.push({ label: structLabel, insertIndex: exerciseLines.length });
         continue;
       }
       
@@ -869,7 +870,7 @@ export function getBlockDisplayDataFromParsed(block: {
         }
       } else if (isStructuralLine(trimmed)) {
         // Linha estrutural (TABATA, EMOM, AMRAP, etc.) sem ** ** → badge
-        structureDescription = trimmed;
+        allStructureLabels.push({ label: trimmed, insertIndex: exerciseLines.length });
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
@@ -885,8 +886,9 @@ export function getBlockDisplayDataFromParsed(block: {
       }
     }
     
-    const hasContent = exerciseLines.length > 0 || coachNotes.length > 0 || structureDescription !== null;
-    return { exerciseLines, coachNotes, structureDescription, hasContent };
+    // Resolve: single structure → badge no topo; multiple → inline badges
+    const resolved = resolveStructureDisplay(allStructureLabels, exerciseLines, coachNotes);
+    return resolved;
   }
 
   // ════════════════════════════════════════════════════════════════════════════
