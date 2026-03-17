@@ -111,6 +111,12 @@ const navItems: NavItem[] = [
     description: "Fila de revisão de provas"
   },
   {
+    id: "exerciseSuggestions",
+    label: "Sugestões",
+    icon: <Lightbulb className="w-5 h-5" />,
+    description: "Exercícios sugeridos por coaches"
+  },
+  {
     id: "knowledgeBase",
     label: "Base Científica",
     icon: <BookOpen className="w-5 h-5" />,
