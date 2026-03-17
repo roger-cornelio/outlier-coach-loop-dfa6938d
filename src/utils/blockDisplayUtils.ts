@@ -954,6 +954,10 @@ export function getBlockDisplayDataFromParsed(block: {
         if (cleanLine) {
           contentExerciseLines.push(cleanLine);
         }
+      } else if (isStructuralLine(trimmed)) {
+        if (!structureDescription) {
+          structureDescription = trimmed;
+        }
       } else {
         contentExerciseLines.push(trimmed);
       }
