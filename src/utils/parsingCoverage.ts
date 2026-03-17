@@ -5,15 +5,21 @@
  * calculando a Taxa de Reconhecimento de métricas mensuráveis.
  */
 
-import type { ParseResult, ParsedLine } from './structuredTextParser';
+import type { ParseResult } from './structuredTextParser';
 import { detectUnits } from './unitDetection';
+
+export interface UnmatchedLine {
+  text: string;
+  blockTitle: string;
+  dayIndex: number;
+}
 
 export interface CoverageReport {
   totalExercises: number;
   recognizedMetrics: number;
   unrecognized: number;
   successRate: number; // 0-100
-  unmatchedLines: string[];
+  unmatchedLines: UnmatchedLine[];
 }
 
 /**
@@ -21,29 +27,33 @@ export interface CoverageReport {
  * tiveram métricas mensuráveis detectadas (TIME, DISTANCE, REPS, EFFORT).
  */
 export function calculateParsingCoverage(parseResult: ParseResult): CoverageReport {
-  const exerciseLines: string[] = [];
-  const unmatchedLines: string[] = [];
+  const unmatchedLines: UnmatchedLine[] = [];
+  let totalExercises = 0;
   let recognizedMetrics = 0;
 
-  for (const day of parseResult.days) {
+  for (let dayIndex = 0; dayIndex < parseResult.days.length; dayIndex++) {
+    const day = parseResult.days[dayIndex];
     for (const block of day.blocks) {
       for (const line of block.lines) {
         // Filtrar apenas linhas classificadas como exercício
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
-          exerciseLines.push(line.text);
+          totalExercises++;
 
           const result = detectUnits(line.text);
           if (result.hasRecognizedUnit) {
             recognizedMetrics++;
           } else {
-            unmatchedLines.push(line.text);
+            unmatchedLines.push({
+              text: line.text,
+              blockTitle: block.title || 'Bloco sem título',
+              dayIndex,
+            });
           }
         }
       }
     }
   }
 
-  const totalExercises = exerciseLines.length;
   const unrecognized = totalExercises - recognizedMetrics;
   const successRate = totalExercises > 0
     ? Math.round((recognizedMetrics / totalExercises) * 100)
@@ -67,7 +77,7 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
   if (unmatchedLines.length > 0) {
     console.groupCollapsed(`⚠️ ${unmatchedLines.length} linha(s) sem métricas detectadas`);
     unmatchedLines.forEach((line, i) => {
-      console.log(`  ${i + 1}. "${line}"`);
+      console.log(`  ${i + 1}. [${line.blockTitle}] "${line.text}"`);
     });
     console.groupEnd();
   }
