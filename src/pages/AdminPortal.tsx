@@ -17,6 +17,7 @@ import { KnowledgeBaseAdmin } from "@/components/admin/KnowledgeBaseAdmin";
 import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin";
 import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
 import { CRMAdmin } from "@/components/admin/CRMAdmin";
+import { ExerciseSuggestionsAdmin } from "@/components/admin/ExerciseSuggestionsAdmin";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,11 +41,12 @@ import {
   BookOpen,
   Calculator,
   Grid3X3,
-  Contact
+  Contact,
+  Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions";
 
 interface NavItem {
   id: AdminView;
@@ -107,6 +109,12 @@ const navItems: NavItem[] = [
     label: "Provas",
     icon: <Target className="w-5 h-5" />,
     description: "Fila de revisão de provas"
+  },
+  {
+    id: "exerciseSuggestions",
+    label: "Sugestões",
+    icon: <Lightbulb className="w-5 h-5" />,
+    description: "Exercícios sugeridos por coaches"
   },
   {
     id: "knowledgeBase",
@@ -246,6 +254,8 @@ const AdminPortal = () => {
         return <StationValenceAdmin />;
       case "crm":
         return <CRMAdmin />;
+      case "exerciseSuggestions":
+        return <ExerciseSuggestionsAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
       default:

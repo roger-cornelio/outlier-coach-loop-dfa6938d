@@ -1145,6 +1145,53 @@ export type Database = {
           },
         ]
       }
+      exercise_suggestions: {
+        Row: {
+          admin_notes: string | null
+          coach_id: string
+          context_block_title: string | null
+          created_at: string
+          exercise_name: string
+          id: string
+          movement_pattern_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          coach_id: string
+          context_block_title?: string | null
+          created_at?: string
+          exercise_name: string
+          id?: string
+          movement_pattern_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          coach_id?: string
+          context_block_title?: string | null
+          created_at?: string
+          exercise_name?: string
+          id?: string
+          movement_pattern_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_suggestions_movement_pattern_id_fkey"
+            columns: ["movement_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "movement_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_exercises: {
         Row: {
           aliases: string[] | null
