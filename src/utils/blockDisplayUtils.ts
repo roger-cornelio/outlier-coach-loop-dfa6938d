@@ -806,12 +806,15 @@ export function isExecutableLine(line: string): boolean {
 // - Não geram alertas, não validam sintaxe
 // ════════════════════════════════════════════════════════════════════════════
 
+/** Prefixo especial para linhas estruturais inline (múltiplos ROUNDS no mesmo bloco) */
+export const STRUCT_LINE_PREFIX = '__STRUCT:';
+
 export interface BlockDisplayData {
-  /** Linhas de exercício para exibição (sem hífen) */
+  /** Linhas de exercício para exibição (sem hífen). Pode conter __STRUCT: prefixadas para badges inline. */
   exerciseLines: string[];
   /** Notas do coach (comentários) */
   coachNotes: string[];
-  /** Descrição da estrutura (ex: "3 ROUNDS", "EMOM 30 MIN") */
+  /** Descrição da estrutura (ex: "3 ROUNDS", "EMOM 30 MIN") — só quando há UMA única estrutura */
   structureDescription: string | null;
   /** Se o bloco tem conteúdo renderizável */
   hasContent: boolean;
