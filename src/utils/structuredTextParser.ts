@@ -2854,6 +2854,30 @@ export function parseStructuredText(text: string): ParseResult {
       continue;
     }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // FUZZY MATCH: Detectar typos em títulos de bloco (ex: "ANRAP" → "AMRAP")
+    // Se fuzzy match encontra um match, TRATA como heading (separa bloco)
+    // mas também gera um warning para o coach corrigir
+    // ════════════════════════════════════════════════════════════════════════════
+    if (!isInsideBlock || (line.length <= 40 && !/^\d/.test(line.trim()) && line.split(/\s+/).length <= 4)) {
+      const fuzzyResult = fuzzyMatchHeading(line);
+      if (fuzzyResult) {
+        _log('[FUZZY_HEADING] "' + line + '" → sugestão: "' + fuzzyResult.suggestion + '"');
+        result.typoWarnings = result.typoWarnings || [];
+        result.typoWarnings.push({
+          line: line.trim(),
+          suggestion: fuzzyResult.suggestion,
+          lineNumber: lineNumber,
+        });
+        // Tratar como heading para separar blocos
+        saveCurrentBlock();
+        currentBlock = createNewBlock(line);
+        isInsideBlock = true;
+        hasSeenValidHeading = true;
+        continue;
+      }
+    }
+
     // Detectar título de bloco (linha em maiúsculas que não é dia E não é format_line E não é estrutura **)
     // MVP0: Também é uma transição válida de bloco
     // MVP0 FIX: Estruturas entre ** ** NUNCA são títulos de bloco
