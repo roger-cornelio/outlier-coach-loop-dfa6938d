@@ -2263,6 +2263,7 @@ export function parseStructuredText(text: string): ParseResult {
       coachNotes: [],
       instructions: [],
       isAutoGenTitle: isAutoGen || title === '', // Marcar como auto-gen se título ficou vazio
+      rawLines: rawTitle ? [rawTitle] : [], // Preservar título original como primeira rawLine
     };
   };
 
