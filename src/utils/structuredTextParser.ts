@@ -1385,14 +1385,18 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   // Helper para verificar se linha deve ser descartada (duplicata do título/formato)
   const shouldDiscard = (text: string, index: number, prevNormalized: string): boolean => {
     const normalized = normalizeText(text);
+    const trimmedText = text.trim();
     
     // Linha vazia
     if (!normalized) return true;
     
+    // REGRA: Estruturas entre ** ** NUNCA são descartadas (suporta múltiplos ROUNDS no mesmo bloco)
+    if (/^\*\*.*\*\*$/.test(trimmedText)) return false;
+    
     // Igual ao título do bloco
     if (normalized === normalizedTitle) return true;
     
-    // Igual ao formato do bloco
+    // Igual ao formato do bloco (mas NÃO estruturas repetidas — já tratado acima)
     if (normalizedFormat && normalized === normalizedFormat) return true;
     
     // Nas primeiras 3 linhas: descartar se igual à linha anterior

@@ -306,9 +306,16 @@ export function WeeklyTrainingView() {
                         
                         <div className="space-y-2">
                           {exerciseLines.length > 0 ? (
-                            exerciseLines.map((line, idx) => (
-                              <ExerciseLine key={idx} line={line} className="text-foreground/80" />
-                            ))
+                            exerciseLines.map((line, idx) => {
+                              if (line.startsWith('__STRUCT:')) {
+                                return (
+                                  <div key={idx} className="pt-3 pb-1">
+                                    <StructureBadge structure={line.slice('__STRUCT:'.length)} />
+                                  </div>
+                                );
+                              }
+                              return <ExerciseLine key={idx} line={line} className="text-foreground/80" />;
+                            })
                           ) : (
                             <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
                           )}
