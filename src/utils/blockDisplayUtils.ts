@@ -736,7 +736,8 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     // Não é exercício, não gera alerta. Armazena como headerLine.
     // ═══════════════════════════════════════════════════════════════════════════
     if (isStructuralLine(content)) {
-      headerLines.push(content);
+      // Inserir como marcador __STRUCT: inline para preservar ordem intercalada
+      exerciseLines.push(`__STRUCT:${content}`);
       continue;
     }
     

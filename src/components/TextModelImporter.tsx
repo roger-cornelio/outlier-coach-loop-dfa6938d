@@ -1803,11 +1803,20 @@ BLOCO: DESCANSO
                             {/* TREINO - linhas de exercício formatadas */}
                             {displayData.exerciseLines.length > 0 && (
                               <div className="text-sm space-y-1 text-foreground/90">
-                                {displayData.exerciseLines.map((line, idx) => (
-                                  <p key={`${block.id || blockIndex}-ex-${idx}`}>
-                                    {normalizeRestLineForDisplay(line)}
-                                  </p>
-                                ))}
+                            {displayData.exerciseLines.map((line, idx) => {
+                                  if (line.startsWith('__STRUCT:')) {
+                                    return (
+                                      <div key={`${block.id || blockIndex}-struct-${idx}`} className="pt-2 pb-1">
+                                        <StructureBadge structure={line.slice('__STRUCT:'.length)} />
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <p key={`${block.id || blockIndex}-ex-${idx}`}>
+                                      {normalizeRestLineForDisplay(line)}
+                                    </p>
+                                  );
+                                })}
                               </div>
                             )}
                             
