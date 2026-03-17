@@ -890,12 +890,15 @@ export function getBlockDisplayDataFromParsed(block: {
         continue;
       }
       
-      // Exercício com hífen - remover para exibição
+      // Exercício com hífen - remover prefixo para exibição
       if (trimmed.startsWith('- ') || trimmed.startsWith('-')) {
         const cleanLine = trimmed.replace(/^-\s*/, '').trim();
         if (cleanLine) {
           exerciseLines.push(cleanLine);
         }
+      } else if (trimmed) {
+        // Qualquer outra linha não-vazia (ex: "6x", "Sendo", "(2' Rest...)")
+        exerciseLines.push(trimmed);
       }
     }
   }
