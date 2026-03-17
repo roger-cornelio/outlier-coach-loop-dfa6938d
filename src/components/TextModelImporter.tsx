@@ -1317,8 +1317,12 @@ BLOCO: DESCANSO
                                     // ════════════════════════════════════════════════════════════════════════════
                                     const displayData = getBlockDisplayDataFromParsed(block);
                                     
-                                    // Limitar exibição a 5 linhas
-                                    const displayExercises = displayData.exerciseLines.slice(0, 5);
+                                    // Estado de expansão por bloco (usando key único)
+                                    const blockKey = `${dayIndex}-${blockIndex}`;
+                                    const isExpanded = expandedBlocks.has(blockKey);
+                                    const displayExercises = isExpanded 
+                                      ? displayData.exerciseLines 
+                                      : displayData.exerciseLines.slice(0, 5);
                                     const hasMore = displayData.exerciseLines.length > 5;
                                     
                                     return (
@@ -1336,9 +1340,26 @@ BLOCO: DESCANSO
                                         ))}
                                         
                                         {hasMore && (
-                                          <p className="text-muted-foreground text-xs">
-                                            ... +{displayData.exerciseLines.length - 5} linhas
-                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setExpandedBlocks(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(blockKey)) {
+                                                  next.delete(blockKey);
+                                                } else {
+                                                  next.add(blockKey);
+                                                }
+                                                return next;
+                                              });
+                                            }}
+                                            className="text-primary text-xs hover:underline cursor-pointer mt-1"
+                                          >
+                                            {isExpanded 
+                                              ? '▲ Recolher'
+                                              : `▼ Ver tudo (+${displayData.exerciseLines.length - 5} linhas)`
+                                            }
+                                          </button>
                                         )}
                                         
                                         {displayData.exerciseLines.length === 0 && !displayData.structureDescription && (
