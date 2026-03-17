@@ -2623,6 +2623,7 @@ export function parseStructuredText(text: string): ParseResult {
       // Anexar ao bloco atual (se existir); se não houver, ignorar (não cria bloco)
       if (currentBlock) {
         currentBlock.coachNotes.push(...parenComments);
+        currentBlock.rawLines.push(trimmedLine);
       }
       continue;
     }

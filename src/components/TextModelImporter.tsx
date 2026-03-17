@@ -340,6 +340,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             coachNotes: [],
             instructions: [],
             isAutoGenTitle: true,
+            rawLines: rawText.split('\n').filter(line => line.trim()),
           }],
           alerts: [],
         }];
