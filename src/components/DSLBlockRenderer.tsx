@@ -345,12 +345,21 @@ export function FullBlockRenderer({
         </div>
       )}
       
-      {/* Exercise Lines */}
+      {/* Exercise Lines (may contain __STRUCT: inline badges) */}
       <div className="space-y-1">
         {exerciseLines.length > 0 ? (
-          exerciseLines.map((line, idx) => (
-            <ExerciseLine key={idx} line={line} />
-          ))
+          exerciseLines.map((line, idx) => {
+            // Detect inline structure badges (__STRUCT:2 ROUNDS)
+            if (line.startsWith(STRUCT_LINE_PREFIX)) {
+              const structLabel = line.slice(STRUCT_LINE_PREFIX.length);
+              return (
+                <div key={idx} className="pt-3 pb-1">
+                  <StructureBadge structure={structLabel} />
+                </div>
+              );
+            }
+            return <ExerciseLine key={idx} line={line} />;
+          })
         ) : (
           <p className="text-xs text-muted-foreground/50 italic">
             Sem exercícios definidos.

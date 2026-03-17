@@ -910,13 +910,13 @@ export function getBlockDisplayDataFromParsed(block: {
       // Estruturas (**ROUNDS**, **EMOM**, etc.) - extrair descrição
       const structLabel = normalizeStructureLabel(text);
       if (structLabel) {
-        structureDescription = structLabel;
+        allStructureLabels.push({ label: structLabel, insertIndex: exerciseLines.length });
         continue;
       }
       
       // Linha estrutural sem ** ** (TABATA, EMOM, etc.) → badge
       if (isStructuralLine(text.trim())) {
-        structureDescription = text.trim();
+        allStructureLabels.push({ label: text.trim(), insertIndex: exerciseLines.length });
         continue;
       }
       
@@ -941,6 +941,7 @@ export function getBlockDisplayDataFromParsed(block: {
   if (block.content) {
     const contentLines = block.content.split('\n');
     const contentExerciseLines: string[] = [];
+    const contentStructLabels: { label: string; insertIndex: number }[] = [];
     
     for (const line of contentLines) {
       const trimmed = line.trim();
@@ -948,8 +949,8 @@ export function getBlockDisplayDataFromParsed(block: {
       
       // Estrutura entre ** **
       const structLabel = normalizeStructureLabel(trimmed);
-      if (structLabel && !structureDescription) {
-        structureDescription = structLabel;
+      if (structLabel) {
+        contentStructLabels.push({ label: structLabel, insertIndex: contentExerciseLines.length });
         continue;
       }
       
@@ -960,9 +961,7 @@ export function getBlockDisplayDataFromParsed(block: {
           contentExerciseLines.push(cleanLine);
         }
       } else if (isStructuralLine(trimmed)) {
-        if (!structureDescription) {
-          structureDescription = trimmed;
-        }
+        contentStructLabels.push({ label: trimmed, insertIndex: contentExerciseLines.length });
       } else {
         contentExerciseLines.push(trimmed);
       }
@@ -972,15 +971,45 @@ export function getBlockDisplayDataFromParsed(block: {
     if (contentExerciseLines.length > exerciseLines.length) {
       exerciseLines.length = 0;
       exerciseLines.push(...contentExerciseLines);
+      // Also use content's structure labels
+      if (contentStructLabels.length > 0) {
+        allStructureLabels.length = 0;
+        allStructureLabels.push(...contentStructLabels);
+      }
     }
   }
 
-  const hasContent = exerciseLines.length > 0 || coachNotes.length > 0 || structureDescription !== null;
+  return resolveStructureDisplay(allStructureLabels, exerciseLines, coachNotes);
+}
 
-  return {
-    exerciseLines,
-    coachNotes,
-    structureDescription,
-    hasContent,
-  };
+// ════════════════════════════════════════════════════════════════════════════
+// HELPER: Resolve single vs multiple structure display
+// ════════════════════════════════════════════════════════════════════════════
+
+function resolveStructureDisplay(
+  allStructureLabels: { label: string; insertIndex: number }[],
+  exerciseLines: string[],
+  coachNotes: string[]
+): BlockDisplayData {
+  if (allStructureLabels.length === 0) {
+    // No structures
+    const hasContent = exerciseLines.length > 0 || coachNotes.length > 0;
+    return { exerciseLines, coachNotes, structureDescription: null, hasContent };
+  }
+  
+  if (allStructureLabels.length === 1) {
+    // Single structure → traditional badge on top
+    const hasContent = exerciseLines.length > 0 || coachNotes.length > 0;
+    return { exerciseLines, coachNotes, structureDescription: allStructureLabels[0].label, hasContent };
+  }
+  
+  // Multiple structures → insert as inline __STRUCT: markers in exerciseLines
+  // Insert from last to first to preserve indices
+  const sorted = [...allStructureLabels].sort((a, b) => b.insertIndex - a.insertIndex);
+  for (const { label, insertIndex } of sorted) {
+    exerciseLines.splice(insertIndex, 0, `${STRUCT_LINE_PREFIX}${label}`);
+  }
+  
+  const hasContent = exerciseLines.length > 0 || coachNotes.length > 0;
+  return { exerciseLines, coachNotes, structureDescription: null, hasContent };
 }
