@@ -161,6 +161,15 @@ export interface StructureIssue {
   // NOTA: sampleFix removido — ensino centralizado no "Modelo Recomendado"
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// TypoWarning: Aviso de possível erro de digitação em título de bloco
+// ════════════════════════════════════════════════════════════════════════════
+export interface TypoWarning {
+  line: string;         // Texto original digitado
+  suggestion: string;   // Sugestão de correção
+  lineNumber: number;   // Número da linha no texto original
+}
+
 export interface ParseResult {
   success: boolean;
   days: ParsedDay[];
@@ -171,6 +180,7 @@ export interface ParseResult {
   hasDayAnchors?: boolean; // MVP0: Indica se o texto tem âncoras de dia (SEGUNDA, TERÇA, etc.)
   structureWarnings?: string[]; // MVP0: Avisos de estrutura inválida (mistura TREINO + COMENTÁRIO)
   structureIssues?: StructureIssue[]; // MVP0: Issues de estrutura com severidade (ERROR bloqueia importação)
+  typoWarnings?: TypoWarning[]; // Avisos de possíveis erros de digitação em títulos
 }
 
 // ============================================
