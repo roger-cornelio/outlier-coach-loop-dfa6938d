@@ -135,6 +135,7 @@ export interface ParsedBlock {
   instruction?: string;
   instructions: string[]; // Lista de instruções do bloco
   isAutoGenTitle?: boolean; // True se título foi gerado automaticamente como "BLOCO X"
+  rawLines: string[]; // Texto bruto original do coach (todas as linhas que entraram neste bloco)
 }
 
 export interface ParsedDay {
@@ -1487,20 +1488,11 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   });
   
   // ============================================
-  // DEDUP FINAL: remover linhas duplicadas por type + normalizedText
+  // DEDUP REMOVIDA: Linhas duplicadas são preservadas e exibidas ao coach.
+  // Se houver duplicatas suspeitas, gerar typoWarning em vez de remover silenciosamente.
   // ============================================
-  const seen = new Set<string>();
-  const dedupedLines: ParsedLine[] = [];
   
-  for (const line of lines) {
-    const key = `${line.type}|${normalizeText(line.text)}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      dedupedLines.push(line);
-    }
-  }
-  
-  return dedupedLines;
+  return lines;
 }
 
 // ============================================
@@ -2262,6 +2254,7 @@ export function parseStructuredText(text: string): ParseResult {
       coachNotes: [],
       instructions: [],
       isAutoGenTitle: isAutoGen || title === '', // Marcar como auto-gen se título ficou vazio
+      rawLines: rawTitle ? [rawTitle] : [], // Preservar título original como primeira rawLine
     };
   };
 
@@ -2630,6 +2623,7 @@ export function parseStructuredText(text: string): ParseResult {
       // Anexar ao bloco atual (se existir); se não houver, ignorar (não cria bloco)
       if (currentBlock) {
         currentBlock.coachNotes.push(...parenComments);
+        currentBlock.rawLines.push(trimmedLine);
       }
       continue;
     }
@@ -2669,11 +2663,13 @@ export function parseStructuredText(text: string): ParseResult {
       if (commentContent && currentBlock) {
         _log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
         currentBlock.coachNotes.push(commentContent);
+        currentBlock.rawLines.push(trimmedLine);
       } else if (commentContent && !currentBlock) {
         // Se não há bloco atual, criar um para receber o comentário
         currentBlock = createNewBlock('', true);
         isInsideBlock = true;
         currentBlock.coachNotes.push(commentContent);
+        currentBlock.rawLines.push(trimmedLine);
         _log('[COMMENT_LINE] Criado bloco vazio para comentário:', commentContent);
       }
       continue;
@@ -2744,10 +2740,12 @@ export function parseStructuredText(text: string): ParseResult {
       // Tratar como conteúdo do bloco atual
       if (currentBlock) {
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
       } else {
         // Criar bloco vazio se necessário
         currentBlock = createNewBlock('', true);
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
         isInsideBlock = true;
       }
       // NÃO fechar bloco, NÃO criar novo bloco, NÃO alterar estado do dia
@@ -2808,6 +2806,7 @@ export function parseStructuredText(text: string): ParseResult {
         isInsideBlock = true;
       }
       currentBlock.instructions.push(line);
+      currentBlock.rawLines.push(line);
       continue;
     }
 
@@ -2903,6 +2902,11 @@ export function parseStructuredText(text: string): ParseResult {
     
     if (isInsideBlock && currentBlock) {
       // ════════════════════════════════════════════════════════════════════════════
+      // PRESERVAR TEXTO BRUTO: Toda linha que entra no bloco é registrada em rawLines
+      // ════════════════════════════════════════════════════════════════════════════
+      currentBlock.rawLines.push(line);
+      
+      // ════════════════════════════════════════════════════════════════════════════
       // MVP0 FIX: TAGS SÃO FONTE DE VERDADE
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
       // ════════════════════════════════════════════════════════════════════════════
@@ -2978,6 +2982,7 @@ export function parseStructuredText(text: string): ParseResult {
         }
         
         currentBlock.items.push(item);
+        currentBlock.rawLines.push(line);
         
         if (item.isWeightAlert && currentDayEntry) {
           const alertMsg = `Carga "${item.weight}" detectada - será autorregulada pelo sistema`;
@@ -2994,6 +2999,8 @@ export function parseStructuredText(text: string): ParseResult {
 
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
     if (currentBlock) {
+      currentBlock.rawLines.push(line);
+      
       // ════════════════════════════════════════════════════════════════════════════
       // MVP0 FIX: TAGS SÃO FONTE DE VERDADE (fallback)
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
@@ -3028,11 +3035,13 @@ export function parseStructuredText(text: string): ParseResult {
         currentBlock = createNewBlock(blockTitle);
         currentBlock.type = inferredType;
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
         currentBlock.optional = isOptional;
         isInsideBlock = true;
         _log('[BLOCK_START] Novo bloco iniciado por estímulo/prescrição');
       } else {
         currentBlock = createNewBlock('');
+        currentBlock.rawLines.push(line);
         if (isInstructionLine(line)) {
           currentBlock.instructions.push(line);
         } else {
@@ -3219,6 +3228,8 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
         isBenchmark: block.isBenchmark || undefined,
         // MVP0 CORREÇÃO: Passar coachNotes como campo separado (fonte única)
         coachNotes: block.coachNotes && block.coachNotes.length > 0 ? block.coachNotes : undefined,
+        // PRESERVAR TEXTO BRUTO: rawLines → WorkoutBlock.lines para exibição fiel
+        lines: block.rawLines && block.rawLines.length > 0 ? block.rawLines : undefined,
       };
       
       // LOG de verificação

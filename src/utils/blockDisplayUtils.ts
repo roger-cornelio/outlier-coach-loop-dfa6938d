@@ -838,7 +838,54 @@ export function getBlockDisplayDataFromParsed(block: {
   const coachNotes: string[] = [];
   let structureDescription: string | null = null;
 
-  // 1) Extrair linhas de treino de block.lines (já parseadas)
+  // ════════════════════════════════════════════════════════════════════════════
+  // PRIORIDADE 1: Se block.lines contém strings brutas (rawLines do coach),
+  // usar como fonte principal — garante 100% de fidelidade ao texto colado.
+  // ════════════════════════════════════════════════════════════════════════════
+  const hasRawStringLines = Array.isArray(block.lines) && block.lines.length > 0 
+    && typeof block.lines[0] === 'string';
+  
+  if (hasRawStringLines) {
+    // block.lines são strings brutas (rawLines preservadas)
+    for (const line of block.lines as string[]) {
+      const trimmed = (line || '').trim();
+      if (!trimmed) continue;
+      
+      // Estrutura entre ** **
+      const structLabel = normalizeStructureLabel(trimmed);
+      if (structLabel) {
+        structureDescription = structLabel;
+        continue;
+      }
+      
+      // Exercício com hífen - remover prefixo para exibição
+      if (trimmed.startsWith('- ') || trimmed.startsWith('-')) {
+        const cleanLine = trimmed.replace(/^-\s*/, '').trim();
+        if (cleanLine) {
+          exerciseLines.push(cleanLine);
+        }
+      } else {
+        // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
+        exerciseLines.push(trimmed);
+      }
+    }
+    
+    // Adicionar coachNotes do bloco
+    if (Array.isArray(block.coachNotes) && block.coachNotes.length > 0) {
+      for (const note of block.coachNotes) {
+        if (note?.trim() && !coachNotes.includes(note.trim())) {
+          coachNotes.push(note.trim());
+        }
+      }
+    }
+    
+    const hasContent = exerciseLines.length > 0 || coachNotes.length > 0 || structureDescription !== null;
+    return { exerciseLines, coachNotes, structureDescription, hasContent };
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FALLBACK: block.lines são ParsedLine[] (objetos com text/type)
+  // ════════════════════════════════════════════════════════════════════════════
   if (Array.isArray(block.lines) && block.lines.length > 0) {
     for (const line of block.lines) {
       const text = typeof line === 'string' ? line : (line?.text || '');
@@ -867,7 +914,7 @@ export function getBlockDisplayDataFromParsed(block: {
     }
   }
   
-  // 2) Adicionar coachNotes do bloco (já extraídos durante parse)
+  // Adicionar coachNotes do bloco (já extraídos durante parse)
   if (Array.isArray(block.coachNotes) && block.coachNotes.length > 0) {
     for (const note of block.coachNotes) {
       if (note?.trim() && !coachNotes.includes(note.trim())) {
@@ -876,8 +923,7 @@ export function getBlockDisplayDataFromParsed(block: {
     }
   }
   
-  // 3) Fallback/complemento: usar block.content quando ele tem mais linhas que o parsed
-  //    Garante que 100% do texto colado pelo coach aparece na exibição
+  // Fallback/complemento: usar block.content quando ele tem mais linhas que o parsed
   if (block.content) {
     const contentLines = block.content.split('\n');
     const contentExerciseLines: string[] = [];
@@ -900,7 +946,6 @@ export function getBlockDisplayDataFromParsed(block: {
           contentExerciseLines.push(cleanLine);
         }
       } else {
-        // Qualquer outra linha não-vazia (ex: "6x", "Sendo", "(2' Rest...)")
         contentExerciseLines.push(trimmed);
       }
     }
@@ -913,9 +958,6 @@ export function getBlockDisplayDataFromParsed(block: {
   }
 
   const hasContent = exerciseLines.length > 0 || coachNotes.length > 0 || structureDescription !== null;
-
-  // LOG silencioso (sem [PARSE_*] para evitar confusão)
-  // console.log('[DISPLAY_DATA]', { exerciseLines: exerciseLines.length, coachNotes: coachNotes.length, structureDescription, hasContent });
 
   return {
     exerciseLines,
