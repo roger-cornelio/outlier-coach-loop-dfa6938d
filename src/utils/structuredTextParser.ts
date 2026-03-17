@@ -1622,6 +1622,125 @@ const HEADING_PATTERNS = [
   /^condicionamento$/i,
 ];
 
+// ════════════════════════════════════════════════════════════════════════════
+// DETECÇÃO DE TYPOS — LEVENSHTEIN DISTANCE
+// ════════════════════════════════════════════════════════════════════════════
+// Termos conhecidos para fuzzy matching em títulos de blocos.
+// Se o coach escreve "ANRAP" em vez de "AMRAP", detecta e avisa.
+// ════════════════════════════════════════════════════════════════════════════
+
+const KNOWN_HEADING_TERMS = [
+  'aquecimento', 'warm up', 'warmup',
+  'força', 'forca', 'strength', 'fortalecimento',
+  'força específica', 'forca especifica',
+  'específico', 'especifico',
+  'conditioning', 'condicionamento',
+  'metcon', 'wod',
+  'core', 'grip',
+  'mobilidade', 'técnica', 'tecnica',
+  'acessório', 'acessorio',
+  'corrida',
+  'amrap', 'emom', 'tabata', 'for time', 'rft',
+  'cool down', 'cooldown', 'volta à calma', 'volta a calma',
+];
+
+/**
+ * Calcula a distância de Levenshtein entre duas strings.
+ * Complexidade: O(m*n) onde m e n são os comprimentos das strings.
+ */
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  
+  // Otimização: se uma das strings é vazia
+  if (m === 0) return n;
+  if (n === 0) return m;
+  
+  // Usar apenas 2 linhas (otimização de memória)
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        prev[j] + 1,      // deletion
+        curr[j - 1] + 1,  // insertion
+        prev[j - 1] + cost // substitution
+      );
+    }
+    [prev, curr] = [curr, prev];
+  }
+  
+  return prev[n];
+}
+
+/**
+ * Tenta encontrar um match fuzzy para uma linha que não foi reconhecida como heading.
+ * Retorna a sugestão se encontrar um match com distância ≤ 2.
+ * 
+ * REGRAS:
+ * - Só verifica linhas curtas (1-4 palavras, ≤ 40 chars)
+ * - Não verifica linhas que começam com número
+ * - Distância máxima: 2 (para evitar falsos positivos)
+ * - Para termos curtos (≤ 4 chars), distância máxima: 1
+ */
+function fuzzyMatchHeading(line: string): { match: boolean; suggestion: string } | null {
+  const trimmed = line.trim();
+  const lower = trimmed.toLowerCase()
+    .replace(/[çc]/g, 'c')
+    .replace(/[ãâá]/g, 'a')
+    .replace(/[éê]/g, 'e')
+    .replace(/[íî]/g, 'i')
+    .replace(/[óô]/g, 'o')
+    .replace(/[úû]/g, 'u');
+  
+  // Só verificar linhas curtas que parecem títulos
+  if (trimmed.length > 40) return null;
+  if (/^\d/.test(trimmed)) return null;
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount > 4) return null;
+  
+  // Não verificar se já é um heading reconhecido
+  if (isWhitelistLine(trimmed) || HEADING_PATTERNS.some(p => p.test(trimmed))) return null;
+  
+  let bestMatch: string | null = null;
+  let bestDist = Infinity;
+  
+  for (const term of KNOWN_HEADING_TERMS) {
+    const normTerm = term.toLowerCase()
+      .replace(/[çc]/g, 'c')
+      .replace(/[ãâá]/g, 'a')
+      .replace(/[éê]/g, 'e')
+      .replace(/[íî]/g, 'i')
+      .replace(/[óô]/g, 'o')
+      .replace(/[úû]/g, 'u');
+    
+    const dist = levenshteinDistance(lower, normTerm);
+    
+    // Threshold: max 1 para termos curtos, max 2 para termos longos
+    const maxDist = normTerm.length <= 4 ? 1 : 2;
+    
+    if (dist > 0 && dist <= maxDist && dist < bestDist) {
+      bestDist = dist;
+      // Capitalizar a primeira letra da sugestão
+      bestMatch = term.charAt(0).toUpperCase() + term.slice(1);
+    }
+  }
+  
+  if (bestMatch) {
+    return { match: true, suggestion: bestMatch };
+  }
+  
+  return null;
+}
+
+// Exportar para uso externo (testes)
+export { fuzzyMatchHeading, levenshteinDistance };
+
 // ============================================
 // MVP0: LISTAS BRANCA E NEGRA PARA TÍTULOS (DEFINIÇÃO GLOBAL)
 // ============================================
