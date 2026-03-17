@@ -3323,19 +3323,56 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
  * - UI deve ler coachNotes diretamente, não extrair do content
  */
 function formatBlockContent(block: ParsedBlock): string {
+  // ════════════════════════════════════════════════════════════════════════════
+  // CORREÇÃO: Usar rawLines para preservar a intercalação original do coach
+  // (ex: "2 ROUNDS" → exercícios → "2 ROUNDS" → exercícios)
+  // Antes: concatenava instructions + items separadamente, perdendo a ordem
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  // Se temos rawLines, usá-las como fonte de verdade para a ordem
+  if (block.rawLines && block.rawLines.length > 0) {
+    // Filtrar linhas vazias e comentários (coachNotes são fonte separada)
+    const contentLines = block.rawLines.filter(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      // Não incluir comentários (começam com ">") — eles vão para coachNotes
+      if (trimmed.startsWith('>')) return false;
+      // Não incluir o título do bloco (já está em block.title)
+      // O título é tipicamente a primeira rawLine e corresponde ao block.title
+      return true;
+    });
+    
+    // Remover a primeira linha se ela corresponder ao título do bloco
+    if (contentLines.length > 0 && block.title) {
+      const firstNorm = contentLines[0].replace(/\*\*/g, '').trim().toLowerCase();
+      const titleNorm = block.title.replace(/\*\*/g, '').trim().toLowerCase();
+      if (firstNorm === titleNorm) {
+        contentLines.shift();
+      }
+    }
+    
+    const trainContent = contentLines.join('\n').trim();
+    if (trainContent) {
+      _log('[SAVE_BLOCK] formatBlockContent (rawLines path):', {
+        title: block.title?.substring(0, 30),
+        rawLinesCount: block.rawLines.length,
+        contentLinesCount: contentLines.length,
+      });
+      return trainContent;
+    }
+  }
+  
+  // Fallback: construir a partir de instructions + items (dados antigos sem rawLines)
   const trainParts: string[] = [];
   
-  // Instrução principal primeiro
   if (block.instruction) {
     trainParts.push(block.instruction);
   }
   
-  // Instruções adicionais
   if (block.instructions && block.instructions.length > 0) {
     trainParts.push(block.instructions.join('\n'));
   }
   
-  // Items (exercícios)
   const itemsText = block.items
     .map(item => {
       let base = `${item.quantity} ${item.unit} ${item.movement}`;
