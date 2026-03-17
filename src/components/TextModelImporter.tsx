@@ -1429,9 +1429,17 @@ BLOCO: DESCANSO
                                           </div>
                                         )}
                                         
-                                        {/* Exercícios */}
-                                        {displayExercises.map((line, idx) => (
-                                          <p key={idx} className="truncate">{normalizeRestLineForDisplay(line)}</p>
+                                        {/* Exercícios (com suporte a badges inline __STRUCT:) */}
+                                        {displayExercises.map((line, idx) => {
+                                          if (line.startsWith('__STRUCT:')) {
+                                            return (
+                                              <div key={idx} className="pt-2 pb-1">
+                                                <StructureBadge structure={line.slice('__STRUCT:'.length)} />
+                                              </div>
+                                            );
+                                          }
+                                          return <p key={idx} className="truncate">{normalizeRestLineForDisplay(line)}</p>;
+                                        }
                                         ))}
                                         
                                         {hasMore && (

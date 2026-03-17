@@ -358,9 +358,16 @@ export function WorkoutExecution() {
                           {/* Exercícios - sem label redundante */}
                           <div className="space-y-2">
                             {exerciseLines.length > 0 ? (
-                              exerciseLines.map((line, idx) => (
-                                <ExerciseLine key={idx} line={line} className="text-foreground/80" />
-                              ))
+                              exerciseLines.map((line, idx) => {
+                                if (line.startsWith('__STRUCT:')) {
+                                  return (
+                                    <div key={idx} className="pt-3 pb-1">
+                                      <StructureBadge structure={line.slice('__STRUCT:'.length)} />
+                                    </div>
+                                  );
+                                }
+                                return <ExerciseLine key={idx} line={line} className="text-foreground/80" />;
+                              })
                             ) : effectiveContent ? (
                               // Fallback: mostrar conteúdo bruto se parser não encontrou linhas
                               <pre className="font-body text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
