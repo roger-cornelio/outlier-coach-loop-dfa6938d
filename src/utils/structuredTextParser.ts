@@ -3228,6 +3228,8 @@ export function parsedToDayWorkouts(parsed: ParseResult, selectedDay?: DayOfWeek
         isBenchmark: block.isBenchmark || undefined,
         // MVP0 CORREÇÃO: Passar coachNotes como campo separado (fonte única)
         coachNotes: block.coachNotes && block.coachNotes.length > 0 ? block.coachNotes : undefined,
+        // PRESERVAR TEXTO BRUTO: rawLines → WorkoutBlock.lines para exibição fiel
+        lines: block.rawLines && block.rawLines.length > 0 ? block.rawLines : undefined,
       };
       
       // LOG de verificação
