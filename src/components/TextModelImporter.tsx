@@ -388,12 +388,37 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             ? block.coachNotes
             : commentLines;
 
+          // ════════════════════════════════════════════════════════════════════════════
+          // PRIORIDADE: Usar rawLines para preservar a ordem original do coach
+          // (estruturas intercaladas com exercícios, ex: 3 seções de "2 ROUNDS")
+          // Fallback para trainingLines se rawLines não estiver disponível
+          // ════════════════════════════════════════════════════════════════════════════
+          const rawLinesFiltered = Array.isArray(block.rawLines) && block.rawLines.length > 0
+            ? block.rawLines
+                .filter(l => {
+                  const t = l.trim();
+                  if (!t) return false;
+                  // Excluir linhas DIA: e BLOCO: (são marcadores de contexto)
+                  if (/^DIA:\s*/i.test(t)) return false;
+                  if (/^BLOCO:\s*/i.test(t)) return false;
+                  // Excluir comentários entre parênteses (já extraídos em coachNotes)
+                  if (/^\(.*\)$/.test(t)) return false;
+                  // Excluir linhas > (comentários DSL)
+                  if (/^>\s/.test(t)) return false;
+                  return true;
+                })
+            : null;
+          
+          const finalLines = rawLinesFiltered && rawLinesFiltered.length >= trainingLines.length
+            ? rawLinesFiltered
+            : (trainingLines.length > 0 ? trainingLines : undefined);
+
           return {
             id: `${day.day || 'new'}-${idx}-${Date.now()}`,
             type: block.type,
             title: block.title,
             content: trainingLines.join('\n'),
-            lines: trainingLines.length > 0 ? trainingLines : undefined,
+            lines: finalLines,
             coachNotes: coachNotes.length > 0 ? coachNotes : undefined,
             isMainWod: block.isMainWod || undefined,
             isBenchmark: block.isBenchmark || undefined,
