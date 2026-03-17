@@ -909,6 +909,12 @@ export function getBlockDisplayDataFromParsed(block: {
         continue;
       }
       
+      // Linha estrutural sem ** ** (TABATA, EMOM, etc.) → badge
+      if (isStructuralLine(text.trim())) {
+        structureDescription = text.trim();
+        continue;
+      }
+      
       // Exercícios - remover hífen para exibição limpa
       const cleanLine = text.replace(/^-\s*/, '').trim();
       if (cleanLine) {
