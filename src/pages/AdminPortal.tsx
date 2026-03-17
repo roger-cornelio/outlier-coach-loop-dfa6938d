@@ -41,7 +41,8 @@ import {
   BookOpen,
   Calculator,
   Grid3X3,
-  Contact
+  Contact,
+  Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
