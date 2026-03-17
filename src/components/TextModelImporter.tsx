@@ -1411,7 +1411,7 @@ BLOCO: DESCANSO
                                     // Alertas de validação vêm do parseResult.structureIssues, não de reparse
                                     // ════════════════════════════════════════════════════════════════════════════
                                     const displayData = getBlockDisplayDataFromParsed(block);
-                                    console.log('[DEBUG_MULTI_STRUCT]', { title: block.title, lines: block.lines, displayData });
+                                    
                                     
                                     // Estado de expansão por bloco (usando key único)
                                     const blockKey = `${dayIndex}-${blockIndex}`;
