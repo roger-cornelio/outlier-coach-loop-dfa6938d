@@ -876,12 +876,15 @@ export function getBlockDisplayDataFromParsed(block: {
     }
   }
   
-  // 3) Fallback: Se não tem lines mas tem content, extrair estrutura apenas
-  //    NÃO faz parse completo, apenas busca estrutura entre ** **
-  if (exerciseLines.length === 0 && block.content) {
-    const lines = block.content.split('\n');
-    for (const line of lines) {
+  // 3) Fallback/complemento: usar block.content quando ele tem mais linhas que o parsed
+  //    Garante que 100% do texto colado pelo coach aparece na exibição
+  if (block.content) {
+    const contentLines = block.content.split('\n');
+    const contentExerciseLines: string[] = [];
+    
+    for (const line of contentLines) {
       const trimmed = line.trim();
+      if (!trimmed) continue;
       
       // Estrutura entre ** **
       const structLabel = normalizeStructureLabel(trimmed);
@@ -894,12 +897,18 @@ export function getBlockDisplayDataFromParsed(block: {
       if (trimmed.startsWith('- ') || trimmed.startsWith('-')) {
         const cleanLine = trimmed.replace(/^-\s*/, '').trim();
         if (cleanLine) {
-          exerciseLines.push(cleanLine);
+          contentExerciseLines.push(cleanLine);
         }
-      } else if (trimmed) {
+      } else {
         // Qualquer outra linha não-vazia (ex: "6x", "Sendo", "(2' Rest...)")
-        exerciseLines.push(trimmed);
+        contentExerciseLines.push(trimmed);
       }
+    }
+    
+    // Se o content bruto tem MAIS linhas que o parsed, usar o content (é mais completo)
+    if (contentExerciseLines.length > exerciseLines.length) {
+      exerciseLines.length = 0;
+      exerciseLines.push(...contentExerciseLines);
     }
   }
 
