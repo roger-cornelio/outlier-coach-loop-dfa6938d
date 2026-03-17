@@ -1488,20 +1488,11 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   });
   
   // ============================================
-  // DEDUP FINAL: remover linhas duplicadas por type + normalizedText
+  // DEDUP REMOVIDA: Linhas duplicadas são preservadas e exibidas ao coach.
+  // Se houver duplicatas suspeitas, gerar typoWarning em vez de remover silenciosamente.
   // ============================================
-  const seen = new Set<string>();
-  const dedupedLines: ParsedLine[] = [];
   
-  for (const line of lines) {
-    const key = `${line.type}|${normalizeText(line.text)}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      dedupedLines.push(line);
-    }
-  }
-  
-  return dedupedLines;
+  return lines;
 }
 
 // ============================================
