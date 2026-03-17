@@ -2740,10 +2740,12 @@ export function parseStructuredText(text: string): ParseResult {
       // Tratar como conteúdo do bloco atual
       if (currentBlock) {
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
       } else {
         // Criar bloco vazio se necessário
         currentBlock = createNewBlock('', true);
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
         isInsideBlock = true;
       }
       // NÃO fechar bloco, NÃO criar novo bloco, NÃO alterar estado do dia
