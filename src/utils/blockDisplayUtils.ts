@@ -864,6 +864,9 @@ export function getBlockDisplayDataFromParsed(block: {
         if (cleanLine) {
           exerciseLines.push(cleanLine);
         }
+      } else if (isStructuralLine(trimmed)) {
+        // Linha estrutural (TABATA, EMOM, AMRAP, etc.) sem ** ** → badge
+        structureDescription = trimmed;
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
@@ -906,6 +909,12 @@ export function getBlockDisplayDataFromParsed(block: {
         continue;
       }
       
+      // Linha estrutural sem ** ** (TABATA, EMOM, etc.) → badge
+      if (isStructuralLine(text.trim())) {
+        structureDescription = text.trim();
+        continue;
+      }
+      
       // Exercícios - remover hífen para exibição limpa
       const cleanLine = text.replace(/^-\s*/, '').trim();
       if (cleanLine) {
@@ -944,6 +953,10 @@ export function getBlockDisplayDataFromParsed(block: {
         const cleanLine = trimmed.replace(/^-\s*/, '').trim();
         if (cleanLine) {
           contentExerciseLines.push(cleanLine);
+        }
+      } else if (isStructuralLine(trimmed)) {
+        if (!structureDescription) {
+          structureDescription = trimmed;
         }
       } else {
         contentExerciseLines.push(trimmed);
