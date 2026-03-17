@@ -971,8 +971,9 @@ export function getBlockDisplayDataFromParsed(block: {
     if (contentExerciseLines.length > exerciseLines.length) {
       exerciseLines.length = 0;
       exerciseLines.push(...contentExerciseLines);
-      // Also use content's structure labels
-      if (contentStructLabels.length > 0) {
+      // Só sobrescrever labels se o content tiver MAIS labels que o já detectado
+      // (evita perder múltiplos badges já encontrados no rawLines path)
+      if (contentStructLabels.length > allStructureLabels.length) {
         allStructureLabels.length = 0;
         allStructureLabels.push(...contentStructLabels);
       }
