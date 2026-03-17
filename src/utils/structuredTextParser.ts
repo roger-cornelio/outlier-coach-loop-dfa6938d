@@ -1492,9 +1492,39 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
   });
   
   // ============================================
-  // DEDUP REMOVIDA: Linhas duplicadas são preservadas e exibidas ao coach.
-  // Se houver duplicatas suspeitas, gerar typoWarning em vez de remover silenciosamente.
+  // REORDER: Reordenar linhas baseado em rawLines para preservar intercalação
+  // (ex: múltiplos "2 ROUNDS" intercalados com exercícios)
   // ============================================
+  if (block.rawLines && block.rawLines.length > 0) {
+    const normalizeForMatch = (t: string) => t.trim().replace(/^-\s*/, '').replace(/\*\*/g, '').toLowerCase().trim();
+    const reordered: ParsedLine[] = [];
+    const used = new Set<number>();
+    
+    for (const rawLine of block.rawLines) {
+      const rawNorm = normalizeForMatch(rawLine);
+      if (!rawNorm) continue;
+      
+      // Find first unused classified line that matches this rawLine
+      for (let i = 0; i < lines.length; i++) {
+        if (used.has(i)) continue;
+        const lineNorm = normalizeForMatch(lines[i].text);
+        if (lineNorm === rawNorm || rawNorm.includes(lineNorm) || lineNorm.includes(rawNorm)) {
+          reordered.push(lines[i]);
+          used.add(i);
+          break;
+        }
+      }
+    }
+    
+    // Add any remaining unmatched lines at the end
+    for (let i = 0; i < lines.length; i++) {
+      if (!used.has(i)) reordered.push(lines[i]);
+    }
+    
+    if (reordered.length === lines.length) {
+      return reordered;
+    }
+  }
   
   return lines;
 }
