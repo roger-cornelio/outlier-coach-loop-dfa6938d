@@ -1393,6 +1393,9 @@ export function classifyBlockLines(block: ParsedBlock): ParsedLine[] {
     // REGRA: Estruturas entre ** ** NUNCA são descartadas (suporta múltiplos ROUNDS no mesmo bloco)
     if (/^\*\*.*\*\*$/.test(trimmedText)) return false;
     
+    // REGRA: Linhas estruturais (N rounds, EMOM, AMRAP, etc.) NUNCA são descartadas como duplicatas
+    if (isFormatLine(trimmedText)) return false;
+    
     // Igual ao título do bloco
     if (normalized === normalizedTitle) return true;
     
