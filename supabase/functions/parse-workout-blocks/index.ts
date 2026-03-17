@@ -126,6 +126,12 @@ ${patternLines}
    - "30s plank" = durationSeconds: 30
    - "Rest 60s" or "Descanso 1min" = restSeconds: 60
 
+6. **TABATA FORMAT**: Tabata is a classic HIIT protocol. When a block is labeled "Tabata" and the coach does NOT specify custom work/rest intervals or duration:
+   - Default: 8 rounds × 20 seconds work / 10 seconds rest = 4 minutes total per exercise
+   - Each exercise in the block gets: sets=8, durationSeconds=20, restSeconds=10
+   - If the coach specifies different times (e.g., "Tabata 30/15" or "Tabata 6 rounds"), use the coach's values instead
+   - Total block time = number of exercises × 4 minutes (when using defaults)
+
 ## FEW-SHOT EXAMPLES:
 
 Input: "Front Squat 4x8 @50kg - descanso 90s"
@@ -142,6 +148,12 @@ Output: []
 
 Input: "Corrida contínua 30min Z2"
 Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","durationSeconds":1800,"intensityType":"zone","intensityValue":2}]
+
+Input: "Tabata\n- Burpees\n- Air Squats"
+Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":8,"durationSeconds":20,"restSeconds":10},{"slug":"air_squats","name":"Air Squats","movementPatternSlug":"squat","sets":8,"durationSeconds":20,"restSeconds":10}]
+
+Input: "Tabata 30/15 - 6 rounds\n- KB Swings"
+Output: [{"slug":"kb_swings","name":"KB Swings","movementPatternSlug":"hinge","sets":6,"durationSeconds":30,"restSeconds":15}]
 
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;

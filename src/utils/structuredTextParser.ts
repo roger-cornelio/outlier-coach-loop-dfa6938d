@@ -3197,6 +3197,35 @@ export function parseStructuredText(text: string): ParseResult {
   });
   
   // ════════════════════════════════════════════════════════════════════════════
+  // PÓS-PROCESSAMENTO: TABATA DEFAULTS INTELIGENTES
+  // ════════════════════════════════════════════════════════════════════════════
+  // Se um bloco tem format === 'tabata' e NÃO tem duração definida pelo coach,
+  // injeta o default clássico: 8 rounds × (20s work + 10s rest) = 4 min por exercício.
+  // Se o coach definiu tempos explícitos, NÃO sobrescreve.
+  // ════════════════════════════════════════════════════════════════════════════
+  for (const day of result.days) {
+    for (const block of day.blocks) {
+      if (block.format === 'tabata') {
+        // Verificar se o coach definiu tempos explícitos no conteúdo do bloco
+        const blockText = (block.rawLines || []).join(' ').toLowerCase();
+        const hasExplicitTime = /\d+\s*(?:min|minutos?|'|"|seg|segundos?|s\b)/i.test(blockText)
+          && !/\btabata\b/i.test(blockText.replace(/\btabata\b/gi, '')); // Ignorar a própria palavra "tabata"
+        
+        // Verificar se coach especificou work/rest customizado (ex: "30/15", "30s/15s")
+        const hasCustomWorkRest = /\d+\s*\/\s*\d+/.test(blockText);
+        
+        if (!hasExplicitTime && !hasCustomWorkRest) {
+          // Sem tempos explícitos → aplicar default clássico
+          if (!block.formatDisplay) {
+            block.formatDisplay = 'Tabata (8x 20s/10s)';
+          }
+          _log('[PARSER] Tabata default aplicado ao bloco:', block.title);
+        }
+      }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
   // MVP0: LOG FINAL DE VALIDAÇÃO (blocksCount e headingsList por dia)
   // ════════════════════════════════════════════════════════════════════════════
   for (const day of result.days) {

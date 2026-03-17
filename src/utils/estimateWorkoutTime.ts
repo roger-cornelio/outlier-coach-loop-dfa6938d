@@ -188,6 +188,45 @@ function detectRoundsMultiplier(text: string): number {
   return 1;
 }
 
+// Tabata: 4 minutos por exercício (8 rounds × 30s = 240s)
+const TABATA_DEFAULT_SECONDS = 240;
+
+/**
+ * Detecta se o bloco é Tabata e calcula tempo baseado no formato clássico.
+ * Retorna null se não for Tabata ou se o coach definiu tempos explícitos.
+ */
+function detectTabataTime(text: string): number | null {
+  const lowerText = text.toLowerCase();
+  
+  if (!/\btabata\b/.test(lowerText)) return null;
+  
+  // Se o coach especificou work/rest customizado (ex: "30/15"), não usar default
+  if (/\d+\s*\/\s*\d+/.test(lowerText)) return null;
+  
+  // Se o coach especificou duração explícita (ex: "8min", "6 minutos"), não usar default
+  // Removemos a palavra "tabata" para não pegar falsos positivos
+  const withoutTabata = lowerText.replace(/\btabata\b/g, '');
+  if (/\d+\s*(?:min|minutos?|')\b/.test(withoutTabata)) return null;
+  
+  // Contar exercícios distintos (linhas que começam com número ou hífen seguido de texto)
+  const lines = text.split('\n').filter(l => l.trim().length > 0);
+  let exerciseCount = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Pular a linha do próprio "Tabata"
+    if (/^\s*tabata\s*$/i.test(trimmed)) continue;
+    // Linhas que parecem exercícios
+    if (/^[-•]\s*\w/.test(trimmed) || /^\d+\s/.test(trimmed) || /^[A-Za-z]/.test(trimmed)) {
+      exerciseCount++;
+    }
+  }
+  
+  // Mínimo 1 exercício
+  exerciseCount = Math.max(exerciseCount, 1);
+  
+  return exerciseCount * TABATA_DEFAULT_SECONDS;
+}
+
 /**
  * Estima duração do treino a partir do conteúdo textual
  */
@@ -196,6 +235,20 @@ export function estimateWorkoutTime(workoutContent: string | string[]): Estimati
   const text = Array.isArray(workoutContent) 
     ? workoutContent.join('\n') 
     : workoutContent;
+  
+  // Tabata: se detectado sem tempos explícitos, usar default de 4min/exercício
+  const tabataSeconds = detectTabataTime(text);
+  if (tabataSeconds !== null) {
+    const totalMinutes = Math.ceil(tabataSeconds / 60);
+    if (import.meta.env.DEV) {
+      console.log('📊 estimateWorkoutTime Tabata default:', { tabataSeconds, totalMinutes });
+    }
+    return {
+      totalMinutes,
+      itemsFound: 1,
+      breakdown: [{ type: 'tabata', value: tabataSeconds, unit: 'sec', seconds: tabataSeconds }],
+    };
+  }
   
   // Extrair itens
   const items = extractPatterns(text);
