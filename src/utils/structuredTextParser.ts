@@ -2929,6 +2929,21 @@ export function parseStructuredText(text: string): ParseResult {
         }
       }
       
+      // ════════════════════════════════════════════════════════════════════════════
+      // DETECÇÃO: "Nx" sozinho (rounds não estruturados)
+      // Preserva como conteúdo, mas avisa o coach para usar **N ROUNDS**
+      // ════════════════════════════════════════════════════════════════════════════
+      const standaloneRoundsMatch = line.trim().match(/^(\d+)\s*x\s*$/i);
+      if (standaloneRoundsMatch) {
+        const n = standaloneRoundsMatch[1];
+        result.typoWarnings = result.typoWarnings || [];
+        result.typoWarnings.push({
+          line: line.trim(),
+          suggestion: `**${n} ROUNDS**`,
+          lineNumber: lineNumber,
+        });
+      }
+
       // Todo o resto é conteúdo do bloco
       if (isTrainingStimulus(line) || isPrescriptionLine(line)) {
         currentBlock.instructions.push(line);
