@@ -864,6 +864,9 @@ export function getBlockDisplayDataFromParsed(block: {
         if (cleanLine) {
           exerciseLines.push(cleanLine);
         }
+      } else if (isStructuralLine(trimmed)) {
+        // Linha estrutural (TABATA, EMOM, AMRAP, etc.) sem ** ** → badge
+        structureDescription = trimmed;
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
