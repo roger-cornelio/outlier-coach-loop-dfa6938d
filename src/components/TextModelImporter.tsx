@@ -413,6 +413,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             ? rawLinesFiltered
             : (trainingLines.length > 0 ? trainingLines : undefined);
 
+          console.log('[DEBUG_RAWLINES]', { title: block.title, rawLines: block.rawLines, rawLinesFiltered, trainingLines, finalLines });
           return {
             id: `${day.day || 'new'}-${idx}-${Date.now()}`,
             type: block.type,
