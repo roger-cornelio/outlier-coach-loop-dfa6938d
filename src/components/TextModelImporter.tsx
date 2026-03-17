@@ -393,11 +393,14 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
           // (estruturas intercaladas com exercícios, ex: 3 seções de "2 ROUNDS")
           // Fallback para trainingLines se rawLines não estiver disponível
           // ════════════════════════════════════════════════════════════════════════════
+          const blockTitleNorm = block.title ? normalizeText(block.title) : '';
           const rawLinesFiltered = Array.isArray(block.rawLines) && block.rawLines.length > 0
             ? block.rawLines
                 .filter(l => {
                   const t = l.trim();
                   if (!t) return false;
+                  // Excluir linha que é igual ao título do bloco (já exibido como header)
+                  if (blockTitleNorm && normalizeText(t) === blockTitleNorm) return false;
                   // Excluir linhas DIA: e BLOCO: (são marcadores de contexto)
                   if (/^DIA:\s*/i.test(t)) return false;
                   if (/^BLOCO:\s*/i.test(t)) return false;

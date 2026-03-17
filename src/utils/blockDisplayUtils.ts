@@ -392,7 +392,7 @@ const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|
 // Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
 // ═══════════════════════════════════════════════════════════════════════════
 const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
-  /^\d+\s+Rounds?$/i,          // "5 Rounds", "3 rounds"
+  /^\d+\s+Rounds?\s*$/i,       // "5 Rounds", "3 rounds" (tolerante a espaços finais)
   /^EMOM\s+\d+/i,              // "EMOM 30", "EMOM 10'"
   /^AMRAP\s+\d+/i,             // "AMRAP 15", "AMRAP 20'"
   /^For\s+Time$/i,             // "For Time"
@@ -971,8 +971,9 @@ export function getBlockDisplayDataFromParsed(block: {
     if (contentExerciseLines.length > exerciseLines.length) {
       exerciseLines.length = 0;
       exerciseLines.push(...contentExerciseLines);
-      // Also use content's structure labels
-      if (contentStructLabels.length > 0) {
+      // Só sobrescrever labels se o content tiver MAIS labels que o já detectado
+      // (evita perder múltiplos badges já encontrados no rawLines path)
+      if (contentStructLabels.length > allStructureLabels.length) {
         allStructureLabels.length = 0;
         allStructureLabels.push(...contentStructLabels);
       }
