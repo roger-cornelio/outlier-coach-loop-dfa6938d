@@ -375,15 +375,15 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
 
   return (
     <>
-    <Tabs defaultValue="structured" className="space-y-6">
+    <Tabs defaultValue="import" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="structured" className="flex items-center gap-2">
-          <PenTool className="w-4 h-4" />
-          Criar Estruturado
-        </TabsTrigger>
         <TabsTrigger value="import" className="flex items-center gap-2">
           <FileText className="w-4 h-4" />
           Colar Treino
+        </TabsTrigger>
+        <TabsTrigger value="structured" className="flex items-center gap-2">
+          <PenTool className="w-4 h-4" />
+          Criar Estruturado
         </TabsTrigger>
       </TabsList>
 
