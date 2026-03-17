@@ -1439,8 +1439,8 @@ BLOCO: DESCANSO
                                             );
                                           }
                                           return <p key={idx} className="truncate">{normalizeRestLineForDisplay(line)}</p>;
-                                        }
-                                        ))}
+                                        })}
+
                                         
                                         {hasMore && (
                                           <button
