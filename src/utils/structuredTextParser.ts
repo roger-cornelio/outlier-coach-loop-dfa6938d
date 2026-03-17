@@ -2663,11 +2663,13 @@ export function parseStructuredText(text: string): ParseResult {
       if (commentContent && currentBlock) {
         _log('[COMMENT_LINE] Linha ">" vai para coachNotes:', commentContent);
         currentBlock.coachNotes.push(commentContent);
+        currentBlock.rawLines.push(trimmedLine);
       } else if (commentContent && !currentBlock) {
         // Se não há bloco atual, criar um para receber o comentário
         currentBlock = createNewBlock('', true);
         isInsideBlock = true;
         currentBlock.coachNotes.push(commentContent);
+        currentBlock.rawLines.push(trimmedLine);
         _log('[COMMENT_LINE] Criado bloco vazio para comentário:', commentContent);
       }
       continue;
