@@ -29,8 +29,9 @@ import {
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
   Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare,
-  Wand2
+  Wand2, Send
 } from 'lucide-react';
+import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
