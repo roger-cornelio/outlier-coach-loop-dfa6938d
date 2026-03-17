@@ -2982,6 +2982,7 @@ export function parseStructuredText(text: string): ParseResult {
         }
         
         currentBlock.items.push(item);
+        currentBlock.rawLines.push(line);
         
         if (item.isWeightAlert && currentDayEntry) {
           const alertMsg = `Carga "${item.weight}" detectada - será autorregulada pelo sistema`;
