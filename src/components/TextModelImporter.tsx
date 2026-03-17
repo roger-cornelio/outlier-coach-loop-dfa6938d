@@ -154,6 +154,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [templateCopied, setTemplateCopied] = useState(false);
   const [coverageReport, setCoverageReport] = useState<CoverageReport | null>(null);
   const [showCoverageBadge, setShowCoverageBadge] = useState(false);
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
 
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
   const autoFormatPreview = useMemo(() => {
@@ -1061,6 +1062,27 @@ BLOCO: DESCANSO
               />
             )}
 
+            {/* Avisos de typos detectados */}
+            {parseResult.typoWarnings && parseResult.typoWarnings.length > 0 && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  Possíveis erros de digitação
+                </div>
+                {parseResult.typoWarnings.map((tw, idx) => (
+                  <p key={idx} className="text-xs text-yellow-700 dark:text-yellow-300">
+                    <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
+                    {' → Você quis dizer '}
+                    <span className="font-semibold">"{tw.suggestion}"</span>?
+                    <span className="text-muted-foreground ml-1">(linha {tw.lineNumber})</span>
+                  </p>
+                ))}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Estes avisos não impedem o salvamento. Corrija se desejar.
+                </p>
+              </div>
+            )}
+
             {/* NOME DA PROGRAMAÇÃO — destaque acima dos blocos */}
             <div className="space-y-1.5">
               <Label htmlFor="program-name-edit" className="text-base font-semibold text-foreground">
@@ -1317,8 +1339,12 @@ BLOCO: DESCANSO
                                     // ════════════════════════════════════════════════════════════════════════════
                                     const displayData = getBlockDisplayDataFromParsed(block);
                                     
-                                    // Limitar exibição a 5 linhas
-                                    const displayExercises = displayData.exerciseLines.slice(0, 5);
+                                    // Estado de expansão por bloco (usando key único)
+                                    const blockKey = `${dayIndex}-${blockIndex}`;
+                                    const isExpanded = expandedBlocks.has(blockKey);
+                                    const displayExercises = isExpanded 
+                                      ? displayData.exerciseLines 
+                                      : displayData.exerciseLines.slice(0, 5);
                                     const hasMore = displayData.exerciseLines.length > 5;
                                     
                                     return (
@@ -1336,9 +1362,26 @@ BLOCO: DESCANSO
                                         ))}
                                         
                                         {hasMore && (
-                                          <p className="text-muted-foreground text-xs">
-                                            ... +{displayData.exerciseLines.length - 5} linhas
-                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setExpandedBlocks(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(blockKey)) {
+                                                  next.delete(blockKey);
+                                                } else {
+                                                  next.add(blockKey);
+                                                }
+                                                return next;
+                                              });
+                                            }}
+                                            className="text-primary text-xs hover:underline cursor-pointer mt-1"
+                                          >
+                                            {isExpanded 
+                                              ? '▲ Recolher'
+                                              : `▼ Ver tudo (+${displayData.exerciseLines.length - 5} linhas)`
+                                            }
+                                          </button>
                                         )}
                                         
                                         {displayData.exerciseLines.length === 0 && !displayData.structureDescription && (
