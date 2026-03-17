@@ -254,6 +254,8 @@ const AdminPortal = () => {
         return <StationValenceAdmin />;
       case "crm":
         return <CRMAdmin />;
+      case "exerciseSuggestions":
+        return <ExerciseSuggestionsAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
       default:
