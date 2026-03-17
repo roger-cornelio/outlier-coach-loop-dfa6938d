@@ -2902,6 +2902,11 @@ export function parseStructuredText(text: string): ParseResult {
     
     if (isInsideBlock && currentBlock) {
       // ════════════════════════════════════════════════════════════════════════════
+      // PRESERVAR TEXTO BRUTO: Toda linha que entra no bloco é registrada em rawLines
+      // ════════════════════════════════════════════════════════════════════════════
+      currentBlock.rawLines.push(line);
+      
+      // ════════════════════════════════════════════════════════════════════════════
       // MVP0 FIX: TAGS SÃO FONTE DE VERDADE
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
       // ════════════════════════════════════════════════════════════════════════════
