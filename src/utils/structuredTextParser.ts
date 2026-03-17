@@ -2999,6 +2999,8 @@ export function parseStructuredText(text: string): ParseResult {
 
     // REGRA PRINCIPAL: Todo texto abaixo de um BLOCO pertence ao BLOCO
     if (currentBlock) {
+      currentBlock.rawLines.push(line);
+      
       // ════════════════════════════════════════════════════════════════════════════
       // MVP0 FIX: TAGS SÃO FONTE DE VERDADE (fallback)
       // Se inCommentTagMode=true, TODA linha vai para coachNotes (NUNCA treino)
@@ -3033,11 +3035,13 @@ export function parseStructuredText(text: string): ParseResult {
         currentBlock = createNewBlock(blockTitle);
         currentBlock.type = inferredType;
         currentBlock.instructions.push(line);
+        currentBlock.rawLines.push(line);
         currentBlock.optional = isOptional;
         isInsideBlock = true;
         _log('[BLOCK_START] Novo bloco iniciado por estímulo/prescrição');
       } else {
         currentBlock = createNewBlock('');
+        currentBlock.rawLines.push(line);
         if (isInstructionLine(line)) {
           currentBlock.instructions.push(line);
         } else {
