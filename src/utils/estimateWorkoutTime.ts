@@ -236,6 +236,20 @@ export function estimateWorkoutTime(workoutContent: string | string[]): Estimati
     ? workoutContent.join('\n') 
     : workoutContent;
   
+  // Tabata: se detectado sem tempos explícitos, usar default de 4min/exercício
+  const tabataSeconds = detectTabataTime(text);
+  if (tabataSeconds !== null) {
+    const totalMinutes = Math.ceil(tabataSeconds / 60);
+    if (import.meta.env.DEV) {
+      console.log('📊 estimateWorkoutTime Tabata default:', { tabataSeconds, totalMinutes });
+    }
+    return {
+      totalMinutes,
+      itemsFound: 1,
+      breakdown: [{ type: 'tabata', value: tabataSeconds, unit: 'sec', seconds: tabataSeconds }],
+    };
+  }
+  
   // Extrair itens
   const items = extractPatterns(text);
   
