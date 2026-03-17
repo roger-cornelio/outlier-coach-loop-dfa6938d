@@ -1036,7 +1036,7 @@ BLOCO: DESCANSO
                   >
                     {coverageReport.successRate === 100
                       ? '🎯 100% interpretado'
-                      : `⚠️ ${coverageReport.unrecognized} linha${coverageReport.unrecognized > 1 ? 's' : ''} não interpretada${coverageReport.unrecognized > 1 ? 's' : ''}`
+                      : `⚠️ ${coverageReport.unrecognized} linha${coverageReport.unrecognized > 1 ? 's' : ''} não interpretada${coverageReport.unrecognized > 1 ? 's' : ''} (${coverageReport.successRate}%)`
                     }
                   </Badge>
 
