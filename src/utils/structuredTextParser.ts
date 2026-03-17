@@ -135,6 +135,7 @@ export interface ParsedBlock {
   instruction?: string;
   instructions: string[]; // Lista de instruções do bloco
   isAutoGenTitle?: boolean; // True se título foi gerado automaticamente como "BLOCO X"
+  rawLines: string[]; // Texto bruto original do coach (todas as linhas que entraram neste bloco)
 }
 
 export interface ParsedDay {
