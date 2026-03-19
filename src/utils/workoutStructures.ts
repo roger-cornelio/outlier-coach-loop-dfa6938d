@@ -166,6 +166,60 @@ function parseWrappedStructureLine(trimmed: string): WorkoutStructure | null {
   return null;
 }
 
+/**
+ * Parseia linhas SEM ** ** wrapper (plain text).
+ * Aceita: "2 ROUNDS", "EMOM 20", "AMRAP 15", "For Time"
+ */
+function parsePlainStructureLine(trimmed: string): WorkoutStructure | null {
+  // ROUNDS
+  const roundsMatch = trimmed.match(PLAIN_ROUNDS_PATTERN);
+  if (roundsMatch) {
+    const rounds = parseInt(roundsMatch[1], 10);
+    return {
+      type: 'MULTIPLIER',
+      value: rounds,
+      rawLine: trimmed,
+      tag: `__STRUCT:ROUNDS=${rounds}`,
+    };
+  }
+
+  // EMOM
+  const emomMatch = trimmed.match(PLAIN_EMOM_PATTERN);
+  if (emomMatch) {
+    const minutes = parseInt(emomMatch[1], 10);
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:EMOM=${minutes}`,
+    };
+  }
+
+  // AMRAP
+  const amrapMatch = trimmed.match(PLAIN_AMRAP_PATTERN);
+  if (amrapMatch) {
+    const minutes = parseInt(amrapMatch[1], 10);
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:AMRAP=${minutes}`,
+    };
+  }
+
+  // FOR TIME
+  if (PLAIN_FOR_TIME_PATTERN.test(trimmed)) {
+    return {
+      type: 'DERIVED_TIME',
+      value: null,
+      rawLine: trimmed,
+      tag: '__STRUCT:FORTIME=true',
+    };
+  }
+
+  return null;
+}
+
 // ============================================
 // VALIDAÇÃO DE CONFLITOS
 // ============================================
