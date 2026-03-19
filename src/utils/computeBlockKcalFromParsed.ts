@@ -11,6 +11,7 @@
  */
 
 import type { ParsedExercise, ComputedBlockMetrics } from '@/types/outlier';
+import { parseRoundGroups, type RoundGroup } from '@/utils/workoutStructures';
 
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
@@ -149,11 +150,16 @@ function getIntensityMultiplier(type?: string, value?: number): number {
 }
 
 /**
- * Calcula métricas completas para um bloco a partir dos exercícios parseados
+ * Calcula métricas completas para um bloco a partir dos exercícios parseados.
+ * 
+ * Se blockContent for fornecido, usa parseRoundGroups para aplicar
+ * multiplicadores de rounds por grupo (cada **N ROUNDS** multiplica
+ * apenas os exercícios imediatamente abaixo dele).
  */
 export function computeBlockMetrics(
   parsedExercises: ParsedExercise[],
   biometrics: BiometricData,
+  blockContent?: string,
 ): ComputedBlockMetrics {
   if (!parsedExercises || !Array.isArray(parsedExercises) || parsedExercises.length === 0) {
     return {};
@@ -162,6 +168,11 @@ export function computeBlockMetrics(
   // Blindar peso (CENÁRIO 1: NaN silencioso)
   const safeBiometrics = { ...biometrics, pesoKg: safePesoKg(biometrics.pesoKg) };
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // ROUND GROUPS: Calcular multiplicador por exercício baseado na posição
+  // ════════════════════════════════════════════════════════════════════════════
+  const exerciseMultipliers = buildExerciseMultiplierMap(parsedExercises, blockContent);
+
   let totalKcal = 0;
   let totalDurationSec = 0;
   let totalSets = 0;
@@ -169,12 +180,15 @@ export function computeBlockMetrics(
   let intensitySum = 0;
   let intensityCount = 0;
 
-  for (const exercise of parsedExercises) {
+  for (let i = 0; i < parsedExercises.length; i++) {
+    const exercise = parsedExercises[i];
+    const roundMultiplier = exerciseMultipliers[i] || 1;
     const { kcal, durationSec } = computeExerciseKcal(exercise, safeBiometrics);
-    totalKcal += kcal;
-    totalDurationSec += durationSec;
-    totalSets += exercise.sets || 0;
-    totalReps += (exercise.sets || 1) * (exercise.reps || 0);
+    
+    totalKcal += kcal * roundMultiplier;
+    totalDurationSec += durationSec * roundMultiplier;
+    totalSets += (exercise.sets || 0) * roundMultiplier;
+    totalReps += ((exercise.sets || 1) * (exercise.reps || 0)) * roundMultiplier;
     
     if (exercise.intensityValue) {
       intensitySum += exercise.intensityValue;
@@ -190,4 +204,45 @@ export function computeBlockMetrics(
     avgIntensity: intensityCount > 0 ? Math.round((intensitySum / intensityCount) * 10) / 10 : undefined,
     computedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Constrói um mapa de multiplicadores de rounds por índice de exercício.
+ * Usa o nome do exercício para fazer match entre parsedExercises e roundGroups.
+ */
+function buildExerciseMultiplierMap(
+  parsedExercises: ParsedExercise[],
+  blockContent?: string,
+): Record<number, number> {
+  const map: Record<number, number> = {};
+
+  if (!blockContent) {
+    // Sem conteúdo bruto → tudo multiplica por 1
+    for (let i = 0; i < parsedExercises.length; i++) map[i] = 1;
+    return map;
+  }
+
+  const groups = parseRoundGroups(blockContent);
+  if (groups.length === 0) {
+    for (let i = 0; i < parsedExercises.length; i++) map[i] = 1;
+    return map;
+  }
+
+  // Match: para cada parsed exercise, tentar achar em qual round group ele está
+  // Usamos ordem sequencial — o primeiro exercício parsed casa com o primeiro grupo, etc.
+  let exerciseIdx = 0;
+  for (const group of groups) {
+    const groupExerciseCount = group.exerciseLines.length;
+    for (let g = 0; g < groupExerciseCount && exerciseIdx < parsedExercises.length; g++) {
+      map[exerciseIdx] = group.multiplier;
+      exerciseIdx++;
+    }
+  }
+
+  // Restantes sem grupo → multiplier 1
+  for (; exerciseIdx < parsedExercises.length; exerciseIdx++) {
+    map[exerciseIdx] = 1;
+  }
+
+  return map;
 }
