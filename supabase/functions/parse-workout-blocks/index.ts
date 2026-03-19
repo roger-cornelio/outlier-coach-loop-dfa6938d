@@ -161,7 +161,7 @@ Return a JSON object with tool calling. For each block, return the blockId and p
 
     // Build user prompt with all blocks
     const userPrompt = blocks.map((b) => 
-      `[BLOCK: ${b.blockId} | type: ${b.blockType}]\n${b.content}`
+      `[BLOCK: ${b.blockId} | type: ${b.blockType} | title: ${b.title || '(sem título)'}]\n${b.content}`
     ).join("\n\n---\n\n");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
