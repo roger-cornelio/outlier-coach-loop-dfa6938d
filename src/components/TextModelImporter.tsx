@@ -167,6 +167,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showCoverageBadge, setShowCoverageBadge] = useState(false);
   const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
+  const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
 
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
   const autoFormatPreview = useMemo(() => {
