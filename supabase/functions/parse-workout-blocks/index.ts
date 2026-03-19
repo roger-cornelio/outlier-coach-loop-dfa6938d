@@ -27,6 +27,7 @@ interface BlockInput {
   blockId: string;
   blockType: string;
   content: string;
+  title?: string;
 }
 
 interface BlockResult {
