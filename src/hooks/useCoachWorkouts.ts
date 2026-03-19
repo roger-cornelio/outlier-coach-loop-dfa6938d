@@ -94,7 +94,7 @@ function stripBenchmarkIfNotAdmin(
  * Chama a Edge Function parse-workout-blocks com timeout
  */
 async function callParseWorkoutBlocks(
-  blocks: { blockId: string; blockType: string; content: string }[]
+  blocks: { blockId: string; blockType: string; content: string; title?: string }[]
 ): Promise<{ results?: any[]; error?: string; errorType?: string }> {
   try {
     const result = await Promise.race([
