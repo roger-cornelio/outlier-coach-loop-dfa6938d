@@ -274,6 +274,7 @@ export function computeBlockMetrics(
  * Prioridade: conteúdo > título (conteúdo é mais específico).
  */
 function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): number | null {
+  // Prioridade 1: conteúdo (mais específico)
   if (blockContent) {
     const lines = blockContent.split('\n');
     for (const line of lines) {
@@ -284,10 +285,26 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
     }
   }
 
+  // Prioridade 2: título (com regex flexível para títulos compostos)
+  // Aceita: "AMRAP 15'", "AMRAP 15' - Conditioning", "EMOM 20min - Upper Body"
   if (blockTitle) {
+    // Primeiro tentar parseStructureLine padrão
     const structure = parseStructureLine(blockTitle);
     if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
       return structure.value;
+    }
+
+    // Fallback: regex flexível para títulos compostos (sem exigir fim de linha)
+    const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    if (flexibleAmrap) {
+      const minutes = parseInt(flexibleAmrap[1], 10);
+      if (minutes > 0) return minutes;
+    }
+
+    const flexibleEmom = blockTitle.match(/EMOM\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    if (flexibleEmom) {
+      const minutes = parseInt(flexibleEmom[1], 10);
+      if (minutes > 0) return minutes;
     }
   }
 
