@@ -94,7 +94,7 @@ function stripBenchmarkIfNotAdmin(
  * Chama a Edge Function parse-workout-blocks com timeout
  */
 async function callParseWorkoutBlocks(
-  blocks: { blockId: string; blockType: string; content: string }[]
+  blocks: { blockId: string; blockType: string; content: string; title?: string }[]
 ): Promise<{ results?: any[]; error?: string; errorType?: string }> {
   try {
     const result = await Promise.race([
@@ -132,7 +132,7 @@ async function callParseWorkoutBlocks(
  */
 async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResult> {
   // Coletar blocos que precisam de validação (excluir notas e dias de descanso)
-  const blocksToValidate: { blockId: string; blockType: string; content: string; dayIndex: number; blockIndex: number }[] = [];
+  const blocksToValidate: { blockId: string; blockType: string; content: string; title?: string; dayIndex: number; blockIndex: number }[] = [];
   
   workoutData.forEach((day, dayIdx) => {
     if (day.isRestDay) return;
@@ -142,6 +142,7 @@ async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResul
         blockId: block.id,
         blockType: block.type,
         content: block.content || '',
+        title: block.title || undefined,
         dayIndex: dayIdx,
         blockIndex: blockIdx,
       });
@@ -154,7 +155,7 @@ async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResul
   }
 
   const response = await callParseWorkoutBlocks(
-    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content }))
+    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content, title: b.title }))
   );
 
   if (response.error) {

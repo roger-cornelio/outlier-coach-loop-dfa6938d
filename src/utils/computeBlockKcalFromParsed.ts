@@ -204,8 +204,16 @@ export function computeBlockMetrics(
     const exercise = parsedExercises[i];
     const roundMultiplier = exerciseMultipliers[i] || 1;
 
+    // ════════════════════════════════════════════════════════════════════════
+    // NORMALIZAÇÃO: Se roundMultiplier > 1, forçar sets=1 para evitar
+    // contagem dupla. Protege tanto dados novos (IA já envia sets=1)
+    // quanto dados legados (IA antiga enviava sets multiplicados).
+    // ════════════════════════════════════════════════════════════════════════
     let effectiveExercise = exercise;
-    if (roundMultiplier > 1 && (exercise.sets || 1) > 1) {
+    if (roundMultiplier > 1) {
+      if ((exercise.sets || 1) > 1) {
+        console.warn(`[computeBlockMetrics] Normalização: exercício "${exercise.name}" com sets=${exercise.sets} e roundMultiplier=${roundMultiplier} → forçando sets=1 para evitar dupla contagem`);
+      }
       effectiveExercise = { ...exercise, sets: 1 };
     }
 
@@ -223,17 +231,31 @@ export function computeBlockMetrics(
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // FIXED_TIME OVERRIDE: Se AMRAP/EMOM detectado, forçar duração fixa e
-  // escalar calorias proporcionalmente aos rounds estimados.
+  // FIXED_TIME OVERRIDE: Se AMRAP/EMOM detectado, o tempo fixo é autoridade
+  // absoluta. Calcula rounds estimados e escala calorias proporcionalmente.
   // ════════════════════════════════════════════════════════════════════════════
   if (fixedTimeMinutes && fixedTimeMinutes > 0) {
     const fixedTimeSec = fixedTimeMinutes * 60;
 
+    // Calcular tempo de 1 round completo (soma de todos exercícios com sets=1)
+    const singleRoundTimeSec = totalDurationSec > 0 ? totalDurationSec : 180; // Fallback conservador de 3min
+
+    if (singleRoundTimeSec !== totalDurationSec) {
+      console.warn(`[computeBlockMetrics] Usando fallback conservador de 180s para singleRoundTimeSec (totalDurationSec era ${totalDurationSec})`);
+    }
+
+    // Estimar rounds internos
+    const estimatedRounds = fixedTimeSec / singleRoundTimeSec;
+
+    // Recalcular kcal baseado nos rounds estimados
+    // totalKcal neste ponto = kcal de 1 round (sem multiplicação FIXED_TIME)
+    // Precisamos escalar para o número de rounds estimados
     if (totalDurationSec > 0) {
       const scaleFactor = fixedTimeSec / totalDurationSec;
       totalKcal = Math.round(totalKcal * scaleFactor);
     }
 
+    // Duração final é SEMPRE o tempo fixo (autoridade absoluta)
     totalDurationSec = fixedTimeSec;
   }
 
@@ -252,6 +274,7 @@ export function computeBlockMetrics(
  * Prioridade: conteúdo > título (conteúdo é mais específico).
  */
 function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): number | null {
+  // Prioridade 1: conteúdo (mais específico)
   if (blockContent) {
     const lines = blockContent.split('\n');
     for (const line of lines) {
@@ -262,10 +285,26 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
     }
   }
 
+  // Prioridade 2: título (com regex flexível para títulos compostos)
+  // Aceita: "AMRAP 15'", "AMRAP 15' - Conditioning", "EMOM 20min - Upper Body"
   if (blockTitle) {
+    // Primeiro tentar parseStructureLine padrão
     const structure = parseStructureLine(blockTitle);
     if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
       return structure.value;
+    }
+
+    // Fallback: regex flexível para títulos compostos (sem exigir fim de linha)
+    const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    if (flexibleAmrap) {
+      const minutes = parseInt(flexibleAmrap[1], 10);
+      if (minutes > 0) return minutes;
+    }
+
+    const flexibleEmom = blockTitle.match(/EMOM\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    if (flexibleEmom) {
+      const minutes = parseInt(flexibleEmom[1], 10);
+      if (minutes > 0) return minutes;
     }
   }
 
