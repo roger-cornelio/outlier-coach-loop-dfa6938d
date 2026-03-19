@@ -80,9 +80,21 @@ describe('workoutStructures', () => {
       expect(result?.type).toBe('DERIVED_TIME');
     });
 
-    it('não deve parsear linhas sem ** **', () => {
-      expect(parseStructureLine('3 ROUNDS')).toBeNull();
-      expect(parseStructureLine('EMOM 30')).toBeNull();
+    it('deve parsear linhas sem ** ** (plain text)', () => {
+      expect(parseStructureLine('3 ROUNDS')).not.toBeNull();
+      expect(parseStructureLine('3 ROUNDS')?.type).toBe('MULTIPLIER');
+      expect(parseStructureLine('3 ROUNDS')?.value).toBe(3);
+      expect(parseStructureLine('EMOM 30')).not.toBeNull();
+      expect(parseStructureLine('EMOM 30')?.type).toBe('FIXED_TIME');
+      expect(parseStructureLine('EMOM 30')?.value).toBe(30);
+      expect(parseStructureLine('For Time')).not.toBeNull();
+      expect(parseStructureLine('For Time')?.type).toBe('DERIVED_TIME');
+    });
+
+    it('não deve parsear texto que não é estrutura', () => {
+      expect(parseStructureLine('12 Back Squat')).toBeNull();
+      expect(parseStructureLine('400m Run')).toBeNull();
+      expect(parseStructureLine('Aquecimento')).toBeNull();
     });
   });
 

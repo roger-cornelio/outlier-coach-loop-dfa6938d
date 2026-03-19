@@ -76,7 +76,8 @@ import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
-import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine } from '@/utils/parsingCoverage';
+import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
+import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
 import {
   Dialog,
   DialogContent,
@@ -112,6 +113,7 @@ function deriveWeekPeriod(weekStart: string): WeekPeriod {
 export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, initialWorkout, onClearInitialWorkout }: TextModelImporterProps) {
   const { submitSuggestion, submitting: suggestSubmitting, submitted: suggestedExercises } = useExerciseSuggestionSubmit();
   const { toast } = useToast();
+  const { exercises: exerciseLibrary } = useExerciseLibrary();
   // ═══════════════════════════════════════════════════════════════════════════
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -165,6 +167,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showCoverageBadge, setShowCoverageBadge] = useState(false);
   const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
+  const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
 
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
   const autoFormatPreview = useMemo(() => {
@@ -439,6 +442,24 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
         const coverage = calculateParsingCoverage(result);
         setCoverageReport(coverage);
         setShowCoverageBadge(true);
+
+        // Fuzzy matching de exercícios contra dicionário global
+        if (exerciseLibrary.length > 0) {
+          const dict = exerciseLibrary.map(ex => ({
+            name: ex.name,
+            aliases: [] as string[], // aliases já estão no name matching
+          }));
+          const allTypoWarnings: ExerciseTypoWarning[] = [];
+          for (let dayIdx = 0; dayIdx < result.days.length; dayIdx++) {
+            const day = result.days[dayIdx];
+            for (const block of day.blocks) {
+              const blockLines = (block.rawLines || block.lines?.map(l => l.text) || []).filter(Boolean);
+              const warnings = detectExerciseTypos(blockLines as string[], dict, block.title || 'Bloco', dayIdx);
+              allTypoWarnings.push(...warnings);
+            }
+          }
+          setExerciseTypoWarnings(allTypoWarnings);
+        }
 
         patchDraft({
           parseResult: result,
@@ -1184,7 +1205,27 @@ BLOCO: DESCANSO
               </div>
             )}
 
-            {/* NOME DA PROGRAMAÇÃO — destaque acima dos blocos */}
+            {/* Avisos de typos em exercícios (fuzzy match contra dicionário) */}
+            {exerciseTypoWarnings.length > 0 && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                  <Puzzle className="w-4 h-4" />
+                  Exercícios com possível erro de digitação
+                </div>
+                {exerciseTypoWarnings.map((tw, idx) => (
+                  <p key={idx} className="text-xs text-yellow-700 dark:text-yellow-300">
+                    <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
+                    {' → Você quis dizer '}
+                    <span className="font-semibold">"{tw.suggestion}"</span>?
+                    <span className="text-muted-foreground ml-1">({tw.blockTitle})</span>
+                  </p>
+                ))}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Estes avisos não impedem o salvamento. O sistema ainda reconhece o exercício.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="program-name-edit" className="text-base font-semibold text-foreground">
                 Nome da Programação

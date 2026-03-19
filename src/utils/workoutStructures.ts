@@ -43,7 +43,7 @@ export interface StructureValidationError {
 }
 
 // ============================================
-// PADRÕES DE DETECÇÃO (OBRIGATÓRIO: ** ** wrapper)
+// PADRÕES DE DETECÇÃO (com e sem ** ** wrapper)
 // ============================================
 
 /**
@@ -75,6 +75,14 @@ const FOR_TIME_PATTERN = /^\*\*\s*For\s+Time\s*\*\*$/i;
  */
 const STRUCTURE_WRAPPER_PATTERN = /^\*\*.*\*\*$/;
 
+// ────────────────────────────────────────────────────────────
+// Padrões PLAIN TEXT (sem ** **) — aceita coaches sem markdown
+// ────────────────────────────────────────────────────────────
+const PLAIN_ROUNDS_PATTERN = /^(\d+)\s+Rounds?\s*$/i;
+const PLAIN_EMOM_PATTERN = /^EMOM\s+(\d+)\s*['′]?\s*(?:min)?\s*$/i;
+const PLAIN_AMRAP_PATTERN = /^AMRAP\s+(\d+)\s*['′]?\s*(?:min)?\s*$/i;
+const PLAIN_FOR_TIME_PATTERN = /^For\s+Time\s*$/i;
+
 // ============================================
 // FUNÇÕES DE DETECÇÃO
 // ============================================
@@ -88,14 +96,25 @@ export function isWrappedStructure(line: string): boolean {
 }
 
 /**
- * Parseia uma linha e retorna a estrutura detectada (ou null)
+ * Parseia uma linha e retorna a estrutura detectada (ou null).
+ * Aceita tanto formato **wrapped** quanto plain text.
  */
 export function parseStructureLine(line: string): WorkoutStructure | null {
   const trimmed = (line ?? '').trim();
   
-  if (!isWrappedStructure(trimmed)) {
-    return null;
+  // ── Primeiro: tentar formato wrapped (**...**) ──
+  if (isWrappedStructure(trimmed)) {
+    return parseWrappedStructureLine(trimmed);
   }
+
+  // ── Segundo: tentar formato plain text ──
+  return parsePlainStructureLine(trimmed);
+}
+
+/**
+ * Parseia linhas com ** ** wrapper (formato original)
+ */
+function parseWrappedStructureLine(trimmed: string): WorkoutStructure | null {
   
   // ROUNDS
   const roundsMatch = trimmed.match(ROUNDS_PATTERN);
@@ -144,6 +163,60 @@ export function parseStructureLine(line: string): WorkoutStructure | null {
   }
   
   // Estrutura não reconhecida entre ** **
+  return null;
+}
+
+/**
+ * Parseia linhas SEM ** ** wrapper (plain text).
+ * Aceita: "2 ROUNDS", "EMOM 20", "AMRAP 15", "For Time"
+ */
+function parsePlainStructureLine(trimmed: string): WorkoutStructure | null {
+  // ROUNDS
+  const roundsMatch = trimmed.match(PLAIN_ROUNDS_PATTERN);
+  if (roundsMatch) {
+    const rounds = parseInt(roundsMatch[1], 10);
+    return {
+      type: 'MULTIPLIER',
+      value: rounds,
+      rawLine: trimmed,
+      tag: `__STRUCT:ROUNDS=${rounds}`,
+    };
+  }
+
+  // EMOM
+  const emomMatch = trimmed.match(PLAIN_EMOM_PATTERN);
+  if (emomMatch) {
+    const minutes = parseInt(emomMatch[1], 10);
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:EMOM=${minutes}`,
+    };
+  }
+
+  // AMRAP
+  const amrapMatch = trimmed.match(PLAIN_AMRAP_PATTERN);
+  if (amrapMatch) {
+    const minutes = parseInt(amrapMatch[1], 10);
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:AMRAP=${minutes}`,
+    };
+  }
+
+  // FOR TIME
+  if (PLAIN_FOR_TIME_PATTERN.test(trimmed)) {
+    return {
+      type: 'DERIVED_TIME',
+      value: null,
+      rawLine: trimmed,
+      tag: '__STRUCT:FORTIME=true',
+    };
+  }
+
   return null;
 }
 
