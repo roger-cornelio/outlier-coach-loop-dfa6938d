@@ -408,10 +408,10 @@ const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|
 // Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
 // ═══════════════════════════════════════════════════════════════════════════
 const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
-  /^\d+\s+Rounds?\s*$/i,       // "5 Rounds", "3 rounds" (tolerante a espaços finais)
-  /^EMOM\s+\d+/i,              // "EMOM 30", "EMOM 10'"
-  /^AMRAP\s+\d+/i,             // "AMRAP 15", "AMRAP 20'"
-  /^For\s+Time$/i,             // "For Time"
+  /^\d+\s*Rounds?\s*$/i,       // "5 Rounds", "2rounds", "3 rounds"
+  /^EMOM\s*\d+/i,              // "EMOM 30", "EMOM20", "EMOM 10'"
+  /^AMRAP\s*\d+/i,             // "AMRAP 15", "AMRAP20", "AMRAP 20'"
+  /^For\s*Time$/i,             // "For Time", "ForTime"
   /^RFT$/i,                    // "RFT" (Rounds For Time)
   /^Tabata$/i,                 // "Tabata"
   /^E\d+M(?:OM)?$/i,           // "E2MOM", "E3MOM"
