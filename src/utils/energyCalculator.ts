@@ -141,10 +141,27 @@ export function calculateExerciseKcal(input: ExerciseKcalInput): ExerciseKcalRes
   } = input;
 
   // Resolve repsOrDistance from new or legacy fields
-  const repsOrDistance = input.repsOrDistance 
+  let repsOrDistance = input.repsOrDistance 
     ?? input.reps 
     ?? input.distanceMeters 
     ?? 1;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CONVERSÃO DISTÂNCIA→REPS para exercícios vertical_work
+  // Se distanceMeters foi fornecido mas reps não, converter metros em reps
+  // equivalentes usando defaultDistanceMeters do pattern.
+  // Ex: 20m Lunge (0.4m/stride) → 50 reps
+  // ════════════════════════════════════════════════════════════════════════
+  if (
+    movementPattern.formula_type === 'vertical_work' &&
+    !input.reps &&
+    !input.repsOrDistance &&
+    input.distanceMeters &&
+    input.distanceMeters > 0 &&
+    movementPattern.default_distance_meters > 0
+  ) {
+    repsOrDistance = Math.ceil(input.distanceMeters / movementPattern.default_distance_meters);
+  }
 
   // Resolve weight via priority chain
   const externalWeightKg = resolveExternalWeight({

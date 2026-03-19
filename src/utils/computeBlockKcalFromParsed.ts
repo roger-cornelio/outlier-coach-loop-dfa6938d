@@ -82,8 +82,26 @@ function computeExerciseKcal(
   }
 
   const sets = exercise.sets || 1;
-  const reps = exercise.reps || 1;
   const loadKg = exercise.loadKg || 0;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CONVERSÃO DISTÂNCIA→REPS para exercícios vertical_work
+  // Se o coach escreveu "20m Lunges", a IA retorna distanceMeters=20, reps=undefined.
+  // Para vertical_work, convertemos metros em reps equivalentes usando defaultDistanceMeters.
+  // Ex: 20m Lunge (0.4m/stride) → 50 reps. 10m Broad Jump (0.3m/jump) → 34 reps.
+  // ════════════════════════════════════════════════════════════════════════
+  let reps: number;
+  if (
+    pattern.formulaType === 'vertical_work' &&
+    !exercise.reps &&
+    exercise.distanceMeters &&
+    exercise.distanceMeters > 0 &&
+    pattern.defaultDistanceMeters > 0
+  ) {
+    reps = Math.ceil(exercise.distanceMeters / pattern.defaultDistanceMeters);
+  } else {
+    reps = exercise.reps || 1;
+  }
 
   // Duração do exercício
   let durationSec: number;
