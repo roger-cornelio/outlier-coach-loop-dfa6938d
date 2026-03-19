@@ -1,45 +1,30 @@
 
 
-## Plano: Corrigir aliases no global_exercises
+## Plano: Conversão distância→reps para exercícios vertical_work
 
 ### Problema
-Vários exercícios não têm variações sem espaço (ex: `backsquat`), singular (`deadlift`), ou abreviações comuns (`rdl`, `benchpress`). Isso prejudica tanto o fuzzy matching local quanto a referência que a IA usa no prompt.
+Quando o coach escreve "20m Lunges", a IA retorna `distanceMeters: 20` e `reps: undefined`. O motor de cálculo usa `reps || 1`, resultando em 1 rep ao invés de ~50. Tempo e calorias ficam absurdamente baixos.
 
-### Mudanças (1 operação de UPDATE no banco, zero arquivos de código)
+### Correção
 
-Usar a ferramenta de insert/update para atualizar os aliases dos seguintes exercícios:
+**Arquivo**: `src/utils/computeBlockKcalFromParsed.ts` — função `computeExerciseKcal`
 
-| Exercício | Aliases atuais | Aliases a adicionar |
-|-----------|---------------|---------------------|
-| Back Squat | bs, agachamento traseiro | **backsquat**, back squats |
-| Front Squat | fs, agachamento frontal | **frontsquat**, front squats |
-| Pull-ups | pullup, pull up, barra fixa | **pullups** |
-| Push-ups | pushup, push up, flexão | **pushups** |
-| Deadlifts | dl, levantamento terra | **deadlift** |
-| Air Squats | air squat, bodyweight squat, agachamento livre | **airsquat**, airsquats |
-| Kettlebell Swings | kettlebell swing, kbs, swing | **kb swing**, kbswing, kbswings |
-| Box Jumps | bj, salto caixa | **boxjump**, boxjumps, box jump |
-| Wall Balls | wb, wall ball, wallball | **wallballs** |
-| Double Unders | du, double under, corda dupla | **doubleunder**, doubleunders |
-| Chin-ups | chin up, chinup | **chinups** |
-| Goblet Squat | gs, agachamento goblet | **gobletsquat** |
-| Hip Thrusts | hip thrust, elevação pélvica | **hipthrust**, hipthrusts |
-| Romanian Deadlift | romanian dl, stiff, stiff leg | **rdl**, romaniandl |
-| Bench Press | supino, bp | **benchpress** |
-| Barbell Row | remada curvada, bent over row | **barbellrow** |
-| Farmers Carry | farmers walk, carregamento, farmer | **farmerscarry** |
-| Step-ups | step up, subida banco | **stepup**, stepups |
-| Sit-ups | situp, abdominal, ghd situp | **situps** |
-| Toes to Bar | ttb, t2b, toes to bar | **toestobar** |
-| Muscle-ups | mu, muscle up, bar muscle up | **muscleup**, muscleups |
-| Rope Climbs | rope climb, subida corda | **ropeclimb**, ropeclimbs |
-| Burpee Broad Jump | bbj, burpee broad jump | **burpeebroadjump** |
-| Box Jump Over | bjo, box jump over | **boxjumpover** |
+Na linha 85, onde hoje temos:
+```
+const reps = exercise.reps || 1;
+```
 
-**Nota**: Shoulder Press já NÃO tem 'ohs' nos aliases (aliases atuais: ohp, overhead press, press militar). Nenhuma correção necessária.
+Adicionar lógica: se o padrão é `vertical_work`, não há `reps`, mas há `distanceMeters`, converter distância em reps equivalentes dividindo pela distância padrão do pattern (`defaultDistanceMeters`).
 
-### Execução
-- 24 statements UPDATE via ferramenta de insert, cada um adicionando aliases com `array_cat`
-- Zero mudanças em código ou schema
-- Efeito imediato: a Edge Function `parse-workout-blocks` busca `global_exercises` a cada chamada, então os novos aliases são usados na próxima interpretação
+Exemplo: 20m Lunge → `20 / 0.4 = 50 reps`. 10m Broad Jump → `10 / 0.3 = 33 reps`.
+
+Se o padrão é `horizontal_friction` ou `metabolic` e tem `distanceMeters`, usar a distância diretamente (já funciona hoje).
+
+**Arquivo**: `src/utils/energyCalculator.ts` — função `calculateExerciseKcal`
+
+Aplicar a mesma lógica no caso `vertical_work`: se `repsOrDistance` veio de `distanceMeters` e o pattern é vertical_work, converter metros em reps equivalentes.
+
+### Escopo
+- 2 arquivos modificados, ~10 linhas cada
+- Zero mudanças no banco, parser ou UI
 
