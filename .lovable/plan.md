@@ -1,40 +1,45 @@
 
 
-## Plano: Identificar estruturas sem espaço + mostrar sintaxe correta na UI
+## Plano: Corrigir aliases no global_exercises
 
 ### Problema
-O coach escreve `2rounds` (sem espaço, sem `**`). Três funções falham:
+Vários exercícios não têm variações sem espaço (ex: `backsquat`), singular (`deadlift`), ou abreviações comuns (`rdl`, `benchpress`). Isso prejudica tanto o fuzzy matching local quanto a referência que a IA usa no prompt.
 
-1. **`PLAIN_ROUNDS_PATTERN`** em `workoutStructures.ts`: `/^\d+\s+Rounds?$/i` — exige espaço → cálculo de multiplicador falha
-2. **`STRUCTURAL_LINE_PATTERNS`** em `blockDisplayUtils.ts`: `/^\d+\s+Rounds?\s*$/i` — exige espaço → não reconhece como estrutura
-3. **`normalizeStructureLabel`** em `blockDisplayUtils.ts`: só extrai labels de `**...**` → "2rounds" sem asteriscos nunca vira badge
+### Mudanças (1 operação de UPDATE no banco, zero arquivos de código)
 
-Resultado: "2rounds" é tratado como exercício, multiplicador = 1, calorias/tempo errados, e a UI não mostra badge.
+Usar a ferramenta de insert/update para atualizar os aliases dos seguintes exercícios:
 
-### Mudanças (2 arquivos)
+| Exercício | Aliases atuais | Aliases a adicionar |
+|-----------|---------------|---------------------|
+| Back Squat | bs, agachamento traseiro | **backsquat**, back squats |
+| Front Squat | fs, agachamento frontal | **frontsquat**, front squats |
+| Pull-ups | pullup, pull up, barra fixa | **pullups** |
+| Push-ups | pushup, push up, flexão | **pushups** |
+| Deadlifts | dl, levantamento terra | **deadlift** |
+| Air Squats | air squat, bodyweight squat, agachamento livre | **airsquat**, airsquats |
+| Kettlebell Swings | kettlebell swing, kbs, swing | **kb swing**, kbswing, kbswings |
+| Box Jumps | bj, salto caixa | **boxjump**, boxjumps, box jump |
+| Wall Balls | wb, wall ball, wallball | **wallballs** |
+| Double Unders | du, double under, corda dupla | **doubleunder**, doubleunders |
+| Chin-ups | chin up, chinup | **chinups** |
+| Goblet Squat | gs, agachamento goblet | **gobletsquat** |
+| Hip Thrusts | hip thrust, elevação pélvica | **hipthrust**, hipthrusts |
+| Romanian Deadlift | romanian dl, stiff, stiff leg | **rdl**, romaniandl |
+| Bench Press | supino, bp | **benchpress** |
+| Barbell Row | remada curvada, bent over row | **barbellrow** |
+| Farmers Carry | farmers walk, carregamento, farmer | **farmerscarry** |
+| Step-ups | step up, subida banco | **stepup**, stepups |
+| Sit-ups | situp, abdominal, ghd situp | **situps** |
+| Toes to Bar | ttb, t2b, toes to bar | **toestobar** |
+| Muscle-ups | mu, muscle up, bar muscle up | **muscleup**, muscleups |
+| Rope Climbs | rope climb, subida corda | **ropeclimb**, ropeclimbs |
+| Burpee Broad Jump | bbj, burpee broad jump | **burpeebroadjump** |
+| Box Jump Over | bjo, box jump over | **boxjumpover** |
 
-**1. `src/utils/workoutStructures.ts`** — Regex mais flexível
+**Nota**: Shoulder Press já NÃO tem 'ohs' nos aliases (aliases atuais: ohp, overhead press, press militar). Nenhuma correção necessária.
 
-Mudar `\s+` para `\s*` nos padrões plain text:
-- `PLAIN_ROUNDS_PATTERN`: `/^(\d+)\s*Rounds?\s*$/i` (aceita "2rounds", "2 rounds", "2ROUNDS")
-- `ROUNDS_PATTERN` (wrapped): `/^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i`
-
-**2. `src/utils/blockDisplayUtils.ts`** — Duas mudanças
-
-a) **`STRUCTURAL_LINE_PATTERNS`** (linha 395): Mudar `\s+` para `\s*`:
-```
-/^\d+\s*Rounds?\s*$/i
-```
-
-b) **`normalizeStructureLabel`** (linhas 86-97): Expandir para aceitar plain text, retornando o label formatado corretamente:
-- Se `**2 ROUNDS**` → retorna `"2 ROUNDS"` (já funciona)
-- Se `2rounds` → retorna `"2 ROUNDS"` (novo)
-- Se `EMOM20` → retorna `"EMOM 20"` (novo)
-
-A função passa a usar `parseStructureLine` do `workoutStructures.ts` para detectar plain text, e formata o label para display limpo. Isso garante que na UI sempre aparece a melhor sintaxe possível (ex: "2 ROUNDS" com badge laranja), independente de como o coach escreveu.
-
-### Resultado
-- Coach escreve `2rounds` → motor reconhece como MULTIPLIER com value=2 → cálculos corretos
-- UI mostra badge laranja **2 ROUNDS** (formatado bonito)
-- Nenhuma mudança de banco, design, ou fluxo do coach
+### Execução
+- 24 statements UPDATE via ferramenta de insert, cada um adicionando aliases com `array_cat`
+- Zero mudanças em código ou schema
+- Efeito imediato: a Edge Function `parse-workout-blocks` busca `global_exercises` a cada chamada, então os novos aliases são usados na próxima interpretação
 
