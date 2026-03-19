@@ -238,7 +238,7 @@ export function WeeklyTrainingView() {
               // PRIORIDADE: usar parsedExercises quando disponíveis (dados da IA)
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
               const parsedMetrics = hasParsedData 
-                ? computeBlockMetrics(block.parsedExercises!, { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex }, block.content)
+                ? computeBlockMetrics(block.parsedExercises!, { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex }, block.content, block.title)
                 : null;
               
               const estimatedKcal = parsedMetrics?.estimatedKcal || blockEstimate?.estimatedKcal || 0;

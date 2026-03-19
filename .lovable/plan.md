@@ -1,30 +1,28 @@
 
 
-## Plano: Conversão distância→reps para exercícios vertical_work
+## Plano: AMRAP/EMOM — Detecção de tempo fixo no motor de cálculo
 
-### Problema
-Quando o coach escreve "20m Lunges", a IA retorna `distanceMeters: 20` e `reps: undefined`. O motor de cálculo usa `reps || 1`, resultando em 1 rep ao invés de ~50. Tempo e calorias ficam absurdamente baixos.
+### Problema resolvido
+Quando o coach escreve "AMRAP 15'" (seja no título ou no conteúdo do bloco), o motor calculava apenas o tempo de 1 round (~2 min) ao invés de 15 minutos. Calorias também ficavam subestimadas.
 
-### Correção
+### Correção implementada
 
-**Arquivo**: `src/utils/computeBlockKcalFromParsed.ts` — função `computeExerciseKcal`
+**Arquivo**: `src/utils/computeBlockKcalFromParsed.ts`
 
-Na linha 85, onde hoje temos:
-```
-const reps = exercise.reps || 1;
-```
+1. Nova função `detectFixedTimeMinutes(blockContent?, blockTitle?)`:
+   - Analisa linhas do conteúdo com `parseStructureLine()` buscando `FIXED_TIME`
+   - Se não encontrar no conteúdo, faz fallback para o título do bloco
+   - Retorna minutos ou null
 
-Adicionar lógica: se o padrão é `vertical_work`, não há `reps`, mas há `distanceMeters`, converter distância em reps equivalentes dividindo pela distância padrão do pattern (`defaultDistanceMeters`).
+2. `computeBlockMetrics` agora aceita `blockTitle?: string` como 4º parâmetro:
+   - Após calcular tempo e kcal normais (1 round), verifica se há FIXED_TIME
+   - Se sim: `estimatedDurationSec = fixedTimeMinutes * 60`
+   - Escala kcal: `totalKcal *= (fixedTimeSec / totalDurationSec)`
 
-Exemplo: 20m Lunge → `20 / 0.4 = 50 reps`. 10m Broad Jump → `10 / 0.3 = 33 reps`.
-
-Se o padrão é `horizontal_friction` ou `metabolic` e tem `distanceMeters`, usar a distância diretamente (já funciona hoje).
-
-**Arquivo**: `src/utils/energyCalculator.ts` — função `calculateExerciseKcal`
-
-Aplicar a mesma lógica no caso `vertical_work`: se `repsOrDistance` veio de `distanceMeters` e o pattern é vertical_work, converter metros em reps equivalentes.
+**Arquivo**: `src/components/WeeklyTrainingView.tsx`
+- Chamada atualizada para passar `block.title` como 4º argumento
 
 ### Escopo
-- 2 arquivos modificados, ~10 linhas cada
-- Zero mudanças no banco, parser ou UI
-
+- 2 arquivos modificados
+- Zero mudanças no banco de dados
+- Funciona para AMRAP e EMOM, tanto no título quanto no conteúdo
