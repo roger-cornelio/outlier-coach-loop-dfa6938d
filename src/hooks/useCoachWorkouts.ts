@@ -155,7 +155,7 @@ async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResul
   }
 
   const response = await callParseWorkoutBlocks(
-    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content }))
+    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content, title: b.title }))
   );
 
   if (response.error) {
