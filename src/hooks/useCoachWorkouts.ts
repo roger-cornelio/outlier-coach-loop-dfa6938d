@@ -132,7 +132,7 @@ async function callParseWorkoutBlocks(
  */
 async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResult> {
   // Coletar blocos que precisam de validação (excluir notas e dias de descanso)
-  const blocksToValidate: { blockId: string; blockType: string; content: string; dayIndex: number; blockIndex: number }[] = [];
+  const blocksToValidate: { blockId: string; blockType: string; content: string; title?: string; dayIndex: number; blockIndex: number }[] = [];
   
   workoutData.forEach((day, dayIdx) => {
     if (day.isRestDay) return;
