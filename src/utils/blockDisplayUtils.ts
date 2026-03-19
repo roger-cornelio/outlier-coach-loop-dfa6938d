@@ -93,6 +93,22 @@ export function normalizeStructureLabel(raw: string | null | undefined): string 
     return match[1].trim();
   }
   
+  // Tentar detectar plain text (sem ** **) via parseStructureLine
+  const structure = parseStructureLine(trimmed);
+  if (structure) {
+    // Formatar label limpo a partir da estrutura detectada
+    if (structure.type === 'MULTIPLIER' && structure.value) {
+      return `${structure.value} ROUNDS`;
+    }
+    if (structure.type === 'FIXED_TIME' && structure.value) {
+      const isEmom = structure.tag.includes('EMOM');
+      return isEmom ? `EMOM ${structure.value}'` : `AMRAP ${structure.value}'`;
+    }
+    if (structure.type === 'DERIVED_TIME') {
+      return 'FOR TIME';
+    }
+  }
+  
   return null;
 }
 
