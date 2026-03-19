@@ -101,59 +101,79 @@ ${dictLines}
 ## MOVEMENT PATTERN DICTIONARY (use as fallback for unknown exercises):
 ${patternLines}
 
-## RULES:
+## CRITICAL RULES — SINGLE SOURCE OF TRUTH:
 
-1. For each block of text, extract exercises with: slug, name, sets, reps, loadKg (if mentioned), loadDisplay (subjective text like "RPE 8"), intensityType, intensityValue, durationSeconds (for timed exercises), distanceMeters (for runs/rows), restSeconds.
+The AI is a TRANSLATOR. The calculation engine is the CALCULATOR.
+You MUST follow these rules to avoid double-counting:
 
-2. **SLUG MATCHING**: Match exercises to dictionary slugs using name OR aliases. Case-insensitive. If the exercise doesn't match any known slug, create a descriptive slug (lowercase, underscored) and set movementPatternSlug to the closest biomechanical pattern (squat, hinge, pull, push, carry, core, cardio, etc.).
+### ROUNDS (MULTIPLIER blocks):
+- When the coach writes "3 rounds de..." or the block title says "3 ROUNDS", return each exercise with sets=1.
+- The engine will apply the round multiplier. Do NOT multiply sets by rounds.
 
-3. **ANTI-HALLUCINATION RULE**: If the text contains NO recognizable physical exercises, movement patterns, or is just a free-text message/note/nonsense, DO NOT INVENT DATA. Return parsedExercises as an EMPTY ARRAY []. Examples of non-exercise text: "Descanso hoje", "Boa semana galera!", "Lembrem de trazer toalha".
+### AMRAP / EMOM (FIXED_TIME blocks):
+- Do NOT distribute durationSeconds across exercises.
+- Return ONLY reps, load, and movement pattern for each exercise. Omit durationSeconds.
+- The engine owns the fixed time from the title and calculates estimated rounds internally.
 
-4. **LOAD PARSING**: 
+### STRENGTH (traditional):
+- Return sets, reps, and load as the coach wrote them. No changes.
+
+### TABATA:
+- Default: 8 rounds × 20s work / 10s rest per exercise (unless coach specifies otherwise).
+- Return sets=8, durationSeconds=20, restSeconds=10 per exercise.
+
+### CARDIO:
+- Return durationSeconds and/or distanceMeters as written. No changes.
+
+## GENERAL RULES:
+
+1. **SLUG MATCHING**: Match exercises to dictionary slugs using name OR aliases. Case-insensitive. If no match, create a descriptive slug and set movementPatternSlug to the closest biomechanical pattern.
+
+2. **ANTI-HALLUCINATION RULE**: If the text contains NO recognizable physical exercises, return parsedExercises as an EMPTY ARRAY [].
+
+3. **LOAD PARSING**: 
    - Explicit kg/lb → convert to loadKg
    - "RPE X" or "PSE X" → intensityType: "rpe" or "pse", intensityValue: X
    - "Zona X" → intensityType: "zone", intensityValue: X
    - "Carga moderada", "Pesado" → loadDisplay only, no loadKg
-   - HYROX standard weights: use defaults based on division (men 20kg, women 16kg for wall balls, etc.)
 
-5. **FORMAT RECOGNITION**: Handle these common patterns:
+4. **FORMAT RECOGNITION**: Handle these common patterns:
    - "4x8" = 4 sets of 8 reps
    - "3x10-12" = 3 sets of 10 reps (use lower bound)
-   - "5 rounds of..." = 5 sets
-   - "AMRAP 12min" = durationSeconds: 720
-   - "EMOM 10min" = durationSeconds: 600
+   - "5 rounds of..." = sets=1 per exercise (engine multiplies)
+   - "AMRAP 12min" = do NOT set durationSeconds on exercises
+   - "EMOM 10min" = do NOT set durationSeconds on exercises
    - "400m run" = distanceMeters: 400
    - "1km row" = distanceMeters: 1000
    - "30s plank" = durationSeconds: 30
    - "Rest 60s" or "Descanso 1min" = restSeconds: 60
 
-6. **TABATA FORMAT**: Tabata is a classic HIIT protocol. When a block is labeled "Tabata" and the coach does NOT specify custom work/rest intervals or duration:
-   - Default: 8 rounds × 20 seconds work / 10 seconds rest = 4 minutes total per exercise
-   - Each exercise in the block gets: sets=8, durationSeconds=20, restSeconds=10
-   - If the coach specifies different times (e.g., "Tabata 30/15" or "Tabata 6 rounds"), use the coach's values instead
-   - Total block time = number of exercises × 4 minutes (when using defaults)
+5. **EXERCISE ORDER**: Maintain the exact order exercises appear in the text.
 
 ## FEW-SHOT EXAMPLES:
 
-Input: "Front Squat 4x8 @50kg - descanso 90s"
+Input block title: "Força", content: "Front Squat 4x8 @50kg - descanso 90s"
 Output: [{"slug":"front_squat","name":"Front Squat","movementPatternSlug":"squat","sets":4,"reps":8,"loadKg":50,"restSeconds":90}]
 
-Input: "3 rounds: 400m Run + 21 KB Swings (24kg) + 12 Pull-ups"
-Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":3,"distanceMeters":400},{"slug":"kb_swings","name":"Kettlebell Swings","movementPatternSlug":"hinge","sets":3,"reps":21,"loadKg":24},{"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":3,"reps":12}]
+Input block title: "3 ROUNDS", content: "400m Run + 21 KB Swings (24kg) + 12 Pull-ups"
+Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"distanceMeters":400},{"slug":"kb_swings","name":"Kettlebell Swings","movementPatternSlug":"hinge","sets":1,"reps":21,"loadKg":24},{"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":1,"reps":12}]
 
-Input: "EMOM 12min: Min 1 - 15 Wall Balls (9kg), Min 2 - 12 Burpees"
-Output: [{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":6,"reps":15,"loadKg":9,"durationSeconds":720},{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":6,"reps":12}]
+Input block title: "AMRAP 15'", content: "10 Burpees + 15 Wall Balls (9kg)"
+Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":1,"reps":10},{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"reps":15,"loadKg":9}]
 
-Input: "Hoje é dia de descanso ativo. Alongamento livre."
+Input block title: "EMOM 12min", content: "Min 1 - 15 Wall Balls (9kg), Min 2 - 12 Burpees"
+Output: [{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"reps":15,"loadKg":9},{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":1,"reps":12}]
+
+Input block title: "Descanso", content: "Hoje é dia de descanso ativo. Alongamento livre."
 Output: []
 
-Input: "Corrida contínua 30min Z2"
+Input block title: "Cardio", content: "Corrida contínua 30min Z2"
 Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","durationSeconds":1800,"intensityType":"zone","intensityValue":2}]
 
-Input: "Tabata\n- Burpees\n- Air Squats"
+Input block title: "Tabata", content: "- Burpees\\n- Air Squats"
 Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":8,"durationSeconds":20,"restSeconds":10},{"slug":"air_squats","name":"Air Squats","movementPatternSlug":"squat","sets":8,"durationSeconds":20,"restSeconds":10}]
 
-Input: "Tabata 30/15 - 6 rounds\n- KB Swings"
+Input block title: "Tabata 30/15 - 6 rounds", content: "- KB Swings"
 Output: [{"slug":"kb_swings","name":"KB Swings","movementPatternSlug":"hinge","sets":6,"durationSeconds":30,"restSeconds":15}]
 
 ## OUTPUT FORMAT:
