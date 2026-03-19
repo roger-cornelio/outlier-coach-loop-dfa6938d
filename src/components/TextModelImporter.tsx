@@ -113,6 +113,7 @@ function deriveWeekPeriod(weekStart: string): WeekPeriod {
 export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, initialWorkout, onClearInitialWorkout }: TextModelImporterProps) {
   const { submitSuggestion, submitting: suggestSubmitting, submitted: suggestedExercises } = useExerciseSuggestionSubmit();
   const { toast } = useToast();
+  const { exercises: exerciseLibrary } = useExerciseLibrary();
   // ═══════════════════════════════════════════════════════════════════════════
   // HOOK DE DRAFT PERSISTENTE (ÚNICA FONTE DE VERDADE)
   // ═══════════════════════════════════════════════════════════════════════════
