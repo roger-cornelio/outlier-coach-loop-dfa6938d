@@ -11,6 +11,7 @@
 import type { AthleteConfig, WorkoutBlock, DayWorkout, AthleteLevel } from '@/types/outlier';
 import { getActiveParams, getLevelSpeedKmh, getNumericParam } from '@/config/outlierParams';
 import { getEffectiveDuration } from '@/utils/benchmarkVariants';
+import { parseRoundGroups } from '@/utils/workoutStructures';
 
 // ============================================
 // TIPOS
