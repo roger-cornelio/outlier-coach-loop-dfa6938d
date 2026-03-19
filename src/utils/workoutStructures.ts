@@ -322,6 +322,103 @@ export function getStructureDescription(structures: WorkoutStructure[]): string 
 }
 
 // ============================================
+// ROUND GROUPS - Semântica de múltiplos rounds
+// ============================================
+
+/**
+ * Um grupo de exercícios com seu multiplicador de rounds.
+ * Cada marcador de rounds "pertence" aos exercícios imediatamente abaixo,
+ * até o próximo marcador ou o fim do bloco.
+ */
+export interface RoundGroup {
+  multiplier: number; // 1 se não houver marcador
+  exerciseLines: string[];
+}
+
+/**
+ * Divide o conteúdo de um bloco em grupos de rounds.
+ * 
+ * Regra: cada **N ROUNDS** se aplica apenas aos exercícios
+ * que vêm logo abaixo dele, até o próximo marcador ou fim do bloco.
+ * Exercícios antes do primeiro marcador ficam com multiplicador 1.
+ * 
+ * @param content - Texto bruto do bloco (com \n)
+ * @returns Lista de RoundGroup
+ */
+export function parseRoundGroups(content: string): RoundGroup[] {
+  if (!content) return [];
+
+  const lines = content.split('\n');
+  const groups: RoundGroup[] = [];
+  let currentMultiplier = 1;
+  let currentExercises: string[] = [];
+  let hasSeenMultiplier = false;
+
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+
+    // Tentar parsear como estrutura
+    const structure = parseStructureLine(trimmed);
+
+    if (structure && structure.type === 'MULTIPLIER' && structure.value) {
+      // Flush exercícios acumulados do grupo anterior
+      if (currentExercises.length > 0) {
+        groups.push({ multiplier: currentMultiplier, exerciseLines: currentExercises });
+        currentExercises = [];
+      }
+      currentMultiplier = structure.value;
+      hasSeenMultiplier = true;
+      continue;
+    }
+
+    // Ignorar FIXED_TIME / DERIVED_TIME structures para agrupamento
+    if (structure) continue;
+
+    // Linhas de exercício (com ou sem hífen)
+    const isExercise = trimmed.startsWith('- ') || trimmed.startsWith('-') ||
+      /^\d/.test(trimmed) || (!trimmed.startsWith('(') && !trimmed.startsWith('>'));
+
+    // Ignorar linhas DSL, separadores, comentários puros
+    if (/^(DIA:|BLOCO:)/i.test(trimmed)) continue;
+    if (/^[⸻─]{3,}/.test(trimmed)) continue;
+    if (/^\([^)]*\)$/.test(trimmed)) continue;
+    if (/^>?\s*COMENT[ÁA]RIO$/i.test(trimmed)) continue;
+
+    if (isExercise) {
+      currentExercises.push(trimmed);
+    }
+  }
+
+  // Flush último grupo
+  if (currentExercises.length > 0) {
+    groups.push({ multiplier: currentMultiplier, exerciseLines: currentExercises });
+  }
+
+  return groups;
+}
+
+/**
+ * Retorna o multiplicador total efetivo de rounds para um bloco.
+ * Para blocos com múltiplos grupos, retorna a média ponderada
+ * (para compatibilidade com código legado que espera um único número).
+ * 
+ * Para cálculos precisos, use parseRoundGroups() diretamente.
+ */
+export function getEffectiveRoundsMultiplier(content: string): number {
+  const groups = parseRoundGroups(content);
+  if (groups.length === 0) return 1;
+  if (groups.length === 1) return groups[0].multiplier;
+
+  // Múltiplos grupos: retornar média ponderada por número de exercícios
+  const totalLines = groups.reduce((sum, g) => sum + g.exerciseLines.length, 0);
+  if (totalLines === 0) return 1;
+
+  const weightedSum = groups.reduce((sum, g) => sum + g.multiplier * g.exerciseLines.length, 0);
+  return Math.round(weightedSum / totalLines);
+}
+
+// ============================================
 // HELPER: Parsear tags armazenadas
 // ============================================
 

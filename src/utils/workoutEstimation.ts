@@ -137,16 +137,38 @@ function estimateForTimeMinutes(content: string, level: AthleteLevel): number {
     `levelMultiplier.${level}`
   );
   
+  // ════════════════════════════════════════════════════════════════════════════
+  // ROUND GROUPS: Cada marcador de rounds multiplica APENAS seus exercícios
+  // ════════════════════════════════════════════════════════════════════════════
+  const roundGroups = parseRoundGroups(content);
+  
+  if (roundGroups.length > 0) {
+    let totalMinutes = 0;
+    
+    for (const group of roundGroups) {
+      const groupLines = group.exerciseLines;
+      let groupBaseMinutes = Math.max(2, groupLines.length * 2.5);
+      
+      // Checar distância dentro do grupo
+      const groupContent = groupLines.join('\n');
+      const distance = extractDistanceKm(groupContent);
+      if (distance && distance >= 1) {
+        const speedKmh = getLevelSpeedKmh(level);
+        const runMinutes = (distance / speedKmh) * 60;
+        groupBaseMinutes = Math.max(groupBaseMinutes, runMinutes);
+      }
+      
+      totalMinutes += groupBaseMinutes * group.multiplier;
+    }
+    
+    return Math.round(Math.max(8, totalMinutes) * levelMultiplier);
+  }
+  
+  // Fallback legado (sem round groups detectados)
   const lines = content.split('\n').filter(l => l.trim().length > 0);
   const componentCount = lines.length;
   
   let baseMinutes = Math.max(8, componentCount * 2.5);
-  
-  const roundsMatch = content.toLowerCase().match(/(\d+)\s*(rounds?|rondas?)/);
-  if (roundsMatch) {
-    const rounds = parseInt(roundsMatch[1]);
-    baseMinutes = Math.max(baseMinutes, rounds * 2);
-  }
   
   const distance = extractDistanceKm(content);
   if (distance && distance >= 1) {
