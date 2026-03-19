@@ -142,6 +142,7 @@ async function runGatekeeper(workoutData: DayWorkout[]): Promise<GatekeeperResul
         blockId: block.id,
         blockType: block.type,
         content: block.content || '',
+        title: block.title || undefined,
         dayIndex: dayIdx,
         blockIndex: blockIdx,
       });
