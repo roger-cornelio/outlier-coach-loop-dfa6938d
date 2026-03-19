@@ -50,7 +50,7 @@ export interface StructureValidationError {
  * Padrão para N ROUNDS dentro de ** **
  * Exemplos: **3 ROUNDS**, **5 rounds**, **10 Rounds**
  */
-const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s+Rounds?\s*\*\*$/i;
+const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i;
 
 /**
  * Padrão para EMOM dentro de ** **
