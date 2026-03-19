@@ -1435,10 +1435,27 @@ BLOCO: DESCANSO
                                   {/* Conteúdo do bloco - SEM REPARSE (usa dados já parseados) */}
                                   {(() => {
                                     // ════════════════════════════════════════════════════════════════════════════
-                                    // MVP0 REGRA: Usar getBlockDisplayDataFromParsed (SEM REPARSE)
-                                    // Alertas de validação vêm do parseResult.structureIssues, não de reparse
+                                    // MVP0 REGRA: Usar rawLines (string[]) para preservar ordem do coach
+                                    // ParsedBlock.lines é ParsedLine[] que agrupa structures antes de exercises
+                                    // rawLines mantém a intercalação original (ex: 2R, ex, ex, 2R, ex, ex)
                                     // ════════════════════════════════════════════════════════════════════════════
-                                    const displayData = getBlockDisplayDataFromParsed(block);
+                                    const titleNorm = block.title ? normalizeText(block.title) : '';
+                                    const filteredRaw = Array.isArray(block.rawLines) && block.rawLines.length > 0
+                                      ? block.rawLines.filter((l: string) => {
+                                          const t = l.trim();
+                                          if (!t) return false;
+                                          if (titleNorm && normalizeText(t) === titleNorm) return false;
+                                          if (/^DIA:\s*/i.test(t)) return false;
+                                          if (/^BLOCO:\s*/i.test(t)) return false;
+                                          if (/^\(.*\)$/.test(t)) return false;
+                                          if (/^>\s/.test(t)) return false;
+                                          return true;
+                                        })
+                                      : null;
+                                    const displayBlock = filteredRaw && filteredRaw.length > 0
+                                      ? { lines: filteredRaw, coachNotes: block.coachNotes, content: undefined }
+                                      : block;
+                                    const displayData = getBlockDisplayDataFromParsed(displayBlock);
                                     
                                     
                                     // Estado de expansão por bloco (usando key único)
