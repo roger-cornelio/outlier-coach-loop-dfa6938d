@@ -178,17 +178,19 @@ export function computeBlockMetrics(
   parsedExercises: ParsedExercise[],
   biometrics: BiometricData,
   blockContent?: string,
+  blockTitle?: string,
 ): ComputedBlockMetrics {
   if (!parsedExercises || !Array.isArray(parsedExercises) || parsedExercises.length === 0) {
     return {};
   }
 
-  // Blindar peso (CENÁRIO 1: NaN silencioso)
   const safeBiometrics = { ...biometrics, pesoKg: safePesoKg(biometrics.pesoKg) };
 
   // ════════════════════════════════════════════════════════════════════════════
-  // ROUND GROUPS: Calcular multiplicador por exercício baseado na posição
+  // FIXED_TIME DETECTION: Detectar AMRAP/EMOM no título OU conteúdo
   // ════════════════════════════════════════════════════════════════════════════
+  const fixedTimeMinutes = detectFixedTimeMinutes(blockContent, blockTitle);
+
   const exerciseMultipliers = buildExerciseMultiplierMap(parsedExercises, blockContent);
 
   let totalKcal = 0;
@@ -202,14 +204,8 @@ export function computeBlockMetrics(
     const exercise = parsedExercises[i];
     const roundMultiplier = exerciseMultipliers[i] || 1;
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ANTI-DUPLA-CONTAGEM: Se o roundGroup detectou multiplicador > 1 E
-    // a IA já embutiu rounds nos sets, usar APENAS o roundGroup multiplier.
-    // A fonte de verdade para rounds é o parseRoundGroups, não a IA.
-    // ════════════════════════════════════════════════════════════════════════
     let effectiveExercise = exercise;
     if (roundMultiplier > 1 && (exercise.sets || 1) > 1) {
-      // IA já converteu "N ROUNDS" em sets:N — resetar para 1
       effectiveExercise = { ...exercise, sets: 1 };
     }
 
@@ -226,6 +222,21 @@ export function computeBlockMetrics(
     }
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // FIXED_TIME OVERRIDE: Se AMRAP/EMOM detectado, forçar duração fixa e
+  // escalar calorias proporcionalmente aos rounds estimados.
+  // ════════════════════════════════════════════════════════════════════════════
+  if (fixedTimeMinutes && fixedTimeMinutes > 0) {
+    const fixedTimeSec = fixedTimeMinutes * 60;
+
+    if (totalDurationSec > 0) {
+      const scaleFactor = fixedTimeSec / totalDurationSec;
+      totalKcal = Math.round(totalKcal * scaleFactor);
+    }
+
+    totalDurationSec = fixedTimeSec;
+  }
+
   return {
     estimatedKcal: Math.round(totalKcal),
     estimatedDurationSec: Math.round(totalDurationSec),
@@ -234,6 +245,31 @@ export function computeBlockMetrics(
     avgIntensity: intensityCount > 0 ? Math.round((intensitySum / intensityCount) * 10) / 10 : undefined,
     computedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Detecta tempo fixo (AMRAP/EMOM) a partir do conteúdo e/ou título do bloco.
+ * Prioridade: conteúdo > título (conteúdo é mais específico).
+ */
+function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): number | null {
+  if (blockContent) {
+    const lines = blockContent.split('\n');
+    for (const line of lines) {
+      const structure = parseStructureLine(line);
+      if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
+        return structure.value;
+      }
+    }
+  }
+
+  if (blockTitle) {
+    const structure = parseStructureLine(blockTitle);
+    if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
+      return structure.value;
+    }
+  }
+
+  return null;
 }
 
 /**
