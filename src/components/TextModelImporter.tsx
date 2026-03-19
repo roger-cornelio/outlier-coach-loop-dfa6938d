@@ -443,6 +443,24 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
         setCoverageReport(coverage);
         setShowCoverageBadge(true);
 
+        // Fuzzy matching de exercícios contra dicionário global
+        if (exerciseLibrary.length > 0) {
+          const dict = exerciseLibrary.map(ex => ({
+            name: ex.name,
+            aliases: [] as string[], // aliases já estão no name matching
+          }));
+          const allTypoWarnings: ExerciseTypoWarning[] = [];
+          for (let dayIdx = 0; dayIdx < result.days.length; dayIdx++) {
+            const day = result.days[dayIdx];
+            for (const block of day.blocks) {
+              const blockLines = (block.rawLines || block.lines?.map(l => l.text) || []).filter(Boolean);
+              const warnings = detectExerciseTypos(blockLines as string[], dict, block.title || 'Bloco', dayIdx);
+              allTypoWarnings.push(...warnings);
+            }
+          }
+          setExerciseTypoWarnings(allTypoWarnings);
+        }
+
         patchDraft({
           parseResult: result,
           parsedDays: workouts,
