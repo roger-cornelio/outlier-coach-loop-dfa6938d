@@ -183,12 +183,24 @@ export function computeBlockMetrics(
   for (let i = 0; i < parsedExercises.length; i++) {
     const exercise = parsedExercises[i];
     const roundMultiplier = exerciseMultipliers[i] || 1;
-    const { kcal, durationSec } = computeExerciseKcal(exercise, safeBiometrics);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // ANTI-DUPLA-CONTAGEM: Se o roundGroup detectou multiplicador > 1 E
+    // a IA já embutiu rounds nos sets, usar APENAS o roundGroup multiplier.
+    // A fonte de verdade para rounds é o parseRoundGroups, não a IA.
+    // ════════════════════════════════════════════════════════════════════════
+    let effectiveExercise = exercise;
+    if (roundMultiplier > 1 && (exercise.sets || 1) > 1) {
+      // IA já converteu "N ROUNDS" em sets:N — resetar para 1
+      effectiveExercise = { ...exercise, sets: 1 };
+    }
+
+    const { kcal, durationSec } = computeExerciseKcal(effectiveExercise, safeBiometrics);
     
     totalKcal += kcal * roundMultiplier;
     totalDurationSec += durationSec * roundMultiplier;
-    totalSets += (exercise.sets || 0) * roundMultiplier;
-    totalReps += ((exercise.sets || 1) * (exercise.reps || 0)) * roundMultiplier;
+    totalSets += (effectiveExercise.sets || 0) * roundMultiplier;
+    totalReps += ((effectiveExercise.sets || 1) * (effectiveExercise.reps || 0)) * roundMultiplier;
     
     if (exercise.intensityValue) {
       intensitySum += exercise.intensityValue;
