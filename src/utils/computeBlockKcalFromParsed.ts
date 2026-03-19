@@ -11,7 +11,7 @@
  */
 
 import type { ParsedExercise, ComputedBlockMetrics } from '@/types/outlier';
-import { parseRoundGroups, type RoundGroup } from '@/utils/workoutStructures';
+import { parseRoundGroups, parseStructureLine, type RoundGroup, type WorkoutStructure } from '@/utils/workoutStructures';
 
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
