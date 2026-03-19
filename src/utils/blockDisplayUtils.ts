@@ -113,8 +113,9 @@ export function normalizeStructureLabel(raw: string | null | undefined): string 
 }
 
 /**
- * Verifica se uma linha é uma estrutura entre ** **.
+ * Verifica se uma linha é uma estrutura (** ** ou plain text).
  * Ex: "**3 ROUNDS**" → true
+ *     "2rounds" → true
  *     "AQUECIMENTO" → false
  */
 export function isStructureLine(raw: string | null | undefined): boolean {
