@@ -50,7 +50,7 @@ export interface StructureValidationError {
  * Padrão para N ROUNDS dentro de ** **
  * Exemplos: **3 ROUNDS**, **5 rounds**, **10 Rounds**
  */
-const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s+Rounds?\s*\*\*$/i;
+const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i;
 
 /**
  * Padrão para EMOM dentro de ** **
@@ -78,10 +78,10 @@ const STRUCTURE_WRAPPER_PATTERN = /^\*\*.*\*\*$/;
 // ────────────────────────────────────────────────────────────
 // Padrões PLAIN TEXT (sem ** **) — aceita coaches sem markdown
 // ────────────────────────────────────────────────────────────
-const PLAIN_ROUNDS_PATTERN = /^(\d+)\s+Rounds?\s*$/i;
-const PLAIN_EMOM_PATTERN = /^EMOM\s+(\d+)\s*['′]?\s*(?:min)?\s*$/i;
-const PLAIN_AMRAP_PATTERN = /^AMRAP\s+(\d+)\s*['′]?\s*(?:min)?\s*$/i;
-const PLAIN_FOR_TIME_PATTERN = /^For\s+Time\s*$/i;
+const PLAIN_ROUNDS_PATTERN = /^(\d+)\s*Rounds?\s*$/i;
+const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['′]?\s*(?:min)?\s*$/i;
+const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['′]?\s*(?:min)?\s*$/i;
+const PLAIN_FOR_TIME_PATTERN = /^For\s*Time\s*$/i;
 
 // ============================================
 // FUNÇÕES DE DETECÇÃO

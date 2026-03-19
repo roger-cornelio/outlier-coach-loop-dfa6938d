@@ -93,12 +93,29 @@ export function normalizeStructureLabel(raw: string | null | undefined): string 
     return match[1].trim();
   }
   
+  // Tentar detectar plain text (sem ** **) via parseStructureLine
+  const structure = parseStructureLine(trimmed);
+  if (structure) {
+    // Formatar label limpo a partir da estrutura detectada
+    if (structure.type === 'MULTIPLIER' && structure.value) {
+      return `${structure.value} ROUNDS`;
+    }
+    if (structure.type === 'FIXED_TIME' && structure.value) {
+      const isEmom = structure.tag.includes('EMOM');
+      return isEmom ? `EMOM ${structure.value}'` : `AMRAP ${structure.value}'`;
+    }
+    if (structure.type === 'DERIVED_TIME') {
+      return 'FOR TIME';
+    }
+  }
+  
   return null;
 }
 
 /**
- * Verifica se uma linha é uma estrutura entre ** **.
+ * Verifica se uma linha é uma estrutura (** ** ou plain text).
  * Ex: "**3 ROUNDS**" → true
+ *     "2rounds" → true
  *     "AQUECIMENTO" → false
  */
 export function isStructureLine(raw: string | null | undefined): boolean {
@@ -392,10 +409,10 @@ const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|
 // Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
 // ═══════════════════════════════════════════════════════════════════════════
 const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
-  /^\d+\s+Rounds?\s*$/i,       // "5 Rounds", "3 rounds" (tolerante a espaços finais)
-  /^EMOM\s+\d+/i,              // "EMOM 30", "EMOM 10'"
-  /^AMRAP\s+\d+/i,             // "AMRAP 15", "AMRAP 20'"
-  /^For\s+Time$/i,             // "For Time"
+  /^\d+\s*Rounds?\s*$/i,       // "5 Rounds", "2rounds", "3 rounds"
+  /^EMOM\s*\d+/i,              // "EMOM 30", "EMOM20", "EMOM 10'"
+  /^AMRAP\s*\d+/i,             // "AMRAP 15", "AMRAP20", "AMRAP 20'"
+  /^For\s*Time$/i,             // "For Time", "ForTime"
   /^RFT$/i,                    // "RFT" (Rounds For Time)
   /^Tabata$/i,                 // "Tabata"
   /^E\d+M(?:OM)?$/i,           // "E2MOM", "E3MOM"

@@ -91,6 +91,31 @@ describe('workoutStructures', () => {
       expect(parseStructureLine('For Time')?.type).toBe('DERIVED_TIME');
     });
 
+    it('deve parsear linhas SEM espaço (2rounds, EMOM20, AMRAP15)', () => {
+      const r1 = parseStructureLine('2rounds');
+      expect(r1).not.toBeNull();
+      expect(r1?.type).toBe('MULTIPLIER');
+      expect(r1?.value).toBe(2);
+
+      const r2 = parseStructureLine('3Rounds');
+      expect(r2?.type).toBe('MULTIPLIER');
+      expect(r2?.value).toBe(3);
+
+      const e1 = parseStructureLine('EMOM20');
+      expect(e1).not.toBeNull();
+      expect(e1?.type).toBe('FIXED_TIME');
+      expect(e1?.value).toBe(20);
+
+      const a1 = parseStructureLine('AMRAP15');
+      expect(a1).not.toBeNull();
+      expect(a1?.type).toBe('FIXED_TIME');
+      expect(a1?.value).toBe(15);
+
+      const ft = parseStructureLine('ForTime');
+      expect(ft).not.toBeNull();
+      expect(ft?.type).toBe('DERIVED_TIME');
+    });
+
     it('não deve parsear texto que não é estrutura', () => {
       expect(parseStructureLine('12 Back Squat')).toBeNull();
       expect(parseStructureLine('400m Run')).toBeNull();
