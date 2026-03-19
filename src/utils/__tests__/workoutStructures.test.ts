@@ -114,6 +114,7 @@ describe('workoutStructures', () => {
       const ft = parseStructureLine('ForTime');
       expect(ft).not.toBeNull();
       expect(ft?.type).toBe('DERIVED_TIME');
+    });
 
     it('não deve parsear texto que não é estrutura', () => {
       expect(parseStructureLine('12 Back Squat')).toBeNull();
