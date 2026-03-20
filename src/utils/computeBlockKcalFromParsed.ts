@@ -16,16 +16,37 @@ import { parseRoundGroups, parseStructureLine, type RoundGroup, type WorkoutStru
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
 
-// MET values para exercícios metabólicos/cardio
+// ════════════════════════════════════════════════════════════════════════
+// ACSM STANDARD: 1.03 kcal/kg/km para cardio distance-based
+// ════════════════════════════════════════════════════════════════════════
+const ACSM_KCAL_PER_KG_PER_KM = 1.03;
+
+// Slugs que são DISTANCE-BASED cardio (usam ACSM)
+const DISTANCE_BASED_CARDIO_SLUGS = new Set([
+  'running', 'rowing', 'ski_erg', 'distance_cardio',
+]);
+
+// Ritmos médios por modalidade (segundos por km)
+const CARDIO_PACE_SEC_PER_KM: Record<string, number> = {
+  running: 360,        // 6:00/km
+  rowing: 240,         // 2:00/500m → 4:00/km
+  ski_erg: 280,        // 2:20/500m → 4:40/km
+  distance_cardio: 360, // default = corrida
+};
+
+// Slugs que são MACHINE/CAL-BASED (mantém MET)
+const MACHINE_BASED_CARDIO_SLUGS = new Set([
+  'assault_bike', 'bike', 'cardio',
+]);
+
+// MET values para exercícios metabólicos que NÃO são distance-based
 const METABOLIC_METS: Record<string, number> = {
-  running: 9.8,
-  distance_cardio: 8.0,
-  cardio: 7.0,
-  rowing: 7.0,
-  ski_erg: 6.5,
   assault_bike: 8.5,
+  bike: 7.0,
+  cardio: 7.0,
   burpees: 8.0,
   total_body_plyo: 8.0,
+  isometric: 3.0,
 };
 
 // Dados default de movement patterns (fallback quando DB não disponível)
@@ -51,9 +72,10 @@ const DEFAULT_PATTERN_DATA: Record<string, {
   horizontal_friction: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   horizontal_sled: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   total_body_plyo: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.3, humanEfficiencyRate: 0.18, defaultSecondsPerRep: 3 },
-  isometric: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
+  isometric: { formulaType: 'metabolic', movedMassPercentage: 0.30, defaultDistanceMeters: 0, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   distance_cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
+  assault_bike: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
 };
 
 interface BiometricData {
