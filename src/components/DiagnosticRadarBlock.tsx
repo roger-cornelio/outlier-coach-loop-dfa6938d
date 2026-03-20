@@ -1284,7 +1284,7 @@ function MobilePhysiologicalModal({
 
 
 
-}: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;}) {
+}: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
