@@ -1,23 +1,36 @@
-## Plano: Fonte Única de Verdade — IA Traduz, Motor Calcula
 
-### Status: ✅ IMPLEMENTADO (94.4% coerência no teste E2E)
+
+## Plano: Feedback Local Sempre Específico (Nunca Genérico)
+
+### Problema
+O feedback cai em mensagens genéricas em dois cenários:
+1. **Sem dados de tempo**: quando o atleta completa mas não registra tempo, o bucket sempre retorna `OK` → mensagem vaga
+2. **Granularidade perdida**: 5 buckets (ELITE/STRONG/OK/TOUGH/DNF) são mapeados em apenas 3 categorias de texto (great/goodButMore/bad), fazendo ELITE e STRONG darem a mesma mensagem
+
+### Solução
+
+**1. Expandir as categorias de feedback no `coachCopy.ts`**
+- Adicionar 2 novas categorias à interface `feedback`: `elite` e `tough` (total: 6 categorias: `elite`, `great`, `goodButMore`, `tough`, `bad`, `missed`)
+- Escrever frases específicas para cada coach (IRON/PULSE/SPARK) em cada nova categoria
+  - `elite`: frases de reconhecimento máximo ("performance acima do topo", etc.)
+  - `tough`: frases de encorajamento para dia difícil mas com presença ("dia duro, mas você estava lá")
+
+**2. Refinar o mapeamento `getBucketFeedbackCategory`**
+- ELITE → `elite` (não mais agrupado com STRONG)
+- STRONG → `great`
+- OK → `goodButMore`
+- TOUGH → `tough` (não mais agrupado com DNF)
+- DNF → `bad`
+
+**3. Tratar cenário sem tempo registrado no `classifyPerformanceLocal`**
+- Se completou mas não registrou tempo → bucket `STRONG` (presunção positiva: completou o treino)
+- Se não completou → `DNF`
+- Isso elimina o fallback para `OK` genérico quando falta dado de tempo
 
 ### Arquivos Modificados
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/parse-workout-blocks/index.ts` | Prompt atualizado com regras de fonte única, título no payload, few-shot corrigidos |
-| `src/hooks/useCoachWorkouts.ts` | Payload envia `block.title` para Edge Function |
-| `src/utils/computeBlockKcalFromParsed.ts` | Normalização rounds (sets=1), lógica AMRAP/EMOM com fallback 180s, regex flexível para títulos compostos |
+- `src/config/coachCopy.ts` — nova interface + frases por coach × categoria
+- `src/components/PerformanceFeedback.tsx` — ajuste no `classifyPerformanceLocal`
 
-### Resultado do Teste E2E (8 cenários)
-- **Rounds**: ✅ sets=1 em todos exercícios
-- **AMRAP**: ✅ sets=1, sem durationSeconds
-- **EMOM**: ✅ sets=1, sem durationSeconds  
-- **Força**: ✅ sets/reps preservados (4x6, 3x10)
-- **Tabata**: ✅ sets=8, dur=20
-- **Cardio**: ⚠️ IA omitiu sets (null vs 1) — impacto zero no cálculo (default=1)
-- **AMRAP título composto**: ✅ "AMRAP 15 - Conditioning" reconhecido
-- **Descanso**: ✅ array vazio
+### Resultado
+O atleta **sempre** recebe uma mensagem específica ao seu bucket e ao estilo do coach, nunca mais a frase genérica "Treino registrado. Continue evoluindo."
 
-### Única divergência (1/18)
-Cardio: IA retornou `sets: null` em vez de `sets: 1`. Sem impacto no motor (default é 1).
