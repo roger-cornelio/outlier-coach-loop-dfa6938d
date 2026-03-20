@@ -1,29 +1,41 @@
 
 
-## Plano: Eliminar Feedback Genérico da Edge Function
+## Plano: Adicionar Regra de Descending/Ascending Rep Scheme ao Prompt
 
-### Problema Raiz
-A Edge Function `generate-performance-feedback` tem um `catch` genérico (linha 407-416) que retorna a mensagem hardcoded **"Treino registrado. Continue evoluindo."** com status 200. Como o frontend recebe status 200, ele aceita como sucesso e nunca ativa o fallback local (que já está correto).
+### O que será feito
 
-Além disso, a função `classifyPerformance` na Edge Function retorna `'OK'` para treinos completados sem tempo (linha 44), enquanto o classificador local já foi corrigido para retornar `'STRONG'`.
+Adicionar ao prompt da Edge Function `parse-workout-blocks` uma regra e exemplos para o padrão de **rep scheme decrescente/crescente** (ex: "40,30,20,10" seguido de exercícios).
 
-### Solução
+### Mudanças no arquivo `supabase/functions/parse-workout-blocks/index.ts`
 
-**1. Corrigir o `catch` da Edge Function** (`supabase/functions/generate-performance-feedback/index.ts`)
-- No bloco `catch`, em vez de retornar a mensagem genérica, retornar `{ error: "...", bucket: null, feedback: null }` com **status 500** (ou sem feedback)
-- Isso faz o frontend cair no caminho de erro e usar o fallback local que já tem mensagens específicas por bucket e coach
+**1. Nova regra no FORMAT RECOGNITION (após linha 149)**
+- Reconhecer padrões como "40,30,20,10", "21-15-9", "50-40-30-20-10" seguidos de exercícios
+- Instrução: somar todas as reps (40+30+20+10=100), retornar `reps: soma`, `sets: 1`
+- Guardar o esquema original no campo `notes` (ex: "Rep scheme: 40,30,20,10")
 
-**2. Alinhar `classifyPerformance` da Edge Function**
-- Linha 44: trocar `if (!timeInSeconds) return 'OK'` para `if (!timeInSeconds) return 'STRONG'`
-- Consistência com o classificador local
+**2. Dois exemplos few-shot novos (após os exemplos existentes)**
 
-**3. Verificar autenticação** 
-- O método `supabase.auth.getClaims(token)` pode não existir nesta versão do SDK, causando exceção que cai no `catch` genérico
-- Substituir por `supabase.auth.getUser()` que é o método padrão e estável
+Exemplo 1 — Warm Up decrescente:
+```
+Input: title "Warm Up", content "40,30,20,10\nShoulder Taps\nCalf Raises"
+Output: [
+  {"slug":"shoulder_taps","name":"Shoulder Taps","movementPatternSlug":"core","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"},
+  {"slug":"calf_raises","name":"Calf Raises","movementPatternSlug":"isolation","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"}
+]
+```
 
-### Arquivos Modificados
-- `supabase/functions/generate-performance-feedback/index.ts`
+Exemplo 2 — Fran-style 21-15-9:
+```
+Input: title "WOD", content "21-15-9\nThrusters (43kg)\nPull-ups"
+Output: [
+  {"slug":"thrusters","name":"Thrusters","movementPatternSlug":"squat_vertical_push","sets":1,"reps":45,"loadKg":43,"notes":"Rep scheme: 21-15-9"},
+  {"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":1,"reps":45,"notes":"Rep scheme: 21-15-9"}
+]
+```
 
-### Resultado
-Quando a Edge Function falhar por qualquer motivo, o frontend usará o fallback local com mensagens específicas ao bucket e ao estilo do coach. A mensagem "Treino registrado. Continue evoluindo." nunca mais aparecerá.
+### Arquivo modificado
+- `supabase/functions/parse-workout-blocks/index.ts` — adição de 1 regra + 2 exemplos no prompt
+
+### Risco
+**Zero.** Apenas texto adicional no prompt. Não altera lógica de parsing nem motor de cálculo.
 
