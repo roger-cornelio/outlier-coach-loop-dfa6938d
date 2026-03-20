@@ -2801,7 +2801,7 @@ export function DiagnosticRadarBlock({
                 <AnimatePresence>
                   {showStationDetails &&
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="mt-3 overflow-hidden">
-                      <DiagnosticStationsBars scores={scores} />
+                      <DiagnosticStationsBars scores={scores} splitTimes={splitTimes} />
                     </motion.div>
                   }
                 </AnimatePresence>

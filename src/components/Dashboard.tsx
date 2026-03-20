@@ -373,6 +373,7 @@ export function Dashboard() {
             provaAlvo={provaAlvoInfo}
             provaAlvoTargetTime={provaAlvoTargetTime}
             perfilFisiologico={diagnosticScores.perfilFisiologico}
+            splitTimes={diagnosticScores.splitTimes}
           />
         </section>
 
