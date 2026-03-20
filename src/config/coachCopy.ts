@@ -325,6 +325,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'QUE ISSO?! 🔥🔥🔥 Você tá VOANDO! Performance de outro nível!',
+        'ABSURDO DEMAIS! Isso é elite de verdade! Mantém essa chama!',
+        'SURREAL! Você superou tudo! Tá brilhando! ✨',
+      ],
       great: [
         'VAMO! Você destruiu isso! 🔥',
         'ABSURDO! Você tá virando OUTLIER real!',
@@ -334,6 +339,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Foi bom! Agora bora subir mais um degrau!',
         'Tá quente! No próximo você vai voar!',
         'Curti! Agora mete mais 10%!',
+      ],
+      tough: [
+        'Dia duro, mas você tava lá! Isso já é vitória! 💪',
+        'Nem todo dia é 🔥, mas você não desistiu! Isso é OUTLIER!',
+        'Foi pesado? Beleza. Você apareceu. Isso muda tudo!',
       ],
       bad: [
         'Hoje foi osso? Beleza. Amanhã é revanche!',
