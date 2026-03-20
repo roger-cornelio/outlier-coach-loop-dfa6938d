@@ -12,10 +12,43 @@ import type { ParseResult } from './structuredTextParser';
 import { detectUnits } from './unitDetection';
 import { levenshteinDistance } from './structuredTextParser';
 
+export type UnmatchedCategory = 'new_exercise' | 'uninterpretable';
+
 export interface UnmatchedLine {
   text: string;
   blockTitle: string;
   dayIndex: number;
+  category: UnmatchedCategory;
+}
+
+/**
+ * Classifica uma linha não interpretada:
+ * - 'uninterpretable': números puros, notação ambígua, prefixos sem contexto
+ * - 'new_exercise': parece um nome de exercício não catalogado
+ */
+export function classifyUnmatchedLine(text: string): UnmatchedCategory {
+  const trimmed = text.trim();
+
+  // Números puros com vírgulas/hífens (rep schemes: "40,30,20,10", "21-15-9")
+  if (/^\d[\d,\-\s]+$/.test(trimmed)) return 'uninterpretable';
+
+  // Notação de tempo isolada (30", 1'30", 90s, 2min)
+  if (/^\d+\s*["']\s*$/.test(trimmed)) return 'uninterpretable';
+  if (/^\d+\s*[']\s*\d+\s*["]\s*$/.test(trimmed)) return 'uninterpretable';
+  if (/^\d+\s*(s|seg|min)\s*$/i.test(trimmed)) return 'uninterpretable';
+
+  // Notação de razão/proporção isolada (30/30, 20/10)
+  if (/^\d+\s*\/\s*\d+\s*$/.test(trimmed)) return 'uninterpretable';
+
+  // Prefixos sem exercício reconhecível (A-, B-, A1-, etc. sozinhos)
+  if (/^[A-Z]\d?\s*[-–—]\s*$/i.test(trimmed)) return 'uninterpretable';
+
+  // Linhas muito curtas sem letras suficientes (< 3 chars de letras)
+  const letterCount = (trimmed.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+  if (letterCount < 3) return 'uninterpretable';
+
+  // Se chegou aqui, parece um exercício novo
+  return 'new_exercise';
 }
 
 export interface CoverageReport {
@@ -213,6 +246,7 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
               text: line.text,
               blockTitle: block.title || 'Bloco sem título',
               dayIndex,
+              category: classifyUnmatchedLine(line.text),
             });
           }
         }
