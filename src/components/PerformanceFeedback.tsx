@@ -136,7 +136,9 @@ export function PerformanceFeedback() {
   function classifyPerformanceLocal(data: typeof resultData): PerformanceBucket {
     if (!data) return 'OK';
     if (!data.result.completed) return 'DNF';
-    if (!data.result.timeInSeconds) return 'OK';
+    
+    // Completou sem tempo registrado → presunção positiva
+    if (!data.result.timeInSeconds) return 'STRONG';
 
     // If we have a target range, use it
     if (data.targetRange && data.targetRange.min > 0 && data.targetRange.max > 0) {
@@ -157,7 +159,8 @@ export function PerformanceFeedback() {
       return 'TOUGH';
     }
 
-    return 'OK';
+    // Completou com tempo mas sem referência → presunção positiva
+    return 'STRONG';
   }
 
   if (!resultData || !athleteConfig) {

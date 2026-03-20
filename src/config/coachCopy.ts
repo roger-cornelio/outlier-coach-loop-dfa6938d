@@ -44,8 +44,10 @@ export interface CoachCopySet {
     postWorkout: string[];
   };
   feedback: {
+    elite: string[];       // performance excepcional, acima do topo
     great: string[];        // arrebentou / PR
     goodButMore: string[];  // bom, mas dava pra mais
+    tough: string[];        // dia difícil, mas apareceu
     bad: string[];          // foi mal / abaixo do padrão
     missed: string[];       // não treinou
   };
@@ -123,6 +125,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'FORA DA CURVA. Isso é nível de quem compete de verdade.',
+        'Performance absurda. Poucos chegam aí. Mantém.',
+        'Você tá acima do topo. Não relaxa — domina.',
+      ],
       great: [
         'CARALHO. É isso. Você mandou muito bem.',
         'Porra… execução limpa. Padrão alto. OUTLIER.',
@@ -132,6 +139,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Pow, mano… dava pra fazer melhor do que isso.',
         'Foi ok. OUTLIER não vive de "ok".',
         'No próximo, você vai pra cima.',
+      ],
+      tough: [
+        'Dia duro. Mas você apareceu. Isso conta.',
+        'Hoje foi pesado. Corrige os detalhes e volta mais forte.',
+        'Não foi seu dia, mas você não fugiu. Respeito.',
       ],
       bad: [
         'Hoje foi fraco. Sem drama: corrige e volta.',
@@ -213,6 +225,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'Excepcional. Esse nível de execução é raro. Você está no topo.',
+        'Performance de elite. Continue assim e os resultados vão se multiplicar.',
+        'Impressionante. Consistência desse nível é o que separa os melhores.',
+      ],
       great: [
         'Excelente. Você executou com controle e consistência.',
         'Muito bom. Isso é evolução real.',
@@ -222,6 +239,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Boa. Agora vamos subir um pouco a régua, com calma.',
         'Você tá no caminho. Ajusta 1 detalhe e melhora muito.',
         'Foi sólido. No próximo, mais intenção.',
+      ],
+      tough: [
+        'Dia difícil, mas você estava lá. Isso é o que importa.',
+        'Nem todo dia é bom, mas todo dia que você aparece conta.',
+        'Foi pesado? Normal. A constância te leva mais longe que a intensidade.',
       ],
       bad: [
         'Hoje não foi seu melhor dia. Tudo bem. Vamos ajustar.',
@@ -303,6 +325,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'QUE ISSO?! 🔥🔥🔥 Você tá VOANDO! Performance de outro nível!',
+        'ABSURDO DEMAIS! Isso é elite de verdade! Mantém essa chama!',
+        'SURREAL! Você superou tudo! Tá brilhando! ✨',
+      ],
       great: [
         'VAMO! Você destruiu isso! 🔥',
         'ABSURDO! Você tá virando OUTLIER real!',
@@ -312,6 +339,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Foi bom! Agora bora subir mais um degrau!',
         'Tá quente! No próximo você vai voar!',
         'Curti! Agora mete mais 10%!',
+      ],
+      tough: [
+        'Dia duro, mas você tava lá! Isso já é vitória! 💪',
+        'Nem todo dia é 🔥, mas você não desistiu! Isso é OUTLIER!',
+        'Foi pesado? Beleza. Você apareceu. Isso muda tudo!',
       ],
       bad: [
         'Hoje foi osso? Beleza. Amanhã é revanche!',
@@ -413,11 +445,13 @@ export function getBlockCompletionLine(
 export function getBucketFeedbackCategory(bucket: string): keyof CoachCopySet['feedback'] {
   switch (bucket) {
     case 'ELITE':
+      return 'elite';
     case 'STRONG':
       return 'great';
     case 'OK':
       return 'goodButMore';
     case 'TOUGH':
+      return 'tough';
     case 'DNF':
       return 'bad';
     default:
