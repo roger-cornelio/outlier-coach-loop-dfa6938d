@@ -21,6 +21,12 @@ export interface PerfilFisiologico {
   radar?: Record<string, number>;
 }
 
+export interface SplitTime {
+  split_name: string;
+  time: string;
+  time_sec: number;
+}
+
 export interface DiagnosticScoresResult {
   scores: CalculatedScore[];
   loading: boolean;
@@ -28,6 +34,8 @@ export interface DiagnosticScoresResult {
   lastResultId: string | null;
   lastResultDate: string | null;
   perfilFisiologico: PerfilFisiologico | null;
+  /** Real split times from tempos_splits (source of truth for station bars) */
+  splitTimes: SplitTime[];
 }
 
 export function useDiagnosticScores(): DiagnosticScoresResult {
