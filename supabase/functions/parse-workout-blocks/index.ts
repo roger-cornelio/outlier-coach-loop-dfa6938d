@@ -146,7 +146,8 @@ You MUST follow these rules to avoid double-counting:
    - "400m run" = distanceMeters: 400
    - "1km row" = distanceMeters: 1000
    - "30s plank" = durationSeconds: 30
-   - "Rest 60s" or "Descanso 1min" = restSeconds: 60
+    - "Rest 60s" or "Descanso 1min" = restSeconds: 60
+    - "40,30,20,10" or "21-15-9" followed by exercises = **Descending/Ascending Rep Scheme**. Sum ALL numbers (40+30+20+10=100) and return reps=sum, sets=1 for EACH exercise. Store the original scheme in notes as "Rep scheme: 40,30,20,10". This applies to any comma-separated or hyphen-separated list of numbers appearing BEFORE the exercise names.
 
 5. **EXERCISE ORDER**: Maintain the exact order exercises appear in the text.
 
@@ -187,6 +188,12 @@ Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_pl
 
 Input block title: "Tabata 30/15 - 6 rounds", content: "- KB Swings"
 Output: [{"slug":"kb_swings","name":"KB Swings","movementPatternSlug":"hinge","sets":6,"durationSeconds":30,"restSeconds":15}]
+
+Input block title: "Warm Up", content: "40,30,20,10\\nShoulder Taps\\nCalf Raises"
+Output: [{"slug":"shoulder_taps","name":"Shoulder Taps","movementPatternSlug":"core","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"},{"slug":"calf_raises","name":"Calf Raises","movementPatternSlug":"isolation","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"}]
+
+Input block title: "WOD", content: "21-15-9\\nThrusters (43kg)\\nPull-ups"
+Output: [{"slug":"thrusters","name":"Thrusters","movementPatternSlug":"squat_vertical_push","sets":1,"reps":45,"loadKg":43,"notes":"Rep scheme: 21-15-9"},{"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":1,"reps":45,"notes":"Rep scheme: 21-15-9"}]
 
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;
