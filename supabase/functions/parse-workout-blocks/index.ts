@@ -168,7 +168,13 @@ Input block title: "Descanso", content: "Hoje é dia de descanso ativo. Alongame
 Output: []
 
 Input block title: "Cardio", content: "Corrida contínua 30min Z2"
-Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","durationSeconds":1800,"intensityType":"zone","intensityValue":2}]
+Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1800,"intensityType":"zone","intensityValue":2}]
+
+Input block title: "Cardio", content: "1000m Remo"
+Output: [{"slug":"rowing","name":"Rowing","movementPatternSlug":"distance_cardio","sets":1,"distanceMeters":1000}]
+
+Input block title: "Cardio", content: "500m Ski Erg"
+Output: [{"slug":"ski_erg","name":"Ski Erg","movementPatternSlug":"distance_cardio","sets":1,"distanceMeters":500}]
 
 Input block title: "Tabata", content: "- Burpees\\n- Air Squats"
 Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":8,"durationSeconds":20,"restSeconds":10},{"slug":"air_squats","name":"Air Squats","movementPatternSlug":"squat","sets":8,"durationSeconds":20,"restSeconds":10}]
