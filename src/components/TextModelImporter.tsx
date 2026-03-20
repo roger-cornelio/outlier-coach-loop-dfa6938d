@@ -1087,7 +1087,14 @@ BLOCO: DESCANSO
                   >
                     {coverageReport.successRate === 100
                       ? '🎯 100% interpretado'
-                      : `⚠️ ${coverageReport.unrecognized} linha${coverageReport.unrecognized > 1 ? 's' : ''} não interpretada${coverageReport.unrecognized > 1 ? 's' : ''} (${coverageReport.successRate}%)`
+                      : (() => {
+                          const newEx = coverageReport.unmatchedLines.filter(l => l.category === 'new_exercise').length;
+                          const unint = coverageReport.unmatchedLines.filter(l => l.category === 'uninterpretable').length;
+                          const parts: string[] = [];
+                          if (newEx > 0) parts.push(`${newEx} exercício${newEx > 1 ? 's' : ''} novo${newEx > 1 ? 's' : ''}`);
+                          if (unint > 0) parts.push(`${unint} linha${unint > 1 ? 's' : ''} não interpretada${unint > 1 ? 's' : ''}`);
+                          return `⚠️ ${parts.join(' · ')} (${coverageReport.successRate}%)`;
+                        })()
                     }
                   </Badge>
 
