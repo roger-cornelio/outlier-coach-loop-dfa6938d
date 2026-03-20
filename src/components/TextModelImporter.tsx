@@ -1110,49 +1110,102 @@ BLOCO: DESCANSO
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            As linhas abaixo não possuem métricas mensuráveis (tempo, distância, repetições). O atleta verá o texto normalmente, mas sem estimativas automáticas de tempo/calorias.
-                          </p>
-
-                          {/* Agrupar por bloco */}
+                          {/* Separar por categoria */}
                           {(() => {
-                            const grouped = new Map<string, UnmatchedLine[]>();
-                            for (const line of coverageReport.unmatchedLines) {
-                              const key = `Dia ${line.dayIndex + 1} — ${line.blockTitle}`;
-                              if (!grouped.has(key)) grouped.set(key, []);
-                              grouped.get(key)!.push(line);
-                            }
-                            return Array.from(grouped.entries()).map(([groupKey, lines]) => (
-                              <div key={groupKey} className="space-y-1.5">
-                                <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
-                                  {groupKey}
-                                </p>
-                                {lines.map((line, i) => (
-                                  <div
-                                    key={i}
-                                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
-                                  >
-                                    <span className="flex-1">{line.text}</span>
-                                    {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
-                                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
-                                        ✓ Enviado
-                                      </Badge>
-                                    ) : (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="shrink-0 text-xs h-7 px-2"
-                                        disabled={suggestSubmitting}
-                                        onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
-                                      >
-                                        <Send className="w-3 h-3 mr-1" />
-                                        Sugerir
-                                      </Button>
-                                    )}
+                            const newExercises = coverageReport.unmatchedLines.filter(l => l.category === 'new_exercise');
+                            const uninterpretable = coverageReport.unmatchedLines.filter(l => l.category === 'uninterpretable');
+
+                            const groupLines = (lines: UnmatchedLine[]) => {
+                              const grouped = new Map<string, UnmatchedLine[]>();
+                              for (const line of lines) {
+                                const key = `Dia ${line.dayIndex + 1} — ${line.blockTitle}`;
+                                if (!grouped.has(key)) grouped.set(key, []);
+                                grouped.get(key)!.push(line);
+                              }
+                              return grouped;
+                            };
+
+                            return (
+                              <>
+                                {/* Seção 1: Exercícios Novos (amarelo) */}
+                                {newExercises.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <Puzzle className="w-4 h-4 text-amber-500" />
+                                      <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                                        Exercícios novos ({newExercises.length})
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Estes exercícios ainda não estão no nosso dicionário. Sugira para que sejam adicionados.
+                                    </p>
+                                    {Array.from(groupLines(newExercises).entries()).map(([groupKey, lines]) => (
+                                      <div key={groupKey} className="space-y-1.5">
+                                        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
+                                          {groupKey}
+                                        </p>
+                                        {lines.map((line, i) => (
+                                          <div
+                                            key={i}
+                                            className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
+                                          >
+                                            <span className="flex-1">{line.text}</span>
+                                            {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
+                                                ✓ Enviado
+                                              </Badge>
+                                            ) : (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="shrink-0 text-xs h-7 px-2"
+                                                disabled={suggestSubmitting}
+                                                onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                              >
+                                                <Send className="w-3 h-3 mr-1" />
+                                                Sugerir
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
-                            ));
+                                )}
+
+                                {/* Seção 2: Linhas Não Interpretadas (vermelho/laranja) */}
+                                {uninterpretable.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                                      <p className="text-sm font-medium text-destructive">
+                                        Linhas não interpretadas ({uninterpretable.length})
+                                      </p>
+                                    </div>
+                                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                                      <p className="text-xs text-destructive font-medium">
+                                        ⚠️ Recomendamos corrigir estas linhas antes de publicar. O atleta não verá estimativas de tempo/calorias nesses trechos.
+                                      </p>
+                                    </div>
+                                    {Array.from(groupLines(uninterpretable).entries()).map(([groupKey, lines]) => (
+                                      <div key={groupKey} className="space-y-1.5">
+                                        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
+                                          {groupKey}
+                                        </p>
+                                        {lines.map((line, i) => (
+                                          <div
+                                            key={i}
+                                            className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10 text-foreground"
+                                          >
+                                            <span className="flex-1 font-mono text-xs">{line.text}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            );
                           })()}
 
                           <p className="text-xs text-muted-foreground italic">
