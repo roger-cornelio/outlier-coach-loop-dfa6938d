@@ -131,6 +131,10 @@ const ISOMETRIC_MET = 3.0;
 /**
  * Calculate exercise energy expenditure using physics formulas.
  * Returns estimated kcal based on mechanical work.
+ * 
+ * @deprecated Use computeBlockMetrics from computeBlockKcalFromParsed.ts instead.
+ * This function is kept only for backward compatibility with type imports.
+ * All new code MUST use computeBlockMetrics as the single source of truth.
  */
 export function calculateExerciseKcal(input: ExerciseKcalInput): ExerciseKcalResult {
   const {
@@ -303,6 +307,10 @@ export interface BlockKcalResult {
 
 /**
  * Calculate total kcal for a list of exercises in a workout block.
+ * 
+ * @deprecated Use computeBlockMetrics from computeBlockKcalFromParsed.ts instead.
+ * This function is kept only for backward compatibility.
+ * All new code MUST use computeBlockMetrics as the single source of truth.
  */
 export function calculateBlockKcal(
   exercises: BlockExercise[],

@@ -176,6 +176,12 @@ Output: [{"slug":"rowing","name":"Rowing","movementPatternSlug":"distance_cardio
 Input block title: "Cardio", content: "500m Ski Erg"
 Output: [{"slug":"ski_erg","name":"Ski Erg","movementPatternSlug":"distance_cardio","sets":1,"distanceMeters":500}]
 
+Input block title: "Cardio", content: "20 cal Assault Bike"
+Output: [{"slug":"assault_bike","name":"Assault Bike","movementPatternSlug":"assault_bike","sets":1,"reps":20,"notes":"20 cal"}]
+
+Input block title: "Cardio", content: "Assault Bike 15min"
+Output: [{"slug":"assault_bike","name":"Assault Bike","movementPatternSlug":"assault_bike","sets":1,"durationSeconds":900}]
+
 Input block title: "Tabata", content: "- Burpees\\n- Air Squats"
 Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_plyo","sets":8,"durationSeconds":20,"restSeconds":10},{"slug":"air_squats","name":"Air Squats","movementPatternSlug":"squat","sets":8,"durationSeconds":20,"restSeconds":10}]
 
