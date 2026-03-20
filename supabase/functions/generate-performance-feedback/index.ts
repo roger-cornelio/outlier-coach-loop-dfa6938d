@@ -41,7 +41,7 @@ function classifyPerformance(
   previousTimes?: number[]
 ): PerformanceBucket {
   if (!completed) return 'DNF';
-  if (!timeInSeconds) return 'OK';
+  if (!timeInSeconds) return 'STRONG';
 
   // If we have a target range (min/max), use it for classification
   if (targetRange && targetRange.min > 0 && targetRange.max > 0) {
@@ -263,16 +263,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      console.error("[generate-performance-feedback] Auth error:", claimsError);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("[generate-performance-feedback] Auth error:", userError);
       return new Response(
         JSON.stringify({ error: "Unauthorized - Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
     console.log("[generate-performance-feedback] Authenticated user:", userId);
     // ========== END AUTHENTICATION ==========
 
@@ -408,10 +407,10 @@ Gere o feedback final em 2-3 frases, mantendo a estrutura de reconhecimento → 
     console.error("Error generating performance feedback:", e);
     return new Response(JSON.stringify({ 
       error: e instanceof Error ? e.message : "Erro desconhecido",
-      bucket: 'OK',
-      feedback: "Treino registrado. Continue evoluindo."
+      bucket: null,
+      feedback: null
     }), {
-      status: 200,
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
