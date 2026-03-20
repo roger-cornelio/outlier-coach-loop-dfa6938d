@@ -44,8 +44,10 @@ export interface CoachCopySet {
     postWorkout: string[];
   };
   feedback: {
+    elite: string[];       // performance excepcional, acima do topo
     great: string[];        // arrebentou / PR
     goodButMore: string[];  // bom, mas dava pra mais
+    tough: string[];        // dia difícil, mas apareceu
     bad: string[];          // foi mal / abaixo do padrão
     missed: string[];       // não treinou
   };
