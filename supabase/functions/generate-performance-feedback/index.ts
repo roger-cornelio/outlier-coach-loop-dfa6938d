@@ -391,7 +391,7 @@ Gere o feedback final em 2-3 frases, mantendo a estrutura de reconhecimento → 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
