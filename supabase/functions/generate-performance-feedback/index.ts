@@ -41,7 +41,7 @@ function classifyPerformance(
   previousTimes?: number[]
 ): PerformanceBucket {
   if (!completed) return 'DNF';
-  if (!timeInSeconds) return 'OK';
+  if (!timeInSeconds) return 'STRONG';
 
   // If we have a target range (min/max), use it for classification
   if (targetRange && targetRange.min > 0 && targetRange.max > 0) {
