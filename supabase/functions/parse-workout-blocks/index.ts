@@ -189,6 +189,12 @@ Output: [{"slug":"burpees","name":"Burpees","movementPatternSlug":"total_body_pl
 Input block title: "Tabata 30/15 - 6 rounds", content: "- KB Swings"
 Output: [{"slug":"kb_swings","name":"KB Swings","movementPatternSlug":"hinge","sets":6,"durationSeconds":30,"restSeconds":15}]
 
+Input block title: "Warm Up", content: "40,30,20,10\\nShoulder Taps\\nCalf Raises"
+Output: [{"slug":"shoulder_taps","name":"Shoulder Taps","movementPatternSlug":"core","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"},{"slug":"calf_raises","name":"Calf Raises","movementPatternSlug":"isolation","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"}]
+
+Input block title: "WOD", content: "21-15-9\\nThrusters (43kg)\\nPull-ups"
+Output: [{"slug":"thrusters","name":"Thrusters","movementPatternSlug":"squat_vertical_push","sets":1,"reps":45,"loadKg":43,"notes":"Rep scheme: 21-15-9"},{"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":1,"reps":45,"notes":"Rep scheme: 21-15-9"}]
+
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;
 
