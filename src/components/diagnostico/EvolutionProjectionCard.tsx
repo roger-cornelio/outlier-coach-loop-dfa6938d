@@ -33,11 +33,14 @@ function formatSecondsToHHMMSS(sec: number): string {
 }
 
 function buildProjectionData(currentSeconds: number, ratePerMonth: number) {
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const now = new Date();
   const points = [];
-  for (let month = 0; month <= 12; month++) {
-    const projected = Math.max(3600, currentSeconds - (ratePerMonth * month));
+  for (let i = 0; i <= 12; i++) {
+    const projected = Math.max(3600, currentSeconds - (ratePerMonth * i));
+    const monthIdx = (now.getMonth() + i) % 12;
     points.push({
-      month: `M${month}`,
+      month: monthNames[monthIdx],
       tempo: Math.round(projected),
     });
   }
