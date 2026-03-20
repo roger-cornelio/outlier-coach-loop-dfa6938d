@@ -262,7 +262,11 @@ Tipos de exercícios: ${[...new Set(blockTypes)].join(', ')}
 
 INTENSIDADE DO TREINO: ${intensityContext}
 
-Gere um feedback motivacional de 2-3 frases sobre o OBJETIVO do treino de hoje, considerando a intensidade. Seja específico sobre o que o atleta vai desenvolver (força, resistência, capacidade aeróbica, recuperação, etc). Mantenha seu estilo de coach consistente com a intensidade indicada.
+Gere um feedback PRÉ-TREINO de 2-3 frases sobre o OBJETIVO do treino de hoje. O feedback deve:
+1. Citar algo ESPECÍFICO do treino (tipo de exercício, estímulo, valência trabalhada)
+2. Conectar com o que o atleta vai SENTIR e DESENVOLVER
+3. Ser IMPOSSÍVEL de copiar-colar para outro treino — deve ser único para este conteúdo
+4. PROIBIDO: "continue evoluindo", "bom treino", "vamos lá" — frases que cabem em qualquer contexto
 
 Responda APENAS com o feedback, sem introduções ou explicações adicionais.`;
 
