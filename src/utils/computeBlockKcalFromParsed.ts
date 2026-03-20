@@ -125,34 +125,94 @@ function computeExerciseKcal(
     reps = exercise.reps || 1;
   }
 
-  // Duração do exercício
-  let durationSec: number;
-  if (exercise.durationSeconds) {
-    durationSec = exercise.durationSeconds;
-  } else {
-    const secPerRep = pattern.defaultSecondsPerRep || 3;
-    durationSec = sets * reps * secPerRep;
-    // Adicionar descanso entre sets
-    const restPerSet = exercise.restSeconds || 60;
-    durationSec += (sets - 1) * restPerSet;
-  }
+  // ════════════════════════════════════════════════════════════════════════
+  // DURAÇÃO E KCAL — Segmentação por tipo de cardio
+  // ════════════════════════════════════════════════════════════════════════
+  const exerciseSlug = exercise.slug || '';
+  const isDistanceBasedCardio = pattern.formulaType === 'metabolic' && 
+    (DISTANCE_BASED_CARDIO_SLUGS.has(patternSlug) || DISTANCE_BASED_CARDIO_SLUGS.has(exerciseSlug));
+  const isMachineBasedCardio = pattern.formulaType === 'metabolic' && 
+    (MACHINE_BASED_CARDIO_SLUGS.has(patternSlug) || MACHINE_BASED_CARDIO_SLUGS.has(exerciseSlug));
 
+  let durationSec: number;
   let kcal = 0;
 
-  if (pattern.formulaType === 'metabolic') {
-    // Kcal = MET * peso * (minutos / 60)
-    const met = METABOLIC_METS[patternSlug] || 7.0;
+  if (isDistanceBasedCardio) {
+    // ═══════════════════════════════════════════════════════════════════
+    // DISTANCE-BASED CARDIO: ACSM (1.03 kcal/kg/km)
+    // Resolve o slug para ritmo, prioriza exerciseSlug depois patternSlug
+    // ═══════════════════════════════════════════════════════════════════
+    const paceSlug = CARDIO_PACE_SEC_PER_KM[exerciseSlug] ? exerciseSlug : patternSlug;
+    const paceSecPerKm = CARDIO_PACE_SEC_PER_KM[paceSlug] || 360;
+
+    let distanceKm: number;
+
+    if (exercise.distanceMeters && exercise.distanceMeters > 0) {
+      // Distância real fornecida
+      distanceKm = exercise.distanceMeters / 1000;
+      // Estimar duração via ritmo se não fornecida
+      if (exercise.durationSeconds && exercise.durationSeconds > 0) {
+        durationSec = exercise.durationSeconds;
+      } else {
+        durationSec = distanceKm * paceSecPerKm;
+      }
+    } else if (exercise.durationSeconds && exercise.durationSeconds > 0) {
+      // Só tempo → estimar distância via ritmo
+      durationSec = exercise.durationSeconds;
+      distanceKm = durationSec / paceSecPerKm;
+    } else {
+      // Sem distância nem tempo → fallback conservador
+      distanceKm = 0;
+      durationSec = 0;
+    }
+
+    kcal = ACSM_KCAL_PER_KG_PER_KM * distanceKm * biometrics.pesoKg * sets;
+    durationSec = durationSec * sets;
+    // Adicionar descanso entre sets (raro para cardio, mas protege)
+    if (sets > 1) {
+      const restPerSet = exercise.restSeconds || 60;
+      durationSec += (sets - 1) * restPerSet;
+    }
+  } else if (pattern.formulaType === 'metabolic') {
+    // ═══════════════════════════════════════════════════════════════════
+    // MACHINE/CAL-BASED ou ISOMETRIC: MET
+    // ═══════════════════════════════════════════════════════════════════
+    if (exercise.durationSeconds) {
+      durationSec = exercise.durationSeconds;
+    } else {
+      const secPerRep = pattern.defaultSecondsPerRep || 3;
+      durationSec = sets * reps * secPerRep;
+      const restPerSet = exercise.restSeconds || 60;
+      durationSec += (sets - 1) * restPerSet;
+    }
+    const met = METABOLIC_METS[patternSlug] || METABOLIC_METS[exerciseSlug] || 7.0;
     const minutes = durationSec / 60;
     kcal = met * biometrics.pesoKg * (minutes / 60);
   } else if (pattern.formulaType === 'horizontal_friction') {
-    // Kcal = (massa * g * coef_fricção * distância * reps * sets) / (eficiência * 4184)
+    // Duração
+    if (exercise.durationSeconds) {
+      durationSec = exercise.durationSeconds;
+    } else {
+      const secPerRep = pattern.defaultSecondsPerRep || 3;
+      durationSec = sets * reps * secPerRep;
+      const restPerSet = exercise.restSeconds || 60;
+      durationSec += (sets - 1) * restPerSet;
+    }
     const massaMovida = biometrics.pesoKg * pattern.movedMassPercentage + loadKg;
     const distance = exercise.distanceMeters || pattern.defaultDistanceMeters;
     const friction = pattern.frictionCoefficient || 0.35;
     const work = massaMovida * GRAVITY * friction * distance * reps * sets;
     kcal = work / (pattern.humanEfficiencyRate * JOULES_PER_KCAL);
   } else {
-    // vertical_work: Kcal = (massa * g * distância * reps * sets) / (eficiência * 4184)
+    // vertical_work
+    if (exercise.durationSeconds) {
+      durationSec = exercise.durationSeconds;
+    } else {
+      const secPerRep = pattern.defaultSecondsPerRep || 3;
+      durationSec = sets * reps * secPerRep;
+      const restPerSet = exercise.restSeconds || 60;
+      durationSec += (sets - 1) * restPerSet;
+    }
     const massaMovida = biometrics.pesoKg * pattern.movedMassPercentage + loadKg;
     const distance = pattern.defaultDistanceMeters;
     const work = massaMovida * GRAVITY * distance * reps * sets;
