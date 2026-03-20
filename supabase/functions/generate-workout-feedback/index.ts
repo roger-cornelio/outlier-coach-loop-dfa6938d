@@ -256,19 +256,20 @@ serve(async (req) => {
     const coachPrompts = getCoachPrompts(sex);
     const systemPrompt = coachPrompts[coachStyle] || coachPrompts.PULSE;
     
-    const userPrompt = `Baseado no treino de ${dayName} que inclui os seguintes blocos: ${blockTitles}.
+    const userPrompt = `O atleta vai fazer o treino de ${dayName}. O treino tem esses blocos: ${blockTitles}.
 
-Tipos de exercícios: ${[...new Set(blockTypes)].join(', ')}
+Tipos: ${[...new Set(blockTypes)].join(', ')}
 
-INTENSIDADE DO TREINO: ${intensityContext}
+Intensidade: ${intensityContext}
 
-Gere um feedback PRÉ-TREINO de 2-3 frases sobre o OBJETIVO do treino de hoje. O feedback deve:
-1. Citar algo ESPECÍFICO do treino (tipo de exercício, estímulo, valência trabalhada)
-2. Conectar com o que o atleta vai SENTIR e DESENVOLVER
-3. Ser IMPOSSÍVEL de copiar-colar para outro treino — deve ser único para este conteúdo
-4. PROIBIDO: "continue evoluindo", "bom treino", "vamos lá" — frases que cabem em qualquer contexto
+Fale com o atleta ANTES do treino começar. Como se você estivesse ao lado dele no box.
+- Diga o que ele vai enfrentar hoje (cite algo específico do treino)
+- Diga o que isso vai exigir dele
+- Dê uma direção clara pro treino
 
-Responda APENAS com o feedback, sem introduções ou explicações adicionais.`;
+2-3 frases no máximo. Linguagem simples, como gente fala. PROIBIDO usar: "estímulo", "valência", "performance", "sistema", "neuromuscular", "aeróbico", "anaeróbico", "vamos lá", "bom treino", "continue evoluindo".
+
+Só o texto, sem aspas, sem introdução.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
