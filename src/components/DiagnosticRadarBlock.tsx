@@ -1992,10 +1992,15 @@ export function DiagnosticRadarBlock({
   const projectionChartData = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return [];
     const currentSec = validatingCompetition.time_in_seconds;
-    return Array.from({ length: 13 }, (_, i) => ({
-      month: `M${i}`,
-      tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
-    }));
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const now = new Date();
+    return Array.from({ length: 13 }, (_, i) => {
+      const monthIdx = (now.getMonth() + i) % 12;
+      return {
+        month: monthNames[monthIdx],
+        tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
+      };
+    });
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
 
   const gain12mFormatted = useMemo(() => {
