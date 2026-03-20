@@ -76,7 +76,7 @@ import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
-import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
+import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, type UnmatchedCategory, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
 import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
 import {
   Dialog,
