@@ -134,6 +134,53 @@ describe('Cardio Calculation — Mixed block (rounds with distance cardio)', () 
   });
 });
 
+describe('Cardio Calculation — Machine/Cal-Based Expanded', () => {
+  it('Assault Bike 20 cal: MET-based, reps como calorias', () => {
+    const exercises: ParsedExercise[] = [{
+      slug: 'assault_bike', name: 'Assault Bike', movementPatternSlug: 'assault_bike',
+      sets: 1, reps: 20, notes: '20 cal',
+    }];
+    const result = computeBlockMetrics(exercises, ATHLETE_75KG);
+    // MET 8.5, reps=20 com ~3s/rep → 60s → MET 8.5*75*(1/60) = ~10.6 kcal
+    expect(result.estimatedKcal!).toBeGreaterThan(5);
+    expect(result.estimatedKcal!).toBeLessThan(30);
+  });
+
+  it('Assault Bike 15min: MET-based ~159 kcal', () => {
+    const exercises: ParsedExercise[] = [{
+      slug: 'assault_bike', name: 'Assault Bike', movementPatternSlug: 'assault_bike',
+      sets: 1, durationSeconds: 900,
+    }];
+    const result = computeBlockMetrics(exercises, ATHLETE_75KG);
+    // MET 8.5 * 75 * (15/60) = 159.4 kcal
+    expect(withinTolerance(result.estimatedKcal!, 159, 0.15)).toBe(true);
+    expect(result.estimatedDurationSec).toBe(900);
+  });
+
+  it('Bike genérica 10min: MET 7.0 ~87 kcal', () => {
+    const exercises: ParsedExercise[] = [{
+      slug: 'bike', name: 'Bike', movementPatternSlug: 'cardio',
+      sets: 1, durationSeconds: 600,
+    }];
+    const result = computeBlockMetrics(exercises, ATHLETE_75KG);
+    // MET 7.0 * 75 * (10/60) = 87.5
+    expect(withinTolerance(result.estimatedKcal!, 87, 0.15)).toBe(true);
+  });
+});
+
+describe('Cardio Calculation — Duration-only Running', () => {
+  it('Corrida 20min sem distância: estima ~3.33km via pace → ~257 kcal', () => {
+    const exercises: ParsedExercise[] = [{
+      slug: 'running', name: 'Running', movementPatternSlug: 'distance_cardio',
+      sets: 1, durationSeconds: 1200,
+    }];
+    const result = computeBlockMetrics(exercises, ATHLETE_75KG);
+    // 1200s / 360s/km = 3.33km → ACSM: 1.03 * 3.33 * 75 = ~257 kcal
+    expect(withinTolerance(result.estimatedKcal!, 257, 0.15)).toBe(true);
+    expect(result.estimatedDurationSec).toBe(1200);
+  });
+});
+
 describe('Cardio Calculation — Legacy compatibility', () => {
   it('cardio genérico sem slug específico mantém MET', () => {
     const exercises: ParsedExercise[] = [{
