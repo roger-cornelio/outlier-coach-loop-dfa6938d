@@ -445,11 +445,13 @@ export function getBlockCompletionLine(
 export function getBucketFeedbackCategory(bucket: string): keyof CoachCopySet['feedback'] {
   switch (bucket) {
     case 'ELITE':
+      return 'elite';
     case 'STRONG':
       return 'great';
     case 'OK':
       return 'goodButMore';
     case 'TOUGH':
+      return 'tough';
     case 'DNF':
       return 'bad';
     default:
