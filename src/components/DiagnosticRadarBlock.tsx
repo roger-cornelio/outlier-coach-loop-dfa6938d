@@ -1317,7 +1317,7 @@ function MobilePhysiologicalModal({
           </p>
 
           {/* Station Bars */}
-          <DiagnosticStationsBars scores={scores} />
+          <DiagnosticStationsBars scores={scores} splitTimes={splitTimes} />
 
           {/* VO2 & Lactate */}
           <div className="grid grid-cols-2 gap-3">
