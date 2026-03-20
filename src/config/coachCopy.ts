@@ -225,6 +225,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'Excepcional. Esse nível de execução é raro. Você está no topo.',
+        'Performance de elite. Continue assim e os resultados vão se multiplicar.',
+        'Impressionante. Consistência desse nível é o que separa os melhores.',
+      ],
       great: [
         'Excelente. Você executou com controle e consistência.',
         'Muito bom. Isso é evolução real.',
@@ -234,6 +239,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Boa. Agora vamos subir um pouco a régua, com calma.',
         'Você tá no caminho. Ajusta 1 detalhe e melhora muito.',
         'Foi sólido. No próximo, mais intenção.',
+      ],
+      tough: [
+        'Dia difícil, mas você estava lá. Isso é o que importa.',
+        'Nem todo dia é bom, mas todo dia que você aparece conta.',
+        'Foi pesado? Normal. A constância te leva mais longe que a intensidade.',
       ],
       bad: [
         'Hoje não foi seu melhor dia. Tudo bem. Vamos ajustar.',
