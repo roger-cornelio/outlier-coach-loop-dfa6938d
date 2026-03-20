@@ -125,6 +125,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       ],
     },
     feedback: {
+      elite: [
+        'FORA DA CURVA. Isso é nível de quem compete de verdade.',
+        'Performance absurda. Poucos chegam aí. Mantém.',
+        'Você tá acima do topo. Não relaxa — domina.',
+      ],
       great: [
         'CARALHO. É isso. Você mandou muito bem.',
         'Porra… execução limpa. Padrão alto. OUTLIER.',
@@ -134,6 +139,11 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
         'Pow, mano… dava pra fazer melhor do que isso.',
         'Foi ok. OUTLIER não vive de "ok".',
         'No próximo, você vai pra cima.',
+      ],
+      tough: [
+        'Dia duro. Mas você apareceu. Isso conta.',
+        'Hoje foi pesado. Corrige os detalhes e volta mais forte.',
+        'Não foi seu dia, mas você não fugiu. Respeito.',
       ],
       bad: [
         'Hoje foi fraco. Sem drama: corrige e volta.',
