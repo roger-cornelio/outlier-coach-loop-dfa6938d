@@ -246,6 +246,7 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
               text: line.text,
               blockTitle: block.title || 'Bloco sem título',
               dayIndex,
+              category: classifyUnmatchedLine(line.text),
             });
           }
         }
