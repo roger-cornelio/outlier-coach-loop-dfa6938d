@@ -146,7 +146,8 @@ You MUST follow these rules to avoid double-counting:
    - "400m run" = distanceMeters: 400
    - "1km row" = distanceMeters: 1000
    - "30s plank" = durationSeconds: 30
-   - "Rest 60s" or "Descanso 1min" = restSeconds: 60
+    - "Rest 60s" or "Descanso 1min" = restSeconds: 60
+    - "40,30,20,10" or "21-15-9" followed by exercises = **Descending/Ascending Rep Scheme**. Sum ALL numbers (40+30+20+10=100) and return reps=sum, sets=1 for EACH exercise. Store the original scheme in notes as "Rep scheme: 40,30,20,10". This applies to any comma-separated or hyphen-separated list of numbers appearing BEFORE the exercise names.
 
 5. **EXERCISE ORDER**: Maintain the exact order exercises appear in the text.
 
