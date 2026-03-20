@@ -2410,7 +2410,8 @@ export function DiagnosticRadarBlock({
           scores={scores}
           radarData={radarData}
           vo2maxEstimate={vo2maxEstimate}
-          lactateThresholdEstimate={lactateThresholdEstimate} />
+          lactateThresholdEstimate={lactateThresholdEstimate}
+          splitTimes={splitTimes} />
 
       </div>);
 
