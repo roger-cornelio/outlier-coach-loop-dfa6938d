@@ -1278,12 +1278,9 @@ function MobilePhysiologicalModal({
   scores,
   radarData,
   vo2maxEstimate,
-  lactateThresholdEstimate
-
-
-
-
-
+  lactateThresholdEstimate,
+  splitTimes,
+}: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];}) {
 }: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];}) {
   return (
     <Dialog>
