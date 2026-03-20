@@ -407,10 +407,10 @@ Gere o feedback final em 2-3 frases, mantendo a estrutura de reconhecimento → 
     console.error("Error generating performance feedback:", e);
     return new Response(JSON.stringify({ 
       error: e instanceof Error ? e.message : "Erro desconhecido",
-      bucket: 'OK',
-      feedback: "Treino registrado. Continue evoluindo."
+      bucket: null,
+      feedback: null
     }), {
-      status: 200,
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
