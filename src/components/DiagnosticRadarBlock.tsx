@@ -500,6 +500,7 @@ interface DiagnosticRadarBlockProps {
   provaAlvo?: RaceInfo | null;
   provaAlvoTargetTime?: string | null;
   perfilFisiologico?: PerfilFisiologico | null;
+  splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];
 }
 
 // ============================================
@@ -1277,13 +1278,9 @@ function MobilePhysiologicalModal({
   scores,
   radarData,
   vo2maxEstimate,
-  lactateThresholdEstimate
-
-
-
-
-
-}: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;}) {
+  lactateThresholdEstimate,
+  splitTimes,
+}: {scores: CalculatedScore[];radarData: {name: string;shortName: string;value: number;fullMark: number;}[];vo2maxEstimate: number | null;lactateThresholdEstimate: string | null;splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -1316,7 +1313,7 @@ function MobilePhysiologicalModal({
           </p>
 
           {/* Station Bars */}
-          <DiagnosticStationsBars scores={scores} />
+          <DiagnosticStationsBars scores={scores} splitTimes={splitTimes} />
 
           {/* VO2 & Lactate */}
           <div className="grid grid-cols-2 gap-3">
@@ -1820,6 +1817,7 @@ export function DiagnosticRadarBlock({
   provaAlvo,
   provaAlvoTargetTime,
   perfilFisiologico,
+  splitTimes,
 }: DiagnosticRadarBlockProps) {
   const { profile } = useAuth();
   const { status, outlierScore, validatingCompetition } = useAthleteStatus();
@@ -2408,7 +2406,8 @@ export function DiagnosticRadarBlock({
           scores={scores}
           radarData={radarData}
           vo2maxEstimate={vo2maxEstimate}
-          lactateThresholdEstimate={lactateThresholdEstimate} />
+          lactateThresholdEstimate={lactateThresholdEstimate}
+          splitTimes={splitTimes} />
 
       </div>);
 
@@ -2799,7 +2798,7 @@ export function DiagnosticRadarBlock({
                 <AnimatePresence>
                   {showStationDetails &&
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="mt-3 overflow-hidden">
-                      <DiagnosticStationsBars scores={scores} />
+                      <DiagnosticStationsBars scores={scores} splitTimes={splitTimes} />
                     </motion.div>
                   }
                 </AnimatePresence>

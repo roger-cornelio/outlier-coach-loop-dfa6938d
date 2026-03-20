@@ -1,12 +1,9 @@
 /**
  * useDiagnosticScores - Hook para buscar scores da última prova para diagnóstico
  * 
- * FONTE DE VERDADE: hyrox_metric_scores (frozen scores)
- * - Lê scores existentes do resultado mais recente
- * - Retorna dados prontos para visualização no radar
- * 
- * GUARDRAILS:
- * - Nunca calcula scores - apenas lê snapshots frozen
+ * FONTE DE VERDADE: 
+ * - hyrox_metric_scores (frozen scores) para percentis/radar
+ * - tempos_splits (real split times) para barras de estação
  */
 
 import { useState, useEffect } from 'react';
@@ -21,6 +18,12 @@ export interface PerfilFisiologico {
   radar?: Record<string, number>;
 }
 
+export interface SplitTime {
+  split_name: string;
+  time: string;
+  time_sec: number;
+}
+
 export interface DiagnosticScoresResult {
   scores: CalculatedScore[];
   loading: boolean;
@@ -28,6 +31,18 @@ export interface DiagnosticScoresResult {
   lastResultId: string | null;
   lastResultDate: string | null;
   perfilFisiologico: PerfilFisiologico | null;
+  /** Real split times from tempos_splits (source of truth for station bars) */
+  splitTimes: SplitTime[];
+}
+
+/** Convert "MM:SS" or "HH:MM:SS" to total seconds */
+function timeToSec(t: string): number {
+  if (!t || typeof t !== 'string') return 0;
+  const parts = t.trim().split(':').map(Number);
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] || 0;
 }
 
 export function useDiagnosticScores(): DiagnosticScoresResult {
@@ -37,6 +52,7 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
   const [lastResultId, setLastResultId] = useState<string | null>(null);
   const [lastResultDate, setLastResultDate] = useState<string | null>(null);
   const [perfilFisiologico, setPerfilFisiologico] = useState<PerfilFisiologico | null>(null);
+  const [splitTimes, setSplitTimes] = useState<SplitTime[]>([]);
 
   useEffect(() => {
     async function fetchDiagnosticData() {
@@ -77,7 +93,6 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
           return;
         }
 
-        // Transformar para o tipo esperado
         const typedScores: CalculatedScore[] = metricScores.map(s => ({
           metric: s.metric,
           raw_time_sec: s.raw_time_sec,
@@ -88,10 +103,10 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
 
         setScores(typedScores);
 
-        // 3. Fetch perfil_fisiologico from diagnostico_resumo (cached deterministic data)
+        // 3. Fetch perfil_fisiologico + tempos_splits from diagnostico_resumo
         const { data: resumoData } = await supabase
           .from('diagnostico_resumo')
-          .select('perfil_fisiologico')
+          .select('id, perfil_fisiologico')
           .eq('atleta_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -99,6 +114,23 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
 
         if (resumoData?.perfil_fisiologico) {
           setPerfilFisiologico(resumoData.perfil_fisiologico as unknown as PerfilFisiologico);
+        }
+
+        // 4. Fetch real split times from tempos_splits (source of truth for bars)
+        if (resumoData?.id) {
+          const { data: splitsData } = await supabase
+            .from('tempos_splits')
+            .select('split_name, time')
+            .eq('resumo_id', resumoData.id);
+
+          if (splitsData && splitsData.length > 0) {
+            const mapped: SplitTime[] = splitsData.map(s => ({
+              split_name: s.split_name,
+              time: s.time,
+              time_sec: timeToSec(s.time),
+            }));
+            setSplitTimes(mapped);
+          }
         }
       } catch (err) {
         console.error('[DiagnosticScores] Error fetching data:', err);
@@ -117,5 +149,6 @@ export function useDiagnosticScores(): DiagnosticScoresResult {
     lastResultId,
     lastResultDate,
     perfilFisiologico,
+    splitTimes,
   };
 }
