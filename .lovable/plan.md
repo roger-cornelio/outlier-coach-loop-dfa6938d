@@ -1,41 +1,41 @@
 
 
-## Plano: Adicionar Regra de Descending/Ascending Rep Scheme ao Prompt
+## Plano: Separar Exercícios Novos vs Linhas Não Interpretadas no Modal
 
-### O que será feito
+### Problema Atual
+O modal "Detalhes da interpretação" mistura tudo numa lista só: exercícios desconhecidos (ex: "Squat to Stand", "Pike Lunges") junto com linhas estruturais que a IA não entendeu (ex: "40,30,20,10", "30/30" Side Plank"). O coach não sabe o que é exercício novo vs. texto mal formatado.
 
-Adicionar ao prompt da Edge Function `parse-workout-blocks` uma regra e exemplos para o padrão de **rep scheme decrescente/crescente** (ex: "40,30,20,10" seguido de exercícios).
+### Solução
+Dividir o modal em **duas seções visuais distintas**:
 
-### Mudanças no arquivo `supabase/functions/parse-workout-blocks/index.ts`
+**Seção 1 — 🟡 Exercícios Novos (amarelo suave)**
+- Linhas que **parecem exercícios** (contêm palavras, sem números puros)
+- Fuzzy match contra `global_exercises` confirma que NÃO existe no dicionário
+- Mostra botão **"Sugerir"** para enviar ao admin
+- Tom: informativo — "Estes exercícios ainda não estão no nosso dicionário"
 
-**1. Nova regra no FORMAT RECOGNITION (após linha 149)**
-- Reconhecer padrões como "40,30,20,10", "21-15-9", "50-40-30-20-10" seguidos de exercícios
-- Instrução: somar todas as reps (40+30+20+10=100), retornar `reps: soma`, `sets: 1`
-- Guardar o esquema original no campo `notes` (ex: "Rep scheme: 40,30,20,10")
+**Seção 2 — 🔴 Linhas Não Interpretadas (vermelho/laranja forte)**
+- Linhas que são **números puros** ("40,30,20,10"), **notação ambígua** ("30/30""), ou **prefixos sem contexto** ("A-", "B-")
+- Sem botão de sugerir (não são exercícios)
+- Tom: **recomendação forte** — "⚠️ Recomendamos corrigir estas linhas antes de publicar. O atleta não verá estimativas de tempo/calorias."
 
-**2. Dois exemplos few-shot novos (após os exemplos existentes)**
+### Mudanças Técnicas
 
-Exemplo 1 — Warm Up decrescente:
-```
-Input: title "Warm Up", content "40,30,20,10\nShoulder Taps\nCalf Raises"
-Output: [
-  {"slug":"shoulder_taps","name":"Shoulder Taps","movementPatternSlug":"core","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"},
-  {"slug":"calf_raises","name":"Calf Raises","movementPatternSlug":"isolation","sets":1,"reps":100,"notes":"Rep scheme: 40,30,20,10"}
-]
-```
+**1. `src/utils/parsingCoverage.ts`**
+- Adicionar campo `category: 'new_exercise' | 'uninterpretable'` ao `UnmatchedLine`
+- Criar função `classifyUnmatchedLine(text)` que usa heurísticas:
+  - Linha é só números/vírgulas/hífens → `uninterpretable`
+  - Linha tem aspas de tempo (30") sem nome claro → `uninterpretable`
+  - Linha começa com "A-", "B-" sem exercício reconhecível → `uninterpretable`
+  - Linha tem pelo menos 2+ letras formando nome → `new_exercise`
 
-Exemplo 2 — Fran-style 21-15-9:
-```
-Input: title "WOD", content "21-15-9\nThrusters (43kg)\nPull-ups"
-Output: [
-  {"slug":"thrusters","name":"Thrusters","movementPatternSlug":"squat_vertical_push","sets":1,"reps":45,"loadKg":43,"notes":"Rep scheme: 21-15-9"},
-  {"slug":"pull_ups","name":"Pull-ups","movementPatternSlug":"pull","sets":1,"reps":45,"notes":"Rep scheme: 21-15-9"}
-]
-```
+**2. `src/components/TextModelImporter.tsx` (modal, linhas ~1112-1161)**
+- Separar `coverageReport.unmatchedLines` em dois arrays filtrados por `category`
+- Renderizar seção "Exercícios novos" (amarelo) com botão Sugerir
+- Renderizar seção "Linhas não interpretadas" (vermelho/laranja) com alerta forte e sem botão Sugerir
+- Badge no header: mostrar contagem separada se houver linhas não interpretadas
 
-### Arquivo modificado
-- `supabase/functions/parse-workout-blocks/index.ts` — adição de 1 regra + 2 exemplos no prompt
-
-### Risco
-**Zero.** Apenas texto adicional no prompt. Não altera lógica de parsing nem motor de cálculo.
+### Arquivos Modificados
+- `src/utils/parsingCoverage.ts` — classificação das linhas
+- `src/components/TextModelImporter.tsx` — UI do modal dividida em 2 seções
 
