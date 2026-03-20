@@ -500,6 +500,7 @@ interface DiagnosticRadarBlockProps {
   provaAlvo?: RaceInfo | null;
   provaAlvoTargetTime?: string | null;
   perfilFisiologico?: PerfilFisiologico | null;
+  splitTimes?: import('@/hooks/useDiagnosticScores').SplitTime[];
 }
 
 // ============================================
