@@ -347,7 +347,7 @@ export function CoachOverviewTab() {
 
       {/* Column headers */}
       {athletes.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+        <div className="flex items-center gap-3 lg:gap-4 px-4 lg:px-6 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
           <div className="w-8" /> {/* avatar space */}
           <div className="flex-1">Atleta</div>
           <div className="w-12 text-center">Ausente</div>
