@@ -225,22 +225,22 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
                                 )}
                               </div>
                               
-                              {/* ALERTAS (não bloqueiam) */}
-                              {alerts.length > 0 && (
-                                <div className="mt-2 space-y-1">
-                                  {alerts.slice(0, 3).map((alert, i) => (
-                                    <div key={i} className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-600">
-                                      ⚠️ {alert.type === 'MISSING_DASH' ? 'Sem hífen' : 'Fora de ( )'}: "{alert.line.slice(0, 30)}..."
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
                               
-                              {/* TREINO: apenas linhas com "- " */}
+                              {/* TREINO: linhas com badges estruturais */}
                               {exerciseLines.length > 0 && (
-                                <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-background/50 p-2 rounded">
-                                  {exerciseLines.join('\n')}
-                                </pre>
+                                <div className="mt-2 text-xs text-muted-foreground font-mono bg-background/50 p-2 rounded space-y-1">
+                                  {exerciseLines.map((line, idx) => {
+                                    if (line.startsWith(STRUCT_LINE_PREFIX)) {
+                                      const structLabel = line.slice(STRUCT_LINE_PREFIX.length);
+                                      return (
+                                        <div key={idx} className="pt-1 pb-0.5">
+                                          <StructureBadge structure={structLabel} />
+                                        </div>
+                                      );
+                                    }
+                                    return <p key={idx} className="whitespace-pre-wrap">{line}</p>;
+                                  })}
+                                </div>
                               )}
                               
                               {/* COMENTÁRIOS INLINE (fora de "> COMENTÁRIO") */}
