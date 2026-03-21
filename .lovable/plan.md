@@ -1,66 +1,36 @@
 
 
-## Plano: Atualizar instruções, modelo recomendado e expandir mapa DSL de dias
+## Plano: Detectar typos de termos estruturais na tela de edição
 
-### 1) Expandir mapa de dias no DSL
-**Arquivo:** `src/utils/dslParser.ts` (linhas 48-59)
+### Problema
 
-Adicionar variantes com `-FEIRA` ao `DSL_DAY_MAP`:
-- `SEGUNDA-FEIRA`, `TERÇA-FEIRA`, `QUARTA-FEIRA`, `QUINTA-FEIRA`, `SEXTA-FEIRA`
-- Também `TERCA-FEIRA` (sem acento)
+Quando o coach escreve **"2r ounds"** (com espaço no meio), o sistema hoje classifica como exercício de baixa confiança. Como "r ounds" não existe no dicionário de exercícios nem tem unidades reconhecíveis, a linha deveria aparecer como erro — mas passa invisível.
 
-Assim o coach pode escrever `DIA: SEGUNDA` ou `DIA: SEGUNDA-FEIRA` — ambos funcionam.
+### Como vamos resolver
 
-### 2) Atualizar modelo recomendado
-**Arquivo:** `src/components/StructuredErrorDisplay.tsx` (linhas 129-150 e 207-224)
+#### 1) Interceptar no classificador — antes de virar "exercício"
+**Arquivo:** `src/utils/structuredTextParser.ts`
 
-**Template novo** — exemplo realista com estrutura AMRAP, comentários entre `()`, métricas concretas:
+Hoje a regra é: "linha começa com número → é exercício". Vamos adicionar uma checagem antes:
 
-```
-DIA: SEGUNDA
+- Separar a parte numérica da parte textual (ex: `"2r ounds"` → número `2`, texto `"r ounds"`)
+- Normalizar o texto (juntar espaços, lowercase)
+- Comparar com termos estruturais conhecidos: `rounds`, `series`, `sets`, `rodadas`, `emom`, `amrap`, `tabata`
+- Se a distância de Levenshtein for ≤ 2 → **não é exercício**, é uma nota solta com erro de digitação
+- Classificar como `NOTE LOW` → cai na regra de "nota solta = borda amarela + erro"
 
-BLOCO: AQUECIMENTO
-- 800m Run Z2
-- 3x10 Squat to Stand
-(Foco na mobilidade de quadril)
+#### 2) Mostrar sugestão "Você quis dizer…?"
+**Arquivo:** `src/utils/parsingCoverage.ts`
 
-BLOCO: WOD
-**15' AMRAP**
-- 10 Wall Ball 9kg
-- 15 Cal Row
-- 5 Bar Muscle-up
-(Cap 5 rounds)
+- Adicionar campo `suggestion` na interface `UnmatchedLine`
+- Quando uma nota solta é detectada como typo estrutural, preencher a sugestão (ex: *"Você quis dizer '2 Rounds'?"*)
+- O modal de detalhes exibe essa dica para o coach corrigir
 
-DIA: TERÇA
+### Resultado esperado
 
-BLOCO: FORÇA
-- Back Squat 5x5 @80%
-- Romanian Deadlift 4x8
-(Rest 2' entre séries)
-```
-
-**Legenda atualizada** — remover `=` e `>`, adicionar:
-- `DIA:` → início do dia
-- `BLOCO:` → início do bloco
-- `**estrutura**` → AMRAP, EMOM, Rounds, For Time
-- `-` exercício → cada exercício com métrica
-- `( )` → comentário/observação (obrigatório)
-- Aviso: "Texto solto sem ( ) será marcado como erro"
-
-### 3) Atualizar sintaxe DSL no importador
-**Arquivo:** `src/components/TextModelImporter.tsx` (linhas 923-931)
-
-Adicionar linha de aviso:
-- `⚠️ Texto solto sem ( ) será marcado como erro de interpretação`
-
-### 4) Atualizar teste unitário
-**Arquivo:** `src/utils/__tests__/dslParser.test.ts`
-
-Adicionar teste para `DIA: SEGUNDA-FEIRA` ser reconhecido corretamente.
+O coach escreve `"2r ounds"` → o bloco fica com borda amarela → ao clicar, vê: **"Linha não interpretada: '2r ounds' — Você quis dizer '2 Rounds'?"**
 
 ### Arquivos a alterar
-- `src/utils/dslParser.ts` — expandir `DSL_DAY_MAP`
-- `src/components/StructuredErrorDisplay.tsx` — template + legenda
-- `src/components/TextModelImporter.tsx` — aviso na sintaxe
-- `src/utils/__tests__/dslParser.test.ts` — teste para variantes com `-FEIRA`
+- `src/utils/structuredTextParser.ts` — regra de classificação
+- `src/utils/parsingCoverage.ts` — sugestão fuzzy + campo `suggestion`
 
