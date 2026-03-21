@@ -56,7 +56,7 @@ const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i;
  * Padrão para EMOM dentro de ** **
  * Exemplos: **EMOM 30**, **EMOM 20'**, **EMOM 10 min**
  */
-const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['′'']?\s*(?:min)?\s*\*\*$/i;
+const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para AMRAP dentro de ** **
