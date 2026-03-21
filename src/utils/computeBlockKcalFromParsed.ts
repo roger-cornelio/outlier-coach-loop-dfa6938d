@@ -389,26 +389,26 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
     }
 
     // Fallback: regex flexível para títulos compostos (sem exigir fim de linha)
-    const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['′'']?\s*(?:min)?/i);
     if (flexibleAmrap) {
       const minutes = parseInt(flexibleAmrap[1], 10);
       if (minutes > 0) return minutes;
     }
 
-    const flexibleEmom = blockTitle.match(/EMOM\s*(\d+)\s*['′]?\s*(?:min)?/i);
+    const flexibleEmom = blockTitle.match(/EMOM\s*(\d+)\s*['′'']?\s*(?:min)?/i);
     if (flexibleEmom) {
       const minutes = parseInt(flexibleEmom[1], 10);
       if (minutes > 0) return minutes;
     }
 
     // Padrão invertido: número ANTES do nome (ex: "15' AMRAP", "10' EMOM")
-    const invertedAmrap = blockTitle.match(/(\d+)\s*['′]?\s*(?:min\s*)?AMRAP/i);
+    const invertedAmrap = blockTitle.match(/(\d+)\s*['′'']?\s*(?:min\s*)?AMRAP/i);
     if (invertedAmrap) {
       const minutes = parseInt(invertedAmrap[1], 10);
       if (minutes > 0) return minutes;
     }
 
-    const invertedEmom = blockTitle.match(/(\d+)\s*['′]?\s*(?:min\s*)?EMOM/i);
+    const invertedEmom = blockTitle.match(/(\d+)\s*['′'']?\s*(?:min\s*)?EMOM/i);
     if (invertedEmom) {
       const minutes = parseInt(invertedEmom[1], 10);
       if (minutes > 0) return minutes;
