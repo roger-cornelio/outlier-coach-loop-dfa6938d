@@ -86,15 +86,19 @@ export function WeeklyTrainingView() {
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
-  // Agregar totais reais do motor de física (fonte única de verdade)
-  const { totalTime, totalCalories } = useMemo(() => {
-    if (!currentWorkout) return { totalTime: 0, totalCalories: 0 };
+  // Fonte única de verdade: métricas por bloco + totais agregados
+  const blockMetricsMap = useMemo(() => {
+    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number }>, totalTime: 0, totalCalories: 0 };
     
     let sumKcal = 0;
     let sumDurationSec = 0;
+    const perBlock: Array<{ kcal: number; durationSec: number }> = [];
     
     currentWorkout.blocks.forEach((block, index) => {
-      if (block.type === 'notas') return;
+      if (block.type === 'notas') {
+        perBlock.push({ kcal: 0, durationSec: 0 });
+        return;
+      }
       
       const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       
@@ -105,23 +109,30 @@ export function WeeklyTrainingView() {
           block.content,
           block.title
         );
-        sumKcal += metrics.estimatedKcal || 0;
-        sumDurationSec += metrics.estimatedDurationSec || 0;
+        const kcal = metrics.estimatedKcal || 0;
+        const dur = metrics.estimatedDurationSec || 0;
+        perBlock.push({ kcal, durationSec: dur });
+        sumKcal += kcal;
+        sumDurationSec += dur;
       } else {
-        // Fallback: usar timeMeta para duração
         const timeMeta = getBlockTimeMeta(block);
-        sumDurationSec += timeMeta.durationSecUsed || 0;
-        // Fallback kcal do estimador heurístico
+        const dur = timeMeta.durationSecUsed || 0;
         const blockEst = workoutEstimation?.blocks[index];
-        sumKcal += blockEst?.estimatedKcal || 0;
+        const kcal = blockEst?.estimatedKcal || 0;
+        perBlock.push({ kcal, durationSec: dur });
+        sumKcal += kcal;
+        sumDurationSec += dur;
       }
     });
     
     return {
+      perBlock,
       totalTime: Math.round(sumDurationSec / 60),
       totalCalories: Math.round(sumKcal),
     };
   }, [currentWorkout, biometrics, workoutEstimation]);
+
+  const { totalTime, totalCalories } = blockMetricsMap;
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -272,22 +283,12 @@ export function WeeklyTrainingView() {
                 return null;
               }
               
-              const blockEstimate = workoutEstimation?.blocks[index];
-              
-              // PRIORIDADE: usar parsedExercises quando disponíveis (dados da IA)
+              // Usar métricas pré-computadas (mesma fonte do header)
+              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0 };
+              const estimatedKcal = blockMet.kcal;
+              const estimatedMinutes = Math.round(blockMet.durationSec / 60);
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
-              const parsedMetrics = hasParsedData 
-                ? computeBlockMetrics(block.parsedExercises!, { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex }, block.content, block.title)
-                : null;
-              
-              const estimatedKcal = parsedMetrics?.estimatedKcal || blockEstimate?.estimatedKcal || 0;
-              
-              // Usar TimeMeta como fonte de verdade para tempo, com fallback para parsed
-              const timeMeta = getBlockTimeMeta(block);
-              const estimatedMinutes = parsedMetrics?.estimatedDurationSec 
-                ? Math.round(parsedMetrics.estimatedDurationSec / 60) 
-                : Math.round(timeMeta.durationSecUsed / 60);
-              const isEstimated = !hasParsedData && timeMeta.source !== 'CONFIRMED';
+              const isEstimated = !hasParsedData;
 
               // Tempo registrado disponível no WOD principal
               const isMainWod = block.isMainWod;
