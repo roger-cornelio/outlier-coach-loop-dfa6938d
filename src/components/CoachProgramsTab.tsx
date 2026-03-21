@@ -188,7 +188,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl lg:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
@@ -594,16 +594,16 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+      <div className="grid grid-cols-3 gap-3 lg:gap-6">
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 lg:p-6 text-center">
           <p className="text-2xl font-bold text-green-500">{published.length}</p>
           <p className="text-xs text-muted-foreground">Publicados</p>
         </div>
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-center">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 lg:p-6 text-center">
           <p className="text-2xl font-bold text-blue-500">{drafts.length}</p>
           <p className="text-xs text-muted-foreground">Rascunhos</p>
         </div>
-        <div className="bg-muted border border-border rounded-lg p-3 text-center">
+        <div className="bg-muted border border-border rounded-lg p-3 lg:p-6 text-center">
           <p className="text-2xl font-bold text-muted-foreground">{archived.length}</p>
           <p className="text-xs text-muted-foreground">Arquivados</p>
         </div>
@@ -631,7 +631,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[500px]">
+            <ScrollArea className="max-h-[500px] lg:max-h-[calc(100vh-400px)]">
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {workouts.map((workout) => {
@@ -645,7 +645,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors"
+                        className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors"
                       >
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <Calendar className="w-5 h-5 text-primary" />
