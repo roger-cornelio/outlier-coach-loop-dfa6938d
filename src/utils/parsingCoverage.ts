@@ -360,7 +360,7 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
         // REGRA: NOTEs soltas na zona de treino = erro de interpretação
         // O coach deve colocar comentários entre () ou em [COMENTÁRIO]
         // ═══════════════════════════════════════════════════════════════
-        else if (line.kind === 'NOTE' && !isLegitimateNote(line.text)) {
+        else if (line.kind === 'NOTE' && line.confidence === 'LOW' && !isLegitimateNote(line.text)) {
           totalExercises++;
           unmatchedLines.push({
             text: line.text,
