@@ -595,7 +595,7 @@ export default function CoachDashboard() {
     <div className="min-h-screen bg-gradient-to-b from-background to-[hsl(0,0%,3%)]">
       {/* Header fixo */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -625,7 +625,7 @@ export default function CoachDashboard() {
       </header>
 
       {/* Navegação por Tabs */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full overflow-x-auto no-scrollbar mb-6 gap-1">
             <TabsTrigger value="visao-geral" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
