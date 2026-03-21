@@ -56,25 +56,19 @@ const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i;
  * Padrão para EMOM dentro de ** **
  * Exemplos: **EMOM 30**, **EMOM 20'**, **EMOM 10 min**
  */
-const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*\*\*$/i;
+const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para AMRAP dentro de ** **
  * Exemplos: **AMRAP 15**, **AMRAP 20'**, **AMRAP 12 min**
  */
-const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*\*\*$/i;
+const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para FOR TIME dentro de ** **
  * Exemplos: **FOR TIME**, **For Time**
  */
 const FOR_TIME_PATTERN = /^\*\*\s*For\s+Time\s*\*\*$/i;
-
-/**
- * Padrão para TABATA dentro de ** **
- * Exemplos: **TABATA**, **TABATA 8**, **TABATA 8'**
- */
-const TABATA_PATTERN = /^\*\*\s*TABATA\s*(?:(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?)?\s*\*\*$/i;
 
 /**
  * Padrão genérico para qualquer estrutura entre ** **
@@ -85,10 +79,9 @@ const STRUCTURE_WRAPPER_PATTERN = /^\*\*.*\*\*$/;
 // Padrões PLAIN TEXT (sem ** **) — aceita coaches sem markdown
 // ────────────────────────────────────────────────────────────
 const PLAIN_ROUNDS_PATTERN = /^(\d+)\s*Rounds?\s*$/i;
-const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*$/i;
-const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*$/i;
+const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
+const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
 const PLAIN_FOR_TIME_PATTERN = /^For\s*Time\s*$/i;
-const PLAIN_TABATA_PATTERN = /^TABATA\s*(?:(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?)?\s*$/i;
 
 // ============================================
 // FUNÇÕES DE DETECÇÃO
@@ -168,18 +161,6 @@ function parseWrappedStructureLine(trimmed: string): WorkoutStructure | null {
       tag: '__STRUCT:FORTIME=true',
     };
   }
-
-  // TABATA
-  const tabataMatch = trimmed.match(TABATA_PATTERN);
-  if (tabataMatch) {
-    const minutes = tabataMatch[1] ? parseInt(tabataMatch[1], 10) : 4; // default 4 min (8×20s/10s)
-    return {
-      type: 'FIXED_TIME',
-      value: minutes,
-      rawLine: trimmed,
-      tag: `__STRUCT:TABATA=${minutes}`,
-    };
-  }
   
   // Estrutura não reconhecida entre ** **
   return null;
@@ -233,18 +214,6 @@ function parsePlainStructureLine(trimmed: string): WorkoutStructure | null {
       value: null,
       rawLine: trimmed,
       tag: '__STRUCT:FORTIME=true',
-    };
-  }
-
-  // TABATA
-  const tabataMatch = trimmed.match(PLAIN_TABATA_PATTERN);
-  if (tabataMatch) {
-    const minutes = tabataMatch[1] ? parseInt(tabataMatch[1], 10) : 4;
-    return {
-      type: 'FIXED_TIME',
-      value: minutes,
-      rawLine: trimmed,
-      tag: `__STRUCT:TABATA=${minutes}`,
     };
   }
 
@@ -414,8 +383,6 @@ export function getStructureDescription(structures: WorkoutStructure[]): string 
           parts.push(`EMOM ${struct.value}'`);
         } else if (struct.tag.includes('AMRAP')) {
           parts.push(`AMRAP ${struct.value}'`);
-        } else if (struct.tag.includes('TABATA')) {
-          parts.push(`Tabata ${struct.value}'`);
         }
         break;
       case 'DERIVED_TIME':
@@ -558,14 +525,6 @@ export function parseStoredTags(tags: string[]): WorkoutStructure[] {
         type: 'FIXED_TIME',
         value,
         rawLine: `**AMRAP ${value}**`,
-        tag,
-      });
-    } else if (tag.startsWith('__STRUCT:TABATA=')) {
-      const value = parseInt(tag.split('=')[1], 10);
-      structures.push({
-        type: 'FIXED_TIME',
-        value,
-        rawLine: `**TABATA ${value}**`,
         tag,
       });
     } else if (tag === '__STRUCT:FORTIME=true') {
