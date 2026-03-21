@@ -48,11 +48,17 @@ export interface DSLParsedLine {
 // Mapeamento DIA: → DayOfWeek
 const DSL_DAY_MAP: Record<string, DayOfWeek> = {
   'SEGUNDA': 'seg',
+  'SEGUNDA-FEIRA': 'seg',
   'TERÇA': 'ter',
   'TERCA': 'ter',
+  'TERÇA-FEIRA': 'ter',
+  'TERCA-FEIRA': 'ter',
   'QUARTA': 'qua',
+  'QUARTA-FEIRA': 'qua',
   'QUINTA': 'qui',
+  'QUINTA-FEIRA': 'qui',
   'SEXTA': 'sex',
+  'SEXTA-FEIRA': 'sex',
   'SÁBADO': 'sab',
   'SABADO': 'sab',
   'DOMINGO': 'dom',
