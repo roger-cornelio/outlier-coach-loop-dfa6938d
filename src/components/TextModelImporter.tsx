@@ -1200,9 +1200,12 @@ BLOCO: DESCANSO
                                         Linhas não interpretadas ({uninterpretable.length})
                                       </p>
                                     </div>
-                                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1">
                                       <p className="text-xs text-destructive font-medium">
                                         ⚠️ Recomendamos corrigir estas linhas antes de publicar. O atleta não verá estimativas de tempo/calorias nesses trechos.
+                                      </p>
+                                      <p className="text-xs text-destructive/80">
+                                        💡 Se for um comentário, coloque entre parênteses <strong>( )</strong> ou mova para a seção <strong>[COMENTÁRIO]</strong>.
                                       </p>
                                     </div>
                                     {Array.from(groupLines(uninterpretable).entries()).map(([groupKey, lines]) => (
