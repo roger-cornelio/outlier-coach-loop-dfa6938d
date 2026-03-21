@@ -595,7 +595,7 @@ export default function CoachDashboard() {
     <div className="min-h-screen bg-gradient-to-b from-background to-[hsl(0,0%,3%)]">
       {/* Header fixo */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
