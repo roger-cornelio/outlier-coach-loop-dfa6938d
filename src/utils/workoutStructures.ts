@@ -414,6 +414,8 @@ export function getStructureDescription(structures: WorkoutStructure[]): string 
           parts.push(`EMOM ${struct.value}'`);
         } else if (struct.tag.includes('AMRAP')) {
           parts.push(`AMRAP ${struct.value}'`);
+        } else if (struct.tag.includes('TABATA')) {
+          parts.push(`Tabata ${struct.value}'`);
         }
         break;
       case 'DERIVED_TIME':
