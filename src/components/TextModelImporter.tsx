@@ -1389,8 +1389,20 @@ BLOCO: DESCANSO
                               const hasMultipleMain = blockPreviewErrors.some(e => e.reason === 'multiple_main');
                               const hasStructureConflict = blockPreviewErrors.some(e => e.reason === 'structure_conflict');
                               
-                              const hasBlockLevelError = hasTitleError || !block.type || isMissingCategory || hasStructureConflict;
-                              const hasValidationErrors = hasBlockLevelError;
+                               const hasBlockLevelError = hasTitleError || !block.type || isMissingCategory || hasStructureConflict;
+                               
+                               // Verificar se bloco tem NOTEs soltas na zona de treino
+                               const hasLooseNotes = block.type !== 'notas' && (block.lines || []).some(
+                                 (line: any) => line.kind === 'NOTE' && (() => {
+                                   const t = (line.text || '').trim();
+                                   if (/^\(.*\)$/.test(t)) return false;
+                                   if (!t || /^[⸻─═\-]{3,}$/.test(t)) return false;
+                                   if ((t.match(/[a-zA-ZÀ-ÿ]/g) || []).length < 3) return false;
+                                   if (t.startsWith('#')) return false;
+                                   return true;
+                                 })()
+                               );
+                               const hasValidationErrors = hasBlockLevelError || hasLooseNotes;
                               
                               // ═══════════════════════════════════════════════════════════
                               // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO

@@ -301,6 +301,24 @@ export function detectExerciseTypos(
  * Calcula a cobertura semântica do parse — quantos exercícios
  * tiveram métricas mensuráveis detectadas (TIME, DISTANCE, REPS, EFFORT).
  */
+/**
+ * Verifica se uma linha NOTE é uma nota legítima (entre parênteses, prefixo reconhecido, etc.)
+ * Notas legítimas NÃO geram erro — o coach as colocou corretamente.
+ */
+function isLegitimateNote(text: string): boolean {
+  const trimmed = text.trim();
+  // Entre parênteses completos
+  if (/^\(.*\)$/.test(trimmed)) return true;
+  // Linha vazia ou separador
+  if (!trimmed || /^[⸻─═\-]{3,}$/.test(trimmed)) return true;
+  // Menos de 3 letras (ruído)
+  const letterCount = (trimmed.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+  if (letterCount < 3) return true;
+  // Prefixo # (marcador de comentário DSL)
+  if (trimmed.startsWith('#')) return true;
+  return false;
+}
+
 export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames?: string[]): CoverageReport {
   const unmatchedLines: UnmatchedLine[] = [];
   let totalExercises = 0;
@@ -313,6 +331,9 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
   for (let dayIndex = 0; dayIndex < parseResult.days.length; dayIndex++) {
     const day = parseResult.days[dayIndex];
     for (const block of day.blocks) {
+      // Pular blocos de notas/comentário — não são zona de treino
+      if (block.type === 'notas') continue;
+
       for (const line of block.lines) {
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
           totalExercises++;
@@ -334,6 +355,19 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
               });
             }
           }
+        }
+        // ═══════════════════════════════════════════════════════════════
+        // REGRA: NOTEs soltas na zona de treino = erro de interpretação
+        // O coach deve colocar comentários entre () ou em [COMENTÁRIO]
+        // ═══════════════════════════════════════════════════════════════
+        else if (line.kind === 'NOTE' && !isLegitimateNote(line.text)) {
+          totalExercises++;
+          unmatchedLines.push({
+            text: line.text,
+            blockTitle: block.title || 'Bloco sem título',
+            dayIndex,
+            category: 'uninterpretable',
+          });
         }
       }
     }
