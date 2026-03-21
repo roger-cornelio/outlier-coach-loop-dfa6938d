@@ -400,6 +400,19 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       const minutes = parseInt(flexibleEmom[1], 10);
       if (minutes > 0) return minutes;
     }
+
+    // Padrão invertido: número ANTES do nome (ex: "15' AMRAP", "10' EMOM")
+    const invertedAmrap = blockTitle.match(/(\d+)\s*['′]?\s*(?:min\s*)?AMRAP/i);
+    if (invertedAmrap) {
+      const minutes = parseInt(invertedAmrap[1], 10);
+      if (minutes > 0) return minutes;
+    }
+
+    const invertedEmom = blockTitle.match(/(\d+)\s*['′]?\s*(?:min\s*)?EMOM/i);
+    if (invertedEmom) {
+      const minutes = parseInt(invertedEmom[1], 10);
+      if (minutes > 0) return minutes;
+    }
   }
 
   return null;
