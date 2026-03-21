@@ -114,7 +114,7 @@ export function WeeklyTrainingView() {
         perBlock.push({ kcal, durationSec: dur });
         sumKcal += kcal;
         sumDurationSec += dur;
-        console.log(`[MetricsDebug] Block ${index} "${block.title}" parsed: ${Math.round(dur/60)}min, ${kcal}kcal`);
+        
       } else {
         const timeMeta = getBlockTimeMeta(block);
         const dur = timeMeta.durationSecUsed || 0;
