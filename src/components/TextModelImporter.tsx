@@ -1557,8 +1557,19 @@ BLOCO: DESCANSO
                                       ? { lines: filteredRaw, coachNotes: block.coachNotes, content: undefined }
                                       : block;
                                     const displayData = getBlockDisplayDataFromParsed(displayBlock);
-                                    
-                                    
+
+  // Recalcula cobertura quando a biblioteca de exercícios atualiza (ex: admin aprovou exercício novo)
+  useEffect(() => {
+    if (!parseResult || !exerciseLibrary.length || !coverageReport) return;
+    const updated = calculateParsingCoverage(parseResult, exerciseLibrary.map(e => e.name));
+    if (updated.successRate !== coverageReport.successRate || 
+        updated.unmatchedLines.length !== coverageReport.unmatchedLines.length) {
+      setCoverageReport(updated);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseLibrary]);
+
+
                                     // Estado de expansão por bloco (usando key único)
                                     const blockKey = `${dayIndex}-${blockIndex}`;
                                     const isExpanded = expandedBlocks.has(blockKey);
