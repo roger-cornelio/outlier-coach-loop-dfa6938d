@@ -29,7 +29,7 @@ import {
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
   Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare,
-  Wand2, Send
+  Wand2, Send, Clock, Flame, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
