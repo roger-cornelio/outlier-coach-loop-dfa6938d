@@ -169,6 +169,17 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
 
+  // Recalcula cobertura quando a biblioteca de exercícios atualiza (ex: admin aprovou exercício novo)
+  useEffect(() => {
+    if (!parseResult || !exerciseLibrary.length || !coverageReport) return;
+    const updated = calculateParsingCoverage(parseResult, exerciseLibrary.map(e => e.name));
+    if (updated.successRate !== coverageReport.successRate || 
+        updated.unmatchedLines.length !== coverageReport.unmatchedLines.length) {
+      setCoverageReport(updated);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseLibrary]);
+
   // Memoized autoformat preview — O(n) single-pass, recalcula apenas quando rawText muda
   const autoFormatPreview = useMemo(() => {
     if (!rawText.trim()) return { hasChanges: false, changesCount: 0, affectedLines: [] };
