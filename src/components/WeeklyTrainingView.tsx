@@ -248,12 +248,16 @@ export function WeeklyTrainingView() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>{totalTime > 0 ? `${totalTime}min` : 'Estimando…'}</span>
+                    <span className="font-medium text-foreground">
+                      {totalTime > 0 ? `~${totalTime}min` : 'Estimando…'}
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">(estimado)</span>
                   </div>
                   {totalCalories > 0 && (
                     <div className="flex items-center gap-2">
                       <Flame className="w-4 h-4 text-orange-500" />
-                      <span className="text-orange-500 font-medium">~{Math.abs(totalCalories)} kcal</span>
+                      <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
+                      <span className="text-xs text-muted-foreground/60">(estimado)</span>
                     </div>
                   )}
                 </div>
