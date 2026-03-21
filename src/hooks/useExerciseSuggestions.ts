@@ -82,21 +82,31 @@ export function useExerciseSuggestionsAdmin() {
   const approveSuggestion = useCallback(async (id: string, movementPatternId: string, exerciseName: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const now = new Date().toISOString();
+      const normalizedName = exerciseName.trim().toLowerCase();
 
-      // 1. Update suggestion status
+      // 1. Find all pending suggestions with the same exercise name
+      const duplicateIds = suggestions
+        .filter(s => s.status === 'pending' && s.exercise_name.trim().toLowerCase() === normalizedName)
+        .map(s => s.id);
+
+      // Ensure the clicked one is included
+      if (!duplicateIds.includes(id)) duplicateIds.push(id);
+
+      // 2. Approve all matching suggestions
       const { error: updateErr } = await supabase
         .from('exercise_suggestions')
         .update({
           status: 'approved',
           movement_pattern_id: movementPatternId,
           reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
+          reviewed_at: now,
         } as any)
-        .eq('id', id) as any;
+        .in('id', duplicateIds) as any;
 
       if (updateErr) throw updateErr;
 
-      // 2. Insert into global_exercises
+      // 3. Insert into global_exercises (only once)
       const { error: insertErr } = await supabase
         .from('global_exercises')
         .insert({
@@ -106,12 +116,18 @@ export function useExerciseSuggestionsAdmin() {
 
       if (insertErr) throw insertErr;
 
-      toast({ title: 'Exercício aprovado', description: `"${exerciseName}" adicionado ao sistema.` });
+      const count = duplicateIds.length;
+      toast({
+        title: 'Exercício aprovado',
+        description: count > 1
+          ? `"${exerciseName}" adicionado ao sistema (${count} sugestões aprovadas).`
+          : `"${exerciseName}" adicionado ao sistema.`,
+      });
       await fetchSuggestions();
     } catch (err: any) {
       toast({ title: 'Erro ao aprovar', description: err.message, variant: 'destructive' });
     }
-  }, [toast, fetchSuggestions]);
+  }, [toast, fetchSuggestions, suggestions]);
 
   const rejectSuggestion = useCallback(async (id: string, reason?: string) => {
     try {
