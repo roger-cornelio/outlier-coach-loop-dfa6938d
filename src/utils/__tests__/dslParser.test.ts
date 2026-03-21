@@ -28,10 +28,17 @@ describe('DSL Parser - Detecção de linhas', () => {
       expect(isDSLDayLine('DIA: DOMINGO')).toBe(true);
     });
 
+    it('detecta variantes com -FEIRA', () => {
+      expect(isDSLDayLine('DIA: SEGUNDA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: TERÇA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: TERCA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: QUINTA-FEIRA')).toBe(true);
+    });
+
     it('não detecta formatos inválidos', () => {
       expect(isDSLDayLine('SEGUNDA')).toBe(false);
-      expect(isDSLDayLine('Dia: Segunda')).toBe(true); // case insensitive para o marcador
-      expect(isDSLDayLine('DIA SEGUNDA')).toBe(false); // falta :
+      expect(isDSLDayLine('Dia: Segunda')).toBe(true);
+      expect(isDSLDayLine('DIA SEGUNDA')).toBe(false);
     });
   });
 
