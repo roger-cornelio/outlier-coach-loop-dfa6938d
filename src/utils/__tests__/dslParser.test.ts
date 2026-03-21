@@ -104,6 +104,11 @@ describe('DSL Parser - Extração de conteúdo', () => {
       expect(extractDSLDay('DIA: SÁBADO')).toEqual({ dayName: 'SÁBADO', dayValue: 'sab' });
     });
 
+    it('extrai variantes com -FEIRA', () => {
+      expect(extractDSLDay('DIA: SEGUNDA-FEIRA')).toEqual({ dayName: 'SEGUNDA-FEIRA', dayValue: 'seg' });
+      expect(extractDSLDay('DIA: TERCA-FEIRA')).toEqual({ dayName: 'TERCA-FEIRA', dayValue: 'ter' });
+    });
+
     it('retorna null para dia inválido', () => {
       expect(extractDSLDay('DIA: FERIADO')).toEqual({ dayName: 'FERIADO', dayValue: null });
     });

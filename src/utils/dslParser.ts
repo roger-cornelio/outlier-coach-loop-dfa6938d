@@ -65,7 +65,7 @@ const DSL_DAY_MAP: Record<string, DayOfWeek> = {
 };
 
 // Pattern para DIA: X (exato, case-insensitive para o nome do dia, mas DIA: deve ser exato)
-const DSL_DAY_PATTERN = /^DIA:\s*(\S+)$/i;
+const DSL_DAY_PATTERN = /^DIA:\s*(.+?)\s*$/i;
 
 // Pattern para BLOCO: X
 const DSL_BLOCK_PATTERN = /^BLOCO:\s*(.+)$/i;

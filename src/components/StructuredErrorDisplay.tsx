@@ -205,20 +205,18 @@ export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
           <div className="space-y-1.5">
             <p className="text-[11px] font-semibold text-muted-foreground">🔒 Marcadores</p>
             <div className="text-xs text-foreground/70 space-y-1 pl-2 font-mono">
-              <p><span className="font-semibold text-primary">=</span> TREINO → bloco de treino</p>
-              <p><span className="font-semibold text-primary">-</span> item → exercício</p>
-              <p><span className="font-semibold text-primary">&gt;</span> COMENTÁRIO → observação</p>
+              <p><span className="font-semibold text-primary">DIA:</span> SEGUNDA → início do dia</p>
+              <p><span className="font-semibold text-primary">BLOCO:</span> AQUECIMENTO → início do bloco</p>
+              <p><span className="font-semibold text-primary">**estrutura**</span> → AMRAP, EMOM, Rounds, For Time</p>
+              <p><span className="font-semibold text-primary">-</span> exercício → cada exercício com métrica</p>
+              <p><span className="font-semibold text-primary">( )</span> → comentário/observação</p>
             </div>
           </div>
           
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-semibold text-muted-foreground">📏 Métricas por modalidade</p>
-            <div className="text-[11px] text-foreground/70 space-y-1 pl-2">
-              <p><span className="font-medium">🏃 Corrida:</span> tempo, distância, intensidade</p>
-              <p><span className="font-medium">🏋️ Força:</span> séries x reps, carga, rest</p>
-              <p><span className="font-medium">🔥 Metcon:</span> formato (EMOM, AMRAP, For Time)</p>
-              <p><span className="font-medium">🧘 Acessórios:</span> tempo ou reps</p>
-            </div>
+          <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <p className="text-[11px] text-amber-700 font-medium">
+              ⚠️ Texto solto sem <span className="font-mono">( )</span> será marcado como erro de interpretação
+            </p>
           </div>
         </div>
       )}
