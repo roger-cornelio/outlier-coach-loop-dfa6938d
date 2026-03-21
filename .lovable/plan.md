@@ -1,33 +1,35 @@
 
 
-## Plano: Ignorar Plural no Fuzzy Matching de Exercícios
+## Plano: Adicionar useEffect para Recalcular Cobertura ao Atualizar Biblioteca
 
-### Problema
-"10 Wall Ball" gera aviso "Você quis dizer Wall Balls?" porque a Levenshtein distance entre "wall ball" e "wall balls" é 1 — que cai dentro do threshold. Mas é o **mesmo exercício**, só variando singular/plural. O mesmo acontece com "Box Jump" → "Box Jumps".
+### O que será feito
 
-### Solução
-Adicionar normalização de plural na função `normalizeForFuzzy` em `src/utils/parsingCoverage.ts`. Antes de comparar, remover o "s" final (e variantes comuns como "es") de ambos os lados.
+Adicionar um `useEffect` em `TextModelImporter.tsx` que recalcula o `coverageReport` automaticamente sempre que a `exerciseLibrary` mudar (ex: após o admin aprovar um exercício novo e o cache do React Query refrescar).
+
+O cache de 30 minutos será mantido como está — impacto zero em performance.
 
 ### Mudança técnica
 
-**Arquivo: `src/utils/parsingCoverage.ts`**
+**Arquivo: `src/components/TextModelImporter.tsx`**
 
-1. **Criar função `stripPlural(text)`** que remove sufixo plural simples:
-   - "s" final (wall balls → wall ball, box jumps → box jump)
-   - "es" final quando precedido de consoante (lunges → lung — mas cuidado com "raises")
-   - Abordagem conservadora: só remover "s" final se a palavra base tiver 4+ caracteres
+Após a linha ~166 (onde `coverageReport` é declarado), adicionar:
 
-2. **Aplicar na comparação dentro de `fuzzyMatchExerciseName`**:
-   - Após normalizar ambos os lados, se `stripPlural(a) === stripPlural(b)` → tratar como match exato (retornar `null`, sem warning)
-   - Isso é checado **antes** do cálculo de Levenshtein
+```ts
+// Recalcula cobertura quando a biblioteca de exercícios atualiza
+useEffect(() => {
+  if (!parseResult || !exerciseLibrary.length || !coverageReport) return;
+  const updated = calculateParsingCoverage(parseResult, exerciseLibrary.map(e => e.name));
+  // Só atualiza se houve mudança real
+  if (updated.successRate !== coverageReport.successRate || 
+      updated.unmatchedLines.length !== coverageReport.unmatchedLines.length) {
+    setCoverageReport(updated);
+  }
+}, [exerciseLibrary]);
+```
 
 ### Resultado
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 10 Wall Ball | ⚠️ "Você quis dizer Wall Balls?" | ✅ Sem aviso |
-| 10 Box Jump | ⚠️ "Você quis dizer Box Jumps?" | ✅ Sem aviso |
-| 10 Bac Squart | ⚠️ "Você quis dizer Back Squat?" | ⚠️ Mantém (é typo real) |
+Quando o admin aprova um exercício e o cache eventualmente revalida (ou o coach recarrega a página), a cobertura é recalculada automaticamente — exercícios aprovados saem da lista de "não interpretados".
 
 ### Arquivo modificado
-- `src/utils/parsingCoverage.ts` — apenas lógica de normalização plural
+- `src/components/TextModelImporter.tsx` — 1 useEffect adicionado (~8 linhas)
 
