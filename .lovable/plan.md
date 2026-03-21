@@ -1,35 +1,29 @@
 
 
-## Plano: Adicionar useEffect para Recalcular Cobertura ao Atualizar Biblioteca
+## Plano: Corrigir Renderização do Treino Semanal no CoachProgramsTab
 
-### O que será feito
+### Problema
+O `CoachProgramsTab.tsx` renderiza `exerciseLines` como texto bruto numa tag `<pre>` (linha 240), sem tratar:
+1. **`__STRUCT:Tabata`**, **`__STRUCT:2 rounds`** — aparecem como texto cru em vez de badges visuais
+2. **Alertas "Sem hífen"** — mostram warnings de formatação numa tela que deveria ser de visualização
 
-Adicionar um `useEffect` em `TextModelImporter.tsx` que recalcula o `coverageReport` automaticamente sempre que a `exerciseLibrary` mudar (ex: após o admin aprovar um exercício novo e o cache do React Query refrescar).
+Outras telas (WeeklyTrainingView, WorkoutExecution) já fazem o tratamento correto: verificam o prefixo `__STRUCT:` e renderizam um `StructureBadge`.
 
-O cache de 30 minutos será mantido como está — impacto zero em performance.
+### Solução
 
-### Mudança técnica
+**Arquivo: `src/components/CoachProgramsTab.tsx`**
 
-**Arquivo: `src/components/TextModelImporter.tsx`**
-
-Após a linha ~166 (onde `coverageReport` é declarado), adicionar:
-
-```ts
-// Recalcula cobertura quando a biblioteca de exercícios atualiza
-useEffect(() => {
-  if (!parseResult || !exerciseLibrary.length || !coverageReport) return;
-  const updated = calculateParsingCoverage(parseResult, exerciseLibrary.map(e => e.name));
-  // Só atualiza se houve mudança real
-  if (updated.successRate !== coverageReport.successRate || 
-      updated.unmatchedLines.length !== coverageReport.unmatchedLines.length) {
-    setCoverageReport(updated);
-  }
-}, [exerciseLibrary]);
-```
+1. **Importar `StructureBadge`** de `DSLBlockRenderer`
+2. **Substituir o `<pre>` por renderização linha-a-linha** que:
+   - Linhas com `__STRUCT:` → renderiza `<StructureBadge>`
+   - Demais linhas → renderiza como texto normal
+3. **Remover/ocultar alertas de "Sem hífen"** nesta visualização (é tela de consulta, não de edição — os alertas já aparecem no importador)
 
 ### Resultado
-Quando o admin aprova um exercício e o cache eventualmente revalida (ou o coach recarrega a página), a cobertura é recalculada automaticamente — exercícios aprovados saem da lista de "não interpretados".
+- `__STRUCT:Tabata` → badge visual "Tabata"
+- `__STRUCT:2 rounds` → badge visual "2 Rounds"
+- Sem alertas amarelos de formatação nesta tela
 
 ### Arquivo modificado
-- `src/components/TextModelImporter.tsx` — 1 useEffect adicionado (~8 linhas)
+- `src/components/CoachProgramsTab.tsx` — ~15 linhas alteradas
 
