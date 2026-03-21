@@ -439,7 +439,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       
       if (result.success && result.days.length > 0) {
         // Relatório de Comissionamento Semântico
-        const coverage = calculateParsingCoverage(result);
+        const coverage = calculateParsingCoverage(result, exerciseLibrary.map(e => e.name));
         setCoverageReport(coverage);
         setShowCoverageBadge(true);
 

@@ -22,11 +22,66 @@ export interface UnmatchedLine {
 }
 
 /**
- * Classifica uma linha não interpretada:
- * - 'uninterpretable': números puros, notação ambígua, prefixos sem contexto
- * - 'new_exercise': parece um nome de exercício não catalogado
+ * Normaliza texto para comparação: lowercase, sem acentos, sem hífens.
  */
-export function classifyUnmatchedLine(text: string): UnmatchedCategory {
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Extrai o nome-base do exercício removendo prefixos, modificadores,
+ * números, unidades e notações de tempo.
+ * Ex: "Max Wall Ball 9 kg" → "wall ball"
+ * Ex: "A- 5 Heavy Single Clean" → "clean"
+ * Ex: "30/30" Side Plank" → "side plank"
+ */
+function extractBaseExerciseName(text: string): string {
+  let t = text.trim();
+  // Remove prefixos A-/B-/C-/D-/A1)/B2) etc.
+  t = t.replace(/^[A-Z]\d?\s*[)\-–—]\s*/i, '');
+  // Remove notações de tempo no início (30", 40", 30/30", 1'30")
+  t = t.replace(/^\d+\s*[/]\s*\d+\s*["'']\s*/i, '');
+  t = t.replace(/^\d+\s*[']\s*\d*\s*["']?\s*/i, '');
+  t = t.replace(/^\d+\s*["'']\s*/i, '');
+  // Remove modificadores de intensidade
+  t = t.replace(/\b(max|heavy|single|strict|tempo|pause|deficit|banded)\b/gi, '');
+  // Remove números e unidades
+  t = t.replace(/\d+\s*(kg|lb|cal|m|km|seg|s|min|reps?|rep)?\b/gi, '');
+  // Remove razões como 32/32, 30/25
+  t = t.replace(/\d+\s*\/\s*\d+/g, '');
+  // Remove @ e % notations
+  t = t.replace(/[@%]/g, '');
+  // Remove leading markers (-, •, *)
+  t = t.replace(/^[-•*]\s*/, '');
+  return normalizeText(t);
+}
+
+/**
+ * Verifica se o nome-base extraído contém algum exercício do dicionário.
+ */
+function matchesDictionary(baseName: string, normalizedDict: string[]): boolean {
+  if (!baseName || baseName.length < 2) return false;
+  for (const dictName of normalizedDict) {
+    if (!dictName) continue;
+    if (baseName.includes(dictName) || dictName.includes(baseName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Classifica uma linha não interpretada:
+ * - 'uninterpretable': exercício conhecido com formatação não reconhecida, ou notação pura
+ * - 'new_exercise': parece um exercício não catalogado
+ */
+export function classifyUnmatchedLine(text: string, exerciseNames?: string[]): UnmatchedCategory {
   const trimmed = text.trim();
 
   // Números puros com vírgulas/hífens (rep schemes: "40,30,20,10", "21-15-9")
@@ -46,6 +101,15 @@ export function classifyUnmatchedLine(text: string): UnmatchedCategory {
   // Linhas muito curtas sem letras suficientes (< 3 chars de letras)
   const letterCount = (trimmed.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
   if (letterCount < 3) return 'uninterpretable';
+
+  // Se temos dicionário, verificar se o nome-base bate com exercício existente
+  if (exerciseNames && exerciseNames.length > 0) {
+    const baseName = extractBaseExerciseName(trimmed);
+    const normalizedDict = exerciseNames.map(n => normalizeText(n));
+    if (baseName.length >= 2 && matchesDictionary(baseName, normalizedDict)) {
+      return 'uninterpretable'; // Exercício existe, é problema de formatação
+    }
+  }
 
   // Se chegou aqui, parece um exercício novo
   return 'new_exercise';
@@ -225,7 +289,7 @@ export function detectExerciseTypos(
  * Calcula a cobertura semântica do parse — quantos exercícios
  * tiveram métricas mensuráveis detectadas (TIME, DISTANCE, REPS, EFFORT).
  */
-export function calculateParsingCoverage(parseResult: ParseResult): CoverageReport {
+export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames?: string[]): CoverageReport {
   const unmatchedLines: UnmatchedLine[] = [];
   let totalExercises = 0;
   let recognizedMetrics = 0;
@@ -234,7 +298,6 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
     const day = parseResult.days[dayIndex];
     for (const block of day.blocks) {
       for (const line of block.lines) {
-        // Filtrar apenas linhas classificadas como exercício
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
           totalExercises++;
 
@@ -246,7 +309,7 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
               text: line.text,
               blockTitle: block.title || 'Bloco sem título',
               dayIndex,
-              category: classifyUnmatchedLine(line.text),
+              category: classifyUnmatchedLine(line.text, exerciseNames),
             });
           }
         }
