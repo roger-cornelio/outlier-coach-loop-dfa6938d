@@ -214,7 +214,11 @@ function computeExerciseKcal(
   } else {
     // vertical_work
     if (exercise.durationSeconds) {
-      durationSec = exercise.durationSeconds;
+      durationSec = exercise.durationSeconds * sets;
+      if (sets > 1) {
+        const restPerSet = exercise.restSeconds || 0;
+        durationSec += (sets - 1) * restPerSet;
+      }
     } else {
       const secPerRep = pattern.defaultSecondsPerRep || 3;
       durationSec = sets * reps * secPerRep;
