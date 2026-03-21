@@ -283,7 +283,7 @@ export function computeBlockMetrics(
   // ════════════════════════════════════════════════════════════════════════════
   // FIXED_TIME DETECTION: Detectar AMRAP/EMOM no título OU conteúdo
   // ════════════════════════════════════════════════════════════════════════════
-  const fixedTimeMinutes = detectFixedTimeMinutes(blockContent, blockTitle);
+  const fixedTimeMinutes = detectFixedTimeMinutes(blockContent, blockTitle, parsedExercises.length);
 
   const exerciseMultipliers = buildExerciseMultiplierMap(parsedExercises, blockContent);
 

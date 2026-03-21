@@ -236,6 +236,18 @@ function parsePlainStructureLine(trimmed: string): WorkoutStructure | null {
     };
   }
 
+  // TABATA
+  const tabataMatch = trimmed.match(PLAIN_TABATA_PATTERN);
+  if (tabataMatch) {
+    const minutes = tabataMatch[1] ? parseInt(tabataMatch[1], 10) : 4;
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:TABATA=${minutes}`,
+    };
+  }
+
   return null;
 }
 
