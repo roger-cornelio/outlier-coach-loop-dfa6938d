@@ -85,8 +85,43 @@ export function WeeklyTrainingView() {
   }, [currentWorkout, athleteConfig]);
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
-  const totalTime = workoutEstimation?.totals.estimatedMinutesTotal || 0;
-  const totalCalories = workoutEstimation?.totals.estimatedKcalTotal || 0;
+
+  // Agregar totais reais do motor de física (fonte única de verdade)
+  const { totalTime, totalCalories } = useMemo(() => {
+    if (!currentWorkout) return { totalTime: 0, totalCalories: 0 };
+    
+    let sumKcal = 0;
+    let sumDurationSec = 0;
+    
+    currentWorkout.blocks.forEach((block, index) => {
+      if (block.type === 'notas') return;
+      
+      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+      
+      if (hasParsedData) {
+        const metrics = computeBlockMetrics(
+          block.parsedExercises!,
+          { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex },
+          block.content,
+          block.title
+        );
+        sumKcal += metrics.estimatedKcal || 0;
+        sumDurationSec += metrics.estimatedDurationSec || 0;
+      } else {
+        // Fallback: usar timeMeta para duração
+        const timeMeta = getBlockTimeMeta(block);
+        sumDurationSec += timeMeta.durationSecUsed || 0;
+        // Fallback kcal do estimador heurístico
+        const blockEst = workoutEstimation?.blocks[index];
+        sumKcal += blockEst?.estimatedKcal || 0;
+      }
+    });
+    
+    return {
+      totalTime: Math.round(sumDurationSec / 60),
+      totalCalories: Math.round(sumKcal),
+    };
+  }, [currentWorkout, biometrics, workoutEstimation]);
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
