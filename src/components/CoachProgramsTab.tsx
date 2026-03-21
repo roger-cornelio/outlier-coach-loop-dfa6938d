@@ -594,7 +594,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 lg:gap-6">
         <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
           <p className="text-2xl font-bold text-green-500">{published.length}</p>
           <p className="text-xs text-muted-foreground">Publicados</p>
