@@ -131,6 +131,37 @@ function StatusBadge({ status, showMicrocopy = false }: StatusBadgeProps) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BIOMETRICS PADRÃO PARA PREVIEW DO COACH
+// Masculino, 75kg, 170cm — usado APENAS na pré-visualização.
+// Ao publicar, o motor recalcula com dados reais de cada atleta.
+// ═══════════════════════════════════════════════════════════════════════════════
+const COACH_PREVIEW_BIOMETRICS = {
+  weightKg: 75,
+  sex: 'masculino' as const,
+  age: 30,
+  heightCm: 170,
+  isValid: true,
+  missingWeight: false,
+};
+
+const COACH_PREVIEW_ATHLETE_CONFIG = {
+  peso: 75,
+  sexo: 'masculino' as const,
+  idade: 30,
+  altura: 170,
+};
+
+const blockTypeColors: Record<string, string> = {
+  aquecimento: 'border-l-amber-500',
+  conditioning: 'border-l-primary',
+  forca: 'border-l-red-500',
+  especifico: 'border-l-purple-500',
+  core: 'border-l-blue-500',
+  corrida: 'border-l-green-500',
+  notas: 'border-l-muted-foreground',
+};
+
 interface WorkoutDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -163,10 +194,12 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
             <Calendar className="w-5 h-5 text-primary" />
             {workout.title}
           </DialogTitle>
-          {/* Status com microcopy obrigatória */}
           <div className="mt-2">
             <StatusBadge status={workout.status} showMicrocopy />
           </div>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Valores estimados para atleta padrão (masculino, 75kg, 170cm). Ao publicar, cada atleta receberá cálculos com seus dados reais.
+          </p>
         </DialogHeader>
         
         <ScrollArea className="flex-1 pr-4">
@@ -178,108 +211,227 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
               </div>
             ) : (
               workoutDays.map((dayWorkout) => (
-                <div key={dayWorkout.day} className="border border-border rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => toggleDay(dayWorkout.day)}
-                    className="w-full p-3 flex items-center justify-between bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">{DAY_NAMES[dayWorkout.day] || dayWorkout.day}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {dayWorkout.blocks?.length || 0} bloco(s)
-                      </span>
-                    </div>
-                    {expandedDays.has(dayWorkout.day) ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedDays.has(dayWorkout.day) && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-3 space-y-3 bg-background">
-                          {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
-                            const { headerTitle, headerMeta } = getBlockHeader(block, idx);
-                            // MVP0 REGRA FINAL: Separar treino e comentário
-                            const parseResult = separateBlockContent(block.content || '');
-                            const { exerciseLines, coachNotes, inlineComments, alerts } = parseResult;
-                            
-                            // Comentários: priorizar coachNotes do parser, fallback para block.coachNotes
-                            const finalComments = coachNotes.length > 0 
-                              ? coachNotes 
-                              : (Array.isArray(block.coachNotes) ? block.coachNotes : []);
-                            
-                            // REGRA: Se não tem exercícios NEM comentários NEM inline, não renderiza
-                            if (exerciseLines.length === 0 && finalComments.length === 0 && inlineComments.length === 0) {
-                              return null;
-                            }
-                            
-                            return (
-                            <div key={block.id || idx} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-medium">{headerTitle}</span>
-                                {headerMeta && (
-                                  <span className="text-xs text-muted-foreground">• {headerMeta}</span>
-                                )}
-                              </div>
-                              
-                              
-                              {/* TREINO: linhas com badges estruturais */}
-                              {exerciseLines.length > 0 && (
-                                <div className="mt-2 text-xs text-muted-foreground font-mono bg-background/50 p-2 rounded space-y-1">
-                                  {exerciseLines.map((line, idx) => {
-                                    if (line.startsWith(STRUCT_LINE_PREFIX)) {
-                                      const structLabel = line.slice(STRUCT_LINE_PREFIX.length);
-                                      return (
-                                        <div key={idx} className="pt-1 pb-0.5">
-                                          <StructureBadge structure={structLabel} />
-                                        </div>
-                                      );
-                                    }
-                                    return <p key={idx} className="whitespace-pre-wrap">{line}</p>;
-                                  })}
-                                </div>
-                              )}
-                              
-                              {/* COMENTÁRIOS INLINE (fora de "> COMENTÁRIO") */}
-                              {inlineComments.length > 0 && (
-                                <div className="mt-1 text-xs text-muted-foreground/60 italic">
-                                  {inlineComments.map((ic, i) => (
-                                    <span key={i}>({ic.text}) </span>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* SUB-BLOCO COMENTÁRIO (da seção "> COMENTÁRIO") */}
-                              {finalComments.length > 0 && (
-                                <div className="mt-2 text-xs text-muted-foreground/70 pl-2 border-l-2 border-muted-foreground/20 bg-muted/20 p-2 rounded-r">
-                                  <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide block mb-1">Comentário</span>
-                                  {finalComments.map((line, i) => (
-                                    <p key={i}>{line}</p>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <DayPreviewCard
+                  key={dayWorkout.day}
+                  dayWorkout={dayWorkout}
+                  isExpanded={expandedDays.has(dayWorkout.day)}
+                  onToggle={() => toggleDay(dayWorkout.day)}
+                />
               ))
             )}
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DayPreviewCard — Card colapsável por dia com UI idêntica à tela do atleta
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface DayPreviewCardProps {
+  dayWorkout: DayWorkout;
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+function DayPreviewCard({ dayWorkout, isExpanded, onToggle }: DayPreviewCardProps) {
+  // Calcular métricas com biometrics padrão (mesmo algoritmo da WeeklyTrainingView)
+  const workoutEstimation = useMemo(() => {
+    return estimateWorkout(dayWorkout, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
+  }, [dayWorkout]);
+
+  const blockMetricsMap = useMemo(() => {
+    let sumMinutes = 0;
+    let sumKcal = 0;
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+
+    dayWorkout.blocks.forEach((block, index) => {
+      const displayData = getBlockDisplayDataFromParsed(block);
+      if (!displayData.hasContent) {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        return;
+      }
+      if (block.type === 'notas') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+
+      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+      let kcal = 0;
+      let dur = 0;
+
+      if (hasParsedData) {
+        const metrics = computeBlockMetrics(
+          block.parsedExercises!,
+          { pesoKg: 75, sexo: 'masculino' },
+          block.content,
+          block.title
+        );
+        kcal = metrics.estimatedKcal || 0;
+        dur = metrics.estimatedDurationSec || 0;
+      } else {
+        const timeMeta = getBlockTimeMeta(block);
+        dur = timeMeta.durationSecUsed || 0;
+        const blockEst = workoutEstimation?.blocks[index];
+        kcal = blockEst?.estimatedKcal || 0;
+      }
+
+      const roundedMinutes = Math.round(dur / 60);
+      const roundedKcal = Math.round(kcal);
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      sumMinutes += roundedMinutes;
+      sumKcal += roundedKcal;
+    });
+
+    return { perBlock, totalTime: sumMinutes, totalCalories: sumKcal };
+  }, [dayWorkout, workoutEstimation]);
+
+  const { totalTime, totalCalories } = blockMetricsMap;
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      {/* Day Header (collapsible trigger) */}
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between bg-secondary/30 hover:bg-secondary/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="font-bold text-sm">
+            {DAY_NAMES[dayWorkout.day] || dayWorkout.day}
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            {dayWorkout.blocks?.length || 0} bloco(s)
+          </span>
+          {totalTime > 0 && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="font-medium text-foreground">~{totalTime}min</span>
+            </div>
+          )}
+          {totalCalories > 0 && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <Flame className="w-3.5 h-3.5 text-orange-500" />
+              <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
+            </div>
+          )}
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4" />
+        ) : (
+          <ChevronDown className="w-4 h-4" />
+        )}
+      </button>
+
+      {/* Expanded Content — identical to athlete WeeklyTrainingView */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-4 bg-background">
+              {dayWorkout.blocks?.map((block: WorkoutBlock, idx: number) => {
+                const displayData = getBlockDisplayDataFromParsed(block);
+                if (!displayData.hasContent) return null;
+
+                const blockMet = blockMetricsMap.perBlock[idx] || { kcal: 0, durationSec: 0, showStats: false };
+                const estimatedKcal = blockMet.kcal;
+                const estimatedMinutes = Math.round(blockMet.durationSec / 60);
+                const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+                const isEstimated = !hasParsedData;
+                const isMainWod = block.isMainWod;
+
+                const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
+
+                return (
+                  <div
+                    key={block.id || idx}
+                    className={`
+                      p-5 rounded-xl border-l-4 bg-card border border-border
+                      ${blockTypeColors[block.type] || 'border-l-border'}
+                      ${isMainWod ? 'ring-1 ring-primary/30' : ''}
+                    `}
+                  >
+                    {/* Block Header */}
+                    <div className="mb-4">
+                      <h3 className="font-display text-xl font-bold tracking-tight uppercase">
+                        {getBlockDisplayTitle(block, idx)}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                        <CategoryChip category={block.type} />
+                        {isMainWod && (
+                          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
+                            WOD Principal
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Structure Badge */}
+                    {structureDescription && (
+                      <div className="mb-4">
+                        <StructureBadge structure={structureDescription} />
+                      </div>
+                    )}
+
+                    {/* Exercise Lines */}
+                    <div className="space-y-2">
+                      {exerciseLines.length > 0 ? (
+                        exerciseLines.map((line, lineIdx) => {
+                          if (line.startsWith(STRUCT_LINE_PREFIX)) {
+                            return (
+                              <div key={lineIdx} className="pt-3 pb-1">
+                                <StructureBadge structure={line.slice(STRUCT_LINE_PREFIX.length)} />
+                              </div>
+                            );
+                          }
+                          return <ExerciseLine key={lineIdx} line={line} className="text-foreground/80" />;
+                        })
+                      ) : (
+                        <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
+                      )}
+                    </div>
+
+                    {/* Coach Notes */}
+                    <CommentSubBlock comments={commentLines} />
+
+                    {/* Block Stats */}
+                    {block.type !== 'notas' && blockMet.showStats && (
+                      <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{isEstimated ? '~' : ''}</span>
+                          <span className="font-medium text-foreground">
+                            {formatEstimatedTime(estimatedMinutes)}
+                          </span>
+                          {isEstimated && (
+                            <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Flame className="w-4 h-4 text-orange-500" />
+                          <span className="text-orange-500 font-medium">
+                            {formatEstimatedKcal(estimatedKcal)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
