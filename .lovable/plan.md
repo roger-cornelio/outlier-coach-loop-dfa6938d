@@ -1,41 +1,45 @@
 
 
-## Plano: Separar Exercícios Novos vs Linhas Não Interpretadas no Modal
+## Plano: Corrigir Classificação Consultando Dicionário de Exercícios
 
-### Problema Atual
-O modal "Detalhes da interpretação" mistura tudo numa lista só: exercícios desconhecidos (ex: "Squat to Stand", "Pike Lunges") junto com linhas estruturais que a IA não entendeu (ex: "40,30,20,10", "30/30" Side Plank"). O coach não sabe o que é exercício novo vs. texto mal formatado.
+### Problema
+`classifyUnmatchedLine` usa apenas regex. "Max Wall Ball 9 kg" é classificado como "exercício novo" quando "Wall Ball" já existe no banco. O mesmo para "30/30" Side Plank", "A- 5 Clean", etc.
 
-### Solução
-Dividir o modal em **duas seções visuais distintas**:
-
-**Seção 1 — 🟡 Exercícios Novos (amarelo suave)**
-- Linhas que **parecem exercícios** (contêm palavras, sem números puros)
-- Fuzzy match contra `global_exercises` confirma que NÃO existe no dicionário
-- Mostra botão **"Sugerir"** para enviar ao admin
-- Tom: informativo — "Estes exercícios ainda não estão no nosso dicionário"
-
-**Seção 2 — 🔴 Linhas Não Interpretadas (vermelho/laranja forte)**
-- Linhas que são **números puros** ("40,30,20,10"), **notação ambígua** ("30/30""), ou **prefixos sem contexto** ("A-", "B-")
-- Sem botão de sugerir (não são exercícios)
-- Tom: **recomendação forte** — "⚠️ Recomendamos corrigir estas linhas antes de publicar. O atleta não verá estimativas de tempo/calorias."
-
-### Mudanças Técnicas
+### Mudanças
 
 **1. `src/utils/parsingCoverage.ts`**
-- Adicionar campo `category: 'new_exercise' | 'uninterpretable'` ao `UnmatchedLine`
-- Criar função `classifyUnmatchedLine(text)` que usa heurísticas:
-  - Linha é só números/vírgulas/hífens → `uninterpretable`
-  - Linha tem aspas de tempo (30") sem nome claro → `uninterpretable`
-  - Linha começa com "A-", "B-" sem exercício reconhecível → `uninterpretable`
-  - Linha tem pelo menos 2+ letras formando nome → `new_exercise`
 
-**2. `src/components/TextModelImporter.tsx` (modal, linhas ~1112-1161)**
-- Separar `coverageReport.unmatchedLines` em dois arrays filtrados por `category`
-- Renderizar seção "Exercícios novos" (amarelo) com botão Sugerir
-- Renderizar seção "Linhas não interpretadas" (vermelho/laranja) com alerta forte e sem botão Sugerir
-- Badge no header: mostrar contagem separada se houver linhas não interpretadas
+- Adicionar função `extractBaseExerciseName(text)` que limpa:
+  - Prefixos A-/B-/C-/D- e variantes A1)/B2)
+  - "Max", "Heavy", "Single" e outros modificadores
+  - Números, unidades (kg, cal, m), notações de tempo (30", 40")
+  - Razões como 32/32, 30/25
+- Atualizar `classifyUnmatchedLine(text, exerciseNames?: string[])`:
+  - Manter as heurísticas regex existentes para números puros
+  - **Após** as heurísticas, extrair o nome-base e comparar (case-insensitive, sem acentos) contra a lista de exercícios
+  - Se o nome-base **contém** um exercício do dicionário → `'uninterpretable'` (problema de formatação)
+  - Se não bate → `'new_exercise'` (realmente novo)
+- Atualizar `calculateParsingCoverage(parseResult, exerciseNames?)` para receber e passar os nomes
+
+**2. `src/components/TextModelImporter.tsx`**
+
+- Na chamada `calculateParsingCoverage(result)`, passar `exerciseLibrary.map(e => e.name)`:
+  ```ts
+  const coverage = calculateParsingCoverage(result, exerciseLibrary.map(e => e.name));
+  ```
+
+### Resultado Esperado
+
+| Linha | Antes | Depois |
+|-------|-------|--------|
+| Max Wall Ball 9 kg | 🟡 exercício novo | 🔴 não interpretada |
+| 30/30" Side Plank | 🟡 exercício novo | 🔴 não interpretada |
+| A- 5 Heavy Single Clean | 🟡 exercício novo | 🔴 não interpretada |
+| B- 40" Max Row | 🟡 exercício novo | 🔴 não interpretada |
+| Squat to Stand | 🟡 exercício novo | 🟡 exercício novo ✅ |
+| Pike Lunges | 🟡 exercício novo | 🟡 exercício novo ✅ |
 
 ### Arquivos Modificados
-- `src/utils/parsingCoverage.ts` — classificação das linhas
-- `src/components/TextModelImporter.tsx` — UI do modal dividida em 2 seções
+- `src/utils/parsingCoverage.ts` — lógica de classificação com dicionário
+- `src/components/TextModelImporter.tsx` — 1 linha alterada para passar nomes
 
