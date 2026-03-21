@@ -56,19 +56,25 @@ const ROUNDS_PATTERN = /^\*\*\s*(\d+)\s*Rounds?\s*\*\*$/i;
  * Padrão para EMOM dentro de ** **
  * Exemplos: **EMOM 30**, **EMOM 20'**, **EMOM 10 min**
  */
-const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
+const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para AMRAP dentro de ** **
  * Exemplos: **AMRAP 15**, **AMRAP 20'**, **AMRAP 12 min**
  */
-const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
+const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para FOR TIME dentro de ** **
  * Exemplos: **FOR TIME**, **For Time**
  */
 const FOR_TIME_PATTERN = /^\*\*\s*For\s+Time\s*\*\*$/i;
+
+/**
+ * Padrão para TABATA dentro de ** **
+ * Exemplos: **TABATA**, **TABATA 8**, **TABATA 8'**
+ */
+const TABATA_PATTERN = /^\*\*\s*TABATA\s*(?:(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?)?\s*\*\*$/i;
 
 /**
  * Padrão genérico para qualquer estrutura entre ** **
@@ -79,9 +85,10 @@ const STRUCTURE_WRAPPER_PATTERN = /^\*\*.*\*\*$/;
 // Padrões PLAIN TEXT (sem ** **) — aceita coaches sem markdown
 // ────────────────────────────────────────────────────────────
 const PLAIN_ROUNDS_PATTERN = /^(\d+)\s*Rounds?\s*$/i;
-const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
-const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
+const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*$/i;
+const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?\s*$/i;
 const PLAIN_FOR_TIME_PATTERN = /^For\s*Time\s*$/i;
+const PLAIN_TABATA_PATTERN = /^TABATA\s*(?:(\d+)\s*['\u2018\u2019\u0027\u2032\u2019]?\s*(?:min)?)?\s*$/i;
 
 // ============================================
 // FUNÇÕES DE DETECÇÃO
