@@ -853,8 +853,13 @@ export function looksLikePrescription(line: string): boolean {
   if (/^\d+[).]\s/.test(trimmed)) return true; // "1) " ou "1. " = lista
   
   // 2. Linha que COMEÇA com número seguido de unidade/exercício = prescrição clara
-  // Ex: "10km", "5 Rounds", "30' EMOM", "3x10 Pull-ups"
-  if (/^\d+/.test(trimmed)) return true;
+  // Ex: "10km", "3x10 Pull-ups"
+  // EXCEÇÃO: "15' AMRAP", "10' EMOM", "20' Tabata" = títulos válidos de bloco
+  if (/^\d+/.test(trimmed)) {
+    if (/^\d+\s*['\u2018\u2019\u0027\u2032"]\s*(AMRAP|EMOM|E\d+MOM|TABATA|FOR\s*TIME|RFT)\b/i.test(trimmed)) return false;
+    if (/^\d+\s*Rounds?\s*(For\s*Time|AMRAP)?\s*$/i.test(trimmed)) return false; // "5 Rounds" is a format line, not prescription
+    return true;
+  }
   
   // 3. Padrões de FORMAT LINE - são CONTEÚDO de bloco, não títulos
   // Ex: "EMOM 30'", "AMRAP 15", "For Time", "E2MOM 12", "Every 2 min"
