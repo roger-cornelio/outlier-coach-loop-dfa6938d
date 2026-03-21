@@ -306,6 +306,10 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
   let totalExercises = 0;
   let recognizedMetrics = 0;
 
+  const normalizedDict = (exerciseNames && exerciseNames.length > 0)
+    ? exerciseNames.map(n => normalizeText(n))
+    : [];
+
   for (let dayIndex = 0; dayIndex < parseResult.days.length; dayIndex++) {
     const day = parseResult.days[dayIndex];
     for (const block of day.blocks) {
@@ -317,12 +321,18 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
           if (result.hasRecognizedUnit) {
             recognizedMetrics++;
           } else {
-            unmatchedLines.push({
-              text: line.text,
-              blockTitle: block.title || 'Bloco sem título',
-              dayIndex,
-              category: classifyUnmatchedLine(line.text, exerciseNames),
-            });
+            // Fallback: se o nome-base existe no dicionário, conta como reconhecido
+            const baseName = extractBaseExerciseName(line.text);
+            if (baseName.length >= 2 && normalizedDict.length > 0 && matchesDictionary(baseName, normalizedDict)) {
+              recognizedMetrics++;
+            } else {
+              unmatchedLines.push({
+                text: line.text,
+                blockTitle: block.title || 'Bloco sem título',
+                dayIndex,
+                category: classifyUnmatchedLine(line.text, exerciseNames),
+              });
+            }
           }
         }
       }
