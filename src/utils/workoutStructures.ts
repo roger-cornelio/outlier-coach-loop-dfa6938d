@@ -62,7 +62,7 @@ const EMOM_PATTERN = /^\*\*\s*EMOM\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:m
  * Padrão para AMRAP dentro de ** **
  * Exemplos: **AMRAP 15**, **AMRAP 20'**, **AMRAP 12 min**
  */
-const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['′'']?\s*(?:min)?\s*\*\*$/i;
+const AMRAP_PATTERN = /^\*\*\s*AMRAP\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*\*\*$/i;
 
 /**
  * Padrão para FOR TIME dentro de ** **
