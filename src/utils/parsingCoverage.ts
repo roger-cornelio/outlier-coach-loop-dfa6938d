@@ -363,11 +363,14 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
         // ═══════════════════════════════════════════════════════════════
         else if (line.kind === 'NOTE' && line.confidence === 'LOW' && !isLegitimateNote(line.text)) {
           totalExercises++;
+          // Verificar se é typo de termo estrutural → sugestão "Você quis dizer…?"
+          const structuralSuggestion = detectStructuralTypo(line.text);
           unmatchedLines.push({
             text: line.text,
             blockTitle: block.title || 'Bloco sem título',
             dayIndex,
             category: 'uninterpretable',
+            suggestion: structuralSuggestion || undefined,
           });
         }
       }
