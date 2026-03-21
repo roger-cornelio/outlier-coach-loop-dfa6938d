@@ -153,6 +153,16 @@ function normalizeForFuzzy(text: string): string {
 }
 
 /**
+ * Remove plural simples de cada palavra (conservador: só "s" final em palavras 4+ chars).
+ */
+function stripPlural(text: string): string {
+  return text
+    .split(' ')
+    .map(w => (w.length >= 4 && w.endsWith('s') && !w.endsWith('ss')) ? w.slice(0, -1) : w)
+    .join(' ');
+}
+
+/**
  * Extrai o nome do exercício de uma linha, removendo números, unidades, etc.
  * Ex: "12 Back Squat @60kg" → "back squat"
  * Ex: "- 400m Run" → "run"
