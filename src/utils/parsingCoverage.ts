@@ -245,7 +245,8 @@ export function fuzzyMatchExerciseName(
     // Check against aliases
     for (const alias of entry.aliases) {
       const normAlias = normalizeForFuzzy(alias);
-      if (normalized === normAlias) return null; // exact alias match
+      if (normalized === normAlias) return null;
+      if (stripPlural(normalized) === stripPlural(normAlias)) return null;
       
       const aliasDist = levenshteinDistance(normalized, normAlias);
       const aliasMaxDist = normAlias.length <= 5 ? 1 : 2;
