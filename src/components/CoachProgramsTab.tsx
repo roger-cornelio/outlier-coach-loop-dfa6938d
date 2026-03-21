@@ -52,7 +52,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { getBlockHeader, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { getBlockHeader, separateBlockContent, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { StructureBadge } from '@/components/DSLBlockRenderer';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
 import {
   Tooltip,
