@@ -351,7 +351,7 @@ export function CoachOverviewTab() {
           <div className="w-8" /> {/* avatar space */}
           <div className="flex-1">Atleta</div>
           <div className="w-12 text-center">Ausente</div>
-          <div className="w-20 text-center hidden sm:block">Adesão</div>
+          <div className="w-20 lg:w-32 text-center hidden sm:block">Adesão</div>
           <div className="w-10" /> {/* action */}
         </div>
       )}
