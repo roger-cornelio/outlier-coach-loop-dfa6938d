@@ -1,36 +1,32 @@
 
 
-## Plano: Corrigir Cálculo de Duração — durationSeconds × sets
+## Plano: Corrigir Detecção de AMRAP/EMOM com Número Antes do Nome
 
 ### Problema
-`durationSeconds` retornado pela IA é **por set**, mas o motor trata como duração total. Um Tabata (8×20s) conta apenas 20s em vez de 240s.
+Tanto AMRAP quanto EMOM falham quando o título usa o formato invertido — número antes do nome (ex: **"15' AMRAP"**, **"10' EMOM"**). O regex atual só reconhece **"AMRAP 15'"** e **"EMOM 10'"**.
+
+Quando a detecção falha, `fixedTimeMinutes` retorna `null` e o motor calcula apenas a duração dos exercícios individuais (~1-2 min), sem escalar para o tempo fixo. Por isso kcal fica muito baixo.
 
 ### Correção
 
 **Arquivo: `src/utils/computeBlockKcalFromParsed.ts`**
 
-Três blocos idênticos (linhas 180, 193, 208) que fazem:
-```ts
-durationSec = exercise.durationSeconds;
+Na função `detectFixedTimeMinutes` (após linha 402), adicionar 2 regex para o padrão invertido:
+
+```
+10' EMOM  →  /(\d+)\s*['′]?\s*(?:min\s*)?EMOM/i
+15' AMRAP →  /(\d+)\s*['′]?\s*(?:min\s*)?AMRAP/i
 ```
 
-Serão substituídos por:
-```ts
-durationSec = exercise.durationSeconds * sets;
-if (sets > 1) {
-  const restPerSet = exercise.restSeconds || 0;
-  durationSec += (sets - 1) * restPerSet;
-}
-```
+### Resultado
 
-**Nota**: O default de `restSeconds` muda de `60` para `0` nestes branches — quando a IA fornece `durationSeconds` explícito, ausência de rest significa zero (diferente do fallback por reps onde 60s é conservador).
-
-### Impacto
-- Tabata 8×20s/10s: 20s → 240s (~4min) + descansos
-- Qualquer exercício com `durationSeconds` + `sets > 1`: corrigido
-- Exercícios sem `durationSeconds` (baseados em reps): sem mudança
-- AMRAPs/EMOMs: sem mudança (fixedTime override)
+| Título | Antes | Depois |
+|--------|-------|--------|
+| 15' AMRAP | ❌ ~2 min, ~26 kcal | ✅ 15 min, ~130+ kcal |
+| 10' EMOM | ❌ ~1 min, ~10 kcal | ✅ 10 min, ~80+ kcal |
+| AMRAP 15' | ✅ já funciona | ✅ sem mudança |
+| EMOM 10' | ✅ já funciona | ✅ sem mudança |
 
 ### Arquivo modificado
-- `src/utils/computeBlockKcalFromParsed.ts` — 3 blocos if (~5 linhas cada)
+- `src/utils/computeBlockKcalFromParsed.ts` — ~10 linhas adicionadas
 
