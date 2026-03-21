@@ -1,29 +1,36 @@
 
 
-## Plano: Corrigir Renderização do Treino Semanal no CoachProgramsTab
+## Plano: Corrigir Cálculo de Duração — durationSeconds × sets
 
 ### Problema
-O `CoachProgramsTab.tsx` renderiza `exerciseLines` como texto bruto numa tag `<pre>` (linha 240), sem tratar:
-1. **`__STRUCT:Tabata`**, **`__STRUCT:2 rounds`** — aparecem como texto cru em vez de badges visuais
-2. **Alertas "Sem hífen"** — mostram warnings de formatação numa tela que deveria ser de visualização
+`durationSeconds` retornado pela IA é **por set**, mas o motor trata como duração total. Um Tabata (8×20s) conta apenas 20s em vez de 240s.
 
-Outras telas (WeeklyTrainingView, WorkoutExecution) já fazem o tratamento correto: verificam o prefixo `__STRUCT:` e renderizam um `StructureBadge`.
+### Correção
 
-### Solução
+**Arquivo: `src/utils/computeBlockKcalFromParsed.ts`**
 
-**Arquivo: `src/components/CoachProgramsTab.tsx`**
+Três blocos idênticos (linhas 180, 193, 208) que fazem:
+```ts
+durationSec = exercise.durationSeconds;
+```
 
-1. **Importar `StructureBadge`** de `DSLBlockRenderer`
-2. **Substituir o `<pre>` por renderização linha-a-linha** que:
-   - Linhas com `__STRUCT:` → renderiza `<StructureBadge>`
-   - Demais linhas → renderiza como texto normal
-3. **Remover/ocultar alertas de "Sem hífen"** nesta visualização (é tela de consulta, não de edição — os alertas já aparecem no importador)
+Serão substituídos por:
+```ts
+durationSec = exercise.durationSeconds * sets;
+if (sets > 1) {
+  const restPerSet = exercise.restSeconds || 0;
+  durationSec += (sets - 1) * restPerSet;
+}
+```
 
-### Resultado
-- `__STRUCT:Tabata` → badge visual "Tabata"
-- `__STRUCT:2 rounds` → badge visual "2 Rounds"
-- Sem alertas amarelos de formatação nesta tela
+**Nota**: O default de `restSeconds` muda de `60` para `0` nestes branches — quando a IA fornece `durationSeconds` explícito, ausência de rest significa zero (diferente do fallback por reps onde 60s é conservador).
+
+### Impacto
+- Tabata 8×20s/10s: 20s → 240s (~4min) + descansos
+- Qualquer exercício com `durationSeconds` + `sets > 1`: corrigido
+- Exercícios sem `durationSeconds` (baseados em reps): sem mudança
+- AMRAPs/EMOMs: sem mudança (fixedTime override)
 
 ### Arquivo modificado
-- `src/components/CoachProgramsTab.tsx` — ~15 linhas alteradas
+- `src/utils/computeBlockKcalFromParsed.ts` — 3 blocos if (~5 linhas cada)
 
