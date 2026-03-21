@@ -123,7 +123,7 @@ export function WeeklyTrainingView() {
         perBlock.push({ kcal, durationSec: dur });
         sumKcal += kcal;
         sumDurationSec += dur;
-        console.log(`[MetricsDebug] Block ${index} "${block.title}" fallback: ${Math.round(dur/60)}min, ${kcal}kcal (parseStatus=${block.parseStatus}, parsedLen=${block.parsedExercises?.length})`);
+        
       }
     });
     
