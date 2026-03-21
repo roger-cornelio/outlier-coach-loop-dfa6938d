@@ -168,6 +168,18 @@ function parseWrappedStructureLine(trimmed: string): WorkoutStructure | null {
       tag: '__STRUCT:FORTIME=true',
     };
   }
+
+  // TABATA
+  const tabataMatch = trimmed.match(TABATA_PATTERN);
+  if (tabataMatch) {
+    const minutes = tabataMatch[1] ? parseInt(tabataMatch[1], 10) : 4; // default 4 min (8×20s/10s)
+    return {
+      type: 'FIXED_TIME',
+      value: minutes,
+      rawLine: trimmed,
+      tag: `__STRUCT:TABATA=${minutes}`,
+    };
+  }
   
   // Estrutura não reconhecida entre ** **
   return null;
