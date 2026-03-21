@@ -136,7 +136,7 @@ function AthleteRow({
       </div>
 
       {/* Adherence bar */}
-      <div className="w-20 hidden sm:block">
+      <div className="w-20 lg:w-32 hidden sm:block">
         <Progress 
           value={adherencePct} 
           className="h-1.5 bg-secondary"
