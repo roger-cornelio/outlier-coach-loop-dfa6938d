@@ -925,10 +925,13 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
               <div className="grid gap-1.5 mt-2 font-mono">
                 <p><span className="font-semibold text-primary">DIA: SEGUNDA</span> — início do dia</p>
                 <p><span className="font-semibold text-primary">BLOCO: AQUECIMENTO</span> — início do bloco</p>
-                <p><span className="font-semibold">**3 ROUNDS**</span> — estrutura do bloco</p>
+                <p><span className="font-semibold">**3 ROUNDS**</span> — estrutura (AMRAP, EMOM, Rounds, For Time)</p>
                 <p><span className="font-semibold">- exercício</span> — cada exercício (com métrica)</p>
                 <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>
+              <p className="text-[10px] text-amber-600 mt-2 font-sans">
+                ⚠️ Texto solto sem <span className="font-mono">( )</span> será marcado como erro de interpretação
+              </p>
             </div>
 
             <Textarea

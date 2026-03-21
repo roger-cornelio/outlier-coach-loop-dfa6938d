@@ -48,18 +48,24 @@ export interface DSLParsedLine {
 // Mapeamento DIA: → DayOfWeek
 const DSL_DAY_MAP: Record<string, DayOfWeek> = {
   'SEGUNDA': 'seg',
+  'SEGUNDA-FEIRA': 'seg',
   'TERÇA': 'ter',
   'TERCA': 'ter',
+  'TERÇA-FEIRA': 'ter',
+  'TERCA-FEIRA': 'ter',
   'QUARTA': 'qua',
+  'QUARTA-FEIRA': 'qua',
   'QUINTA': 'qui',
+  'QUINTA-FEIRA': 'qui',
   'SEXTA': 'sex',
+  'SEXTA-FEIRA': 'sex',
   'SÁBADO': 'sab',
   'SABADO': 'sab',
   'DOMINGO': 'dom',
 };
 
 // Pattern para DIA: X (exato, case-insensitive para o nome do dia, mas DIA: deve ser exato)
-const DSL_DAY_PATTERN = /^DIA:\s*(\S+)$/i;
+const DSL_DAY_PATTERN = /^DIA:\s*(.+?)\s*$/i;
 
 // Pattern para BLOCO: X
 const DSL_BLOCK_PATTERN = /^BLOCO:\s*(.+)$/i;
@@ -434,7 +440,9 @@ export function classifyDSLLine(line: string, lineNumber: number): DSLParsedLine
  * Verifica se o texto usa o formato DSL (tem pelo menos um DIA: ou BLOCO:)
  */
 export function usesDSLFormat(text: string): boolean {
-  return DSL_DAY_PATTERN.test(text) || DSL_BLOCK_PATTERN.test(text);
+  const multilineDayPattern = /^DIA:\s*(.+?)\s*$/im;
+  const multilineBlockPattern = /^BLOCO:\s*(.+)$/im;
+  return multilineDayPattern.test(text) || multilineBlockPattern.test(text);
 }
 
 /**

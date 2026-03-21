@@ -28,10 +28,17 @@ describe('DSL Parser - Detecção de linhas', () => {
       expect(isDSLDayLine('DIA: DOMINGO')).toBe(true);
     });
 
+    it('detecta variantes com -FEIRA', () => {
+      expect(isDSLDayLine('DIA: SEGUNDA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: TERÇA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: TERCA-FEIRA')).toBe(true);
+      expect(isDSLDayLine('DIA: QUINTA-FEIRA')).toBe(true);
+    });
+
     it('não detecta formatos inválidos', () => {
       expect(isDSLDayLine('SEGUNDA')).toBe(false);
-      expect(isDSLDayLine('Dia: Segunda')).toBe(true); // case insensitive para o marcador
-      expect(isDSLDayLine('DIA SEGUNDA')).toBe(false); // falta :
+      expect(isDSLDayLine('Dia: Segunda')).toBe(true);
+      expect(isDSLDayLine('DIA SEGUNDA')).toBe(false);
     });
   });
 
@@ -95,6 +102,11 @@ describe('DSL Parser - Extração de conteúdo', () => {
       expect(extractDSLDay('DIA: SEGUNDA')).toEqual({ dayName: 'SEGUNDA', dayValue: 'seg' });
       expect(extractDSLDay('DIA: TERÇA')).toEqual({ dayName: 'TERÇA', dayValue: 'ter' });
       expect(extractDSLDay('DIA: SÁBADO')).toEqual({ dayName: 'SÁBADO', dayValue: 'sab' });
+    });
+
+    it('extrai variantes com -FEIRA', () => {
+      expect(extractDSLDay('DIA: SEGUNDA-FEIRA')).toEqual({ dayName: 'SEGUNDA-FEIRA', dayValue: 'seg' });
+      expect(extractDSLDay('DIA: TERCA-FEIRA')).toEqual({ dayName: 'TERCA-FEIRA', dayValue: 'ter' });
     });
 
     it('retorna null para dia inválido', () => {
