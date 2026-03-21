@@ -599,11 +599,11 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
           <p className="text-2xl font-bold text-green-500">{published.length}</p>
           <p className="text-xs text-muted-foreground">Publicados</p>
         </div>
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-center">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 lg:p-6 text-center">
           <p className="text-2xl font-bold text-blue-500">{drafts.length}</p>
           <p className="text-xs text-muted-foreground">Rascunhos</p>
         </div>
-        <div className="bg-muted border border-border rounded-lg p-3 text-center">
+        <div className="bg-muted border border-border rounded-lg p-3 lg:p-6 text-center">
           <p className="text-2xl font-bold text-muted-foreground">{archived.length}</p>
           <p className="text-xs text-muted-foreground">Arquivados</p>
         </div>
