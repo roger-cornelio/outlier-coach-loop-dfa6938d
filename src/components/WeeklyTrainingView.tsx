@@ -114,6 +114,7 @@ export function WeeklyTrainingView() {
         perBlock.push({ kcal, durationSec: dur });
         sumKcal += kcal;
         sumDurationSec += dur;
+        
       } else {
         const timeMeta = getBlockTimeMeta(block);
         const dur = timeMeta.durationSecUsed || 0;
@@ -122,8 +123,10 @@ export function WeeklyTrainingView() {
         perBlock.push({ kcal, durationSec: dur });
         sumKcal += kcal;
         sumDurationSec += dur;
+        
       }
     });
+    
     
     return {
       perBlock,
