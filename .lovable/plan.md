@@ -1,45 +1,34 @@
 
 
-## Plano: Atualizar Preview do Importador com UI idêntica à tela do atleta
+## Plano: Expandir layout desktop das abas Visao Geral e Programacoes
 
 ### Problema
+As abas "Visao Geral" e "Programacoes" usam layout compacto (gaps pequenos, alturas fixas, listas empilhadas) que nao aproveita a largura disponivel em desktop. A edicao e visualizacao ficam apertadas.
 
-A tela de preview dentro do `TextModelImporter.tsx` (step 3 do fluxo de importação) ainda usa layout simples: texto puro, sem cards coloridos por tipo, sem cálculos de tempo e calorias, sem badges de estrutura. O coach não consegue conferir como o treino vai aparecer para o atleta.
+### Alteracoes
 
-O `WorkoutDetailModal` no `CoachProgramsTab.tsx` já foi atualizado, mas o preview do importador (que o coach vê ANTES de salvar) continua com a UI antiga.
+#### 1) CoachOverviewTab (`src/components/CoachOverviewTab.tsx`)
 
-### Solução
+- **KPI Cards**: aumentar gap no desktop (`gap-3` para `gap-3 lg:gap-6`) e padding interno (`sm:p-4` para `lg:p-6`)
+- **KPI Card content**: textos e icones maiores em desktop (`lg:text-4xl` para o numero, `lg:w-5 lg:h-5` para icone)
+- **Lista de atletas**: aumentar `max-h` no desktop (`max-h-[calc(100vh-380px)]` para `lg:max-h-[calc(100vh-320px)]`)
+- **Athlete Row**: padding e gaps maiores em desktop (`lg:px-6 lg:py-4 lg:gap-4`)
+- **Column headers**: gap maior no desktop
+- **Adherence bar**: mais larga em desktop (`w-20` para `lg:w-32`)
 
-Reescrever a seção de preview do `TextModelImporter.tsx` (linhas ~1870-2004) para usar a mesma estrutura visual já implementada no `WorkoutDetailModal`:
+#### 2) CoachProgramsTab (`src/components/CoachProgramsTab.tsx`)
 
-#### 1) Cada dia como card colapsável
-- Header com nome do dia + badge de totais (`~Xmin`, `~X kcal`)
-- Colapsável com animação
+- **Summary grid**: gap maior (`gap-3` para `gap-3 lg:gap-6`), padding maior nos cards de resumo (`lg:p-6`)
+- **ScrollArea**: remover `max-h-[500px]` fixo, usar `max-h-[calc(100vh-400px)]` para aproveitar a tela
+- **Workout cards na lista**: em desktop, usar layout com mais espaco horizontal (`lg:p-4 lg:gap-4`)
+- **WorkoutDetailModal**: expandir de `max-w-2xl` para `max-w-4xl` em desktop para mostrar blocos lado a lado
 
-#### 2) Blocos com UI do atleta
-- Card com `border-l-4` colorido por tipo (aquecimento=amber, conditioning=primary, força=red, etc.)
-- `CategoryChip` para tipo do bloco
-- Badge "WOD Principal" quando aplicável
-- `StructureBadge` para estruturas (ROUNDS, EMOM, AMRAP)
-- `ExerciseLine` para exercícios
-- `CommentSubBlock` para comentários
+#### 3) Nao alterar
+- Nenhuma logica, hook, integracao ou fluxo
+- Nenhuma cor, icone ou texto
+- Layout mobile permanece intacto (todas as mudancas usam prefixo `lg:`)
 
-#### 3) Métricas por bloco
-- Footer com tempo e calorias usando `computeBlockMetrics` + `getBlockTimeMeta`
-- Biometrics padrão: masculino, 75kg, 170cm (mesmo do `WorkoutDetailModal`)
-- Nota discreta: "Valores estimados para atleta padrão (masculino, 75kg, 170cm)"
-
-#### 4) Totais por dia no header colapsável
-- `Clock` icon + `~Xmin`
-- `Flame` icon + `~X kcal`
-
-### Detalhes técnicos
-
-- Reutilizar os imports já presentes: `StructureBadge`, `CategoryChip`, `ExerciseLine`, `CommentSubBlock`, `getBlockDisplayDataFromParsed`
-- Adicionar imports: `computeBlockMetrics`, `getBlockTimeMeta`, `formatEstimatedTime`, `formatEstimatedKcal`, `estimateWorkout`, `Flame`, `Collapsible`
-- Usar constantes `COACH_PREVIEW_BIOMETRICS` / `blockTypeColors` (extrair do `CoachProgramsTab` ou duplicar localmente)
-- Manter botões "Voltar para edição" e "Salvar e ir para Programações" intactos
-
-### Arquivo a alterar
-- `src/components/TextModelImporter.tsx` — reescrever seção de preview (linhas ~1870-2004)
+### Arquivos a alterar
+- `src/components/CoachOverviewTab.tsx` — gaps, paddings, alturas responsivos
+- `src/components/CoachProgramsTab.tsx` — gaps, ScrollArea height, modal width
 
