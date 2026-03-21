@@ -11,7 +11,7 @@
  * NUNCA publicar automaticamente ou para todos os atletas.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
@@ -28,6 +28,8 @@ import {
   Copy,
   AlertCircle,
   CheckCircle2,
+  Flame,
+  Zap,
 } from 'lucide-react';
 import { useCoachWorkouts, type CoachWorkout, type WorkoutStatus } from '@/hooks/useCoachWorkouts';
 import { useToast } from '@/hooks/use-toast';
@@ -52,9 +54,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { getBlockHeader, separateBlockContent, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
-import { StructureBadge } from '@/components/DSLBlockRenderer';
+import { getBlockHeader, getBlockDisplayTitle, getBlockDisplayDataFromParsed, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { StructureBadge, CategoryChip, ExerciseLine, CommentSubBlock } from '@/components/DSLBlockRenderer';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
+import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
+import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
+import { getBlockTimeMeta } from '@/utils/timeValidation';
 import {
   Tooltip,
   TooltipContent,
