@@ -97,7 +97,249 @@ interface TextModelImporterProps {
   onClearInitialWorkout?: () => void;
 }
 
-const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
+// ═══════════════════════════════════════════════════════════════════════════════
+// BIOMETRICS PADRÃO PARA PREVIEW DO COACH (mesmo do CoachProgramsTab)
+// ═══════════════════════════════════════════════════════════════════════════════
+const COACH_PREVIEW_ATHLETE_CONFIG = {
+  peso: 75,
+  sexo: 'masculino' as const,
+  idade: 30,
+  altura: 170,
+};
+
+const previewBlockTypeColors: Record<string, string> = {
+  aquecimento: 'border-l-amber-500',
+  conditioning: 'border-l-primary',
+  forca: 'border-l-red-500',
+  especifico: 'border-l-purple-500',
+  core: 'border-l-blue-500',
+  corrida: 'border-l-green-500',
+  notas: 'border-l-muted-foreground',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PreviewDayCard — Card colapsável por dia com UI idêntica à tela do atleta
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface PreviewDayCardProps {
+  dayWorkout: DayWorkout;
+  dayName: string;
+  isRestDay: boolean;
+}
+
+function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const workoutEst = useMemo(() => {
+    if (isRestDay) return null;
+    return estimateWorkout(dayWorkout, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
+  }, [dayWorkout, isRestDay]);
+
+  const blockMetrics = useMemo(() => {
+    if (isRestDay || !dayWorkout.blocks) return { perBlock: [], totalTime: 0, totalCalories: 0 };
+
+    let sumMinutes = 0;
+    let sumKcal = 0;
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+
+    dayWorkout.blocks.forEach((block, index) => {
+      const displayData = getBlockDisplayDataFromParsed(block);
+      if (!displayData.hasContent) {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        return;
+      }
+      if (block.type === 'notas') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+
+      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+      let kcal = 0;
+      let dur = 0;
+
+      if (hasParsedData) {
+        const metrics = computeBlockMetrics(
+          block.parsedExercises!,
+          { pesoKg: 75, sexo: 'masculino' },
+          block.content,
+          block.title
+        );
+        kcal = metrics.estimatedKcal || 0;
+        dur = metrics.estimatedDurationSec || 0;
+      } else {
+        const timeMeta = getBlockTimeMeta(block);
+        dur = timeMeta.durationSecUsed || 0;
+        const blockEst = workoutEst?.blocks[index];
+        kcal = blockEst?.estimatedKcal || 0;
+      }
+
+      const roundedMinutes = Math.round(dur / 60);
+      const roundedKcal = Math.round(kcal);
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      sumMinutes += roundedMinutes;
+      sumKcal += roundedKcal;
+    });
+
+    return { perBlock, totalTime: sumMinutes, totalCalories: sumKcal };
+  }, [dayWorkout, workoutEst, isRestDay]);
+
+  const { totalTime, totalCalories } = blockMetrics;
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      {/* Day Header (collapsible trigger) */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center justify-between bg-secondary/30 hover:bg-secondary/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="font-bold text-sm uppercase">
+            {dayName}
+          </Badge>
+          {isRestDay ? (
+            <Badge variant="secondary" className="bg-blue-500/20 text-blue-600">
+              <Moon className="w-3 h-3 mr-1" />
+              Descanso
+            </Badge>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {dayWorkout.blocks?.length || 0} bloco(s)
+              </span>
+              {totalTime > 0 && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-medium text-foreground">~{totalTime}min</span>
+                </div>
+              )}
+              {totalCalories > 0 && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Flame className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4" />
+        ) : (
+          <ChevronDown className="w-4 h-4" />
+        )}
+      </button>
+
+      {/* Expanded Content — identical to athlete WeeklyTrainingView */}
+      <AnimatePresence>
+        {isExpanded && !isRestDay && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-4 bg-background">
+              {dayWorkout.blocks?.map((block, idx) => {
+                const displayData = getBlockDisplayDataFromParsed(block);
+                if (!displayData.hasContent) return null;
+
+                const blockMet = blockMetrics.perBlock[idx] || { kcal: 0, durationSec: 0, showStats: false };
+                const estimatedKcal = blockMet.kcal;
+                const estimatedMinutes = Math.round(blockMet.durationSec / 60);
+                const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+                const isEstimated = !hasParsedData;
+                const isMainWod = block.isMainWod;
+
+                const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
+
+                return (
+                  <div
+                    key={block.id || idx}
+                    className={`
+                      p-5 rounded-xl border-l-4 bg-card border border-border
+                      ${previewBlockTypeColors[block.type] || 'border-l-border'}
+                      ${isMainWod ? 'ring-1 ring-primary/30' : ''}
+                    `}
+                  >
+                    {/* Block Header */}
+                    <div className="mb-4">
+                      <h3 className="font-display text-xl font-bold tracking-tight uppercase">
+                        {getBlockDisplayTitle(block, idx)}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                        <CategoryChip category={block.type} />
+                        {isMainWod && (
+                          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
+                            WOD Principal
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Structure Badge */}
+                    {structureDescription && (
+                      <div className="mb-4">
+                        <StructureBadge structure={structureDescription} />
+                      </div>
+                    )}
+
+                    {/* Exercise Lines */}
+                    <div className="space-y-2">
+                      {exerciseLines.length > 0 ? (
+                        exerciseLines.map((line, lineIdx) => {
+                          if (line.startsWith(STRUCT_LINE_PREFIX)) {
+                            return (
+                              <div key={lineIdx} className="pt-3 pb-1">
+                                <StructureBadge structure={line.slice(STRUCT_LINE_PREFIX.length)} />
+                              </div>
+                            );
+                          }
+                          return <ExerciseLine key={lineIdx} line={line} className="text-foreground/80" />;
+                        })
+                      ) : (
+                        <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
+                      )}
+                    </div>
+
+                    {/* Coach Notes */}
+                    <CommentSubBlock comments={commentLines} />
+
+                    {/* Block Stats */}
+                    {block.type !== 'notas' && blockMet.showStats && (
+                      <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{isEstimated ? '~' : ''}</span>
+                          <span className="font-medium text-foreground">
+                            {formatEstimatedTime(estimatedMinutes)}
+                          </span>
+                          {isEstimated && (
+                            <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Flame className="w-4 h-4 text-orange-500" />
+                          <span className="text-orange-500 font-medium">
+                            {formatEstimatedKcal(estimatedKcal)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+
   value: cat.value,
   label: cat.label,
 }));
