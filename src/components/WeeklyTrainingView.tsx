@@ -87,20 +87,39 @@ export function WeeklyTrainingView() {
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   // Fonte única de verdade: métricas por bloco + totais agregados
+  // O header soma EXATAMENTE os valores arredondados que cada card exibe
   const blockMetricsMap = useMemo(() => {
-    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number }>, totalTime: 0, totalCalories: 0 };
+    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }>, totalTime: 0, totalCalories: 0 };
     
+    let sumMinutes = 0;
     let sumKcal = 0;
-    let sumDurationSec = 0;
-    const perBlock: Array<{ kcal: number; durationSec: number }> = [];
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
     
     currentWorkout.blocks.forEach((block, index) => {
-      if (block.type === 'notas') {
-        perBlock.push({ kcal: 0, durationSec: 0 });
+      // Regra 1: bloco sem conteúdo não aparece na tela
+      const displayData = getBlockDisplayDataFromParsed(block);
+      if (!displayData.hasContent) {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
         return;
       }
       
+      // Regra 2: blocos "notas" não mostram stats
+      if (block.type === 'notas') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+      
+      // Regra 3: blocos bypassed/failed mostram "--", não entram na soma
+      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        return;
+      }
+      
+      // Regra 4: calcular métricas reais
       const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+      
+      let kcal = 0;
+      let dur = 0;
       
       if (hasParsedData) {
         const metrics = computeBlockMetrics(
@@ -109,29 +128,30 @@ export function WeeklyTrainingView() {
           block.content,
           block.title
         );
-        const kcal = metrics.estimatedKcal || 0;
-        const dur = metrics.estimatedDurationSec || 0;
-        perBlock.push({ kcal, durationSec: dur });
-        sumKcal += kcal;
-        sumDurationSec += dur;
-        
+        kcal = metrics.estimatedKcal || 0;
+        dur = metrics.estimatedDurationSec || 0;
       } else {
         const timeMeta = getBlockTimeMeta(block);
-        const dur = timeMeta.durationSecUsed || 0;
+        dur = timeMeta.durationSecUsed || 0;
         const blockEst = workoutEstimation?.blocks[index];
-        const kcal = blockEst?.estimatedKcal || 0;
-        perBlock.push({ kcal, durationSec: dur });
-        sumKcal += kcal;
-        sumDurationSec += dur;
-        
+        kcal = blockEst?.estimatedKcal || 0;
       }
+      
+      // Arredondar para os mesmos valores que o card exibe
+      const roundedMinutes = Math.round(dur / 60);
+      const roundedKcal = Math.round(kcal);
+      
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      
+      // Somar os valores arredondados (mesma coisa que o card mostra)
+      sumMinutes += roundedMinutes;
+      sumKcal += roundedKcal;
     });
-    
     
     return {
       perBlock,
-      totalTime: Math.round(sumDurationSec / 60),
-      totalCalories: Math.round(sumKcal),
+      totalTime: sumMinutes,
+      totalCalories: sumKcal,
     };
   }, [currentWorkout, biometrics, workoutEstimation]);
 
