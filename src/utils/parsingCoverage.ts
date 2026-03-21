@@ -289,7 +289,7 @@ export function detectExerciseTypos(
  * Calcula a cobertura semântica do parse — quantos exercícios
  * tiveram métricas mensuráveis detectadas (TIME, DISTANCE, REPS, EFFORT).
  */
-export function calculateParsingCoverage(parseResult: ParseResult): CoverageReport {
+export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames?: string[]): CoverageReport {
   const unmatchedLines: UnmatchedLine[] = [];
   let totalExercises = 0;
   let recognizedMetrics = 0;
@@ -298,7 +298,6 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
     const day = parseResult.days[dayIndex];
     for (const block of day.blocks) {
       for (const line of block.lines) {
-        // Filtrar apenas linhas classificadas como exercício
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
           totalExercises++;
 
@@ -310,7 +309,7 @@ export function calculateParsingCoverage(parseResult: ParseResult): CoverageRepo
               text: line.text,
               blockTitle: block.title || 'Bloco sem título',
               dayIndex,
-              category: classifyUnmatchedLine(line.text),
+              category: classifyUnmatchedLine(line.text, exerciseNames),
             });
           }
         }
