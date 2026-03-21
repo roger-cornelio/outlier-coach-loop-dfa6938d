@@ -230,8 +230,9 @@ export function fuzzyMatchExerciseName(
     // Check against the main name
     const normName = normalizeForFuzzy(entry.name);
     
-    // Exact match → no warning needed
+    // Exact match (including plural variants) → no warning needed
     if (normalized === normName) return null;
+    if (stripPlural(normalized) === stripPlural(normName)) return null;
     
     const dist = levenshteinDistance(normalized, normName);
     // Threshold: max 1 for short terms (≤ 5 chars), max 2 for longer
