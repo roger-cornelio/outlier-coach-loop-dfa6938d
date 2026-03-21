@@ -79,8 +79,8 @@ const STRUCTURE_WRAPPER_PATTERN = /^\*\*.*\*\*$/;
 // Padrões PLAIN TEXT (sem ** **) — aceita coaches sem markdown
 // ────────────────────────────────────────────────────────────
 const PLAIN_ROUNDS_PATTERN = /^(\d+)\s*Rounds?\s*$/i;
-const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['′'']?\s*(?:min)?\s*$/i;
-const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['′'']?\s*(?:min)?\s*$/i;
+const PLAIN_EMOM_PATTERN = /^EMOM\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
+const PLAIN_AMRAP_PATTERN = /^AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?\s*$/i;
 const PLAIN_FOR_TIME_PATTERN = /^For\s*Time\s*$/i;
 
 // ============================================
