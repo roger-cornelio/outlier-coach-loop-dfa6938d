@@ -1,73 +1,47 @@
 
-## Plano: fazer o total do topo ser a soma exata do que aparece nos blocos
 
-### Diagnóstico
-O erro está na lógica do `WeeklyTrainingView`, não no motor dos blocos.
+## Plano: Adicionar TABATA como tipo de tempo fixo no motor de calorias
 
-Hoje o topo não soma “o que o usuário vê”. Ele soma uma mistura de valores internos:
+### Problema confirmado
+Você tem razão. O motor de calorias (`computeBlockKcalFromParsed.ts`) **não reconhece TABATA** como tempo fixo. Ele só reconhece AMRAP e EMOM.
 
-1. **Soma blocos que nem sempre aparecem na tela**
-   - O header percorre `currentWorkout.blocks`
-   - Mas os cards pulam blocos sem `displayData.hasContent`
-   - Resultado: o topo pode incluir bloco invisível
+Quando o bloco é "WARM UP (TABATA)":
+1. `detectFixedTimeMinutes` retorna `null` (não conhece TABATA)
+2. O motor calcula kcal de **1 passada** pelos exercícios (~0.3 kcal cada)
+3. Nunca multiplica pelo tempo real (8 min)
+4. Resultado: **~5 kcal** em vez de **~50-70 kcal**
 
-2. **Soma blocos com parse falho, mas o card mostra `--`**
-   - Para `bypassed/failed`, o card esconde tempo/kcal
-   - Porém o header ainda usa fallback e adiciona esses valores
-   - Resultado: o topo conta valores que não existem visualmente
+Já existe `detectTabataTime` em `estimateWorkoutTime.ts` que resolve isso para estimativa de tempo, mas nunca foi integrado ao motor de calorias.
 
-3. **Tempo do topo arredonda diferente dos cards**
-   - Card: arredonda cada bloco para minutos
-   - Header: soma segundos crus e arredonda só no final
-   - Resultado: mesmo com motor certo, a soma visual pode divergir
+### Correção
 
-4. **Caloria do topo pode seguir regra visual diferente do card**
-   - O card só exibe kcal em certas condições
-   - O topo precisa obedecer à mesma regra para bater 100%
+**Arquivo: `src/utils/computeBlockKcalFromParsed.ts`**
 
-### O que vou ajustar
+Na função `detectFixedTimeMinutes`, adicionar detecção de TABATA:
+- Regex para "TABATA" no título ou conteúdo
+- Se detectar "TABATA" sem tempo explícito → default 4 min por exercício (formato clássico: 8×20s/10s = 4min)
+- Se detectar "TABATA 8'" ou "8' TABATA" → usar o tempo explícito
+- Contar exercícios no bloco para calcular duração total (ex: 2 exercícios × 4min = 8min)
 
-**Arquivo:** `src/components/WeeklyTrainingView.tsx`
+**Arquivo: `src/utils/workoutStructures.ts`**
 
-#### 1) Criar uma lista única de métricas “exibíveis”
-Para cada bloco, calcular:
-- se ele será renderizado ou não
-- se tempo/kcal serão exibidos ou `--`
-- quantos minutos aparecem no card
-- quantas kcal aparecem no card
+Adicionar TABATA como padrão reconhecido em `parseStructureLine`:
+- `**TABATA**` → `FIXED_TIME` com valor calculado
+- `**TABATA 8**` → `FIXED_TIME` com 8 min
 
-Essa estrutura vira a única fonte de verdade da tela.
-
-#### 2) Fazer o topo somar apenas o que está visível
-O header vai somar:
-- **tempo total = soma dos minutos exibidos em cada card**
-- **kcal total = soma das kcal exibidas em cada card**
-
-Sem fallback escondido, sem incluir bloco invisível.
-
-#### 3) Alinhar regras visuais
-O topo vai seguir exatamente as mesmas regras dos cards:
-- bloco sem conteúdo: não entra
-- bloco `bypassed/failed`: não entra na soma
-- bloco sem kcal visível: não entra na soma de kcal
-
-#### 4) Manter o label “estimado”
-O texto do topo continua como:
-- `~Xmin (estimado)`
-- `~Y kcal (estimado)`
-
-Mas agora com soma simples e consistente.
+### Lógica de duração TABATA
+- Sem tempo explícito: 4 min por exercício no bloco (8 rounds × 20s work + 10s rest)
+- Com tempo explícito (ex: "TABATA 8'"): usar o valor informado
+- Com tempos customizados (ex: "Tabata 30/15"): calcular baseado nesses tempos × 8 rounds
 
 ### Resultado esperado
-Depois da correção:
 
-- **Topo = soma exata dos blocos visíveis**
-- Se os cards mostrarem `8 min + 12 min + 15 min`, o topo mostra `~35min`
-- Se os cards mostrarem `50 + 110 + 90 kcal`, o topo mostra `~250 kcal`
-- Nenhum bloco oculto ou com `--` vai contaminar a soma
+| Bloco | Antes | Depois |
+|-------|-------|--------|
+| WARM UP (TABATA) com 2 exercícios | ~5 kcal, ~0.5 min | ~50-70 kcal, 8 min |
+| TABATA 4' | não detectado | 4 min fixo |
 
-### Arquivo a alterar
-- `src/components/WeeklyTrainingView.tsx`
+### Arquivos a modificar
+- `src/utils/computeBlockKcalFromParsed.ts` — ~15 linhas na `detectFixedTimeMinutes`
+- `src/utils/workoutStructures.ts` — ~10 linhas no `parseStructureLine`
 
-### Observação técnica
-O motor de cálculo dos blocos pode continuar como está. O problema principal agora é de **agregação da UI**: o topo precisa somar os valores já preparados para exibição, e não recalcular por outro caminho.
