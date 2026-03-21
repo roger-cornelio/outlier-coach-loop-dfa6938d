@@ -1389,7 +1389,8 @@ BLOCO: DESCANSO
                               const hasMultipleMain = blockPreviewErrors.some(e => e.reason === 'multiple_main');
                               const hasStructureConflict = blockPreviewErrors.some(e => e.reason === 'structure_conflict');
                               
-                              const hasValidationErrors = hasTitleError || !block.type || hasPreviewError;
+                              const hasBlockLevelError = hasTitleError || !block.type || isMissingCategory || hasStructureConflict;
+                              const hasValidationErrors = hasBlockLevelError;
                               
                               // ═══════════════════════════════════════════════════════════
                               // MVP0: REGRA OBRIGATÓRIA DE RENDERIZAÇÃO
