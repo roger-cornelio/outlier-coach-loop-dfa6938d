@@ -127,7 +127,6 @@ export function WeeklyTrainingView() {
       }
     });
     
-    console.log(`[MetricsDebug] TOTALS: ${Math.round(sumDurationSec/60)}min, ${Math.round(sumKcal)}kcal`);
     
     return {
       perBlock,
