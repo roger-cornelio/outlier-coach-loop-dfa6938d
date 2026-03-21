@@ -1,60 +1,75 @@
 
+## Plano: Corrigir tempo/kcal dos blocos e travar a soma do header na mesma fonte de verdade
 
-## Verificação Ponta a Ponta: Interpretação IA → Tela do Atleta
+### Diagnóstico
+Revendo ponta a ponta, encontrei 2 causas principais:
 
-### Descobertas
+1. **AMRAP/EMOM com apóstrofo curvo não são reconhecidos**
+   - Os treinos salvos estão vindo como **`15’ AMRAP`** / **`10’ EMOM`**.
+   - O motor hoje aceita `'` e `′`, mas **não aceita `’`**.
+   - Resultado: o bloco perde o “tempo fixo” e cai no cálculo de **1 round apenas**, por isso aparece algo como **2 min / 26 kcal**.
 
-Analisando o fluxo completo, identifiquei **1 problema principal** e **1 inconsistência menor**:
+2. **Header e cards ainda podem divergir por cálculo duplicado**
+   - O `WeeklyTrainingView` recalcula métricas no header e nos cards em pontos diferentes.
+   - Mesmo usando a mesma função, há caminhos de fallback separados.
+   - Isso deixa a soma visual mais frágil do que deveria.
 
----
+### O que vou ajustar
 
-### Problema Principal: Total de Kcal no Header é Sempre 0
+#### 1) Corrigir o reconhecimento de tempo fixo no motor
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
 
-O header do treino diário (onde mostra "⏱ Xmin" e "🔥 ~Y kcal") usa `estimateWorkout()` para calcular os totais. Porém:
+- Expandir os regex de `detectFixedTimeMinutes` para aceitar também o caractere **`’`**.
+- Cobrir os dois formatos:
+  - `AMRAP 15’` / `EMOM 10’`
+  - `15’ AMRAP` / `10’ EMOM`
 
-- `estimateWorkout()` retorna `estimatedKcalTotal: 0` **sempre** (linha 295 do `workoutEstimation.ts`: `estimatedKcalTotal: 0, // Kcal is now calculated by Physics Engine`)
-- O motor de física (`computeBlockMetrics`) calcula kcal por bloco corretamente — mas ninguém soma esses valores para o header
-- Resultado: o header nunca mostra calorias totais do dia, embora cada bloco individualmente mostre suas kcal
+**Impacto esperado**
+- Todo bloco com título como **`15’ AMRAP`** ou **`10’ EMOM`** passa a usar **15 min / 10 min reais** como autoridade.
+- As calorias deixam de refletir “um round” e passam a escalar para o bloco inteiro.
 
-**Onde o dado se perde:**
+#### 2) Harmonizar o parser estrutural para o mesmo padrão
+**Arquivo:** `src/utils/workoutStructures.ts`
 
-```text
-IA interpreta → parsedExercises ✅
-Motor calcula por bloco → estimatedKcal por bloco ✅  
-Header soma totais → usa estimateWorkout() → kcal = 0 ❌
-```
+- Atualizar os padrões de `parseStructureLine` para também aceitar **`’`**.
+- Isso evita inconsistência entre:
+  - leitura estrutural,
+  - badges/estrutura,
+  - e motor de cálculo.
 
-### Inconsistência Menor: Tempo do Header vs Tempo dos Blocos
+**Impacto esperado**
+- O sistema inteiro passa a entender a mesma notação de minutos, sem depender do tipo de aspas usado no treino importado.
 
-- O header usa `estimateWorkout()` para tempo (regex heurístico baseado no conteúdo textual)
-- Cada bloco usa `computeBlockMetrics()` (motor de física com dados da IA)
-- Podem divergir: o header pode dizer 45min enquanto a soma dos blocos dá 55min
+#### 3) Fazer o header somar exatamente o que os cards exibem
+**Arquivo:** `src/components/WeeklyTrainingView.tsx`
 
----
+- Criar uma única estrutura memoizada com as métricas de cada bloco.
+- Os cards passam a exibir esses valores prontos.
+- O header passa a somar **essa mesma lista**, e não recalcular em paralelo.
 
-### Plano de Correção
+**Impacto esperado**
+- O topo sempre será:
+  - **Tempo total do treino = soma dos tempos exibidos nos blocos**
+  - **Calorias totais do treino = soma das calorias exibidas nos blocos**
+- Mantendo o label **“estimado”**.
 
-**Arquivo: `src/components/WeeklyTrainingView.tsx`**
+#### 4) Adicionar regressão automatizada
+**Arquivo:** `src/utils/__tests__/cardioCalculation.test.ts` (ou teste dedicado do motor)
 
-1. Após calcular `workoutEstimation`, somar o `estimatedKcal` e `estimatedMinutes` de cada bloco usando `computeBlockMetrics` (mesmo cálculo já feito inline nos blocos)
-2. Usar esses totais no header em vez dos valores zerados de `estimateWorkout()`
-3. Isso garante que header e blocos usem a **mesma fonte de verdade** (motor de física)
+Vou adicionar testes para garantir:
+- `15’ AMRAP` → retorna **15 min**
+- `10’ EMOM` → retorna **10 min**
+- formato invertido e formato tradicional continuam funcionando
+- kcal do bloco cresce proporcionalmente ao tempo fixo
 
-**Lógica:**
-- Iterar sobre `currentWorkout.blocks`
-- Para cada bloco com `parsedExercises` e `parseStatus === 'completed'`, chamar `computeBlockMetrics`
-- Somar `estimatedKcal` e `estimatedDurationSec` de todos os blocos
-- Para blocos sem dados parsed, usar fallback do `workoutEstimation`
-- Exibir os totais agregados no header
+### Resultado esperado na sua tela
+Depois da correção:
+- os dois blocos `15’ AMRAP` deixam de mostrar **1–2 min** e passam a mostrar algo próximo de **15 min**
+- as kcal desses blocos sobem para valores coerentes com 15 minutos de trabalho
+- o header passa a bater exatamente com a soma dos cards
 
-### Resultado Esperado
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Header Kcal | Sempre 0 (nunca aparece) | Soma real dos blocos (~200-500 kcal) |
-| Header Tempo | Heurística textual | Motor de física (consistente com blocos) |
-| Blocos individuais | Corretos | Sem mudança |
-
-### Arquivo modificado
-- `src/components/WeeklyTrainingView.tsx` — ~20 linhas (novo useMemo para agregar totais)
-
+### Arquivos previstos
+- `src/utils/computeBlockKcalFromParsed.ts`
+- `src/utils/workoutStructures.ts`
+- `src/components/WeeklyTrainingView.tsx`
+- `src/utils/__tests__/cardioCalculation.test.ts`
