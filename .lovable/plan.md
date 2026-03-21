@@ -1,75 +1,73 @@
 
-## Plano: Corrigir tempo/kcal dos blocos e travar a soma do header na mesma fonte de verdade
+## Plano: fazer o total do topo ser a soma exata do que aparece nos blocos
 
 ### Diagnóstico
-Revendo ponta a ponta, encontrei 2 causas principais:
+O erro está na lógica do `WeeklyTrainingView`, não no motor dos blocos.
 
-1. **AMRAP/EMOM com apóstrofo curvo não são reconhecidos**
-   - Os treinos salvos estão vindo como **`15’ AMRAP`** / **`10’ EMOM`**.
-   - O motor hoje aceita `'` e `′`, mas **não aceita `’`**.
-   - Resultado: o bloco perde o “tempo fixo” e cai no cálculo de **1 round apenas**, por isso aparece algo como **2 min / 26 kcal**.
+Hoje o topo não soma “o que o usuário vê”. Ele soma uma mistura de valores internos:
 
-2. **Header e cards ainda podem divergir por cálculo duplicado**
-   - O `WeeklyTrainingView` recalcula métricas no header e nos cards em pontos diferentes.
-   - Mesmo usando a mesma função, há caminhos de fallback separados.
-   - Isso deixa a soma visual mais frágil do que deveria.
+1. **Soma blocos que nem sempre aparecem na tela**
+   - O header percorre `currentWorkout.blocks`
+   - Mas os cards pulam blocos sem `displayData.hasContent`
+   - Resultado: o topo pode incluir bloco invisível
+
+2. **Soma blocos com parse falho, mas o card mostra `--`**
+   - Para `bypassed/failed`, o card esconde tempo/kcal
+   - Porém o header ainda usa fallback e adiciona esses valores
+   - Resultado: o topo conta valores que não existem visualmente
+
+3. **Tempo do topo arredonda diferente dos cards**
+   - Card: arredonda cada bloco para minutos
+   - Header: soma segundos crus e arredonda só no final
+   - Resultado: mesmo com motor certo, a soma visual pode divergir
+
+4. **Caloria do topo pode seguir regra visual diferente do card**
+   - O card só exibe kcal em certas condições
+   - O topo precisa obedecer à mesma regra para bater 100%
 
 ### O que vou ajustar
 
-#### 1) Corrigir o reconhecimento de tempo fixo no motor
-**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
-
-- Expandir os regex de `detectFixedTimeMinutes` para aceitar também o caractere **`’`**.
-- Cobrir os dois formatos:
-  - `AMRAP 15’` / `EMOM 10’`
-  - `15’ AMRAP` / `10’ EMOM`
-
-**Impacto esperado**
-- Todo bloco com título como **`15’ AMRAP`** ou **`10’ EMOM`** passa a usar **15 min / 10 min reais** como autoridade.
-- As calorias deixam de refletir “um round” e passam a escalar para o bloco inteiro.
-
-#### 2) Harmonizar o parser estrutural para o mesmo padrão
-**Arquivo:** `src/utils/workoutStructures.ts`
-
-- Atualizar os padrões de `parseStructureLine` para também aceitar **`’`**.
-- Isso evita inconsistência entre:
-  - leitura estrutural,
-  - badges/estrutura,
-  - e motor de cálculo.
-
-**Impacto esperado**
-- O sistema inteiro passa a entender a mesma notação de minutos, sem depender do tipo de aspas usado no treino importado.
-
-#### 3) Fazer o header somar exatamente o que os cards exibem
 **Arquivo:** `src/components/WeeklyTrainingView.tsx`
 
-- Criar uma única estrutura memoizada com as métricas de cada bloco.
-- Os cards passam a exibir esses valores prontos.
-- O header passa a somar **essa mesma lista**, e não recalcular em paralelo.
+#### 1) Criar uma lista única de métricas “exibíveis”
+Para cada bloco, calcular:
+- se ele será renderizado ou não
+- se tempo/kcal serão exibidos ou `--`
+- quantos minutos aparecem no card
+- quantas kcal aparecem no card
 
-**Impacto esperado**
-- O topo sempre será:
-  - **Tempo total do treino = soma dos tempos exibidos nos blocos**
-  - **Calorias totais do treino = soma das calorias exibidas nos blocos**
-- Mantendo o label **“estimado”**.
+Essa estrutura vira a única fonte de verdade da tela.
 
-#### 4) Adicionar regressão automatizada
-**Arquivo:** `src/utils/__tests__/cardioCalculation.test.ts` (ou teste dedicado do motor)
+#### 2) Fazer o topo somar apenas o que está visível
+O header vai somar:
+- **tempo total = soma dos minutos exibidos em cada card**
+- **kcal total = soma das kcal exibidas em cada card**
 
-Vou adicionar testes para garantir:
-- `15’ AMRAP` → retorna **15 min**
-- `10’ EMOM` → retorna **10 min**
-- formato invertido e formato tradicional continuam funcionando
-- kcal do bloco cresce proporcionalmente ao tempo fixo
+Sem fallback escondido, sem incluir bloco invisível.
 
-### Resultado esperado na sua tela
+#### 3) Alinhar regras visuais
+O topo vai seguir exatamente as mesmas regras dos cards:
+- bloco sem conteúdo: não entra
+- bloco `bypassed/failed`: não entra na soma
+- bloco sem kcal visível: não entra na soma de kcal
+
+#### 4) Manter o label “estimado”
+O texto do topo continua como:
+- `~Xmin (estimado)`
+- `~Y kcal (estimado)`
+
+Mas agora com soma simples e consistente.
+
+### Resultado esperado
 Depois da correção:
-- os dois blocos `15’ AMRAP` deixam de mostrar **1–2 min** e passam a mostrar algo próximo de **15 min**
-- as kcal desses blocos sobem para valores coerentes com 15 minutos de trabalho
-- o header passa a bater exatamente com a soma dos cards
 
-### Arquivos previstos
-- `src/utils/computeBlockKcalFromParsed.ts`
-- `src/utils/workoutStructures.ts`
+- **Topo = soma exata dos blocos visíveis**
+- Se os cards mostrarem `8 min + 12 min + 15 min`, o topo mostra `~35min`
+- Se os cards mostrarem `50 + 110 + 90 kcal`, o topo mostra `~250 kcal`
+- Nenhum bloco oculto ou com `--` vai contaminar a soma
+
+### Arquivo a alterar
 - `src/components/WeeklyTrainingView.tsx`
-- `src/utils/__tests__/cardioCalculation.test.ts`
+
+### Observação técnica
+O motor de cálculo dos blocos pode continuar como está. O problema principal agora é de **agregação da UI**: o topo precisa somar os valores já preparados para exibição, e não recalcular por outro caminho.
