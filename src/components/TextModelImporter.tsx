@@ -339,7 +339,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
   );
 }
 
-
+const BLOCK_TYPE_OPTIONS = BLOCK_CATEGORIES.map(cat => ({
   value: cat.value,
   label: cat.label,
 }));
