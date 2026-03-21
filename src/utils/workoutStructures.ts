@@ -560,6 +560,14 @@ export function parseStoredTags(tags: string[]): WorkoutStructure[] {
         rawLine: `**AMRAP ${value}**`,
         tag,
       });
+    } else if (tag.startsWith('__STRUCT:TABATA=')) {
+      const value = parseInt(tag.split('=')[1], 10);
+      structures.push({
+        type: 'FIXED_TIME',
+        value,
+        rawLine: `**TABATA ${value}**`,
+        tag,
+      });
     } else if (tag === '__STRUCT:FORTIME=true') {
       structures.push({
         type: 'DERIVED_TIME',
