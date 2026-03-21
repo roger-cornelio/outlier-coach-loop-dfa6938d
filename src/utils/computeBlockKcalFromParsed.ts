@@ -283,7 +283,7 @@ export function computeBlockMetrics(
   // ════════════════════════════════════════════════════════════════════════════
   // FIXED_TIME DETECTION: Detectar AMRAP/EMOM no título OU conteúdo
   // ════════════════════════════════════════════════════════════════════════════
-  const fixedTimeMinutes = detectFixedTimeMinutes(blockContent, blockTitle);
+  const fixedTimeMinutes = detectFixedTimeMinutes(blockContent, blockTitle, parsedExercises.length);
 
   const exerciseMultipliers = buildExerciseMultiplierMap(parsedExercises, blockContent);
 
@@ -367,7 +367,11 @@ export function computeBlockMetrics(
  * Detecta tempo fixo (AMRAP/EMOM) a partir do conteúdo e/ou título do bloco.
  * Prioridade: conteúdo > título (conteúdo é mais específico).
  */
-function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): number | null {
+function detectFixedTimeMinutes(
+  blockContent?: string,
+  blockTitle?: string,
+  exerciseCount?: number,
+): number | null {
   // Prioridade 1: conteúdo (mais específico)
   if (blockContent) {
     const lines = blockContent.split('\n');
@@ -380,7 +384,6 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
   }
 
   // Prioridade 2: título (com regex flexível para títulos compostos)
-  // Aceita: "AMRAP 15'", "AMRAP 15' - Conditioning", "EMOM 20min - Upper Body"
   if (blockTitle) {
     // Primeiro tentar parseStructureLine padrão
     const structure = parseStructureLine(blockTitle);
@@ -413,6 +416,27 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       const minutes = parseInt(invertedEmom[1], 10);
       if (minutes > 0) return minutes;
     }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // TABATA DETECTION: Detectar "TABATA" no título ou conteúdo
+  // Se tempo explícito (ex: "TABATA 8'") → usar esse valor
+  // Se sem tempo → default 4 min por exercício (8×20s/10s = 4min clássico)
+  // ════════════════════════════════════════════════════════════════════════════
+  const combined = [blockTitle || '', blockContent || ''].join(' ');
+
+  // Tabata com tempo explícito: "TABATA 8'", "8' TABATA", "TABATA 8 min"
+  const tabataWithTime = combined.match(/TABATA\s+(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?/i)
+    || combined.match(/(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min\s*)?TABATA/i);
+  if (tabataWithTime) {
+    const minutes = parseInt(tabataWithTime[1], 10);
+    if (minutes > 0) return minutes;
+  }
+
+  // Tabata sem tempo explícito: default 4 min por exercício
+  if (/\btabata\b/i.test(combined)) {
+    const numExercises = exerciseCount && exerciseCount > 0 ? exerciseCount : 1;
+    return 4 * numExercises; // 8 rounds × (20s + 10s) = 4 min per exercise
   }
 
   return null;
