@@ -59,7 +59,7 @@ function KPICard({
       <CardContent className="p-3 sm:p-4 lg:p-6">
         <div className="flex items-center justify-between mb-1 sm:mb-2">
           <span className={`text-[10px] sm:text-xs font-medium uppercase tracking-wider ${colorClass} truncate`}>{label}</span>
-          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${colorClass}`} />
+          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 shrink-0 ${colorClass}`} />
         </div>
         <p className={`text-2xl sm:text-3xl font-bold ${colorClass}`}>{count}</p>
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{pct}% dos atletas</p>
