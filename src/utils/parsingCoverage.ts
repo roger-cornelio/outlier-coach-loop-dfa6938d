@@ -19,6 +19,7 @@ export interface UnmatchedLine {
   blockTitle: string;
   dayIndex: number;
   category: UnmatchedCategory;
+  suggestion?: string;
 }
 
 /**

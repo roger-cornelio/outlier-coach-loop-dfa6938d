@@ -1327,8 +1327,22 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
     return { kind: 'NOTE', confidence: 'HIGH' };
   }
   
-  // H) Começa com número (provável exercício) → LOW confidence
+  // H) Começa com número — verificar se é typo de termo estrutural antes de classificar como exercício
   if (/^\d+/.test(trimmed)) {
+    // Extrair parte textual após dígitos iniciais
+    const textAfterDigits = trimmed.replace(/^\d+\s*/, '').trim();
+    if (textAfterDigits.length >= 3) {
+      const normalizedAfter = textAfterDigits.toLowerCase().replace(/\s+/g, '');
+      const structuralTerms = ['rounds', 'round', 'series', 'serie', 'sets', 'set', 'rodadas', 'rodada', 'emom', 'amrap', 'tabata', 'fortime'];
+      for (const term of structuralTerms) {
+        const dist = levenshteinDistance(normalizedAfter, term);
+        const maxDist = term.length <= 4 ? 1 : 2;
+        if (dist > 0 && dist <= maxDist) {
+          // Typo de termo estrutural → NOTE LOW (cai na regra de nota solta = erro)
+          return { kind: 'NOTE', confidence: 'LOW' };
+        }
+      }
+    }
     return { kind: 'EXERCISE', confidence: 'LOW' };
   }
   
