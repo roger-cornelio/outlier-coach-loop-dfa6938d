@@ -631,7 +631,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[500px]">
+            <ScrollArea className="max-h-[500px] lg:max-h-[calc(100vh-400px)]">
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {workouts.map((workout) => {
