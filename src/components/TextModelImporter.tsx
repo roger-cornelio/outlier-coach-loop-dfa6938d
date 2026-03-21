@@ -1872,138 +1872,23 @@ BLOCO: DESCANSO
             </div>
           )}
 
-          {/* Lista de dias - SOMENTE effectiveDays */}
+          {/* Nota sobre valores estimados */}
+          <p className="text-xs text-muted-foreground/60 text-center">
+            Valores estimados para atleta padrão (masculino, 75kg, 170cm). Ao publicar, cada atleta receberá cálculos com seus dados reais.
+          </p>
+
+          {/* Lista de dias - UI idêntica à tela do atleta */}
           {days.map((dayWorkout, dayIndex) => {
             const dayName = getDayName(dayWorkout.day);
             const isRestDay = Boolean(dayWorkout.isRestDay || restDays[dayIndex]);
 
-            // Render check gated - removed excessive logging
-
-            // REGRA: Dia SEMPRE renderizado, independente de erros
             return (
-              <div key={`${dayWorkout.day}-${dayIndex}`} className="border rounded-lg overflow-hidden">
-                <div className="p-4 bg-secondary/30 flex items-center gap-3">
-                  <span className="font-bold text-lg uppercase">{dayName}</span>
-                  {isRestDay && (
-                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-600">
-                      <Moon className="w-3 h-3 mr-1" />
-                      Descanso
-                    </Badge>
-                  )}
-                </div>
-
-                {!isRestDay && (
-                  <div className="p-4 space-y-3">
-                    {(dayWorkout.blocks || []).map((block, blockIndex) => {
-                      // ════════════════════════════════════════════════════════════════════════════
-                      // MVP0 REGRA FINAL: PREVIEW USA DADOS JÁ PARSEADOS (SEM REPARSE)
-                      // 
-                      // PROIBIDO no Preview:
-                      // - Chamar separateBlockContent()
-                      // - Chamar parseStructuredText()
-                      // - Gerar alertas de sintaxe
-                      // - Validar DSL
-                      // 
-                      // PERMITIDO:
-                      // - Usar block.lines (já parseado)
-                      // - Usar block.coachNotes (já extraído)
-                      // - Formatar para exibição limpa
-                      // ════════════════════════════════════════════════════════════════════════════
-                      
-                      const displayData = getBlockDisplayDataFromParsed(block);
-                      
-                      // REGRA: Só esconder se não tem NENHUM conteúdo útil
-                      if (!displayData.hasContent) {
-                        return null;
-                      }
-                      
-                      return (
-                        <div
-                          key={block.id || blockIndex}
-                          className={`p-3 rounded-lg border transition-all ${
-                            block.isMainWod 
-                              ? 'border-primary bg-primary/10 ring-2 ring-primary/30 shadow-sm' 
-                              : 'border-border'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            {block.isMainWod && (
-                              <Star className="w-4 h-4 text-primary fill-primary flex-shrink-0" />
-                            )}
-                            {/* Título do bloco - normalizado (sem prefixo "BLOCO:") */}
-                            <span className={`font-medium ${block.isMainWod ? 'text-primary' : ''}`}>
-                              {normalizeBlockTitle(block.title) || `Bloco ${blockIndex + 1}`}
-                            </span>
-                            {block.isMainWod && (
-                              <Badge className="text-xs bg-primary text-primary-foreground">
-                                WOD Principal
-                              </Badge>
-                            )}
-                            {block.type && (
-                              <Badge variant="outline" className="text-xs">
-                                {BLOCK_TYPE_OPTIONS.find(o => o.value === block.type)?.label || block.type}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* ════════════════════════════════════════════════════════════════════════════
-                              EXIBIÇÃO PURA (SEM REPARSE) - Usando displayData
-                              ════════════════════════════════════════════════════════════════════════════ */}
-                          <div className="space-y-2">
-                            {/* ESTRUTURA DO BLOCO - Badge visual (ROUNDS, EMOM, etc.) */}
-                            {displayData.structureDescription && (
-                              <div className="mb-2">
-                                <StructureBadge structure={displayData.structureDescription} />
-                              </div>
-                            )}
-                            
-                            {/* TREINO - linhas de exercício formatadas */}
-                            {displayData.exerciseLines.length > 0 && (
-                              <div className="text-sm space-y-1 text-foreground/90">
-                            {displayData.exerciseLines.map((line, idx) => {
-                                  if (line.startsWith('__STRUCT:')) {
-                                    return (
-                                      <div key={`${block.id || blockIndex}-struct-${idx}`} className="pt-2 pb-1">
-                                        <StructureBadge structure={line.slice('__STRUCT:'.length)} />
-                                      </div>
-                                    );
-                                  }
-                                  return (
-                                    <p key={`${block.id || blockIndex}-ex-${idx}`}>
-                                      {normalizeRestLineForDisplay(line)}
-                                    </p>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            
-                            {displayData.exerciseLines.length === 0 && displayData.coachNotes.length === 0 && !displayData.structureDescription && (
-                              <p className="text-xs text-muted-foreground/50 italic">Sem conteúdo de treino.</p>
-                            )}
-
-                            {/* SUB-BLOCO: COMENTÁRIO DO COACH */}
-                            {displayData.coachNotes.length > 0 && (
-                              <div className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md">
-                                <div className="flex items-start gap-2">
-                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                  <div className="space-y-1">
-                                    <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">Comentário</span>
-                                    {displayData.coachNotes.map((line, idx) => (
-                                      <p key={`${block.id || blockIndex}-cm-${idx}`} className="text-xs text-muted-foreground italic">
-                                        {normalizeRestLineForDisplay(line)}
-                                      </p>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <PreviewDayCard
+                key={`${dayWorkout.day}-${dayIndex}`}
+                dayWorkout={dayWorkout}
+                dayName={dayName}
+                isRestDay={isRestDay}
+              />
             );
           })}
 
