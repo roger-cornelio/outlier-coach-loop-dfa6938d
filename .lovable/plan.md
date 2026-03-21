@@ -1,45 +1,33 @@
 
 
-## Plano: Corrigir Classificação Consultando Dicionário de Exercícios
+## Plano: Ignorar Plural no Fuzzy Matching de Exercícios
 
 ### Problema
-`classifyUnmatchedLine` usa apenas regex. "Max Wall Ball 9 kg" é classificado como "exercício novo" quando "Wall Ball" já existe no banco. O mesmo para "30/30" Side Plank", "A- 5 Clean", etc.
+"10 Wall Ball" gera aviso "Você quis dizer Wall Balls?" porque a Levenshtein distance entre "wall ball" e "wall balls" é 1 — que cai dentro do threshold. Mas é o **mesmo exercício**, só variando singular/plural. O mesmo acontece com "Box Jump" → "Box Jumps".
 
-### Mudanças
+### Solução
+Adicionar normalização de plural na função `normalizeForFuzzy` em `src/utils/parsingCoverage.ts`. Antes de comparar, remover o "s" final (e variantes comuns como "es") de ambos os lados.
 
-**1. `src/utils/parsingCoverage.ts`**
+### Mudança técnica
 
-- Adicionar função `extractBaseExerciseName(text)` que limpa:
-  - Prefixos A-/B-/C-/D- e variantes A1)/B2)
-  - "Max", "Heavy", "Single" e outros modificadores
-  - Números, unidades (kg, cal, m), notações de tempo (30", 40")
-  - Razões como 32/32, 30/25
-- Atualizar `classifyUnmatchedLine(text, exerciseNames?: string[])`:
-  - Manter as heurísticas regex existentes para números puros
-  - **Após** as heurísticas, extrair o nome-base e comparar (case-insensitive, sem acentos) contra a lista de exercícios
-  - Se o nome-base **contém** um exercício do dicionário → `'uninterpretable'` (problema de formatação)
-  - Se não bate → `'new_exercise'` (realmente novo)
-- Atualizar `calculateParsingCoverage(parseResult, exerciseNames?)` para receber e passar os nomes
+**Arquivo: `src/utils/parsingCoverage.ts`**
 
-**2. `src/components/TextModelImporter.tsx`**
+1. **Criar função `stripPlural(text)`** que remove sufixo plural simples:
+   - "s" final (wall balls → wall ball, box jumps → box jump)
+   - "es" final quando precedido de consoante (lunges → lung — mas cuidado com "raises")
+   - Abordagem conservadora: só remover "s" final se a palavra base tiver 4+ caracteres
 
-- Na chamada `calculateParsingCoverage(result)`, passar `exerciseLibrary.map(e => e.name)`:
-  ```ts
-  const coverage = calculateParsingCoverage(result, exerciseLibrary.map(e => e.name));
-  ```
+2. **Aplicar na comparação dentro de `fuzzyMatchExerciseName`**:
+   - Após normalizar ambos os lados, se `stripPlural(a) === stripPlural(b)` → tratar como match exato (retornar `null`, sem warning)
+   - Isso é checado **antes** do cálculo de Levenshtein
 
-### Resultado Esperado
-
+### Resultado
 | Linha | Antes | Depois |
 |-------|-------|--------|
-| Max Wall Ball 9 kg | 🟡 exercício novo | 🔴 não interpretada |
-| 30/30" Side Plank | 🟡 exercício novo | 🔴 não interpretada |
-| A- 5 Heavy Single Clean | 🟡 exercício novo | 🔴 não interpretada |
-| B- 40" Max Row | 🟡 exercício novo | 🔴 não interpretada |
-| Squat to Stand | 🟡 exercício novo | 🟡 exercício novo ✅ |
-| Pike Lunges | 🟡 exercício novo | 🟡 exercício novo ✅ |
+| 10 Wall Ball | ⚠️ "Você quis dizer Wall Balls?" | ✅ Sem aviso |
+| 10 Box Jump | ⚠️ "Você quis dizer Box Jumps?" | ✅ Sem aviso |
+| 10 Bac Squart | ⚠️ "Você quis dizer Back Squat?" | ⚠️ Mantém (é typo real) |
 
-### Arquivos Modificados
-- `src/utils/parsingCoverage.ts` — lógica de classificação com dicionário
-- `src/components/TextModelImporter.tsx` — 1 linha alterada para passar nomes
+### Arquivo modificado
+- `src/utils/parsingCoverage.ts` — apenas lógica de normalização plural
 
