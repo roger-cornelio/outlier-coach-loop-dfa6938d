@@ -19,6 +19,7 @@ export interface UnmatchedLine {
   blockTitle: string;
   dayIndex: number;
   category: UnmatchedCategory;
+  suggestion?: string;
 }
 
 /**
@@ -319,6 +320,35 @@ function isLegitimateNote(text: string): boolean {
   return false;
 }
 
+/**
+ * Detecta se uma linha é um typo de termo estrutural (ex: "2r ounds" → "2 Rounds").
+ * Retorna a sugestão corrigida ou null.
+ */
+function detectStructuralTypo(text: string): string | null {
+  const trimmed = text.trim();
+  // Extrair parte numérica e textual
+  const match = trimmed.match(/^(\d+)\s*(.*)/);
+  const textPart = match ? match[2] : trimmed;
+  const numPart = match ? match[1] : '';
+  if (!textPart || textPart.length < 3) return null;
+
+  const normalized = textPart.toLowerCase().replace(/\s+/g, '');
+  const structuralMap: Record<string, string> = {
+    rounds: 'Rounds', round: 'Round', series: 'Séries', serie: 'Série',
+    sets: 'Sets', set: 'Set', rodadas: 'Rodadas', rodada: 'Rodada',
+    emom: 'EMOM', amrap: 'AMRAP', tabata: 'Tabata', fortime: 'For Time',
+  };
+
+  for (const [term, display] of Object.entries(structuralMap)) {
+    const dist = levenshteinDistance(normalized, term);
+    const maxDist = term.length <= 4 ? 1 : 2;
+    if (dist > 0 && dist <= maxDist) {
+      return numPart ? `${numPart} ${display}` : display;
+    }
+  }
+  return null;
+}
+
 export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames?: string[]): CoverageReport {
   const unmatchedLines: UnmatchedLine[] = [];
   let totalExercises = 0;
@@ -362,11 +392,14 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
         // ═══════════════════════════════════════════════════════════════
         else if (line.kind === 'NOTE' && line.confidence === 'LOW' && !isLegitimateNote(line.text)) {
           totalExercises++;
+          // Verificar se é typo de termo estrutural → sugestão "Você quis dizer…?"
+          const structuralSuggestion = detectStructuralTypo(line.text);
           unmatchedLines.push({
             text: line.text,
             blockTitle: block.title || 'Bloco sem título',
             dayIndex,
             category: 'uninterpretable',
+            suggestion: structuralSuggestion || undefined,
           });
         }
       }
