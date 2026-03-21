@@ -1,50 +1,66 @@
 
 
-## Plano: Notas soltas dentro de [TREINO] devem gerar erro de interpretação
+## Plano: Atualizar instruções, modelo recomendado e expandir mapa DSL de dias
 
-### Situação atual
+### 1) Expandir mapa de dias no DSL
+**Arquivo:** `src/utils/dslParser.ts` (linhas 48-59)
 
-Quando o coach escreve algo como "Sendo" dentro de um bloco de treino, o parser classifica como `NOTE` com confiança `LOW`. O relatório de cobertura só analisa linhas do tipo `EXERCISE` — ignora completamente as `NOTE`. Resultado: a linha passa invisível, sem nenhum alerta.
+Adicionar variantes com `-FEIRA` ao `DSL_DAY_MAP`:
+- `SEGUNDA-FEIRA`, `TERÇA-FEIRA`, `QUARTA-FEIRA`, `QUINTA-FEIRA`, `SEXTA-FEIRA`
+- Também `TERCA-FEIRA` (sem acento)
 
-### Regra nova
+Assim o coach pode escrever `DIA: SEGUNDA` ou `DIA: SEGUNDA-FEIRA` — ambos funcionam.
 
-**Toda linha dentro da zona de treino de um bloco que não for exercício, descanso ou estrutura reconhecida deve ser tratada como erro de interpretação.** O coach deve ser orientado a colocar comentários entre parênteses `()` ou na seção `[COMENTÁRIO]`.
+### 2) Atualizar modelo recomendado
+**Arquivo:** `src/components/StructuredErrorDisplay.tsx` (linhas 129-150 e 207-224)
 
-### O que muda
+**Template novo** — exemplo realista com estrutura AMRAP, comentários entre `()`, métricas concretas:
 
-#### 1) Relatório de cobertura passa a auditar NOTEs suspeitas
-**Arquivo:** `src/utils/parsingCoverage.ts`
+```
+DIA: SEGUNDA
 
-Na função `calculateParsingCoverage`, além de verificar linhas `EXERCISE`, também verificar linhas `NOTE` com confiança `LOW` que:
-- Não estejam entre parênteses `()`
-- Não comecem com prefixos de nota reconhecidos (`Obs:`, `Nota:`, `#`)
-- Não sejam linhas vazias ou separadores
-- Tenham pelo menos 3 caracteres de letra
+BLOCO: AQUECIMENTO
+- 800m Run Z2
+- 3x10 Squat to Stand
+(Foco na mobilidade de quadril)
 
-Essas linhas entram no relatório como `uninterpretable`, incrementam o total e reduzem a taxa de cobertura.
+BLOCO: WOD
+**15' AMRAP**
+- 10 Wall Ball 9kg
+- 15 Cal Row
+- 5 Bar Muscle-up
+(Cap 5 rounds)
 
-#### 2) Borda amarela considera linhas NOTE soltas
-**Arquivo:** `src/components/TextModelImporter.tsx`
+DIA: TERÇA
 
-Na lógica de `hasValidationErrors` (que controla a borda amarela do bloco), adicionar verificação: se o bloco tem linhas `NOTE` com `LOW` confidence fora de parênteses/comentário, o bloco permanece amarelo.
+BLOCO: FORÇA
+- Back Squat 5x5 @80%
+- Romanian Deadlift 4x8
+(Rest 2' entre séries)
+```
 
-Isso garante que o coach veja visualmente que algo no bloco precisa de atenção.
+**Legenda atualizada** — remover `=` e `>`, adicionar:
+- `DIA:` → início do dia
+- `BLOCO:` → início do bloco
+- `**estrutura**` → AMRAP, EMOM, Rounds, For Time
+- `-` exercício → cada exercício com métrica
+- `( )` → comentário/observação (obrigatório)
+- Aviso: "Texto solto sem ( ) será marcado como erro"
 
-#### 3) Mensagem orientativa no modal de detalhes
+### 3) Atualizar sintaxe DSL no importador
+**Arquivo:** `src/components/TextModelImporter.tsx` (linhas 923-931)
 
-No modal de cobertura, as linhas NOTE soltas aparecem na seção vermelha ("Linhas Não Interpretadas") com uma dica: **"Coloque comentários entre ( ) ou na seção [COMENTÁRIO]"**.
+Adicionar linha de aviso:
+- `⚠️ Texto solto sem ( ) será marcado como erro de interpretação`
 
-### Exemplos
+### 4) Atualizar teste unitário
+**Arquivo:** `src/utils/__tests__/dslParser.test.ts`
 
-| Linha | Hoje | Depois |
-|-------|------|--------|
-| `Sendo` | Ignorada silenciosamente | Erro: linha não interpretada |
-| `Obs: manter postura` | Ignorada | Erro: deve ir entre `()` ou `[COMENTÁRIO]` |
-| `2' Rest a cada Round` | Ignorada | Erro: deve ir entre `()` ou `[COMENTÁRIO]` |
-| `(Obs: manter postura)` | Ignorada | OK — está entre parênteses |
-| `10 Burpees` | Exercício ✅ | Exercício ✅ (sem mudança) |
+Adicionar teste para `DIA: SEGUNDA-FEIRA` ser reconhecido corretamente.
 
 ### Arquivos a alterar
-- `src/utils/parsingCoverage.ts` — incluir NOTE+LOW no relatório
-- `src/components/TextModelImporter.tsx` — borda amarela + mensagem orientativa
+- `src/utils/dslParser.ts` — expandir `DSL_DAY_MAP`
+- `src/components/StructuredErrorDisplay.tsx` — template + legenda
+- `src/components/TextModelImporter.tsx` — aviso na sintaxe
+- `src/utils/__tests__/dslParser.test.ts` — teste para variantes com `-FEIRA`
 
