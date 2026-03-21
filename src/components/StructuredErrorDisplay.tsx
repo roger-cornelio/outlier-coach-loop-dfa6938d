@@ -126,28 +126,26 @@ function SingleError({ issue, onScrollToBlock }: SingleErrorProps) {
  * Bloco "Modelo Recomendado" - CONSTANTE FIXA (MVP0)
  */
 
-const MODEL_RECOMMENDED_TEMPLATE = `SEGUNDA
+const MODEL_RECOMMENDED_TEMPLATE = `DIA: SEGUNDA
 
-NOME_DO_BLOCO
+BLOCO: AQUECIMENTO
+- 800m Run Z2
+- 3x10 Squat to Stand
+(Foco na mobilidade de quadril)
 
-= TREINO
-- <linha de treino com métrica objetiva>
-- <linha de treino com métrica objetiva>
+BLOCO: WOD
+**15' AMRAP**
+- 10 Wall Ball 9kg
+- 15 Cal Row
+- 5 Bar Muscle-up
+(Cap 5 rounds)
 
-> COMENTÁRIO
-> <observação do coach>
+DIA: TERÇA
 
-
-TERÇA
-
-NOME_DO_BLOCO
-
-= TREINO
-- <linha de treino>
-- <linha de treino>
-
-> COMENTÁRIO
-> <observação do coach>`;
+BLOCO: FORÇA
+- Back Squat 5x5 @80%
+- Romanian Deadlift 4x8
+(Rest 2' entre séries)`;
 
 interface RecommendedModelBlockProps {}
 
