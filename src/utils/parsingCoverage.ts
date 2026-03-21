@@ -333,6 +333,7 @@ function detectStructuralTypo(text: string): string | null {
   if (!textPart || textPart.length < 3) return null;
 
   const normalized = textPart.toLowerCase().replace(/\s+/g, '');
+  const originalLower = textPart.toLowerCase().trim();
   const structuralMap: Record<string, string> = {
     rounds: 'Rounds', round: 'Round', series: 'Séries', serie: 'Série',
     sets: 'Sets', set: 'Set', rodadas: 'Rodadas', rodada: 'Rodada',
@@ -342,7 +343,11 @@ function detectStructuralTypo(text: string): string | null {
   for (const [term, display] of Object.entries(structuralMap)) {
     const dist = levenshteinDistance(normalized, term);
     const maxDist = term.length <= 4 ? 1 : 2;
-    if (dist > 0 && dist <= maxDist) {
+    // Case 1: fuzzy match (typo like "roumds")
+    const isFuzzyTypo = dist > 0 && dist <= maxDist;
+    // Case 2: exact match after collapsing spaces but original has broken spacing ("r ounds")
+    const hasBrokenSpacing = dist === 0 && originalLower !== term;
+    if (isFuzzyTypo || hasBrokenSpacing) {
       return numPart ? `${numPart} ${display}` : display;
     }
   }

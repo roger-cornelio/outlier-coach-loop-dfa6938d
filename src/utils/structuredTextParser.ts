@@ -1333,11 +1333,16 @@ export function classifyItemDeterministic(line: string): ClassifiedItem {
     const textAfterDigits = trimmed.replace(/^\d+\s*/, '').trim();
     if (textAfterDigits.length >= 3) {
       const normalizedAfter = textAfterDigits.toLowerCase().replace(/\s+/g, '');
+      const originalLower = textAfterDigits.toLowerCase().trim();
       const structuralTerms = ['rounds', 'round', 'series', 'serie', 'sets', 'set', 'rodadas', 'rodada', 'emom', 'amrap', 'tabata', 'fortime'];
       for (const term of structuralTerms) {
         const dist = levenshteinDistance(normalizedAfter, term);
         const maxDist = term.length <= 4 ? 1 : 2;
-        if (dist > 0 && dist <= maxDist) {
+        // Case 1: fuzzy match (typo like "roumds")
+        // Case 2: exact match after collapsing spaces but original has broken spacing ("r ounds")
+        const isFuzzyTypo = dist > 0 && dist <= maxDist;
+        const hasBrokenSpacing = dist === 0 && originalLower !== term;
+        if (isFuzzyTypo || hasBrokenSpacing) {
           // Typo de termo estrutural → NOTE LOW (cai na regra de nota solta = erro)
           return { kind: 'NOTE', confidence: 'LOW' };
         }

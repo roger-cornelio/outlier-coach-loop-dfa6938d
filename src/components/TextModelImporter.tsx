@@ -1219,9 +1219,14 @@ BLOCO: DESCANSO
                                         {lines.map((line, i) => (
                                           <div
                                             key={i}
-                                            className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10 text-foreground"
+                                            className="flex flex-col gap-1 text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10 text-foreground"
                                           >
-                                            <span className="flex-1 font-mono text-xs">{line.text}</span>
+                                            <span className="font-mono text-xs">{line.text}</span>
+                                            {line.suggestion && (
+                                              <span className="text-xs text-orange-600 dark:text-orange-400">
+                                                💡 Você quis dizer <strong>"{line.suggestion}"</strong>?
+                                              </span>
+                                            )}
                                           </div>
                                         ))}
                                       </div>
