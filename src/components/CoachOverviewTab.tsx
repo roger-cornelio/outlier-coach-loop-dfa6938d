@@ -365,7 +365,7 @@ export function CoachOverviewTab() {
       ) : (
         <div
           ref={parentRef}
-          className="max-h-[calc(100vh-380px)] overflow-auto rounded-lg"
+          className="max-h-[calc(100vh-380px)] lg:max-h-[calc(100vh-320px)] overflow-auto rounded-lg"
           style={{ contain: 'strict' }}
         >
           <div

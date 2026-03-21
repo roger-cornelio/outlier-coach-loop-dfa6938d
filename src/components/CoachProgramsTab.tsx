@@ -645,7 +645,7 @@ export function CoachProgramsTab({ linkedAthletes, loadingAthletes = false, onEd
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors"
+                        className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors"
                       >
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <Calendar className="w-5 h-5 text-primary" />
