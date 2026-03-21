@@ -440,7 +440,9 @@ export function classifyDSLLine(line: string, lineNumber: number): DSLParsedLine
  * Verifica se o texto usa o formato DSL (tem pelo menos um DIA: ou BLOCO:)
  */
 export function usesDSLFormat(text: string): boolean {
-  return DSL_DAY_PATTERN.test(text) || DSL_BLOCK_PATTERN.test(text);
+  const multilineDayPattern = /^DIA:\s*(.+?)\s*$/im;
+  const multilineBlockPattern = /^BLOCO:\s*(.+)$/im;
+  return multilineDayPattern.test(text) || multilineBlockPattern.test(text);
 }
 
 /**
