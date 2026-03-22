@@ -32,6 +32,7 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
 // Dashboard blocks
+import { useEvents } from '@/hooks/useEvents';
 import { 
   EvolutionChartBlock, 
   EvolutionFocusBlock 
