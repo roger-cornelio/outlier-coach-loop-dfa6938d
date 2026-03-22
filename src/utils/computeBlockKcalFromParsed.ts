@@ -78,6 +78,9 @@ const DEFAULT_PATTERN_DATA: Record<string, {
   distance_cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   assault_bike: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
+  mobility: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.2, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
+  warmup_movement: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.2, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
+  rest: { formulaType: 'metabolic', movedMassPercentage: 0, defaultDistanceMeters: 0, humanEfficiencyRate: 1.0, defaultSecondsPerRep: 60 },
 };
 
 interface BiometricData {
