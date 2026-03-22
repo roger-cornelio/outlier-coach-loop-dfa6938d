@@ -1,35 +1,36 @@
 
 
-## Plano: Modal do olhinho mostra treino completo expandido (visão do atleta)
+## Plano: Corrigir rolagem do modal de detalhes do treino
 
 ### Problema
-Ao clicar no ícone de olho (👁️) na aba Programações, o modal abre com todos os dias colapsados. O coach precisa expandir cada dia manualmente. O esperado é que o treino apareça todo aberto, como o atleta vê.
+O modal do olhinho (WorkoutDetailModal) tem `max-h-[85vh] overflow-hidden flex flex-col` no container e um `ScrollArea` com `flex-1`, mas a rolagem não funciona. O `ScrollArea` do Radix precisa de uma altura explícita para ativar o scroll — `flex-1` sozinho não basta dentro do layout do Dialog.
 
-### Alterações
+### Correção
 
-**Arquivo:** `src/components/CoachProgramsTab.tsx`
+**Arquivo:** `src/components/CoachProgramsTab.tsx` (linha 200-214)
 
-#### 1) Iniciar todos os dias expandidos no modal
-No `WorkoutDetailModal`, mudar o estado `expandedDays` para iniciar com todos os dias abertos em vez de um `Set` vazio:
+Trocar o `ScrollArea` por um `div` com `overflow-y-auto` e altura calculada, que é mais confiável dentro de um flex container:
 
-```typescript
-const [expandedDays, setExpandedDays] = useState<Set<string>>(() => {
-  const allDays = new Set<string>();
-  workoutDays.forEach(d => allDays.add(d.day));
-  return allDays;
-});
+```tsx
+<DialogContent className="max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+  <DialogHeader className="flex-shrink-0">
+    ...
+  </DialogHeader>
+  
+  <div className="flex-1 overflow-y-auto pr-2 min-h-0">
+    <div className="space-y-3">
+      ...
+    </div>
+  </div>
+</DialogContent>
 ```
 
-Resetar quando o workout mudar (via `useEffect` ou key).
-
-#### 2) Ampliar o modal para tela quase cheia
-Mudar `max-w-2xl lg:max-w-4xl` para `max-w-5xl` para dar mais espaço horizontal e mostrar o conteúdo confortavelmente (similar ao `max-w-6xl` da tela do atleta).
+Mudancas:
+- `max-h-[85vh]` → `max-h-[90vh]` para mais espaço vertical
+- `ScrollArea` → `div` com `overflow-y-auto` e `min-h-0` (necessário para flex children scrollable)
+- Adicionar `min-h-0` no container flex child para que o overflow funcione
 
 ### Não alterar
-- Nenhuma lógica de cálculo, hooks ou integrações
+- Nenhuma lógica, cálculo ou fluxo
 - Layout mobile inalterado
-- Nenhum texto, cor ou ícone
-
-### Arquivos
-- `src/components/CoachProgramsTab.tsx` — estado inicial expandido + largura do modal
 
