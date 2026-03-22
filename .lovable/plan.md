@@ -1,36 +1,36 @@
 
 
-## Plano: Corrigir rolagem do modal de detalhes do treino
+## Análise: Cálculos entre Preview e Programações
 
-### Problema
-O modal do olhinho (WorkoutDetailModal) tem `max-h-[85vh] overflow-hidden flex flex-col` no container e um `ScrollArea` com `flex-1`, mas a rolagem não funciona. O `ScrollArea` do Radix precisa de uma altura explícita para ativar o scroll — `flex-1` sozinho não basta dentro do layout do Dialog.
+### Resultado da Investigação
 
-### Correção
+Comparei linha por linha o código de cálculo em **3 componentes**:
 
-**Arquivo:** `src/components/CoachProgramsTab.tsx` (linha 200-214)
+| Componente | Arquivo | Biometria | Motor |
+|---|---|---|---|
+| Preview (importador) | `TextModelImporter.tsx` | 75kg, masculino | `computeBlockMetrics` |
+| Modal olhinho (Programações) | `CoachProgramsTab.tsx` | 75kg, masculino | `computeBlockMetrics` |
+| Tela do atleta | `WeeklyTrainingView.tsx` | dados reais do atleta | `computeBlockMetrics` |
 
-Trocar o `ScrollArea` por um `div` com `overflow-y-auto` e altura calculada, que é mais confiável dentro de um flex container:
+**O código é 100% idêntico** entre Preview e Programações — mesma função, mesmos parâmetros, mesma lógica de fallback. Não há diferença algorítmica.
 
-```tsx
-<DialogContent className="max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-  <DialogHeader className="flex-shrink-0">
-    ...
-  </DialogHeader>
-  
-  <div className="flex-1 overflow-y-auto pr-2 min-h-0">
-    <div className="space-y-3">
-      ...
-    </div>
-  </div>
-</DialogContent>
-```
+### Possíveis causas da discrepância
 
-Mudancas:
-- `max-h-[85vh]` → `max-h-[90vh]` para mais espaço vertical
-- `ScrollArea` → `div` com `overflow-y-auto` e `min-h-0` (necessário para flex children scrollable)
-- Adicionar `min-h-0` no container flex child para que o overflow funcione
+Se os números realmente diferem entre as duas telas, a causa está nos **dados** (não no código):
 
-### Não alterar
-- Nenhuma lógica, cálculo ou fluxo
-- Layout mobile inalterado
+1. **Re-parsing entre preview e save**: Se o coach editou blocos entre ver o preview e salvar, os `parsedExercises` no DB podem diferir do que o preview mostrava
+2. **Serialização JSON**: O `JSON.parse(JSON.stringify(...))` no save pode perder tipos numéricos em edge cases (ex: `loadKg` vira string)
+3. **Versão antiga do treino**: O treino no DB pode ter sido salvo antes das correções recentes no motor (carry, mobility, etc.), enquanto o preview usou o motor atualizado
+
+### Proposta de verificação
+
+Para confirmar, posso adicionar um **log de auditoria** temporário no modal do olhinho que mostre o `parsedExercises` do primeiro bloco, para compararmos com o que a preview tinha. Alternativamente, se você conseguir me mostrar screenshots lado a lado (preview vs modal) do **mesmo treino**, posso identificar exatamente qual bloco diverge.
+
+### Ação recomendada
+
+Se a suspeita for "dados antigos com motor novo":
+- **Re-importar o treino** (apagar o draft e importar novamente) deve alinhar os cálculos, pois os `parsedExercises` serão gerados com o motor atualizado
+- Para correção permanente, podemos adicionar uma **migração de dados** que re-processe os `parsedExercises` dos treinos existentes
+
+Preciso que você confirme: **é o mesmo treino** em ambas as telas, ou são versões diferentes?
 
