@@ -49,21 +49,8 @@ export function getWeekEnd(date: Date = new Date()): string {
  * @returns YYYY-MM-DD da segunda-feira
  */
 export function getAthleteCurrentWeekStart(now: Date = new Date()): string {
-  const d = new Date(now);
-  d.setHours(12, 0, 0, 0);
-  
-  const dayOfWeek = d.getDay(); // 0 = domingo
-  
-  if (dayOfWeek === 0) {
-    // DOMINGO: semana "atual" é a PRÓXIMA segunda-feira
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  } else {
-    // SEG-SÁB: semana "atual" é a segunda-feira da semana corrente
-    const diff = d.getDate() - dayOfWeek + 1;
-    d.setDate(diff);
-    return d.toISOString().split('T')[0];
-  }
+  // Domingo é o último dia da semana (seg-dom). Usa mesma lógica de getWeekStart.
+  return getWeekStart(now);
 }
 
 /**
