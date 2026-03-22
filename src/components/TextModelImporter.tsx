@@ -2001,10 +2001,14 @@ BLOCO: DESCANSO
             <Button
               onClick={handleGoToPreview}
               className="flex-1"
-              disabled={!parseResult?.success}
+              disabled={!parseResult?.success || isParsingForPreview}
             >
-              <ArrowRight className="w-4 h-4 mr-2" />
-              Ver preview
+              {isParsingForPreview ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ArrowRight className="w-4 h-4 mr-2" />
+              )}
+              {isParsingForPreview ? 'Calculando...' : 'Ver preview'}
             </Button>
           </div>
         </div>
