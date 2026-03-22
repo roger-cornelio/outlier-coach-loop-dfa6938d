@@ -490,6 +490,13 @@ export function WeeklyTrainingView() {
                 ? 'Seu coach ainda não publicou treinos para a próxima semana.'
                 : 'Seu coach ainda não publicou treinos para esta semana. Aguarde ou entre em contato.'}
             </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Atualizar
+            </button>
           </div>
         ) : null}
       </main>

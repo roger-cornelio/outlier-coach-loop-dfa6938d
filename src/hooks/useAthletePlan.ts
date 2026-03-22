@@ -363,6 +363,53 @@ export function useAthletePlan(): UseAthletePlanReturn {
     fetchPlans();
   }, [fetchPlans]);
 
+  // ============================================
+  // REALTIME: Subscription para mudanças em athlete_plans
+  // ============================================
+  useEffect(() => {
+    if (!userId || canManageWorkouts) return;
+
+    const channel: RealtimeChannel = supabase
+      .channel(`athlete-plans-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'athlete_plans',
+          filter: `athlete_user_id=eq.${userId}`,
+        },
+        () => {
+          console.log('[useAthletePlan] Realtime: change detected, refetching...');
+          fetchPlans();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, canManageWorkouts, fetchPlans]);
+
+  // ============================================
+  // VISIBILITY: Refetch quando o usuário volta para a aba
+  // ============================================
+  useEffect(() => {
+    if (!userId || canManageWorkouts) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[useAthletePlan] Tab visible, refetching...');
+        fetchPlans();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId, canManageWorkouts, fetchPlans]);
+
   // Primeiro plano
   const plan = plans.length > 0 ? plans[0] : null;
 
