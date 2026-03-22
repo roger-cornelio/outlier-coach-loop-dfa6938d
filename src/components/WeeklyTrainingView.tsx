@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, Info, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
@@ -58,6 +58,7 @@ export function WeeklyTrainingView() {
     goToNextWeek,
     goToCurrentWeek,
     isViewingHistory,
+    refetch,
   } = useAthletePlan();
 
   const completions = useWeekWorkoutCompletions(currentWeek.start);
@@ -489,6 +490,13 @@ export function WeeklyTrainingView() {
                 ? 'Seu coach ainda não publicou treinos para a próxima semana.'
                 : 'Seu coach ainda não publicou treinos para esta semana. Aguarde ou entre em contato.'}
             </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Atualizar
+            </button>
           </div>
         ) : null}
       </main>
