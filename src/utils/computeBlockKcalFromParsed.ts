@@ -66,7 +66,7 @@ const DEFAULT_PATTERN_DATA: Record<string, {
   push: { formulaType: 'vertical_work', movedMassPercentage: 0.60, defaultDistanceMeters: 0.5, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2.5 },
   pull: { formulaType: 'vertical_work', movedMassPercentage: 0.60, defaultDistanceMeters: 0.5, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2.5 },
   pull_vertical: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.6, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
-  carry: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.01, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
+  carry: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 25, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   core: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.3, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2 },
   lunge: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 0.4, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
   squat_vertical_push: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 0.8, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3.5 },
