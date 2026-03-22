@@ -169,13 +169,22 @@ interface WorkoutDetailModalProps {
 }
 
 function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalProps) {
+  const workoutDays: DayWorkout[] = useMemo(() => {
+    if (!workout) return [];
+    return Array.isArray(workout.workout_json) ? workout.workout_json as DayWorkout[] : [];
+  }, [workout]);
+
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
-  if (!workout) return null;
+  // Expandir todos os dias ao trocar de treino
+  const workoutId = workout?.id;
+  useMemo(() => {
+    const allDays = new Set<string>();
+    workoutDays.forEach(d => allDays.add(d.day));
+    setExpandedDays(allDays);
+  }, [workoutId]);
 
-  const workoutDays: DayWorkout[] = Array.isArray(workout.workout_json) 
-    ? workout.workout_json as DayWorkout[] 
-    : [];
+  if (!workout) return null;
 
   const toggleDay = (day: string) => {
     setExpandedDays(prev => {
@@ -188,7 +197,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl lg:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl lg:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
