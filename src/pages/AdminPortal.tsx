@@ -266,6 +266,8 @@ const AdminPortal = () => {
         return <ExerciseSuggestionsAdmin />;
       case "demoLevelUp":
         return <DemoLevelUp />;
+      case "analytics":
+        return <AnalyticsDashboard />;
       default:
         return <AthleteStatusAdmin />;
     }
