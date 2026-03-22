@@ -1,36 +1,49 @@
 
+Diagnóstico
 
-## Análise: Cálculos entre Preview e Programações
+O publish está chegando no backend, mas a tela do atleta não está se atualizando sozinha.
 
-### Resultado da Investigação
+O que confirmei:
+- Já existem registros publicados em `athlete_plans` para a semana `2026-03-23` para atletas vinculados.
+- A screenshot do atleta mostra a semana `23–29 mar.` com badge `PRÓXIMA`, ou seja, ele está vendo a semana futura.
+- O hook `useAthletePlan` busca os planos apenas:
+  - no mount
+  - quando `selectedWeekStart` muda
+- Não existe assinatura em tempo real nem refetch automático quando o coach publica depois que o atleta já abriu essa tela.
 
-Comparei linha por linha o código de cálculo em **3 componentes**:
+Conclusão mais provável:
+1. O atleta abriu a semana futura antes da publicação.
+2. A query veio vazia naquele momento.
+3. O coach publicou depois.
+4. Como a tela do atleta não refaz a busca sozinha, continua mostrando vazio até recarregar/navegar.
 
-| Componente | Arquivo | Biometria | Motor |
-|---|---|---|---|
-| Preview (importador) | `TextModelImporter.tsx` | 75kg, masculino | `computeBlockMetrics` |
-| Modal olhinho (Programações) | `CoachProgramsTab.tsx` | 75kg, masculino | `computeBlockMetrics` |
-| Tela do atleta | `WeeklyTrainingView.tsx` | dados reais do atleta | `computeBlockMetrics` |
+Plano de correção
 
-**O código é 100% idêntico** entre Preview e Programações — mesma função, mesmos parâmetros, mesma lógica de fallback. Não há diferença algorítmica.
+1. Atualizar `useAthletePlan` para refazer a busca automaticamente quando houver mudança em `athlete_plans`
+- Adicionar subscription de mudanças da tabela filtrada pelo `athlete_user_id`.
+- Quando entrar/atualizar um plano `published` da semana selecionada, chamar `fetchPlans()`.
 
-### Possíveis causas da discrepância
+2. Adicionar refetch defensivo por foco/visibilidade
+- Ao voltar para a aba ou focar a janela, refazer `fetchPlans()`.
+- Isso cobre casos em que o publish ocorreu enquanto o atleta estava com a tela aberta.
 
-Se os números realmente diferem entre as duas telas, a causa está nos **dados** (não no código):
+3. Melhorar o estado vazio para não parecer erro definitivo
+- Se a semana estiver vazia, exibir ação de “Atualizar”.
+- Opcionalmente mostrar microcopy indicando que novos treinos publicados podem aparecer após atualização.
 
-1. **Re-parsing entre preview e save**: Se o coach editou blocos entre ver o preview e salvar, os `parsedExercises` no DB podem diferir do que o preview mostrava
-2. **Serialização JSON**: O `JSON.parse(JSON.stringify(...))` no save pode perder tipos numéricos em edge cases (ex: `loadKg` vira string)
-3. **Versão antiga do treino**: O treino no DB pode ter sido salvo antes das correções recentes no motor (carry, mobility, etc.), enquanto o preview usou o motor atualizado
+4. Validar persistência da semana
+- Revisar a restauração via `outlier_week_anchor` para confirmar se o atleta não está ficando preso em semana futura sem perceber.
+- Se necessário, manter a âncora apenas como conveniência, mas priorizar a semana atual no boot após novo login.
 
-### Proposta de verificação
+Arquivos envolvidos
+- `src/hooks/useAthletePlan.ts`
+- `src/components/WeeklyTrainingView.tsx`
+- possivelmente `src/components/Dashboard.tsx` se precisarmos garantir aplicação imediata dos planos após refetch
 
-Para confirmar, posso adicionar um **log de auditoria** temporário no modal do olhinho que mostre o `parsedExercises` do primeiro bloco, para compararmos com o que a preview tinha. Alternativamente, se você conseguir me mostrar screenshots lado a lado (preview vs modal) do **mesmo treino**, posso identificar exatamente qual bloco diverge.
-
-### Ação recomendada
-
-Se a suspeita for "dados antigos com motor novo":
-- **Re-importar o treino** (apagar o draft e importar novamente) deve alinhar os cálculos, pois os `parsedExercises` serão gerados com o motor atualizado
-- Para correção permanente, podemos adicionar uma **migração de dados** que re-processe os `parsedExercises` dos treinos existentes
-
-Preciso que você confirme: **é o mesmo treino** em ambas as telas, ou são versões diferentes?
-
+Detalhes técnicos
+- O problema não parece ser RLS nem falha de publicação.
+- O problema principal é sincronização da UI do atleta após publicação.
+- A evidência mais forte é:
+  - dados publicados existem no banco
+  - a tela do atleta mostra semana futura vazia
+  - o hook não possui realtime, polling, nem refresh on focus
