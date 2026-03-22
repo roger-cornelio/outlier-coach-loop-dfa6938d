@@ -1,33 +1,35 @@
 
 
-## Plano: Corrigir cálculo de Carry para considerar carga externa
+## Plano: Modal do olhinho mostra treino completo expandido (visão do atleta)
 
 ### Problema
-A fórmula metabólica (MET) para `carry` ignora a carga externa (`loadKg`). Um Farmer Carry com 64kg gasta significativamente mais energia que sem carga, mas o motor calcula o mesmo valor.
+Ao clicar no ícone de olho (👁️) na aba Programações, o modal abre com todos os dias colapsados. O coach precisa expandir cada dia manualmente. O esperado é que o treino apareça todo aberto, como o atleta vê.
 
-Resultado: AMRAP 2 mostra ~90 kcal quando deveria ser ~120-140 kcal.
+### Alterações
 
-### Correção
+**Arquivo:** `src/components/CoachProgramsTab.tsx`
 
-**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
+#### 1) Iniciar todos os dias expandidos no modal
+No `WorkoutDetailModal`, mudar o estado `expandedDays` para iniciar com todos os dias abertos em vez de um `Set` vazio:
 
-#### 1) Carry: MET ajustado pela carga
-Na branch `metabolic` do `computeExerciseKcal`, quando o slug é `carry`, aplicar um multiplicador baseado na carga relativa ao peso corporal:
-
+```typescript
+const [expandedDays, setExpandedDays] = useState<Set<string>>(() => {
+  const allDays = new Set<string>();
+  workoutDays.forEach(d => allDays.add(d.day));
+  return allDays;
+});
 ```
-metEfetivo = metBase × (1 + loadKg / pesoKg)
-```
 
-Exemplo: Farmer Carry 32/32 (64kg), atleta 75kg:
-- metEfetivo = 6.0 × (1 + 64/75) = 6.0 × 1.85 = 11.1
-- kcal = 11.1 × 75 × (0.5/60) = 6.94 kcal/round (vs 3.75 atual)
-- ~85% mais calorias por round → total AMRAP sobe para ~120-130 kcal
+Resetar quando o workout mudar (via `useEffect` ou key).
 
-#### 2) Garantir que a IA retorna loadKg para Farmer Carry
-O "32/32" deve ser interpretado como loadKg = 64 (soma). Se a IA não estiver somando, ajustar o prompt na Edge Function.
+#### 2) Ampliar o modal para tela quase cheia
+Mudar `max-w-2xl lg:max-w-4xl` para `max-w-5xl` para dar mais espaço horizontal e mostrar o conteúdo confortavelmente (similar ao `max-w-6xl` da tela do atleta).
 
 ### Não alterar
-- Nenhuma outra fórmula ou pattern
-- Nenhuma lógica de UI, hooks ou fluxos
-- Layout inalterado
+- Nenhuma lógica de cálculo, hooks ou integrações
+- Layout mobile inalterado
+- Nenhum texto, cor ou ícone
+
+### Arquivos
+- `src/components/CoachProgramsTab.tsx` — estado inicial expandido + largura do modal
 
