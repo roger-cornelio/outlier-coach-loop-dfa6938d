@@ -169,7 +169,19 @@ interface WorkoutDetailModalProps {
 }
 
 function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalProps) {
+  const workoutDays: DayWorkout[] = useMemo(() => {
+    if (!workout) return [];
+    return Array.isArray(workout.workout_json) ? workout.workout_json as DayWorkout[] : [];
+  }, [workout]);
+
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  // Expandir todos os dias ao abrir ou trocar de treino
+  useState(() => {
+    const allDays = new Set<string>();
+    workoutDays.forEach(d => allDays.add(d.day));
+    setExpandedDays(allDays);
+  });
 
   if (!workout) return null;
 
