@@ -47,6 +47,8 @@ const METABOLIC_METS: Record<string, number> = {
   burpees: 8.0,
   total_body_plyo: 8.0,
   isometric: 3.0,
+  carry: 6.0,
+  rest: 1.0,
 };
 
 // Dados default de movement patterns (fallback quando DB não disponível)
