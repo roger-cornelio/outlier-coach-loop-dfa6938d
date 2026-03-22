@@ -59,6 +59,12 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
+    id: "analytics",
+    label: "Analytics",
+    icon: <BarChart3 className="w-5 h-5" />,
+    description: "DAU, retenção e eventos"
+  },
+  {
     id: "crm",
     label: "CRM",
     icon: <Contact className="w-5 h-5" />,
