@@ -47,6 +47,8 @@ const METABOLIC_METS: Record<string, number> = {
   burpees: 8.0,
   total_body_plyo: 8.0,
   isometric: 3.0,
+  carry: 6.0,
+  rest: 1.0,
 };
 
 // Dados default de movement patterns (fallback quando DB não disponível)
@@ -64,18 +66,21 @@ const DEFAULT_PATTERN_DATA: Record<string, {
   push: { formulaType: 'vertical_work', movedMassPercentage: 0.60, defaultDistanceMeters: 0.5, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2.5 },
   pull: { formulaType: 'vertical_work', movedMassPercentage: 0.60, defaultDistanceMeters: 0.5, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2.5 },
   pull_vertical: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.6, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
-  carry: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.01, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
+  carry: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 25, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   core: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.3, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 2 },
   lunge: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 0.4, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
   squat_vertical_push: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 0.8, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3.5 },
   olympic_lift: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 1.2, humanEfficiencyRate: 0.18, defaultSecondsPerRep: 4 },
   horizontal_friction: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   horizontal_sled: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
-  total_body_plyo: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.3, humanEfficiencyRate: 0.18, defaultSecondsPerRep: 3 },
+  total_body_plyo: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.45, humanEfficiencyRate: 0.15, defaultSecondsPerRep: 3 },
   isometric: { formulaType: 'metabolic', movedMassPercentage: 0.30, defaultDistanceMeters: 0, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   distance_cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   assault_bike: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
+  mobility: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.2, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
+  warmup_movement: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.2, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 },
+  rest: { formulaType: 'metabolic', movedMassPercentage: 0, defaultDistanceMeters: 0, humanEfficiencyRate: 1.0, defaultSecondsPerRep: 60 },
 };
 
 interface BiometricData {
