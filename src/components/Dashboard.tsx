@@ -32,6 +32,7 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
 // Dashboard blocks
+import { useEvents } from '@/hooks/useEvents';
 import { 
   EvolutionChartBlock, 
   EvolutionFocusBlock 
@@ -295,7 +296,10 @@ export function Dashboard() {
     }
   };
 
+  const { trackEvent } = useEvents();
+
   const handleStartWorkout = () => {
+    trackEvent('workout_viewed');
     setCurrentView('weeklyTraining');
   };
 

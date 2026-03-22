@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useEvents } from '@/hooks/useEvents';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
 import { SimulatorScreen } from './simulator/SimulatorScreen';
@@ -30,6 +31,7 @@ export function BenchmarksScreen() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
+  const { trackEvent } = useEvents();
 
   // Sync local refreshKey with global store (e.g. after import from dashboard CTA)
   useEffect(() => {
@@ -39,6 +41,7 @@ export function BenchmarksScreen() {
   }, [externalResultsRefreshKey]);
 
   const handleResultAdded = () => {
+    trackEvent('benchmark_completed');
     triggerExternalResultsRefresh();
     setRefreshKey(prev => prev + 1);
   };
