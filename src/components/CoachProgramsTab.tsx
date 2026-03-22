@@ -197,7 +197,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl lg:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
@@ -211,7 +211,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
           </p>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4">
+        <div className="flex-1 overflow-y-auto pr-2 min-h-0">
           <div className="space-y-3">
             {workoutDays.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -229,7 +229,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
