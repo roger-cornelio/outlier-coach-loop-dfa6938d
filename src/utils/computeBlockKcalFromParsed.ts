@@ -194,7 +194,17 @@ function computeExerciseKcal(
       const restPerSet = exercise.restSeconds || 60;
       durationSec += (sets - 1) * restPerSet;
     }
-    const met = METABOLIC_METS[patternSlug] || METABOLIC_METS[exerciseSlug] || 7.0;
+    let met = METABOLIC_METS[patternSlug] || METABOLIC_METS[exerciseSlug] || 7.0;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CARRY LOAD ADJUSTMENT: MET escala com carga externa
+    // metEfetivo = metBase × (1 + loadKg / pesoKg)
+    // Ex: Farmer Carry 64kg, atleta 75kg → 6.0 × 1.85 = 11.1
+    // ═══════════════════════════════════════════════════════════════════
+    if ((patternSlug === 'carry' || exerciseSlug === 'carry') && loadKg > 0) {
+      met = met * (1 + loadKg / biometrics.pesoKg);
+    }
+
     const minutes = durationSec / 60;
     kcal = met * biometrics.pesoKg * (minutes / 60);
   } else if (pattern.formulaType === 'horizontal_friction') {
