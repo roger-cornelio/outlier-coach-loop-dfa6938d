@@ -73,7 +73,7 @@ const DEFAULT_PATTERN_DATA: Record<string, {
   olympic_lift: { formulaType: 'vertical_work', movedMassPercentage: 0.70, defaultDistanceMeters: 1.2, humanEfficiencyRate: 0.18, defaultSecondsPerRep: 4 },
   horizontal_friction: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   horizontal_sled: { formulaType: 'horizontal_friction', movedMassPercentage: 1.0, defaultDistanceMeters: 25, frictionCoefficient: 0.35, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
-  total_body_plyo: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.3, humanEfficiencyRate: 0.18, defaultSecondsPerRep: 3 },
+  total_body_plyo: { formulaType: 'vertical_work', movedMassPercentage: 0.95, defaultDistanceMeters: 0.45, humanEfficiencyRate: 0.15, defaultSecondsPerRep: 3 },
   isometric: { formulaType: 'metabolic', movedMassPercentage: 0.30, defaultDistanceMeters: 0, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 },
   distance_cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
   cardio: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 0, humanEfficiencyRate: 0.25 },
