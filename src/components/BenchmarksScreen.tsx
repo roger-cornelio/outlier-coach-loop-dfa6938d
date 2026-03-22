@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useEvents } from '@/hooks/useEvents';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
 import { SimulatorScreen } from './simulator/SimulatorScreen';

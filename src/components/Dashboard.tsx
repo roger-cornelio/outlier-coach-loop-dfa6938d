@@ -296,7 +296,10 @@ export function Dashboard() {
     }
   };
 
+  const { trackEvent } = useEvents();
+
   const handleStartWorkout = () => {
+    trackEvent('workout_viewed');
     setCurrentView('weeklyTraining');
   };
 
