@@ -58,6 +58,7 @@ export function WeeklyTrainingView() {
     goToNextWeek,
     goToCurrentWeek,
     isViewingHistory,
+    refetch,
   } = useAthletePlan();
 
   const completions = useWeekWorkoutCompletions(currentWeek.start);
