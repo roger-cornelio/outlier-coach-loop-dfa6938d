@@ -1,34 +1,76 @@
 
 
-## Plano: Expandir layout desktop das abas Visao Geral e Programacoes
+## Plano: Corrigir cálculos do motor de energia (5 erros identificados)
 
-### Problema
-As abas "Visao Geral" e "Programacoes" usam layout compacto (gaps pequenos, alturas fixas, listas empilhadas) que nao aproveita a largura disponivel em desktop. A edicao e visualizacao ficam apertadas.
+### Contexto
 
-### Alteracoes
+A análise comparativa entre os cálculos do motor e os valores de referência revelou 5 problemas no `DEFAULT_PATTERN_DATA` do `computeBlockKcalFromParsed.ts`. Os erros afetam todas as telas (Preview, Programações e Atleta) já que todas usam `computeBlockMetrics` como fonte única.
 
-#### 1) CoachOverviewTab (`src/components/CoachOverviewTab.tsx`)
+### Correções
 
-- **KPI Cards**: aumentar gap no desktop (`gap-3` para `gap-3 lg:gap-6`) e padding interno (`sm:p-4` para `lg:p-6`)
-- **KPI Card content**: textos e icones maiores em desktop (`lg:text-4xl` para o numero, `lg:w-5 lg:h-5` para icone)
-- **Lista de atletas**: aumentar `max-h` no desktop (`max-h-[calc(100vh-380px)]` para `lg:max-h-[calc(100vh-320px)]`)
-- **Athlete Row**: padding e gaps maiores em desktop (`lg:px-6 lg:py-4 lg:gap-4`)
-- **Column headers**: gap maior no desktop
-- **Adherence bar**: mais larga em desktop (`w-20` para `lg:w-32`)
+#### 1) Adicionar pattern `mobility` para exercícios leves (Squat to Stand, Pike Lunges)
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
 
-#### 2) CoachProgramsTab (`src/components/CoachProgramsTab.tsx`)
+Hoje esses exercícios caem no pattern `squat` (70% massa, 0.5m) → ~5 kcal. Referência: 1-2 kcal.
 
-- **Summary grid**: gap maior (`gap-3` para `gap-3 lg:gap-6`), padding maior nos cards de resumo (`lg:p-6`)
-- **ScrollArea**: remover `max-h-[500px]` fixo, usar `max-h-[calc(100vh-400px)]` para aproveitar a tela
-- **Workout cards na lista**: em desktop, usar layout com mais espaco horizontal (`lg:p-4 lg:gap-4`)
-- **WorkoutDetailModal**: expandir de `max-w-2xl` para `max-w-4xl` em desktop para mostrar blocos lado a lado
+Adicionar:
+```
+mobility: { formulaType: 'vertical_work', movedMassPercentage: 0.30, defaultDistanceMeters: 0.2, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 3 }
+```
 
-#### 3) Nao alterar
-- Nenhuma logica, hook, integracao ou fluxo
-- Nenhuma cor, icone ou texto
-- Layout mobile permanece intacto (todas as mudancas usam prefixo `lg:`)
+#### 2) Corrigir Farmer Carry — de fricção para MET metabólico
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
 
-### Arquivos a alterar
-- `src/components/CoachOverviewTab.tsx` — gaps, paddings, alturas responsivos
-- `src/components/CoachProgramsTab.tsx` — gaps, ScrollArea height, modal width
+Hoje `carry` usa `horizontal_friction` com coeff 0.01 → ~0.2 kcal (irreal). Farmer Carry com carga deveria ser ~5-8 kcal por 20m.
+
+Mudar carry para:
+```
+carry: { formulaType: 'metabolic', movedMassPercentage: 1.0, defaultDistanceMeters: 25, humanEfficiencyRate: 0.20, defaultSecondsPerRep: 30 }
+```
+E adicionar `carry` ao `METABOLIC_METS` com MET 6.0.
+
+#### 3) Adicionar pattern `rest` para descanso entre rounds
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
+
+Quando a IA retorna um exercício "rest" com `durationSeconds`, o motor deve contabilizar o tempo sem adicionar kcal.
+
+Adicionar:
+```
+rest: { formulaType: 'metabolic', movedMassPercentage: 0, defaultDistanceMeters: 0, humanEfficiencyRate: 1.0, defaultSecondsPerRep: 60 }
+```
+E `rest` ao `METABOLIC_METS` com MET 1.0 (basal, gasto desprezível).
+
+#### 4) Melhorar Broad Jump — aumentar distância vertical efetiva
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
+
+`total_body_plyo` usa `defaultDistanceMeters: 0.3` que subestima Broad Jumps. Aumentar para 0.45m e reduzir eficiência para 0.15 (maior gasto real pela componente horizontal).
+
+```
+total_body_plyo: { ..., defaultDistanceMeters: 0.45, humanEfficiencyRate: 0.15, ... }
+```
+
+#### 5) Adicionar slug `warmup_movement` como alias de `mobility`
+**Arquivo:** `src/utils/computeBlockKcalFromParsed.ts`
+
+Para cobrir classificações da IA que usem esse slug alternativo.
+
+```
+warmup_movement: mobility (mesmos valores)
+```
+
+### Impacto
+
+- **Exercícios leves**: de ~5 kcal para ~1-2 kcal (alinhado com referência)
+- **Farmer Carry**: de ~0.2 kcal para ~5-8 kcal (alinhado com referência)
+- **Rest**: tempo contabilizado, kcal ≈ 0
+- **Broad Jump**: aumento moderado no gasto estimado
+- Todas as telas (Preview, Programações, Atleta) se beneficiam automaticamente
+
+### Arquivo a alterar
+- `src/utils/computeBlockKcalFromParsed.ts` — patterns, METs e slugs
+
+### Não alterar
+- Nenhuma lógica de rendering, hooks, integrações ou fluxos
+- Nenhuma Edge Function ou banco de dados
+- Layout mobile/desktop inalterado
 
