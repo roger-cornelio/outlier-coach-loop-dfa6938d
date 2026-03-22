@@ -1027,7 +1027,9 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   // NAVEGAÇÃO ENTRE TELAS + GUARDS CENTRALIZADOS
   // ═══════════════════════════════════════════════════════════════════════════
   
-  const handleGoToPreview = () => {
+  const [isParsingForPreview, setIsParsingForPreview] = useState(false);
+
+  const handleGoToPreview = async () => {
     // GUARD 1: Semana obrigatória
     if (!weekId) {
       setPreviewValidationError('Selecione a semana de referência');
@@ -1051,6 +1053,30 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
         invalidBlocks: previewValidation.invalidBlocks.length 
       });
       return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PARSING ANTECIPADO: Chamar IA para enriquecer blocos com parsedExercises
+    // Isso garante que o Preview mostra tempo e calorias iguais à tela do atleta
+    // ═══════════════════════════════════════════════════════════════════════════
+    const days = effectiveDays || [];
+    if (days.length > 0) {
+      setIsParsingForPreview(true);
+      try {
+        const { parseAndEnrichWorkoutBlocks } = await import('@/hooks/useCoachWorkouts');
+        const { enrichedWorkouts } = await parseAndEnrichWorkoutBlocks(days);
+        // Atualizar os days com dados enriquecidos
+        setEditedDays(enrichedWorkouts);
+        console.log('[PREVIEW_ENRICHED]', {
+          totalBlocks: enrichedWorkouts.reduce((s, d) => s + d.blocks.length, 0),
+          parsedBlocks: enrichedWorkouts.reduce((s, d) => s + d.blocks.filter(b => b.parseStatus === 'completed').length, 0),
+        });
+      } catch (err) {
+        console.warn('[PREVIEW_ENRICH_FAILED]', err);
+        // Continuar mesmo sem parsing — preview usará fallback
+      } finally {
+        setIsParsingForPreview(false);
+      }
     }
     
     // LOG OBRIGATÓRIO: Estado completo no momento do preview
@@ -1975,10 +2001,14 @@ BLOCO: DESCANSO
             <Button
               onClick={handleGoToPreview}
               className="flex-1"
-              disabled={!parseResult?.success}
+              disabled={!parseResult?.success || isParsingForPreview}
             >
-              <ArrowRight className="w-4 h-4 mr-2" />
-              Ver preview
+              {isParsingForPreview ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ArrowRight className="w-4 h-4 mr-2" />
+              )}
+              {isParsingForPreview ? 'Calculando...' : 'Ver preview'}
             </Button>
           </div>
         </div>
