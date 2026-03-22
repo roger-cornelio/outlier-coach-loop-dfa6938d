@@ -229,7 +229,7 @@ function WorkoutDetailModal({ open, onOpenChange, workout }: WorkoutDetailModalP
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
