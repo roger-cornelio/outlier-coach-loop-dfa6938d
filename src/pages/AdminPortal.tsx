@@ -18,6 +18,7 @@ import { MovementPatternsAdmin } from "@/components/admin/MovementPatternsAdmin"
 import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
 import { CRMAdmin } from "@/components/admin/CRMAdmin";
 import { ExerciseSuggestionsAdmin } from "@/components/admin/ExerciseSuggestionsAdmin";
+import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,11 +43,12 @@ import {
   Calculator,
   Grid3X3,
   Contact,
-  Lightbulb
+  Lightbulb,
+  BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions" | "analytics";
 
 interface NavItem {
   id: AdminView;
