@@ -91,6 +91,72 @@ function stripBenchmarkIfNotAdmin(
 }
 
 /**
+ * Exportável: Chama IA para parsear blocos e enriquece DayWorkout[] com parsedExercises.
+ * Usado no Preview do importador e no Gatekeeper do save.
+ */
+export async function parseAndEnrichWorkoutBlocks(
+  workoutData: DayWorkout[]
+): Promise<{ enrichedWorkouts: DayWorkout[]; hadErrors: boolean }> {
+  const blocksToValidate: { blockId: string; blockType: string; content: string; title?: string; dayIndex: number; blockIndex: number }[] = [];
+
+  workoutData.forEach((day, dayIdx) => {
+    if (day.isRestDay) return;
+    day.blocks.forEach((block, blockIdx) => {
+      if (block.type === 'notas') return;
+      // Skip blocks that are already parsed
+      if (block.parseStatus === 'completed' && block.parsedExercises?.length) return;
+      blocksToValidate.push({
+        blockId: block.id,
+        blockType: block.type,
+        content: block.content || '',
+        title: block.title || undefined,
+        dayIndex: dayIdx,
+        blockIndex: blockIdx,
+      });
+    });
+  });
+
+  if (blocksToValidate.length === 0) {
+    return { enrichedWorkouts: workoutData, hadErrors: false };
+  }
+
+  const response = await callParseWorkoutBlocks(
+    blocksToValidate.map(b => ({ blockId: b.blockId, blockType: b.blockType, content: b.content, title: b.title }))
+  );
+
+  if (response.error) {
+    return { enrichedWorkouts: workoutData, hadErrors: true };
+  }
+
+  let hadErrors = false;
+  const enrichedWorkouts = workoutData.map((day, dayIdx) => ({
+    ...day,
+    blocks: day.blocks.map((block, blockIdx) => {
+      const validationEntry = blocksToValidate.find(
+        b => b.dayIndex === dayIdx && b.blockIndex === blockIdx
+      );
+      if (!validationEntry) return block;
+
+      const result = response.results?.find((r: any) => r.blockId === block.id);
+
+      if (!result || result.parseStatus === 'failed' || !result.parsedExercises?.length) {
+        hadErrors = true;
+        return { ...block, parseStatus: 'failed' as const, parsedAt: new Date().toISOString() };
+      }
+
+      return {
+        ...block,
+        parsedExercises: result.parsedExercises,
+        parseStatus: 'completed' as const,
+        parsedAt: new Date().toISOString(),
+      };
+    }),
+  }));
+
+  return { enrichedWorkouts, hadErrors };
+}
+
+/**
  * Chama a Edge Function parse-workout-blocks com timeout
  */
 async function callParseWorkoutBlocks(
