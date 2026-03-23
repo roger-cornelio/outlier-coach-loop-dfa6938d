@@ -1,37 +1,30 @@
 
 
-## Plano: Reconhecimento inteligente de exercícios sem métricas + Backup interativo para linhas não interpretadas
+## Plano: Corrigir treino duplicado em todas as semanas
 
-### Problema
+### Causa raiz
 
-Linhas como "Shoulder Taps" ou "Calf Raises" (sem reps/sets/carga) são ignoradas pelo parser local porque `hasMeasurableStimulus()` retorna `false`. A IA (Edge Function) já sabe lidar com esses casos (tem até few-shot example), mas o relatório de cobertura local classifica essas linhas como "não interpretadas" e o coach não tem como agir sobre elas facilmente.
+`WeeklyTrainingView.tsx` busca os treinos corretos por semana via `useAthletePlan()` (variável `planWorkouts`), mas **ignora esse dado** e usa `baseWorkouts`/`adaptedWorkouts` do Zustand store (linha 79-80). O store é global e só é atualizado pelo `Dashboard.tsx`. Quando o atleta navega entre semanas na `WeeklyTrainingView`, o store continua com os treinos da semana anterior — mostrando o mesmo treino de segunda em todas as semanas.
 
-### Solução em 2 partes
-
-**Parte 1: Melhorar o parser local para reconhecer exercícios sem métricas**
-
-No `parsingCoverage.ts`, adicionar uma heurística: se uma linha contém **apenas um nome que se parece com exercício** (2+ palavras com letra, sem ser título/comentário/narrativa), e está dentro de um bloco de treino, considerar como exercício reconhecido — mesmo sem número. Isso usa o dicionário `global_exercises` como referência: se o nome faz match fuzzy com o dicionário, conta como interpretado.
-
-Também melhorar `hasMeasurableStimulus()` no `structuredTextParser.ts` para aceitar linhas que sejam **nomes puros de exercício** quando estão dentro de contexto de bloco estruturado (ex: após um rep scheme "40,30,20,10").
-
-**Parte 2: Backup — na modal de cobertura, linhas vermelhas ganham botão "É um exercício"**
-
-Nas linhas classificadas como `uninterpretable` (vermelhas), adicionar um botão **"É um exercício → Sugerir"** que:
-1. Move a linha da seção vermelha para amarela (exercício novo)
-2. Envia como sugestão para o admin via `exercise_suggestions` (reusa o hook `useExerciseSuggestionSubmit` que já existe)
-3. Marca como "✓ Enviado"
-
-### Alterações
+### Correção
 
 | Arquivo | O que muda |
 |---|---|
-| `src/utils/parsingCoverage.ts` | Na função `classifyUnmatchedLine`, antes de retornar `uninterpretable`, verificar se a linha se parece com nome de exercício (2+ palavras alfabéticas, sem números puros, sem narrativa) — se sim, classificar como `new_exercise` em vez de `uninterpretable` |
-| `src/utils/structuredTextParser.ts` | Adicionar detecção de contexto pós-rep-scheme: se a linha anterior era um rep scheme ("40,30,20,10") e a linha atual tem apenas texto alfabético, marcar como exercício implícito |
-| `src/components/TextModelImporter.tsx` | Na seção vermelha (linhas não interpretadas), adicionar botão "É um exercício → Sugerir" que reclassifica a linha e chama `submitSuggestion` |
+| `src/components/WeeklyTrainingView.tsx` | Usar `planWorkouts` do `useAthletePlan()` como fonte de dados para renderização, em vez de `baseWorkouts`/`adaptedWorkouts` do store. Manter adaptedWorkouts apenas como override quando disponíveis para a mesma semana. |
 
-### Resultado
+### Detalhes
 
-- "Shoulder Taps" dentro de um bloco = classificado como `new_exercise` (amarelo) com opção de sugerir
-- Linhas vermelhas ganham escape: o coach pode dizer "isso é um exercício" e enviar para aprovação
-- Zero impacto no motor de cálculo (a IA já sabe interpretar)
+Na linha 78-80, trocar:
+```ts
+const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
+const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+```
+
+Por:
+```ts
+const displayWorkouts = planWorkouts.length > 0 ? planWorkouts : [];
+const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+```
+
+Isso garante que cada semana mostra **apenas** os treinos publicados para aquela semana específica, usando a query filtrada por `week_start` que já existe no `useAthletePlan`.
 
