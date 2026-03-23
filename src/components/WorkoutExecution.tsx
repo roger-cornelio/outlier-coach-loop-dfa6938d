@@ -5,6 +5,7 @@ import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
+import { estimateWorkoutTime } from '@/utils/estimateWorkoutTime';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
