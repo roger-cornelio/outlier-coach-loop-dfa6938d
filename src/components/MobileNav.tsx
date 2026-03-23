@@ -171,6 +171,9 @@ export function MobileNav() {
                     )}>
                       {item.title}
                     </span>
+                    {item.view === 'weeklyTraining' && hasNewPlan && (
+                      <span className="w-2 h-2 bg-destructive rounded-full animate-pulse ml-auto flex-shrink-0" />
+                    )}
                   </button>
                 </li>
               );
