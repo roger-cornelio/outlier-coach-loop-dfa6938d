@@ -1,24 +1,23 @@
 
 
-## Plano: Corrigir Deteccao Tabata no Motor de Kcal
+## Plano: Corrigir crash "Cannot read properties of undefined (reading 'toLowerCase')"
 
 ### Problema
-O `detectFixedTimeMinutes` em `computeBlockKcalFromParsed.ts` retorna `4` fixo quando detecta "tabata" sem tempo explicito. Mas o modelo correto (ja implementado em `estimateWorkoutTime.ts`) e **4 minutos POR EXERCICIO** (8 rounds × 30s = 240s).
+O `extractTimeFromContent` em `workoutEstimation.ts` (linha 82) faz `content.toLowerCase()` sem verificar se `content` é `undefined`. Quando um bloco do rascunho não tem o campo `content` preenchido, o motor crasheia e o ErrorBoundary exibe a tela de erro.
 
-Com 2 exercicios (Squat to Stand + Pike Lunges), deveria ser 8 min, nao 4.
+O mesmo problema pode ocorrer em `estimateForTimeMinutes` (linha 131) e no `switch` que usa `block.content` (linha 223).
 
-### Correcao
+### Correção
 
-**Arquivo: `src/utils/computeBlockKcalFromParsed.ts`**
+**Arquivo: `src/utils/workoutEstimation.ts`**
 
-Na deteccao de Tabata dentro de `detectFixedTimeMinutes` (linhas ~443-444):
-- Em vez de `return 4`, contar o numero de exercicios no `blockContent` (mesma logica que `estimateWorkoutTime.ts` ja usa)
-- Retornar `exerciseCount * 4`
+1. **Linha 82** — `extractTimeFromContent`: adicionar guard `if (!content) return null;` no início da função
+2. **Linha 208** — chamada `extractTimeFromContent(block.content)`: passar `block.content || ''` como fallback
+3. **Linha 223** — `estimateForTimeMinutes(block.content, level)`: passar `block.content || ''`
 
-Logica de contagem: linhas que comecam com `-`, `•`, numero, ou letra (excluindo a propria linha "tabata" e linhas vazias).
+Correção defensiva em 3 pontos, sem alterar lógica de cálculo.
 
 ### Resultado
-- 2 exercicios → 8 min → floor = 8.0 × 75 × (8/60) = **80 kcal**
-- 1 exercicio → 4 min → floor = **40 kcal**
-- Consistente com `estimateWorkoutTime.ts`
+- Blocos sem `content` retornam estimativa por tipo (fallback existente no switch/case)
+- Sem crash, sem tela cinza
 
