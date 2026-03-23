@@ -188,7 +188,7 @@ export function WeeklyTrainingView() {
             coachStyle,
             workoutSummary: summaryText,
             hasWorkout: true,
-            sex: athleteConfig?.sex || undefined,
+            sex: athleteConfig?.sexo || undefined,
           },
         });
         if (!cancelled && data?.message) {
