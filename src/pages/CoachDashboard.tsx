@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
