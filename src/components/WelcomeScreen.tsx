@@ -858,7 +858,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MINHA EVOLUÇÃO'}
+              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
             <motion.button onClick={() => setStep('profileGoal')}

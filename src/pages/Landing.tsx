@@ -126,15 +126,15 @@ export default function Landing() {
           className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
         >
-          TECNOLOGIA DE <span className="text-primary">PERFORMANCE</span>
+          O QUE VOCÊ <span className="text-primary">RECEBE</span>
         </motion.h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Activity, label: 'Motor HYROX' },
-            { icon: Brain, label: 'Parsing Inteligente' },
-            { icon: BarChart3, label: 'Radar de Performance' },
-            { icon: TrendingUp, label: 'Classificação por Nível' },
+            { icon: Activity, label: 'Diagnóstico Gratuito' },
+            { icon: Users, label: 'Coach Dedicado' },
+            { icon: Brain, label: 'Feedback IA em Tempo Real' },
+            { icon: TrendingUp, label: 'Evolução Mensurável' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-5 rounded-xl bg-secondary/50 border border-border text-center hover:border-primary/30 transition-colors"
