@@ -18,10 +18,17 @@ export default function Landing() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <OutlierWordmark size="sm" className="!text-lg md:!text-xl" />
-          <Link to="/login" className="font-display text-xs md:text-sm tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-            Já sou atleta
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-3 md:gap-4">
+            <Link to="/login/coach" className="font-display text-xs md:text-sm tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+              Sou Coach
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <span className="h-4 border-r border-border/40" />
+            <Link to="/login" className="font-display text-xs md:text-sm tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+              Sou Atleta
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </header>
 
