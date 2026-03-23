@@ -98,6 +98,11 @@ export function calculateEngineCoverage(
       reason = 'no_kcal';
     }
 
+    // Determine fallback confidence based on reason
+    const fallbackConfidence = reason === 'bypassed' || reason === 'parse_failed' 
+      ? 45 
+      : reason === 'no_kcal' ? 60 : 50;
+
     result.push({
       title,
       kcal,
@@ -105,6 +110,7 @@ export function calculateEngineCoverage(
       success: false,
       reason,
       reasonLabel: REASON_LABELS[reason],
+      confidencePercent: fallbackConfidence,
     });
   }
 

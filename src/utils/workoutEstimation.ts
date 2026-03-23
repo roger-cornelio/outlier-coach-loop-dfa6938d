@@ -281,16 +281,23 @@ export function estimateBlock(
     estimatedMinutes = Math.round(estimatedMinutes * 1.15);
   }
   
-  // Kcal = 0 here. Real calorie calculation is done by Physics Engine (energyCalculator.ts)
-  // when rendering the workout UI with movement_patterns data.
+  // Fallback Kcal via MET × peso × tempo
+  const weightKg = biometrics.weightKg || 75;
+  const met = BLOCK_TYPE_METS[block.type] || 5.0;
+  const estimatedKcal = estimatedMinutes > 0
+    ? Math.round(met * weightKg * (estimatedMinutes / 60))
+    : 0;
+
+  const confidencePercent = CONFIDENCE_PERCENT_MAP[confidence];
   
   return {
     blockId: block.id,
     title: block.title,
     type: block.type,
     estimatedMinutes: Math.max(0, estimatedMinutes),
-    estimatedKcal: 0,
+    estimatedKcal,
     confidence,
+    confidencePercent,
   };
 }
 
