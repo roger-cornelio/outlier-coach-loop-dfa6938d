@@ -91,6 +91,11 @@ interface OutlierState {
   // Admin: Visualizar como atleta
   setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
   clearViewingAsAthlete: () => void;
+  
+  // Session block results
+  setSessionBlockResults: (results: SessionBlockResult[]) => void;
+  addSessionBlockResult: (result: SessionBlockResult) => void;
+  clearSessionBlockResults: () => void;
 }
 
 export const useOutlierStore = create<OutlierState>()(
