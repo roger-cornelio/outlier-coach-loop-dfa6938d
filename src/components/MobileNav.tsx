@@ -25,6 +25,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
+import { useNewPlanIndicator } from '@/hooks/useNewPlanIndicator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import {
