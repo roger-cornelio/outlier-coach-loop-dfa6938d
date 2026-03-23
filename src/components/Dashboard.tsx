@@ -44,6 +44,7 @@ import { useEvolutionFocus } from '@/hooks/useEvolutionFocus';
 import { useWeeklyEvolution } from '@/hooks/useWeeklyEvolution';
 import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { AthleteHeroIdentity } from './AthleteHeroIdentity';
+import { WeeklySummaryCard } from './WeeklySummaryCard';
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -366,6 +367,10 @@ export function Dashboard() {
             BLOCO 1 — PERFIL DE PERFORMANCE COMPLETO
             (Diagnóstico + Limitador + Impacto + Projeção + CTA)
             ============================================ */}
+        <section className="mb-6">
+          <WeeklySummaryCard />
+        </section>
+
         <section className="mb-6">
           <DiagnosticRadarBlock
             scores={diagnosticScores.scores}
