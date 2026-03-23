@@ -15,11 +15,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta';
+
+interface ProfileAnswers {
+  experience: 'never' | 'spectator' | '1race' | '2plus' | null;
+  goal: 'finish' | 'improve_time' | 'podium' | 'lifestyle' | null;
+  targetRace: 'next3months' | 'next6months' | 'nodate' | 'just_training' | null;
+}
 
 interface SearchResult {
   athlete_name: string;
