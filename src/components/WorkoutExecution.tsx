@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOutlierStore } from '@/store/outlierStore';
+import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
@@ -12,6 +12,7 @@ import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
+
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
   conditioning: 'border-l-primary',
@@ -22,17 +23,63 @@ const blockTypeColors: Record<string, string> = {
   notas: 'border-l-muted-foreground',
 };
 
+// Detect block format from structureDescription and block type
+function detectBlockFormat(block: { type: string }, structureDescription: string | null): SessionBlockResult['format'] {
+  const sd = (structureDescription || '').toUpperCase();
+  
+  if (sd.includes('AMRAP')) return 'amrap';
+  if (sd.includes('EMOM')) return 'emom';
+  if (sd.includes('FOR TIME') || sd.includes('RFT') || sd.includes('CHIPPER')) return 'for_time';
+  if (block.type === 'forca') return 'strength';
+  
+  // Time-based formats
+  if (/\d+\s*(ROUNDS?|RDS?)/.test(sd)) return 'for_time';
+  
+  return 'other';
+}
+
+// Should this block type skip recording entirely?
+function isAutoCompleteBlock(blockType: string): boolean {
+  return ['aquecimento', 'core', 'notas'].includes(blockType);
+}
+
+// Should we ask for time input?
+function needsTimeInput(format: SessionBlockResult['format']): boolean {
+  return format === 'for_time';
+}
+
+// Should we ask for reps input?
+function needsRepsInput(format: SessionBlockResult['format']): boolean {
+  return format === 'amrap';
+}
+
+// Should we ask for confirmation only?
+function needsConfirmationOnly(format: SessionBlockResult['format']): boolean {
+  return format === 'emom' || format === 'strength';
+}
+
+function formatSecondsToMinSec(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 export function WorkoutExecution() {
-  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig, addWorkoutResult } = useOutlierStore();
+  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig, addWorkoutResult, addSessionBlockResult, clearSessionBlockResults } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  
+  // Inline recording state
+  const [recordingBlockId, setRecordingBlockId] = useState<string | null>(null);
+  const [inputMinutes, setInputMinutes] = useState('');
+  const [inputSeconds, setInputSeconds] = useState('');
+  const [inputReps, setInputReps] = useState('');
+  const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
 
-  // Equipamentos indisponíveis salvos no athleteConfig
   const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
 
-  // Adaptar workout baseado nos equipamentos indisponíveis
   const { workout: displayedWorkout, result: adaptationResult } = useMemo(() => {
     if (!selectedWorkout) {
       return { workout: null, result: { adapted: false, substitutions: [], noSubstitutionItems: [] } };
@@ -46,15 +93,9 @@ export function WorkoutExecution() {
   }
 
   const handleApplyEquipmentAdaptation = (unavailableEquipment: string[]) => {
-    // Salvar preferências no athleteConfig
     if (athleteConfig) {
-      setAthleteConfig({
-        ...athleteConfig,
-        unavailableEquipment,
-      });
+      setAthleteConfig({ ...athleteConfig, unavailableEquipment });
     }
-
-    // Mostrar feedback
     if (unavailableEquipment.length > 0) {
       toast.success('Treino adaptado pro seu box.', { duration: 3000 });
     } else {
@@ -62,99 +103,179 @@ export function WorkoutExecution() {
     }
   };
 
-  // Get animation variants based on coach style
   const getCompletionAnimation = (coachStyle: string | undefined) => {
     switch (coachStyle) {
       case 'IRON':
-        return {
-          initial: { scale: 1 },
-          complete: { 
-            scale: [1, 0.98, 1],
-            transition: { duration: 0.2 }
-          }
-        };
+        return { initial: { scale: 1 }, complete: { scale: [1, 0.98, 1], transition: { duration: 0.2 } } };
       case 'SPARK':
-        return {
-          initial: { scale: 1, rotate: 0 },
-          complete: { 
-            scale: [1, 1.05, 0.95, 1.02, 1],
-            rotate: [0, -2, 2, -1, 0],
-            transition: { duration: 0.5 }
-          }
-        };
+        return { initial: { scale: 1, rotate: 0 }, complete: { scale: [1, 1.05, 0.95, 1.02, 1], rotate: [0, -2, 2, -1, 0], transition: { duration: 0.5 } } };
       case 'PULSE':
       default:
-        return {
-          initial: { scale: 1 },
-          complete: { 
-            scale: [1, 1.02, 1],
-            opacity: [1, 0.8, 0.6],
-            transition: { duration: 0.4 }
-          }
-        };
+        return { initial: { scale: 1 }, complete: { scale: [1, 1.02, 1], opacity: [1, 0.8, 0.6], transition: { duration: 0.4 } } };
     }
   };
 
-  // Get checkbox animation based on coach style
   const getCheckboxAnimation = (coachStyle: string | undefined, isComplete: boolean) => {
     if (!isComplete) return { scale: 1, opacity: 1 };
-    
     switch (coachStyle) {
       case 'IRON':
-        return {
-          scale: [0, 1.1, 1],
-          transition: { duration: 0.15 }
-        };
+        return { scale: [0, 1.1, 1], transition: { duration: 0.15 } };
       case 'SPARK':
-        return {
-          scale: [0, 1.3, 0.9, 1.1, 1],
-          rotate: [0, 10, -10, 5, 0],
-          transition: { duration: 0.4 }
-        };
+        return { scale: [0, 1.3, 0.9, 1.1, 1], rotate: [0, 10, -10, 5, 0], transition: { duration: 0.4 } };
       case 'PULSE':
       default:
-        return {
-          scale: [0, 1.05, 1],
-          transition: { duration: 0.3 }
-        };
+        return { scale: [0, 1.05, 1], transition: { duration: 0.3 } };
     }
   };
 
-  const toggleBlockComplete = (blockId: string, blockType: string) => {
+  // Generate local feedback comparing actual vs estimated
+  function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number): string {
+    if (format === 'amrap' && reps !== undefined) {
+      return `${reps} rounds/reps completados`;
+    }
+    
+    if (format === 'emom') {
+      return 'EMOM concluído ✓';
+    }
+    
+    if (format === 'for_time' && timeInSeconds && estimatedSeconds && estimatedSeconds > 0) {
+      const diff = timeInSeconds - estimatedSeconds;
+      const absDiff = Math.abs(diff);
+      const diffFormatted = formatSecondsToMinSec(absDiff);
+      
+      if (diff < -10) return `${diffFormatted} mais rápido que o estimado`;
+      if (diff > 10) return `${diffFormatted} mais lento que o estimado`;
+      return 'Dentro do tempo estimado';
+    }
+    
+    if (format === 'strength') {
+      return 'Bloco de força concluído ✓';
+    }
+    
+    return 'Concluído ✓';
+  }
+
+  const toggleBlockComplete = (blockId: string, blockType: string, blockIndex: number) => {
     const isCompleting = !completedBlocks.includes(blockId);
     
-    setCompletedBlocks((prev) =>
-      prev.includes(blockId)
-        ? prev.filter((id) => id !== blockId)
-        : [...prev, blockId]
-    );
-
-    // Show motivational toast and trigger animation when completing a block
     if (isCompleting) {
+      // Check if this block type auto-completes
+      if (isAutoCompleteBlock(blockType)) {
+        // Auto-complete without recording
+        setCompletedBlocks((prev) => [...prev, blockId]);
+        setJustCompletedBlock(blockId);
+        setTimeout(() => setJustCompletedBlock(null), 600);
+        
+        const newCompletedCount = completedBlocks.length + 1;
+        const blocksRemaining = displayedWorkout.blocks.length - newCompletedCount;
+        const isLastBlock = blocksRemaining === 0;
+        const message = getBlockCompletionLine(athleteConfig?.coachStyle, blockType, isLastBlock);
+        toast.success(message, { duration: 2000 });
+        
+        if (blockIndex === currentBlockIndex) {
+          setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
+        }
+        return;
+      }
+      
+      // Get block format info
+      const block = displayedWorkout.blocks[blockIndex];
+      const displayData = getBlockDisplayDataFromParsed(block);
+      const format = detectBlockFormat(block, displayData.structureDescription);
+      
+      // Check if we need to show inline recording
+      if (needsTimeInput(format) || needsRepsInput(format) || needsConfirmationOnly(format)) {
+        setRecordingBlockId(blockId);
+        setInputMinutes('');
+        setInputSeconds('');
+        setInputReps('');
+        return; // Don't complete yet - wait for recording
+      }
+      
+      // Default: just complete
+      setCompletedBlocks((prev) => [...prev, blockId]);
       setJustCompletedBlock(blockId);
       setTimeout(() => setJustCompletedBlock(null), 600);
-      
-      const newCompletedCount = completedBlocks.length + 1;
-      const blocksRemaining = displayedWorkout.blocks.length - newCompletedCount;
-      const isLastBlock = blocksRemaining === 0;
-      const message = getBlockCompletionLine(athleteConfig?.coachStyle, blockType, isLastBlock);
-      
-      const toastStyle = athleteConfig?.coachStyle === 'SPARK' 
-        ? { duration: 2500 }
-        : { duration: 2000 };
-      
-      toast.success(message, toastStyle);
+      if (blockIndex === currentBlockIndex) {
+        setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
+      }
+    } else {
+      // Uncompleting
+      setCompletedBlocks((prev) => prev.filter((id) => id !== blockId));
+      setBlockFeedbacks((prev) => {
+        const next = { ...prev };
+        delete next[blockId];
+        return next;
+      });
     }
   };
 
-  const mainWod = displayedWorkout.blocks.find((b) => b.isMainWod);
+  const handleRecordBlock = (blockIndex: number) => {
+    const block = displayedWorkout.blocks[blockIndex];
+    const blockId = block.id;
+    const displayData = getBlockDisplayDataFromParsed(block);
+    const format = detectBlockFormat(block, displayData.structureDescription);
+    const timeMeta = getBlockTimeMeta(block);
+    const estimatedSeconds = timeMeta.durationSecUsed;
+    
+    let timeInSeconds: number | undefined;
+    let reps: number | undefined;
+    
+    if (needsTimeInput(format)) {
+      const mins = parseInt(inputMinutes || '0');
+      const secs = parseInt(inputSeconds || '0');
+      timeInSeconds = mins * 60 + secs;
+      if (timeInSeconds === 0) timeInSeconds = undefined;
+    }
+    
+    if (needsRepsInput(format)) {
+      reps = parseInt(inputReps || '0') || undefined;
+    }
+    
+    // Save to store
+    const result: SessionBlockResult = {
+      blockId,
+      blockTitle: getBlockDisplayTitle(block, blockIndex),
+      blockType: block.type,
+      format,
+      completed: true,
+      timeInSeconds,
+      estimatedTimeSeconds: estimatedSeconds > 0 ? estimatedSeconds : undefined,
+      reps,
+      structureDescription: displayData.structureDescription,
+    };
+    addSessionBlockResult(result);
+    
+    // Generate local feedback
+    const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps);
+    setBlockFeedbacks((prev) => ({ ...prev, [blockId]: feedback }));
+    
+    // Complete the block
+    setCompletedBlocks((prev) => [...prev, blockId]);
+    setJustCompletedBlock(blockId);
+    setTimeout(() => setJustCompletedBlock(null), 600);
+    setRecordingBlockId(null);
+    
+    if (blockIndex === currentBlockIndex) {
+      setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
+    }
+    
+    const newCompletedCount = completedBlocks.length + 1;
+    const blocksRemaining = displayedWorkout.blocks.length - newCompletedCount;
+    const isLastBlock = blocksRemaining === 0;
+    const message = getBlockCompletionLine(athleteConfig?.coachStyle, block.type, isLastBlock);
+    toast.success(message, { duration: 2000 });
+  };
+
+  const handleCancelRecording = () => {
+    setRecordingBlockId(null);
+    setInputMinutes('');
+    setInputSeconds('');
+    setInputReps('');
+  };
+
   const allBlocksComplete = displayedWorkout.blocks.every((b) => completedBlocks.includes(b.id));
 
-  // ============================================
-  // ESTIMATIVA DE TEMPO E CALORIAS
-  // Fonte única: estimateWorkout()
-  // ============================================
-  // usa nível 'pro' como referência padrão
   const effectiveLevel: AthleteLevel = 'pro';
   
   const workoutEstimation = useMemo(() => {
@@ -165,21 +286,17 @@ export function WorkoutExecution() {
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   const handleFinishWorkout = () => {
-    // SEMPRE registrar sessão de treino no store para a Jornada progredir
     const sessionResult = {
       workoutId: selectedWorkout.day,
-      blockId: mainWod?.id || `session-${selectedWorkout.day}-${Date.now()}`,
+      blockId: `session-${selectedWorkout.day}-${Date.now()}`,
       completed: true,
       date: new Date().toISOString(),
     };
     addWorkoutResult(sessionResult);
     console.log('[JOURNEY] Training session registered:', sessionResult);
-
-    if (mainWod) {
-      setCurrentView('result');
-    } else {
-      setCurrentView('dashboard');
-    }
+    
+    // Go directly to feedback (skipping ResultRecording)
+    setCurrentView('feedback');
   };
 
   return (
@@ -211,9 +328,7 @@ export function WorkoutExecution() {
         <motion.div
           className="bg-primary h-full"
           initial={{ width: 0 }}
-          animate={{ 
-            width: `${(completedBlocks.length / displayedWorkout.blocks.length) * 100}%` 
-          }}
+          animate={{ width: `${(completedBlocks.length / displayedWorkout.blocks.length) * 100}%` }}
           transition={{ duration: 0.3 }}
         />
       </div>
@@ -250,8 +365,7 @@ export function WorkoutExecution() {
             const isComplete = completedBlocks.includes(block.id);
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
-            
-            // Get effective content and notes based on athlete level
+            const isRecording = recordingBlockId === block.id;
             
             const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
             const effectiveTargetRange = getEffectiveTargetRange(block, effectiveLevel);
@@ -259,16 +373,18 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            // Calorias do workoutEstimation
             const blockEstimate = workoutEstimation?.blocks[index];
             const estimatedKcal = blockEstimate?.estimatedKcal || 0;
             
-            // Usar TimeMeta como fonte de verdade para tempo
             const timeMeta = getBlockTimeMeta(block);
             const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
             const isEstimated = timeMeta.source !== 'CONFIRMED';
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
+            
+            const displayData = getBlockDisplayDataFromParsed(block);
+            const blockFormat = detectBlockFormat(block, displayData.structureDescription);
+            const blockFeedback = blockFeedbacks[block.id];
 
             return (
               <motion.div
@@ -279,19 +395,15 @@ export function WorkoutExecution() {
                 className={`
                   card-elevated p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
-                  ${isComplete ? 'opacity-60' : ''}
+                  ${isComplete && !isRecording ? 'opacity-60' : ''}
                   ${block.isMainWod ? 'ring-2 ring-primary/50' : ''}
                   ${isJustCompleted && athleteConfig?.coachStyle === 'SPARK' ? 'ring-2 ring-yellow-400/50' : ''}
                 `}
               >
                 <div className="flex items-start gap-4">
                   <motion.button
-                    onClick={() => {
-                      toggleBlockComplete(block.id, block.type);
-                      if (!isComplete && index === currentBlockIndex) {
-                        setCurrentBlockIndex(Math.min(index + 1, displayedWorkout.blocks.length - 1));
-                      }
-                    }}
+                    onClick={() => toggleBlockComplete(block.id, block.type, index)}
+                    disabled={isRecording}
                     className={`
                       mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
                       ${isComplete
@@ -302,8 +414,9 @@ export function WorkoutExecution() {
                             : 'bg-primary border-primary text-primary-foreground'
                         : 'border-muted-foreground/30 hover:border-primary'
                       }
+                      ${isRecording ? 'opacity-50 cursor-not-allowed' : ''}
                     `}
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={isRecording ? {} : { scale: 0.9 }}
                   >
                     <AnimatePresence mode="wait">
                       {isComplete && (
@@ -319,7 +432,7 @@ export function WorkoutExecution() {
                   </motion.button>
 
                   <div className="flex-1">
-                    {/* NÍVEL 1 + 2: Header com título grande e chips */}
+                    {/* Header */}
                     <div className="mb-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-2">
@@ -338,21 +451,18 @@ export function WorkoutExecution() {
                       </div>
                     </div>
                     
-                    {/* NÍVEL 3: Conteúdo do treino (exercícios) */}
+                    {/* Exercise content */}
                     {(() => {
-                      const displayData = getBlockDisplayDataFromParsed(block);
                       const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
                       
                       return (
                         <>
-                          {/* Structure Badge (se houver) */}
                           {structureDescription && (
                             <div className="mb-4">
                               <StructureBadge structure={structureDescription} />
                             </div>
                           )}
                           
-                          {/* Exercícios - sem label redundante */}
                           <div className="space-y-2">
                             {exerciseLines.length > 0 ? (
                               exerciseLines.map((line, idx) => {
@@ -370,13 +480,11 @@ export function WorkoutExecution() {
                             )}
                           </div>
                           
-                          {/* NÍVEL 4: Comentário do Coach - container distinto */}
                           <CommentSubBlock comments={commentLines} />
                         </>
                       );
                     })()}
                     
-                    {/* Level-specific notes */}
                     {effectiveNotes && (
                       <div className="flex items-start gap-2 mt-3 p-2 bg-secondary/50 rounded text-xs text-muted-foreground">
                         <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -387,44 +495,30 @@ export function WorkoutExecution() {
                     {/* Block Stats */}
                     {block.type !== 'notas' && (estimatedMinutes > 0 || pseInfo || effectivePace) && (
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-border/50">
-                        {/* Tempo - usando TimeMeta */}
                         {estimatedMinutes > 0 && (
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-primary" />
-                            <span className="text-muted-foreground">
-                              {isEstimated ? '~' : ''}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {formatEstimatedTime(estimatedMinutes)}
-                            </span>
-                            {isEstimated && (
-                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                            )}
+                            <span className="text-muted-foreground">{isEstimated ? '~' : ''}</span>
+                            <span className="font-medium text-foreground">{formatEstimatedTime(estimatedMinutes)}</span>
+                            {isEstimated && <span className="text-xs text-muted-foreground/60">(estimado)</span>}
                           </div>
                         )}
                         
-                        {/* Calorias - só exibir se peso configurado */}
                         {biometrics.isValid && estimatedKcal > 0 && (
                           <div className="flex items-center gap-2 text-sm">
                             <Flame className="w-4 h-4 text-orange-500" />
-                            <span className="text-orange-500 font-medium">
-                              {formatEstimatedKcal(estimatedKcal)}
-                            </span>
+                            <span className="text-orange-500 font-medium">{formatEstimatedKcal(estimatedKcal)}</span>
                           </div>
                         )}
                         
-                        {/* PSE */}
                         {pseInfo && (
                           <div className="flex items-center gap-2 text-sm">
                             <Target className="w-4 h-4 text-muted-foreground" />
                             <span className="text-muted-foreground">PSE:</span>
-                            <span className={`font-medium ${pseInfo.colorClass}`}>
-                              {effectivePSE}/10
-                            </span>
+                            <span className={`font-medium ${pseInfo.colorClass}`}>{effectivePSE}/10</span>
                           </div>
                         )}
                         
-                        {/* Pace */}
                         {effectivePace && (
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-muted-foreground">Pace:</span>
@@ -432,6 +526,120 @@ export function WorkoutExecution() {
                           </div>
                         )}
                       </div>
+                    )}
+                    
+                    {/* ==================== INLINE RECORDING PANEL ==================== */}
+                    <AnimatePresence>
+                      {isRecording && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-4 pt-4 border-t border-primary/30"
+                        >
+                          <div className="bg-primary/5 rounded-lg p-4 space-y-4">
+                            {/* FOR TIME - Time input */}
+                            {needsTimeInput(blockFormat) && (
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="font-display text-sm tracking-wide text-foreground">SEU TEMPO</p>
+                                  {timeMeta.durationSecUsed > 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Estimado: <span className="font-medium text-foreground">{formatSecondsToMinSec(timeMeta.durationSecUsed)}</span>
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-1">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="180"
+                                      value={inputMinutes}
+                                      onChange={(e) => setInputMinutes(e.target.value)}
+                                      placeholder="min"
+                                      className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                    />
+                                  </div>
+                                  <span className="font-display text-3xl text-muted-foreground">:</span>
+                                  <div className="flex-1">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="59"
+                                      value={inputSeconds}
+                                      onChange={(e) => setInputSeconds(e.target.value)}
+                                      placeholder="seg"
+                                      className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* AMRAP - Reps input */}
+                            {needsRepsInput(blockFormat) && (
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS / REPS COMPLETADOS</p>
+                                  {displayData.structureDescription && (
+                                    <p className="text-xs text-muted-foreground">{displayData.structureDescription}</p>
+                                  )}
+                                </div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={inputReps}
+                                  onChange={(e) => setInputReps(e.target.value)}
+                                  placeholder="Ex: 5 rounds + 3 reps → 53"
+                                  className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                              </div>
+                            )}
+                            
+                            {/* EMOM / Strength - Confirmation only */}
+                            {needsConfirmationOnly(blockFormat) && (
+                              <div className="text-center">
+                                <p className="font-display text-sm tracking-wide text-foreground mb-2">
+                                  {blockFormat === 'emom' ? 'CONCLUIU O EMOM?' : 'CONCLUIU O BLOCO?'}
+                                </p>
+                                {timeMeta.durationSecUsed > 0 && blockFormat !== 'emom' && (
+                                  <p className="text-xs text-muted-foreground mb-3">
+                                    Tempo estimado: <span className="font-medium">{formatSecondsToMinSec(timeMeta.durationSecUsed)}</span>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Action buttons */}
+                            <div className="flex gap-3">
+                              <button
+                                onClick={handleCancelRecording}
+                                className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors font-display text-sm"
+                              >
+                                CANCELAR
+                              </button>
+                              <button
+                                onClick={() => handleRecordBlock(index)}
+                                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-display text-sm"
+                              >
+                                REGISTRAR
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    {/* ==================== BLOCK FEEDBACK (after recording) ==================== */}
+                    {blockFeedback && isComplete && !isRecording && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20"
+                      >
+                        <p className="text-sm text-primary font-medium">{blockFeedback}</p>
+                      </motion.div>
                     )}
                   </div>
                 </div>
@@ -443,25 +651,25 @@ export function WorkoutExecution() {
         {/* Finish Button */}
         <motion.button
           onClick={handleFinishWorkout}
-          disabled={!allBlocksComplete && !!mainWod}
+          disabled={!allBlocksComplete}
           className={`
             w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all
             flex items-center justify-center gap-3
-            ${allBlocksComplete || !mainWod
+            ${allBlocksComplete
               ? 'bg-primary text-primary-foreground hover:opacity-90'
               : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
-          whileHover={allBlocksComplete || !mainWod ? { scale: 1.01 } : {}}
-          whileTap={allBlocksComplete || !mainWod ? { scale: 0.99 } : {}}
+          whileHover={allBlocksComplete ? { scale: 1.01 } : {}}
+          whileTap={allBlocksComplete ? { scale: 0.99 } : {}}
         >
-          {mainWod ? 'REGISTRAR RESULTADO' : 'FINALIZAR TREINO'}
+          FINALIZAR TREINO
           <Play className="w-5 h-5" />
         </motion.button>
 
-        {!allBlocksComplete && mainWod && (
+        {!allBlocksComplete && (
           <p className="text-center text-muted-foreground text-sm mt-4">
-            Complete todos os blocos para registrar seu resultado
+            Complete todos os blocos para finalizar o treino
           </p>
         )}
 
@@ -475,7 +683,6 @@ export function WorkoutExecution() {
         </button>
       </main>
 
-      {/* Equipment Adaptation Modal */}
       <EquipmentAdaptModal
         isOpen={isEquipmentModalOpen}
         onClose={() => setIsEquipmentModalOpen(false)}
