@@ -206,7 +206,7 @@ export function estimateBlock(
     estimatedMinutes = effectiveDuration;
     confidence = 'high';
   } else {
-    const contentTime = extractTimeFromContent(block.content);
+    const contentTime = extractTimeFromContent(block.content || '');
     if (contentTime) {
       estimatedMinutes = contentTime.minutes;
       confidence = contentTime.confidence;
