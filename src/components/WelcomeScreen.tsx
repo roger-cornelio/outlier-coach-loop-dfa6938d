@@ -107,8 +107,7 @@ export function WelcomeScreen() {
     setSearchDone(false);
 
     try {
-      const gender = profile?.sexo === 'feminino' ? 'W' : profile?.sexo === 'masculino' ? 'M' : 
-                     athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
       const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
         body: { firstName, lastName, gender },
       });
