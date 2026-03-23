@@ -139,7 +139,7 @@ export function WelcomeScreen() {
       setSearching(false);
       setSearchDone(true);
     }
-  }, [user, profile?.sexo, athleteConfig?.sexo]);
+  }, [user, athleteConfig?.sexo]);
 
   function handleQueryChange(value: string) {
     setSearchQuery(value);
