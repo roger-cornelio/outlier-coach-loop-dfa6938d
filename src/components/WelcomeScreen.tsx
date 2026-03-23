@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 
@@ -77,7 +77,10 @@ export function WelcomeScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [retryResult, setRetryResult] = useState<SearchResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
   const autoSearchedRef = useRef(false);
@@ -105,10 +108,10 @@ export function WelcomeScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.name, user]);
 
-  const executeSearch = useCallback(async (query: string) => {
+  const executeSearch = useCallback(async (query: string, isRetry = false) => {
     const trimmed = query.trim();
     if (!trimmed || trimmed.length < 2) return;
-    if (trimmed === lastSearchedRef.current) return;
+    if (!isRetry && trimmed === lastSearchedRef.current) return;
     lastSearchedRef.current = trimmed;
 
     const parts = trimmed.split(/\s+/);
@@ -118,40 +121,55 @@ export function WelcomeScreen() {
 
     setSearching(true);
     setSearchDone(false);
+    setSearchError(false);
 
-    try {
-      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
-      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
-        body: { firstName, lastName, gender },
-      });
-      if (error) throw error;
+    const MAX_RETRIES = 2;
+    let lastErr: any = null;
 
-      const rawResults: SearchResult[] = data?.results || [];
-      const sorted = rawResults.sort((a, b) => {
-        if (b.season_id !== a.season_id) return b.season_id - a.season_id;
-        return (a.event_index ?? 999) - (b.event_index ?? 999);
-      });
-      // Show only most recent
-      const displayed = sorted.slice(0, 3);
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
 
-      if (user) {
-        const urls = displayed.map(r => r.result_url);
-        const { data: existing } = await supabase
-          .from('diagnostico_resumo')
-          .select('source_url')
-          .eq('atleta_id', user.id)
-          .in('source_url', urls);
-        const importedUrls = new Set((existing || []).map(e => e.source_url));
-        setSearchResults(displayed.filter(r => !importedUrls.has(r.result_url)));
-      } else {
-        setSearchResults(displayed);
+        const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+        const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
+          body: { firstName, lastName, gender },
+        });
+        if (error) throw error;
+
+        const rawResults: SearchResult[] = data?.results || [];
+        const sorted = rawResults.sort((a, b) => {
+          if (b.season_id !== a.season_id) return b.season_id - a.season_id;
+          return (a.event_index ?? 999) - (b.event_index ?? 999);
+        });
+        const displayed = sorted.slice(0, 3);
+
+        if (user) {
+          const urls = displayed.map(r => r.result_url);
+          const { data: existing } = await supabase
+            .from('diagnostico_resumo')
+            .select('source_url')
+            .eq('atleta_id', user.id)
+            .in('source_url', urls);
+          const importedUrls = new Set((existing || []).map(e => e.source_url));
+          setSearchResults(displayed.filter(r => !importedUrls.has(r.result_url)));
+        } else {
+          setSearchResults(displayed);
+        }
+
+        setSearching(false);
+        setSearchDone(true);
+        return;
+      } catch (err) {
+        lastErr = err;
+        console.error(`Search attempt ${attempt + 1} failed:`, err);
       }
-    } catch (err) {
-      console.error('Search error:', err);
-    } finally {
-      setSearching(false);
-      setSearchDone(true);
     }
+
+    // All retries exhausted
+    console.error('Search failed after retries:', lastErr);
+    setSearchError(true);
+    setSearching(false);
+    setSearchDone(true);
   }, [user, athleteConfig?.sexo]);
 
   function handleQueryChange(value: string) {
@@ -162,9 +180,13 @@ export function WelcomeScreen() {
     }
   }
 
-  async function handleSelectResult(result: SearchResult) {
+  async function handleSelectResult(result: SearchResult, retryCount = 0) {
     if (!user) return;
     setGenerating(true);
+    setImportError(null);
+    setRetryResult(null);
+
+    const MAX_RETRIES = 2;
 
     try {
       // Save race history
@@ -186,23 +208,32 @@ export function WelcomeScreen() {
         }
       }
 
-      // Generate diagnostic
+      // Generate diagnostic with retry
       const sourceUrl = result.result_url;
       let proxyData: any = null;
-      try {
-        const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-          body: {
-            athlete_name: result.athlete_name,
-            event_name: result.event_name,
-            division: result.division,
-            season_id: result.season_id,
-            result_url: result.result_url,
-          },
-        });
-        if (!proxyResult.error && proxyResult.data?.ok !== false) {
-          proxyData = proxyResult.data;
+      let proxyAttempts = 0;
+
+      while (proxyAttempts <= MAX_RETRIES) {
+        try {
+          if (proxyAttempts > 0) await new Promise(r => setTimeout(r, 1000 * proxyAttempts));
+          const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+            body: {
+              athlete_name: result.athlete_name,
+              event_name: result.event_name,
+              division: result.division,
+              season_id: result.season_id,
+              result_url: result.result_url,
+            },
+          });
+          if (!proxyResult.error && proxyResult.data?.ok !== false) {
+            proxyData = proxyResult.data;
+            break;
+          }
+        } catch {
+          console.warn(`proxy-roxcoach attempt ${proxyAttempts + 1} failed`);
         }
-      } catch { /* non-fatal */ }
+        proxyAttempts++;
+      }
 
       let parsed: ReturnType<typeof parseDiagnosticResponse> | null = null;
       if (proxyData) {
@@ -214,7 +245,6 @@ export function WelcomeScreen() {
 
       // Save to DB
       if (!parsed) {
-        // Minimal save
         await supabase.from('diagnostico_resumo').insert({
           atleta_id: user.id,
           source_url: sourceUrl,
@@ -269,7 +299,6 @@ export function WelcomeScreen() {
           nome_atleta: insertedResumo.nome_atleta,
         });
 
-        // Top 3 bottlenecks by improvement potential
         const sorted = [...parsed.diagRows]
           .filter(d => d.improvement_value > 0)
           .sort((a, b) => b.improvement_value - a.improvement_value)
@@ -284,7 +313,8 @@ export function WelcomeScreen() {
       setStep('congrats');
     } catch (err: any) {
       console.error('Import error:', err);
-      toast.error('Erro ao importar prova. Tente novamente.');
+      setImportError('Não conseguimos importar sua prova. A conexão com o servidor pode estar instável.');
+      setRetryResult(result);
     } finally {
       setGenerating(false);
     }
@@ -391,7 +421,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             {/* Loading */}
-            {(searching || generating) && (
+            {(searching || generating) && !importError && (
               <motion.div className="flex flex-col items-center gap-3 mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
@@ -400,8 +430,62 @@ export function WelcomeScreen() {
               </motion.div>
             )}
 
+            {/* Import error with retry */}
+            {importError && !generating && (
+              <motion.div className="mb-6 max-w-md mx-auto p-4 rounded-xl bg-destructive/10 border border-destructive/30"
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm text-foreground font-medium mb-1">Falha na importação</p>
+                    <p className="text-xs text-muted-foreground mb-3">{importError}</p>
+                    <div className="flex gap-2">
+                      {retryResult && (
+                        <button
+                          onClick={() => handleSelectResult(retryResult)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:brightness-110 transition-all"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Tentar novamente
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setImportError(null); setRetryResult(null); }}
+                        className="px-3 py-1.5 rounded-lg bg-secondary/50 text-muted-foreground text-xs hover:text-foreground transition-colors"
+                      >
+                        Escolher outra prova
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Search error */}
+            {!searching && !generating && searchDone && searchError && (
+              <motion.div className="mb-6 max-w-md mx-auto p-4 rounded-xl bg-destructive/10 border border-destructive/30"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm text-foreground font-medium mb-1">Erro na busca</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Não foi possível conectar ao servidor de resultados HYROX. Tente novamente em alguns segundos.
+                    </p>
+                    <button
+                      onClick={() => { lastSearchedRef.current = ''; executeSearch(searchQuery, true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:brightness-110 transition-all"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Tentar novamente
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Results */}
-            {!searching && !generating && searchDone && searchResults.length > 0 && (
+            {!searching && !generating && !importError && searchDone && !searchError && searchResults.length > 0 && (
               <motion.div className="space-y-3 mb-6 max-w-md mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <p className="text-sm text-muted-foreground mb-2">Selecione sua prova:</p>
                 {searchResults.map((result, i) => (
@@ -422,7 +506,7 @@ export function WelcomeScreen() {
             )}
 
             {/* No results */}
-            {!searching && !generating && searchDone && searchResults.length === 0 && (
+            {!searching && !generating && !importError && searchDone && !searchError && searchResults.length === 0 && (
               <motion.div className="mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <p className="text-sm text-muted-foreground mb-4">
                   Nenhuma prova encontrada. Você pode buscar com outro nome ou pular esta etapa.
