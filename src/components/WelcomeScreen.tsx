@@ -77,7 +77,10 @@ export function WelcomeScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [retryResult, setRetryResult] = useState<SearchResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
   const autoSearchedRef = useRef(false);
