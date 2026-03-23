@@ -5,6 +5,7 @@ import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
+import { estimateWorkoutTime } from '@/utils/estimateWorkoutTime';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
@@ -23,17 +24,42 @@ const blockTypeColors: Record<string, string> = {
   notas: 'border-l-muted-foreground',
 };
 
-// Detect block format from structureDescription and block type
-function detectBlockFormat(block: { type: string }, structureDescription: string | null): SessionBlockResult['format'] {
+// Detect block format from structureDescription, block title, and inline struct markers
+function detectBlockFormat(
+  block: { type: string; title?: string },
+  structureDescription: string | null,
+  blockTitle?: string,
+  exerciseLines?: string[]
+): SessionBlockResult['format'] {
+  // 1. Check structureDescription first
   const sd = (structureDescription || '').toUpperCase();
-  
   if (sd.includes('AMRAP')) return 'amrap';
   if (sd.includes('EMOM')) return 'emom';
   if (sd.includes('FOR TIME') || sd.includes('RFT') || sd.includes('CHIPPER')) return 'for_time';
-  if (block.type === 'forca') return 'strength';
-  
-  // Time-based formats
   if (/\d+\s*(ROUNDS?|RDS?)/.test(sd)) return 'for_time';
+  
+  // 2. Check block title (e.g. "15' AMRAP", "EMOM 12'", "3 Rounds For Time")
+  const titleUpper = (blockTitle || block.title || '').toUpperCase();
+  if (/AMRAP/.test(titleUpper)) return 'amrap';
+  if (/EMOM/.test(titleUpper)) return 'emom';
+  if (/FOR\s*TIME|RFT|CHIPPER/.test(titleUpper)) return 'for_time';
+  if (/\d+\s*(ROUNDS?|RDS?)/.test(titleUpper)) return 'for_time';
+  
+  // 3. Check inline __STRUCT: markers in exercise lines
+  if (exerciseLines) {
+    for (const line of exerciseLines) {
+      if (line.startsWith('__STRUCT:')) {
+        const structText = line.slice('__STRUCT:'.length).toUpperCase();
+        if (structText.includes('AMRAP')) return 'amrap';
+        if (structText.includes('EMOM')) return 'emom';
+        if (/FOR\s*TIME|RFT|CHIPPER/.test(structText)) return 'for_time';
+        if (/\d+\s*(ROUNDS?|RDS?)/.test(structText)) return 'for_time';
+      }
+    }
+  }
+  
+  // 4. Fallback by block type
+  if (block.type === 'forca') return 'strength';
   
   return 'other';
 }
@@ -128,9 +154,29 @@ export function WorkoutExecution() {
     }
   };
 
+  // Estimate expected rounds for AMRAP blocks
+  function estimateExpectedRounds(block: typeof displayedWorkout.blocks[0], totalAmrapSeconds: number): number | undefined {
+    if (totalAmrapSeconds <= 0) return undefined;
+    
+    const estimation = estimateWorkoutTime(block.content || '');
+    
+    if (estimation.itemsFound === 0 || estimation.totalMinutes <= 0) return undefined;
+    
+    const baseSecondsForOneRound = estimation.breakdown.reduce((sum: number, item: { seconds: number }) => sum + item.seconds, 0);
+    if (baseSecondsForOneRound <= 0) return undefined;
+    
+    return Math.round(totalAmrapSeconds / baseSecondsForOneRound);
+  }
+
   // Generate local feedback comparing actual vs estimated
-  function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number): string {
+  function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number, estimatedRounds?: number): string {
     if (format === 'amrap' && reps !== undefined) {
+      if (estimatedRounds && estimatedRounds > 0) {
+        const diff = reps - estimatedRounds;
+        if (diff > 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — acima do esperado 💪`;
+        if (diff < 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — abaixo do esperado`;
+        return `${reps} rounds (esperado: ~${estimatedRounds}) — no alvo!`;
+      }
       return `${reps} rounds/reps completados`;
     }
     
@@ -143,9 +189,9 @@ export function WorkoutExecution() {
       const absDiff = Math.abs(diff);
       const diffFormatted = formatSecondsToMinSec(absDiff);
       
-      if (diff < -10) return `${diffFormatted} mais rápido que o estimado`;
+      if (diff < -10) return `${diffFormatted} mais rápido que o estimado 🔥`;
       if (diff > 10) return `${diffFormatted} mais lento que o estimado`;
-      return 'Dentro do tempo estimado';
+      return 'Dentro do tempo estimado ✓';
     }
     
     if (format === 'strength') {
@@ -181,7 +227,8 @@ export function WorkoutExecution() {
       // Get block format info
       const block = displayedWorkout.blocks[blockIndex];
       const displayData = getBlockDisplayDataFromParsed(block);
-      const format = detectBlockFormat(block, displayData.structureDescription);
+      const blockTitle = getBlockDisplayTitle(block, blockIndex);
+      const format = detectBlockFormat(block, displayData.structureDescription, blockTitle, displayData.exerciseLines);
       
       // Check if we need to show inline recording
       if (needsTimeInput(format) || needsRepsInput(format) || needsConfirmationOnly(format)) {
@@ -214,7 +261,8 @@ export function WorkoutExecution() {
     const block = displayedWorkout.blocks[blockIndex];
     const blockId = block.id;
     const displayData = getBlockDisplayDataFromParsed(block);
-    const format = detectBlockFormat(block, displayData.structureDescription);
+    const blockTitleText = getBlockDisplayTitle(block, blockIndex);
+    const format = detectBlockFormat(block, displayData.structureDescription, blockTitleText, displayData.exerciseLines);
     const timeMeta = getBlockTimeMeta(block);
     const estimatedSeconds = timeMeta.durationSecUsed;
     
@@ -232,6 +280,12 @@ export function WorkoutExecution() {
       reps = parseInt(inputReps || '0') || undefined;
     }
     
+    // Calculate estimated rounds for AMRAP
+    let estRounds: number | undefined;
+    if (format === 'amrap' && estimatedSeconds > 0) {
+      estRounds = estimateExpectedRounds(block, estimatedSeconds);
+    }
+    
     // Save to store
     const result: SessionBlockResult = {
       blockId,
@@ -242,12 +296,13 @@ export function WorkoutExecution() {
       timeInSeconds,
       estimatedTimeSeconds: estimatedSeconds > 0 ? estimatedSeconds : undefined,
       reps,
+      estimatedRounds: estRounds,
       structureDescription: displayData.structureDescription,
     };
     addSessionBlockResult(result);
     
     // Generate local feedback
-    const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps);
+    const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps, estRounds);
     setBlockFeedbacks((prev) => ({ ...prev, [blockId]: feedback }));
     
     // Complete the block
@@ -383,7 +438,7 @@ export function WorkoutExecution() {
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
             
             const displayData = getBlockDisplayDataFromParsed(block);
-            const blockFormat = detectBlockFormat(block, displayData.structureDescription);
+            const blockFormat = detectBlockFormat(block, displayData.structureDescription, getBlockDisplayTitle(block, index), displayData.exerciseLines);
             const blockFeedback = blockFeedbacks[block.id];
 
             return (
@@ -578,12 +633,16 @@ export function WorkoutExecution() {
                             )}
                             
                             {/* AMRAP - Reps input */}
-                            {needsRepsInput(blockFormat) && (
+                            {needsRepsInput(blockFormat) && (() => {
+                              const amrapEstRounds = timeMeta.durationSecUsed > 0 ? estimateExpectedRounds(block, timeMeta.durationSecUsed) : undefined;
+                              return (
                               <div>
                                 <div className="flex items-center justify-between mb-3">
-                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS / REPS COMPLETADOS</p>
-                                  {displayData.structureDescription && (
-                                    <p className="text-xs text-muted-foreground">{displayData.structureDescription}</p>
+                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS COMPLETADOS</p>
+                                  {amrapEstRounds && amrapEstRounds > 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Esperado: <span className="font-medium text-foreground">~{amrapEstRounds} rounds</span>
+                                    </p>
                                   )}
                                 </div>
                                 <input
@@ -591,11 +650,12 @@ export function WorkoutExecution() {
                                   min="0"
                                   value={inputReps}
                                   onChange={(e) => setInputReps(e.target.value)}
-                                  placeholder="Ex: 5 rounds + 3 reps → 53"
+                                  placeholder="Ex: 5"
                                   className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                               </div>
-                            )}
+                              );
+                            })()}
                             
                             {/* EMOM / Strength - Confirmation only */}
                             {needsConfirmationOnly(blockFormat) && (
