@@ -309,7 +309,8 @@ You MUST follow these rules to avoid double-counting:
    - **CALORIES**: "20 cal Row" or "30 cal Bike" = reps with notes "20 cal". "30/25 cal Bike" (male/female) = use the FIRST number as reps, store "30/25 cal" in notes.
    - **SUPERSET LABELS**: "A1)", "A2)", "B1)", "B2)" etc. are superset grouping labels. IGNORE the label prefix and parse the exercise normally. "A1) Back Squat 4x8" = slug: back_squat, sets: 4, reps: 8. Store "Superset A" in notes.
    - **BARBELL COMPLEXES**: "1 Power Clean + 1 Hang Clean + 1 Jerk" on the SAME LINE = treat as separate exercises, each with reps as written (usually 1). Do NOT merge into one exercise.
-   - **ALTERNATIVE EXERCISES**: "Push Press / Push Jerk 4x5" with "/" = pick the FIRST exercise only. Store the alternative in notes: "Alt: Push Jerk". Do NOT create two exercises.
+    - **ALTERNATIVE EXERCISES**: "Push Press / Push Jerk 4x5" with "/" = pick the FIRST exercise only. Store the alternative in notes: "Alt: Push Jerk". Do NOT create two exercises.
+    - **MAX (MAXIMUM EFFORT)**: "Max Wall Ball", "Max Row", "Max Farmer Carry" = the athlete performs as many reps/distance as possible. Return the exercise with notes: "Max" and do NOT set reps or durationSeconds. The engine will use the parent block's time constraint.
 
 5. **EXERCISE ORDER**: Maintain the exact order exercises appear in the text.
 
