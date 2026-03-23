@@ -122,6 +122,16 @@ const previewBlockTypeColors: Record<string, string> = {
 // PreviewDayCard — Card colapsável por dia com UI idêntica à tela do atleta
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function getConfidenceTooltip(percent: number): string {
+  if (percent >= 70) {
+    return "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto.";
+  }
+  if (percent >= 50) {
+    return "Tempo detectado no texto, calorias estimadas por tipo de bloco. Dica: adicione nome dos exercícios e reps (ex: '10 Box Jump') para o motor calcular com mais precisão.";
+  }
+  return "Estrutura não reconhecida. Dica: use formatos como 'AMRAP 12', 'FOR TIME', ou liste exercícios com reps e distâncias para o motor interpretar.";
+}
+
 interface PreviewDayCardProps {
   dayWorkout: DayWorkout;
   dayName: string;
