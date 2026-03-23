@@ -79,10 +79,10 @@ export function AdherenceCard() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', delay: 0.5 }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20"
           >
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span className="font-display text-xs tracking-wide text-orange-400">
+            <Flame className="w-3.5 h-3.5 text-destructive" />
+            <span className="font-display text-xs tracking-wide text-destructive">
               {adherence.streakWeeks} {adherence.streakWeeks === 1 ? 'semana' : 'semanas'}
             </span>
           </motion.div>
