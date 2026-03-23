@@ -280,6 +280,12 @@ export function WorkoutExecution() {
       reps = parseInt(inputReps || '0') || undefined;
     }
     
+    // Calculate estimated rounds for AMRAP
+    let estRounds: number | undefined;
+    if (format === 'amrap' && estimatedSeconds > 0) {
+      estRounds = estimateExpectedRounds(block, estimatedSeconds);
+    }
+    
     // Save to store
     const result: SessionBlockResult = {
       blockId,
@@ -290,12 +296,13 @@ export function WorkoutExecution() {
       timeInSeconds,
       estimatedTimeSeconds: estimatedSeconds > 0 ? estimatedSeconds : undefined,
       reps,
+      estimatedRounds: estRounds,
       structureDescription: displayData.structureDescription,
     };
     addSessionBlockResult(result);
     
     // Generate local feedback
-    const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps);
+    const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps, estRounds);
     setBlockFeedbacks((prev) => ({ ...prev, [blockId]: feedback }));
     
     // Complete the block
