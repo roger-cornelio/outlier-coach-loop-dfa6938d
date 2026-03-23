@@ -415,6 +415,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
+  const [showEngineCoverageModal, setShowEngineCoverageModal] = useState(false);
 
   // Recalcula cobertura quando a biblioteca de exercícios atualiza (ex: admin aprovou exercício novo)
   useEffect(() => {
