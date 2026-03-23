@@ -145,9 +145,9 @@ export function CoachFeedbacksTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between lg:mb-2">
+        <h2 className="text-lg lg:text-xl font-semibold text-foreground flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
           Feedbacks dos Atletas
         </h2>
         {athletes.length > 1 && (
