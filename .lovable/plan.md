@@ -1,42 +1,45 @@
 
 
-## Plano: Nome de exibição do Coach — identidade e pertencimento
+## Plano: Corrigir detecção de dia — `DIA:` prefix e case-insensitive
 
-### Problema
+### Causa raiz
 
-O painel do coach mostra "diego.mutacao" (prefixo do email) porque o campo `name` no perfil está vazio. Não existe um fluxo para o coach definir como quer ser chamado.
+Na linha 2762-2763 do parser:
+```ts
+const detectedDay = detectDay(line);
+if (detectedDay && isUpperCaseLine(line)) {
+```
 
-### Solução
+`isUpperCaseLine("DIA: Segunda")` retorna `false` porque "Segunda" tem mixed case. O parser **exige** que a linha inteira esteja em MAIÚSCULAS para reconhecer como marcador de dia, mas o coach escreve "DIA: Segunda", "DIA: terça", etc.
 
-Usar o campo `name` já existente na tabela `profiles` (não precisa de migration). Adicionar um campo editável no painel do coach para definir o nome de exibição, e destacar visualmente esse nome em todos os pontos.
+Resultado: todos os dias caem no mesmo bloco, gerando um treino único com tudo misturado.
 
-### Alterações
+### Correção
 
 | Arquivo | O que muda |
 |---|---|
-| `src/pages/CoachDashboard.tsx` | Header: nome do coach em destaque (`text-lg font-bold text-primary` em vez de `text-sm text-muted-foreground`). Adicionar modal/inline edit para o coach definir seu nome na primeira vez (ou via clique no nome). |
-| `src/pages/CoachDashboard.tsx` | Ao detectar que `profile.name` está vazio ou parece email, exibir prompt para o coach preencher "Como quer ser chamado?" — salva em `profiles.name`. |
-| `src/utils/displayName.ts` | Já funciona corretamente — `getCoachDisplayName` prioriza `name` sobre email. Nenhuma mudança necessária. |
-| `src/components/AthleteConfig.tsx` | Já usa `getCoachDisplayName` — vai funcionar automaticamente quando o coach preencher o nome. |
+| `src/utils/structuredTextParser.ts` | Na detecção de dia (linha 2762), adicionar check explícito para prefixo `DIA:` — se a linha começa com `DIA:` (case-insensitive), tratar SEMPRE como marcador de dia, **sem exigir** `isUpperCaseLine`. Manter o check de uppercase como fallback para linhas sem prefixo (ex: "SEGUNDA" sozinha). |
 
 ### Detalhes
 
-**Header do Coach Dashboard:**
-- Layout atual: "Painel do Coach" (h1) + email prefix (p muted)
-- Layout novo: "Painel do Coach" (h1) + nome do coach em `text-lg font-semibold text-primary` com ícone de edição sutil
-- Se nome não definido, mostrar prompt inline "Defina seu nome →"
+Trocar:
+```ts
+const detectedDay = detectDay(line);
+if (detectedDay && isUpperCaseLine(line)) {
+```
 
-**Modal/Inline de nome:**
-- Input simples: "Como você quer ser chamado pelos seus atletas?"
-- Salva em `profiles.name` via update direto
-- Atualiza `profile` no `useAuth` via `refreshProfile`
+Por:
+```ts
+const hasDiaPrefix = /^DIA:\s*/i.test(line);
+const detectedDay = detectDay(line);
+if (detectedDay && (hasDiaPrefix || isUpperCaseLine(line))) {
+```
 
-**Propagação automática:**
-- `AthleteConfig` (coach vinculado) — já usa `getCoachDisplayName(coachProfile)` → pega `name`
-- `WeeklyTrainingView` — não mostra nome do coach atualmente, sem mudança
-- `ServiceQualityDashboard` (admin) — já usa `getCoachDisplayName`
+Isso resolve todos os formatos que o coach usa:
+- `DIA: Segunda` ✓ (prefixo DIA:)
+- `DIA: terça` ✓ (prefixo DIA:)
+- `SEGUNDA` ✓ (uppercase, já funcionava)
+- `DIA: QUARTA` ✓ (ambos)
 
-### Resultado
-
-Coach define "Diego Mutação" como nome → aparece em destaque no header do painel, nas configurações do atleta, e em qualquer lugar que use `getCoachDisplayName`.
+Uma linha, zero risco de side effects.
 
