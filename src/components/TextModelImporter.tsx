@@ -1734,7 +1734,9 @@ BLOCO: DESCANSO
                     <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
                     {' → Você quis dizer '}
                     <span className="font-semibold">"{tw.suggestion}"</span>?
-                    <span className="text-muted-foreground ml-1">(linha {tw.lineNumber})</span>
+                    <span className="text-muted-foreground ml-1">
+                      ({tw.dayLabel ? `${tw.dayLabel} · ` : ''}{tw.blockTitle || `linha ${tw.lineNumber}`})
+                    </span>
                   </p>
                 ))}
                 <p className="text-[10px] text-muted-foreground mt-1">
