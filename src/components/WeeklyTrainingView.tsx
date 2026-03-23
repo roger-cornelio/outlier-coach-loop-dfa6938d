@@ -301,7 +301,7 @@ export function WeeklyTrainingView() {
               }
               
               // Usar métricas pré-computadas (mesma fonte do header)
-              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0 };
+              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0 };
               const estimatedKcal = blockMet.kcal;
               const estimatedMinutes = Math.round(blockMet.durationSec / 60);
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
