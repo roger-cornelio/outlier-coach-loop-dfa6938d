@@ -437,6 +437,25 @@ export function isStructuralLine(line: string): boolean {
   return STRUCTURAL_LINE_PATTERNS.some(pattern => pattern.test(trimmed));
 }
 
+/**
+ * Verifica se uma linha é um rep scheme puro (ex: "40,30,20,10", "21-15-9", "50 40 30 20 10")
+ */
+export function isRepSchemeLine(line: string): boolean {
+  const trimmed = (line ?? "").trim();
+  if (!trimmed) return false;
+  return REP_SCHEME_PATTERN.test(trimmed) || REP_SCHEME_SPACES_PATTERN.test(trimmed);
+}
+
+/**
+ * Formata rep scheme para exibição: "40,30,20,10" → "40 · 30 · 20 · 10"
+ */
+export function formatRepSchemeLabel(line: string): string {
+  const trimmed = (line ?? "").trim();
+  // Split by comma, hyphen, or whitespace
+  const nums = trimmed.split(/[\s,\-–—]+/).filter(n => /^\d+$/.test(n));
+  return nums.join(' · ');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // REGRA SUPREMA: EXTRAIR COMENTÁRIOS ENTRE ( ) ANTES DE QUALQUER CHECAGEM
 // ═══════════════════════════════════════════════════════════════════════════
