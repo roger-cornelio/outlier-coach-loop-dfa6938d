@@ -14,8 +14,19 @@ const fadeUp = {
 export default function Landing() {
   return (
     <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+      {/* ══════════ HEADER FIXO ══════════ */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <OutlierWordmark size="sm" className="!text-lg md:!text-xl" />
+          <Link to="/login" className="font-display text-xs md:text-sm tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+            Já sou atleta
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </header>
+
       {/* ══════════ HERO ══════════ */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 py-20 text-center overflow-hidden">
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 py-20 pt-28 text-center overflow-hidden">
         <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: 'var(--gradient-glow)' }} />
 
         <motion.p
