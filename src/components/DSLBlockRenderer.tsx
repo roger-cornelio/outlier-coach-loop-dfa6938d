@@ -114,6 +114,34 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// INTENSITY BADGE - Badge visual vermelho para indicadores de intensidade
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface IntensityBadgeProps {
+  intensity: string;
+  className?: string;
+}
+
+export function IntensityBadge({ intensity, className }: IntensityBadgeProps) {
+  // Remove parênteses externas se existirem: "(forte)" → "forte"
+  const displayText = intensity.replace(/^\(/, '').replace(/\)$/, '').trim();
+  
+  return (
+    <Badge 
+      variant="outline" 
+      className={cn(
+        'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
+        'bg-red-600/20 text-red-500 border-red-600/30',
+        className
+      )}
+    >
+      <Activity className="w-3 h-3" />
+      {displayText}
+    </Badge>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // CATEGORY CHIP - Chip visual colorido por categoria
 // ═══════════════════════════════════════════════════════════════════════════════
 
