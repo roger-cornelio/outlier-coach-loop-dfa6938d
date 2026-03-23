@@ -585,6 +585,9 @@ export default function CoachDashboard() {
           />
         );
 
+      case 'feedbacks':
+        return <CoachFeedbacksTab />;
+
       case 'parametros':
         return <AdminParamsEditor />;
 
