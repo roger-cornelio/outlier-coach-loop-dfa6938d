@@ -171,7 +171,7 @@ export function CoachFeedbacksTab() {
           <p className="text-sm text-muted-foreground">Nenhum feedback recebido ainda</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
           {filtered.map((fb, idx) => (
             <motion.div
               key={fb.id}
