@@ -415,6 +415,9 @@ export function hasMeasurableStimulus(line: string): boolean {
   // Calorias
   if (/\d+\s*(?:cal|calorias?)\b/i.test(line)) { _measurableCache.set(line, true); return true; }
   
+  // Max [exercício]: "Max Wall Ball", "Max Row", "Max Farmer Carry"
+  if (/\bmax\b/i.test(line) && /[a-zA-ZÀ-ÿ]{3,}/.test(line.replace(/\bmax\b/gi, ''))) { _measurableCache.set(line, true); return true; }
+  
   _measurableCache.set(line, false);
   return false;
 }

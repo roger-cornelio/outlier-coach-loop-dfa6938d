@@ -309,7 +309,8 @@ You MUST follow these rules to avoid double-counting:
    - **CALORIES**: "20 cal Row" or "30 cal Bike" = reps with notes "20 cal". "30/25 cal Bike" (male/female) = use the FIRST number as reps, store "30/25 cal" in notes.
    - **SUPERSET LABELS**: "A1)", "A2)", "B1)", "B2)" etc. are superset grouping labels. IGNORE the label prefix and parse the exercise normally. "A1) Back Squat 4x8" = slug: back_squat, sets: 4, reps: 8. Store "Superset A" in notes.
    - **BARBELL COMPLEXES**: "1 Power Clean + 1 Hang Clean + 1 Jerk" on the SAME LINE = treat as separate exercises, each with reps as written (usually 1). Do NOT merge into one exercise.
-   - **ALTERNATIVE EXERCISES**: "Push Press / Push Jerk 4x5" with "/" = pick the FIRST exercise only. Store the alternative in notes: "Alt: Push Jerk". Do NOT create two exercises.
+    - **ALTERNATIVE EXERCISES**: "Push Press / Push Jerk 4x5" with "/" = pick the FIRST exercise only. Store the alternative in notes: "Alt: Push Jerk". Do NOT create two exercises.
+    - **MAX (MAXIMUM EFFORT)**: "Max Wall Ball", "Max Row", "Max Farmer Carry" = the athlete performs as many reps/distance as possible. Return the exercise with notes: "Max" and do NOT set reps or durationSeconds. The engine will use the parent block's time constraint.
 
 5. **EXERCISE ORDER**: Maintain the exact order exercises appear in the text.
 
@@ -383,6 +384,15 @@ Output: [{"slug":"power_clean","name":"Power Clean","movementPatternSlug":"olymp
 
 Input block title: "Warm Up", content: "10 Wall Ball\\n10 Box Jump\\n12 Deadlift"
 Output: [{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"reps":10},{"slug":"box_jumps","name":"Box Jumps","movementPatternSlug":"plyo","sets":1,"reps":10},{"slug":"deadlifts","name":"Deadlifts","movementPatternSlug":"hinge","sets":1,"reps":12}]
+
+Input block title: "METCON 3' On / 2' Off", content: "10m Burpee Broad Jump\\n10 Double DB Thruster\\n10m Burpee Broad Jump\\nMax Wall Ball 9 kg"
+Output: [{"slug":"burpee_broad_jump","name":"Burpee Broad Jump","movementPatternSlug":"total_body_plyo","sets":1,"distanceMeters":10},{"slug":"double_db_thruster","name":"Double DB Thruster","movementPatternSlug":"squat_vertical_push","sets":1,"reps":10},{"slug":"burpee_broad_jump","name":"Burpee Broad Jump","movementPatternSlug":"total_body_plyo","sets":1,"distanceMeters":10},{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"loadKg":9,"notes":"Max"}]
+
+Input block title: "Aquecimento 5x 2' On / 1' Off", content: "10 Double DB Shoulder Press\\nMax Burpee Jump To Plate"
+Output: [{"slug":"double_db_shoulder_press","name":"Double DB Shoulder Press","movementPatternSlug":"vertical_push","sets":1,"reps":10},{"slug":"burpee_jump_to_plate","name":"Burpee Jump To Plate","movementPatternSlug":"total_body_plyo","sets":1,"notes":"Max"}]
+
+Input block title: "Aquecimento 5x 2' On / 1' Off", content: "5-10 Strict Pullup\\nMax Farmer Carry 32/32"
+Output: [{"slug":"strict_pullup","name":"Strict Pull-up","movementPatternSlug":"pull","sets":1,"reps":5,"notes":"Rep range: 5-10"},{"slug":"farmers_carry","name":"Farmer Carry","movementPatternSlug":"carry","sets":1,"loadKg":32,"notes":"Max, 32/32"}]
 
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;
