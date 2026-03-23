@@ -305,7 +305,15 @@ export function CoachOverviewTab() {
   return (
     <div className="space-y-6">
       {/* KPI Header */}
-      <div className="grid grid-cols-3 gap-3 lg:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6">
+        <KPICard
+          label="Total Atletas"
+          count={kpis.total}
+          total={kpis.total}
+          icon={Users}
+          colorClass="text-primary"
+          borderClass="border-primary/30"
+        />
         <KPICard
           label="Em Alta"
           count={kpis.highPerformance}
