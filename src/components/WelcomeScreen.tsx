@@ -421,7 +421,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             {/* Loading */}
-            {(searching || generating) && (
+            {(searching || generating) && !importError && (
               <motion.div className="flex flex-col items-center gap-3 mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
@@ -430,8 +430,62 @@ export function WelcomeScreen() {
               </motion.div>
             )}
 
+            {/* Import error with retry */}
+            {importError && !generating && (
+              <motion.div className="mb-6 max-w-md mx-auto p-4 rounded-xl bg-destructive/10 border border-destructive/30"
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm text-foreground font-medium mb-1">Falha na importação</p>
+                    <p className="text-xs text-muted-foreground mb-3">{importError}</p>
+                    <div className="flex gap-2">
+                      {retryResult && (
+                        <button
+                          onClick={() => handleSelectResult(retryResult)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:brightness-110 transition-all"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Tentar novamente
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setImportError(null); setRetryResult(null); }}
+                        className="px-3 py-1.5 rounded-lg bg-secondary/50 text-muted-foreground text-xs hover:text-foreground transition-colors"
+                      >
+                        Escolher outra prova
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Search error */}
+            {!searching && !generating && searchDone && searchError && (
+              <motion.div className="mb-6 max-w-md mx-auto p-4 rounded-xl bg-destructive/10 border border-destructive/30"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm text-foreground font-medium mb-1">Erro na busca</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Não foi possível conectar ao servidor de resultados HYROX. Tente novamente em alguns segundos.
+                    </p>
+                    <button
+                      onClick={() => { lastSearchedRef.current = ''; executeSearch(searchQuery, true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:brightness-110 transition-all"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Tentar novamente
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Results */}
-            {!searching && !generating && searchDone && searchResults.length > 0 && (
+            {!searching && !generating && !importError && searchDone && !searchError && searchResults.length > 0 && (
               <motion.div className="space-y-3 mb-6 max-w-md mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <p className="text-sm text-muted-foreground mb-2">Selecione sua prova:</p>
                 {searchResults.map((result, i) => (
@@ -452,7 +506,7 @@ export function WelcomeScreen() {
             )}
 
             {/* No results */}
-            {!searching && !generating && searchDone && searchResults.length === 0 && (
+            {!searching && !generating && !importError && searchDone && !searchError && searchResults.length === 0 && (
               <motion.div className="mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <p className="text-sm text-muted-foreground mb-4">
                   Nenhuma prova encontrada. Você pode buscar com outro nome ou pular esta etapa.
