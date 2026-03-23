@@ -35,6 +35,7 @@ const PUBLIC_ROUTES = [
   '/coach-request',
   '/coach-pending',
   '/coach/definir-senha',
+  '/diagnostico-gratuito',
 ];
 
 export function AppGate({ children }: AppGateProps) {

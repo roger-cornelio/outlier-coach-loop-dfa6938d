@@ -107,6 +107,9 @@ const App = () => (
               <Route path="/importar-prova" element={<ImportarProva />} />
               
 
+              {/* === PUBLIC PAGES === */}
+              <Route path="/diagnostico-gratuito" element={<DiagnosticoGratuito />} />
+
               {/* === REDIRECTS === */}
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Navigate to="/login" replace />} />
