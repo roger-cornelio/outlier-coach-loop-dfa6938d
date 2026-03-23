@@ -125,7 +125,7 @@ const previewBlockTypeColors: Record<string, string> = {
 
 function getConfidenceTooltip(percent: number): string {
   if (percent >= 70) {
-    return "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto.";
+    return "Cálculo feito pelo motor físico — com precisão superior à medição de relógios como Garmin, Apple Watch e Amazfit. Mantenha esse formato de escrita para manter essa precisão. A margem restante é da própria IA, não do seu texto.";
   }
   if (percent >= 50) {
     return "Tempo detectado, calorias estimadas por fallback (METs). Dica: detalhe exercícios com reps e carga (ex: '10 Box Jump') para subir a precisão pro motor físico.";
