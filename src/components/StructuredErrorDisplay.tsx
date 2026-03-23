@@ -135,6 +135,7 @@ BLOCO: AQUECIMENTO
 
 BLOCO: WOD
 **15' AMRAP**
+PSE 8
 - 10 Wall Ball 9kg
 - 15 Cal Row
 - 5 Bar Muscle-up
