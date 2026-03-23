@@ -28,6 +28,7 @@ interface AppGateProps {
 
 // Rotas públicas - NUNCA bloquear, NUNCA redirecionar
 const PUBLIC_ROUTES = [
+  '/',
   '/login',
   '/login/admin', 
   '/login/coach',
