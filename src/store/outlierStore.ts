@@ -59,6 +59,9 @@ interface OutlierState {
   // Admin: Visualizar como atleta específico
   viewingAsAthlete: ViewingAsAthlete | null;
   
+  // Session block results (temporary, not persisted)
+  sessionBlockResults: SessionBlockResult[];
+  
   // Actions
   setHasHydrated: (v: boolean) => void;
   setCoachStyle: (style: CoachStyle) => void;
