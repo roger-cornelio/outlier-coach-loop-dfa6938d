@@ -309,13 +309,52 @@ export function PublishToAthletesModal({
       for (const athleteUserId of selectedAthletes) {
         // NORMALIZAÇÃO: Garantir que durationSec seja persistido
         const normalizedWorkouts = normalizeWorkoutsForPersistence(workouts);
-        
+
+        // ════════════════════════════════════════════════════════════════════════
+        // MERGE: Buscar plano existente e mesclar dias (não sobrescrever tudo)
+        // ════════════════════════════════════════════════════════════════════════
+        let mergedWorkouts = normalizedWorkouts;
+
+        const { data: existingPlan } = await supabase
+          .from('athlete_plans')
+          .select('plan_json')
+          .eq('athlete_user_id', athleteUserId)
+          .eq('week_start', weekStart)
+          .maybeSingle();
+
+        if (existingPlan?.plan_json) {
+          const existingJson = existingPlan.plan_json as any;
+          const existingWorkouts: any[] = existingJson?.workouts || [];
+
+          if (existingWorkouts.length > 0) {
+            // Chaves dos dias sendo publicados agora (day label OU scheduledDate)
+            const newDayKeys = new Set(
+              normalizedWorkouts.map((w: any) => w.day || w.dayLabel || w.scheduledDate)
+            );
+
+            // Manter dias antigos que NÃO estão na nova publicação
+            const keptFromExisting = existingWorkouts.filter(
+              (w: any) => !newDayKeys.has(w.day || w.dayLabel || w.scheduledDate)
+            );
+
+            mergedWorkouts = [...keptFromExisting, ...normalizedWorkouts];
+
+            console.log('[PUBLISH] Merge result:', {
+              athleteId: athleteUserId,
+              existingDays: existingWorkouts.map((w: any) => w.day || w.dayLabel),
+              newDays: Array.from(newDayKeys),
+              keptDays: keptFromExisting.map((w: any) => w.day || w.dayLabel),
+              totalAfterMerge: mergedWorkouts.length,
+            });
+          }
+        }
+
         const payload = {
           athlete_user_id: athleteUserId,
           coach_id: profile.id,
           week_start: weekStart, // YYYY-MM-DD string (segunda-feira)
           scheduled_date: weekStart,
-          plan_json: { workouts: normalizedWorkouts },
+          plan_json: { workouts: mergedWorkouts },
           title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),
@@ -331,7 +370,6 @@ export function PublishToAthletesModal({
           });
 
         if (upsertError) {
-          // LOG: PUBLISH_FAIL com formato específico
           console.error('PUBLISH_FAIL', {
             week_start: weekStart,
             athleteId: athleteUserId,
