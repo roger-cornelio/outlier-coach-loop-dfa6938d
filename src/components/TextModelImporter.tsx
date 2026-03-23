@@ -1358,7 +1358,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
               Importar Semana
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Cole o <span className="font-semibold">TREINO DA SEMANA</span> (SEG–DOM). O OUTLIER separa por dia automaticamente.
+              Cole o <span className="font-semibold">TREINO DA SEMANA</span> (SEG–DOM). A <span className="font-bold text-gradient-logo">OUTLIER</span> separa por dia automaticamente.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
