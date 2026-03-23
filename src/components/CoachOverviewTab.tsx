@@ -103,7 +103,7 @@ function AthleteRow({
 
   return (
     <div
-      className={`flex items-center gap-2 sm:gap-3 lg:gap-4 px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 lg:py-4 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
+      className={`flex items-center gap-2 sm:gap-3 lg:gap-4 px-3 sm:px-4 lg:px-8 py-2.5 sm:py-3 lg:py-4 border-l-2 ${borderColor} bg-card hover:bg-secondary/40 cursor-pointer transition-colors rounded-r-lg`}
       onClick={onClick}
     >
       <UserAvatar
@@ -136,10 +136,10 @@ function AthleteRow({
       </div>
 
       {/* Adherence bar */}
-      <div className="w-20 lg:w-32 hidden sm:block">
+      <div className="w-20 lg:w-40 hidden sm:block">
         <Progress 
           value={adherencePct} 
-          className="h-1.5 bg-secondary"
+          className="h-1.5 lg:h-2 bg-secondary"
         />
         <p className="text-[10px] text-muted-foreground text-center mt-0.5">{adherencePct}%</p>
       </div>
@@ -305,7 +305,15 @@ export function CoachOverviewTab() {
   return (
     <div className="space-y-6">
       {/* KPI Header */}
-      <div className="grid grid-cols-3 gap-3 lg:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6">
+        <KPICard
+          label="Total Atletas"
+          count={kpis.total}
+          total={kpis.total}
+          icon={Users}
+          colorClass="text-primary"
+          borderClass="border-primary/30"
+        />
         <KPICard
           label="Em Alta"
           count={kpis.highPerformance}
@@ -347,11 +355,11 @@ export function CoachOverviewTab() {
 
       {/* Column headers */}
       {athletes.length > 0 && (
-        <div className="flex items-center gap-3 lg:gap-4 px-4 lg:px-6 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
+        <div className="flex items-center gap-3 lg:gap-4 px-4 lg:px-8 py-1.5 text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wider">
           <div className="w-8" /> {/* avatar space */}
           <div className="flex-1">Atleta</div>
           <div className="w-12 text-center">Ausente</div>
-          <div className="w-20 lg:w-32 text-center hidden sm:block">Adesão</div>
+          <div className="w-20 lg:w-40 text-center hidden sm:block">Adesão</div>
           <div className="w-10" /> {/* action */}
         </div>
       )}

@@ -79,7 +79,7 @@ function FeedbackCard({ feedback }: { feedback: SessionFeedbackRecord }) {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-2 pt-4 px-4">
+      <CardHeader className="pb-2 pt-4 px-4 lg:px-6 lg:pt-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-sm text-foreground">{displayName}</p>
@@ -90,7 +90,7 @@ function FeedbackCard({ feedback }: { feedback: SessionFeedbackRecord }) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 space-y-3">
+      <CardContent className="px-4 pb-4 lg:px-6 lg:pb-5 space-y-3">
         {/* Block results */}
         {feedback.block_results && feedback.block_results.length > 0 && (
           <div className="space-y-0">
@@ -145,9 +145,9 @@ export function CoachFeedbacksTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between lg:mb-2">
+        <h2 className="text-lg lg:text-xl font-semibold text-foreground flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
           Feedbacks dos Atletas
         </h2>
         {athletes.length > 1 && (
@@ -171,7 +171,7 @@ export function CoachFeedbacksTab() {
           <p className="text-sm text-muted-foreground">Nenhum feedback recebido ainda</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
           {filtered.map((fb, idx) => (
             <motion.div
               key={fb.id}
