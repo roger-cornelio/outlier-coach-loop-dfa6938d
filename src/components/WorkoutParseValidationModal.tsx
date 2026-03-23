@@ -107,20 +107,28 @@ export function WorkoutParseValidationModal({
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={onClose}
-            className={`flex-1 ${isInfraError ? '' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
-            variant={isInfraError ? 'default' : undefined}
-          >
-            {isInfraError ? 'Tentar novamente' : 'Corrigir texto'}
-          </Button>
-          <Button
-            onClick={onForceBypass}
-            variant="outline"
-            className="flex-1 text-muted-foreground"
-          >
-            Forçar salvamento sem cálculos
-          </Button>
+          {isInfraError ? (
+            <>
+              <Button onClick={onClose} className="flex-1">
+                Tentar novamente
+              </Button>
+              <Button onClick={onForceBypass} variant="outline" className="flex-1 text-muted-foreground">
+                Forçar salvamento sem cálculos
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={onForceBypass}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                Prosseguir com estimativa
+              </Button>
+              <Button onClick={onClose} variant="outline" className="flex-1 text-muted-foreground">
+                Voltar e corrigir
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
