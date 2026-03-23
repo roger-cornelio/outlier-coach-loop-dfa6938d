@@ -461,14 +461,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                         )}
                         {/* Precision Badge */}
                         {blockMet.confidencePercent > 0 && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
+                          <Popover>
+                            <PopoverTrigger asChild>
                                 <Badge 
                                   variant="outline" 
-                                  className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-help ${
+                                  className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer ${
                                     blockMet.confidencePercent >= 70 
-                                      ? 'bg-primary/10 text-primary border-primary/20' 
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
                                       : blockMet.confidencePercent >= 50 
                                         ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
                                         : 'bg-destructive/10 text-destructive border-destructive/20'
@@ -476,12 +475,11 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                                 >
                                   ⚡ ~{blockMet.confidencePercent}%
                                 </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="max-w-[250px] text-xs">
-                                <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" className="max-w-[260px] text-xs p-3">
+                              <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                     )}
