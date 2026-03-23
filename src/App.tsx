@@ -41,6 +41,7 @@ const EXCLUDED_LAST_ROUTES = new Set([
   "/coach-pending",
   "/coach/definir-senha",
   "/coach",
+  "/diagnostico-gratuito",
 ]);
 
 function shouldPersistLastRoute(pathname: string) {
