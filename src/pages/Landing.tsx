@@ -78,9 +78,9 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Target, title: 'Treinos genéricos não funcionam', desc: 'Cada atleta precisa de um programa baseado nos seus dados reais de performance.' },
-            { icon: Brain, title: 'Dados sem interpretação não servem', desc: 'Nosso motor analisa cada split da sua prova e identifica seus gargalos automaticamente.' },
-            { icon: Shield, title: 'Sem coach forte, sem resultado', desc: 'Conectamos você a coaches certificados que usam dados para potencializar seu treino.' },
+            { icon: Target, title: 'Treinos genéricos não funcionam', desc: 'Seu coach dedicado analisa seu diagnóstico e monta cada treino pensando nos seus gargalos reais.' },
+            { icon: Brain, title: 'Dados sem interpretação não servem', desc: 'Nosso motor analisa cada split da sua prova e entrega ao coach um mapa completo da sua performance.' },
+            { icon: Shield, title: 'Coach dedicado, resultado real', desc: 'Zero automação genérica. Seu coach usa dados reais para montar treinos que atacam exatamente onde você precisa.' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
