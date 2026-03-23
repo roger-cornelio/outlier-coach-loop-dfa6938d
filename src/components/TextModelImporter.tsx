@@ -300,14 +300,14 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     key={i}
                     className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
                       block.success
-                        ? 'bg-primary/5 border-primary/10'
+                        ? 'bg-emerald-500/5 border-emerald-500/10'
                         : block.confidencePercent >= 50
                           ? 'bg-amber-500/5 border-amber-500/10'
                           : 'bg-destructive/5 border-destructive/10'
                     }`}
                   >
                     {block.success ? (
-                      <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     ) : block.confidencePercent >= 50 ? (
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     ) : (
