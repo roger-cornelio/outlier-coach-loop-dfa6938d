@@ -45,7 +45,6 @@ export default function Landing() {
         >
           Diagnóstico HYROX gratuito, treino montado por um coach dedicado e feedback de IA em tempo real. Para atletas que querem ser fora da curva.
         </motion.p>
-        </motion.p>
 
         <motion.div
           className="flex flex-col sm:flex-row gap-4 mt-12"
