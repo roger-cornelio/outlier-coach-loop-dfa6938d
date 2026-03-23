@@ -127,6 +127,9 @@ export function MobileNav() {
           aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5 text-foreground" />
+          {hasNewPlan && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+          )}
         </Button>
       </SheetTrigger>
 
