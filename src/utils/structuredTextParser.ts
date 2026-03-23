@@ -2759,8 +2759,9 @@ export function parseStructuredText(text: string): ParseResult {
     // ─────────────────────────────────────────────────────────────────────────────
     // 1. DAY_MARKER: Detectar dia da semana
     // ─────────────────────────────────────────────────────────────────────────────
+    const hasDiaPrefix = /^DIA:\s*/i.test(line);
     const detectedDay = detectDay(line);
-    if (detectedDay && isUpperCaseLine(line)) {
+    if (detectedDay && (hasDiaPrefix || isUpperCaseLine(line))) {
       // Salvar bloco atual antes de trocar de dia
       saveCurrentBlock();
       
