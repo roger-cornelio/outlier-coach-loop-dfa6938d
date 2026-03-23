@@ -674,7 +674,7 @@ export function WelcomeScreen() {
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-12 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-              Seu diagnóstico está pronto. Acesse treinos personalizados, benchmarks e evolução em tempo real.
+              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos.
             </motion.p>
 
             <motion.button
