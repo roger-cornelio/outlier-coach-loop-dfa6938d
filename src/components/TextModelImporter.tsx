@@ -127,9 +127,9 @@ function getConfidenceTooltip(percent: number): string {
     return "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto.";
   }
   if (percent >= 50) {
-    return "Tempo detectado no texto, calorias estimadas por tipo de bloco. Dica: adicione nome dos exercícios e reps (ex: '10 Box Jump') para o motor calcular com mais precisão.";
+    return "Tempo detectado, calorias estimadas por fallback (METs). Dica: detalhe exercícios com reps e carga (ex: '10 Box Jump') para subir a precisão pro motor físico.";
   }
-  return "Estrutura não reconhecida. Dica: use formatos como 'AMRAP 12', 'FOR TIME', ou liste exercícios com reps e distâncias para o motor interpretar.";
+  return "Estrutura não reconhecida — estimativa por heurística. Reescreva usando formatos como 'AMRAP 12', 'FOR TIME' ou liste exercícios com reps e distância.";
 }
 
 interface PreviewDayCardProps {
