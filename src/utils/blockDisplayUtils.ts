@@ -943,6 +943,11 @@ export function getBlockDisplayDataFromParsed(block: {
     for (const line of block.lines) {
       const text = typeof line === 'string' ? line : (line?.text || '');
       const type = typeof line === 'string' ? 'exercise' : (line?.type || 'exercise');
+      // Rep scheme (40,30,20,10 / 21-15-9) → badge
+      if (isRepSchemeLine(text.trim())) {
+        allStructureLabels.push({ label: formatRepSchemeLabel(text.trim()), insertIndex: exerciseLines.length });
+        continue;
+      }
       
       if (!text.trim()) continue;
       
