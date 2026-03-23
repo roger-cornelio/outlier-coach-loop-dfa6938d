@@ -435,11 +435,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   }, [rawText]);
 
   // Engine coverage — calcula quantos blocos têm tempo+kcal (somente coach vê)
+  // Usa effectiveDays (pós-IA) em vez de parseResult.days (pré-IA)
   const engineCoverage = useMemo<EngineCoverageReport | null>(() => {
-    if (!parseResult?.days || parseResult.days.length === 0) return null;
+    if (!effectiveDays || effectiveDays.length === 0) return null;
     
     const dayReports: EngineCoverageReport[] = [];
-    for (const day of parseResult.days) {
+    for (const day of effectiveDays) {
       if (!day.blocks || day.blocks.length === 0) continue;
       
       const workoutEst = estimateWorkout(day as any, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
@@ -487,7 +488,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     }
 
     return aggregateEngineCoverage(dayReports);
-  }, [parseResult]);
+  }, [effectiveDays]);
 
 
   // LOAD WORKOUT FOR EDIT (from Programações tab)
@@ -1582,93 +1583,7 @@ BLOCO: DESCANSO
                 </>
               )}
 
-              {/* Badge de precisão do motor — quantos blocos calcularam tempo+kcal */}
-              {engineCoverage && engineCoverage.totalBlocks > 0 && (
-                <>
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
-                      engineCoverage.successRate === 100
-                        ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
-                        : engineCoverage.successRate >= 70
-                          ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
-                          : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
-                    }`}
-                    onClick={() => setShowEngineCoverageModal(true)}
-                  >
-                    {engineCoverage.successRate === 100
-                      ? `⚡ ${engineCoverage.totalBlocks}/${engineCoverage.totalBlocks} blocos calculados`
-                      : `⚡ ${engineCoverage.calculatedBlocks}/${engineCoverage.totalBlocks} blocos calculados`
-                    }
-                  </Badge>
-
-                  {/* Modal de detalhes da precisão do motor */}
-                  <Dialog open={showEngineCoverageModal} onOpenChange={setShowEngineCoverageModal}>
-                    <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Precisão do Motor de Cálculo</DialogTitle>
-                        <DialogDescription>
-                          {engineCoverage.calculatedBlocks} de {engineCoverage.totalBlocks} blocos tiveram tempo e calorias estimados ({engineCoverage.successRate}%)
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      {engineCoverage.successRate === 100 ? (
-                        <div className="flex flex-col items-center gap-3 py-6">
-                          <CheckCircle className="h-10 w-10 text-primary" />
-                          <p className="text-sm text-center text-foreground/80">
-                            Todos os blocos tiveram tempo e calorias calculados com sucesso!
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {engineCoverage.blocks.map((block, i) => (
-                            <div
-                              key={i}
-                              className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
-                                block.success
-                                  ? 'bg-primary/5 border-primary/10'
-                                  : 'bg-amber-500/5 border-amber-500/10'
-                              }`}
-                            >
-                              {block.success ? (
-                                <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                              ) : (
-                                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-foreground truncate">{block.title}</p>
-                                {block.success ? (
-                                  <p className="text-xs text-muted-foreground">
-                                    {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                                    {block.reasonLabel}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-
-                          <div className="rounded-md border border-muted bg-muted/30 p-3">
-                            <p className="text-xs text-muted-foreground">
-                              💡 Blocos sem cálculo podem ser melhorados ajustando a formatação do treino. 
-                              Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
-                              adicione repetições e séries explícitas aos exercícios.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex justify-end pt-2">
-                        <Button variant="outline" size="sm" onClick={() => setShowEngineCoverageModal(false)}>
-                          Entendi
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </>
-              )}
+              {/* Badge de precisão do motor movido para Preview */}
             </div>
             <p className="text-sm text-muted-foreground">
               Revise e ajuste os blocos. Defina a categoria e marque o WOD principal.
@@ -2313,6 +2228,96 @@ BLOCO: DESCANSO
           <p className="text-sm text-muted-foreground text-center">
             {days.length} dia(s) • {restCount} de descanso
           </p>
+
+          {/* Badge de precisão do motor — só aparece no Preview (pós-IA) */}
+          {engineCoverage && engineCoverage.totalBlocks > 0 && (
+            <>
+              <div className="flex justify-center">
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
+                    engineCoverage.successRate === 100
+                      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                      : engineCoverage.successRate >= 70
+                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+                        : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+                  }`}
+                  onClick={() => setShowEngineCoverageModal(true)}
+                >
+                  {engineCoverage.successRate === 100
+                    ? `⚡ ${engineCoverage.totalBlocks}/${engineCoverage.totalBlocks} blocos calculados`
+                    : `⚡ ${engineCoverage.calculatedBlocks}/${engineCoverage.totalBlocks} blocos calculados`
+                  }
+                </Badge>
+              </div>
+
+              {/* Modal de detalhes da precisão do motor */}
+              <Dialog open={showEngineCoverageModal} onOpenChange={setShowEngineCoverageModal}>
+                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Precisão do Motor de Cálculo</DialogTitle>
+                    <DialogDescription>
+                      {engineCoverage.calculatedBlocks} de {engineCoverage.totalBlocks} blocos tiveram tempo e calorias estimados ({engineCoverage.successRate}%)
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  {engineCoverage.successRate === 100 ? (
+                    <div className="flex flex-col items-center gap-3 py-6">
+                      <CheckCircle className="h-10 w-10 text-primary" />
+                      <p className="text-sm text-center text-foreground/80">
+                        Todos os blocos tiveram tempo e calorias calculados com sucesso!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {engineCoverage.blocks.map((block, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
+                            block.success
+                              ? 'bg-primary/5 border-primary/10'
+                              : 'bg-amber-500/5 border-amber-500/10'
+                          }`}
+                        >
+                          {block.success ? (
+                            <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">{block.title}</p>
+                            {block.success ? (
+                              <p className="text-xs text-muted-foreground">
+                                {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
+                              </p>
+                            ) : (
+                              <p className="text-xs text-amber-600 dark:text-amber-400">
+                                {block.reasonLabel}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="rounded-md border border-muted bg-muted/30 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          💡 Blocos sem cálculo podem ser melhorados ajustando a formatação do treino. 
+                          Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
+                          adicione repetições e séries explícitas aos exercícios.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowEngineCoverageModal(false)}>
+                      Entendi
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
 
           {/* BOTÕES: VOLTAR E SALVAR */}
           <div className="flex gap-3">
