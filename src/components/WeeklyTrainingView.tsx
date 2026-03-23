@@ -401,46 +401,27 @@ export function WeeklyTrainingView() {
                   )}
 
                   {/* Block Stats */}
-                  {block.type !== 'notas' && (
+                  {block.type !== 'notas' && blockMet.showStats && (
                     <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
-                      {/* Blindagem UX: se bloco foi bypassed, mostrar ícone info com tooltip */}
-                      {(block.parseStatus === 'bypassed' || block.parseStatus === 'failed') ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 text-sm cursor-help">
-                                <Info className="w-4 h-4 text-muted-foreground/50" />
-                                <span className="text-muted-foreground/50">--</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p className="text-xs">O detalhamento deste bloco não permitiu estimar tempo e calorias.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              {isEstimated ? '~' : ''}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {formatEstimatedTime(estimatedMinutes)}
-                            </span>
-                            {isEstimated && (
-                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                            )}
-                          </div>
-                          {biometrics.isValid && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Flame className="w-4 h-4 text-orange-500" />
-                              <span className="text-orange-500 font-medium">
-                                {formatEstimatedKcal(estimatedKcal)}
-                              </span>
-                            </div>
-                          )}
-                        </>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {isEstimated ? '~' : ''}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatEstimatedTime(estimatedMinutes)}
+                        </span>
+                        {isEstimated && (
+                          <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                        )}
+                      </div>
+                      {biometrics.isValid && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Flame className="w-4 h-4 text-orange-500" />
+                          <span className="text-orange-500 font-medium">
+                            {formatEstimatedKcal(estimatedKcal)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
