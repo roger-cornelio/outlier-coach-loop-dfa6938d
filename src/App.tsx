@@ -107,7 +107,7 @@ const App = () => (
               
 
               {/* === REDIRECTS === */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Navigate to="/login" replace />} />
               <Route path="/longin" element={<Navigate to="/login" replace />} />
 
