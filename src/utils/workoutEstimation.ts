@@ -221,7 +221,7 @@ export function estimateBlock(
           confidence = 'medium';
           break;
         case 'conditioning':
-          estimatedMinutes = estimateForTimeMinutes(block.content, level);
+          estimatedMinutes = estimateForTimeMinutes(block.content || '', level);
           confidence = 'low';
           break;
         case 'especifico':
