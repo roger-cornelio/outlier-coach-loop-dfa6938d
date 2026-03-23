@@ -90,7 +90,7 @@ function FeedbackCard({ feedback }: { feedback: SessionFeedbackRecord }) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 space-y-3">
+      <CardContent className="px-4 pb-4 lg:px-6 lg:pb-5 space-y-3">
         {/* Block results */}
         {feedback.block_results && feedback.block_results.length > 0 && (
           <div className="space-y-0">
