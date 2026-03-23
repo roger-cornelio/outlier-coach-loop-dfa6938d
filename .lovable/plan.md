@@ -1,30 +1,24 @@
 
 
-## Plano: Corrigir treino duplicado em todas as semanas
+## Plano: Melhorar estética do badge de rep scheme (40 · 30 · 20 · 10)
 
-### Causa raiz
+### O que muda
 
-`WeeklyTrainingView.tsx` busca os treinos corretos por semana via `useAthletePlan()` (variável `planWorkouts`), mas **ignora esse dado** e usa `baseWorkouts`/`adaptedWorkouts` do Zustand store (linha 79-80). O store é global e só é atualizado pelo `Dashboard.tsx`. Quando o atleta navega entre semanas na `WeeklyTrainingView`, o store continua com os treinos da semana anterior — mostrando o mesmo treino de segunda em todas as semanas.
+O badge de rep scheme atualmente usa estilo `slate` (cinza apagado), ícone pequeno e fonte minúscula (`text-[10px]`). Para o atleta, esse é um dado importante — precisa ter mais destaque visual.
 
-### Correção
+### Alterações
 
 | Arquivo | O que muda |
 |---|---|
-| `src/components/WeeklyTrainingView.tsx` | Usar `planWorkouts` do `useAthletePlan()` como fonte de dados para renderização, em vez de `baseWorkouts`/`adaptedWorkouts` do store. Manter adaptedWorkouts apenas como override quando disponíveis para a mesma semana. |
+| `src/components/DSLBlockRenderer.tsx` | Criar renderização especial para rep schemes: números grandes e coloridos separados por pontos estilizados, fundo mais vivo (primary/orange), ícone maior |
 
-### Detalhes
+### Detalhes visuais
 
-Na linha 78-80, trocar:
-```ts
-const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
-const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
-```
+- Detectar rep scheme no `StructureBadge` (regex `^\d+\s*·`)
+- Em vez de renderizar como texto plano num badge pequeno, renderizar cada número individual com `text-lg font-black text-primary` separado por um dot `·` estilizado
+- Fundo `bg-primary/15` com borda `border-primary/40`
+- Ícone `ListOrdered` maior (`w-4 h-4`)
+- Padding mais generoso (`px-4 py-2`)
 
-Por:
-```ts
-const displayWorkouts = planWorkouts.length > 0 ? planWorkouts : [];
-const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
-```
-
-Isso garante que cada semana mostra **apenas** os treinos publicados para aquela semana específica, usando a query filtrada por `week_start` que já existe no `useAthletePlan`.
+Resultado: "40 · 30 · 20 · 10" passa de um chip cinza discreto para um elemento visual impactante com números grandes e cor laranja/primary vibrante.
 
