@@ -1019,6 +1019,12 @@ export function getBlockDisplayDataFromParsed(block: {
         continue;
       }
       
+      // Linha de intensidade pura → marcar com prefixo especial
+      if (isIntensityOnlyLine(text.trim())) {
+        exerciseLines.push(`${INTENSITY_LINE_PREFIX}${text.trim()}`);
+        continue;
+      }
+      
       // Exercícios - remover hífen para exibição limpa
       const cleanLine = text.replace(/^-\s*/, '').trim();
       if (cleanLine) {
