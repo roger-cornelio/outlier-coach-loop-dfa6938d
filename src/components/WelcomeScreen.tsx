@@ -302,7 +302,35 @@ export function WelcomeScreen() {
   }
 
   async function handleSkip() {
-    setStep('cta');
+    setStep('profile');
+  }
+
+  const experienceOptions = [
+    { key: 'never' as const, icon: Target, label: 'Nunca fiz HYROX', desc: 'Quero começar do zero' },
+    { key: 'spectator' as const, icon: Search, label: 'Já assisti provas', desc: 'Conheço mas nunca competi' },
+    { key: '1race' as const, icon: Trophy, label: 'Fiz 1 prova', desc: 'Mas não tenho resultado online' },
+    { key: '2plus' as const, icon: Flame, label: '2+ provas', desc: 'Resultado não aparece na busca' },
+  ];
+
+  const goalOptions = [
+    { key: 'finish' as const, icon: Target, label: 'COMPLETAR', desc: 'Cruzar a linha de chegada' },
+    { key: 'improve_time' as const, icon: Timer, label: 'MELHORAR TEMPO', desc: 'Superar meu resultado anterior' },
+    { key: 'podium' as const, icon: Trophy, label: 'PÓDIO', desc: 'Competir entre os melhores' },
+    { key: 'lifestyle' as const, icon: Dumbbell, label: 'LIFESTYLE', desc: 'Treinar no formato HYROX' },
+  ];
+
+  const targetRaceOptions = [
+    { key: 'next3months' as const, label: 'NOS PRÓXIMOS 3 MESES', desc: 'Prova confirmada em breve' },
+    { key: 'next6months' as const, label: 'NOS PRÓXIMOS 6 MESES', desc: 'Planejando para o semestre' },
+    { key: 'nodate' as const, label: 'SEM DATA DEFINIDA', desc: 'Quero me preparar com calma' },
+    { key: 'just_training' as const, label: 'SÓ QUERO TREINAR', desc: 'Sem compromisso com prova' },
+  ];
+
+  function getMotivationalMessage(): string {
+    if (profileAnswers.goal === 'podium') return 'Seu objetivo é ambicioso. Vamos construir o caminho até o pódio.';
+    if (profileAnswers.goal === 'improve_time') return 'Cada segundo conta. Vamos otimizar sua performance.';
+    if (profileAnswers.goal === 'finish') return 'A primeira conquista é cruzar a linha. Vamos te preparar.';
+    return 'Treinar como um HYROX athlete vai transformar seu condicionamento.';
   }
 
   const handleLogout = async () => {
