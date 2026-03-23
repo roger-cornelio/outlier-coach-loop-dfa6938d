@@ -16,6 +16,18 @@ interface ViewingAsAthlete {
   name: string | null;
 }
 
+export interface SessionBlockResult {
+  blockId: string;
+  blockTitle: string;
+  blockType: string;
+  format: 'for_time' | 'amrap' | 'emom' | 'strength' | 'other';
+  completed: boolean;
+  timeInSeconds?: number;
+  estimatedTimeSeconds?: number;
+  reps?: number;
+  structureDescription?: string | null;
+}
+
 interface OutlierState {
   // Hydration flag - evita loops durante rehydrate
   hasHydrated: boolean;
@@ -47,6 +59,9 @@ interface OutlierState {
   // Admin: Visualizar como atleta específico
   viewingAsAthlete: ViewingAsAthlete | null;
   
+  // Session block results (temporary, not persisted)
+  sessionBlockResults: SessionBlockResult[];
+  
   // Actions
   setHasHydrated: (v: boolean) => void;
   setCoachStyle: (style: CoachStyle) => void;
@@ -76,6 +91,11 @@ interface OutlierState {
   // Admin: Visualizar como atleta
   setViewingAsAthlete: (athlete: ViewingAsAthlete | null) => void;
   clearViewingAsAthlete: () => void;
+  
+  // Session block results
+  setSessionBlockResults: (results: SessionBlockResult[]) => void;
+  addSessionBlockResult: (result: SessionBlockResult) => void;
+  clearSessionBlockResults: () => void;
 }
 
 export const useOutlierStore = create<OutlierState>()(
@@ -95,6 +115,7 @@ export const useOutlierStore = create<OutlierState>()(
       selectedWorkout: null,
       externalResultsRefreshKey: 0,
       viewingAsAthlete: null,
+      sessionBlockResults: [],
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       setCoachStyle: (style) => set({ coachStyle: style }),
@@ -188,6 +209,12 @@ export const useOutlierStore = create<OutlierState>()(
       
       setViewingAsAthlete: (athlete) => set({ viewingAsAthlete: athlete }),
       clearViewingAsAthlete: () => set({ viewingAsAthlete: null }),
+      
+      setSessionBlockResults: (results) => set({ sessionBlockResults: results }),
+      addSessionBlockResult: (result) => set((state) => ({ 
+        sessionBlockResults: [...state.sessionBlockResults.filter(r => r.blockId !== result.blockId), result] 
+      })),
+      clearSessionBlockResults: () => set({ sessionBlockResults: [] }),
     }),
     {
       name: 'outlier-store-v2', // NOVO NAME para limpar storage antigo
