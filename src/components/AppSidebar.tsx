@@ -97,6 +97,7 @@ export function AppSidebar() {
   ];
 
   const handleNavClick = (item: NavItem) => {
+    if (item.view === 'weeklyTraining') markAsSeen();
     if (item.action) {
       item.action();
     } else if (item.route) {
