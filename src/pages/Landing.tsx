@@ -51,14 +51,14 @@ export default function Landing() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
         >
           <Link to="/login?mode=signup"
-            className="font-display text-lg tracking-widest px-10 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40 flex items-center gap-3 justify-center">
-            <Zap className="w-5 h-5" />
+            className="font-display text-lg tracking-widest px-12 py-5 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40 flex items-center gap-3 justify-center">
+            <Zap className="w-6 h-6" />
             COMECE AGORA
           </Link>
           <Link to="/coach-request"
-            className="font-display text-sm tracking-widest px-10 py-4 rounded-xl border border-border bg-secondary/50 text-foreground hover:bg-secondary transition-all flex items-center gap-3 justify-center">
+            className="font-display text-xs tracking-widest px-6 py-3 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all flex items-center gap-2 justify-center opacity-70 hover:opacity-100">
             SOU COACH
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3 h-3" />
           </Link>
         </motion.div>
       </section>
