@@ -6,19 +6,18 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, Info, RefreshCw } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
-import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
-import { getBlockTimeMeta } from '@/utils/timeValidation';
+import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -79,50 +78,37 @@ export function WeeklyTrainingView() {
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
-  // Estimativa de tempo e calorias
-  const workoutEstimation = useMemo(() => {
-    if (!currentWorkout) return null;
-    return estimateWorkout(currentWorkout, athleteConfig, 'pro');
-  }, [currentWorkout, athleteConfig]);
-
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   // Fonte única de verdade: métricas por bloco + totais agregados
   // O header soma EXATAMENTE os valores arredondados que cada card exibe
   const blockMetricsMap = useMemo(() => {
-    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }>, totalTime: 0, totalCalories: 0 };
+    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }>, totalTime: 0, totalCalories: 0 };
     
     let sumMinutes = 0;
     let sumKcal = 0;
-    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }> = [];
     
     currentWorkout.blocks.forEach((block, index) => {
-      // Regra 1: bloco sem conteúdo não aparece na tela
       const displayData = getBlockDisplayDataFromParsed(block);
       if (!displayData.hasContent) {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false, confidencePercent: 0 });
         return;
       }
       
-      // Regra 2: blocos "notas" não mostram stats
       if (block.type === 'notas') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false, confidencePercent: 0 });
         return;
       }
-      
-      // Regra 3: blocos bypassed/failed mostram "--", não entram na soma
-      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-        return;
-      }
-      
-      // Regra 4: calcular métricas reais
-      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       
       let kcal = 0;
       let dur = 0;
+      let confidencePercent = 0;
+      
+      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       
       if (hasParsedData) {
+        // Motor físico — cálculo biomecânico completo com biometria real
         const metrics = computeBlockMetrics(
           block.parsedExercises!,
           { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex },
@@ -131,20 +117,20 @@ export function WeeklyTrainingView() {
         );
         kcal = metrics.estimatedKcal || 0;
         dur = metrics.estimatedDurationSec || 0;
+        confidencePercent = (dur > 0 && kcal > 0) ? 90 : 60;
       } else {
-        const timeMeta = getBlockTimeMeta(block);
-        dur = timeMeta.durationSecUsed || 0;
-        const blockEst = workoutEstimation?.blocks[index];
-        kcal = blockEst?.estimatedKcal || 0;
+        // Fallback MET — usa biometria REAL do atleta (peso, sexo, nível)
+        const blockEst = estimateBlock(block, biometrics, (athleteConfig?.trainingLevel as any) || 'open');
+        dur = (blockEst.estimatedMinutes || 0) * 60;
+        kcal = blockEst.estimatedKcal || 0;
+        confidencePercent = blockEst.confidencePercent || 45;
       }
       
-      // Arredondar para os mesmos valores que o card exibe
       const roundedMinutes = Math.round(dur / 60);
       const roundedKcal = Math.round(kcal);
       
-      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: roundedMinutes > 0 || roundedKcal > 0, confidencePercent });
       
-      // Somar os valores arredondados (mesma coisa que o card mostra)
       sumMinutes += roundedMinutes;
       sumKcal += roundedKcal;
     });
@@ -154,7 +140,7 @@ export function WeeklyTrainingView() {
       totalTime: sumMinutes,
       totalCalories: sumKcal,
     };
-  }, [currentWorkout, biometrics, workoutEstimation]);
+  }, [currentWorkout, biometrics, athleteConfig]);
 
   const { totalTime, totalCalories } = blockMetricsMap;
 
@@ -308,7 +294,7 @@ export function WeeklyTrainingView() {
               }
               
               // Usar métricas pré-computadas (mesma fonte do header)
-              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0 };
+              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false };
               const estimatedKcal = blockMet.kcal;
               const estimatedMinutes = Math.round(blockMet.durationSec / 60);
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
@@ -408,46 +394,27 @@ export function WeeklyTrainingView() {
                   )}
 
                   {/* Block Stats */}
-                  {block.type !== 'notas' && (
+                  {block.type !== 'notas' && blockMet.showStats && (
                     <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
-                      {/* Blindagem UX: se bloco foi bypassed, mostrar ícone info com tooltip */}
-                      {(block.parseStatus === 'bypassed' || block.parseStatus === 'failed') ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 text-sm cursor-help">
-                                <Info className="w-4 h-4 text-muted-foreground/50" />
-                                <span className="text-muted-foreground/50">--</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p className="text-xs">O detalhamento deste bloco não permitiu estimar tempo e calorias.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              {isEstimated ? '~' : ''}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {formatEstimatedTime(estimatedMinutes)}
-                            </span>
-                            {isEstimated && (
-                              <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                            )}
-                          </div>
-                          {biometrics.isValid && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Flame className="w-4 h-4 text-orange-500" />
-                              <span className="text-orange-500 font-medium">
-                                {formatEstimatedKcal(estimatedKcal)}
-                              </span>
-                            </div>
-                          )}
-                        </>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {isEstimated ? '~' : ''}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatEstimatedTime(estimatedMinutes)}
+                        </span>
+                        {isEstimated && (
+                          <span className="text-xs text-muted-foreground/60">(estimado)</span>
+                        )}
+                      </div>
+                      {biometrics.isValid && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Flame className="w-4 h-4 text-orange-500" />
+                          <span className="text-orange-500 font-medium">
+                            {formatEstimatedKcal(estimatedKcal)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
