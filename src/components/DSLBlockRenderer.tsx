@@ -415,6 +415,15 @@ export function FullBlockRenderer({
                 </div>
               );
             }
+            // Detect intensity badges (__INTENSITY:PSE 8)
+            if (line.startsWith(INTENSITY_LINE_PREFIX)) {
+              const intensityLabel = line.slice(INTENSITY_LINE_PREFIX.length);
+              return (
+                <div key={idx} className="pt-2 pb-1">
+                  <IntensityBadge intensity={intensityLabel} />
+                </div>
+              );
+            }
             return <ExerciseLine key={idx} line={line} />;
           })
         ) : (

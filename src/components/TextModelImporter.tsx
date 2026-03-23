@@ -434,6 +434,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                               </div>
                             );
                           }
+                          if (line.startsWith(INTENSITY_LINE_PREFIX)) {
+                            return (
+                              <div key={lineIdx} className="pt-2 pb-1">
+                                <IntensityBadge intensity={line.slice(INTENSITY_LINE_PREFIX.length)} />
+                              </div>
+                            );
+                          }
                           return <ExerciseLine key={lineIdx} line={line} className="text-foreground/80" />;
                         })
                       ) : (

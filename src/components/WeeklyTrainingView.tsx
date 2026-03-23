@@ -452,6 +452,13 @@ export function WeeklyTrainingView() {
                                   </div>
                                 );
                               }
+                              if (line.startsWith('__INTENSITY:')) {
+                                return (
+                                  <div key={idx} className="pt-2 pb-1">
+                                    <IntensityBadge intensity={line.slice('__INTENSITY:'.length)} />
+                                  </div>
+                                );
+                              }
                               return <ExerciseLine key={idx} line={line} className="text-foreground/80" />;
                             })
                           ) : (
