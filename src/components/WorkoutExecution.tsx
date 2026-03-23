@@ -153,9 +153,33 @@ export function WorkoutExecution() {
     }
   };
 
+  // Estimate expected rounds for AMRAP blocks
+  function estimateExpectedRounds(block: typeof displayedWorkout.blocks[0], totalAmrapSeconds: number): number | undefined {
+    if (totalAmrapSeconds <= 0) return undefined;
+    
+    // Use estimateWorkoutTime to get time for 1 round of the block content
+    const { estimateWorkoutTime } = require('@/utils/estimateWorkoutTime');
+    const estimation = estimateWorkoutTime(block.content || '');
+    
+    if (estimation.itemsFound === 0 || estimation.totalMinutes <= 0) return undefined;
+    
+    // estimateWorkoutTime already considers rounds multiplier, we need 1 round time
+    // The base seconds (before multiplier) is what we want
+    const baseSecondsForOneRound = estimation.breakdown.reduce((sum: number, item: { seconds: number }) => sum + item.seconds, 0);
+    if (baseSecondsForOneRound <= 0) return undefined;
+    
+    return Math.round(totalAmrapSeconds / baseSecondsForOneRound);
+  }
+
   // Generate local feedback comparing actual vs estimated
-  function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number): string {
+  function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number, estimatedRounds?: number): string {
     if (format === 'amrap' && reps !== undefined) {
+      if (estimatedRounds && estimatedRounds > 0) {
+        const diff = reps - estimatedRounds;
+        if (diff > 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — acima do esperado 💪`;
+        if (diff < 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — abaixo do esperado`;
+        return `${reps} rounds (esperado: ~${estimatedRounds}) — no alvo!`;
+      }
       return `${reps} rounds/reps completados`;
     }
     
@@ -168,9 +192,9 @@ export function WorkoutExecution() {
       const absDiff = Math.abs(diff);
       const diffFormatted = formatSecondsToMinSec(absDiff);
       
-      if (diff < -10) return `${diffFormatted} mais rápido que o estimado`;
+      if (diff < -10) return `${diffFormatted} mais rápido que o estimado 🔥`;
       if (diff > 10) return `${diffFormatted} mais lento que o estimado`;
-      return 'Dentro do tempo estimado';
+      return 'Dentro do tempo estimado ✓';
     }
     
     if (format === 'strength') {
