@@ -80,8 +80,6 @@ export function WeeklyTrainingView() {
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
-  const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
-
   // Fonte única de verdade: métricas por bloco + totais agregados
   // O header soma EXATAMENTE os valores arredondados que cada card exibe
   const blockMetricsMap = useMemo(() => {
