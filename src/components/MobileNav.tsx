@@ -25,6 +25,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
+import { useNewPlanIndicator } from '@/hooks/useNewPlanIndicator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import {
@@ -88,12 +89,14 @@ export function MobileNav() {
   const isMobile = useIsMobile();
   const { currentView, setCurrentView } = useOutlierStore();
   const { logout, isLoggingOut } = useLogout();
+  const { hasNewPlan, markAsSeen } = useNewPlanIndicator();
   const navigate = useNavigate();
 
   // Só renderiza em mobile
   if (!isMobile) return null;
 
   const handleNavClick = (item: NavItem) => {
+    if (item.view === 'weeklyTraining') markAsSeen();
     if (item.route) {
       navigate(item.route);
     } else if (item.view) {
@@ -124,6 +127,9 @@ export function MobileNav() {
           aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5 text-foreground" />
+          {hasNewPlan && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+          )}
         </Button>
       </SheetTrigger>
 
@@ -165,6 +171,9 @@ export function MobileNav() {
                     )}>
                       {item.title}
                     </span>
+                    {item.view === 'weeklyTraining' && hasNewPlan && (
+                      <span className="w-2 h-2 bg-destructive rounded-full animate-pulse ml-auto flex-shrink-0" />
+                    )}
                   </button>
                 </li>
               );

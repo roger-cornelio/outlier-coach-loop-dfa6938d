@@ -24,6 +24,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useLogout } from '@/hooks/useLogout';
+import { useNewPlanIndicator } from '@/hooks/useNewPlanIndicator';
 import { cn } from '@/lib/utils';
 import {
   Sidebar,
@@ -53,6 +54,7 @@ export function AppSidebar() {
   const { currentView, setCurrentView } = useOutlierStore();
   const { state: sidebarState } = useSidebar();
   const { logout, isLoggingOut } = useLogout();
+  const { hasNewPlan, markAsSeen } = useNewPlanIndicator();
   const navigate = useNavigate();
   const isCollapsed = sidebarState === 'collapsed';
 
@@ -95,6 +97,7 @@ export function AppSidebar() {
   ];
 
   const handleNavClick = (item: NavItem) => {
+    if (item.view === 'weeklyTraining') markAsSeen();
     if (item.action) {
       item.action();
     } else if (item.route) {
@@ -158,6 +161,9 @@ export function AppSidebar() {
                         )}>
                           {item.title}
                         </span>
+                      )}
+                      {item.view === 'weeklyTraining' && hasNewPlan && (
+                        <span className="w-2 h-2 bg-destructive rounded-full animate-pulse ml-auto flex-shrink-0" />
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
