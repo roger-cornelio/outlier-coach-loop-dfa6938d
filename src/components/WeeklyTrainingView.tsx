@@ -97,32 +97,25 @@ export function WeeklyTrainingView() {
     const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }> = [];
     
     currentWorkout.blocks.forEach((block, index) => {
-      // Regra 1: bloco sem conteúdo não aparece na tela
       const displayData = getBlockDisplayDataFromParsed(block);
       if (!displayData.hasContent) {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false, confidencePercent: 0 });
         return;
       }
       
-      // Regra 2: blocos "notas" não mostram stats
       if (block.type === 'notas') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false, confidencePercent: 0 });
         return;
       }
-      
-      // Regra 3: blocos bypassed/failed mostram "--", não entram na soma
-      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-        return;
-      }
-      
-      // Regra 4: calcular métricas reais
-      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       
       let kcal = 0;
       let dur = 0;
+      let confidencePercent = 0;
+      
+      const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       
       if (hasParsedData) {
+        // Motor físico — cálculo biomecânico completo com biometria real
         const metrics = computeBlockMetrics(
           block.parsedExercises!,
           { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex },
@@ -131,20 +124,20 @@ export function WeeklyTrainingView() {
         );
         kcal = metrics.estimatedKcal || 0;
         dur = metrics.estimatedDurationSec || 0;
+        confidencePercent = (dur > 0 && kcal > 0) ? 90 : 60;
       } else {
-        const timeMeta = getBlockTimeMeta(block);
-        dur = timeMeta.durationSecUsed || 0;
-        const blockEst = workoutEstimation?.blocks[index];
-        kcal = blockEst?.estimatedKcal || 0;
+        // Fallback MET — usa biometria REAL do atleta (peso, sexo, nível)
+        const blockEst = estimateBlock(block, biometrics, (athleteConfig?.training_level as any) || 'open');
+        dur = (blockEst.estimatedMinutes || 0) * 60;
+        kcal = blockEst.estimatedKcal || 0;
+        confidencePercent = blockEst.confidencePercent || 45;
       }
       
-      // Arredondar para os mesmos valores que o card exibe
       const roundedMinutes = Math.round(dur / 60);
       const roundedKcal = Math.round(kcal);
       
-      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: roundedMinutes > 0 || roundedKcal > 0, confidencePercent });
       
-      // Somar os valores arredondados (mesma coisa que o card mostra)
       sumMinutes += roundedMinutes;
       sumKcal += roundedKcal;
     });
