@@ -33,8 +33,26 @@ export interface BlockEstimate {
   estimatedMinutes: number;
   estimatedKcal: number;
   confidence: 'high' | 'medium' | 'low';
+  confidencePercent: number;
   items?: string[];
 }
+
+// METs por tipo de bloco (sincronizados com motor físico)
+const BLOCK_TYPE_METS: Record<string, number> = {
+  aquecimento: 4.0,
+  forca: 5.0,
+  conditioning: 8.0,
+  especifico: 6.5,
+  core: 3.5,
+  corrida: 9.0,
+  notas: 0,
+};
+
+const CONFIDENCE_PERCENT_MAP: Record<'high' | 'medium' | 'low', number> = {
+  high: 75,
+  medium: 60,
+  low: 45,
+};
 
 export interface WorkoutEstimation {
   blocks: BlockEstimate[];

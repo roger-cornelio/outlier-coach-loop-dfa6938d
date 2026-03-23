@@ -22,6 +22,7 @@ export interface EngineBlockStatus {
   success: boolean;
   reason?: EngineFailReason;
   reasonLabel?: string;   // Texto amigável pro coach
+  confidencePercent: number; // 90 = motor, 75/60/45 = fallback
 }
 
 export interface EngineCoverageReport {
