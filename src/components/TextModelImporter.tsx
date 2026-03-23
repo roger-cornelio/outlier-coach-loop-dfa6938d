@@ -316,14 +316,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground truncate">{block.title}</p>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                        <Popover>
+                          <PopoverTrigger asChild>
                               <Badge 
                                 variant="outline" 
-                                className={`text-[10px] px-1.5 py-0 h-5 shrink-0 cursor-help ${
+                                className={`text-[10px] px-1.5 py-0 h-5 shrink-0 cursor-pointer ${
                                   block.confidencePercent >= 70 
-                                    ? 'bg-primary/10 text-primary border-primary/20' 
+                                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
                                     : block.confidencePercent >= 50 
                                       ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
                                       : 'bg-destructive/10 text-destructive border-destructive/20'
@@ -331,12 +330,11 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                               >
                                 ~{block.confidencePercent}%
                               </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[250px] text-xs">
-                              <p>{getConfidenceTooltip(block.confidencePercent)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" className="max-w-[260px] text-xs p-3">
+                            <p>{getConfidenceTooltip(block.confidencePercent)}</p>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       {block.success ? (
                         <p className="text-xs text-muted-foreground">
