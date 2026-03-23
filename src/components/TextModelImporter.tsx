@@ -142,7 +142,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
     let sumMinutes = 0;
     let sumKcal = 0;
-    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }> = [];
 
     dayWorkout.blocks.forEach((block, index) => {
       const displayData = getBlockDisplayDataFromParsed(block);
