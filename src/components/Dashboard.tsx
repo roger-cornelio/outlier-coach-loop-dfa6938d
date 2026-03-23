@@ -368,6 +368,10 @@ export function Dashboard() {
             (Diagnóstico + Limitador + Impacto + Projeção + CTA)
             ============================================ */}
         <section className="mb-6">
+          <WeeklySummaryCard />
+        </section>
+
+        <section className="mb-6">
           <DiagnosticRadarBlock
             scores={diagnosticScores.scores}
             loading={diagnosticScores.loading}
