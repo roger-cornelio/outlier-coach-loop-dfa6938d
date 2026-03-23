@@ -1651,12 +1651,31 @@ BLOCO: DESCANSO
                                         <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
                                           {groupKey}
                                         </p>
-                                        {lines.map((line, i) => (
+                                    {lines.map((line, i) => (
                                           <div
                                             key={i}
                                             className="flex flex-col gap-1 text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10 text-foreground"
                                           >
-                                            <span className="font-mono text-xs">{line.text}</span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-mono text-xs flex-1">{line.text}</span>
+                                              {/* Botão "É um exercício → Sugerir" */}
+                                              {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                                <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
+                                                  ✓ Enviado
+                                                </Badge>
+                                              ) : (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="shrink-0 text-xs h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                                                  disabled={suggestSubmitting}
+                                                  onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                                >
+                                                  <Send className="w-3 h-3 mr-1" />
+                                                  É exercício
+                                                </Button>
+                                              )}
+                                            </div>
                                             {line.suggestion && (
                                               <span className="text-xs text-orange-600 dark:text-orange-400">
                                                 💡 Você quis dizer <strong>"{line.suggestion}"</strong>?
