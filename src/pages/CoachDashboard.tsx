@@ -25,8 +25,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye, MessageSquare
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
@@ -62,11 +63,45 @@ interface DiagnosticCounts {
 }
 
 export default function CoachDashboard() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, refreshProfile, updateProfileOptimistic } = useAuth();
   const { logout, isLoggingOut } = useLogout();
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
   const { setDiagnosticCounts, setFetchResult } = useLinkDebug();
+
+  // Coach display name editing
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  const coachDisplayName = getCoachDisplayName(profile);
+  const nameNeedsSetup = !profile?.name || profile.name.includes('@');
+
+  const handleStartEditName = () => {
+    setNameInput(nameNeedsSetup ? '' : (profile?.name || ''));
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed || !profile?.user_id) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: trimmed })
+        .eq('user_id', profile.user_id);
+      if (error) throw error;
+      updateProfileOptimistic({ name: trimmed });
+      await refreshProfile();
+      setIsEditingName(false);
+      toast({ title: 'Nome atualizado!', description: `Seus atletas verão "${trimmed}" como seu nome.` });
+    } catch (err) {
+      toast({ title: 'Erro ao salvar nome', variant: 'destructive' });
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   // Estado unificado de atletas - FONTE ÚNICA
   const [linkedAthletes, setLinkedAthletes] = useState<LinkedAthlete[]>([]);
@@ -603,13 +638,45 @@ export default function CoachDashboard() {
         <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <LayoutGrid className="w-6 h-6 text-primary" />
-                Painel do Coach
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {getCoachDisplayName(profile)}
-              </p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Painel do Coach</p>
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="Como quer ser chamado?"
+                    className="h-9 w-48 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') setIsEditingName(false);
+                    }}
+                  />
+                  <Button size="icon" variant="ghost" onClick={handleSaveName} disabled={savingName || !nameInput.trim()} className="h-8 w-8">
+                    {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-green-500" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => setIsEditingName(false)} className="h-8 w-8">
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  {nameNeedsSetup ? (
+                    <button onClick={handleStartEditName} className="text-sm text-primary/70 hover:text-primary transition-colors underline underline-offset-4 decoration-dashed">
+                      Defina seu nome →
+                    </button>
+                  ) : (
+                    <>
+                      <h1 className="text-xl font-bold text-primary tracking-tight">
+                        {coachDisplayName}
+                      </h1>
+                      <button onClick={handleStartEditName} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <Button
               variant="outline"
