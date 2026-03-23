@@ -441,7 +441,19 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
     if (minutes > 0) return minutes;
   }
   if (/tabata/i.test(combinedText)) {
-    return 4;
+    // Contar exercícios no conteúdo: 4 min POR EXERCÍCIO (8 rounds × 30s)
+    // Consistente com estimateWorkoutTime.ts
+    const contentLines = (blockContent || '').split('\n').filter(l => l.trim().length > 0);
+    let exerciseCount = 0;
+    for (const line of contentLines) {
+      const trimmed = line.trim();
+      if (/^\s*tabata\s*$/i.test(trimmed)) continue;
+      if (/^[-•]\s*\w/.test(trimmed) || /^\d+\s/.test(trimmed) || /^[A-Za-z]/.test(trimmed)) {
+        exerciseCount++;
+      }
+    }
+    exerciseCount = Math.max(exerciseCount, 1);
+    return exerciseCount * 4;
   }
 
   return null;
