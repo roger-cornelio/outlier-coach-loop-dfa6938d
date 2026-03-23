@@ -127,7 +127,7 @@ export function WeeklyTrainingView() {
         confidencePercent = (dur > 0 && kcal > 0) ? 90 : 60;
       } else {
         // Fallback MET — usa biometria REAL do atleta (peso, sexo, nível)
-        const blockEst = estimateBlock(block, biometrics, (athleteConfig?.training_level as any) || 'open');
+        const blockEst = estimateBlock(block, biometrics, (athleteConfig?.trainingLevel as any) || 'open');
         dur = (blockEst.estimatedMinutes || 0) * 60;
         kcal = blockEst.estimatedKcal || 0;
         confidencePercent = blockEst.confidencePercent || 45;
