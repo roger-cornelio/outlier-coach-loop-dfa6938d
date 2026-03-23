@@ -156,9 +156,10 @@ interface CoachSpreadsheetTabProps {
   loadingAthletes?: boolean;
   initialWorkout?: CoachWorkout | null;
   onClearInitialWorkout?: () => void;
+  onSavedGoToPrograms?: () => void;
 }
 
-export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
+export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout, onSavedGoToPrograms }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
   const { saveWorkout: saveToDb, forceSaveWorkout, gatekeeperResult, clearGatekeeperResult } = useCoachWorkouts();
   const { clearDraft } = useCoachDraft();
@@ -838,11 +839,13 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
               const { title, workouts, weekStart } = pendingGatekeeperSave;
               const workoutId = await forceSaveWorkout(title, workouts, 'draft', 0, weekStart);
               if (workoutId) {
-                setSuccess('Treino salvo (sem estimativas nos blocos não reconhecidos).');
+                setSuccess('Treino salvo com estimativas! Veja na aba Programações.');
+                clearDraft();
                 setParsedWorkouts(null);
                 setSpreadsheetText('');
                 setProgramName('');
                 setSelectedWeek(null);
+                onSavedGoToPrograms?.();
               }
             } catch (err) {
               console.error('[CoachSpreadsheetTab] Bypass save error:', err);
