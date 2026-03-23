@@ -130,6 +130,7 @@ interface PreviewDayCardProps {
 
 function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showCoverageModal, setShowCoverageModal] = useState(false);
 
   const workoutEst = useMemo(() => {
     if (isRestDay) return null;
@@ -190,6 +191,20 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
   const { totalTime, totalCalories } = blockMetrics;
 
+  // Engine coverage per day
+  const dayCoverage = useMemo(() => {
+    if (isRestDay || !dayWorkout.blocks || dayWorkout.blocks.length === 0) return null;
+    return calculateEngineCoverage(blockMetrics.perBlock, dayWorkout.blocks as any);
+  }, [isRestDay, dayWorkout.blocks, blockMetrics.perBlock]);
+
+  const coverageBadgeClass = dayCoverage
+    ? dayCoverage.successRate === 100
+      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+      : dayCoverage.successRate >= 50
+        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+        : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+    : '';
+
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Day Header (collapsible trigger) */}
@@ -223,6 +238,18 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                   <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
                 </div>
               )}
+              {dayCoverage && dayCoverage.totalBlocks > 0 && (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-2 py-0.5 cursor-pointer transition-colors ${coverageBadgeClass}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCoverageModal(true);
+                  }}
+                >
+                  ⚡ {dayCoverage.calculatedBlocks}/{dayCoverage.totalBlocks}
+                </Badge>
+              )}
             </>
           )}
         </div>
@@ -232,6 +259,73 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
           <ChevronDown className="w-4 h-4" />
         )}
       </button>
+
+      {/* Modal de detalhes da precisão do motor — por dia */}
+      {dayCoverage && dayCoverage.totalBlocks > 0 && (
+        <Dialog open={showCoverageModal} onOpenChange={setShowCoverageModal}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Precisão do Motor — {dayName}</DialogTitle>
+              <DialogDescription>
+                {dayCoverage.calculatedBlocks} de {dayCoverage.totalBlocks} blocos com tempo e calorias ({dayCoverage.successRate}%)
+              </DialogDescription>
+            </DialogHeader>
+
+            {dayCoverage.successRate === 100 ? (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <CheckCircle className="h-10 w-10 text-primary" />
+                <p className="text-sm text-center text-foreground/80">
+                  Todos os blocos calculados com sucesso!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {dayCoverage.blocks.map((block, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
+                      block.success
+                        ? 'bg-primary/5 border-primary/10'
+                        : 'bg-amber-500/5 border-amber-500/10'
+                    }`}
+                  >
+                    {block.success ? (
+                      <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{block.title}</p>
+                      {block.success ? (
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          {block.reasonLabel}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="rounded-md border border-muted bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    💡 Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
+                    adicione repetições e séries explícitas.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setShowCoverageModal(false)}>
+                Entendi
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Expanded Content — identical to athlete WeeklyTrainingView */}
       <AnimatePresence>
