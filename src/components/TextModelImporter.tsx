@@ -67,6 +67,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   getDayName,
   isInvalidBlockTitle,
@@ -127,9 +128,9 @@ function getConfidenceTooltip(percent: number): string {
     return "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto.";
   }
   if (percent >= 50) {
-    return "Tempo detectado no texto, calorias estimadas por tipo de bloco. Dica: adicione nome dos exercícios e reps (ex: '10 Box Jump') para o motor calcular com mais precisão.";
+    return "Tempo detectado, calorias estimadas por fallback (METs). Dica: detalhe exercícios com reps e carga (ex: '10 Box Jump') para subir a precisão pro motor físico.";
   }
-  return "Estrutura não reconhecida. Dica: use formatos como 'AMRAP 12', 'FOR TIME', ou liste exercícios com reps e distâncias para o motor interpretar.";
+  return "Estrutura não reconhecida — estimativa por heurística. Reescreva usando formatos como 'AMRAP 12', 'FOR TIME' ou liste exercícios com reps e distância.";
 }
 
 interface PreviewDayCardProps {
@@ -213,8 +214,8 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
   }, [isRestDay, dayWorkout.blocks, blockMetrics.perBlock]);
 
   const coverageBadgeClass = dayCoverage
-    ? dayCoverage.successRate === 100
-      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+    ? dayCoverage.successRate >= 70
+      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
       : dayCoverage.successRate >= 50
         ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
         : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
@@ -300,14 +301,14 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     key={i}
                     className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
                       block.success
-                        ? 'bg-primary/5 border-primary/10'
+                        ? 'bg-emerald-500/5 border-emerald-500/10'
                         : block.confidencePercent >= 50
                           ? 'bg-amber-500/5 border-amber-500/10'
                           : 'bg-destructive/5 border-destructive/10'
                     }`}
                   >
                     {block.success ? (
-                      <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     ) : block.confidencePercent >= 50 ? (
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     ) : (
@@ -316,14 +317,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground truncate">{block.title}</p>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                        <Popover>
+                          <PopoverTrigger asChild>
                               <Badge 
                                 variant="outline" 
-                                className={`text-[10px] px-1.5 py-0 h-5 shrink-0 cursor-help ${
+                                className={`text-[10px] px-1.5 py-0 h-5 shrink-0 cursor-pointer ${
                                   block.confidencePercent >= 70 
-                                    ? 'bg-primary/10 text-primary border-primary/20' 
+                                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
                                     : block.confidencePercent >= 50 
                                       ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
                                       : 'bg-destructive/10 text-destructive border-destructive/20'
@@ -331,12 +331,11 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                               >
                                 ~{block.confidencePercent}%
                               </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[250px] text-xs">
-                              <p>{getConfidenceTooltip(block.confidencePercent)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" className="max-w-[260px] text-xs p-3">
+                            <p>{getConfidenceTooltip(block.confidencePercent)}</p>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       {block.success ? (
                         <p className="text-xs text-muted-foreground">
@@ -463,14 +462,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                         )}
                         {/* Precision Badge */}
                         {blockMet.confidencePercent > 0 && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
+                          <Popover>
+                            <PopoverTrigger asChild>
                                 <Badge 
                                   variant="outline" 
-                                  className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-help ${
+                                  className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer ${
                                     blockMet.confidencePercent >= 70 
-                                      ? 'bg-primary/10 text-primary border-primary/20' 
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
                                       : blockMet.confidencePercent >= 50 
                                         ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
                                         : 'bg-destructive/10 text-destructive border-destructive/20'
@@ -478,12 +476,11 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                                 >
                                   ⚡ ~{blockMet.confidencePercent}%
                                 </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="max-w-[250px] text-xs">
-                                <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" className="max-w-[260px] text-xs p-3">
+                              <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                     )}
@@ -1528,7 +1525,7 @@ BLOCO: DESCANSO
                     variant="outline" 
                     className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
                       coverageReport.successRate === 100
-                        ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
                         : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
                     }`}
                     onClick={() => setShowCoverageModal(true)}
