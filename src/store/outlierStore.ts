@@ -16,6 +16,18 @@ interface ViewingAsAthlete {
   name: string | null;
 }
 
+export interface SessionBlockResult {
+  blockId: string;
+  blockTitle: string;
+  blockType: string;
+  format: 'for_time' | 'amrap' | 'emom' | 'strength' | 'other';
+  completed: boolean;
+  timeInSeconds?: number;
+  estimatedTimeSeconds?: number;
+  reps?: number;
+  structureDescription?: string | null;
+}
+
 interface OutlierState {
   // Hydration flag - evita loops durante rehydrate
   hasHydrated: boolean;
