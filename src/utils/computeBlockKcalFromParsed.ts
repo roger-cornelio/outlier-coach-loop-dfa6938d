@@ -15,6 +15,7 @@ import { parseRoundGroups, parseStructureLine, type RoundGroup, type WorkoutStru
 
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
+const MET_HIIT = 8.0; // MET para protocolos de alta intensidade (TABATA, AMRAP, EMOM)
 
 // ════════════════════════════════════════════════════════════════════════
 // ACSM STANDARD: 1.03 kcal/kg/km para cardio distance-based
