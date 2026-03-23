@@ -23,17 +23,42 @@ const blockTypeColors: Record<string, string> = {
   notas: 'border-l-muted-foreground',
 };
 
-// Detect block format from structureDescription and block type
-function detectBlockFormat(block: { type: string }, structureDescription: string | null): SessionBlockResult['format'] {
+// Detect block format from structureDescription, block title, and inline struct markers
+function detectBlockFormat(
+  block: { type: string; title?: string },
+  structureDescription: string | null,
+  blockTitle?: string,
+  exerciseLines?: string[]
+): SessionBlockResult['format'] {
+  // 1. Check structureDescription first
   const sd = (structureDescription || '').toUpperCase();
-  
   if (sd.includes('AMRAP')) return 'amrap';
   if (sd.includes('EMOM')) return 'emom';
   if (sd.includes('FOR TIME') || sd.includes('RFT') || sd.includes('CHIPPER')) return 'for_time';
-  if (block.type === 'forca') return 'strength';
-  
-  // Time-based formats
   if (/\d+\s*(ROUNDS?|RDS?)/.test(sd)) return 'for_time';
+  
+  // 2. Check block title (e.g. "15' AMRAP", "EMOM 12'", "3 Rounds For Time")
+  const titleUpper = (blockTitle || block.title || '').toUpperCase();
+  if (/AMRAP/.test(titleUpper)) return 'amrap';
+  if (/EMOM/.test(titleUpper)) return 'emom';
+  if (/FOR\s*TIME|RFT|CHIPPER/.test(titleUpper)) return 'for_time';
+  if (/\d+\s*(ROUNDS?|RDS?)/.test(titleUpper)) return 'for_time';
+  
+  // 3. Check inline __STRUCT: markers in exercise lines
+  if (exerciseLines) {
+    for (const line of exerciseLines) {
+      if (line.startsWith('__STRUCT:')) {
+        const structText = line.slice('__STRUCT:'.length).toUpperCase();
+        if (structText.includes('AMRAP')) return 'amrap';
+        if (structText.includes('EMOM')) return 'emom';
+        if (/FOR\s*TIME|RFT|CHIPPER/.test(structText)) return 'for_time';
+        if (/\d+\s*(ROUNDS?|RDS?)/.test(structText)) return 'for_time';
+      }
+    }
+  }
+  
+  // 4. Fallback by block type
+  if (block.type === 'forca') return 'strength';
   
   return 'other';
 }

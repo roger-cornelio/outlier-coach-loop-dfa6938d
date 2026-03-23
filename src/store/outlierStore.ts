@@ -25,6 +25,7 @@ export interface SessionBlockResult {
   timeInSeconds?: number;
   estimatedTimeSeconds?: number;
   reps?: number;
+  estimatedRounds?: number;
   structureDescription?: string | null;
 }
 
