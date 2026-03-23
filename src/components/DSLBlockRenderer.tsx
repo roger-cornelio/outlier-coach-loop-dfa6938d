@@ -25,7 +25,7 @@
  */
 
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell } from 'lucide-react';
+import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell, ListOrdered } from 'lucide-react';
 import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import type { WorkoutBlock } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
