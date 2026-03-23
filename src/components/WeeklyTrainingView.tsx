@@ -146,7 +146,66 @@ export function WeeklyTrainingView() {
 
   const { totalTime, totalCalories } = blockMetricsMap;
 
-  const handleStartWorkout = () => {
+  // ====== AI Daily Summary ======
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const aiCacheRef = useRef<Map<string, string>>(new Map());
+
+  const buildWorkoutSummaryText = useCallback((workout: typeof currentWorkout) => {
+    if (!workout || workout.isRestDay) return '';
+    return workout.blocks
+      .filter(b => b.type !== 'notas')
+      .map(b => {
+        const title = getBlockDisplayTitle(b, 0);
+        const data = getBlockDisplayDataFromParsed(b);
+        const lines = data.exerciseLines.slice(0, 5).join(', ');
+        return `[${b.type.toUpperCase()}] ${title}${b.isMainWod ? ' (WOD Principal)' : ''}: ${lines || b.content?.slice(0, 100) || ''}`;
+      })
+      .join('\n');
+  }, []);
+
+  useEffect(() => {
+    if (!currentWorkout || currentWorkout.isRestDay) {
+      setAiSummary(null);
+      return;
+    }
+
+    const cacheKey = `${currentWeek.start}_${activeDay}`;
+    if (aiCacheRef.current.has(cacheKey)) {
+      setAiSummary(aiCacheRef.current.get(cacheKey)!);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSummary = async () => {
+      setAiSummaryLoading(true);
+      try {
+        const summaryText = buildWorkoutSummaryText(currentWorkout);
+        const coachStyle = profile?.coach_style || 'PULSE';
+        const { data, error } = await supabase.functions.invoke('generate-preworkout-message', {
+          body: {
+            mode: 'daily_summary',
+            coachStyle,
+            workoutSummary: summaryText,
+            hasWorkout: true,
+            sex: profile?.sexo || undefined,
+          },
+        });
+        if (!cancelled && data?.message) {
+          setAiSummary(data.message);
+          aiCacheRef.current.set(cacheKey, data.message);
+        }
+      } catch (e) {
+        console.error('AI summary error:', e);
+      } finally {
+        if (!cancelled) setAiSummaryLoading(false);
+      }
+    };
+    fetchSummary();
+    return () => { cancelled = true; };
+  }, [activeDay, currentWorkout?.day, currentWeek.start]);
+
+
     if (currentWorkout) {
       setSelectedWorkout(currentWorkout);
       setCurrentView('workout');
