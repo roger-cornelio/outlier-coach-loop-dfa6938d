@@ -1373,7 +1373,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
                 <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>
               <p className="text-[10px] text-amber-600 mt-2 font-sans">
-                ⚠️ Treinos fora deste formato podem não ser interpretados corretamente pela <span className="font-bold text-primary">OUTLIER</span>
+                ⚠️ Treinos fora deste formato podem não ser interpretados corretamente pela IA
               </p>
             </div>
 
