@@ -340,11 +340,8 @@ export function WorkoutExecution() {
                     
                     {/* NÍVEL 3: Conteúdo do treino (exercícios) */}
                     {(() => {
-                      const { exerciseLines, commentLines, structures } = separateBlockContent(effectiveContent);
-                      // Extrair descrição legível da estrutura (remove asteriscos)
-                      const structureDescription = structures && structures.length > 0 
-                        ? structures[0].rawLine.replace(/\*\*/g, '').trim() 
-                        : null;
+                      const displayData = getBlockDisplayDataFromParsed(block);
+                      const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
                       
                       return (
                         <>
@@ -368,11 +365,6 @@ export function WorkoutExecution() {
                                 }
                                 return <ExerciseLine key={idx} line={line} className="text-foreground/80" />;
                               })
-                            ) : effectiveContent ? (
-                              // Fallback: mostrar conteúdo bruto se parser não encontrou linhas
-                              <pre className="font-body text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                                {effectiveContent}
-                              </pre>
                             ) : (
                               <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
                             )}
