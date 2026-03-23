@@ -156,12 +156,12 @@ export default function Landing() {
             </div>
 
             <p className="text-lg text-foreground mb-6 font-medium">
-              Escale sua operação sem perder qualidade.
+              Escale sua operação com mais qualidade.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
-                'Leads qualificados via plataforma',
+                'Novos atletas toda semana',
                 'Gestão completa de atletas',
                 'Métricas de retenção e engajamento',
                 'Publicação de treinos com 1 clique',
@@ -173,11 +173,16 @@ export default function Landing() {
               ))}
             </div>
 
-            <Link to="/coach-request"
-              className="inline-flex items-center gap-3 font-display text-base tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
-              QUERO SER COACH OUTLIER
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <Link to="/coach-request"
+                className="inline-flex items-center gap-3 font-display text-base tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
+                QUERO SER COACH OUTLIER
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <span className="text-[10px] tracking-wider text-muted-foreground/60 uppercase font-display border border-border/40 rounded-lg px-3 py-1.5">
+                ⬥ Aprovação sujeita aos requisitos OUTLIER
+              </span>
+            </div>
           </motion.div>
         </div>
       </section>
