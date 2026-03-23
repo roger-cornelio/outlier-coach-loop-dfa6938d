@@ -1,24 +1,20 @@
 
 
-## Plano: Melhorar estética do badge de rep scheme (40 · 30 · 20 · 10)
+## Plano: Adicionar link "Já sou Coach" no header da Landing Page
 
-### O que muda
+### Problema
 
-O badge de rep scheme atualmente usa estilo `slate` (cinza apagado), ícone pequeno e fonte minúscula (`text-[10px]`). Para o atleta, esse é um dado importante — precisa ter mais destaque visual.
+O header fixo da Landing só tem "Já sou atleta →" apontando para `/login`. Falta o equivalente para coaches acessarem `/login/coach`.
 
-### Alterações
+### Alteração
 
 | Arquivo | O que muda |
 |---|---|
-| `src/components/DSLBlockRenderer.tsx` | Criar renderização especial para rep schemes: números grandes e coloridos separados por pontos estilizados, fundo mais vivo (primary/orange), ícone maior |
+| `src/pages/Landing.tsx` | Adicionar link "Já sou Coach →" no header, ao lado de "Já sou atleta", apontando para `/login/coach` |
 
-### Detalhes visuais
+### Detalhes
 
-- Detectar rep scheme no `StructureBadge` (regex `^\d+\s*·`)
-- Em vez de renderizar como texto plano num badge pequeno, renderizar cada número individual com `text-lg font-black text-primary` separado por um dot `·` estilizado
-- Fundo `bg-primary/15` com borda `border-primary/40`
-- Ícone `ListOrdered` maior (`w-4 h-4`)
-- Padding mais generoso (`px-4 py-2`)
-
-Resultado: "40 · 30 · 20 · 10" passa de um chip cinza discreto para um elemento visual impactante com números grandes e cor laranja/primary vibrante.
+- Dois links no header: "Já sou Coach" e "Já sou Atleta", ambos com mesmo estilo (`font-display text-xs tracking-widest text-muted-foreground`)
+- Separados por um divider sutil (`border-r border-border/40`)
+- Mantém layout compacto no mobile
 
