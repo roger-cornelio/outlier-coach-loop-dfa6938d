@@ -1,31 +1,71 @@
 
 
-## Plano: Reconhecer termos descritivos de intensidade
+## Plano: Badge de Intensidade — Vermelho Forte, Visual Único
 
-### Problema
+### Resumo
 
-Termos como `(forte)`, `(leve)`, `(moderado)`, `(recovery)` são ignorados pela função `hasIntensityParameter()`, que só reconhece formatos numéricos (PSE 5, Z2, FC 150, etc.). Isso dispara avisos desnecessários em blocos longos de cardio.
+Criar um novo marcador visual para indicadores de intensidade (PSE, RPE, Zona, FC, Pace, descritivos) com **cor vermelha forte** e visual distinto de rounds (laranja), exercícios (texto normal) e comentários (cinza). Adicionar na documentação DSL e modelo recomendado como marcador opcional.
 
-### Alteração
+### O que muda
 
-| Arquivo | O que muda |
+| Arquivo | Alteração |
 |---|---|
-| `src/utils/structuredTextParser.ts` | Adicionar na função `hasIntensityParameter()` um check para termos descritivos de intensidade em português e inglês |
+| `src/utils/blockDisplayUtils.ts` | Nova constante `INTENSITY_LINE_PREFIX = '__INTENSITY:'`. Nova função `isIntensityOnlyLine()` que detecta linhas 100% de intensidade. No `getBlockDisplayDataFromParsed`, linhas de intensidade pura são marcadas com `__INTENSITY:` em vez de virar exercício. |
+| `src/components/DSLBlockRenderer.tsx` | Novo componente `IntensityBadge` — fundo vermelho escuro (`bg-red-600/20 text-red-500 border-red-600/30`), ícone de pulso (`Activity` do lucide), fonte bold. Todos os loops de `exerciseLines` (incluindo `FullBlockRenderer`) verificam `__INTENSITY:` para renderizar o badge. |
+| `src/components/CoachProgramsTab.tsx` | No loop de exerciseLines, check para `INTENSITY_LINE_PREFIX` → renderizar `IntensityBadge`. |
+| `src/components/TextModelImporter.tsx` | (1) No loop de exerciseLines do preview, check para `INTENSITY_LINE_PREFIX`. (2) Na Sintaxe DSL, adicionar linha: `PSE 8` — intensidade (opcional). |
+| `src/components/WeeklyTrainingView.tsx` | No loop de exerciseLines, check para `INTENSITY_LINE_PREFIX` → renderizar `IntensityBadge`. |
+| `src/components/StructuredErrorDisplay.tsx` | No modelo recomendado e nos marcadores, adicionar `PSE 8` como marcador opcional de intensidade. |
 
-### Termos que serão reconhecidos
+### Visual do IntensityBadge
 
-**Português:** forte, leve, moderado, moderada, intenso, intensa, suave, pesado, pesada, máximo, máxima, explosivo, explosiva, controlado, controlada, progressivo, progressiva, confortável, recovery, easy
-
-**Inglês:** strong, light, moderate, intense, heavy, max, explosive, controlled, progressive, comfortable, easy, hard, steady
-
-### Detalhes
-
-Adicionar no final da função `hasIntensityParameter`, antes do `return false`:
-
-```ts
-// Termos descritivos de intensidade (dentro ou fora de parênteses)
-if (/\b(?:forte|leve|moderad[oa]|intens[oa]|suave|pesad[oa]|m[aá]xim[oa]|explosiv[oa]|controlad[oa]|progressiv[oa]|confort[aá]vel|recovery|easy|strong|light|moderate|intense|heavy|hard|steady)\b/i.test(lower)) return true;
+```text
+┌─────────────────────────┐
+│  ❤️‍🔥  PSE 8              │  ← vermelho forte, bold
+└─────────────────────────┘
 ```
 
-Impacto zero em outros fluxos — só amplia o vocabulário aceito.
+- **Cor única para todos os tipos**: `bg-red-600/20 text-red-500 border-red-600/30`
+- **Ícone**: `Activity` (pulso/batimento) do lucide-react
+- **Formato**: mesmo tamanho do StructureBadge, mas visualmente distinto pelo vermelho
+
+### Detecção de linha de intensidade pura
+
+A função `isIntensityOnlyLine()` verifica se a linha **inteira** é um indicador. Exemplos que viram badge:
+- `PSE 8`, `RPE 7`, `Z2`, `Zona 3`, `FC 150`, `Pace 5:00/km`, `(forte)`, `(leve)`
+
+Exemplos que **não** viram badge (contêm exercício):
+- `Corrida 5km Z2` → exercício normal
+- `Row 2000m Pace 5:00/km` → exercício normal
+
+### Documentação atualizada
+
+**Sintaxe DSL** (TextModelImporter):
+```
+PSE 8  — intensidade do bloco (opcional: PSE, RPE, Z2, FC, Pace)
+```
+
+**Modelo Recomendado** (StructuredErrorDisplay):
+```
+BLOCO: WOD
+**15' AMRAP**
+PSE 8
+- 10 Wall Ball 9kg
+```
+
+**Marcadores**:
+```
+PSE 8  → intensidade (PSE, RPE, Z2, FC, Pace…) — opcional
+```
+
+### Hierarquia visual final
+
+| Token | Cor | Destaque |
+|---|---|---|
+| DIA | foreground | grande, bold, divisor |
+| BLOCO | foreground | card com borda |
+| ESTRUTURA | laranja/variado | badge com ícone |
+| **INTENSIDADE** | **vermelho forte** | **badge com ícone de pulso** |
+| EXERCÍCIO | foreground/80 | texto normal |
+| COMENTÁRIO | cinza | bloco lateral com 💬 |
 
