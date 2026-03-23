@@ -209,6 +209,12 @@ export const useOutlierStore = create<OutlierState>()(
       
       setViewingAsAthlete: (athlete) => set({ viewingAsAthlete: athlete }),
       clearViewingAsAthlete: () => set({ viewingAsAthlete: null }),
+      
+      setSessionBlockResults: (results) => set({ sessionBlockResults: results }),
+      addSessionBlockResult: (result) => set((state) => ({ 
+        sessionBlockResults: [...state.sessionBlockResults.filter(r => r.blockId !== result.blockId), result] 
+      })),
+      clearSessionBlockResults: () => set({ sessionBlockResults: [] }),
     }),
     {
       name: 'outlier-store-v2', // NOVO NAME para limpar storage antigo
