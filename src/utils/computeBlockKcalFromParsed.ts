@@ -15,6 +15,7 @@ import { parseRoundGroups, parseStructureLine, type RoundGroup, type WorkoutStru
 
 const GRAVITY = 9.81; // m/s²
 const JOULES_PER_KCAL = 4184;
+const MET_HIIT = 8.0; // MET para protocolos de alta intensidade (TABATA, AMRAP, EMOM)
 
 // ════════════════════════════════════════════════════════════════════════
 // ACSM STANDARD: 1.03 kcal/kg/km para cardio distance-based
@@ -346,22 +347,25 @@ export function computeBlockMetrics(
   if (fixedTimeMinutes && fixedTimeMinutes > 0) {
     const fixedTimeSec = fixedTimeMinutes * 60;
 
-    // Calcular tempo de 1 round completo (soma de todos exercícios com sets=1)
-    const singleRoundTimeSec = totalDurationSec > 0 ? totalDurationSec : 180; // Fallback conservador de 3min
+    const singleRoundTimeSec = totalDurationSec > 0 ? totalDurationSec : 180;
 
     if (singleRoundTimeSec !== totalDurationSec) {
       console.warn(`[computeBlockMetrics] Usando fallback conservador de 180s para singleRoundTimeSec (totalDurationSec era ${totalDurationSec})`);
     }
 
-    // Estimar rounds internos
-    const estimatedRounds = fixedTimeSec / singleRoundTimeSec;
-
-    // Recalcular kcal baseado nos rounds estimados
-    // totalKcal neste ponto = kcal de 1 round (sem multiplicação FIXED_TIME)
-    // Precisamos escalar para o número de rounds estimados
     if (totalDurationSec > 0) {
       const scaleFactor = fixedTimeSec / totalDurationSec;
       totalKcal = Math.round(totalKcal * scaleFactor);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PISO METABÓLICO: Garante que blocos HIIT nunca reportem menos
+    // calorias do que o equivalente metabólico de exercício intenso.
+    // Ex: Tabata 4min, 75kg → floor = 8.0 * 75 * (4/60) = 40 kcal
+    // ════════════════════════════════════════════════════════════════════════
+    const kcalFloor = MET_HIIT * safeBiometrics.pesoKg * (fixedTimeMinutes / 60);
+    if (totalKcal < kcalFloor) {
+      totalKcal = Math.round(kcalFloor);
     }
 
     // Duração final é SEMPRE o tempo fixo (autoridade absoluta)
@@ -395,15 +399,12 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
   }
 
   // Prioridade 2: título (com regex flexível para títulos compostos)
-  // Aceita: "AMRAP 15'", "AMRAP 15' - Conditioning", "EMOM 20min - Upper Body"
   if (blockTitle) {
-    // Primeiro tentar parseStructureLine padrão
     const structure = parseStructureLine(blockTitle);
     if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
       return structure.value;
     }
 
-    // Fallback: regex flexível para títulos compostos (sem exigir fim de linha)
     const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?/i);
     if (flexibleAmrap) {
       const minutes = parseInt(flexibleAmrap[1], 10);
@@ -416,7 +417,6 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       if (minutes > 0) return minutes;
     }
 
-    // Padrão invertido: número ANTES do nome (ex: "15' AMRAP", "10' EMOM")
     const invertedAmrap = blockTitle.match(/(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min\s*)?AMRAP/i);
     if (invertedAmrap) {
       const minutes = parseInt(invertedAmrap[1], 10);
@@ -428,6 +428,20 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       const minutes = parseInt(invertedEmom[1], 10);
       if (minutes > 0) return minutes;
     }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // TABATA DETECTION: Detectar "tabata" no título ou conteúdo
+  // Default clássico: 8 rounds × (20s work + 10s rest) = 4 min
+  // ════════════════════════════════════════════════════════════════════════
+  const combinedText = `${blockTitle || ''} ${blockContent || ''}`;
+  const tabataMatch = combinedText.match(/tabata\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?/i);
+  if (tabataMatch) {
+    const minutes = parseInt(tabataMatch[1], 10);
+    if (minutes > 0) return minutes;
+  }
+  if (/tabata/i.test(combinedText)) {
+    return 4;
   }
 
   return null;
