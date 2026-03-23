@@ -25,8 +25,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye, MessageSquare
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
