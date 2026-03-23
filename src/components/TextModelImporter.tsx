@@ -147,21 +147,18 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
     dayWorkout.blocks.forEach((block, index) => {
       const displayData = getBlockDisplayDataFromParsed(block);
       if (!displayData.hasContent) {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false, confidencePercent: 0 });
         return;
       }
       if (block.type === 'notas') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-        return;
-      }
-      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false, confidencePercent: 0 });
         return;
       }
 
       const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       let kcal = 0;
       let dur = 0;
+      let confidencePercent = 0;
 
       if (hasParsedData) {
         const metrics = computeBlockMetrics(
@@ -172,16 +169,24 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
         );
         kcal = metrics.estimatedKcal || 0;
         dur = metrics.estimatedDurationSec || 0;
+        confidencePercent = (dur > 0 && kcal > 0) ? 90 : 60;
       } else {
-        const timeMeta = getBlockTimeMeta(block);
-        dur = timeMeta.durationSecUsed || 0;
+        // Fallback: use workoutEstimation with MET-based kcal
         const blockEst = workoutEst?.blocks[index];
-        kcal = blockEst?.estimatedKcal || 0;
+        if (blockEst) {
+          dur = (blockEst.estimatedMinutes || 0) * 60;
+          kcal = blockEst.estimatedKcal || 0;
+          confidencePercent = blockEst.confidencePercent || 45;
+        } else {
+          const timeMeta = getBlockTimeMeta(block);
+          dur = timeMeta.durationSecUsed || 0;
+          confidencePercent = 45;
+        }
       }
 
       const roundedMinutes = Math.round(dur / 60);
       const roundedKcal = Math.round(kcal);
-      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: roundedMinutes > 0 || roundedKcal > 0, confidencePercent });
       sumMinutes += roundedMinutes;
       sumKcal += roundedKcal;
     });
