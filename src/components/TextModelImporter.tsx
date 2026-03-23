@@ -122,6 +122,16 @@ const previewBlockTypeColors: Record<string, string> = {
 // PreviewDayCard — Card colapsável por dia com UI idêntica à tela do atleta
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function getConfidenceTooltip(percent: number): string {
+  if (percent >= 70) {
+    return "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto.";
+  }
+  if (percent >= 50) {
+    return "Tempo detectado no texto, calorias estimadas por tipo de bloco. Dica: adicione nome dos exercícios e reps (ex: '10 Box Jump') para o motor calcular com mais precisão.";
+  }
+  return "Estrutura não reconhecida. Dica: use formatos como 'AMRAP 12', 'FOR TIME', ou liste exercícios com reps e distâncias para o motor interpretar.";
+}
+
 interface PreviewDayCardProps {
   dayWorkout: DayWorkout;
   dayName: string;
@@ -306,18 +316,27 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground truncate">{block.title}</p>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-[10px] px-1.5 py-0 h-5 shrink-0 ${
-                            block.confidencePercent >= 70 
-                              ? 'bg-primary/10 text-primary border-primary/20' 
-                              : block.confidencePercent >= 50 
-                                ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
-                                : 'bg-destructive/10 text-destructive border-destructive/20'
-                          }`}
-                        >
-                          ~{block.confidencePercent}%
-                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-[10px] px-1.5 py-0 h-5 shrink-0 cursor-help ${
+                                  block.confidencePercent >= 70 
+                                    ? 'bg-primary/10 text-primary border-primary/20' 
+                                    : block.confidencePercent >= 50 
+                                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                      : 'bg-destructive/10 text-destructive border-destructive/20'
+                                }`}
+                              >
+                                ~{block.confidencePercent}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[250px] text-xs">
+                              <p>{getConfidenceTooltip(block.confidencePercent)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                       {block.success ? (
                         <p className="text-xs text-muted-foreground">
@@ -444,18 +463,27 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                         )}
                         {/* Precision Badge */}
                         {blockMet.confidencePercent > 0 && (
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[10px] px-1.5 py-0 h-5 font-medium ${
-                              blockMet.confidencePercent >= 70 
-                                ? 'bg-primary/10 text-primary border-primary/20' 
-                                : blockMet.confidencePercent >= 50 
-                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
-                                  : 'bg-destructive/10 text-destructive border-destructive/20'
-                            }`}
-                          >
-                            ⚡ ~{blockMet.confidencePercent}%
-                          </Badge>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-help ${
+                                    blockMet.confidencePercent >= 70 
+                                      ? 'bg-primary/10 text-primary border-primary/20' 
+                                      : blockMet.confidencePercent >= 50 
+                                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                        : 'bg-destructive/10 text-destructive border-destructive/20'
+                                  }`}
+                                >
+                                  ⚡ ~{blockMet.confidencePercent}%
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-[250px] text-xs">
+                                <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
                     )}
