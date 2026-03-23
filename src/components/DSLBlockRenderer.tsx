@@ -61,6 +61,10 @@ function getStructureStyle(structure: string): { icon: React.ReactNode; colorCla
   if (upper.includes('SÉRIE') || upper.includes('SERIES')) {
     return { icon: <Dumbbell className="w-3 h-3" />, colorClass: 'bg-purple-500/20 text-purple-600 border-purple-500/30' };
   }
+  // Rep scheme badge: "40 · 30 · 20 · 10", "21 · 15 · 9"
+  if (/^\d+\s*·/.test(structure.trim())) {
+    return { icon: <ListOrdered className="w-3 h-3" />, colorClass: 'bg-slate-500/20 text-slate-600 border-slate-500/30' };
+  }
   
   // Default: primary color
   return { icon: <Repeat className="w-3 h-3" />, colorClass: 'bg-primary/20 text-primary border-primary/30' };

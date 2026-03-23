@@ -1012,6 +1012,8 @@ export function getBlockDisplayDataFromParsed(block: {
         }
       } else if (isStructuralLine(trimmed)) {
         contentStructLabels.push({ label: trimmed, insertIndex: contentExerciseLines.length });
+      } else if (isRepSchemeLine(trimmed)) {
+        contentStructLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: contentExerciseLines.length });
       } else {
         contentExerciseLines.push(trimmed);
       }
