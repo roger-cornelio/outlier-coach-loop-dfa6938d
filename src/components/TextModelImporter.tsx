@@ -1368,6 +1368,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
                 <p><span className="font-semibold text-primary">DIA: SEGUNDA</span> — início do dia</p>
                 <p><span className="font-semibold text-primary">BLOCO: AQUECIMENTO</span> — início do bloco</p>
                 <p><span className="font-semibold">**3 ROUNDS**</span> — estrutura (AMRAP, EMOM, Rounds, For Time)</p>
+                <p><span className="font-semibold text-red-500">PSE 8</span> — intensidade do bloco (opcional: PSE, RPE, Z2, FC, Pace)</p>
                 <p><span className="font-semibold">- exercício</span> — cada exercício (com métrica)</p>
                 <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>
