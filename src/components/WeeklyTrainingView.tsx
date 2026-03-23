@@ -90,11 +90,11 @@ export function WeeklyTrainingView() {
   // Fonte única de verdade: métricas por bloco + totais agregados
   // O header soma EXATAMENTE os valores arredondados que cada card exibe
   const blockMetricsMap = useMemo(() => {
-    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }>, totalTime: 0, totalCalories: 0 };
+    if (!currentWorkout) return { perBlock: [] as Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }>, totalTime: 0, totalCalories: 0 };
     
     let sumMinutes = 0;
     let sumKcal = 0;
-    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }> = [];
     
     currentWorkout.blocks.forEach((block, index) => {
       // Regra 1: bloco sem conteúdo não aparece na tela
