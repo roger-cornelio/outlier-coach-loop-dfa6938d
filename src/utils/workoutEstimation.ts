@@ -318,7 +318,7 @@ export function estimateWorkout(
   
   const totals = {
     estimatedMinutesTotal: blocks.reduce((sum, b) => sum + b.estimatedMinutes, 0),
-    estimatedKcalTotal: 0, // Kcal is now calculated by Physics Engine
+    estimatedKcalTotal: blocks.reduce((sum, b) => sum + b.estimatedKcal, 0),
   };
   
   return {
