@@ -36,11 +36,11 @@ import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
-import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine } from './DSLBlockRenderer';
+import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
-import { getBlockDisplayTitle, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
