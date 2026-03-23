@@ -1,41 +1,24 @@
 
 
-## Plano: Botao de Login Rapido na Landing Page
+## Plano: Corrigir Deteccao Tabata no Motor de Kcal
 
 ### Problema
-A landing e otimizada para novos usuarios (funil diagnostico), mas atletas que ja tem conta precisam de um acesso rapido visivel — hoje nao ha nenhum link de login na pagina.
+O `detectFixedTimeMinutes` em `computeBlockKcalFromParsed.ts` retorna `4` fixo quando detecta "tabata" sem tempo explicito. Mas o modelo correto (ja implementado em `estimateWorkoutTime.ts`) e **4 minutos POR EXERCICIO** (8 rounds × 30s = 240s).
 
-### Solucao
-Adicionar um link discreto mas visivel no topo direito da landing (header fixo) com texto tipo "Ja sou atleta" ou "Entrar", sem competir com o CTA principal de diagnostico.
+Com 2 exercicios (Squat to Stand + Pike Lunges), deveria ser 8 min, nao 4.
 
-### Implementacao
+### Correcao
 
-**Arquivo: `src/pages/Landing.tsx`**
+**Arquivo: `src/utils/computeBlockKcalFromParsed.ts`**
 
-- Adicionar um header fixo/sticky no topo com:
-  - Logo Outlier (esquerda)
-  - Link "Ja sou atleta → Entrar" (direita) apontando para `/login`
-  - Estilo discreto: texto `text-muted-foreground hover:text-primary`, sem background pesado, apenas um underline ou seta
-- O header fica `fixed top-0` com `z-50` e background semi-transparente (`bg-background/80 backdrop-blur`)
+Na deteccao de Tabata dentro de `detectFixedTimeMinutes` (linhas ~443-444):
+- Em vez de `return 4`, contar o numero de exercicios no `blockContent` (mesma logica que `estimateWorkoutTime.ts` ja usa)
+- Retornar `exerciseCount * 4`
 
-### Visual esperado
+Logica de contagem: linhas que comecam com `-`, `•`, numero, ou letra (excluindo a propria linha "tabata" e linhas vazias).
 
-```text
-┌──────────────────────────────────────────────┐
-│  ◆ OUTLIER                   Já sou atleta → │  ← header fixo, discreto
-├──────────────────────────────────────────────┤
-│                                              │
-│           Performance que separa             │
-│               ◆ OUTLIER ◆                    │
-│                do comum                      │
-│                                              │
-│          [ RECEBER DIAGNÓSTICO ]             │  ← CTA principal intocado
-│                                              │
-└──────────────────────────────────────────────┘
-```
-
-### Detalhes
-- 1 arquivo editado: `src/pages/Landing.tsx`
-- Zero mudanca de logica, apenas UI
-- O CTA de diagnostico continua sendo o protagonista
+### Resultado
+- 2 exercicios → 8 min → floor = 8.0 × 75 × (8/60) = **80 kcal**
+- 1 exercicio → 4 min → floor = **40 kcal**
+- Consistente com `estimateWorkoutTime.ts`
 
