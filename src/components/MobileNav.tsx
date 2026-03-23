@@ -89,6 +89,7 @@ export function MobileNav() {
   const isMobile = useIsMobile();
   const { currentView, setCurrentView } = useOutlierStore();
   const { logout, isLoggingOut } = useLogout();
+  const { hasNewPlan, markAsSeen } = useNewPlanIndicator();
   const navigate = useNavigate();
 
   // Só renderiza em mobile
