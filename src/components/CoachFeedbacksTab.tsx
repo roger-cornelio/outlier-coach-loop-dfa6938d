@@ -79,7 +79,7 @@ function FeedbackCard({ feedback }: { feedback: SessionFeedbackRecord }) {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-2 pt-4 px-4">
+      <CardHeader className="pb-2 pt-4 px-4 lg:px-6 lg:pt-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-sm text-foreground">{displayName}</p>
