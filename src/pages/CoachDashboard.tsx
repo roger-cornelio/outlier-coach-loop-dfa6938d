@@ -571,6 +571,7 @@ export default function CoachDashboard() {
             loadingAthletes={loadingAthletes}
             initialWorkout={editingWorkout}
             onClearInitialWorkout={() => setEditingWorkout(null)}
+            onSavedGoToPrograms={() => setActiveTab('programacoes')}
           />
         );
 
