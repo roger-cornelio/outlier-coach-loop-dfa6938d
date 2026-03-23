@@ -115,6 +115,7 @@ export const useOutlierStore = create<OutlierState>()(
       selectedWorkout: null,
       externalResultsRefreshKey: 0,
       viewingAsAthlete: null,
+      sessionBlockResults: [],
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       setCoachStyle: (style) => set({ coachStyle: style }),
