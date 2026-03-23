@@ -80,7 +80,7 @@ export function calculateEngineCoverage(
 
     if (success) {
       calculatedBlocks++;
-      result.push({ title, kcal, durationSec: dur, success: true });
+      result.push({ title, kcal, durationSec: dur, success: true, confidencePercent: 90 });
       continue;
     }
 
