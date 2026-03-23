@@ -158,14 +158,10 @@ export function WorkoutExecution() {
   function estimateExpectedRounds(block: typeof displayedWorkout.blocks[0], totalAmrapSeconds: number): number | undefined {
     if (totalAmrapSeconds <= 0) return undefined;
     
-    // Use estimateWorkoutTime to get time for 1 round of the block content
-    const { estimateWorkoutTime } = require('@/utils/estimateWorkoutTime');
     const estimation = estimateWorkoutTime(block.content || '');
     
     if (estimation.itemsFound === 0 || estimation.totalMinutes <= 0) return undefined;
     
-    // estimateWorkoutTime already considers rounds multiplier, we need 1 round time
-    // The base seconds (before multiplier) is what we want
     const baseSecondsForOneRound = estimation.breakdown.reduce((sum: number, item: { seconds: number }) => sum + item.seconds, 0);
     if (baseSecondsForOneRound <= 0) return undefined;
     
