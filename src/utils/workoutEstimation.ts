@@ -33,8 +33,26 @@ export interface BlockEstimate {
   estimatedMinutes: number;
   estimatedKcal: number;
   confidence: 'high' | 'medium' | 'low';
+  confidencePercent: number;
   items?: string[];
 }
+
+// METs por tipo de bloco (sincronizados com motor físico)
+const BLOCK_TYPE_METS: Record<string, number> = {
+  aquecimento: 4.0,
+  forca: 5.0,
+  conditioning: 8.0,
+  especifico: 6.5,
+  core: 3.5,
+  corrida: 9.0,
+  notas: 0,
+};
+
+const CONFIDENCE_PERCENT_MAP: Record<'high' | 'medium' | 'low', number> = {
+  high: 75,
+  medium: 60,
+  low: 45,
+};
 
 export interface WorkoutEstimation {
   blocks: BlockEstimate[];
@@ -263,16 +281,23 @@ export function estimateBlock(
     estimatedMinutes = Math.round(estimatedMinutes * 1.15);
   }
   
-  // Kcal = 0 here. Real calorie calculation is done by Physics Engine (energyCalculator.ts)
-  // when rendering the workout UI with movement_patterns data.
+  // Fallback Kcal via MET × peso × tempo
+  const weightKg = biometrics.weightKg || 75;
+  const met = BLOCK_TYPE_METS[block.type] || 5.0;
+  const estimatedKcal = estimatedMinutes > 0
+    ? Math.round(met * weightKg * (estimatedMinutes / 60))
+    : 0;
+
+  const confidencePercent = CONFIDENCE_PERCENT_MAP[confidence];
   
   return {
     blockId: block.id,
     title: block.title,
     type: block.type,
     estimatedMinutes: Math.max(0, estimatedMinutes),
-    estimatedKcal: 0,
+    estimatedKcal,
     confidence,
+    confidencePercent,
   };
 }
 
@@ -293,7 +318,7 @@ export function estimateWorkout(
   
   const totals = {
     estimatedMinutesTotal: blocks.reduce((sum, b) => sum + b.estimatedMinutes, 0),
-    estimatedKcalTotal: 0, // Kcal is now calculated by Physics Engine
+    estimatedKcalTotal: blocks.reduce((sum, b) => sum + b.estimatedKcal, 0),
   };
   
   return {

@@ -142,26 +142,23 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
     let sumMinutes = 0;
     let sumKcal = 0;
-    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+    const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent: number }> = [];
 
     dayWorkout.blocks.forEach((block, index) => {
       const displayData = getBlockDisplayDataFromParsed(block);
       if (!displayData.hasContent) {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false, confidencePercent: 0 });
         return;
       }
       if (block.type === 'notas') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-        return;
-      }
-      if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
-        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+        perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false, confidencePercent: 0 });
         return;
       }
 
       const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
       let kcal = 0;
       let dur = 0;
+      let confidencePercent = 0;
 
       if (hasParsedData) {
         const metrics = computeBlockMetrics(
@@ -172,16 +169,24 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
         );
         kcal = metrics.estimatedKcal || 0;
         dur = metrics.estimatedDurationSec || 0;
+        confidencePercent = (dur > 0 && kcal > 0) ? 90 : 60;
       } else {
-        const timeMeta = getBlockTimeMeta(block);
-        dur = timeMeta.durationSecUsed || 0;
+        // Fallback: use workoutEstimation with MET-based kcal
         const blockEst = workoutEst?.blocks[index];
-        kcal = blockEst?.estimatedKcal || 0;
+        if (blockEst) {
+          dur = (blockEst.estimatedMinutes || 0) * 60;
+          kcal = blockEst.estimatedKcal || 0;
+          confidencePercent = blockEst.confidencePercent || 45;
+        } else {
+          const timeMeta = getBlockTimeMeta(block);
+          dur = timeMeta.durationSecUsed || 0;
+          confidencePercent = 45;
+        }
       }
 
       const roundedMinutes = Math.round(dur / 60);
       const roundedKcal = Math.round(kcal);
-      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: true });
+      perBlock.push({ kcal: roundedKcal, durationSec: dur, visible: true, showStats: roundedMinutes > 0 || roundedKcal > 0, confidencePercent });
       sumMinutes += roundedMinutes;
       sumKcal += roundedKcal;
     });
@@ -286,16 +291,34 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
                       block.success
                         ? 'bg-primary/5 border-primary/10'
-                        : 'bg-amber-500/5 border-amber-500/10'
+                        : block.confidencePercent >= 50
+                          ? 'bg-amber-500/5 border-amber-500/10'
+                          : 'bg-destructive/5 border-destructive/10'
                     }`}
                   >
                     {block.success ? (
                       <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    ) : (
+                    ) : block.confidencePercent >= 50 ? (
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{block.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-foreground truncate">{block.title}</p>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] px-1.5 py-0 h-5 shrink-0 ${
+                            block.confidencePercent >= 70 
+                              ? 'bg-primary/10 text-primary border-primary/20' 
+                              : block.confidencePercent >= 50 
+                                ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                : 'bg-destructive/10 text-destructive border-destructive/20'
+                          }`}
+                        >
+                          ~{block.confidencePercent}%
+                        </Badge>
+                      </div>
                       {block.success ? (
                         <p className="text-xs text-muted-foreground">
                           {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
@@ -311,8 +334,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
                 <div className="rounded-md border border-muted bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">
-                    💡 Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
-                    adicione repetições e séries explícitas.
+                    💡 <strong>~90%</strong> = Motor Físico · <strong>~60-75%</strong> = Estimativa com padrões · <strong>~45%</strong> = Heurística por tipo
                   </p>
                 </div>
               </div>
@@ -402,7 +424,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     {/* Coach Notes */}
                     <CommentSubBlock comments={commentLines} />
 
-                    {/* Block Stats */}
+                    {/* Block Stats with Precision Badge */}
                     {block.type !== 'notas' && blockMet.showStats && (
                       <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
                         <div className="flex items-center gap-2 text-sm">
@@ -411,16 +433,30 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                           <span className="font-medium text-foreground">
                             {formatEstimatedTime(estimatedMinutes)}
                           </span>
-                          {isEstimated && (
-                            <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Flame className="w-4 h-4 text-orange-500" />
-                          <span className="text-orange-500 font-medium">
-                            {formatEstimatedKcal(estimatedKcal)}
-                          </span>
-                        </div>
+                        {estimatedKcal > 0 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            <span className="text-orange-500 font-medium">
+                              {formatEstimatedKcal(estimatedKcal)}
+                            </span>
+                          </div>
+                        )}
+                        {/* Precision Badge */}
+                        {blockMet.confidencePercent > 0 && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] px-1.5 py-0 h-5 font-medium ${
+                              blockMet.confidencePercent >= 70 
+                                ? 'bg-primary/10 text-primary border-primary/20' 
+                                : blockMet.confidencePercent >= 50 
+                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                  : 'bg-destructive/10 text-destructive border-destructive/20'
+                            }`}
+                          >
+                            ⚡ ~{blockMet.confidencePercent}%
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>

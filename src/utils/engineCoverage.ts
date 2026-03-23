@@ -22,6 +22,7 @@ export interface EngineBlockStatus {
   success: boolean;
   reason?: EngineFailReason;
   reasonLabel?: string;   // Texto amigável pro coach
+  confidencePercent: number; // 90 = motor, 75/60/45 = fallback
 }
 
 export interface EngineCoverageReport {
@@ -47,7 +48,7 @@ const REASON_LABELS: Record<EngineFailReason, string> = {
  * @param blocks - Blocos do DayWorkout para extrair metadata (título, parseStatus, etc.)
  */
 export function calculateEngineCoverage(
-  perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }>,
+  perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent?: number }>,
   blocks: Array<{
     title?: string;
     type?: string;
@@ -79,7 +80,7 @@ export function calculateEngineCoverage(
 
     if (success) {
       calculatedBlocks++;
-      result.push({ title, kcal, durationSec: dur, success: true });
+      result.push({ title, kcal, durationSec: dur, success: true, confidencePercent: 90 });
       continue;
     }
 
@@ -97,6 +98,11 @@ export function calculateEngineCoverage(
       reason = 'no_kcal';
     }
 
+    // Determine fallback confidence based on reason
+    const fallbackConfidence = reason === 'bypassed' || reason === 'parse_failed' 
+      ? 45 
+      : reason === 'no_kcal' ? 60 : 50;
+
     result.push({
       title,
       kcal,
@@ -104,6 +110,7 @@ export function calculateEngineCoverage(
       success: false,
       reason,
       reasonLabel: REASON_LABELS[reason],
+      confidencePercent: fallbackConfidence,
     });
   }
 
