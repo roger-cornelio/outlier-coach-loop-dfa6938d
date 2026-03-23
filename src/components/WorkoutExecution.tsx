@@ -252,7 +252,7 @@ export function WorkoutExecution() {
             const isJustCompleted = justCompletedBlock === block.id;
             
             // Get effective content and notes based on athlete level
-            const effectiveContent = getEffectiveContent(block, effectiveLevel);
+            
             const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
             const effectiveTargetRange = getEffectiveTargetRange(block, effectiveLevel);
             const effectivePSE = getEffectivePSE(block, effectiveLevel);
