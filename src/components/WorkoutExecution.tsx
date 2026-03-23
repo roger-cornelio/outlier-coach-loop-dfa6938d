@@ -633,12 +633,16 @@ export function WorkoutExecution() {
                             )}
                             
                             {/* AMRAP - Reps input */}
-                            {needsRepsInput(blockFormat) && (
+                            {needsRepsInput(blockFormat) && (() => {
+                              const amrapEstRounds = timeMeta.durationSecUsed > 0 ? estimateExpectedRounds(block, timeMeta.durationSecUsed) : undefined;
+                              return (
                               <div>
                                 <div className="flex items-center justify-between mb-3">
-                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS / REPS COMPLETADOS</p>
-                                  {displayData.structureDescription && (
-                                    <p className="text-xs text-muted-foreground">{displayData.structureDescription}</p>
+                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS COMPLETADOS</p>
+                                  {amrapEstRounds && amrapEstRounds > 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Esperado: <span className="font-medium text-foreground">~{amrapEstRounds} rounds</span>
+                                    </p>
                                   )}
                                 </div>
                                 <input
@@ -646,8 +650,9 @@ export function WorkoutExecution() {
                                   min="0"
                                   value={inputReps}
                                   onChange={(e) => setInputReps(e.target.value)}
-                                  placeholder="Ex: 5 rounds + 3 reps → 53"
+                                  placeholder="Ex: 5"
                                   className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
                                 />
                               </div>
                             )}
