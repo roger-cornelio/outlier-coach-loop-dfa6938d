@@ -81,7 +81,7 @@ export function PerformanceFeedback() {
     );
   }
 
-  const fallbackMessage = getCoachLine(athleteConfig.coachStyle, 'completion');
+  const fallbackMessage = getCoachLine(athleteConfig.coachStyle, 'great');
   const feedbackMessage = aiFeedback || fallbackMessage;
 
   // Compute per-block summary display
