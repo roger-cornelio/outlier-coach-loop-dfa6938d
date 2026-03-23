@@ -79,6 +79,7 @@ export function getUserBiometrics(athleteConfig: AthleteConfig | null): UserBiom
 // ============================================
 
 function extractTimeFromContent(content: string): { minutes: number; confidence: 'high' | 'medium' | 'low' } | null {
+  if (!content) return null;
   const lower = content.toLowerCase();
   
   const capMatch = lower.match(/cap[:\s]*(\d+)/);
