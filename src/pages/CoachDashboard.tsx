@@ -649,6 +649,10 @@ export default function CoachDashboard() {
               <Calendar className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Programações</span>
             </TabsTrigger>
+            <TabsTrigger value="feedbacks" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
+            </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="parametros" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
                 <Settings2 className="w-4 h-4 shrink-0" />
