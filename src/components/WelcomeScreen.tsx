@@ -674,7 +674,7 @@ export function WelcomeScreen() {
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-12 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-              Seu diagnóstico está pronto. Acesse treinos personalizados, benchmarks e evolução em tempo real.
+              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos.
             </motion.p>
 
             <motion.button
@@ -692,7 +692,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MINHA EVOLUÇÃO'}
+              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
           </motion.div>
         )}
@@ -858,7 +858,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MINHA EVOLUÇÃO'}
+              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
             <motion.button onClick={() => setStep('profileGoal')}

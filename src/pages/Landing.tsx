@@ -43,7 +43,7 @@ export default function Landing() {
           className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Diagnóstico HYROX inteligente, treinos personalizados e evolução baseada em dados reais. Para atletas que querem ser fora da curva.
+          Diagnóstico HYROX gratuito, treino montado por um coach dedicado e feedback de IA em tempo real. Para atletas que querem ser fora da curva.
         </motion.p>
 
         <motion.div
@@ -74,9 +74,9 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Target, title: 'Treinos genéricos não funcionam', desc: 'Cada atleta precisa de um programa baseado nos seus dados reais de performance.' },
-            { icon: Brain, title: 'Dados sem interpretação não servem', desc: 'Nosso motor analisa cada split da sua prova e identifica seus gargalos automaticamente.' },
-            { icon: Shield, title: 'Sem coach forte, sem resultado', desc: 'Conectamos você a coaches certificados que usam dados para potencializar seu treino.' },
+            { icon: Target, title: 'Treinos genéricos não funcionam', desc: 'Seu coach dedicado analisa seu diagnóstico e monta cada treino pensando nos seus gargalos reais.' },
+            { icon: Brain, title: 'Dados sem interpretação não servem', desc: 'Nosso motor analisa cada split da sua prova e entrega ao coach um mapa completo da sua performance.' },
+            { icon: Shield, title: 'Coach dedicado, resultado real', desc: 'Zero automação genérica. Seu coach usa dados reais para montar treinos que atacam exatamente onde você precisa.' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
@@ -101,9 +101,9 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Cadastre-se', desc: 'Crie sua conta e importe seu resultado HYROX automaticamente.' },
-              { step: '02', title: 'Receba seu diagnóstico', desc: 'Nosso motor identifica seus gargalos e pontos fortes em segundos.' },
-              { step: '03', title: 'Evolua com dados', desc: 'Treinos personalizados, benchmarks e evolução em tempo real.' },
+              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus gargalos em segundos.' },
+              { step: '02', title: 'Conecte-se a um coach', desc: 'Um coach dedicado recebe seu diagnóstico e monta treinos específicos para você.' },
+              { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. A IA dá feedback em tempo real. Você evolui com dados.' },
             ].map((item, i) => (
               <motion.div key={i} className="text-center"
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
@@ -122,15 +122,15 @@ export default function Landing() {
           className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
         >
-          TECNOLOGIA DE <span className="text-primary">PERFORMANCE</span>
+          O QUE VOCÊ <span className="text-primary">RECEBE</span>
         </motion.h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Activity, label: 'Motor HYROX' },
-            { icon: Brain, label: 'Parsing Inteligente' },
-            { icon: BarChart3, label: 'Radar de Performance' },
-            { icon: TrendingUp, label: 'Classificação por Nível' },
+            { icon: Activity, label: 'Diagnóstico Gratuito' },
+            { icon: Users, label: 'Coach Dedicado' },
+            { icon: Brain, label: 'Feedback IA em Tempo Real' },
+            { icon: TrendingUp, label: 'Evolução Mensurável' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-5 rounded-xl bg-secondary/50 border border-border text-center hover:border-primary/30 transition-colors"
