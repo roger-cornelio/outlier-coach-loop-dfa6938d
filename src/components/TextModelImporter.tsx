@@ -466,6 +466,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                         {blockMet.confidencePercent > 0 && (
                           <Popover>
                             <PopoverTrigger asChild>
+                              <button type="button" className="appearance-none border-0 bg-transparent p-0">
                                 <Badge 
                                   variant="outline" 
                                   className={`text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer ${
@@ -478,6 +479,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                                 >
                                   ⚡ ~{blockMet.confidencePercent}%
                                 </Badge>
+                              </button>
                             </PopoverTrigger>
                             <PopoverContent side="bottom" className="max-w-[260px] text-xs p-3">
                               <p>{getConfidenceTooltip(blockMet.confidencePercent)}</p>
