@@ -346,6 +346,29 @@ export function WeeklyTrainingView() {
               )}
             </div>
 
+            {/* AI Daily Summary */}
+            {!currentWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-5 rounded-xl bg-secondary/50 border border-border"
+              >
+                <div className="flex items-start gap-3">
+                  <MessageSquareText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    {aiSummaryLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-foreground/90 leading-relaxed">{aiSummary}</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Workout Blocks */}
             {currentWorkout.blocks.map((block, index) => {
               const displayData = getBlockDisplayDataFromParsed(block);
