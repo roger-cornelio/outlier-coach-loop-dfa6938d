@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
-import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
+import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
