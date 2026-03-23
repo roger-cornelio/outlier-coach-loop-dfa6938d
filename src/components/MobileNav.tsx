@@ -96,6 +96,7 @@ export function MobileNav() {
   if (!isMobile) return null;
 
   const handleNavClick = (item: NavItem) => {
+    if (item.view === 'weeklyTraining') markAsSeen();
     if (item.route) {
       navigate(item.route);
     } else if (item.view) {
