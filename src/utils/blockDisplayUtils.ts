@@ -913,6 +913,9 @@ export function getBlockDisplayDataFromParsed(block: {
       } else if (isStructuralLine(trimmed)) {
         // Linha estrutural (TABATA, EMOM, AMRAP, etc.) sem ** ** → badge
         allStructureLabels.push({ label: trimmed, insertIndex: exerciseLines.length });
+      } else if (isRepSchemeLine(trimmed)) {
+        // Rep scheme (40,30,20,10 / 21-15-9) → badge inline
+        allStructureLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: exerciseLines.length });
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
