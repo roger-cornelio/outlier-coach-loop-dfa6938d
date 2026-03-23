@@ -399,15 +399,12 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
   }
 
   // Prioridade 2: título (com regex flexível para títulos compostos)
-  // Aceita: "AMRAP 15'", "AMRAP 15' - Conditioning", "EMOM 20min - Upper Body"
   if (blockTitle) {
-    // Primeiro tentar parseStructureLine padrão
     const structure = parseStructureLine(blockTitle);
     if (structure && structure.type === 'FIXED_TIME' && structure.value && structure.value > 0) {
       return structure.value;
     }
 
-    // Fallback: regex flexível para títulos compostos (sem exigir fim de linha)
     const flexibleAmrap = blockTitle.match(/AMRAP\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?/i);
     if (flexibleAmrap) {
       const minutes = parseInt(flexibleAmrap[1], 10);
@@ -420,7 +417,6 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       if (minutes > 0) return minutes;
     }
 
-    // Padrão invertido: número ANTES do nome (ex: "15' AMRAP", "10' EMOM")
     const invertedAmrap = blockTitle.match(/(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min\s*)?AMRAP/i);
     if (invertedAmrap) {
       const minutes = parseInt(invertedAmrap[1], 10);
@@ -432,6 +428,20 @@ function detectFixedTimeMinutes(blockContent?: string, blockTitle?: string): num
       const minutes = parseInt(invertedEmom[1], 10);
       if (minutes > 0) return minutes;
     }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // TABATA DETECTION: Detectar "tabata" no título ou conteúdo
+  // Default clássico: 8 rounds × (20s work + 10s rest) = 4 min
+  // ════════════════════════════════════════════════════════════════════════
+  const combinedText = `${blockTitle || ''} ${blockContent || ''}`;
+  const tabataMatch = combinedText.match(/tabata\s*(\d+)\s*['\u2018\u2019\u0027\u2032]?\s*(?:min)?/i);
+  if (tabataMatch) {
+    const minutes = parseInt(tabataMatch[1], 10);
+    if (minutes > 0) return minutes;
+  }
+  if (/tabata/i.test(combinedText)) {
+    return 4;
   }
 
   return null;
