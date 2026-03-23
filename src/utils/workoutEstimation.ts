@@ -79,6 +79,7 @@ export function getUserBiometrics(athleteConfig: AthleteConfig | null): UserBiom
 // ============================================
 
 function extractTimeFromContent(content: string): { minutes: number; confidence: 'high' | 'medium' | 'low' } | null {
+  if (!content) return null;
   const lower = content.toLowerCase();
   
   const capMatch = lower.match(/cap[:\s]*(\d+)/);
@@ -205,7 +206,7 @@ export function estimateBlock(
     estimatedMinutes = effectiveDuration;
     confidence = 'high';
   } else {
-    const contentTime = extractTimeFromContent(block.content);
+    const contentTime = extractTimeFromContent(block.content || '');
     if (contentTime) {
       estimatedMinutes = contentTime.minutes;
       confidence = contentTime.confidence;
@@ -220,7 +221,7 @@ export function estimateBlock(
           confidence = 'medium';
           break;
         case 'conditioning':
-          estimatedMinutes = estimateForTimeMinutes(block.content, level);
+          estimatedMinutes = estimateForTimeMinutes(block.content || '', level);
           confidence = 'low';
           break;
         case 'especifico':
