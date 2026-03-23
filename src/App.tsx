@@ -24,6 +24,7 @@ import ProvaAlvo from "./pages/ProvaAlvo";
 import ImportarProva from "./pages/ImportarProva";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
+import DiagnosticoGratuito from "./pages/DiagnosticoGratuito";
 
 const queryClient = new QueryClient();
 
