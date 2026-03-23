@@ -81,6 +81,7 @@ import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
 import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, type UnmatchedCategory, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
+import { calculateEngineCoverage, aggregateEngineCoverage, type EngineCoverageReport } from '@/utils/engineCoverage';
 import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
 import {
   Dialog,
