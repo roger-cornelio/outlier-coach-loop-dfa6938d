@@ -653,9 +653,9 @@ export function WorkoutExecution() {
                                   placeholder="Ex: 5"
                                   className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
-                                />
                               </div>
-                            )}
+                              );
+                            })()}
                             
                             {/* EMOM / Strength - Confirmation only */}
                             {needsConfirmationOnly(blockFormat) && (
