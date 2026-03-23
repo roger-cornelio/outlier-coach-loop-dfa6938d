@@ -205,7 +205,7 @@ export function WeeklyTrainingView() {
     return () => { cancelled = true; };
   }, [activeDay, currentWorkout?.day, currentWeek.start]);
 
-
+  const handleStartWorkout = () => {
     if (currentWorkout) {
       setSelectedWorkout(currentWorkout);
       setCurrentView('workout');
