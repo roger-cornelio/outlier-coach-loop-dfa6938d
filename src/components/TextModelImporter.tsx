@@ -435,11 +435,12 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   }, [rawText]);
 
   // Engine coverage — calcula quantos blocos têm tempo+kcal (somente coach vê)
+  // Usa effectiveDays (pós-IA) em vez de parseResult.days (pré-IA)
   const engineCoverage = useMemo<EngineCoverageReport | null>(() => {
-    if (!parseResult?.days || parseResult.days.length === 0) return null;
+    if (!effectiveDays || effectiveDays.length === 0) return null;
     
     const dayReports: EngineCoverageReport[] = [];
-    for (const day of parseResult.days) {
+    for (const day of effectiveDays) {
       if (!day.blocks || day.blocks.length === 0) continue;
       
       const workoutEst = estimateWorkout(day as any, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
@@ -487,7 +488,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     }
 
     return aggregateEngineCoverage(dayReports);
-  }, [parseResult]);
+  }, [effectiveDays]);
 
 
   // LOAD WORKOUT FOR EDIT (from Programações tab)
