@@ -147,7 +147,7 @@ export function WeeklyTrainingView() {
       totalTime: sumMinutes,
       totalCalories: sumKcal,
     };
-  }, [currentWorkout, biometrics, workoutEstimation]);
+  }, [currentWorkout, biometrics, athleteConfig]);
 
   const { totalTime, totalCalories } = blockMetricsMap;
 
