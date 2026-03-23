@@ -851,6 +851,52 @@ export function isExecutableLine(line: string): boolean {
 /** Prefixo especial para linhas estruturais inline (múltiplos ROUNDS no mesmo bloco) */
 export const STRUCT_LINE_PREFIX = '__STRUCT:';
 
+/** Prefixo especial para linhas de intensidade pura (PSE, RPE, Z2, FC, Pace, descritivos) */
+export const INTENSITY_LINE_PREFIX = '__INTENSITY:';
+
+/**
+ * Verifica se uma linha é PURAMENTE um indicador de intensidade (não contém exercício).
+ * 
+ * Exemplos que retornam TRUE:
+ * - "PSE 8", "RPE 7", "Z2", "Zona 3", "FC 150", "Pace 5:00/km"
+ * - "(forte)", "(leve)", "(moderado)"
+ * - "PSE: 8", "RPE = 7"
+ * 
+ * Exemplos que retornam FALSE (contêm exercício):
+ * - "Corrida 5km Z2" → exercício normal
+ * - "Row 2000m Pace 5:00/km" → exercício normal
+ * - "10 Wall Ball PSE 8" → exercício normal
+ */
+export function isIntensityOnlyLine(rawLine: string): boolean {
+  const trimmed = (rawLine ?? '').trim();
+  if (!trimmed) return false;
+
+  // Remove parênteses externas para checar conteúdo: "(forte)" → "forte"
+  const unwrapped = trimmed.replace(/^\(/, '').replace(/\)$/, '').trim();
+  if (!unwrapped) return false;
+
+  // Padrões PUROS de intensidade (linha inteira é só intensidade)
+  // PSE/RPE: "PSE 8", "RPE 7", "PSE: 8", "RPE = 7"
+  if (/^(?:pse|rpe)\s*[:=]?\s*\d+$/i.test(unwrapped)) return true;
+
+  // Zona: "Z2", "Zona 3", "Zone 2"
+  if (/^(?:zona|zone|z)\s*\d+$/i.test(unwrapped)) return true;
+
+  // FC/HR: "FC 150", "HR 140", "FC: 160"
+  if (/^(?:fc|hr)\s*[:=]?\s*\d{2,3}$/i.test(unwrapped)) return true;
+
+  // Pace: "Pace 5:00/km", "Pace 5'30"
+  if (/^pace\s+\d+[:'′]\d{0,2}\s*\/?k?m?$/i.test(unwrapped)) return true;
+
+  // % do max: "70% FCmax", "80% do máximo"
+  if (/^\d+\s*%\s*(?:fc|hr|max|m[aá]x)/i.test(unwrapped)) return true;
+
+  // Termo descritivo puro (1-2 palavras): "forte", "leve", "moderado", "recovery", "easy"
+  if (/^(?:forte|leve|moderad[oa]|intens[oa]|suave|pesad[oa]|m[aá]xim[oa]|explosiv[oa]|controlad[oa]|progressiv[oa]|confort[aá]vel|recovery|easy|strong|light|moderate|intense|heavy|hard|steady)$/i.test(unwrapped)) return true;
+
+  return false;
+}
+
 export interface BlockDisplayData {
   /** Linhas de exercício para exibição (sem hífen). Pode conter __STRUCT: prefixadas para badges inline. */
   exerciseLines: string[];
