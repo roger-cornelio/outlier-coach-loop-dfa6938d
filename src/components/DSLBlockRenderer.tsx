@@ -73,6 +73,31 @@ function getStructureStyle(structure: string): { icon: React.ReactNode; colorCla
 export function StructureBadge({ structure, className }: StructureBadgeProps) {
   const { icon, colorClass } = getStructureStyle(structure);
   
+  // Rep scheme special rendering: "40 · 30 · 20 · 10"
+  const isRepScheme = /^\d+\s*·/.test(structure.trim());
+  
+  if (isRepScheme) {
+    const parts = structure.split('·').map(p => p.trim()).filter(Boolean);
+    return (
+      <div className={cn(
+        'inline-flex items-center gap-2 rounded-xl border-2 border-primary/40 bg-primary/10 px-4 py-2.5',
+        className
+      )}>
+        <ListOrdered className="w-4 h-4 text-primary flex-shrink-0" />
+        <div className="flex items-center gap-1.5">
+          {parts.map((num, idx) => (
+            <span key={idx} className="flex items-center gap-1.5">
+              <span className="text-xl font-black text-primary tracking-tight">{num}</span>
+              {idx < parts.length - 1 && (
+                <span className="text-primary/50 text-base font-bold">·</span>
+              )}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <Badge 
       variant="outline" 
