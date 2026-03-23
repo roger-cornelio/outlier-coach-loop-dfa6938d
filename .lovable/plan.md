@@ -1,45 +1,31 @@
 
 
-## Plano: Corrigir detecção de dia — `DIA:` prefix e case-insensitive
+## Plano: Reconhecer termos descritivos de intensidade
 
-### Causa raiz
+### Problema
 
-Na linha 2762-2763 do parser:
-```ts
-const detectedDay = detectDay(line);
-if (detectedDay && isUpperCaseLine(line)) {
-```
+Termos como `(forte)`, `(leve)`, `(moderado)`, `(recovery)` são ignorados pela função `hasIntensityParameter()`, que só reconhece formatos numéricos (PSE 5, Z2, FC 150, etc.). Isso dispara avisos desnecessários em blocos longos de cardio.
 
-`isUpperCaseLine("DIA: Segunda")` retorna `false` porque "Segunda" tem mixed case. O parser **exige** que a linha inteira esteja em MAIÚSCULAS para reconhecer como marcador de dia, mas o coach escreve "DIA: Segunda", "DIA: terça", etc.
-
-Resultado: todos os dias caem no mesmo bloco, gerando um treino único com tudo misturado.
-
-### Correção
+### Alteração
 
 | Arquivo | O que muda |
 |---|---|
-| `src/utils/structuredTextParser.ts` | Na detecção de dia (linha 2762), adicionar check explícito para prefixo `DIA:` — se a linha começa com `DIA:` (case-insensitive), tratar SEMPRE como marcador de dia, **sem exigir** `isUpperCaseLine`. Manter o check de uppercase como fallback para linhas sem prefixo (ex: "SEGUNDA" sozinha). |
+| `src/utils/structuredTextParser.ts` | Adicionar na função `hasIntensityParameter()` um check para termos descritivos de intensidade em português e inglês |
+
+### Termos que serão reconhecidos
+
+**Português:** forte, leve, moderado, moderada, intenso, intensa, suave, pesado, pesada, máximo, máxima, explosivo, explosiva, controlado, controlada, progressivo, progressiva, confortável, recovery, easy
+
+**Inglês:** strong, light, moderate, intense, heavy, max, explosive, controlled, progressive, comfortable, easy, hard, steady
 
 ### Detalhes
 
-Trocar:
+Adicionar no final da função `hasIntensityParameter`, antes do `return false`:
+
 ```ts
-const detectedDay = detectDay(line);
-if (detectedDay && isUpperCaseLine(line)) {
+// Termos descritivos de intensidade (dentro ou fora de parênteses)
+if (/\b(?:forte|leve|moderad[oa]|intens[oa]|suave|pesad[oa]|m[aá]xim[oa]|explosiv[oa]|controlad[oa]|progressiv[oa]|confort[aá]vel|recovery|easy|strong|light|moderate|intense|heavy|hard|steady)\b/i.test(lower)) return true;
 ```
 
-Por:
-```ts
-const hasDiaPrefix = /^DIA:\s*/i.test(line);
-const detectedDay = detectDay(line);
-if (detectedDay && (hasDiaPrefix || isUpperCaseLine(line))) {
-```
-
-Isso resolve todos os formatos que o coach usa:
-- `DIA: Segunda` ✓ (prefixo DIA:)
-- `DIA: terça` ✓ (prefixo DIA:)
-- `SEGUNDA` ✓ (uppercase, já funcionava)
-- `DIA: QUARTA` ✓ (ambos)
-
-Uma linha, zero risco de side effects.
+Impacto zero em outros fluxos — só amplia o vocabulário aceito.
 
