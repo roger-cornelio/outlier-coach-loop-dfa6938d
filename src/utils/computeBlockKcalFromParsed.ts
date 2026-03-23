@@ -347,22 +347,25 @@ export function computeBlockMetrics(
   if (fixedTimeMinutes && fixedTimeMinutes > 0) {
     const fixedTimeSec = fixedTimeMinutes * 60;
 
-    // Calcular tempo de 1 round completo (soma de todos exercícios com sets=1)
-    const singleRoundTimeSec = totalDurationSec > 0 ? totalDurationSec : 180; // Fallback conservador de 3min
+    const singleRoundTimeSec = totalDurationSec > 0 ? totalDurationSec : 180;
 
     if (singleRoundTimeSec !== totalDurationSec) {
       console.warn(`[computeBlockMetrics] Usando fallback conservador de 180s para singleRoundTimeSec (totalDurationSec era ${totalDurationSec})`);
     }
 
-    // Estimar rounds internos
-    const estimatedRounds = fixedTimeSec / singleRoundTimeSec;
-
-    // Recalcular kcal baseado nos rounds estimados
-    // totalKcal neste ponto = kcal de 1 round (sem multiplicação FIXED_TIME)
-    // Precisamos escalar para o número de rounds estimados
     if (totalDurationSec > 0) {
       const scaleFactor = fixedTimeSec / totalDurationSec;
       totalKcal = Math.round(totalKcal * scaleFactor);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PISO METABÓLICO: Garante que blocos HIIT nunca reportem menos
+    // calorias do que o equivalente metabólico de exercício intenso.
+    // Ex: Tabata 4min, 75kg → floor = 8.0 * 75 * (4/60) = 40 kcal
+    // ════════════════════════════════════════════════════════════════════════
+    const kcalFloor = MET_HIIT * safeBiometrics.pesoKg * (fixedTimeMinutes / 60);
+    if (totalKcal < kcalFloor) {
+      totalKcal = Math.round(kcalFloor);
     }
 
     // Duração final é SEMPRE o tempo fixo (autoridade absoluta)
