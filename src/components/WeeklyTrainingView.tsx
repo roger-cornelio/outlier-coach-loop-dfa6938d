@@ -2,11 +2,13 @@
  * WeeklyTrainingView - Página dedicada para visualização do treino semanal
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
@@ -143,6 +145,65 @@ export function WeeklyTrainingView() {
   }, [currentWorkout, biometrics, athleteConfig]);
 
   const { totalTime, totalCalories } = blockMetricsMap;
+
+  // ====== AI Daily Summary ======
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const aiCacheRef = useRef<Map<string, string>>(new Map());
+
+  const buildWorkoutSummaryText = useCallback((workout: typeof currentWorkout) => {
+    if (!workout || workout.isRestDay) return '';
+    return workout.blocks
+      .filter(b => b.type !== 'notas')
+      .map(b => {
+        const title = getBlockDisplayTitle(b, 0);
+        const data = getBlockDisplayDataFromParsed(b);
+        const lines = data.exerciseLines.slice(0, 5).join(', ');
+        return `[${b.type.toUpperCase()}] ${title}${b.isMainWod ? ' (WOD Principal)' : ''}: ${lines || b.content?.slice(0, 100) || ''}`;
+      })
+      .join('\n');
+  }, []);
+
+  useEffect(() => {
+    if (!currentWorkout || currentWorkout.isRestDay) {
+      setAiSummary(null);
+      return;
+    }
+
+    const cacheKey = `${currentWeek.start}_${activeDay}`;
+    if (aiCacheRef.current.has(cacheKey)) {
+      setAiSummary(aiCacheRef.current.get(cacheKey)!);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSummary = async () => {
+      setAiSummaryLoading(true);
+      try {
+        const summaryText = buildWorkoutSummaryText(currentWorkout);
+        const coachStyle = profile?.coach_style || 'PULSE';
+        const { data, error } = await supabase.functions.invoke('generate-preworkout-message', {
+          body: {
+            mode: 'daily_summary',
+            coachStyle,
+            workoutSummary: summaryText,
+            hasWorkout: true,
+            sex: athleteConfig?.sexo || undefined,
+          },
+        });
+        if (!cancelled && data?.message) {
+          setAiSummary(data.message);
+          aiCacheRef.current.set(cacheKey, data.message);
+        }
+      } catch (e) {
+        console.error('AI summary error:', e);
+      } finally {
+        if (!cancelled) setAiSummaryLoading(false);
+      }
+    };
+    fetchSummary();
+    return () => { cancelled = true; };
+  }, [activeDay, currentWorkout?.day, currentWeek.start]);
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -284,6 +345,29 @@ export function WeeklyTrainingView() {
                 </div>
               )}
             </div>
+
+            {/* AI Daily Summary */}
+            {!currentWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-5 rounded-xl bg-secondary/50 border border-border"
+              >
+                <div className="flex items-start gap-3">
+                  <MessageSquareText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    {aiSummaryLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-foreground/90 leading-relaxed">{aiSummary}</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Workout Blocks */}
             {currentWorkout.blocks.map((block, index) => {
