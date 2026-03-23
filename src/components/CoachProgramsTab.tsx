@@ -54,8 +54,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { getBlockHeader, getBlockDisplayTitle, getBlockDisplayDataFromParsed, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
-import { StructureBadge, CategoryChip, ExerciseLine, CommentSubBlock } from '@/components/DSLBlockRenderer';
+import { getBlockHeader, getBlockDisplayTitle, getBlockDisplayDataFromParsed, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { StructureBadge, CategoryChip, ExerciseLine, CommentSubBlock, IntensityBadge } from '@/components/DSLBlockRenderer';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
