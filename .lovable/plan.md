@@ -1,64 +1,40 @@
 
 
-## Plano: Onboarding como Funil de Venda (Diagnóstico + Gargalos)
+## Plano: Badge de "Novo Treino" na Sidebar e Mobile Nav
 
-### Conceito
+### Objetivo
+Mostrar um dot/badge pulsante no item "Treino Semanal" quando o coach publicar um novo plano que o atleta ainda nao visualizou.
 
-Transformar o `WelcomeScreen` em um fluxo de 4 steps que usa dados reais da prova HYROX do atleta como argumento de venda:
+### Mecanismo
 
-```text
-Step 1: "ENTENDEMOS A SUA PROVA"
-  → Busca automática pelo nome do perfil
-  → Atleta seleciona sua prova
-  → Loading: "Analisando sua performance..."
+1. **Hook `useNewPlanIndicator`** (novo arquivo):
+   - Armazena em `localStorage` o timestamp da ultima vez que o atleta abriu a view `weeklyTraining` (`outlier_last_seen_plan_ts`)
+   - Compara com o `published_at` mais recente retornado pelo `useAthletePlan`
+   - Retorna `{ hasNewPlan: boolean, markAsSeen: () => void }`
+   - `markAsSeen()` atualiza o timestamp no localStorage e e chamado quando o atleta navega para `weeklyTraining`
 
-Step 2: "PARABÉNS POR ESSE RESULTADO"
-  → Mostra finish time, evento, divisão
-  → Destaque positivo: posição, pontos fortes
+2. **`AppSidebar.tsx`** — Adicionar dot vermelho pulsante no item "Treino Semanal":
+   - Importar `useNewPlanIndicator`
+   - Renderizar `<span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />` ao lado do icone/texto quando `hasNewPlan` for true
+   - Chamar `markAsSeen()` quando o usuario clicar no item
 
-Step 3: "MAS PARA SER OUTLIER..."
-  → Lista os gargalos extraídos (diagnostico_melhoria)
-  → Visual impactante: barras vermelhas nos piores splits
-  → "Você precisa melhorar: SkiErg, Sled Push, Run..."
+3. **`MobileNav.tsx`** — Mesmo badge no menu mobile:
+   - Mesma logica: importar hook, mostrar dot, chamar `markAsSeen()` no click
 
-Step 4: "PRONTO PARA SER FORA DA CURVA?"
-  → CTA final: "COMEÇAR MINHA EVOLUÇÃO"
-  → Salva coach_style PULSE + marca setup completo
-  → Redireciona para dashboard
+4. **`MobileNav.tsx` trigger button** — Dot no botao hamburger quando ha novidade (opcional mas de alto impacto visual):
+   - Mostrar dot vermelho no canto superior direito do botao de menu
 
-Fallback (sem prova encontrada):
-  → Mostra busca manual
-  → Botão "Pular" → vai direto ao Step 4 sem dados
-```
-
-### Arquivo
+### Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| `src/components/WelcomeScreen.tsx` | Refatorar para fluxo multi-step com busca, diagnóstico e venda |
+| `src/hooks/useNewPlanIndicator.ts` | Criar hook |
+| `src/components/AppSidebar.tsx` | Adicionar badge no "Treino Semanal" |
+| `src/components/MobileNav.tsx` | Adicionar badge no "Treino Semanal" + dot no hamburger |
 
-### Fluxo tecnico
+### Detalhes tecnicos
 
-1. **Step 1** reutiliza a logica de `RoxCoachExtractor`: chama `search-hyrox-athlete` com `profile.name` + `profile.sexo`, mostra resultados para selecao. Apos selecao, chama `proxy-roxcoach` + `generateDiagnostic` para obter dados completos.
-
-2. **Step 2** usa os dados do `diagnostico_resumo` recem-salvo (finish_time, evento, divisao, posicao).
-
-3. **Step 3** usa os dados de `diagnostico_melhoria` recem-salvos para listar os top 3 gargalos (ordenados por `percentage` ou `improvement_value`), mostrando nome do exercicio e quanto tempo o atleta pode ganhar.
-
-4. **Step 4** chama `saveCoachStyle('PULSE')` e `setCurrentView('dashboard')` (mesma logica atual).
-
-### Design visual
-
-- Fundo escuro com glow (manter atual)
-- Transicoes com framer-motion entre steps
-- Step 3 usa cores de alerta (vermelho/laranja) nos gargalos
-- Cada step ocupa tela cheia (mobile-first)
-- Animacoes sequenciais nos itens de gargalo
-
-### Nao alterar
-
-- Edge functions (search, scrape, proxy) — ja existem
-- `useOnboardingDecision` — trigger continua sendo `first_setup_completed`
-- `Index.tsx` — continua renderizando `WelcomeScreen` quando `currentView === 'welcome'`
-- Fluxo pos-setup (dashboard, treinos, etc.)
+- Sem alteracao de banco — usa apenas `localStorage` + dados ja disponíveis do `useAthletePlan`
+- O hook escuta o realtime indiretamente: quando `useAthletePlan` refaz fetch via realtime, o `published_at` atualiza e o badge aparece automaticamente
+- O dot desaparece ao navegar para `weeklyTraining` (ambas navs chamam `markAsSeen`)
 
