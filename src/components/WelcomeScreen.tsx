@@ -15,11 +15,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta';
+
+interface ProfileAnswers {
+  experience: 'never' | 'spectator' | '1race' | '2plus' | null;
+  goal: 'finish' | 'improve_time' | 'podium' | 'lifestyle' | null;
+  targetRace: 'next3months' | 'next6months' | 'nodate' | 'just_training' | null;
+}
 
 interface SearchResult {
   athlete_name: string;
@@ -79,6 +85,13 @@ export function WelcomeScreen() {
   // Diagnostic data
   const [summary, setSummary] = useState<DiagnosticSummary | null>(null);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>([]);
+
+  // Profile questionnaire state
+  const [profileAnswers, setProfileAnswers] = useState<ProfileAnswers>({
+    experience: null,
+    goal: null,
+    targetRace: null,
+  });
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
 
@@ -289,7 +302,35 @@ export function WelcomeScreen() {
   }
 
   async function handleSkip() {
-    setStep('cta');
+    setStep('profile');
+  }
+
+  const experienceOptions = [
+    { key: 'never' as const, icon: Target, label: 'Nunca fiz HYROX', desc: 'Quero começar do zero' },
+    { key: 'spectator' as const, icon: Search, label: 'Já assisti provas', desc: 'Conheço mas nunca competi' },
+    { key: '1race' as const, icon: Trophy, label: 'Fiz 1 prova', desc: 'Mas não tenho resultado online' },
+    { key: '2plus' as const, icon: Flame, label: '2+ provas', desc: 'Resultado não aparece na busca' },
+  ];
+
+  const goalOptions = [
+    { key: 'finish' as const, icon: Target, label: 'COMPLETAR', desc: 'Cruzar a linha de chegada' },
+    { key: 'improve_time' as const, icon: Timer, label: 'MELHORAR TEMPO', desc: 'Superar meu resultado anterior' },
+    { key: 'podium' as const, icon: Trophy, label: 'PÓDIO', desc: 'Competir entre os melhores' },
+    { key: 'lifestyle' as const, icon: Dumbbell, label: 'LIFESTYLE', desc: 'Treinar no formato HYROX' },
+  ];
+
+  const targetRaceOptions = [
+    { key: 'next3months' as const, label: 'NOS PRÓXIMOS 3 MESES', desc: 'Prova confirmada em breve' },
+    { key: 'next6months' as const, label: 'NOS PRÓXIMOS 6 MESES', desc: 'Planejando para o semestre' },
+    { key: 'nodate' as const, label: 'SEM DATA DEFINIDA', desc: 'Quero me preparar com calma' },
+    { key: 'just_training' as const, label: 'SÓ QUERO TREINAR', desc: 'Sem compromisso com prova' },
+  ];
+
+  function getMotivationalMessage(): string {
+    if (profileAnswers.goal === 'podium') return 'Seu objetivo é ambicioso. Vamos construir o caminho até o pódio.';
+    if (profileAnswers.goal === 'improve_time') return 'Cada segundo conta. Vamos otimizar sua performance.';
+    if (profileAnswers.goal === 'finish') return 'A primeira conquista é cruzar a linha. Vamos te preparar.';
+    return 'Treinar como um HYROX athlete vai transformar seu condicionamento.';
   }
 
   const handleLogout = async () => {
@@ -568,6 +609,178 @@ export function WelcomeScreen() {
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
               {isSaving ? 'CARREGANDO...' : 'COMEÇAR MINHA EVOLUÇÃO'}
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* ===== PROFILE QUESTIONNAIRE: Step 1 - Experience ===== */}
+        {step === 'profile' && (
+          <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-xl w-full">
+
+            <motion.div className="mb-6" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Dumbbell className="w-8 h-8 text-primary" />
+              </div>
+            </motion.div>
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+              CONTE-NOS SOBRE VOCÊ
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              Qual sua experiência com HYROX?
+            </motion.p>
+
+            <div className="space-y-3 max-w-md mx-auto mb-8">
+              {experienceOptions.map((opt, i) => {
+                const Icon = opt.icon;
+                const selected = profileAnswers.experience === opt.key;
+                return (
+                  <motion.button key={opt.key}
+                    onClick={() => {
+                      setProfileAnswers(prev => ({ ...prev, experience: opt.key }));
+                      setTimeout(() => setStep('profileGoal'), 400);
+                    }}
+                    className={`w-full p-4 rounded-xl border transition-all text-left group flex items-center gap-4 ${
+                      selected
+                        ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                        : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                    }`}
+                    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 + i * 0.1 }}>
+                    <div className={`p-2 rounded-lg ${selected ? 'bg-primary/30' : 'bg-secondary'}`}>
+                      <Icon className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <p className="font-display text-sm tracking-wide text-foreground">{opt.label}</p>
+                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ===== PROFILE QUESTIONNAIRE: Step 2 - Goal ===== */}
+        {step === 'profileGoal' && (
+          <motion.div key="profileGoal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-xl w-full">
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              QUAL SEU OBJETIVO?
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              Isso define como vamos montar seu plano de evolução.
+            </motion.p>
+
+            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-8">
+              {goalOptions.map((opt, i) => {
+                const Icon = opt.icon;
+                const selected = profileAnswers.goal === opt.key;
+                return (
+                  <motion.button key={opt.key}
+                    onClick={() => {
+                      setProfileAnswers(prev => ({ ...prev, goal: opt.key }));
+                      setTimeout(() => setStep('profileCta'), 400);
+                    }}
+                    className={`p-5 rounded-xl border transition-all text-center group flex flex-col items-center gap-3 ${
+                      selected
+                        ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                        : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                    }`}
+                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}>
+                    <div className={`p-3 rounded-full ${selected ? 'bg-primary/30' : 'bg-secondary'}`}>
+                      <Icon className={`w-6 h-6 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <p className="font-display text-xs md:text-sm tracking-wide text-foreground">{opt.label}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <motion.button onClick={() => setStep('profile')}
+              className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+              ← Voltar
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* ===== PROFILE CTA: Motivational close ===== */}
+        {step === 'profileCta' && (
+          <motion.div key="profileCta" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-xl w-full">
+
+            <motion.div className="mb-6" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Flame className="w-10 h-10 text-primary" />
+              </div>
+            </motion.div>
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-3"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              TODO OUTLIER COMEÇA
+            </motion.h1>
+
+            <motion.div className="mb-4" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.6 }}>
+              <p className="font-display text-3xl md:text-5xl tracking-widest text-primary">
+                PELO PRIMEIRO PASSO
+              </p>
+            </motion.div>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-6 max-w-sm mx-auto"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+              {getMotivationalMessage()}
+            </motion.p>
+
+            {/* Summary cards */}
+            <motion.div className="flex flex-wrap justify-center gap-3 mb-10 max-w-md mx-auto"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+              {profileAnswers.experience && (
+                <div className="px-4 py-2 rounded-full bg-secondary/80 border border-border/50 text-xs text-muted-foreground">
+                  {experienceOptions.find(o => o.key === profileAnswers.experience)?.label}
+                </div>
+              )}
+              {profileAnswers.goal && (
+                <div className="px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-xs text-primary font-display tracking-wide">
+                  {goalOptions.find(o => o.key === profileAnswers.goal)?.label}
+                </div>
+              )}
+            </motion.div>
+
+            <motion.button
+              onClick={handleFinish}
+              disabled={isSaving}
+              className={`
+                font-display text-xl tracking-widest px-16 py-6 rounded-xl
+                transition-all duration-300 flex items-center justify-center gap-3 mx-auto
+                ${!isSaving
+                  ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }
+              `}
+              whileHover={!isSaving ? { scale: 1.05 } : {}}
+              whileTap={!isSaving ? { scale: 0.95 } : {}}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MINHA EVOLUÇÃO'}
+            </motion.button>
+
+            <motion.button onClick={() => setStep('profileGoal')}
+              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
+              ← Voltar
             </motion.button>
           </motion.div>
         )}
