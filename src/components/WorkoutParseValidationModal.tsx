@@ -69,13 +69,13 @@ export function WorkoutParseValidationModal({
             <h3 className={`font-display text-lg font-bold ${isInfraError ? 'text-destructive' : 'text-orange-500'}`}>
               {isInfraError 
                 ? '⚠️ Motor de cálculo indisponível'
-                : '⚠️ Texto não reconhecido'
+                : '⚡ Alguns blocos usarão estimativa'
               }
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
               {isInfraError 
                 ? 'Nosso motor de cálculo está temporariamente indisponível. Você pode tentar salvar novamente ou forçar o salvamento sem as estimativas.'
-                : 'O sistema não identificou a estrutura do treino em alguns blocos. O atleta não verá as estimativas de tempo/calorias nesses blocos. Por favor, detalhe os exercícios de forma clara (Ex: Front Squat 4x8 50kg).'
+                : `O motor não reconheceu a estrutura de ${failedBlocks.length} bloco(s). Esses blocos receberão uma estimativa aproximada de tempo e calorias gerada por IA. Para cálculos mais precisos, detalhe os exercícios (Ex: Front Squat 4x8 50kg).`
               }
             </p>
           </div>
