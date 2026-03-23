@@ -2931,6 +2931,8 @@ export function parseStructuredText(text: string): ParseResult {
           line: line.trim(),
           suggestion: fuzzyResult.suggestion,
           lineNumber: lineNumber,
+          dayLabel: currentDay ? getDayName(currentDay) : undefined,
+          blockTitle: currentBlock?.title || undefined,
         });
         // Tratar como heading para separar blocos
         saveCurrentBlock();
