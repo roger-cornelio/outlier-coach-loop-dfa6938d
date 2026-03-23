@@ -63,11 +63,45 @@ interface DiagnosticCounts {
 }
 
 export default function CoachDashboard() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, refreshProfile, updateProfileOptimistic } = useAuth();
   const { logout, isLoggingOut } = useLogout();
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
   const { setDiagnosticCounts, setFetchResult } = useLinkDebug();
+
+  // Coach display name editing
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  const coachDisplayName = getCoachDisplayName(profile);
+  const nameNeedsSetup = !profile?.name || profile.name.includes('@');
+
+  const handleStartEditName = () => {
+    setNameInput(nameNeedsSetup ? '' : (profile?.name || ''));
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed || !profile?.user_id) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: trimmed })
+        .eq('user_id', profile.user_id);
+      if (error) throw error;
+      updateProfileOptimistic({ name: trimmed });
+      await refreshProfile();
+      setIsEditingName(false);
+      toast({ title: 'Nome atualizado!', description: `Seus atletas verão "${trimmed}" como seu nome.` });
+    } catch (err) {
+      toast({ title: 'Erro ao salvar nome', variant: 'destructive' });
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   // Estado unificado de atletas - FONTE ÚNICA
   const [linkedAthletes, setLinkedAthletes] = useState<LinkedAthlete[]>([]);
