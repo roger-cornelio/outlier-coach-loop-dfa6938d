@@ -1,53 +1,44 @@
 
 
-## Plano: Resumo da Sessão com Comparação Visual + Feedback do Atleta para o Coach
+## Plano: Resumo IA do treino do dia na tela de treino semanal
 
 ### O que será feito
 
-**1. Melhorar o Resumo da Sessão (tela de feedback)**
-- Cada bloco no resumo mostrará: nome do bloco, valor registrado, valor esperado, e a **diferença** colorida
-- **Verde** quando o resultado for positivo (mais rápido que esperado, mais rounds que esperado)
-- **Vermelho** quando for negativo (mais lento, menos rounds)
-- Para AMRAP: mostrar "10 rounds (esperado: ~9)" com a diferença "+1 round" em verde
-- Para FOR TIME: mostrar "10:30 (esperado: 15:00)" com "-4:30" em verde
-- EMOM/Strength: apenas "Concluído" sem comparação
+Abaixo do tempo e calorias estimadas e **antes dos blocos de treino**, exibir um card com um resumo gerado por IA sobre o treino daquele dia. O texto será escrito no tom do coach escolhido (IRON, PULSE ou SPARK) e vai:
 
-**2. Caixa de feedback do atleta para o coach**
-- Na tela de feedback (PerformanceFeedback), adicionar um campo de texto abaixo do feedback da IA
-- Placeholder: "Como foi o treino? Deixe um recado pro seu coach..."
-- Botão de enviar que salva no banco de dados
-- O atleta pode pular (não é obrigatório)
+1. Explicar o objetivo do treino de forma clara
+2. Apontar onde o atleta vai "sangrar mais" (parte mais difícil)
+3. Motivar o atleta a fazer o treino
 
-**3. Tabela no banco de dados**
-- Nova tabela `workout_session_feedback` com:
-  - `id`, `athlete_id` (ref profiles), `coach_id`, `workout_day`, `session_date`, `block_results` (JSON com resultados dos blocos), `athlete_comment` (texto livre), `ai_feedback` (texto da IA), `created_at`
-- RLS: atleta só vê/insere os próprios; coach vê os de seus atletas vinculados
+### Como funciona
 
-**4. Visualização no painel do Coach**
-- Nova aba "Feedbacks" no CoachDashboard (ou seção dentro de Visão Geral)
-- Lista cronológica dos feedbacks recebidos de todos os atletas
-- Filtro por atleta
-- Cada card mostra: nome do atleta, data, dia do treino, resumo dos blocos (esperado vs feito), e o comentário escrito pelo atleta
-- Coach pode ver rapidamente quem está performando acima/abaixo e o que cada atleta relatou
+- Quando o atleta seleciona um dia com treino, o sistema chama a Edge Function `generate-preworkout-message` já existente (ou cria uma nova variante) passando o resumo técnico do treino daquele dia
+- A IA gera 2-3 frases no tom do coach, focadas no conteúdo real do treino
+- O texto aparece num card destacado entre as estatísticas (tempo/kcal) e os blocos de exercício
+- Enquanto carrega, mostra um skeleton/loading sutil
+- O texto é cacheado por dia para não chamar a IA toda vez que troca de aba e volta
 
-### Arquivos alterados
+### Diferença da PreWorkoutScreen
 
-| Arquivo | Alteração |
+A PreWorkoutScreen já faz algo parecido mas é uma tela cheia antes do treino. Aqui é um card inline na visualização do treino semanal — mais curto, contextual, sempre visível quando o atleta navega entre os dias.
+
+### Edge Function
+
+Reutilizar a `generate-preworkout-message` existente, que já recebe `coachStyle`, `workoutSummary` e `sex`. O prompt será ajustado para incluir instrução de mencionar a parte mais difícil do treino. Pode ser feito com um novo campo `mode: 'daily_summary'` no body para diferenciar do uso na tela de pré-treino.
+
+### Alterações
+
+| Arquivo | O que muda |
 |---|---|
-| **Migration SQL** | Criar tabela `workout_session_feedback` com RLS |
-| `src/components/PerformanceFeedback.tsx` | Reformular resumo com esperado/feito/diferença colorida + campo de texto + salvar no banco |
-| `src/pages/CoachDashboard.tsx` | Adicionar aba "Feedbacks" |
-| `src/components/CoachFeedbacksTab.tsx` | Novo componente — lista de feedbacks dos atletas com filtro |
-| `src/hooks/useAthleteFeedbacks.ts` | Hook para buscar feedbacks (coach) e salvar (atleta) |
+| `src/components/WeeklyTrainingView.tsx` | Adicionar estado para mensagem IA, chamar edge function quando troca de dia, renderizar card entre stats e blocos |
+| `supabase/functions/generate-preworkout-message/index.ts` | Adicionar modo `daily_summary` com prompt mais detalhado sobre onde o treino pega mais pesado |
 
-### Formato do resumo na tela
+### Regras do texto gerado
 
-```text
-RESUMO DA SESSÃO
-
-Strength               10:30  (est. 15:00)   -4:30 ← verde
-15' AMRAP              10 rounds (est. ~9)    +1    ← verde  
-15' AMRAP              5 rounds (est. ~8)     -3    ← vermelho
-EMOM                   Concluído
-```
+- 2-3 frases no máximo
+- Deve mencionar o foco principal do treino (ex: "força + condicionamento")
+- Deve apontar o bloco ou momento mais intenso (ex: "o AMRAP de 15 min vai testar seu fôlego")
+- Deve motivar sem ser genérico
+- Tom 100% alinhado com o coach escolhido
+- Baseado nos blocos reais, tipos, estruturas e duração — nunca inventar estímulos
 
