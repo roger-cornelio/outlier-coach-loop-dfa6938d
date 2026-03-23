@@ -25,8 +25,8 @@
  */
 
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell, ListOrdered } from 'lucide-react';
-import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell, ListOrdered, Activity } from 'lucide-react';
+import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import type { WorkoutBlock } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { cn } from '@/lib/utils';
@@ -109,6 +109,34 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
     >
       {icon}
       {structure}
+    </Badge>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INTENSITY BADGE - Badge visual vermelho para indicadores de intensidade
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface IntensityBadgeProps {
+  intensity: string;
+  className?: string;
+}
+
+export function IntensityBadge({ intensity, className }: IntensityBadgeProps) {
+  // Remove parênteses externas se existirem: "(forte)" → "forte"
+  const displayText = intensity.replace(/^\(/, '').replace(/\)$/, '').trim();
+  
+  return (
+    <Badge 
+      variant="outline" 
+      className={cn(
+        'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
+        'bg-red-600/20 text-red-500 border-red-600/30',
+        className
+      )}
+    >
+      <Activity className="w-3 h-3" />
+      {displayText}
     </Badge>
   );
 }
@@ -384,6 +412,15 @@ export function FullBlockRenderer({
               return (
                 <div key={idx} className="pt-3 pb-1">
                   <StructureBadge structure={structLabel} />
+                </div>
+              );
+            }
+            // Detect intensity badges (__INTENSITY:PSE 8)
+            if (line.startsWith(INTENSITY_LINE_PREFIX)) {
+              const intensityLabel = line.slice(INTENSITY_LINE_PREFIX.length);
+              return (
+                <div key={idx} className="pt-2 pb-1">
+                  <IntensityBadge intensity={intensityLabel} />
                 </div>
               );
             }

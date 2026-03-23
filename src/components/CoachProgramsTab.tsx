@@ -54,8 +54,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
-import { getBlockHeader, getBlockDisplayTitle, getBlockDisplayDataFromParsed, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
-import { StructureBadge, CategoryChip, ExerciseLine, CommentSubBlock } from '@/components/DSLBlockRenderer';
+import { getBlockHeader, getBlockDisplayTitle, getBlockDisplayDataFromParsed, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { StructureBadge, CategoryChip, ExerciseLine, CommentSubBlock, IntensityBadge } from '@/components/DSLBlockRenderer';
 import { PublishToAthletesModal } from '@/components/PublishToAthletesModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
@@ -399,6 +399,13 @@ function DayPreviewCard({ dayWorkout, isExpanded, onToggle }: DayPreviewCardProp
                             return (
                               <div key={lineIdx} className="pt-3 pb-1">
                                 <StructureBadge structure={line.slice(STRUCT_LINE_PREFIX.length)} />
+                              </div>
+                            );
+                          }
+                          if (line.startsWith(INTENSITY_LINE_PREFIX)) {
+                            return (
+                              <div key={lineIdx} className="pt-2 pb-1">
+                                <IntensityBadge intensity={line.slice(INTENSITY_LINE_PREFIX.length)} />
                               </div>
                             );
                           }

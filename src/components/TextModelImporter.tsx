@@ -36,11 +36,11 @@ import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
-import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine } from './DSLBlockRenderer';
+import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
-import { getBlockDisplayTitle, STRUCT_LINE_PREFIX } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -431,6 +431,13 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                             return (
                               <div key={lineIdx} className="pt-3 pb-1">
                                 <StructureBadge structure={line.slice(STRUCT_LINE_PREFIX.length)} />
+                              </div>
+                            );
+                          }
+                          if (line.startsWith(INTENSITY_LINE_PREFIX)) {
+                            return (
+                              <div key={lineIdx} className="pt-2 pb-1">
+                                <IntensityBadge intensity={line.slice(INTENSITY_LINE_PREFIX.length)} />
                               </div>
                             );
                           }
@@ -1361,6 +1368,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
                 <p><span className="font-semibold text-primary">DIA: SEGUNDA</span> — início do dia</p>
                 <p><span className="font-semibold text-primary">BLOCO: AQUECIMENTO</span> — início do bloco</p>
                 <p><span className="font-semibold">**3 ROUNDS**</span> — estrutura (AMRAP, EMOM, Rounds, For Time)</p>
+                <p><span className="font-semibold text-red-500">PSE 8</span> — intensidade do bloco (opcional: PSE, RPE, Z2, FC, Pace)</p>
                 <p><span className="font-semibold">- exercício</span> — cada exercício (com métrica)</p>
                 <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>

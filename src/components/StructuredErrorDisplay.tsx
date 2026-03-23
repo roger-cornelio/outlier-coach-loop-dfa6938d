@@ -135,6 +135,7 @@ BLOCO: AQUECIMENTO
 
 BLOCO: WOD
 **15' AMRAP**
+PSE 8
 - 10 Wall Ball 9kg
 - 15 Cal Row
 - 5 Bar Muscle-up
@@ -208,6 +209,7 @@ export function RecommendedModelBlock(_props: RecommendedModelBlockProps) {
               <p><span className="font-semibold text-primary">DIA:</span> SEGUNDA → início do dia</p>
               <p><span className="font-semibold text-primary">BLOCO:</span> AQUECIMENTO → início do bloco</p>
               <p><span className="font-semibold text-primary">**estrutura**</span> → AMRAP, EMOM, Rounds, For Time</p>
+              <p><span className="font-semibold text-red-500">PSE 8</span> → intensidade (PSE, RPE, Z2, FC, Pace…) — opcional</p>
               <p><span className="font-semibold text-primary">-</span> exercício → cada exercício com métrica</p>
               <p><span className="font-semibold text-primary">( )</span> → comentário/observação</p>
             </div>
