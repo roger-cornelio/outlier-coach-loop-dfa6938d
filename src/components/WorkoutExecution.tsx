@@ -261,7 +261,8 @@ export function WorkoutExecution() {
     const block = displayedWorkout.blocks[blockIndex];
     const blockId = block.id;
     const displayData = getBlockDisplayDataFromParsed(block);
-    const format = detectBlockFormat(block, displayData.structureDescription);
+    const blockTitleText = getBlockDisplayTitle(block, blockIndex);
+    const format = detectBlockFormat(block, displayData.structureDescription, blockTitleText, displayData.exerciseLines);
     const timeMeta = getBlockTimeMeta(block);
     const estimatedSeconds = timeMeta.durationSecUsed;
     
