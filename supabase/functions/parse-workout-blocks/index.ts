@@ -385,6 +385,15 @@ Output: [{"slug":"power_clean","name":"Power Clean","movementPatternSlug":"olymp
 Input block title: "Warm Up", content: "10 Wall Ball\\n10 Box Jump\\n12 Deadlift"
 Output: [{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"reps":10},{"slug":"box_jumps","name":"Box Jumps","movementPatternSlug":"plyo","sets":1,"reps":10},{"slug":"deadlifts","name":"Deadlifts","movementPatternSlug":"hinge","sets":1,"reps":12}]
 
+Input block title: "METCON 3' On / 2' Off", content: "10m Burpee Broad Jump\\n10 Double DB Thruster\\n10m Burpee Broad Jump\\nMax Wall Ball 9 kg"
+Output: [{"slug":"burpee_broad_jump","name":"Burpee Broad Jump","movementPatternSlug":"total_body_plyo","sets":1,"distanceMeters":10},{"slug":"double_db_thruster","name":"Double DB Thruster","movementPatternSlug":"squat_vertical_push","sets":1,"reps":10},{"slug":"burpee_broad_jump","name":"Burpee Broad Jump","movementPatternSlug":"total_body_plyo","sets":1,"distanceMeters":10},{"slug":"wall_balls","name":"Wall Balls","movementPatternSlug":"squat_vertical_push","sets":1,"loadKg":9,"notes":"Max"}]
+
+Input block title: "Aquecimento 5x 2' On / 1' Off", content: "10 Double DB Shoulder Press\\nMax Burpee Jump To Plate"
+Output: [{"slug":"double_db_shoulder_press","name":"Double DB Shoulder Press","movementPatternSlug":"vertical_push","sets":1,"reps":10},{"slug":"burpee_jump_to_plate","name":"Burpee Jump To Plate","movementPatternSlug":"total_body_plyo","sets":1,"notes":"Max"}]
+
+Input block title: "Aquecimento 5x 2' On / 1' Off", content: "5-10 Strict Pullup\\nMax Farmer Carry 32/32"
+Output: [{"slug":"strict_pullup","name":"Strict Pull-up","movementPatternSlug":"pull","sets":1,"reps":5,"notes":"Rep range: 5-10"},{"slug":"farmers_carry","name":"Farmer Carry","movementPatternSlug":"carry","sets":1,"loadKg":32,"notes":"Max, 32/32"}]
+
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;
 }
