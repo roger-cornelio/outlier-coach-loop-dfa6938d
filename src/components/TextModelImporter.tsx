@@ -1363,7 +1363,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-xs text-muted-foreground space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="font-medium text-foreground">Sintaxe DSL (determinística):</p>
+              <p className="font-medium text-foreground">📋 Formato ideal:</p>
               <div className="grid gap-1.5 mt-2 font-mono">
                 <p><span className="font-semibold text-primary">DIA: SEGUNDA</span> — início do dia</p>
                 <p><span className="font-semibold text-primary">BLOCO: AQUECIMENTO</span> — início do bloco</p>
@@ -1373,7 +1373,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
                 <p><span className="font-semibold">(comentário)</span> — observação do coach</p>
               </div>
               <p className="text-[10px] text-amber-600 mt-2 font-sans">
-                ⚠️ Texto solto sem <span className="font-mono">( )</span> será marcado como erro de interpretação
+                ⚠️ Treinos fora deste formato podem não ser interpretados corretamente pela IA
               </p>
             </div>
 
