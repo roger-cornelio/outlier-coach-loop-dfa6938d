@@ -1524,7 +1524,7 @@ BLOCO: DESCANSO
                     variant="outline" 
                     className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
                       coverageReport.successRate === 100
-                        ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
                         : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
                     }`}
                     onClick={() => setShowCoverageModal(true)}
