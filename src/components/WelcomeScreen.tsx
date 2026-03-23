@@ -86,6 +86,13 @@ export function WelcomeScreen() {
   const [summary, setSummary] = useState<DiagnosticSummary | null>(null);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>([]);
 
+  // Profile questionnaire state
+  const [profileAnswers, setProfileAnswers] = useState<ProfileAnswers>({
+    experience: null,
+    goal: null,
+    targetRace: null,
+  });
+
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
 
   // Auto-search on mount
