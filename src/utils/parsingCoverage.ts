@@ -116,6 +116,22 @@ export function classifyUnmatchedLine(text: string, exerciseNames?: string[]): U
     }
   }
 
+  // Heurística: se a linha tem 2+ palavras alfabéticas, sem ser número puro,
+  // sem parecer narrativa/comentário, provavelmente é um nome de exercício
+  // Ex: "Shoulder Taps", "Calf Raises", "Bear Crawl"
+  const words = trimmed.split(/\s+/).filter(w => /[a-zA-ZÀ-ÿ]{2,}/.test(w));
+  if (words.length >= 1) {
+    // Verificar se NÃO é narrativa (frases longas com conectivos)
+    const hasConnectives = /\b(com|para|que|de|do|da|no|na|em|ou|and|with|for|the|your|its)\b/i.test(trimmed);
+    const wordCount = trimmed.split(/\s+/).length;
+    // Narrativa: muitas palavras + conectivos
+    if (hasConnectives && wordCount > 5) {
+      return 'uninterpretable';
+    }
+    // Parece nome de exercício (1-5 palavras, sem conectivos longos)
+    return 'new_exercise';
+  }
+
   // Se chegou aqui, parece um exercício novo
   return 'new_exercise';
 }
