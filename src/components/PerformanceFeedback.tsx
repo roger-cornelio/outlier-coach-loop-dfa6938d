@@ -148,15 +148,15 @@ export function PerformanceFeedback() {
                           <div className="flex items-center gap-1.5 ml-3">
                             {result.timeInSeconds < result.estimatedTimeSeconds - 10 ? (
                               <>
-                                <TrendingDown className="w-3.5 h-3.5 text-emerald-500" />
-                                <span className="text-xs font-medium text-emerald-500">
+                                <TrendingDown className="w-3.5 h-3.5 text-status-good" />
+                                <span className="text-xs font-medium text-status-good">
                                   -{formatSecondsToMinSec(result.estimatedTimeSeconds - result.timeInSeconds)}
                                 </span>
                               </>
                             ) : result.timeInSeconds > result.estimatedTimeSeconds + 10 ? (
                               <>
-                                <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="text-xs font-medium text-amber-500">
+                                <TrendingUp className="w-3.5 h-3.5 text-status-attention" />
+                                <span className="text-xs font-medium text-status-attention">
                                   +{formatSecondsToMinSec(result.timeInSeconds - result.estimatedTimeSeconds)}
                                 </span>
                               </>
