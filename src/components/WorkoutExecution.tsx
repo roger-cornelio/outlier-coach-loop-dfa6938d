@@ -173,9 +173,10 @@ export function WorkoutExecution() {
     if (format === 'amrap' && reps !== undefined) {
       if (estimatedRounds && estimatedRounds > 0) {
         const diff = reps - estimatedRounds;
-        if (diff > 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — acima do esperado 💪`;
-        if (diff < 0) return `${reps} rounds (esperado: ~${estimatedRounds}) — abaixo do esperado`;
-        return `${reps} rounds (esperado: ~${estimatedRounds}) — no alvo!`;
+        const absDiff = Math.abs(diff);
+        if (diff > 0) return `${absDiff} round${absDiff > 1 ? 's' : ''} acima do esperado 💪`;
+        if (diff < 0) return `${absDiff} round${absDiff > 1 ? 's' : ''} abaixo do esperado`;
+        return `No alvo! (${reps} rounds) 🎯`;
       }
       return `${reps} rounds/reps completados`;
     }
