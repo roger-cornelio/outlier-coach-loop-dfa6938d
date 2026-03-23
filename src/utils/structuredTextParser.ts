@@ -533,6 +533,9 @@ export function hasIntensityParameter(line: string): boolean {
   // % do max (ex: "70% FCmax", "80% do máximo")
   if (/\d+\s*%\s*(?:fc|hr|max|m[aá]x)/i.test(lower)) return true;
   
+  // Termos descritivos de intensidade (dentro ou fora de parênteses)
+  if (/\b(?:forte|leve|moderad[oa]|intens[oa]|suave|pesad[oa]|m[aá]xim[oa]|explosiv[oa]|controlad[oa]|progressiv[oa]|confort[aá]vel|recovery|easy|strong|light|moderate|intense|heavy|hard|steady)\b/i.test(lower)) return true;
+  
   return false;
 }
 
