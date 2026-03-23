@@ -408,6 +408,11 @@ const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|
 // PADRÕES DE LINHAS ESTRUTURAIS (Rounds, EMOM, AMRAP, For Time)
 // Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
 // ═══════════════════════════════════════════════════════════════════════════
+/** Detecta linhas de rep scheme puro: "40,30,20,10", "21-15-9", "50 40 30 20 10" */
+const REP_SCHEME_PATTERN = /^\d+(?:\s*[,\-–—]\s*\d+)+\s*$/;
+/** Detecta linhas de rep scheme separadas por espaços: "50 40 30 20 10" */
+const REP_SCHEME_SPACES_PATTERN = /^\d+(?:\s+\d+){2,}\s*$/;
+
 const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
   /^\d+\s*Rounds?\s*$/i,       // "5 Rounds", "2rounds", "3 rounds"
   /^EMOM\s*\d+/i,              // "EMOM 30", "EMOM20", "EMOM 10'"
