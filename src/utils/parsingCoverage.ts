@@ -85,6 +85,10 @@ function matchesDictionary(baseName: string, normalizedDict: string[]): boolean 
 export function classifyUnmatchedLine(text: string, exerciseNames?: string[]): UnmatchedCategory {
   const trimmed = text.trim();
 
+  // Rep schemes: "40,30,20,10", "21-15-9", "50 40 30 20 10" → structural, not exercise
+  if (/^\d+(?:\s*[,\-–—]\s*\d+)+\s*$/.test(trimmed)) return 'uninterpretable';
+  if (/^\d+(?:\s+\d+){2,}\s*$/.test(trimmed)) return 'uninterpretable';
+
   // Números puros com vírgulas/hífens (rep schemes: "40,30,20,10", "21-15-9")
   if (/^\d[\d,\-\s]+$/.test(trimmed)) return 'uninterpretable';
 
@@ -370,7 +374,17 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
       if (block.type === 'notas') continue;
 
       for (const line of block.lines) {
+        // Skip rep scheme lines — they are structural data, not exercises
         if (line.type === 'exercise' || line.kind === 'EXERCISE') {
+          const trimmedText = (line.text || '').trim();
+          // Rep scheme patterns: "40,30,20,10", "21-15-9", "50 40 30 20 10"
+          const isRepScheme = /^\d+(?:\s*[,\-–—]\s*\d+)+\s*$/.test(trimmedText)
+            || /^\d+(?:\s+\d+){2,}\s*$/.test(trimmedText);
+          if (isRepScheme) {
+            // Don't count as exercise or unmatched — it's structural data
+            continue;
+          }
+
           totalExercises++;
 
           const result = detectUnits(line.text);

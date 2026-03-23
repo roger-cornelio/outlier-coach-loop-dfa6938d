@@ -408,6 +408,11 @@ const LOOKS_LIKE_EXERCISE_PATTERN = /^(\d+|reps?|x\d+|\d+x)|(?:reps?|x|m\b|km\b|
 // PADRÕES DE LINHAS ESTRUTURAIS (Rounds, EMOM, AMRAP, For Time)
 // Estas linhas descrevem a ESTRUTURA do bloco, NÃO são exercícios.
 // ═══════════════════════════════════════════════════════════════════════════
+/** Detecta linhas de rep scheme puro: "40,30,20,10", "21-15-9", "50 40 30 20 10" */
+const REP_SCHEME_PATTERN = /^\d+(?:\s*[,\-–—]\s*\d+)+\s*$/;
+/** Detecta linhas de rep scheme separadas por espaços: "50 40 30 20 10" */
+const REP_SCHEME_SPACES_PATTERN = /^\d+(?:\s+\d+){2,}\s*$/;
+
 const STRUCTURAL_LINE_PATTERNS: RegExp[] = [
   /^\d+\s*Rounds?\s*$/i,       // "5 Rounds", "2rounds", "3 rounds"
   /^EMOM\s*\d+/i,              // "EMOM 30", "EMOM20", "EMOM 10'"
@@ -430,6 +435,25 @@ export function isStructuralLine(line: string): boolean {
   const trimmed = (line ?? "").trim();
   if (!trimmed) return false;
   return STRUCTURAL_LINE_PATTERNS.some(pattern => pattern.test(trimmed));
+}
+
+/**
+ * Verifica se uma linha é um rep scheme puro (ex: "40,30,20,10", "21-15-9", "50 40 30 20 10")
+ */
+export function isRepSchemeLine(line: string): boolean {
+  const trimmed = (line ?? "").trim();
+  if (!trimmed) return false;
+  return REP_SCHEME_PATTERN.test(trimmed) || REP_SCHEME_SPACES_PATTERN.test(trimmed);
+}
+
+/**
+ * Formata rep scheme para exibição: "40,30,20,10" → "40 · 30 · 20 · 10"
+ */
+export function formatRepSchemeLabel(line: string): string {
+  const trimmed = (line ?? "").trim();
+  // Split by comma, hyphen, or whitespace
+  const nums = trimmed.split(/[\s,\-–—]+/).filter(n => /^\d+$/.test(n));
+  return nums.join(' · ');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -889,6 +913,9 @@ export function getBlockDisplayDataFromParsed(block: {
       } else if (isStructuralLine(trimmed)) {
         // Linha estrutural (TABATA, EMOM, AMRAP, etc.) sem ** ** → badge
         allStructureLabels.push({ label: trimmed, insertIndex: exerciseLines.length });
+      } else if (isRepSchemeLine(trimmed)) {
+        // Rep scheme (40,30,20,10 / 21-15-9) → badge inline
+        allStructureLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: exerciseLines.length });
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
@@ -916,6 +943,11 @@ export function getBlockDisplayDataFromParsed(block: {
     for (const line of block.lines) {
       const text = typeof line === 'string' ? line : (line?.text || '');
       const type = typeof line === 'string' ? 'exercise' : (line?.type || 'exercise');
+      // Rep scheme (40,30,20,10 / 21-15-9) → badge
+      if (isRepSchemeLine(text.trim())) {
+        allStructureLabels.push({ label: formatRepSchemeLabel(text.trim()), insertIndex: exerciseLines.length });
+        continue;
+      }
       
       if (!text.trim()) continue;
       
@@ -980,6 +1012,8 @@ export function getBlockDisplayDataFromParsed(block: {
         }
       } else if (isStructuralLine(trimmed)) {
         contentStructLabels.push({ label: trimmed, insertIndex: contentExerciseLines.length });
+      } else if (isRepSchemeLine(trimmed)) {
+        contentStructLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: contentExerciseLines.length });
       } else {
         contentExerciseLines.push(trimmed);
       }
