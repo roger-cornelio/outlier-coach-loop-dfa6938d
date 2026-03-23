@@ -32,6 +32,7 @@ import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
+import { CoachFeedbacksTab } from '@/components/CoachFeedbacksTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
