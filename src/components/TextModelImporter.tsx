@@ -407,7 +407,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     {/* Coach Notes */}
                     <CommentSubBlock comments={commentLines} />
 
-                    {/* Block Stats */}
+                    {/* Block Stats with Precision Badge */}
                     {block.type !== 'notas' && blockMet.showStats && (
                       <div className="flex items-center gap-4 pt-3 border-t border-border/50 mt-4">
                         <div className="flex items-center gap-2 text-sm">
@@ -416,16 +416,30 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                           <span className="font-medium text-foreground">
                             {formatEstimatedTime(estimatedMinutes)}
                           </span>
-                          {isEstimated && (
-                            <span className="text-xs text-muted-foreground/60">(estimado)</span>
-                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Flame className="w-4 h-4 text-orange-500" />
-                          <span className="text-orange-500 font-medium">
-                            {formatEstimatedKcal(estimatedKcal)}
-                          </span>
-                        </div>
+                        {estimatedKcal > 0 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            <span className="text-orange-500 font-medium">
+                              {formatEstimatedKcal(estimatedKcal)}
+                            </span>
+                          </div>
+                        )}
+                        {/* Precision Badge */}
+                        {blockMet.confidencePercent > 0 && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] px-1.5 py-0 h-5 font-medium ${
+                              blockMet.confidencePercent >= 70 
+                                ? 'bg-primary/10 text-primary border-primary/20' 
+                                : blockMet.confidencePercent >= 50 
+                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                  : 'bg-destructive/10 text-destructive border-destructive/20'
+                            }`}
+                          >
+                            ⚡ ~{blockMet.confidencePercent}%
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>
