@@ -5,12 +5,12 @@ import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale } from 'lucide-react';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
-import { getEffectiveContent, getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
+import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
-import { getBlockDisplayTitle, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
@@ -252,7 +252,7 @@ export function WorkoutExecution() {
             const isJustCompleted = justCompletedBlock === block.id;
             
             // Get effective content and notes based on athlete level
-            const effectiveContent = getEffectiveContent(block, effectiveLevel);
+            
             const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
             const effectiveTargetRange = getEffectiveTargetRange(block, effectiveLevel);
             const effectivePSE = getEffectivePSE(block, effectiveLevel);
@@ -340,11 +340,8 @@ export function WorkoutExecution() {
                     
                     {/* NÍVEL 3: Conteúdo do treino (exercícios) */}
                     {(() => {
-                      const { exerciseLines, commentLines, structures } = separateBlockContent(effectiveContent);
-                      // Extrair descrição legível da estrutura (remove asteriscos)
-                      const structureDescription = structures && structures.length > 0 
-                        ? structures[0].rawLine.replace(/\*\*/g, '').trim() 
-                        : null;
+                      const displayData = getBlockDisplayDataFromParsed(block);
+                      const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
                       
                       return (
                         <>
@@ -368,11 +365,6 @@ export function WorkoutExecution() {
                                 }
                                 return <ExerciseLine key={idx} line={line} className="text-foreground/80" />;
                               })
-                            ) : effectiveContent ? (
-                              // Fallback: mostrar conteúdo bruto se parser não encontrou linhas
-                              <pre className="font-body text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                                {effectiveContent}
-                              </pre>
                             ) : (
                               <p className="text-xs text-muted-foreground/30 italic py-1">—</p>
                             )}
