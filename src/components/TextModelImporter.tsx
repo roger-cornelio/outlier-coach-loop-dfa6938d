@@ -434,7 +434,62 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     return previewAutoFormatChanges(rawText);
   }, [rawText]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Engine coverage — calcula quantos blocos têm tempo+kcal (somente coach vê)
+  const engineCoverage = useMemo<EngineCoverageReport | null>(() => {
+    if (!parseResult?.days || parseResult.days.length === 0) return null;
+    
+    const dayReports: EngineCoverageReport[] = [];
+    for (const day of parseResult.days) {
+      if (!day.blocks || day.blocks.length === 0) continue;
+      
+      const workoutEst = estimateWorkout(day as any, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
+      const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
+
+      day.blocks.forEach((block: any, index: number) => {
+        const displayData = getBlockDisplayDataFromParsed(block);
+        if (!displayData.hasContent) {
+          perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
+          return;
+        }
+        if (block.type === 'notas') {
+          perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+          return;
+        }
+        if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
+          perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
+          return;
+        }
+
+        const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+        let kcal = 0;
+        let dur = 0;
+
+        if (hasParsedData) {
+          const metrics = computeBlockMetrics(
+            block.parsedExercises,
+            { pesoKg: 75, sexo: 'masculino' },
+            block.content,
+            block.title
+          );
+          kcal = metrics.estimatedKcal || 0;
+          dur = metrics.estimatedDurationSec || 0;
+        } else {
+          const timeMeta = getBlockTimeMeta(block);
+          dur = timeMeta.durationSecUsed || 0;
+          const blockEst = workoutEst?.blocks[index];
+          kcal = blockEst?.estimatedKcal || 0;
+        }
+
+        perBlock.push({ kcal: Math.round(kcal), durationSec: dur, visible: true, showStats: true });
+      });
+
+      dayReports.push(calculateEngineCoverage(perBlock, day.blocks as any));
+    }
+
+    return aggregateEngineCoverage(dayReports);
+  }, [parseResult]);
+
+
   // LOAD WORKOUT FOR EDIT (from Programações tab)
   // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
