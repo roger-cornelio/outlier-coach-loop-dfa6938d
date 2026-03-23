@@ -48,7 +48,7 @@ const REASON_LABELS: Record<EngineFailReason, string> = {
  * @param blocks - Blocos do DayWorkout para extrair metadata (título, parseStatus, etc.)
  */
 export function calculateEngineCoverage(
-  perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }>,
+  perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean; confidencePercent?: number }>,
   blocks: Array<{
     title?: string;
     type?: string;
