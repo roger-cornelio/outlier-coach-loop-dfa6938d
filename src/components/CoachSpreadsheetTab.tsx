@@ -156,6 +156,7 @@ interface CoachSpreadsheetTabProps {
   loadingAthletes?: boolean;
   initialWorkout?: CoachWorkout | null;
   onClearInitialWorkout?: () => void;
+  onSavedGoToPrograms?: () => void;
 }
 
 export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
