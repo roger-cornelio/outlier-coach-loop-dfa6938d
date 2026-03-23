@@ -54,6 +54,7 @@ export function AppSidebar() {
   const { currentView, setCurrentView } = useOutlierStore();
   const { state: sidebarState } = useSidebar();
   const { logout, isLoggingOut } = useLogout();
+  const { hasNewPlan, markAsSeen } = useNewPlanIndicator();
   const navigate = useNavigate();
   const isCollapsed = sidebarState === 'collapsed';
 
