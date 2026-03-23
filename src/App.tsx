@@ -24,6 +24,7 @@ import ProvaAlvo from "./pages/ProvaAlvo";
 import ImportarProva from "./pages/ImportarProva";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
+import DiagnosticoGratuito from "./pages/DiagnosticoGratuito";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const EXCLUDED_LAST_ROUTES = new Set([
   "/coach-pending",
   "/coach/definir-senha",
   "/coach",
+  "/diagnostico-gratuito",
 ]);
 
 function shouldPersistLastRoute(pathname: string) {
@@ -105,6 +107,9 @@ const App = () => (
               <Route path="/prova-alvo" element={<ProvaAlvo />} />
               <Route path="/importar-prova" element={<ImportarProva />} />
               
+
+              {/* === PUBLIC PAGES === */}
+              <Route path="/diagnostico-gratuito" element={<DiagnosticoGratuito />} />
 
               {/* === REDIRECTS === */}
               <Route path="/" element={<Landing />} />
