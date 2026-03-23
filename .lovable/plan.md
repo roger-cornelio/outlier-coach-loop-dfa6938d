@@ -1,32 +1,16 @@
 
 
-## Plano: Corrigir bypass para salvar e navegar para Programações
+## Plano: Ajustar texto do tooltip verde
 
-### Problema
+### Mudança
 
-Quando o coach clica "Prosseguir com estimativa" no modal laranja, o treino é salvo no banco, mas:
-1. O `clearDraft()` não é chamado → TextModelImporter continua mostrando o preview
-2. A aba não muda para "Programações" → coach fica preso na mesma tela
-3. Toast mostra "sem estimativas" (texto desatualizado)
+**Arquivo: `src/components/TextModelImporter.tsx`**
 
-### Correção
+Alterar apenas o texto do tooltip para badges verdes (≥70%):
 
-**Arquivo: `src/components/CoachSpreadsheetTab.tsx`**
+**De:** "Exercícios reconhecidos pelo motor físico. Dica: continue detalhando séries, reps e carga para manter essa precisão."
 
-- Adicionar prop `onSavedGoToPrograms?: () => void` para permitir navegação à aba Programações
-- No `onForceBypass` (linhas 834-855), após `forceSaveWorkout` retornar sucesso:
-  - Chamar `clearDraft()` para limpar o rascunho
-  - Chamar `onSavedGoToPrograms()` para mudar para a aba Programações
-  - Atualizar toast: "Treino salvo com estimativas! Veja na aba Programações."
+**Para:** "Cálculo feito pelo motor físico. Mantenha esse formato de escrita para manter a precisão. A margem restante é da própria IA, não do seu texto."
 
-**Arquivo: `src/pages/CoachDashboard.tsx`**
-
-- Passar callback `onSavedGoToPrograms={() => setActiveTab('programacoes')}` para o `CoachSpreadsheetTab`
-
-### Resultado
-
-Após clicar "Prosseguir com estimativa":
-1. Treino salva no banco com dados de fallback
-2. Draft é limpo
-3. Coach é levado automaticamente para a aba Programações
+Os textos laranja e vermelho permanecem como aprovados.
 
