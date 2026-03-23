@@ -169,6 +169,8 @@ export interface TypoWarning {
   line: string;         // Texto original digitado
   suggestion: string;   // Sugestão de correção
   lineNumber: number;   // Número da linha no texto original
+  dayLabel?: string;    // Ex: "Segunda", "Terça"
+  blockTitle?: string;  // Ex: "Strength", "METCON"
 }
 
 export interface ParseResult {
@@ -2929,6 +2931,8 @@ export function parseStructuredText(text: string): ParseResult {
           line: line.trim(),
           suggestion: fuzzyResult.suggestion,
           lineNumber: lineNumber,
+          dayLabel: currentDay ? getDayName(currentDay) : undefined,
+          blockTitle: currentBlock?.title || undefined,
         });
         // Tratar como heading para separar blocos
         saveCurrentBlock();
@@ -3007,6 +3011,8 @@ export function parseStructuredText(text: string): ParseResult {
           line: line.trim(),
           suggestion: `**${n} ROUNDS**`,
           lineNumber: lineNumber,
+          dayLabel: currentDay ? getDayName(currentDay) : undefined,
+          blockTitle: currentBlock?.title || undefined,
         });
       }
 
