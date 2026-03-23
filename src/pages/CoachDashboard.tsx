@@ -25,13 +25,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
+import { CoachFeedbacksTab } from '@/components/CoachFeedbacksTab';
 import { AdminParamsEditor } from '@/components/AdminParamsEditor';
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
@@ -584,6 +585,9 @@ export default function CoachDashboard() {
           />
         );
 
+      case 'feedbacks':
+        return <CoachFeedbacksTab />;
+
       case 'parametros':
         return <AdminParamsEditor />;
 
@@ -644,6 +648,10 @@ export default function CoachDashboard() {
             <TabsTrigger value="programacoes" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
               <Calendar className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Programações</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedbacks" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="parametros" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">

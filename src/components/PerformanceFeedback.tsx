@@ -2,14 +2,116 @@ import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import type { CoachStyle } from '@/types/outlier';
-import { ArrowLeft, Home, Settings, Zap, Loader2, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Home, Zap, Loader2, TrendingUp, TrendingDown, Minus, Send, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCoachLine } from '@/config/coachCopy';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useSaveSessionFeedback } from '@/hooks/useAthleteFeedbacks';
+import { useAuth } from '@/hooks/useAuth';
+
+function formatSecondsToMinSec(seconds: number): string {
+  const mins = Math.floor(Math.abs(seconds) / 60);
+  const secs = Math.abs(seconds) % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function SessionSummary({ sessionBlockResults }: { sessionBlockResults: any[] }) {
+  if (sessionBlockResults.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+      className="card-elevated p-4 space-y-3"
+    >
+      <p className="font-display text-sm tracking-wide text-muted-foreground">RESUMO DA SESSÃO</p>
+      <div className="space-y-1">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-1 border-b border-border/50">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 flex-1">Bloco</span>
+          <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+            <span className="w-14 text-right">Feito</span>
+            <span className="w-14 text-right">Esper.</span>
+            <span className="w-16 text-right">Diff</span>
+          </div>
+        </div>
+
+        {sessionBlockResults.map((result, idx) => (
+          <BlockRow key={result.blockId || idx} result={result} />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function BlockRow({ result }: { result: any }) {
+  const { blockTitle, format, timeInSeconds, estimatedTimeSeconds, reps, estimatedRounds, completed } = result;
+
+  // AMRAP with rounds
+  if (format === 'amrap' && reps != null && estimatedRounds != null && estimatedRounds > 0) {
+    const diff = reps - estimatedRounds;
+    const isPositive = diff > 0;
+    const isNeutral = diff === 0;
+    return (
+      <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+        <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-foreground w-14 text-right">{reps}r</span>
+          <span className="text-xs text-muted-foreground w-14 text-right">~{estimatedRounds}r</span>
+          {isNeutral ? (
+            <span className="text-xs text-muted-foreground w-16 text-right">🎯</span>
+          ) : (
+            <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+              {isPositive ? '+' : ''}{diff}r
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // FOR TIME / Strength with time comparison
+  if (timeInSeconds && estimatedTimeSeconds && estimatedTimeSeconds > 0) {
+    const diff = timeInSeconds - estimatedTimeSeconds;
+    const isPositive = diff < -10; // faster = good
+    const isNegative = diff > 10;
+    return (
+      <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+        <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
+          <span className="text-xs text-muted-foreground w-14 text-right">{formatSecondsToMinSec(estimatedTimeSeconds)}</span>
+          {!isPositive && !isNegative ? (
+            <span className="text-xs text-muted-foreground w-16 text-right">—</span>
+          ) : (
+            <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+              {diff < 0 ? '-' : '+'}{formatSecondsToMinSec(Math.abs(diff))}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // EMOM / other — just "Concluído"
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+      <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
+      <span className="text-xs text-muted-foreground">Concluído ✓</span>
+    </div>
+  );
+}
 
 export function PerformanceFeedback() {
   const { selectedWorkout, athleteConfig, setCurrentView, sessionBlockResults, clearSessionBlockResults } = useOutlierStore();
+  const { profile } = useAuth();
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [athleteComment, setAthleteComment] = useState('');
+  const [commentSent, setCommentSent] = useState(false);
+  const { saveFeedback, isSaving } = useSaveSessionFeedback();
 
   // Fetch AI-generated session feedback
   useEffect(() => {
@@ -21,7 +123,6 @@ export function PerformanceFeedback() {
     const fetchFeedback = async () => {
       setIsLoading(true);
       try {
-        // Build block summaries for the AI
         const blockSummaries = sessionBlockResults.map(r => ({
           title: r.blockTitle,
           type: r.blockType,
@@ -30,6 +131,7 @@ export function PerformanceFeedback() {
           timeInSeconds: r.timeInSeconds,
           estimatedTimeSeconds: r.estimatedTimeSeconds,
           reps: r.reps,
+          estimatedRounds: r.estimatedRounds,
           structureDescription: r.structureDescription,
         }));
 
@@ -37,13 +139,11 @@ export function PerformanceFeedback() {
           body: {
             coachStyle: athleteConfig.coachStyle,
             gender: athleteConfig.sexo,
-            // New multi-block payload
             sessionBlocks: blockSummaries,
             workoutDay: selectedWorkout.day,
             workoutStimulus: selectedWorkout.stimulus,
             totalBlocks: selectedWorkout.blocks.length,
             completedBlocks: sessionBlockResults.filter(r => r.completed).length,
-            // Legacy fields for backward compatibility
             completed: true,
             workoutTitle: selectedWorkout.stimulus || selectedWorkout.day,
             workoutContent: '',
@@ -73,6 +173,34 @@ export function PerformanceFeedback() {
     setCurrentView('dashboard');
   };
 
+  const handleSendComment = async () => {
+    if (!selectedWorkout) return;
+
+    const blockResultsForDB = sessionBlockResults.map(r => ({
+      blockTitle: r.blockTitle,
+      blockType: r.blockType,
+      format: r.format,
+      completed: r.completed,
+      timeInSeconds: r.timeInSeconds,
+      estimatedTimeSeconds: r.estimatedTimeSeconds,
+      reps: r.reps,
+      estimatedRounds: r.estimatedRounds,
+    }));
+
+    const success = await saveFeedback({
+      workoutDay: selectedWorkout.day,
+      workoutStimulus: selectedWorkout.stimulus,
+      blockResults: blockResultsForDB,
+      athleteComment: athleteComment.trim() || undefined,
+      aiFeedback: aiFeedback || undefined,
+      coachProfileId: profile?.coach_id || null,
+    });
+
+    if (success) {
+      setCommentSent(true);
+    }
+  };
+
   if (!selectedWorkout || !athleteConfig) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -83,9 +211,6 @@ export function PerformanceFeedback() {
 
   const fallbackMessage = getCoachLine(athleteConfig.coachStyle, 'great');
   const feedbackMessage = aiFeedback || fallbackMessage;
-
-  // Compute per-block summary display
-  const blocksWithTime = sessionBlockResults.filter(r => r.timeInSeconds && r.estimatedTimeSeconds);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -123,56 +248,7 @@ export function PerformanceFeedback() {
               className="space-y-6"
             >
               {/* Session Summary */}
-              {sessionBlockResults.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="card-elevated p-4 space-y-3"
-                >
-                  <p className="font-display text-sm tracking-wide text-muted-foreground">RESUMO DA SESSÃO</p>
-                  <div className="space-y-2">
-                    {sessionBlockResults.map((result, idx) => (
-                      <div key={result.blockId} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{result.blockTitle}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {result.format === 'amrap' && result.reps && `${result.reps} rounds/reps`}
-                            {result.format === 'for_time' && result.timeInSeconds && formatSecondsToMinSec(result.timeInSeconds)}
-                            {result.format === 'emom' && 'Concluído'}
-                            {result.format === 'strength' && 'Concluído'}
-                            {!result.timeInSeconds && !result.reps && result.format !== 'emom' && result.format !== 'strength' && 'Concluído'}
-                          </p>
-                        </div>
-                        {result.timeInSeconds && result.estimatedTimeSeconds && result.estimatedTimeSeconds > 0 && (
-                          <div className="flex items-center gap-1.5 ml-3">
-                            {result.timeInSeconds < result.estimatedTimeSeconds - 10 ? (
-                              <>
-                                <TrendingDown className="w-3.5 h-3.5 text-status-good" />
-                                <span className="text-xs font-medium text-status-good">
-                                  -{formatSecondsToMinSec(result.estimatedTimeSeconds - result.timeInSeconds)}
-                                </span>
-                              </>
-                            ) : result.timeInSeconds > result.estimatedTimeSeconds + 10 ? (
-                              <>
-                                <TrendingUp className="w-3.5 h-3.5 text-status-attention" />
-                                <span className="text-xs font-medium text-status-attention">
-                                  +{formatSecondsToMinSec(result.timeInSeconds - result.estimatedTimeSeconds)}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <Minus className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">no tempo</span>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+              <SessionSummary sessionBlockResults={sessionBlockResults} />
 
               {/* Coach Feedback */}
               <motion.div
@@ -190,11 +266,52 @@ export function PerformanceFeedback() {
                 </p>
               </motion.div>
 
+              {/* Athlete comment box */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="card-elevated p-4 space-y-3"
+              >
+                <p className="text-sm font-display text-muted-foreground">RECADO PRO COACH</p>
+                {commentSent ? (
+                  <div className="flex items-center gap-2 py-4 justify-center text-green-500">
+                    <Check className="w-5 h-5" />
+                    <span className="text-sm font-medium">Feedback enviado!</span>
+                  </div>
+                ) : (
+                  <>
+                    <Textarea
+                      placeholder="Como foi o treino? Deixe um recado pro seu coach..."
+                      value={athleteComment}
+                      onChange={(e) => setAthleteComment(e.target.value)}
+                      className="min-h-[80px] bg-background/50 resize-none"
+                      maxLength={500}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSendComment}
+                        disabled={isSaving}
+                        className="flex items-center gap-1.5"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                        Enviar
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+
               {/* Actions */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.7 }}
                 className="flex gap-4"
               >
                 <button
@@ -211,10 +328,4 @@ export function PerformanceFeedback() {
       </main>
     </div>
   );
-}
-
-function formatSecondsToMinSec(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
 }

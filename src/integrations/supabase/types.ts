@@ -2057,6 +2057,53 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_session_feedback: {
+        Row: {
+          ai_feedback: string | null
+          athlete_comment: string | null
+          athlete_id: string
+          block_results: Json
+          coach_id: string | null
+          created_at: string
+          id: string
+          session_date: string
+          workout_day: string
+          workout_stimulus: string | null
+        }
+        Insert: {
+          ai_feedback?: string | null
+          athlete_comment?: string | null
+          athlete_id: string
+          block_results?: Json
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          session_date?: string
+          workout_day: string
+          workout_stimulus?: string | null
+        }
+        Update: {
+          ai_feedback?: string | null
+          athlete_comment?: string | null
+          athlete_id?: string
+          block_results?: Json
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          session_date?: string
+          workout_day?: string
+          workout_stimulus?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_session_feedback_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workouts: {
         Row: {
           coach_id: string
