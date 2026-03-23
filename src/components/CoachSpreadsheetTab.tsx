@@ -159,7 +159,7 @@ interface CoachSpreadsheetTabProps {
   onSavedGoToPrograms?: () => void;
 }
 
-export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout }: CoachSpreadsheetTabProps) {
+export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, initialWorkout, onClearInitialWorkout, onSavedGoToPrograms }: CoachSpreadsheetTabProps) {
   const { profile } = useAuth();
   const { saveWorkout: saveToDb, forceSaveWorkout, gatekeeperResult, clearGatekeeperResult } = useCoachWorkouts();
   const { clearDraft } = useCoachDraft();
