@@ -180,9 +180,13 @@ export function WelcomeScreen() {
     }
   }
 
-  async function handleSelectResult(result: SearchResult) {
+  async function handleSelectResult(result: SearchResult, retryCount = 0) {
     if (!user) return;
     setGenerating(true);
+    setImportError(null);
+    setRetryResult(null);
+
+    const MAX_RETRIES = 2;
 
     try {
       // Save race history
@@ -204,23 +208,32 @@ export function WelcomeScreen() {
         }
       }
 
-      // Generate diagnostic
+      // Generate diagnostic with retry
       const sourceUrl = result.result_url;
       let proxyData: any = null;
-      try {
-        const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-          body: {
-            athlete_name: result.athlete_name,
-            event_name: result.event_name,
-            division: result.division,
-            season_id: result.season_id,
-            result_url: result.result_url,
-          },
-        });
-        if (!proxyResult.error && proxyResult.data?.ok !== false) {
-          proxyData = proxyResult.data;
+      let proxyAttempts = 0;
+
+      while (proxyAttempts <= MAX_RETRIES) {
+        try {
+          if (proxyAttempts > 0) await new Promise(r => setTimeout(r, 1000 * proxyAttempts));
+          const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+            body: {
+              athlete_name: result.athlete_name,
+              event_name: result.event_name,
+              division: result.division,
+              season_id: result.season_id,
+              result_url: result.result_url,
+            },
+          });
+          if (!proxyResult.error && proxyResult.data?.ok !== false) {
+            proxyData = proxyResult.data;
+            break;
+          }
+        } catch {
+          console.warn(`proxy-roxcoach attempt ${proxyAttempts + 1} failed`);
         }
-      } catch { /* non-fatal */ }
+        proxyAttempts++;
+      }
 
       let parsed: ReturnType<typeof parseDiagnosticResponse> | null = null;
       if (proxyData) {
@@ -232,7 +245,6 @@ export function WelcomeScreen() {
 
       // Save to DB
       if (!parsed) {
-        // Minimal save
         await supabase.from('diagnostico_resumo').insert({
           atleta_id: user.id,
           source_url: sourceUrl,
@@ -287,7 +299,6 @@ export function WelcomeScreen() {
           nome_atleta: insertedResumo.nome_atleta,
         });
 
-        // Top 3 bottlenecks by improvement potential
         const sorted = [...parsed.diagRows]
           .filter(d => d.improvement_value > 0)
           .sort((a, b) => b.improvement_value - a.improvement_value)
@@ -302,7 +313,8 @@ export function WelcomeScreen() {
       setStep('congrats');
     } catch (err: any) {
       console.error('Import error:', err);
-      toast.error('Erro ao importar prova. Tente novamente.');
+      setImportError('Não conseguimos importar sua prova. A conexão com o servidor pode estar instável.');
+      setRetryResult(result);
     } finally {
       setGenerating(false);
     }
