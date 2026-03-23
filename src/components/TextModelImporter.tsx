@@ -291,16 +291,34 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                     className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
                       block.success
                         ? 'bg-primary/5 border-primary/10'
-                        : 'bg-amber-500/5 border-amber-500/10'
+                        : block.confidencePercent >= 50
+                          ? 'bg-amber-500/5 border-amber-500/10'
+                          : 'bg-destructive/5 border-destructive/10'
                     }`}
                   >
                     {block.success ? (
                       <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    ) : (
+                    ) : block.confidencePercent >= 50 ? (
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{block.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-foreground truncate">{block.title}</p>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] px-1.5 py-0 h-5 shrink-0 ${
+                            block.confidencePercent >= 70 
+                              ? 'bg-primary/10 text-primary border-primary/20' 
+                              : block.confidencePercent >= 50 
+                                ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' 
+                                : 'bg-destructive/10 text-destructive border-destructive/20'
+                          }`}
+                        >
+                          ~{block.confidencePercent}%
+                        </Badge>
+                      </div>
                       {block.success ? (
                         <p className="text-xs text-muted-foreground">
                           {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
@@ -316,8 +334,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
                 <div className="rounded-md border border-muted bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">
-                    💡 Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
-                    adicione repetições e séries explícitas.
+                    💡 <strong>~90%</strong> = Motor Físico · <strong>~60-75%</strong> = Estimativa com padrões · <strong>~45%</strong> = Heurística por tipo
                   </p>
                 </div>
               </div>
