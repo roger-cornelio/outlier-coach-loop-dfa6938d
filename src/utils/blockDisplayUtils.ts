@@ -962,6 +962,9 @@ export function getBlockDisplayDataFromParsed(block: {
       } else if (isRepSchemeLine(trimmed)) {
         // Rep scheme (40,30,20,10 / 21-15-9) → badge inline
         allStructureLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: exerciseLines.length });
+      } else if (isIntensityOnlyLine(trimmed)) {
+        // Linha de intensidade pura → marcar com prefixo especial
+        exerciseLines.push(`${INTENSITY_LINE_PREFIX}${trimmed}`);
       } else {
         // Qualquer outra linha (instruções, sub-formatos, "Sendo", etc.)
         exerciseLines.push(trimmed);
