@@ -431,7 +431,7 @@ export function WorkoutExecution() {
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
             
             const displayData = getBlockDisplayDataFromParsed(block);
-            const blockFormat = detectBlockFormat(block, displayData.structureDescription);
+            const blockFormat = detectBlockFormat(block, displayData.structureDescription, getBlockDisplayTitle(block, index), displayData.exerciseLines);
             const blockFeedback = blockFeedbacks[block.id];
 
             return (
