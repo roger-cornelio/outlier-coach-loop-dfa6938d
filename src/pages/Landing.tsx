@@ -105,9 +105,9 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Cadastre-se', desc: 'Crie sua conta e importe seu resultado HYROX automaticamente.' },
-              { step: '02', title: 'Receba seu diagnóstico', desc: 'Nosso motor identifica seus gargalos e pontos fortes em segundos.' },
-              { step: '03', title: 'Evolua com dados', desc: 'Treinos personalizados, benchmarks e evolução em tempo real.' },
+              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus gargalos em segundos.' },
+              { step: '02', title: 'Conecte-se a um coach', desc: 'Um coach dedicado recebe seu diagnóstico e monta treinos específicos para você.' },
+              { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. A IA dá feedback em tempo real. Você evolui com dados.' },
             ].map((item, i) => (
               <motion.div key={i} className="text-center"
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
