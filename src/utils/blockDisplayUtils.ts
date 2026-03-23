@@ -1063,6 +1063,8 @@ export function getBlockDisplayDataFromParsed(block: {
         contentStructLabels.push({ label: trimmed, insertIndex: contentExerciseLines.length });
       } else if (isRepSchemeLine(trimmed)) {
         contentStructLabels.push({ label: formatRepSchemeLabel(trimmed), insertIndex: contentExerciseLines.length });
+      } else if (isIntensityOnlyLine(trimmed)) {
+        contentExerciseLines.push(`${INTENSITY_LINE_PREFIX}${trimmed}`);
       } else {
         contentExerciseLines.push(trimmed);
       }
