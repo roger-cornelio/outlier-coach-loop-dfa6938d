@@ -227,7 +227,8 @@ export function WorkoutExecution() {
       // Get block format info
       const block = displayedWorkout.blocks[blockIndex];
       const displayData = getBlockDisplayDataFromParsed(block);
-      const format = detectBlockFormat(block, displayData.structureDescription);
+      const blockTitle = getBlockDisplayTitle(block, blockIndex);
+      const format = detectBlockFormat(block, displayData.structureDescription, blockTitle, displayData.exerciseLines);
       
       // Check if we need to show inline recording
       if (needsTimeInput(format) || needsRepsInput(format) || needsConfirmationOnly(format)) {
