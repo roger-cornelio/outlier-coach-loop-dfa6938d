@@ -356,6 +356,9 @@ export function WeeklyTrainingView() {
                 <div className="flex items-start gap-3">
                   <MessageSquareText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary mb-1.5 block">
+                      Coach {(profile?.coach_style || 'PULSE')}
+                    </span>
                     {aiSummaryLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-4 w-full" />
