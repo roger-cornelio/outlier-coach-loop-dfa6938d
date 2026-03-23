@@ -81,7 +81,7 @@ import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
 import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, type UnmatchedCategory, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
-import { calculateEngineCoverage, aggregateEngineCoverage, type EngineCoverageReport } from '@/utils/engineCoverage';
+import { calculateEngineCoverage } from '@/utils/engineCoverage';
 import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
 import {
   Dialog,
@@ -130,6 +130,7 @@ interface PreviewDayCardProps {
 
 function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showCoverageModal, setShowCoverageModal] = useState(false);
 
   const workoutEst = useMemo(() => {
     if (isRestDay) return null;
@@ -190,6 +191,20 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
 
   const { totalTime, totalCalories } = blockMetrics;
 
+  // Engine coverage per day
+  const dayCoverage = useMemo(() => {
+    if (isRestDay || !dayWorkout.blocks || dayWorkout.blocks.length === 0) return null;
+    return calculateEngineCoverage(blockMetrics.perBlock, dayWorkout.blocks as any);
+  }, [isRestDay, dayWorkout.blocks, blockMetrics.perBlock]);
+
+  const coverageBadgeClass = dayCoverage
+    ? dayCoverage.successRate === 100
+      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+      : dayCoverage.successRate >= 50
+        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+        : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+    : '';
+
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Day Header (collapsible trigger) */}
@@ -223,6 +238,18 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                   <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
                 </div>
               )}
+              {dayCoverage && dayCoverage.totalBlocks > 0 && (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-2 py-0.5 cursor-pointer transition-colors ${coverageBadgeClass}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCoverageModal(true);
+                  }}
+                >
+                  ⚡ {dayCoverage.calculatedBlocks}/{dayCoverage.totalBlocks}
+                </Badge>
+              )}
             </>
           )}
         </div>
@@ -232,6 +259,73 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
           <ChevronDown className="w-4 h-4" />
         )}
       </button>
+
+      {/* Modal de detalhes da precisão do motor — por dia */}
+      {dayCoverage && dayCoverage.totalBlocks > 0 && (
+        <Dialog open={showCoverageModal} onOpenChange={setShowCoverageModal}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Precisão do Motor — {dayName}</DialogTitle>
+              <DialogDescription>
+                {dayCoverage.calculatedBlocks} de {dayCoverage.totalBlocks} blocos com tempo e calorias ({dayCoverage.successRate}%)
+              </DialogDescription>
+            </DialogHeader>
+
+            {dayCoverage.successRate === 100 ? (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <CheckCircle className="h-10 w-10 text-primary" />
+                <p className="text-sm text-center text-foreground/80">
+                  Todos os blocos calculados com sucesso!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {dayCoverage.blocks.map((block, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
+                      block.success
+                        ? 'bg-primary/5 border-primary/10'
+                        : 'bg-amber-500/5 border-amber-500/10'
+                    }`}
+                  >
+                    {block.success ? (
+                      <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{block.title}</p>
+                      {block.success ? (
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          {block.reasonLabel}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="rounded-md border border-muted bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    💡 Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
+                    adicione repetições e séries explícitas.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setShowCoverageModal(false)}>
+                Entendi
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Expanded Content — identical to athlete WeeklyTrainingView */}
       <AnimatePresence>
@@ -415,7 +509,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
-  const [showEngineCoverageModal, setShowEngineCoverageModal] = useState(false);
+  
 
   // Recalcula cobertura quando a biblioteca de exercícios atualiza (ex: admin aprovou exercício novo)
   useEffect(() => {
@@ -434,61 +528,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     return previewAutoFormatChanges(rawText);
   }, [rawText]);
 
-  // Engine coverage — calcula quantos blocos têm tempo+kcal (somente coach vê)
-  // Usa effectiveDays (pós-IA) em vez de parseResult.days (pré-IA)
-  const engineCoverage = useMemo<EngineCoverageReport | null>(() => {
-    if (!effectiveDays || effectiveDays.length === 0) return null;
-    
-    const dayReports: EngineCoverageReport[] = [];
-    for (const day of effectiveDays) {
-      if (!day.blocks || day.blocks.length === 0) continue;
-      
-      const workoutEst = estimateWorkout(day as any, COACH_PREVIEW_ATHLETE_CONFIG as any, 'pro');
-      const perBlock: Array<{ kcal: number; durationSec: number; visible: boolean; showStats: boolean }> = [];
-
-      day.blocks.forEach((block: any, index: number) => {
-        const displayData = getBlockDisplayDataFromParsed(block);
-        if (!displayData.hasContent) {
-          perBlock.push({ kcal: 0, durationSec: 0, visible: false, showStats: false });
-          return;
-        }
-        if (block.type === 'notas') {
-          perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-          return;
-        }
-        if (block.parseStatus === 'bypassed' || block.parseStatus === 'failed') {
-          perBlock.push({ kcal: 0, durationSec: 0, visible: true, showStats: false });
-          return;
-        }
-
-        const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
-        let kcal = 0;
-        let dur = 0;
-
-        if (hasParsedData) {
-          const metrics = computeBlockMetrics(
-            block.parsedExercises,
-            { pesoKg: 75, sexo: 'masculino' },
-            block.content,
-            block.title
-          );
-          kcal = metrics.estimatedKcal || 0;
-          dur = metrics.estimatedDurationSec || 0;
-        } else {
-          const timeMeta = getBlockTimeMeta(block);
-          dur = timeMeta.durationSecUsed || 0;
-          const blockEst = workoutEst?.blocks[index];
-          kcal = blockEst?.estimatedKcal || 0;
-        }
-
-        perBlock.push({ kcal: Math.round(kcal), durationSec: dur, visible: true, showStats: true });
-      });
-
-      dayReports.push(calculateEngineCoverage(perBlock, day.blocks as any));
-    }
-
-    return aggregateEngineCoverage(dayReports);
-  }, [effectiveDays]);
+  // Engine coverage agora é calculado dentro de cada PreviewDayCard
 
 
   // LOAD WORKOUT FOR EDIT (from Programações tab)
@@ -2229,95 +2269,7 @@ BLOCO: DESCANSO
             {days.length} dia(s) • {restCount} de descanso
           </p>
 
-          {/* Badge de precisão do motor — só aparece no Preview (pós-IA) */}
-          {engineCoverage && engineCoverage.totalBlocks > 0 && (
-            <>
-              <div className="flex justify-center">
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
-                    engineCoverage.successRate === 100
-                      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
-                      : engineCoverage.successRate >= 70
-                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
-                        : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
-                  }`}
-                  onClick={() => setShowEngineCoverageModal(true)}
-                >
-                  {engineCoverage.successRate === 100
-                    ? `⚡ ${engineCoverage.totalBlocks}/${engineCoverage.totalBlocks} blocos calculados`
-                    : `⚡ ${engineCoverage.calculatedBlocks}/${engineCoverage.totalBlocks} blocos calculados`
-                  }
-                </Badge>
-              </div>
 
-              {/* Modal de detalhes da precisão do motor */}
-              <Dialog open={showEngineCoverageModal} onOpenChange={setShowEngineCoverageModal}>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Precisão do Motor de Cálculo</DialogTitle>
-                    <DialogDescription>
-                      {engineCoverage.calculatedBlocks} de {engineCoverage.totalBlocks} blocos tiveram tempo e calorias estimados ({engineCoverage.successRate}%)
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  {engineCoverage.successRate === 100 ? (
-                    <div className="flex flex-col items-center gap-3 py-6">
-                      <CheckCircle className="h-10 w-10 text-primary" />
-                      <p className="text-sm text-center text-foreground/80">
-                        Todos os blocos tiveram tempo e calorias calculados com sucesso!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {engineCoverage.blocks.map((block, i) => (
-                        <div
-                          key={i}
-                          className={`flex items-start gap-3 text-sm px-3 py-2.5 rounded-md border ${
-                            block.success
-                              ? 'bg-primary/5 border-primary/10'
-                              : 'bg-amber-500/5 border-amber-500/10'
-                          }`}
-                        >
-                          {block.success ? (
-                            <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">{block.title}</p>
-                            {block.success ? (
-                              <p className="text-xs text-muted-foreground">
-                                {Math.round(block.durationSec / 60)} min · {block.kcal} kcal
-                              </p>
-                            ) : (
-                              <p className="text-xs text-amber-600 dark:text-amber-400">
-                                {block.reasonLabel}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="rounded-md border border-muted bg-muted/30 p-3">
-                        <p className="text-xs text-muted-foreground">
-                          💡 Blocos sem cálculo podem ser melhorados ajustando a formatação do treino. 
-                          Use padrões como <strong>EMOM</strong>, <strong>AMRAP</strong>, <strong>FOR TIME</strong> ou 
-                          adicione repetições e séries explícitas aos exercícios.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end pt-2">
-                    <Button variant="outline" size="sm" onClick={() => setShowEngineCoverageModal(false)}>
-                      Entendi
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
 
           {/* BOTÕES: VOLTAR E SALVAR */}
           <div className="flex gap-3">
