@@ -3011,6 +3011,8 @@ export function parseStructuredText(text: string): ParseResult {
           line: line.trim(),
           suggestion: `**${n} ROUNDS**`,
           lineNumber: lineNumber,
+          dayLabel: currentDay ? getDayName(currentDay) : undefined,
+          blockTitle: currentBlock?.title || undefined,
         });
       }
 

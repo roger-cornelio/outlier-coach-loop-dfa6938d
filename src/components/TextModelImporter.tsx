@@ -1752,14 +1752,20 @@ BLOCO: DESCANSO
                   <Puzzle className="w-4 h-4" />
                   Exercícios com possível erro de digitação
                 </div>
-                {exerciseTypoWarnings.map((tw, idx) => (
-                  <p key={idx} className="text-xs text-yellow-700 dark:text-yellow-300">
-                    <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
-                    {' → Você quis dizer '}
-                    <span className="font-semibold">"{tw.suggestion}"</span>?
-                    <span className="text-muted-foreground ml-1">({tw.blockTitle})</span>
-                  </p>
-                ))}
+                {exerciseTypoWarnings.map((tw, idx) => {
+                  const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+                  const dayLabel = dayNames[tw.dayIndex] || `Dia ${tw.dayIndex + 1}`;
+                  return (
+                    <p key={idx} className="text-xs text-yellow-700 dark:text-yellow-300">
+                      <span className="font-mono bg-yellow-500/15 px-1 rounded">"{tw.line}"</span>
+                      {' → Você quis dizer '}
+                      <span className="font-semibold">"{tw.suggestion}"</span>?
+                      <span className="text-muted-foreground ml-1">
+                        ({dayLabel} · {tw.blockTitle})
+                      </span>
+                    </p>
+                  );
+                })}
                 <p className="text-[10px] text-muted-foreground mt-1">
                   Estes avisos não impedem o salvamento. O sistema ainda reconhece o exercício.
                 </p>
