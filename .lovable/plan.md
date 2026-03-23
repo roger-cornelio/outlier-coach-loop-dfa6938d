@@ -1,35 +1,29 @@
 
 
-## Plano: Mover badge de precisão para dentro de cada card de dia
+## Plano: Reformular modal laranja para informar sobre estimativa por fallback
 
-### O que muda
+### Contexto
 
-O badge `⚡ 3/4 blocos calculados` sai do rodapé geral do preview e passa a aparecer **dentro de cada PreviewDayCard**, ao lado das calorias no cabeçalho do dia.
+Antes, o modal laranja bloqueava o salvamento dizendo "O atleta NÃO verá estimativas". Agora, com o sistema de fallback (motor → IA), o bloco **sempre** terá estimativa. O modal deve continuar aparecendo, mas com tom informativo, não bloqueante.
 
-### Como
+### Mudanças
 
-**Arquivo: `src/components/TextModelImporter.tsx`**
+**Arquivo: `src/components/WorkoutParseValidationModal.tsx`**
 
-1. **PreviewDayCard recebe cobertura por dia** — Calcular `engineCoverage` dentro do próprio `PreviewDayCard` usando os dados de `blockMetrics.perBlock` que já existem no componente, junto com `dayWorkout.blocks`. Isso elimina a necessidade de passar dados de fora.
+- **Titulo**: De "Texto não reconhecido" para "Alguns blocos usarão estimativa"
+- **Descrição**: Informar que o motor não reconheceu a estrutura em X blocos, mas o sistema fará uma **estimativa aproximada** de tempo e calorias baseada em IA. Sugerir que o coach detalhe melhor os exercícios para cálculos mais precisos.
+- **Botão primario**: De "Corrigir texto" para **"Prosseguir com estimativa"** (executa `onForceBypass` — salva normalmente)
+- **Botão secundario**: **"Voltar e corrigir"** (executa `onClose` — volta ao editor)
+- **Tom visual**: Manter laranja, mas como aviso informativo, não como erro
 
-2. **Badge no header do dia** — Após o bloco de calorias (linha ~225), adicionar o badge inline:
-   - `⚡ 4/4` em verde quando 100%
-   - `⚡ 3/4` em laranja quando parcial
-   - `⚡ 1/4` em vermelho quando baixo
-   - Clicável → abre o modal de detalhes (por dia)
+**Arquivo: `src/hooks/useCoachWorkouts.ts`** (se necessario)
 
-3. **Mover o modal para dentro do PreviewDayCard** — Cada card terá seu próprio modal de detalhes mostrando os blocos daquele dia específico.
+- Garantir que `onForceBypass` marca os blocos como `fallback` (não `bypass`) para que recebam estimativas da IA em vez de ficarem zerados.
 
-4. **Remover badge e modal do rodapé geral** — Linhas ~2232-2320 (o badge centralizado e o Dialog global) são removidos.
+### Resultado
 
-5. **Remover o `engineCoverage` global** — O `useMemo` das linhas 438-491 no componente principal é removido, já que cada card calcula o seu.
+O coach vê: "O motor não reconheceu 2 blocos. Eles receberão uma estimativa aproximada. Deseja prosseguir ou prefere corrigir o texto para maior precisão?"
 
-### Resultado visual
-
-No header de cada dia:
-```text
-[ SEG ]  4 bloco(s)  🕐 ~45min  🔥 ~320 kcal  ⚡ 3/4
-```
-
-O badge fica inline, visível e contextual — o coach sabe exatamente qual dia tem blocos não calculados.
+- Botão principal: Prosseguir (salva com fallback)
+- Botão secundario: Voltar e corrigir
 
