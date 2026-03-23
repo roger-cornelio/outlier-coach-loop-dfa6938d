@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
 import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
-import { getBlockDisplayTitle, separateBlockContent } from '@/utils/blockDisplayUtils';
+import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 const blockTypeColors: Record<string, string> = {
   aquecimento: 'border-l-amber-500',
