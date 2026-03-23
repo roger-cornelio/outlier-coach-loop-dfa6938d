@@ -108,10 +108,10 @@ export function WelcomeScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.name, user]);
 
-  const executeSearch = useCallback(async (query: string) => {
+  const executeSearch = useCallback(async (query: string, isRetry = false) => {
     const trimmed = query.trim();
     if (!trimmed || trimmed.length < 2) return;
-    if (trimmed === lastSearchedRef.current) return;
+    if (!isRetry && trimmed === lastSearchedRef.current) return;
     lastSearchedRef.current = trimmed;
 
     const parts = trimmed.split(/\s+/);
@@ -121,40 +121,55 @@ export function WelcomeScreen() {
 
     setSearching(true);
     setSearchDone(false);
+    setSearchError(false);
 
-    try {
-      const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
-      const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
-        body: { firstName, lastName, gender },
-      });
-      if (error) throw error;
+    const MAX_RETRIES = 2;
+    let lastErr: any = null;
 
-      const rawResults: SearchResult[] = data?.results || [];
-      const sorted = rawResults.sort((a, b) => {
-        if (b.season_id !== a.season_id) return b.season_id - a.season_id;
-        return (a.event_index ?? 999) - (b.event_index ?? 999);
-      });
-      // Show only most recent
-      const displayed = sorted.slice(0, 3);
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
 
-      if (user) {
-        const urls = displayed.map(r => r.result_url);
-        const { data: existing } = await supabase
-          .from('diagnostico_resumo')
-          .select('source_url')
-          .eq('atleta_id', user.id)
-          .in('source_url', urls);
-        const importedUrls = new Set((existing || []).map(e => e.source_url));
-        setSearchResults(displayed.filter(r => !importedUrls.has(r.result_url)));
-      } else {
-        setSearchResults(displayed);
+        const gender = athleteConfig?.sexo === 'feminino' ? 'W' : athleteConfig?.sexo === 'masculino' ? 'M' : '';
+        const { data, error } = await supabase.functions.invoke('search-hyrox-athlete', {
+          body: { firstName, lastName, gender },
+        });
+        if (error) throw error;
+
+        const rawResults: SearchResult[] = data?.results || [];
+        const sorted = rawResults.sort((a, b) => {
+          if (b.season_id !== a.season_id) return b.season_id - a.season_id;
+          return (a.event_index ?? 999) - (b.event_index ?? 999);
+        });
+        const displayed = sorted.slice(0, 3);
+
+        if (user) {
+          const urls = displayed.map(r => r.result_url);
+          const { data: existing } = await supabase
+            .from('diagnostico_resumo')
+            .select('source_url')
+            .eq('atleta_id', user.id)
+            .in('source_url', urls);
+          const importedUrls = new Set((existing || []).map(e => e.source_url));
+          setSearchResults(displayed.filter(r => !importedUrls.has(r.result_url)));
+        } else {
+          setSearchResults(displayed);
+        }
+
+        setSearching(false);
+        setSearchDone(true);
+        return;
+      } catch (err) {
+        lastErr = err;
+        console.error(`Search attempt ${attempt + 1} failed:`, err);
       }
-    } catch (err) {
-      console.error('Search error:', err);
-    } finally {
-      setSearching(false);
-      setSearchDone(true);
     }
+
+    // All retries exhausted
+    console.error('Search failed after retries:', lastErr);
+    setSearchError(true);
+    setSearching(false);
+    setSearchDone(true);
   }, [user, athleteConfig?.sexo]);
 
   function handleQueryChange(value: string) {
