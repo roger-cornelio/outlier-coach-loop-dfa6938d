@@ -75,8 +75,9 @@ export function WeeklyTrainingView() {
   const dayIsCompleted = !!dayCompletion?.completed;
   const dayTimeInSeconds = dayCompletion?.timeInSeconds;
 
-  // Usar adaptedWorkouts quando existir, senão baseWorkouts
-  const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
+  // FONTE ÚNICA: usar planWorkouts do useAthletePlan (filtrado por week_start)
+  // Isso garante que cada semana mostra APENAS os treinos daquela semana
+  const displayWorkouts = planWorkouts.length > 0 ? planWorkouts : [];
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
