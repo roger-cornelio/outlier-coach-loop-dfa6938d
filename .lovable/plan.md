@@ -1,50 +1,41 @@
 
 
-## Plano: Alinhar Copy e Posicionamento ao Modelo de Negocio Real
+## Plano: Botao de Login Rapido na Landing Page
 
-### Contexto (entendimento do modelo)
-- **Coach dedicado** monta treino manualmente com base no diagnostico — zero treino generico
-- **Diagnostico no onboarding** = isca de venda (lead magnet gratuito → conversao para plano pago)
-- **Feedback em tempo real** = feito pela IA, nao pelo coach
+### Problema
+A landing e otimizada para novos usuarios (funil diagnostico), mas atletas que ja tem conta precisam de um acesso rapido visivel — hoje nao ha nenhum link de login na pagina.
 
-### O que precisa mudar
+### Solucao
+Adicionar um link discreto mas visivel no topo direito da landing (header fixo) com texto tipo "Ja sou atleta" ou "Entrar", sem competir com o CTA principal de diagnostico.
 
-**1. Landing Page (`src/pages/Landing.tsx`)**
+### Implementacao
 
-Textos atuais que contradizem o modelo:
-- "Treinos genéricos não funcionam" → ok, mas o desc fala "programa baseado nos seus dados" sem mencionar o coach humano
-- "treinos personalizados" no hero → vago, parece automatico
-- Step 03 "Evolua com dados" → nao menciona coach dedicado
-- Seçao "TECNOLOGIA DE PERFORMANCE" → foca em tech, nao no valor humano
+**Arquivo: `src/pages/Landing.tsx`**
 
-Mudanças:
-- Hero subtitle: "Diagnóstico gratuito + treino personalizado por um coach dedicado"
-- Card 1: manter titulo, mudar desc para enfatizar coach humano que usa dados
-- Card 3: reforçar que o coach monta o treino com base no diagnostico
-- Step 03: "Treine com um coach dedicado" — desc: "Seu coach monta cada treino com base no seu diagnóstico. Feedback em tempo real acompanha sua evolução."
-- Seçao tech: renomear para "O QUE VOCE RECEBE" com items mais orientados a valor (diagnostico gratuito, coach dedicado, feedback instantaneo, evolução mensuravel)
+- Adicionar um header fixo/sticky no topo com:
+  - Logo Outlier (esquerda)
+  - Link "Ja sou atleta → Entrar" (direita) apontando para `/login`
+  - Estilo discreto: texto `text-muted-foreground hover:text-primary`, sem background pesado, apenas um underline ou seta
+- O header fica `fixed top-0` com `z-50` e background semi-transparente (`bg-background/80 backdrop-blur`)
 
-**2. Onboarding CTA (`src/components/WelcomeScreen.tsx`)**
+### Visual esperado
 
-Step `cta` (linha 675-677): texto atual "Acesse treinos personalizados, benchmarks e evolução em tempo real" — generico demais.
+```text
+┌──────────────────────────────────────────────┐
+│  ◆ OUTLIER                   Já sou atleta → │  ← header fixo, discreto
+├──────────────────────────────────────────────┤
+│                                              │
+│           Performance que separa             │
+│               ◆ OUTLIER ◆                    │
+│                do comum                      │
+│                                              │
+│          [ RECEBER DIAGNÓSTICO ]             │  ← CTA principal intocado
+│                                              │
+└──────────────────────────────────────────────┘
+```
 
-Mudança: "Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos."
-
-Step `profileCta` (linhas 826-828): manter motivacional mas reforçar que o proximo passo é ser conectado a um coach.
-
-Botao CTA: "COMEÇAR MINHA EVOLUÇÃO" → "QUERO MEU PLANO DE TREINO"
-
-**3. Dashboard diagnosis text**
-
-O hook `useAthleteDiagnosis` ja tem copy adequada. Nao precisa mudar.
-
-### Arquivos
-
-| Arquivo | Mudança |
-|---|---|
-| `src/pages/Landing.tsx` | Reescrever copy das 4 seçoes para posicionar coach dedicado + diagnostico como isca |
-| `src/components/WelcomeScreen.tsx` | Ajustar copy dos steps `cta` e `profileCta` para vender o plano do coach |
-
-### Resumo
-Duas edições de copy focadas em comunicar: (1) diagnostico gratuito como porta de entrada, (2) coach humano dedicado como diferencial, (3) feedback IA em tempo real como valor agregado. Sem mudanças de logica ou banco.
+### Detalhes
+- 1 arquivo editado: `src/pages/Landing.tsx`
+- Zero mudanca de logica, apenas UI
+- O CTA de diagnostico continua sendo o protagonista
 
