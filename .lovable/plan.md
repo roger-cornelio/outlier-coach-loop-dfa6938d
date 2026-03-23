@@ -1,40 +1,50 @@
 
 
-## Plano: Badge de "Novo Treino" na Sidebar e Mobile Nav
+## Plano: Alinhar Copy e Posicionamento ao Modelo de Negocio Real
 
-### Objetivo
-Mostrar um dot/badge pulsante no item "Treino Semanal" quando o coach publicar um novo plano que o atleta ainda nao visualizou.
+### Contexto (entendimento do modelo)
+- **Coach dedicado** monta treino manualmente com base no diagnostico — zero treino generico
+- **Diagnostico no onboarding** = isca de venda (lead magnet gratuito → conversao para plano pago)
+- **Feedback em tempo real** = feito pela IA, nao pelo coach
 
-### Mecanismo
+### O que precisa mudar
 
-1. **Hook `useNewPlanIndicator`** (novo arquivo):
-   - Armazena em `localStorage` o timestamp da ultima vez que o atleta abriu a view `weeklyTraining` (`outlier_last_seen_plan_ts`)
-   - Compara com o `published_at` mais recente retornado pelo `useAthletePlan`
-   - Retorna `{ hasNewPlan: boolean, markAsSeen: () => void }`
-   - `markAsSeen()` atualiza o timestamp no localStorage e e chamado quando o atleta navega para `weeklyTraining`
+**1. Landing Page (`src/pages/Landing.tsx`)**
 
-2. **`AppSidebar.tsx`** — Adicionar dot vermelho pulsante no item "Treino Semanal":
-   - Importar `useNewPlanIndicator`
-   - Renderizar `<span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />` ao lado do icone/texto quando `hasNewPlan` for true
-   - Chamar `markAsSeen()` quando o usuario clicar no item
+Textos atuais que contradizem o modelo:
+- "Treinos genéricos não funcionam" → ok, mas o desc fala "programa baseado nos seus dados" sem mencionar o coach humano
+- "treinos personalizados" no hero → vago, parece automatico
+- Step 03 "Evolua com dados" → nao menciona coach dedicado
+- Seçao "TECNOLOGIA DE PERFORMANCE" → foca em tech, nao no valor humano
 
-3. **`MobileNav.tsx`** — Mesmo badge no menu mobile:
-   - Mesma logica: importar hook, mostrar dot, chamar `markAsSeen()` no click
+Mudanças:
+- Hero subtitle: "Diagnóstico gratuito + treino personalizado por um coach dedicado"
+- Card 1: manter titulo, mudar desc para enfatizar coach humano que usa dados
+- Card 3: reforçar que o coach monta o treino com base no diagnostico
+- Step 03: "Treine com um coach dedicado" — desc: "Seu coach monta cada treino com base no seu diagnóstico. Feedback em tempo real acompanha sua evolução."
+- Seçao tech: renomear para "O QUE VOCE RECEBE" com items mais orientados a valor (diagnostico gratuito, coach dedicado, feedback instantaneo, evolução mensuravel)
 
-4. **`MobileNav.tsx` trigger button** — Dot no botao hamburger quando ha novidade (opcional mas de alto impacto visual):
-   - Mostrar dot vermelho no canto superior direito do botao de menu
+**2. Onboarding CTA (`src/components/WelcomeScreen.tsx`)**
+
+Step `cta` (linha 675-677): texto atual "Acesse treinos personalizados, benchmarks e evolução em tempo real" — generico demais.
+
+Mudança: "Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos."
+
+Step `profileCta` (linhas 826-828): manter motivacional mas reforçar que o proximo passo é ser conectado a um coach.
+
+Botao CTA: "COMEÇAR MINHA EVOLUÇÃO" → "QUERO MEU PLANO DE TREINO"
+
+**3. Dashboard diagnosis text**
+
+O hook `useAthleteDiagnosis` ja tem copy adequada. Nao precisa mudar.
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Mudança |
 |---|---|
-| `src/hooks/useNewPlanIndicator.ts` | Criar hook |
-| `src/components/AppSidebar.tsx` | Adicionar badge no "Treino Semanal" |
-| `src/components/MobileNav.tsx` | Adicionar badge no "Treino Semanal" + dot no hamburger |
+| `src/pages/Landing.tsx` | Reescrever copy das 4 seçoes para posicionar coach dedicado + diagnostico como isca |
+| `src/components/WelcomeScreen.tsx` | Ajustar copy dos steps `cta` e `profileCta` para vender o plano do coach |
 
-### Detalhes tecnicos
-
-- Sem alteracao de banco — usa apenas `localStorage` + dados ja disponíveis do `useAthletePlan`
-- O hook escuta o realtime indiretamente: quando `useAthletePlan` refaz fetch via realtime, o `published_at` atualiza e o badge aparece automaticamente
-- O dot desaparece ao navegar para `weeklyTraining` (ambas navs chamam `markAsSeen`)
+### Resumo
+Duas edições de copy focadas em comunicar: (1) diagnostico gratuito como porta de entrada, (2) coach humano dedicado como diferencial, (3) feedback IA em tempo real como valor agregado. Sem mudanças de logica ou banco.
 
