@@ -78,11 +78,7 @@ export function WeeklyTrainingView() {
   const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
-  // Estimativa de tempo e calorias
-  const workoutEstimation = useMemo(() => {
-    if (!currentWorkout) return null;
-    return estimateWorkout(currentWorkout, athleteConfig, 'pro');
-  }, [currentWorkout, athleteConfig]);
+  const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
