@@ -213,8 +213,8 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
   }, [isRestDay, dayWorkout.blocks, blockMetrics.perBlock]);
 
   const coverageBadgeClass = dayCoverage
-    ? dayCoverage.successRate === 100
-      ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+    ? dayCoverage.successRate >= 70
+      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
       : dayCoverage.successRate >= 50
         ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
         : 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
