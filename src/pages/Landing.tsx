@@ -186,10 +186,12 @@ export default function Landing() {
       <section className="px-6 py-24 text-center relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: 'var(--gradient-glow)' }} />
 
-        <motion.div className="relative z-10"
+        <motion.div className="relative z-10 flex flex-col items-center"
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
           <p className="font-display text-xl md:text-2xl tracking-widest text-muted-foreground mb-4">PRONTO PARA SER</p>
-          <OutlierWordmark size="xl" className="mb-8" />
+          <div className="mb-10">
+            <OutlierWordmark size="xl" />
+          </div>
 
           <Link to="/login?mode=signup"
             className="inline-flex items-center gap-3 font-display text-xl tracking-widest px-16 py-6 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40">
