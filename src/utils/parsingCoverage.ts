@@ -85,6 +85,10 @@ function matchesDictionary(baseName: string, normalizedDict: string[]): boolean 
 export function classifyUnmatchedLine(text: string, exerciseNames?: string[]): UnmatchedCategory {
   const trimmed = text.trim();
 
+  // Rep schemes: "40,30,20,10", "21-15-9", "50 40 30 20 10" → structural, not exercise
+  if (/^\d+(?:\s*[,\-–—]\s*\d+)+\s*$/.test(trimmed)) return 'uninterpretable';
+  if (/^\d+(?:\s+\d+){2,}\s*$/.test(trimmed)) return 'uninterpretable';
+
   // Números puros com vírgulas/hífens (rep schemes: "40,30,20,10", "21-15-9")
   if (/^\d[\d,\-\s]+$/.test(trimmed)) return 'uninterpretable';
 
