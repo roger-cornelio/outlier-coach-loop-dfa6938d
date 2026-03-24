@@ -1,28 +1,27 @@
 
 
-## Plano: Diagnóstico Gratuito com RoxCoach — IMPLEMENTADO ✅
+## Problema
 
-### O que foi feito
+O RoxCoach retorna tempos como **strings** (`"41:55"`, `"36:22"`) nos campos `your_score`, `top_1` e `improvement_value`. O código do `DiagnosticoGratuito.tsx` trata esses valores como números:
 
-**1. Edge Function `proxy-roxcoach`** — Auth agora é opcional ✅
-- Se tiver header Authorization, valida e identifica o usuário
-- Se não tiver, permite a chamada como anônima (userId = 'anonymous')
-- Toda a lógica de retry, normalização de nome e timeout foi mantida
+```
+your_score: d.your_score || 0,   // "41:55" (string, não número)
+top_1: d.top_1 || 0,             // "36:22" (string, não número)
+```
 
-**2. Página `DiagnosticoGratuito.tsx`** — Integração com RoxCoach ✅
-- `handleSelectResult` agora chama `scrape-hyrox-result` e `proxy-roxcoach` em paralelo
-- Usa os dados `top_1` do RoxCoach como "Meta OUTLIER" no "Onde Focar"
-- Se o RoxCoach falhar: exibe mensagem "Diagnóstico comparativo temporariamente indisponível"
-- Splits e tempo total continuam visíveis mesmo em caso de falha
-- Dados salvos no localStorage incluem dados do RoxCoach para persistência no onboarding
+Depois faz `diagnosticos.some(d => d.top_1 > 0)` — como `"36:22"` convertido a número é `NaN`, e `NaN > 0 = false`, o sistema sempre marca `roxCoachFailed = true`.
 
-**3. Componente `ImprovementTable.tsx`** — Revertido para dados RoxCoach ✅
-- Removido o useEffect que buscava percentile_bands e sobrescrevia top_1
-- Removido estado p10Map e import do supabase client
-- Usa dados originais de diagnostico_melhoria (fonte RoxCoach)
+A tela de Evolução **nunca teve esse problema** porque usa `parseDiagnosticResponse` do `diagnosticParser.ts`, que tem a função `parseScoreValue` que detecta `:` e converte "MM:SS" para segundos.
 
-### Risco de falha estimado: 2-3%
-- Render pago elimina cold starts
-- Retry automático (2 tentativas com 3s de intervalo)
-- Normalização de nomes cobre "Sobrenome, Nome" → "Nome Sobrenome"
-- Timeout de 55s generoso
+## Solução
+
+**1 arquivo: `src/pages/DiagnosticoGratuito.tsx`** (linhas 229-249)
+
+Usar `parseScoreValue` (mesma lógica do `diagnosticParser.ts`) para converter os tempos "MM:SS" em segundos antes de atribuir aos campos numéricos:
+
+- Importar ou criar inline a função `timeToSec` que converte "MM:SS" → segundos
+- Aplicar nos campos `your_score`, `top_1`, `improvement_value` e `percentage` ao mapear `diagnostico_melhoria`
+- A verificação `diagnosticos.some(d => d.top_1 > 0)` passará a funcionar corretamente
+
+Nenhuma outra alteração necessária — o proxy está funcionando (os logs de rede confirmam resposta 200 com dados completos).
+
