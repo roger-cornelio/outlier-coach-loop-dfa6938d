@@ -55,40 +55,57 @@ function getRoxzoneFromSplits(splits: Split[]): number {
 }
 
 export default function ImprovementTable({ diagnosticos, splits = [], metricScores = [] }: Props) {
+  // Fetch p10_sec from percentile_bands as the single source of truth for "Meta OUTLIER"
+  const [p10Map, setP10Map] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function fetchP10() {
+      const { data } = await supabase
+        .from('percentile_bands')
+        .select('metric, p10_sec')
+        .eq('percentile_set_id', 'v1')
+        .eq('is_active', true);
+      if (data) {
+        const map: Record<string, number> = {};
+        for (const b of data) {
+          map[b.metric] = b.p10_sec;
+        }
+        setP10Map(map);
+      }
+    }
+    if (diagnosticos.length > 0) fetchP10();
+  }, [diagnosticos.length]);
+
   if (diagnosticos.length === 0) return null;
 
-  // Build rows, injecting Roxzone from splits if missing
-  let rows = [...diagnosticos];
+  // Build rows, overriding top_1 with p10_sec when available
+  let rows = diagnosticos.map(d => {
+    const p10 = p10Map[d.metric];
+    if (p10 && p10 > 0) {
+      const newTop1 = p10;
+      const newImprovement = Math.max(0, d.your_score - newTop1);
+      return { ...d, top_1: newTop1, improvement_value: newImprovement };
+    }
+    return { ...d };
+  });
+
+  // Inject Roxzone from splits if missing
   if (!hasRoxzone(diagnosticos) && splits.length > 0) {
     const roxzoneSec = getRoxzoneFromSplits(splits);
     if (roxzoneSec > 0) {
-      // Try to get roxzone reference from frozen metric scores
-      const roxzoneScore = metricScores.find(s => s.metric === 'roxzone');
-      
-      // Calculate a reference (Meta OUTLIER) for roxzone
-      // Use percentile to estimate: if athlete is at P50 (420s), top reference ~P10 (270s)
-      // Simple heuristic: reference = raw_time * (percentile / 100) factor
-      let roxzoneRef = 0;
-      if (roxzoneScore && roxzoneScore.percentile_value > 0) {
-        // Use a ratio based on the other stations' avg improvement (~30-40% reduction for top)
-        // More accurately: estimate top_1 as ~60-70% of athlete time based on percentile position
-        const avgRatio = rows.length > 0
-          ? rows.reduce((sum, d) => sum + (d.top_1 > 0 && d.your_score > 0 ? d.top_1 / d.your_score : 0), 0) / rows.filter(d => d.top_1 > 0 && d.your_score > 0).length
-          : 0.65;
-        roxzoneRef = Math.round(roxzoneSec * (avgRatio > 0 ? avgRatio : 0.65));
-      }
-
+      const roxzoneP10 = p10Map['roxzone'] || 0;
+      const roxzoneRef = roxzoneP10 > 0 ? roxzoneP10 : 0;
       const improvementVal = roxzoneRef > 0 ? Math.max(0, roxzoneSec - roxzoneRef) : 0;
 
       rows.push({
         id: 'roxzone-computed',
         movement: 'Roxzone Time',
-        metric: 'time',
+        metric: 'roxzone',
         value: 0,
         your_score: roxzoneSec,
         top_1: roxzoneRef,
         improvement_value: improvementVal,
-        percentage: 0, // Will be recalculated below
+        percentage: 0,
         total_improvement: 0,
       });
     }
@@ -99,7 +116,7 @@ export default function ImprovementTable({ diagnosticos, splits = [], metricScor
   if (totalImprovement > 0) {
     rows = rows.map(d => ({
       ...d,
-      percentage: d.improvement_value > 0 ? (d.improvement_value / totalImprovement) * 100 : d.percentage,
+      percentage: d.improvement_value > 0 ? (d.improvement_value / totalImprovement) * 100 : 0,
     }));
   }
 
