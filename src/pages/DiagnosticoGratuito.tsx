@@ -842,14 +842,7 @@ export default function DiagnosticoGratuito() {
               exit={{ opacity: 0, y: -30 }}
               className="flex flex-col items-center justify-center min-h-[60vh] px-4"
             >
-              <motion.p
-                className="text-xs text-muted-foreground/60 font-display tracking-widest mb-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                DENTRO DA ANÁLISE OUTLIER, ESSE É O COACH IDEAL PARA A SUA MELHOR PERFORMANCE
-              </motion.p>
+
 
               <OnboardingCoachSelection
                 onCoachSelected={(coachId, coachName) => {
