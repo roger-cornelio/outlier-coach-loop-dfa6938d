@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DiagnosticoMelhoria, Split } from './types';
 import { secondsToTime, timeToSeconds } from './types';
 import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   diagnosticos: DiagnosticoMelhoria[];
