@@ -1399,7 +1399,7 @@ function MobileAdvancedDataSection({
           <div className="bg-amber-500/5 rounded-lg p-3 border border-amber-500/10">
               <div className="flex items-center gap-1.5 mb-2">
                 <Target className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Pontos Fracos</span>
               </div>
               <ul className="space-y-1.5">
                 {worstMetrics.map((m, i) => {
