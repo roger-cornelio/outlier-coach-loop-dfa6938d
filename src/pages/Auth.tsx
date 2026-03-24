@@ -1073,12 +1073,23 @@ export default function Auth({ context = 'user' }: AuthProps) {
             </Link>
           )}
           {mode === 'signup' && (
-            <button
-              onClick={() => switchMode('login')}
-              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
-            >
-              Já tem conta? Entrar
-            </button>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => switchMode('login')}
+                className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
+              >
+                Já tem conta? Entrar
+              </button>
+              {context === 'user' && (
+                <Link
+                  to="/"
+                  className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  Voltar ao início
+                </Link>
+              )}
+            </div>
           )}
           {mode === 'forgot-password' && !resetSent && (
             <button
