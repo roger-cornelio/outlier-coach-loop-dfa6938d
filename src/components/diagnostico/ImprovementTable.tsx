@@ -60,9 +60,14 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
   if (!hasRoxzone(diagnosticos) && splits.length > 0) {
     const roxzoneSec = getRoxzoneFromSplits(splits);
     if (roxzoneSec > 0) {
-      const roxzoneP10 = p10Map['roxzone'] || 0;
-      const roxzoneRef = roxzoneP10 > 0 ? roxzoneP10 : 0;
-      const improvementVal = roxzoneRef > 0 ? Math.max(0, roxzoneSec - roxzoneRef) : 0;
+      rows.push({
+        id: 'roxzone-computed',
+        movement: 'Roxzone Time',
+        metric: 'roxzone',
+        value: 0,
+        your_score: roxzoneSec,
+        top_1: 0,
+        improvement_value: 0,
 
       rows.push({
         id: 'roxzone-computed',
