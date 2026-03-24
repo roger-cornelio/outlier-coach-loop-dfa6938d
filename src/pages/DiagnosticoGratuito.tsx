@@ -792,39 +792,7 @@ export default function DiagnosticoGratuito() {
                           minutos que você pode recuperar com treino direcionado
                         </p>
                       </div>
-          )}
-
-          {/* ===== COACH SELECTION STEP ===== */}
-          {step === 'coach-selection' && (
-            <motion.div
-              key="coach-selection"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              className="flex flex-col items-center justify-center min-h-[60vh] px-4"
-            >
-              <motion.p
-                className="text-xs text-muted-foreground/60 font-display tracking-widest mb-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                DENTRO DA ANÁLISE OUTLIER, ESSE É O COACH IDEAL PARA A SUA MELHOR PERFORMANCE
-              </motion.p>
-
-              <OnboardingCoachSelection
-                onCoachSelected={(coachId, coachName) => {
-                  // Store selected coach info for post-signup linking
-                  try {
-                    localStorage.setItem('outlier_selected_coach', JSON.stringify({ coachId, coachName }));
-                  } catch {}
-                  // Navigate to signup
-                  window.location.href = '/login?mode=signup';
-                }}
-                onBack={() => setStep('results')}
-              />
-            </motion.div>
-          )}
+          )
                     <div className="w-16 h-px bg-primary/30 mx-auto" />
 
                     <div className="space-y-3">
