@@ -242,8 +242,30 @@ export default function DiagnosticoGratuito() {
                 ))}
               </div>
 
+              {/* Consent checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="mt-0.5">
+                  <div
+                    onClick={() => setConsentGiven(!consentGiven)}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      consentGiven
+                        ? 'bg-primary border-primary'
+                        : 'border-muted-foreground/40 hover:border-muted-foreground group-hover:border-muted-foreground'
+                    }`}
+                  >
+                    {consentGiven && <CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" />}
+                  </div>
+                </div>
+                <span
+                  onClick={() => setConsentGiven(!consentGiven)}
+                  className="text-xs text-muted-foreground leading-relaxed select-none"
+                >
+                  Autorizo a busca e análise dos meus dados de resultado HYROX disponíveis publicamente para fins de diagnóstico de performance.
+                </span>
+              </label>
+
               {/* Search input */}
-              <div className="relative">
+              <div className={`relative transition-opacity ${!consentGiven ? 'opacity-40 pointer-events-none' : ''}`}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Digite seu nome completo..."
@@ -251,6 +273,7 @@ export default function DiagnosticoGratuito() {
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && executeSearch(searchQuery)}
                   className="pl-10 h-12 text-base bg-card border-border"
+                  disabled={!consentGiven}
                 />
                 {searching && (
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
@@ -258,7 +281,7 @@ export default function DiagnosticoGratuito() {
               </div>
 
               {/* Search hint */}
-              {!searchDone && !searching && (
+              {!searchDone && !searching && consentGiven && (
                 <p className="text-xs text-center text-muted-foreground">
                   Buscamos seu resultado diretamente no site oficial do HYROX
                 </p>
