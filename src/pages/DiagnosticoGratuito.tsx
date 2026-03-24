@@ -491,7 +491,7 @@ export default function DiagnosticoGratuito() {
                   transition={{ delay: 1.2 }}
                   className="text-[10px] text-muted-foreground/60 uppercase tracking-widest"
                 >
-                  Análise baseada em 50.000+ resultados HYROX globais
+                  Análise baseada em quase 1 milhão de resultados HYROX · Comparamos você com atletas da sua categoria
                 </motion.p>
               </motion.div>
 
