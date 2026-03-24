@@ -495,21 +495,90 @@ export default function DiagnosticoGratuito() {
                 </motion.p>
               </motion.div>
 
-              {/* ─── 2. RADAR ─── */}
-              {scores.length > 0 && (
+              {/* ─── 2. PARECER OUTLIER ─── */}
+              {weakStations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="bg-card rounded-2xl border border-border p-6"
+                  className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/[0.04]"
                 >
-                  <h3 className="font-display text-sm tracking-wider text-foreground mb-1 text-center">
-                    PERFIL DE PERFORMANCE
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground text-center mb-4 tracking-wide">
-                    Comparado com todos os atletas da sua divisão
-                  </p>
-                  <OutlierRadarChart scores={scores} />
+                  <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-primary/[0.06] blur-3xl pointer-events-none" />
+                  <div className="relative p-6 space-y-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 border border-primary/20">
+                        <Target className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
+                          Parecer OUTLIER
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
+                          Inteligência de Performance · Dados Reais
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-[15px] leading-relaxed text-muted-foreground space-y-4">
+                      <p>
+                        Você finalizou o{' '}
+                        <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
+                        <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Nós dissecamos a sua prova e
+                        comparamos cada split contra a referência OUTLIER da categoria{' '}
+                        <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
+                      </p>
+
+                      <p>
+                        Os dados não mentem: identificamos exatamente onde a sua performance
+                        está vazando. O seu maior ponto fraco atual é no{' '}
+                        <span className="font-bold text-primary">{METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span>, onde você está no percentil{' '}
+                        <span className="font-bold text-destructive">P{weakStations[0].percentile_value}</span> — abaixo de{' '}
+                        {100 - weakStations[0].percentile_value}% dos atletas da sua categoria.
+                      </p>
+
+                      {/* Critical stations */}
+                      <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
+                        <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-primary" />
+                          Estações Críticas
+                        </p>
+                        <div className="space-y-2">
+                          {weakStations.map((s, i) => (
+                            <div key={s.metric} className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
+                                  {i + 1}
+                                </span>
+                                <span className="text-sm font-semibold text-foreground truncate">
+                                  {METRIC_LABELS[s.metric] || s.metric}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0 text-xs">
+                                <span className="text-muted-foreground">
+                                  Seu tempo: <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
+                                </span>
+                                <span className="font-bold text-destructive">
+                                  P{s.percentile_value}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {totalTimeLost > 0 && (
+                          <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                            Potencial combinado: cortar{' '}
+                            <span className="font-bold text-primary">{Math.round(totalTimeLost / 60)}+ minutos</span>{' '}
+                            do seu tempo final focando apenas nessas estações.
+                          </p>
+                        )}
+                      </div>
+
+                      <p>
+                        A estratégia agora não é treinar mais, é treinar mais inteligente.
+                        Vamos focar em transformar essas fraquezas na sua maior vantagem competitiva.
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -524,72 +593,47 @@ export default function DiagnosticoGratuito() {
                 </motion.div>
               )}
 
-              {/* ─── 4. PONTOS FRACOS (Aversão à Perda) ─── */}
+              {/* ─── 4. PLANO DE ATAQUE — 3 pontos ─── */}
               {weakStations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
-                  className="bg-card rounded-2xl border border-destructive/30 p-6 space-y-4 relative overflow-hidden"
+                  className="bg-card rounded-2xl border border-primary/20 p-6 space-y-4"
                 >
-                  {/* Pulsing warning glow */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-destructive/60 to-transparent animate-pulse" />
-
                   <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-destructive" />
+                    <Zap className="w-5 h-5 text-primary" />
                     <h3 className="font-display text-sm tracking-wider text-foreground">
-                      VOCÊ ESTÁ PERDENDO TEMPO AQUI
+                      COMO VAMOS TE FAZER EVOLUIR
                     </h3>
                   </div>
 
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Cada segundo perdido nas estações abaixo te afasta do próximo nível.{' '}
-                    <span className="text-destructive font-semibold">
-                      Atletas que corrigem esses pontos melhoram até {Math.round(totalTimeLost / 60)}+ minutos no tempo final.
-                    </span>
-                  </p>
-
                   <div className="space-y-3">
-                    {weakStations.map((station, idx) => (
-                      <motion.div
-                        key={station.metric}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.8 + idx * 0.15 }}
-                        className="space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-destructive/80 w-5">#{idx + 1}</span>
-                            <span className="text-foreground font-medium">{METRIC_LABELS[station.metric] || station.metric}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {formatTimeSec(station.raw_time_sec)} · P{station.percentile_value}
-                          </span>
+                    {[
+                      {
+                        num: '01',
+                        title: `Corrigir ${METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
+                        desc: `Treinos específicos para tirar você do P${weakStations[0]?.percentile_value || 0} e colocar acima do P50 — onde a maioria dos atletas competitivos está.`,
+                      },
+                      {
+                        num: '02',
+                        title: 'Blindar sua resistência sob fadiga',
+                        desc: 'Protocolos de gestão de pace e resistência muscular para que seu desempenho não desabe nas últimas estações.',
+                      },
+                      {
+                        num: '03',
+                        title: 'Periodização orientada à sua próxima prova',
+                        desc: `Plano semanal personalizado com foco em derrubar seu tempo para ${evolution ? formatTimeSec(projectedAt12) : 'o próximo nível'}.`,
+                      },
+                    ].map((item) => (
+                      <div key={item.num} className="flex gap-3 items-start">
+                        <span className="text-2xl font-bold text-primary/30 font-mono leading-none mt-0.5">{item.num}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.desc}</p>
                         </div>
-                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.max(5, station.percentile_value)}%` }}
-                            transition={{ duration: 1, delay: 0.9 + idx * 0.15 }}
-                            className="h-full rounded-full"
-                            style={{
-                              backgroundColor: station.percentile_value < 25
-                                ? 'hsl(var(--destructive))'
-                                : station.percentile_value < 50
-                                ? 'hsl(35, 92%, 50%)'
-                                : 'hsl(var(--primary))',
-                            }}
-                          />
-                        </div>
-                      </motion.div>
+                      </div>
                     ))}
-                  </div>
-
-                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 mt-2">
-                    <p className="text-xs text-destructive/90 text-center font-medium">
-                      ⚠️ Sem intervenção, esses gaps tendem a aumentar com o tempo — não a diminuir.
-                    </p>
                   </div>
                 </motion.div>
               )}
