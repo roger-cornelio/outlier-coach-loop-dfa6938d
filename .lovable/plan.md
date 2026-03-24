@@ -1,41 +1,40 @@
 
 
-## Plano: Unificar Referência de "Meta OUTLIER" entre Diagnóstico Gratuito e Tela de Evolução
+## Plano: Diagnóstico Gratuito com RoxCoach sem Autenticação
 
-### Causa Raiz da Divergência
+### Alterações
 
-As duas telas usam **fontes de dados diferentes** para calcular a "Meta OUTLIER":
+**1. Edge Function `proxy-roxcoach`** — Tornar auth opcional
+- Se tiver header Authorization, valida e identifica o usuário
+- Se não tiver, permite a chamada como anônima
+- Sem rate limiting nesta fase
+- Manter todo o resto da lógica (retry, normalização de nome, timeout)
 
-- **Diagnóstico Gratuito** → usa `p10_sec` da tabela `percentile_bands` (calculado pela edge function `calculate-hyrox-percentiles` com `dry_run: true`)
-- **Tela de Evolução (ImprovementTable)** → usa `top_1` da tabela `diagnostico_melhoria`, que vem da **API externa RoxCoach** (campo "Top 1%" parseado pelo `diagnosticParser.ts`)
+**2. Página `DiagnosticoGratuito.tsx`** — Chamar RoxCoach
+- Na função handleSelectResult, adicionar chamada ao proxy-roxcoach em paralelo
+- Usar os dados top_1 do RoxCoach como "Meta OUTLIER" no diagnóstico
+- Se o RoxCoach falhar: exibir mensagem "Diagnóstico temporariamente indisponível" na seção de análise comparativa (splits e tempo total continuam visíveis)
+- Salvar resultado no localStorage para persistência futura quando criar conta
+- Sem fallback para benchmarks internos
 
-São duas referências completamente independentes — o p10 interno e o "Top 1%" do RoxCoach. Por isso os números divergem (ex: Run Total mostra 36:23 num lugar e outro valor no outro).
+**3. Componente `ImprovementTable.tsx`** — Reverter override de p10_sec
+- Remover o useEffect que busca percentile_bands e sobrescreve top_1
+- Remover estado p10Map
+- Usar dados originais de diagnostico_melhoria (fonte RoxCoach)
 
-### Solução: Fonte Única de Verdade
+### Arquivos afetados
+1. `supabase/functions/proxy-roxcoach/index.ts`
+2. `src/pages/DiagnosticoGratuito.tsx`
+3. `src/components/diagnostico/ImprovementTable.tsx`
 
-Fazer a **ImprovementTable** na tela de evolução usar os mesmos dados `p10_sec` da tabela `percentile_bands` (via `hyrox_metric_scores` já calculados e salvos), em vez de depender do `top_1` vindo do scraper externo.
-
-### Implementação
-
-**1. `src/components/diagnostico/ImprovementTable.tsx`**
-
-- Receber `metricScores` (já recebe) que contém `p10_sec` de cada métrica (quando disponível do `calculate-hyrox-percentiles`)
-- Para cada linha de `diagnostico_melhoria`, buscar o `p10_sec` correspondente do `metricScores` via match de `metric`
-- Se encontrar `p10_sec`, usar como `top_1` (Meta OUTLIER) e recalcular `improvement_value = your_score - p10_sec`
-- Se não encontrar (fallback), manter o `top_1` original do banco
-
-**2. Onde a ImprovementTable é usada — verificar que `metricScores` é passado**
-
-- Verificar os componentes pai que renderizam `ImprovementTable` e garantir que `metricScores` esteja sendo passado corretamente (provavelmente já está, mas preciso confirmar)
+### Risco de falha estimado: 2-3%
+- Render pago elimina cold starts (era ~40% do risco)
+- Retry automático já existe (2 tentativas com 3s de intervalo)
+- Normalização de nomes já cobre "Sobrenome, Nome" → "Nome Sobrenome"
+- Timeout de 55s é generoso para API respondendo sem cold start
 
 ### O que NÃO muda
-
-- DiagnosticoGratuito (já usa p10_sec corretamente)
-- Edge function `calculate-hyrox-percentiles`
-- Tabela `diagnostico_melhoria` (dados do scraper continuam salvos, mas a exibição prioriza p10_sec)
+- Edge functions de scraping e percentis
 - Schema do banco (zero migrations)
-
-### Resultado esperado
-
-Uma mesma prova vai mostrar exatamente os mesmos números de "Meta OUTLIER", "Potencial de Evolução" e "% Foco" tanto no diagnóstico gratuito quanto na tela de evolução.
+- Fluxo de criação de conta
 
