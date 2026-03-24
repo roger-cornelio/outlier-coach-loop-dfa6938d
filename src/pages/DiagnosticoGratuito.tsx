@@ -683,7 +683,7 @@ export default function DiagnosticoGratuito() {
                       <p>
                         Os dados não mentem: identificamos exatamente onde a sua performance
                         está vazando. O seu maior ponto fraco atual é no{' '}
-                        <span className="font-bold text-primary">{METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
+                        <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
                         <span className="font-bold text-destructive">{100 - weakStations[0].percentile_value}% dos atletas da sua categoria são mais rápidos que você</span>.
                       </p>
 
@@ -701,7 +701,7 @@ export default function DiagnosticoGratuito() {
                                     {i + 1}
                                   </span>
                                   <span className="text-sm font-semibold text-foreground truncate">
-                                    {METRIC_LABELS[s.metric] || s.metric}
+                                    {s.movement || METRIC_LABELS[s.metric] || s.metric}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0 text-xs">
@@ -759,7 +759,7 @@ export default function DiagnosticoGratuito() {
                   <div className="grid grid-cols-2 gap-3">
                     {strongStations.map((station) => (
                       <div key={station.metric} className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
-                        <p className="text-xs text-muted-foreground">{METRIC_LABELS[station.metric] || station.metric}</p>
+                        <p className="text-xs text-muted-foreground">{roxCoachDiagnosticos.find((d: any) => d.metric === station.metric)?.movement || METRIC_LABELS[station.metric] || station.metric}</p>
                         <p className="text-lg font-bold text-primary mt-1">{formatTimeSec(station.raw_time_sec)}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Top {100 - station.percentile_value}%</p>
                       </div>
@@ -787,7 +787,7 @@ export default function DiagnosticoGratuito() {
                     {[
                       {
                         num: '01',
-                        title: `Corrigir ${METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
+                        title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
                         desc: `Treinos específicos para tirar você dos ${100 - (weakStations[0]?.percentile_value || 0)}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
