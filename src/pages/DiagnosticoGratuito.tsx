@@ -68,6 +68,7 @@ export default function DiagnosticoGratuito() {
   const [scrapedData, setScrapedData] = useState<ScrapeResult | null>(null);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [gender, setGender] = useState<'M' | 'F'>('M');
+  const [consentGiven, setConsentGiven] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
