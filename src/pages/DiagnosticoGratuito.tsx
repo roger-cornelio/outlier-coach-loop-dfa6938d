@@ -252,16 +252,7 @@ export default function DiagnosticoGratuito() {
     return result;
   }, [scrapedData]);
 
-  // Total time lost to weak stations
-  const totalTimeLost = useMemo(() => {
-    if (weakStations.length === 0) return 0;
-    // Estimate: for each weak station, the gap between their time and the P50 benchmark
-    // Simple heuristic: lower percentile = more time lost
-    return weakStations.reduce((sum, s) => {
-      const lostEstimate = Math.max(0, (50 - s.percentile_value) * 1.5); // ~1.5s per percentile point
-      return sum + lostEstimate;
-    }, 0);
-  }, [weakStations]);
+  // (totalTimeLost replaced by totalImprovementSec above)
 
   // Evolution projection
   const totalSeconds = scrapedData?.time_in_seconds || 0;
