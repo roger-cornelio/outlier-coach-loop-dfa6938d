@@ -787,7 +787,7 @@ export default function DiagnosticoGratuito() {
                     {[
                       {
                         num: '01',
-                        title: `Corrigir ${METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
+                        title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
                         desc: `Treinos específicos para tirar você dos ${100 - (weakStations[0]?.percentile_value || 0)}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
