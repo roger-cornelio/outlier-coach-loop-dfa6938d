@@ -1,61 +1,45 @@
 
 
-## Diagnóstico Gratuito — Redesign focado em conversão e impacto emocional
+## Plano: Corrigir FOCO % com dados reais da Meta OUTLIER + Top 5 estações + Gráfico de Fadiga
 
-### Problema atual
-A tela de resultados é técnica demais: radar + barrinhas de percentil + CTA genérico. Falta impacto emocional, storytelling e gatilhos psicológicos (Aversão à Perda, Novidade, Autoridade).
+### O que está errado hoje
 
-### Visão
-Transformar os resultados em uma experiência narrativa de alto impacto, com dados reais do atleta apresentados de forma aspiracional. O diagnóstico deve fazer o atleta sentir: "Eu PRECISO disso."
+O "% de foco" mostrado na tela gratuita é **inventado** — usa uma fórmula genérica que não tem relação com os dados reais. O diagnóstico completo (pago) já calcula isso corretamente usando a **Meta OUTLIER** (tempo dos top 10% da categoria), mas a tela gratuita não tem acesso a esse dado.
 
-### Estrutura dos resultados (nova ordem)
+### O que vamos fazer
 
-**1. Hero do Resultado — "Seu Raio X HYROX"**
-- Tempo total grande e destacado com animação de contagem
-- Badge de classificação automática (Novato / Intermediário / Avançado / Elite) com cor
-- Nome do evento + divisão como subtítulo
-- Frase de autoridade: "Análise baseada em 50.000+ resultados HYROX globais"
+**Passo 1 — Trazer a Meta OUTLIER para a tela gratuita**
 
-**2. Radar Chart (existente, mantido)**
-- Mesmo OutlierRadarChart, mas com subtítulo de marketing: "Comparado com todos os atletas da sua divisão"
+A função que calcula os percentis da tela gratuita já busca os dados de referência (top 10%, top 25%, etc.), mas só devolve o percentil final. Vamos fazer ela devolver também o **tempo de referência dos top 10%** (a Meta OUTLIER). Isso não exige tabela nova nem dados novos — já está tudo lá, só não é retornado.
 
-**3. Resistência sob Fadiga (FatigueIndexCard adaptado)**
-- Reutilizar a lógica do gauge + gráfico de linha das 8 runs
-- Dados virão dos splits do scrape (run_1_sec...run_8_sec) convertidos para o formato Split[]
-- Copy de aversão à perda: "Você está perdendo X minutos por fadiga. Atletas que corrigem isso melhoram em média Y minutos."
+**Passo 2 — Calcular FOCO % com a fórmula real**
 
-**4. Pontos Fracos com gatilho de perda**
-- Manter as 3 piores estações mas com copy emocional
-- Adicionar frase: "Cada segundo perdido aqui te afasta do pódio na sua categoria"
-- Highlight visual mais agressivo (borda vermelha pulsante)
+Com a Meta OUTLIER em mãos, o cálculo passa a ser:
+- **Tempo que pode ganhar** = Seu tempo − Meta OUTLIER
+- **FOCO %** = Tempo que pode ganhar nessa estação ÷ Soma de todas as estações × 100
 
-**5. Pontos Fortes (mantido, mais compacto)**
-- Seção menor, celebração rápida
+Exatamente igual à tabela do diagnóstico completo.
 
-**6. Projeção de Evolução (EvolutionProjectionCard adaptado — PARCIALMENTE BLOQUEADO)**
-- Mostrar o gráfico de 12 meses com a curva descendente (tempo melhorando)
-- Mostrar as 3 métricas (resultado esperado, ganho/mês, ganho em 12m)
-- SEM o texto AI (não autenticado)
-- Copy: "Com treino direcionado, seu tempo pode cair para X:XX:XX em 12 meses"
-- Usar dados reais: calcular com `calculateEvolutionTimeframe` e gap dos scores
+**Passo 3 — Mostrar só as 5 estações mais impactantes**
 
-**7. CTA Final — Gate Premium (redesenhado)**
-- Contagem do que o atleta está "deixando na mesa": tempo total que poderia ganhar
-- Animação mais agressiva, glow pulsante
-- Copy: "Você tem X:XX de potencial escondido. Um coach dedicado vai desbloquear cada segundo."
-- Botão: "COMEÇAR MEUS 30 DIAS GRÁTIS"
-- Sub-CTA: "Sem cartão de crédito · Cancele quando quiser"
+Ordenar todas as estações pelo FOCO % e exibir apenas as 5 maiores. Cada uma mostra o tempo que o atleta fez + o badge de FOCO %.
 
-### Mudanças técnicas
+**Passo 4 — Garantir que o gráfico de Resistência sob Fadiga aparece**
 
-**Arquivo**: `src/pages/DiagnosticoGratuito.tsx`
+O gráfico já está no código mas pode não estar aparecendo corretamente. Vamos garantir que ele é renderizado logo após os destaques, mostrando a quebra de performance entre as corridas 2 a 7.
 
-1. **Mapear splits do scrape para formato Split[]** — converter `splits.run_1_sec`, `splits.ski_sec` etc. para array de `{ id, split_name, time }` compatível com FatigueIndexCard
-2. **Importar e usar FatigueIndexCard** com os splits mapeados
-3. **Calcular projeção** usando `calculateEvolutionTimeframe` com o finish_time e gap total dos scores
-4. **Construir gráfico de projeção inline** (sem chamar edge function de AI, pois não há auth)
-5. **Redesenhar seção de resultados** com nova hierarquia visual e copy de marketing
-6. **Adicionar animações** de contagem (tempo total) e entrada escalonada nos cards
+### Ordem final da tela de resultados
 
-Nenhuma tabela ou edge function nova necessária — tudo usa dados já disponíveis do scrape + cálculos client-side.
+1. **Hero** — Tempo total + classificação + categoria
+2. **Parecer OUTLIER** — Top 5 estações por FOCO % (com tempo real + badge)
+3. **Seus Destaques** — Estações fortes (com tempo)
+4. **Resistência sob Fadiga** — Gráfico de quebra nas corridas
+5. **Como vamos te fazer evoluir** — 3 pontos estratégicos
+6. **CTA** — Botão de conversão
+
+### O que NÃO muda
+
+- Nenhuma tabela nova no banco
+- Nenhuma função nova no backend
+- Os dados de scrape continuam os mesmos
 
