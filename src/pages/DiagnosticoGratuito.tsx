@@ -406,7 +406,7 @@ export default function DiagnosticoGratuito() {
                     Nenhum resultado encontrado. Verifique o nome ou tente outra grafia.
                   </p>
                   <Link
-                    to="/login?mode=signup"
+                    to="/login"
                     className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
                   >
                     Nunca fez HYROX? Crie sua conta e faça o onboarding por perfil
