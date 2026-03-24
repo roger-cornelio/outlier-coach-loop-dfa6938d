@@ -621,7 +621,7 @@ export default function DiagnosticoGratuito() {
                     Tente novamente em alguns minutos.
                   </p>
                   <button
-                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
+                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
                     className="text-xs text-primary hover:underline"
                   >
                     ← Tentar novamente
