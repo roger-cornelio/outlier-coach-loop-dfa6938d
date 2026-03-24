@@ -164,11 +164,30 @@ export default function DiagnosticoGratuito() {
   async function handleSelectResult(result: SearchResult) {
     setSelectedResult(result);
     setStep('loading');
+    setRoxCoachFailed(false);
+    setRoxCoachDiagnosticos([]);
 
     try {
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-hyrox-result', {
-        body: { url: result.result_url },
-      });
+      // Call scrape + RoxCoach proxy in parallel
+      const [scrapeResponse, roxCoachResponse] = await Promise.all([
+        supabase.functions.invoke('scrape-hyrox-result', {
+          body: { url: result.result_url },
+        }),
+        supabase.functions.invoke('proxy-roxcoach', {
+          body: {
+            athlete_name: result.athlete_name,
+            event_name: result.event_name,
+            division: result.division,
+            season_id: result.season_id,
+            result_url: result.result_url,
+          },
+        }).catch(err => {
+          console.warn('[DIAG_FREE] RoxCoach proxy failed:', err);
+          return { data: null, error: err };
+        }),
+      ]);
+
+      const { data: scrapeData, error: scrapeError } = scrapeResponse;
 
       if (scrapeError || scrapeData?.error) {
         throw new Error(scrapeData?.error || 'Erro ao importar dados da prova');
@@ -193,6 +212,7 @@ export default function DiagnosticoGratuito() {
       const division = scrapeData?.race_category === 'PRO' ? 'HYROX PRO' : 'HYROX';
       const detectedGender = result.division?.includes('Women') || result.division?.includes('Female') ? 'F' : 'M';
 
+      // Calculate percentiles for basic scores (percentile_value, etc.)
       const { data: percentileData, error: percentileError } = await supabase.functions.invoke('calculate-hyrox-percentiles', {
         body: { division, gender: detectedGender, metrics: metricsToCalc, dry_run: true },
       });
@@ -206,11 +226,34 @@ export default function DiagnosticoGratuito() {
 
       setScores(calculatedScores);
 
+      // Process RoxCoach diagnostic data
+      const roxData = roxCoachResponse?.data;
+      if (roxData && !roxData.error && !roxData.ok === false && roxData.diagnostico_melhoria) {
+        const diagnosticos: RoxCoachDiagnostico[] = (roxData.diagnostico_melhoria || []).map((d: any) => ({
+          movement: d.movement || d.station || '',
+          metric: d.metric || '',
+          your_score: d.your_score || 0,
+          top_1: d.top_1 || 0,
+          improvement_value: d.improvement_value || Math.max(0, (d.your_score || 0) - (d.top_1 || 0)),
+          percentage: d.percentage || 0,
+        }));
+        if (diagnosticos.length > 0 && diagnosticos.some(d => d.top_1 > 0)) {
+          setRoxCoachDiagnosticos(diagnosticos);
+          setRoxCoachFailed(false);
+        } else {
+          setRoxCoachFailed(true);
+        }
+      } else {
+        console.warn('[DIAG_FREE] RoxCoach returned no diagnostic data');
+        setRoxCoachFailed(true);
+      }
+
       // Save to localStorage for reuse during onboarding signup
       try {
         localStorage.setItem('outlier_free_diagnostic', JSON.stringify({
           scores: calculatedScores,
           scrapedData: scrapeData,
+          roxCoachDiagnosticos: roxData?.diagnostico_melhoria || null,
           selectedResult: { ...result, division: scrapeData?.race_category || result.division },
           gender: detectedGender,
           division,
