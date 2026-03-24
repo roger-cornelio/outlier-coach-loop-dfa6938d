@@ -220,7 +220,7 @@ export default function DiagnosticoGratuito() {
                   DIAGNÓSTICO <span className="text-primary">GRATUITO</span>
                 </h1>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                  Descubra seus pontos fortes e gargalos com base na sua última prova HYROX. Sem cadastro.
+                  Descubra seus pontos fortes e pontos fracos com base na sua última prova HYROX. Sem cadastro.
                 </p>
               </div>
 
