@@ -89,6 +89,15 @@ function AnimatedTime({ targetSeconds }: { targetSeconds: number }) {
 
 type Step = 'search' | 'loading' | 'results' | 'coach-selection';
 
+interface RoxCoachDiagnostico {
+  movement: string;
+  metric: string;
+  your_score: number;
+  top_1: number;
+  improvement_value: number;
+  percentage: number;
+}
+
 export default function DiagnosticoGratuito() {
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +109,8 @@ export default function DiagnosticoGratuito() {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [gender, setGender] = useState<'M' | 'F'>('M');
   const [consentGiven, setConsentGiven] = useState(false);
+  const [roxCoachDiagnosticos, setRoxCoachDiagnosticos] = useState<RoxCoachDiagnostico[]>([]);
+  const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
@@ -153,11 +164,30 @@ export default function DiagnosticoGratuito() {
   async function handleSelectResult(result: SearchResult) {
     setSelectedResult(result);
     setStep('loading');
+    setRoxCoachFailed(false);
+    setRoxCoachDiagnosticos([]);
 
     try {
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-hyrox-result', {
-        body: { url: result.result_url },
-      });
+      // Call scrape + RoxCoach proxy in parallel
+      const [scrapeResponse, roxCoachResponse] = await Promise.all([
+        supabase.functions.invoke('scrape-hyrox-result', {
+          body: { url: result.result_url },
+        }),
+        supabase.functions.invoke('proxy-roxcoach', {
+          body: {
+            athlete_name: result.athlete_name,
+            event_name: result.event_name,
+            division: result.division,
+            season_id: result.season_id,
+            result_url: result.result_url,
+          },
+        }).catch(err => {
+          console.warn('[DIAG_FREE] RoxCoach proxy failed:', err);
+          return { data: null, error: err };
+        }),
+      ]);
+
+      const { data: scrapeData, error: scrapeError } = scrapeResponse;
 
       if (scrapeError || scrapeData?.error) {
         throw new Error(scrapeData?.error || 'Erro ao importar dados da prova');
@@ -182,6 +212,7 @@ export default function DiagnosticoGratuito() {
       const division = scrapeData?.race_category === 'PRO' ? 'HYROX PRO' : 'HYROX';
       const detectedGender = result.division?.includes('Women') || result.division?.includes('Female') ? 'F' : 'M';
 
+      // Calculate percentiles for basic scores (percentile_value, etc.)
       const { data: percentileData, error: percentileError } = await supabase.functions.invoke('calculate-hyrox-percentiles', {
         body: { division, gender: detectedGender, metrics: metricsToCalc, dry_run: true },
       });
@@ -195,11 +226,34 @@ export default function DiagnosticoGratuito() {
 
       setScores(calculatedScores);
 
+      // Process RoxCoach diagnostic data
+      const roxData = roxCoachResponse?.data;
+      if (roxData && !roxData.error && roxData.ok !== false && roxData.diagnostico_melhoria) {
+        const diagnosticos: RoxCoachDiagnostico[] = (roxData.diagnostico_melhoria || []).map((d: any) => ({
+          movement: d.movement || d.station || '',
+          metric: d.metric || '',
+          your_score: d.your_score || 0,
+          top_1: d.top_1 || 0,
+          improvement_value: d.improvement_value || Math.max(0, (d.your_score || 0) - (d.top_1 || 0)),
+          percentage: d.percentage || 0,
+        }));
+        if (diagnosticos.length > 0 && diagnosticos.some(d => d.top_1 > 0)) {
+          setRoxCoachDiagnosticos(diagnosticos);
+          setRoxCoachFailed(false);
+        } else {
+          setRoxCoachFailed(true);
+        }
+      } else {
+        console.warn('[DIAG_FREE] RoxCoach returned no diagnostic data');
+        setRoxCoachFailed(true);
+      }
+
       // Save to localStorage for reuse during onboarding signup
       try {
         localStorage.setItem('outlier_free_diagnostic', JSON.stringify({
           scores: calculatedScores,
           scrapedData: scrapeData,
+          roxCoachDiagnosticos: roxData?.diagnostico_melhoria || null,
           selectedResult: { ...result, division: scrapeData?.race_category || result.division },
           gender: detectedGender,
           division,
@@ -219,8 +273,32 @@ export default function DiagnosticoGratuito() {
   }
 
   // Derived data for results
-  // Compute FOCO % using real Meta OUTLIER (p10_sec) gap
+  // Use RoxCoach diagnosticos when available, otherwise fall back to percentile p10_sec
   const stationsWithFocus = useMemo(() => {
+    if (roxCoachDiagnosticos.length > 0) {
+      // Use RoxCoach top_1 data as source of truth
+      const withGap = roxCoachDiagnosticos
+        .filter(d => d.your_score > 0 && d.top_1 > 0 && d.your_score > d.top_1)
+        .map(d => ({
+          metric: d.metric,
+          movement: d.movement,
+          raw_time_sec: d.your_score,
+          top_1: d.top_1,
+          improvement_value: d.improvement_value > 0 ? d.improvement_value : Math.max(0, d.your_score - d.top_1),
+          percentile_value: scores.find(s => s.metric === d.metric)?.percentile_value || 50,
+        }));
+      const totalImprovement = withGap.reduce((sum, s) => sum + s.improvement_value, 0);
+      return withGap
+        .map(s => ({
+          ...s,
+          focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
+        }))
+        .sort((a, b) => b.focusPct - a.focusPct);
+    }
+
+    // Fallback to p10_sec from percentiles (only if RoxCoach didn't fail)
+    if (roxCoachFailed) return [];
+
     const withGap = scores
       .filter((s: any) => s.raw_time_sec > 0 && s.p10_sec > 0 && s.raw_time_sec > s.p10_sec)
       .map((s: any) => ({
@@ -234,7 +312,7 @@ export default function DiagnosticoGratuito() {
         focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
       }))
       .sort((a: any, b: any) => b.focusPct - a.focusPct);
-  }, [scores]);
+  }, [scores, roxCoachDiagnosticos, roxCoachFailed]);
 
   const weakStations = useMemo(() => stationsWithFocus.slice(0, 5), [stationsWithFocus]);
 
@@ -524,6 +602,32 @@ export default function DiagnosticoGratuito() {
               </motion.div>
 
               {/* ─── 2. PARECER OUTLIER ─── */}
+              {roxCoachFailed && weakStations.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="rounded-2xl border border-border bg-card p-6 text-center space-y-3"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted mx-auto">
+                    <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Diagnóstico comparativo temporariamente indisponível
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                    Não foi possível acessar os dados de referência neste momento.
+                    Seus splits e tempo total estão visíveis acima.
+                    Tente novamente em alguns minutos.
+                  </p>
+                  <button
+                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    ← Tentar novamente
+                  </button>
+                </motion.div>
+              )}
               {weakStations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -840,7 +944,7 @@ export default function DiagnosticoGratuito() {
               {/* Back to search */}
               <div className="text-center pt-4">
                 <button
-                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
+                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   ← Buscar outro atleta
