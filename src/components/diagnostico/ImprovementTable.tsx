@@ -50,40 +50,11 @@ function getRoxzoneFromSplits(splits: Split[]): number {
   return 0;
 }
 
-export default function ImprovementTable({ diagnosticos, splits = [], metricScores = [] }: Props) {
-  // Fetch p10_sec from percentile_bands as the single source of truth for "Meta OUTLIER"
-  const [p10Map, setP10Map] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    async function fetchP10() {
-      const { data } = await supabase
-        .from('percentile_bands')
-        .select('metric, p10_sec')
-        .eq('percentile_set_id', 'v1')
-        .eq('is_active', true);
-      if (data) {
-        const map: Record<string, number> = {};
-        for (const b of data) {
-          map[b.metric] = b.p10_sec;
-        }
-        setP10Map(map);
-      }
-    }
-    if (diagnosticos.length > 0) fetchP10();
-  }, [diagnosticos.length]);
-
+export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
   if (diagnosticos.length === 0) return null;
 
-  // Build rows, overriding top_1 with p10_sec when available
-  let rows = diagnosticos.map(d => {
-    const p10 = p10Map[d.metric];
-    if (p10 && p10 > 0) {
-      const newTop1 = p10;
-      const newImprovement = Math.max(0, d.your_score - newTop1);
-      return { ...d, top_1: newTop1, improvement_value: newImprovement };
-    }
-    return { ...d };
-  });
+  // Use original data from diagnostico_melhoria (RoxCoach source)
+  let rows = diagnosticos.map(d => ({ ...d }));
 
   // Inject Roxzone from splits if missing
   if (!hasRoxzone(diagnosticos) && splits.length > 0) {
