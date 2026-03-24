@@ -1,45 +1,31 @@
 
 
-## Plano: Coach do Diagnóstico → Vinculação Automática (sem sobrescrever coach existente)
+## Plano: Fix — Click no Coach do Diagnóstico Não Faz Nada
 
-### Situação Atual
+### Causa raiz
 
-1. No diagnóstico gratuito, ao clicar num coach, salva `outlier_selected_coach` no localStorage e redireciona para `/login?mode=signup` (forçando cadastro)
-2. No WelcomeScreen, o `outlier_selected_coach` **não é consumido** — o atleta precisa escolher coach de novo no step `coach`
-3. Não existe proteção contra sobrescrever um coach já vinculado
+O componente `OnboardingCoachSelection` tenta vincular o coach no banco (`coach_athletes.insert`) e precisa de `user?.id` para isso. Na página de diagnóstico gratuito, **o usuário não está logado**, então `user?.id` é `null` e a função `handleSelectCoach` retorna imediatamente sem chamar `onCoachSelected`.
 
-### O que muda
+O callback que salva no localStorage e redireciona para `/login` nunca é executado.
 
-**1. Redirecionamento inteligente (`DiagnosticoGratuito.tsx`)**
+### Solução
 
-Ao clicar no coach, redirecionar para `/login` (sem `?mode=signup`). Assim, quem já tem conta vê login por padrão; quem é novo clica em "Criar conta".
+Modificar `OnboardingCoachSelection` para aceitar um modo "somente seleção" (sem vinculação no banco). Quando usado no diagnóstico gratuito (sem usuário logado), o componente deve apenas chamar `onCoachSelected` com os dados do coach, sem tentar inserir no banco.
 
-**2. Auto-vinculação no WelcomeScreen (`WelcomeScreen.tsx`)**
+### Implementação
 
-Ao montar, verificar se existe `outlier_selected_coach` no localStorage:
-- **Se SIM e o atleta NÃO tem coach** (`profile.coach_id` é null): vincular automaticamente (insert em `coach_athletes` + update `profiles.coach_id`) e pular o step `coach`, indo direto para `handleFinish`
-- **Se SIM e o atleta JÁ tem coach**: ignorar o localStorage, não sobrescrever. O atleta segue o fluxo normal
-- **Se NÃO**: fluxo normal, step `coach` aparece normalmente
-- Limpar `outlier_selected_coach` do localStorage após consumo (ou descarte)
+**`src/components/OnboardingCoachSelection.tsx`**:
 
-**3. Proteção no OnboardingCoachSelection**
+1. Adicionar prop opcional `skipLinking?: boolean` (default `false`)
+2. No `handleSelectCoach`: se `skipLinking` é `true`, chamar `onCoachSelected` direto sem fazer insert no banco
+3. Se `skipLinking` é `false` (uso no WelcomeScreen), manter comportamento atual com vinculação
 
-Nenhuma mudança necessária — esse componente já só aparece no onboarding de novos atletas. A proteção contra sobrescrita fica no WelcomeScreen.
+**`src/pages/DiagnosticoGratuito.tsx`**:
 
-### Regra de negócio
+1. Passar `skipLinking={true}` ao `OnboardingCoachSelection`
 
-- Coach do diagnóstico gratuito só é vinculado se o atleta **não tem coach cadastrado**
-- Troca de coach só acontece dentro de Configurações (fluxo existente, sem alteração)
+### Arquivo afetado
 
-### Arquivos afetados
-
-1. `src/pages/DiagnosticoGratuito.tsx` — trocar `/login?mode=signup` por `/login`
-2. `src/components/WelcomeScreen.tsx` — adicionar useEffect que consome `outlier_selected_coach`, verifica `profile.coach_id`, vincula se null, e pula step coach
-
-### O que NÃO muda
-
-- Componente `OnboardingCoachSelection` (mesma UI)
-- Fluxo de troca de coach em Configurações
-- Schema do banco (zero migrations)
-- RLS policies existentes
+- `src/components/OnboardingCoachSelection.tsx` — nova prop + guard no handleSelectCoach
+- `src/pages/DiagnosticoGratuito.tsx` — passar `skipLinking`
 
