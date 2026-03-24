@@ -336,10 +336,32 @@ export default function DiagnosticoGratuito() {
 
   const weakStations = useMemo(() => stationsWithFocus.slice(0, 5), [stationsWithFocus]);
 
-  const strongStations = useMemo(() =>
-    [...scores].sort((a, b) => b.percentile_value - a.percentile_value).slice(0, 2),
-    [scores]
-  );
+  const strongStations = useMemo(() => {
+    // When RoxCoach data is available, pick stations with smallest gap (closest to top 1%)
+    if (roxCoachDiagnosticos.length > 0) {
+      const validDiags = roxCoachDiagnosticos.filter((d: any) => d.your_score > 0 && d.top_1 > 0);
+      if (validDiags.length > 0) {
+        const sorted = [...validDiags].sort((a: any, b: any) => {
+          const gapA = Math.abs(a.your_score - a.top_1);
+          const gapB = Math.abs(b.your_score - b.top_1);
+          return gapA - gapB;
+        });
+        return sorted.slice(0, 2).map((d: any) => {
+          const matchingScore = scores.find(s => s.metric === d.metric);
+          return {
+            metric: d.metric,
+            movement: d.movement,
+            raw_time_sec: d.your_score,
+            percentile_value: matchingScore?.percentile_value ?? 0,
+            data_source: matchingScore?.data_source ?? 'estimated',
+            percentile_set_id_used: '',
+          };
+        });
+      }
+    }
+    // Fallback: use internal percentile scores
+    return [...scores].sort((a, b) => b.percentile_value - a.percentile_value).slice(0, 2);
+  }, [scores, roxCoachDiagnosticos]);
 
   // Total improvement in seconds (real gap)
   const totalImprovementSec = useMemo(() =>
