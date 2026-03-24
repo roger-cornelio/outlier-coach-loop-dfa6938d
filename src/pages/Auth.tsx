@@ -667,6 +667,16 @@ export default function Auth({ context = 'user' }: AuthProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Back to landing */}
+      {context === 'user' && (
+        <Link
+          to="/"
+          className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Voltar
+        </Link>
+      )}
 
       <motion.div
         initial={{ opacity: 0 }}
