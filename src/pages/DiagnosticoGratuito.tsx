@@ -865,7 +865,7 @@ export default function DiagnosticoGratuito() {
                   try {
                     localStorage.setItem('outlier_selected_coach', JSON.stringify({ coachId, coachName }));
                   } catch {}
-                  window.location.href = '/login?mode=signup';
+                  window.location.href = '/login';
                 }}
                 onBack={() => setStep('results')}
               />
