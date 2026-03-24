@@ -1,45 +1,62 @@
 
 
-## Plano: Corrigir FOCO % com dados reais da Meta OUTLIER + Top 5 estações + Gráfico de Fadiga
+## Plano: Reaproveitar Dados do Diagnóstico Gratuito no Onboarding
 
-### O que está errado hoje
+### Resumo
 
-O "% de foco" mostrado na tela gratuita é **inventado** — usa uma fórmula genérica que não tem relação com os dados reais. O diagnóstico completo (pago) já calcula isso corretamente usando a **Meta OUTLIER** (tempo dos top 10% da categoria), mas a tela gratuita não tem acesso a esse dado.
+Quando o atleta faz o diagnóstico gratuito e depois cria conta, os dados da prova já analisada são automaticamente salvos no banco — sem precisar buscar/importar de novo. A busca na aba Evolução continua funcionando normalmente para importar provas adicionais.
 
-### O que vamos fazer
+### Como funciona hoje
 
-**Passo 1 — Trazer a Meta OUTLIER para a tela gratuita**
+1. **Diagnóstico Gratuito** (`DiagnosticoGratuito.tsx`): busca nome → scrape da prova → calcula percentis via `public-calculate-percentiles` → mostra resultado → **descarta tudo** (nada salva)
+2. **Onboarding** (`WelcomeScreen.tsx`): busca nome de novo → scrape de novo → chama `proxy-roxcoach` → salva em `diagnostico_resumo`, `diagnostico_melhoria`, `tempos_splits`, `benchmark_results`
+3. **Evolução** (`EvolutionTab.tsx`): lê dos dados salvos no banco
 
-A função que calcula os percentis da tela gratuita já busca os dados de referência (top 10%, top 25%, etc.), mas só devolve o percentil final. Vamos fazer ela devolver também o **tempo de referência dos top 10%** (a Meta OUTLIER). Isso não exige tabela nova nem dados novos — já está tudo lá, só não é retornado.
+### O que muda
 
-**Passo 2 — Calcular FOCO % com a fórmula real**
+**Passo 1 — Unificar cálculo de percentis (dry_run)**
 
-Com a Meta OUTLIER em mãos, o cálculo passa a ser:
-- **Tempo que pode ganhar** = Seu tempo − Meta OUTLIER
-- **FOCO %** = Tempo que pode ganhar nessa estação ÷ Soma de todas as estações × 100
+Adicionar `dry_run: true` na edge function `calculate-hyrox-percentiles`:
+- Pula JWT, pula busca em `benchmark_results`, pula insert em `hyrox_metric_scores`
+- Retorna scores + `p10_sec` (mesma lógica, mesma tabela `percentile_bands`)
 
-Exatamente igual à tabela do diagnóstico completo.
+Atualizar `DiagnosticoGratuito.tsx` para chamar essa função unificada. Deletar `public-calculate-percentiles`.
 
-**Passo 3 — Mostrar só as 5 estações mais impactantes**
+**Passo 2 — Salvar dados no localStorage ao completar diagnóstico gratuito**
 
-Ordenar todas as estações pelo FOCO % e exibir apenas as 5 maiores. Cada uma mostra o tempo que o atleta fez + o badge de FOCO %.
+Após calcular os scores e mostrar o resultado, salvar em `localStorage` (chave `outlier_free_diagnostic`):
+- `scores` (percentis + p10_sec)
+- `scrapedData` (splits, time_in_seconds, event_name, race_category)
+- `selectedResult` (athlete_name, division, result_url, season_id)
+- `gender`
+- `timestamp` (expira em 24h)
 
-**Passo 4 — Garantir que o gráfico de Resistência sob Fadiga aparece**
+**Passo 3 — WelcomeScreen consome dados do localStorage**
 
-O gráfico já está no código mas pode não estar aparecendo corretamente. Vamos garantir que ele é renderizado logo após os destaques, mostrando a quebra de performance entre as corridas 2 a 7.
+Ao montar, verificar se existe `outlier_free_diagnostic` válido:
+- **Se SIM**: pular a etapa de busca e ir direto para o step `congrats`. Em paralelo:
+  - Chamar `proxy-roxcoach` com o contexto salvo para obter diagnóstico completo
+  - Persistir em `diagnostico_resumo`, `diagnostico_melhoria`, `tempos_splits`
+  - Persistir em `benchmark_results` (tempo total + splits)
+  - Chamar `calculate-hyrox-percentiles` (sem dry_run, com JWT) para salvar em `hyrox_metric_scores`
+  - Limpar localStorage após sucesso
+- **Se NÃO**: fluxo normal (busca → importação), sem mudança nenhuma
 
-### Ordem final da tela de resultados
+**Passo 4 — Aba Evolução continua igual**
 
-1. **Hero** — Tempo total + classificação + categoria
-2. **Parecer OUTLIER** — Top 5 estações por FOCO % (com tempo real + badge)
-3. **Seus Destaques** — Estações fortes (com tempo)
-4. **Resistência sob Fadiga** — Gráfico de quebra nas corridas
-5. **Como vamos te fazer evoluir** — 3 pontos estratégicos
-6. **CTA** — Botão de conversão
+Nenhuma mudança. A busca para importar provas adicionais continua existindo no `ImportarProva.tsx` e no fluxo de benchmarks. A aba Evolução lê de `diagnostico_resumo` + `tempos_splits` que foram populados pelo WelcomeScreen (seja via localStorage ou busca manual).
+
+### Arquivos afetados
+
+1. `supabase/functions/calculate-hyrox-percentiles/index.ts` — branch `dry_run`
+2. `src/pages/DiagnosticoGratuito.tsx` — trocar edge function + salvar localStorage
+3. `src/components/WelcomeScreen.tsx` — detectar localStorage + persistir dados
+4. `supabase/functions/public-calculate-percentiles/` — deletar
 
 ### O que NÃO muda
 
-- Nenhuma tabela nova no banco
-- Nenhuma função nova no backend
-- Os dados de scrape continuam os mesmos
+- Apresentação visual de nenhuma tela
+- Busca de provas adicionais na aba Evolução / Importar Prova
+- Schema do banco (zero migrations)
+- Nenhum custo extra de API
 
