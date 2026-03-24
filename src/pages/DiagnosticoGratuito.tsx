@@ -792,7 +792,8 @@ export default function DiagnosticoGratuito() {
                           minutos que você pode recuperar com treino direcionado
                         </p>
                       </div>
-          )
+                    )}
+
                     <div className="w-16 h-px bg-primary/30 mx-auto" />
 
                     <div className="space-y-3">
