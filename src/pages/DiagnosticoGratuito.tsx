@@ -944,7 +944,7 @@ export default function DiagnosticoGratuito() {
               {/* Back to search */}
               <div className="text-center pt-4">
                 <button
-                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
+                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   ← Buscar outro atleta
