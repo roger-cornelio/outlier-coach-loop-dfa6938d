@@ -4,6 +4,8 @@ import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
@@ -111,6 +113,8 @@ export default function DiagnosticoGratuito() {
   const [consentGiven, setConsentGiven] = useState(false);
   const [roxCoachDiagnosticos, setRoxCoachDiagnosticos] = useState<RoxCoachDiagnostico[]>([]);
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
+  const [textoIa, setTextoIa] = useState<string | null>(null);
+  const [textoIaLoading, setTextoIaLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
@@ -166,7 +170,8 @@ export default function DiagnosticoGratuito() {
     setStep('loading');
     setRoxCoachFailed(false);
     setRoxCoachDiagnosticos([]);
-
+    setTextoIa(null);
+    setTextoIaLoading(false);
     try {
       // Call scrape + RoxCoach proxy in parallel
       const [scrapeResponse, roxCoachResponse] = await Promise.all([
@@ -285,6 +290,32 @@ export default function DiagnosticoGratuito() {
       }
 
       setStep('results');
+
+      // Fire AI parecer generation (non-blocking)
+      const roxDiagData = roxData?.diagnostico_melhoria || [];
+      const roxSplitsData = roxData?.tempos_splits || [];
+      if (roxDiagData.length > 0 || calculatedScores.length > 0) {
+        setTextoIaLoading(true);
+        supabase.functions.invoke('generate-diagnostic-ai', {
+          body: {
+            athlete_name: result.athlete_name,
+            event_name: scrapeData?.event_name || result.event_name,
+            division,
+            finish_time: scrapeData?.formatted_time || result.time_formatted,
+            splits_data: roxSplitsData,
+            diagnostic_data: roxDiagData,
+            coach_style: 'PULSE',
+          },
+        }).then(({ data: aiData }) => {
+          if (aiData?.texto_ia) {
+            setTextoIa(aiData.texto_ia);
+          }
+        }).catch(err => {
+          console.warn('[DIAG_FREE] AI parecer failed:', err);
+        }).finally(() => {
+          setTextoIaLoading(false);
+        });
+      }
     } catch (err: any) {
       console.error('Diagnostic error:', err);
       toast.error(err.message || 'Erro ao gerar diagnóstico. Tente novamente.');
@@ -663,7 +694,7 @@ export default function DiagnosticoGratuito() {
                     Tente novamente em alguns minutos.
                   </p>
                   <button
-                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
+                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); setTextoIa(null); setTextoIaLoading(false); lastSearchedRef.current = ''; }}
                     className="text-xs text-primary hover:underline"
                   >
                     ← Tentar novamente
@@ -688,69 +719,130 @@ export default function DiagnosticoGratuito() {
                           Parecer OUTLIER
                         </h3>
                         <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                          Inteligência de Performance · Dados Reais
+                          {textoIa ? 'Análise Avançada · Treinador de Elite' : 'Inteligência de Performance · Dados Reais'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-[15px] leading-relaxed text-muted-foreground space-y-4">
-                      <p>
-                        Você finalizou o{' '}
-                        <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
-                        <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Isso te coloca entre os{' '}
-                        <span className="font-bold text-primary">top {100 - (weakStations.length > 0 ? Math.round(scores.reduce((s, sc) => s + sc.percentile_value, 0) / scores.length) : 50)}%</span>{' '}
-                        dos atletas da categoria <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
-                      </p>
-
-                      <p>
-                        Os dados não mentem: identificamos exatamente onde a sua performance
-                        está vazando. O seu maior ponto fraco atual é no{' '}
-                        <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
-                        <span className="font-bold text-destructive">{100 - weakStations[0].percentile_value}% dos atletas da sua categoria são mais rápidos que você</span>.
-                      </p>
-
-                      {/* Critical stations — show % focus instead of percentile */}
-                      <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
-                        <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 text-primary" />
-                          Onde Focar
+                    {/* AI-generated markdown analysis */}
+                    {textoIa ? (
+                      <div className="prose prose-sm max-w-none parecer-markdown">
+                        <ReactMarkdown
+                          components={{
+                            h3: ({ children }) => (
+                              <h3 className="text-orange-500 font-extrabold text-sm uppercase tracking-wide mt-5 mb-2 flex items-center gap-1.5">
+                                {children}
+                              </h3>
+                            ),
+                            p: ({ children }) => (
+                              <p className="text-white/90 text-[15px] leading-relaxed mb-3">
+                                {children}
+                              </p>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className="text-orange-400 font-bold">
+                                {children}
+                              </strong>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="list-disc list-inside space-y-1 mb-3 text-white/80 text-sm">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="list-decimal list-inside space-y-1 mb-3 text-white/80 text-sm">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className="text-white/80 text-sm leading-relaxed">
+                                {children}
+                              </li>
+                            ),
+                          }}
+                        >
+                          {textoIa}
+                        </ReactMarkdown>
+                      </div>
+                    ) : textoIaLoading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-4/6" />
+                        <Skeleton className="h-20 w-full rounded-xl" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    ) : (
+                      /* Fallback: template-based analysis */
+                      <div className="text-[15px] leading-relaxed text-muted-foreground space-y-4">
+                        <p>
+                          Você finalizou o{' '}
+                          <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
+                          <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Isso te coloca entre os{' '}
+                          <span className="font-bold text-primary">top {(() => {
+                            if (roxCoachDiagnosticos.length > 0) {
+                              const validPcts = roxCoachDiagnosticos.filter(d => d.percentage > 0);
+                              if (validPcts.length > 0) return Math.round(validPcts.reduce((s, d) => s + d.percentage, 0) / validPcts.length);
+                            }
+                            return 100 - (weakStations.length > 0 ? Math.round(scores.reduce((s, sc) => s + sc.percentile_value, 0) / scores.length) : 50);
+                          })()}%</span>{' '}
+                          dos atletas da categoria <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
                         </p>
-                        <div className="space-y-2">
-                          {weakStations.map((s: any, i: number) => (
-                              <div key={s.metric} className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
-                                    {i + 1}
-                                  </span>
-                                  <span className="text-sm font-semibold text-foreground truncate">
-                                    {s.movement || METRIC_LABELS[s.metric] || s.metric}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0 text-xs">
-                                  <span className="text-muted-foreground">
-                                    <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
-                                  </span>
-                                  <span className="font-bold text-primary">
-                                    {s.focusPct}% foco
-                                  </span>
-                                </div>
-                              </div>
-                          ))}
-                        </div>
-                        {totalImprovementSec > 0 && (
-                          <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
-                            Potencial combinado: cortar{' '}
-                            <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
-                            do seu tempo final focando nessas estações.
+
+                        <p>
+                          Os dados não mentem: identificamos exatamente onde a sua performance
+                          está vazando. O seu maior ponto fraco atual é no{' '}
+                          <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
+                          <span className="font-bold text-destructive">{(() => {
+                            const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0].metric || d.movement === weakStations[0].movement);
+                            if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
+                            return 100 - weakStations[0].percentile_value;
+                          })()}% dos atletas da sua categoria são mais rápidos que você</span>.
+                        </p>
+
+                        {/* Critical stations — show % focus instead of percentile */}
+                        <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
+                          <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-primary" />
+                            Onde Focar
                           </p>
-                        )}
-                      </div>
+                          <div className="space-y-2">
+                            {weakStations.map((s: any, i: number) => (
+                                <div key={s.metric} className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
+                                      {i + 1}
+                                    </span>
+                                    <span className="text-sm font-semibold text-foreground truncate">
+                                      {s.movement || METRIC_LABELS[s.metric] || s.metric}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-3 shrink-0 text-xs">
+                                    <span className="text-muted-foreground">
+                                      <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
+                                    </span>
+                                    <span className="font-bold text-primary">
+                                      {s.focusPct}% foco
+                                    </span>
+                                  </div>
+                                </div>
+                            ))}
+                          </div>
+                          {totalImprovementSec > 0 && (
+                            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                              Potencial combinado: cortar{' '}
+                              <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
+                              do seu tempo final focando nessas estações.
+                            </p>
+                          )}
+                        </div>
 
-                      <p>
-                        A estratégia agora não é treinar mais, é treinar mais inteligente.
-                        Vamos focar em transformar essas fraquezas na sua maior vantagem competitiva.
-                      </p>
-                    </div>
+                        <p>
+                          A estratégia agora não é treinar mais, é treinar mais inteligente.
+                          Vamos focar em transformar essas fraquezas na sua maior vantagem competitiva.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -788,7 +880,11 @@ export default function DiagnosticoGratuito() {
                       {
                         num: '01',
                         title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
-                        desc: `Treinos específicos para tirar você dos ${100 - (weakStations[0]?.percentile_value || 0)}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
+                        desc: `Treinos específicos para tirar você dos ${(() => {
+                          const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0]?.metric || d.movement === weakStations[0]?.movement);
+                          if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
+                          return 100 - (weakStations[0]?.percentile_value || 0);
+                        })()}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
                         num: '02',
@@ -964,7 +1060,7 @@ export default function DiagnosticoGratuito() {
               {/* Back to search */}
               <div className="text-center pt-4">
                 <button
-                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); lastSearchedRef.current = ''; }}
+                  onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); setTextoIa(null); setTextoIaLoading(false); lastSearchedRef.current = ''; }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   ← Buscar outro atleta
