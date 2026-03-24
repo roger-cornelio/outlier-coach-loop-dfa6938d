@@ -4,6 +4,8 @@ import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
