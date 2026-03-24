@@ -553,9 +553,7 @@ export default function DiagnosticoGratuito() {
                           Onde Focar
                         </p>
                         <div className="space-y-2">
-                          {weakStations.map((s, i) => {
-                            const focusPct = Math.round((1 / (s.percentile_value || 1)) * 100 / weakStations.reduce((sum, w) => sum + (1 / (w.percentile_value || 1)), 0) * 100);
-                            return (
+                          {weakStations.map((s: any, i: number) => (
                               <div key={s.metric} className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
@@ -570,18 +568,17 @@ export default function DiagnosticoGratuito() {
                                     <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
                                   </span>
                                   <span className="font-bold text-primary">
-                                    {focusPct}% foco
+                                    {s.focusPct}% foco
                                   </span>
                                 </div>
                               </div>
-                            );
-                          })}
+                          ))}
                         </div>
-                        {totalTimeLost > 0 && (
+                        {totalImprovementSec > 0 && (
                           <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
                             Potencial combinado: cortar{' '}
-                            <span className="font-bold text-primary">{Math.round(totalTimeLost / 60)}+ minutos</span>{' '}
-                            do seu tempo final focando apenas nessas estações.
+                            <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
+                            do seu tempo final focando nessas estações.
                           </p>
                         )}
                       </div>
