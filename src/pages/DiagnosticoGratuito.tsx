@@ -168,7 +168,8 @@ export default function DiagnosticoGratuito() {
     setStep('loading');
     setRoxCoachFailed(false);
     setRoxCoachDiagnosticos([]);
-
+    setTextoIa(null);
+    setTextoIaLoading(false);
     try {
       // Call scrape + RoxCoach proxy in parallel
       const [scrapeResponse, roxCoachResponse] = await Promise.all([
