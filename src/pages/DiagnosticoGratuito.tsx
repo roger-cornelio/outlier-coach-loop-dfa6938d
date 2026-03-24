@@ -202,14 +202,34 @@ export default function DiagnosticoGratuito() {
   }
 
   // Derived data for results
-  const weakStations = useMemo(() =>
-    [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 3),
-    [scores]
-  );
+  // Compute FOCO % using real Meta OUTLIER (p10_sec) gap
+  const stationsWithFocus = useMemo(() => {
+    const withGap = scores
+      .filter((s: any) => s.raw_time_sec > 0 && s.p10_sec > 0 && s.raw_time_sec > s.p10_sec)
+      .map((s: any) => ({
+        ...s,
+        improvement_value: s.raw_time_sec - s.p10_sec,
+      }));
+    const totalImprovement = withGap.reduce((sum: number, s: any) => sum + s.improvement_value, 0);
+    return withGap
+      .map((s: any) => ({
+        ...s,
+        focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
+      }))
+      .sort((a: any, b: any) => b.focusPct - a.focusPct);
+  }, [scores]);
+
+  const weakStations = useMemo(() => stationsWithFocus.slice(0, 5), [stationsWithFocus]);
 
   const strongStations = useMemo(() =>
     [...scores].sort((a, b) => b.percentile_value - a.percentile_value).slice(0, 2),
     [scores]
+  );
+
+  // Total improvement in seconds (real gap)
+  const totalImprovementSec = useMemo(() =>
+    stationsWithFocus.reduce((sum: number, s: any) => sum + s.improvement_value, 0),
+    [stationsWithFocus]
   );
 
   // Convert scraped splits to FatigueIndexCard Split[] format
