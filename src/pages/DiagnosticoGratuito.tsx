@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -86,7 +87,7 @@ function AnimatedTime({ targetSeconds }: { targetSeconds: number }) {
   return <span>{formatTimeSec(current)}</span>;
 }
 
-type Step = 'search' | 'loading' | 'results';
+type Step = 'search' | 'loading' | 'results' | 'coach-selection';
 
 export default function DiagnosticoGratuito() {
   const [step, setStep] = useState<Step>('search');
@@ -804,14 +805,14 @@ export default function DiagnosticoGratuito() {
                       </p>
                     </div>
 
-                    <Link
-                      to="/login?mode=signup"
+                    <button
+                      onClick={() => setStep('coach-selection')}
                       className="inline-flex items-center gap-3 font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40"
                     >
                       <Zap className="w-5 h-5" />
                       COMEÇAR MEUS 30 DIAS GRÁTIS
                       <ArrowRight className="w-4 h-4" />
-                    </Link>
+                    </button>
 
                     <p className="text-[10px] text-muted-foreground/50">
                       Cancele quando quiser
@@ -829,6 +830,36 @@ export default function DiagnosticoGratuito() {
                   ← Buscar outro atleta
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {/* ===== COACH SELECTION STEP ===== */}
+          {step === 'coach-selection' && (
+            <motion.div
+              key="coach-selection"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="flex flex-col items-center justify-center min-h-[60vh] px-4"
+            >
+              <motion.p
+                className="text-xs text-muted-foreground/60 font-display tracking-widest mb-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                DENTRO DA ANÁLISE OUTLIER, ESSE É O COACH IDEAL PARA A SUA MELHOR PERFORMANCE
+              </motion.p>
+
+              <OnboardingCoachSelection
+                onCoachSelected={(coachId, coachName) => {
+                  try {
+                    localStorage.setItem('outlier_selected_coach', JSON.stringify({ coachId, coachName }));
+                  } catch {}
+                  window.location.href = '/login?mode=signup';
+                }}
+                onBack={() => setStep('results')}
+              />
             </motion.div>
           )}
         </AnimatePresence>
