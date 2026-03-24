@@ -1,12 +1,20 @@
 
 
-## Plano: Aumentar Área do Hero da Landing Page
+## Plano: Corrigir Tamanho do Header da Landing
 
-A seção hero atual usa `min-h-[90vh]`. Vou aumentar para `min-h-screen` (100vh) e ampliar o espaçamento interno para dar mais respiro visual ao conteúdo central.
+**Problema**: O `OutlierWordmark` com `size="sm"` já usa `text-2xl md:text-3xl` por padrão. A classe extra `!text-2xl md:!text-3xl` é redundante — não altera nada.
 
-### Alterações em `src/pages/Landing.tsx` (linha 36)
+### Alteração em `src/pages/Landing.tsx` (linha 20)
 
-1. **Altura mínima**: `min-h-[90vh]` → `min-h-screen` (ocupa a tela inteira)
-2. **Padding vertical**: `py-20 pt-28` → `py-32 pt-36` (mais espaço acima e abaixo)
-3. **Espaço entre descrição e CTA**: `mt-12` → `mt-16` (mais respiro antes do botão)
+Trocar de `size="sm"` para `size="md"` para usar `text-4xl md:text-5xl`, que é significativamente maior:
+
+```tsx
+// De:
+<OutlierWordmark size="sm" className="!text-2xl md:!text-3xl" />
+
+// Para:
+<OutlierWordmark size="md" />
+```
+
+Isso dobra o tamanho visual da wordmark no header, de `text-2xl` para `text-4xl`.
 
