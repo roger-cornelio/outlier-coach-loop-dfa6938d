@@ -1,14 +1,18 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import OutlierRadarChart from '@/components/diagnostico/OutlierRadarChart';
+import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
+import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
+import type { Split } from '@/components/diagnostico/types';
 
 interface SearchResult {
   athlete_name: string;
@@ -54,6 +58,32 @@ function formatTimeSec(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function getClassificationBadge(totalSeconds: number): { label: string; color: string; bgClass: string } {
+  if (totalSeconds <= 3900) return { label: 'ELITE', color: 'text-primary', bgClass: 'bg-primary/20 border-primary/40' };
+  if (totalSeconds <= 4500) return { label: 'AVANÇADO', color: 'text-emerald-400', bgClass: 'bg-emerald-500/20 border-emerald-500/40' };
+  if (totalSeconds <= 5400) return { label: 'INTERMEDIÁRIO', color: 'text-amber-400', bgClass: 'bg-amber-500/20 border-amber-500/40' };
+  return { label: 'INICIANTE', color: 'text-muted-foreground', bgClass: 'bg-muted border-border' };
+}
+
+/** Animated counter for the hero time */
+function AnimatedTime({ targetSeconds }: { targetSeconds: number }) {
+  const [current, setCurrent] = useState(0);
+  useEffect(() => {
+    const duration = 1500;
+    const start = performance.now();
+    function tick(now: number) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCurrent(Math.round(eased * targetSeconds));
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [targetSeconds]);
+  return <span>{formatTimeSec(current)}</span>;
 }
 
 type Step = 'search' | 'loading' | 'results';
@@ -124,7 +154,6 @@ export default function DiagnosticoGratuito() {
     setStep('loading');
 
     try {
-      // Step 1: Scrape the HYROX result page
       const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-hyrox-result', {
         body: { url: result.result_url },
       });
@@ -135,7 +164,6 @@ export default function DiagnosticoGratuito() {
 
       setScrapedData(scrapeData);
 
-      // Step 2: Build metrics from scraped splits
       const splits = scrapeData?.splits || {};
       const metricsToCalc = [
         'run_avg', 'roxzone', 'ski', 'sled_push', 'sled_pull',
@@ -150,22 +178,14 @@ export default function DiagnosticoGratuito() {
         throw new Error('Nenhum split encontrado na prova.');
       }
 
-      // Determine division from scraped data
       const division = scrapeData?.race_category === 'PRO' ? 'HYROX PRO' : 'HYROX';
       const detectedGender = result.division?.includes('Women') || result.division?.includes('Female') ? 'F' : 'M';
 
-      // Step 3: Calculate percentiles server-side (no auth needed)
       const { data: percentileData, error: percentileError } = await supabase.functions.invoke('public-calculate-percentiles', {
-        body: {
-          division,
-          gender: detectedGender,
-          metrics: metricsToCalc,
-        },
+        body: { division, gender: detectedGender, metrics: metricsToCalc },
       });
 
-      if (percentileError) {
-        throw new Error('Erro ao calcular percentis');
-      }
+      if (percentileError) throw new Error('Erro ao calcular percentis');
 
       const calculatedScores: CalculatedScore[] = (percentileData?.scores || []).map((s: any) => ({
         ...s,
@@ -181,14 +201,79 @@ export default function DiagnosticoGratuito() {
     }
   }
 
-  // Find weakest stations (lowest percentiles)
-  const weakStations = [...scores]
-    .sort((a, b) => a.percentile_value - b.percentile_value)
-    .slice(0, 3);
+  // Derived data for results
+  const weakStations = useMemo(() =>
+    [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 3),
+    [scores]
+  );
 
-  const strongStations = [...scores]
-    .sort((a, b) => b.percentile_value - a.percentile_value)
-    .slice(0, 3);
+  const strongStations = useMemo(() =>
+    [...scores].sort((a, b) => b.percentile_value - a.percentile_value).slice(0, 2),
+    [scores]
+  );
+
+  // Convert scraped splits to FatigueIndexCard Split[] format
+  const fatigueSplits: Split[] = useMemo(() => {
+    if (!scrapedData?.splits) return [];
+    const splits = scrapedData.splits;
+    const result: Split[] = [];
+    for (let i = 1; i <= 8; i++) {
+      const sec = splits[`run_${i}_sec`] || splits[`run_${i}`] || 0;
+      if (sec > 0) {
+        const m = Math.floor(sec / 60);
+        const s = Math.round(sec % 60);
+        result.push({
+          id: `run-${i}`,
+          split_name: `Running ${i}`,
+          time: `${m}:${String(s).padStart(2, '0')}`,
+        });
+      }
+    }
+    return result;
+  }, [scrapedData]);
+
+  // Total time lost to weak stations
+  const totalTimeLost = useMemo(() => {
+    if (weakStations.length === 0) return 0;
+    // Estimate: for each weak station, the gap between their time and the P50 benchmark
+    // Simple heuristic: lower percentile = more time lost
+    return weakStations.reduce((sum, s) => {
+      const lostEstimate = Math.max(0, (50 - s.percentile_value) * 1.5); // ~1.5s per percentile point
+      return sum + lostEstimate;
+    }, 0);
+  }, [weakStations]);
+
+  // Evolution projection
+  const totalSeconds = scrapedData?.time_in_seconds || 0;
+  const classification = totalSeconds > 0 ? getClassificationBadge(totalSeconds) : null;
+
+  const totalGap = useMemo(() => {
+    return scores.reduce((sum, s) => {
+      const gap = Math.max(0, (80 - s.percentile_value) * 1.2);
+      return sum + gap;
+    }, 0);
+  }, [scores]);
+
+  const evolution = useMemo(() => {
+    if (totalSeconds <= 0 || totalGap <= 0) return null;
+    return calculateEvolutionTimeframe(totalSeconds, totalGap);
+  }, [totalSeconds, totalGap]);
+
+  const projectionChartData = useMemo(() => {
+    if (!evolution || totalSeconds <= 0) return [];
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const now = new Date();
+    const points = [];
+    for (let i = 0; i <= 12; i++) {
+      const projected = Math.max(3600, totalSeconds - (evolution.ratePerMonth * i));
+      const monthIdx = (now.getMonth() + i) % 12;
+      points.push({ month: monthNames[monthIdx], tempo: Math.round(projected) });
+    }
+    return points;
+  }, [totalSeconds, evolution]);
+
+  const projectedAt12 = evolution ? Math.max(3600, totalSeconds - (evolution.ratePerMonth * 12)) : 0;
+  const gainIn12 = totalSeconds - projectedAt12;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -206,8 +291,8 @@ export default function DiagnosticoGratuito() {
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-12">
-        {/* ═══ STEP: SEARCH ═══ */}
         <AnimatePresence mode="wait">
+          {/* ═══ STEP: SEARCH ═══ */}
           {step === 'search' && (
             <motion.div
               key="search"
@@ -280,14 +365,12 @@ export default function DiagnosticoGratuito() {
                 )}
               </div>
 
-              {/* Search hint */}
               {!searchDone && !searching && consentGiven && (
                 <p className="text-xs text-center text-muted-foreground">
                   Buscamos seu resultado diretamente no site oficial do HYROX
                 </p>
               )}
 
-              {/* Search results */}
               {searchDone && searchResults.length === 0 && (
                 <div className="text-center py-8 space-y-3">
                   <AlertTriangle className="w-8 h-8 text-muted-foreground mx-auto" />
@@ -338,11 +421,14 @@ export default function DiagnosticoGratuito() {
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-20 gap-6"
             >
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <div className="relative">
+                <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+              </div>
               <div className="text-center space-y-2">
-                <p className="font-display tracking-wider text-foreground">ANALISANDO SUA PROVA</p>
+                <p className="font-display tracking-wider text-foreground text-lg">ANALISANDO SUA PROVA</p>
                 <p className="text-xs text-muted-foreground">
-                  Extraindo splits e calculando percentis...
+                  Cruzando seus splits com 50.000+ resultados HYROX...
                 </p>
               </div>
             </motion.div>
@@ -352,53 +438,140 @@ export default function DiagnosticoGratuito() {
           {step === 'results' && (
             <motion.div
               key="results"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
             >
-              {/* Header */}
-              <div className="text-center space-y-2">
-                <h2 className="font-display text-xl tracking-widest text-foreground">
-                  SEU DIAGNÓSTICO
-                </h2>
+              {/* ─── 1. HERO ─── */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="text-center space-y-4 py-6"
+              >
+                <p className="text-xs text-muted-foreground font-display tracking-[0.3em] uppercase">
+                  Seu Raio X HYROX
+                </p>
+
+                {/* Big Time */}
+                {totalSeconds > 0 && (
+                  <div className="relative inline-block">
+                    <div className="text-5xl md:text-6xl font-bold font-mono text-foreground tracking-tight">
+                      <AnimatedTime targetSeconds={totalSeconds} />
+                    </div>
+                    <div className="absolute -inset-4 bg-primary/5 rounded-2xl blur-2xl -z-10" />
+                  </div>
+                )}
+
+                {/* Classification Badge */}
+                {classification && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                  >
+                    <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-display tracking-widest ${classification.bgClass} ${classification.color}`}>
+                      <Award className="w-3.5 h-3.5" />
+                      {classification.label}
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Event info */}
                 {selectedResult && (
                   <p className="text-xs text-muted-foreground">
-                    {selectedResult.event_name} · {scrapedData?.formatted_time || selectedResult.time_formatted}
+                    {selectedResult.event_name} · {selectedResult.division}
                   </p>
                 )}
-              </div>
 
-              {/* Radar Chart */}
+                {/* Authority line */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.2 }}
+                  className="text-[10px] text-muted-foreground/60 uppercase tracking-widest"
+                >
+                  Análise baseada em 50.000+ resultados HYROX globais
+                </motion.p>
+              </motion.div>
+
+              {/* ─── 2. RADAR ─── */}
               {scores.length > 0 && (
-                <div className="bg-card rounded-2xl border border-border p-6">
-                  <h3 className="font-display text-sm tracking-wider text-foreground mb-4 text-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-card rounded-2xl border border-border p-6"
+                >
+                  <h3 className="font-display text-sm tracking-wider text-foreground mb-1 text-center">
                     PERFIL DE PERFORMANCE
                   </h3>
+                  <p className="text-[10px] text-muted-foreground text-center mb-4 tracking-wide">
+                    Comparado com todos os atletas da sua divisão
+                  </p>
                   <OutlierRadarChart scores={scores} />
-                </div>
+                </motion.div>
               )}
 
-              {/* Gargalos (weaknesses) */}
+              {/* ─── 3. FADIGA ─── */}
+              {fatigueSplits.length >= 8 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <FatigueIndexCard splits={fatigueSplits} />
+                </motion.div>
+              )}
+
+              {/* ─── 4. PONTOS FRACOS (Aversão à Perda) ─── */}
               {weakStations.length > 0 && (
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-                  <h3 className="font-display text-sm tracking-wider text-foreground flex items-center gap-2">
-                    <Target className="w-4 h-4 text-destructive" />
-                    SEUS PONTOS FRACOS
-                  </h3>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="bg-card rounded-2xl border border-destructive/30 p-6 space-y-4 relative overflow-hidden"
+                >
+                  {/* Pulsing warning glow */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-destructive/60 to-transparent animate-pulse" />
+
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-destructive" />
+                    <h3 className="font-display text-sm tracking-wider text-foreground">
+                      VOCÊ ESTÁ PERDENDO TEMPO AQUI
+                    </h3>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Cada segundo perdido nas estações abaixo te afasta do próximo nível.{' '}
+                    <span className="text-destructive font-semibold">
+                      Atletas que corrigem esses pontos melhoram até {Math.round(totalTimeLost / 60)}+ minutos no tempo final.
+                    </span>
+                  </p>
+
                   <div className="space-y-3">
-                    {weakStations.map((station) => (
-                      <div key={station.metric} className="space-y-1">
+                    {weakStations.map((station, idx) => (
+                      <motion.div
+                        key={station.metric}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.8 + idx * 0.15 }}
+                        className="space-y-1.5"
+                      >
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-foreground">{METRIC_LABELS[station.metric] || station.metric}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-destructive/80 w-5">#{idx + 1}</span>
+                            <span className="text-foreground font-medium">{METRIC_LABELS[station.metric] || station.metric}</span>
+                          </div>
                           <span className="text-xs text-muted-foreground font-mono">
                             {formatTimeSec(station.raw_time_sec)} · P{station.percentile_value}
                           </span>
                         </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${Math.max(5, station.percentile_value)}%` }}
-                            transition={{ duration: 0.8, delay: 0.2 }}
+                            transition={{ duration: 1, delay: 0.9 + idx * 0.15 }}
                             className="h-full rounded-full"
                             style={{
                               backgroundColor: station.percentile_value < 25
@@ -409,81 +582,191 @@ export default function DiagnosticoGratuito() {
                             }}
                           />
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
-                </div>
+
+                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 mt-2">
+                    <p className="text-xs text-destructive/90 text-center font-medium">
+                      ⚠️ Sem intervenção, esses gaps tendem a aumentar com o tempo — não a diminuir.
+                    </p>
+                  </div>
+                </motion.div>
               )}
 
-              {/* Pontos fortes */}
+              {/* ─── 5. PONTOS FORTES (compact celebration) ─── */}
               {strongStations.length > 0 && (
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-                  <h3 className="font-display text-sm tracking-wider text-foreground flex items-center gap-2">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                  className="bg-card rounded-2xl border border-primary/20 p-5 space-y-3"
+                >
+                  <div className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-primary" />
-                    PONTOS FORTES
-                  </h3>
-                  <div className="space-y-3">
+                    <h3 className="font-display text-xs tracking-wider text-foreground">SEUS DESTAQUES</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     {strongStations.map((station) => (
-                      <div key={station.metric} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-foreground">{METRIC_LABELS[station.metric] || station.metric}</span>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {formatTimeSec(station.raw_time_sec)} · P{station.percentile_value}
-                          </span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.max(5, station.percentile_value)}%` }}
-                            transition={{ duration: 0.8, delay: 0.2 }}
-                            className="h-full rounded-full bg-primary"
-                          />
-                        </div>
+                      <div key={station.metric} className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">{METRIC_LABELS[station.metric] || station.metric}</p>
+                        <p className="text-lg font-bold text-primary mt-1">P{station.percentile_value}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              {/* ═══ CTA GATE ═══ */}
-              <div className="relative">
-                {/* Blurred preview of what's behind the gate */}
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-4 opacity-40 blur-[2px] select-none pointer-events-none">
-                  <h3 className="font-display text-sm tracking-wider text-foreground">
-                    PLANO DE EVOLUÇÃO PERSONALIZADO
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                    <div className="h-3 bg-muted rounded w-2/3" />
+              {/* ─── 6. PROJEÇÃO DE EVOLUÇÃO ─── */}
+              {evolution && projectionChartData.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.1 }}
+                  className="bg-card rounded-2xl border border-primary/30 p-6 space-y-4"
+                >
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-primary" />
+                    <h3 className="font-display text-sm tracking-wider text-foreground">
+                      SUA EVOLUÇÃO PROJETADA
+                    </h3>
                   </div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded w-full" />
-                    <div className="h-3 bg-muted rounded w-4/5" />
-                  </div>
-                </div>
 
-                {/* Overlay CTA */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm rounded-2xl">
-                  <Lock className="w-8 h-8 text-primary mb-4" />
-                  <p className="font-display text-sm tracking-wider text-foreground mb-2 text-center px-4">
-                    TREINE COM O COACH IDEAL PARA VOCÊ
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Com treino direcionado por um coach OUTLIER, seu tempo pode cair para{' '}
+                    <span className="text-primary font-bold">{formatTimeSec(projectedAt12)}</span> em 12 meses.
                   </p>
-                  <p className="text-xs text-muted-foreground mb-6 text-center max-w-sm px-4">
-                    Acesse um treino específico para trabalhar seus pontos fracos e obter a melhor performance. 30 dias grátis.
-                  </p>
-                  <Link
-                    to="/login?mode=signup"
-                    className="font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40 flex items-center gap-3"
-                  >
-                    <Zap className="w-5 h-5" />
-                    QUERO MEU PLANO DE TREINO
-                  </Link>
+
+                  {/* Chart */}
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={projectionChartData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="projGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                          axisLine={{ stroke: 'hsl(var(--border))' }}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(val: number) => formatTimeSec(val)}
+                          domain={['dataMin - 60', 'dataMax + 60']}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                          }}
+                          formatter={(value: number) => [formatTimeSec(value), 'Tempo']}
+                        />
+                        {projectedAt12 > 0 && (
+                          <ReferenceLine
+                            y={projectedAt12}
+                            stroke="hsl(var(--primary))"
+                            strokeDasharray="4 4"
+                            opacity={0.6}
+                          />
+                        )}
+                        <Area
+                          type="monotone"
+                          dataKey="tempo"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          fill="url(#projGradient)"
+                          dot={{ fill: 'hsl(var(--primary))', r: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Metric boxes */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-secondary/40 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-foreground">{formatTimeSec(projectedAt12)}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Meta em 12m</div>
+                    </div>
+                    <div className="bg-secondary/40 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-primary">{evolution.ratePerMonth}s</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
+                    </div>
+                    <div className="bg-secondary/40 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-foreground">
+                        {Math.floor(gainIn12 / 60)}min
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho total</div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ─── 7. CTA FINAL — GATE PREMIUM ─── */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.4 }}
+                className="relative mt-4"
+              >
+                <div className="bg-gradient-to-b from-primary/10 via-card to-card rounded-2xl border border-primary/30 p-8 text-center space-y-6 relative overflow-hidden">
+                  {/* Animated glow */}
+                  <div className="absolute inset-0 bg-primary/5 animate-pulse rounded-2xl" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
+
+                  <div className="relative z-10 space-y-6">
+                    {/* Loss framing */}
+                    {gainIn12 > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground uppercase tracking-widest font-display">
+                          Potencial escondido no seu resultado
+                        </p>
+                        <p className="text-4xl font-bold text-primary font-mono">
+                          {Math.floor(gainIn12 / 60)}:{String(Math.round(gainIn12 % 60)).padStart(2, '0')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          minutos que você pode recuperar com treino direcionado
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="w-16 h-px bg-primary/30 mx-auto" />
+
+                    <div className="space-y-3">
+                      <h3 className="font-display text-base tracking-wider text-foreground">
+                        DESBLOQUEIE SEU POTENCIAL COMPLETO
+                      </h3>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                        Um coach dedicado vai criar um plano de treino focado exatamente nos seus pontos fracos. Treinos semanais personalizados, acompanhamento de evolução e suporte contínuo.
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/login?mode=signup"
+                      className="inline-flex items-center gap-3 font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40"
+                    >
+                      <Zap className="w-5 h-5" />
+                      COMEÇAR MEUS 30 DIAS GRÁTIS
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+
+                    <p className="text-[10px] text-muted-foreground/50">
+                      Sem cartão de crédito · Cancele quando quiser
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Back to search */}
-              <div className="text-center">
+              <div className="text-center pt-4">
                 <button
                   onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
