@@ -880,7 +880,11 @@ export default function DiagnosticoGratuito() {
                       {
                         num: '01',
                         title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
-                        desc: `Treinos específicos para tirar você dos ${100 - (weakStations[0]?.percentile_value || 0)}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
+                        desc: `Treinos específicos para tirar você dos ${(() => {
+                          const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0]?.metric || d.movement === weakStations[0]?.movement);
+                          if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
+                          return 100 - (weakStations[0]?.percentile_value || 0);
+                        })()}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
                         num: '02',
