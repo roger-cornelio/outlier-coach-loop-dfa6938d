@@ -72,6 +72,7 @@ export function WelcomeScreen() {
 
   const [step, setStep] = useState<OnboardingStep>('search');
   const [isSaving, setIsSaving] = useState(false);
+  const [coachAutoLinked, setCoachAutoLinked] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
