@@ -1134,7 +1134,7 @@ function MobilePathToEliteCard({
 }
 
 // ============================================
-// MOBILE BLOCK 3 — GARGALOS DE PERFORMANCE
+// MOBILE BLOCK 3 — PONTOS FRACOS DE PERFORMANCE
 // ============================================
 function MobileBottlenecksBlock({
   scores
