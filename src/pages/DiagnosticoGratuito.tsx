@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
