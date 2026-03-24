@@ -1,24 +1,17 @@
 
 
-## Plano: Reaproveitar Dados do Diagnóstico Gratuito no Onboarding ✅ IMPLEMENTADO
+## Plano: Mostrar Apenas a Última Prova no Diagnóstico Gratuito
 
-### O que foi feito
+### O que muda
 
-1. **Edge function `calculate-hyrox-percentiles`** — adicionado modo `dry_run: true` que pula JWT, pula persistência no banco, e retorna scores com `p10_sec` (Meta OUTLIER). Mesma função `calculatePercentile`, mesma tabela `percentile_bands`.
+No `DiagnosticoGratuito.tsx`, a busca já ordena os resultados por `season_id DESC` + `event_index ASC` (mais recente primeiro) — mesma lógica usada internamente no `BenchmarkHistory.tsx` e `ProvasTab.tsx`.
 
-2. **`DiagnosticoGratuito.tsx`** — trocou chamada de `public-calculate-percentiles` para `calculate-hyrox-percentiles` com `dry_run: true`. Após calcular, salva os dados em `localStorage` (chave `outlier_free_diagnostic`) com scores, scraped data, selected result, gender e timestamp (expira em 24h).
+A única mudança é: em vez de mostrar até 5 resultados (`sorted.slice(0, 5)`), mostrar **apenas o primeiro** (`sorted.slice(0, 1)`).
 
-3. **`WelcomeScreen.tsx`** — ao montar, verifica se existe `outlier_free_diagnostic` válido no localStorage. Se sim:
-   - Pula direto para o step `congrats`
-   - Persiste dados no banco em background (diagnostico_resumo, diagnostico_melhoria, tempos_splits, race_results)
-   - Chama `proxy-roxcoach` para obter diagnóstico completo
-   - Limpa localStorage após sucesso
+### Arquivo afetado
 
-4. **`public-calculate-percentiles`** — deletada (redundante).
+**`src/pages/DiagnosticoGratuito.tsx`** — linha 135:
+- Trocar `sorted.slice(0, 5)` por `sorted.slice(0, 1)`
 
-### O que NÃO mudou
+Isso garante que o atleta vê apenas sua prova mais recente, sem opção de escolher outras. Uma única mudança de uma linha.
 
-- Apresentação visual de nenhuma tela
-- Busca de provas adicionais na aba Evolução / Importar Prova
-- Schema do banco (zero migrations)
-- Fluxo para quem nunca fez diagnóstico gratuito
