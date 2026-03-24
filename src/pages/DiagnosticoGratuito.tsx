@@ -109,6 +109,8 @@ export default function DiagnosticoGratuito() {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [gender, setGender] = useState<'M' | 'F'>('M');
   const [consentGiven, setConsentGiven] = useState(false);
+  const [roxCoachDiagnosticos, setRoxCoachDiagnosticos] = useState<RoxCoachDiagnostico[]>([]);
+  const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
