@@ -132,7 +132,7 @@ export default function DiagnosticoGratuito() {
         if (b.season_id !== a.season_id) return b.season_id - a.season_id;
         return (a.event_index ?? 999) - (b.event_index ?? 999);
       });
-      setSearchResults(sorted.slice(0, 5));
+      setSearchResults(sorted.slice(0, 1));
     } catch (err) {
       console.error('Search error:', err);
       toast.error('Erro ao buscar resultados HYROX.');
