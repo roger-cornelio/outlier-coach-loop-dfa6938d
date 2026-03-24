@@ -68,15 +68,6 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
         your_score: roxzoneSec,
         top_1: 0,
         improvement_value: 0,
-
-      rows.push({
-        id: 'roxzone-computed',
-        movement: 'Roxzone Time',
-        metric: 'roxzone',
-        value: 0,
-        your_score: roxzoneSec,
-        top_1: roxzoneRef,
-        improvement_value: improvementVal,
         percentage: 0,
         total_improvement: 0,
       });
