@@ -18,8 +18,9 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
+import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
@@ -678,7 +679,7 @@ export function WelcomeScreen() {
             </motion.p>
 
             <motion.button
-              onClick={handleFinish}
+              onClick={() => setStep('coach')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -844,7 +845,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={handleFinish}
+              onClick={() => setStep('coach')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -867,6 +868,23 @@ export function WelcomeScreen() {
               ← Voltar
             </motion.button>
           </motion.div>
+        )}
+
+        {/* ===== COACH SELECTION STEP ===== */}
+        {step === 'coach' && (
+          <OnboardingCoachSelection
+            onCoachSelected={(_coachId, _coachName) => {
+              handleFinish();
+            }}
+            onBack={() => {
+              // Go back to whichever CTA was before
+              if (summary) {
+                setStep('cta');
+              } else {
+                setStep('profileCta');
+              }
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
