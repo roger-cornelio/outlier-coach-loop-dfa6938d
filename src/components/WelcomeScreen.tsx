@@ -655,6 +655,12 @@ export function WelcomeScreen() {
               <ArrowRight className="w-5 h-5" />
               CONTINUAR
             </motion.button>
+
+            <motion.button onClick={() => setStep('congrats')}
+              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}>
+              ← Voltar
+            </motion.button>
           </motion.div>
         )}
 
