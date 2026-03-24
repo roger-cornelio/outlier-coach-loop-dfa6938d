@@ -1,27 +1,32 @@
 
 
-## Problema
+## Correção: Nomes das Estações no Diagnóstico Gratuito
 
-O RoxCoach retorna tempos como **strings** (`"41:55"`, `"36:22"`) nos campos `your_score`, `top_1` e `improvement_value`. O código do `DiagnosticoGratuito.tsx` trata esses valores como números:
+### O que será feito
 
-```
-your_score: d.your_score || 0,   // "41:55" (string, não número)
-top_1: d.top_1 || 0,             // "36:22" (string, não número)
-```
+Corrigir os nomes das estações que aparecem em branco/código técnico em 4 pontos da tela:
 
-Depois faz `diagnosticos.some(d => d.top_1 > 0)` — como `"36:22"` convertido a número é `NaN`, e `NaN > 0 = false`, o sistema sempre marca `roxCoachFailed = true`.
+1. **Tabela "Onde Focar"** — mostrar "Ski Erg", "Sled Push" etc. em vez de chaves técnicas vazias
+2. **Texto do gargalo** — "seu maior ponto fraco é no **Ski Erg**" em vez de texto vazio
+3. **Seção "Seus Destaques"** — nomes legíveis nas cards de pontos fortes
+4. **Plano de Ataque** — "Corrigir **Sled Push**" em vez de "Corrigir seu ponto fraco"
 
-A tela de Evolução **nunca teve esse problema** porque usa `parseDiagnosticResponse` do `diagnosticParser.ts`, que tem a função `parseScoreValue` que detecta `:` e converte "MM:SS" para segundos.
+### Como
 
-## Solução
+**1 arquivo: `src/pages/DiagnosticoGratuito.tsx`**
 
-**1 arquivo: `src/pages/DiagnosticoGratuito.tsx`** (linhas 229-249)
+Em todos os pontos que usam `METRIC_LABELS[s.metric]`, trocar para priorizar `s.movement` (nome legível vindo do RoxCoach):
 
-Usar `parseScoreValue` (mesma lógica do `diagnosticParser.ts`) para converter os tempos "MM:SS" em segundos antes de atribuir aos campos numéricos:
+- Linha 686 (texto gargalo): `weakStations[0].movement || METRIC_LABELS[...] || ...`
+- Linha 704 (tabela Onde Focar): `s.movement || METRIC_LABELS[s.metric] || s.metric`
+- Linha 762 (Seus Destaques): cruzar com `roxCoachDiagnosticos` para pegar o `movement` correspondente
+- Linha 790 (Plano de Ataque): `weakStations[0]?.movement || METRIC_LABELS[...] || 'seu ponto fraco'`
 
-- Importar ou criar inline a função `timeToSec` que converte "MM:SS" → segundos
-- Aplicar nos campos `your_score`, `top_1`, `improvement_value` e `percentage` ao mapear `diagnostico_melhoria`
-- A verificação `diagnosticos.some(d => d.top_1 > 0)` passará a funcionar corretamente
+**Sem tabela de comparação adicional** — a tela continua com o formato atual de venda narrativa, apenas com os nomes corrigidos.
 
-Nenhuma outra alteração necessária — o proxy está funcionando (os logs de rede confirmam resposta 200 com dados completos).
+### O que NÃO muda
+- Cálculo do "Top X%" (média dos percentis)
+- Formato da tabela "Onde Focar" (tempo + % foco)
+- Texto narrativo e tom de venda
+- Nenhuma migration ou alteração de banco
 
