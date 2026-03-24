@@ -226,17 +226,37 @@ export default function DiagnosticoGratuito() {
 
       setScores(calculatedScores);
 
+      // Parse score: handles "MM:SS" strings and plain numbers
+      const parseScore = (val: any): number => {
+        if (val == null || val === '') return 0;
+        const s = String(val).trim();
+        if (s.includes(':')) {
+          const parts = s.split(':').map(Number);
+          if (parts.some(isNaN)) return 0;
+          if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+          if (parts.length === 2) return parts[0] * 60 + parts[1];
+          return parts[0] || 0;
+        }
+        const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
+        return isNaN(n) ? 0 : n;
+      };
+
       // Process RoxCoach diagnostic data
       const roxData = roxCoachResponse?.data;
       if (roxData && !roxData.error && roxData.ok !== false && roxData.diagnostico_melhoria) {
-        const diagnosticos: RoxCoachDiagnostico[] = (roxData.diagnostico_melhoria || []).map((d: any) => ({
-          movement: d.movement || d.station || '',
-          metric: d.metric || '',
-          your_score: d.your_score || 0,
-          top_1: d.top_1 || 0,
-          improvement_value: d.improvement_value || Math.max(0, (d.your_score || 0) - (d.top_1 || 0)),
-          percentage: d.percentage || 0,
-        }));
+        const diagnosticos: RoxCoachDiagnostico[] = (roxData.diagnostico_melhoria || []).map((d: any) => {
+          const yourScore = parseScore(d.your_score);
+          const top1 = parseScore(d.top_1);
+          const improvement = parseScore(d.improvement_value) || Math.max(0, yourScore - top1);
+          return {
+            movement: d.movement || d.station || '',
+            metric: d.metric || '',
+            your_score: yourScore,
+            top_1: top1,
+            improvement_value: improvement,
+            percentage: parseScore(d.percentage),
+          };
+        });
         if (diagnosticos.length > 0 && diagnosticos.some(d => d.top_1 > 0)) {
           setRoxCoachDiagnosticos(diagnosticos);
           setRoxCoachFailed(false);
