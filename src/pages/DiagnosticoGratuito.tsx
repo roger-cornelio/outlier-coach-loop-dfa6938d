@@ -359,7 +359,7 @@ export default function DiagnosticoGratuito() {
                 <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
                   <h3 className="font-display text-sm tracking-wider text-foreground flex items-center gap-2">
                     <Target className="w-4 h-4 text-destructive" />
-                    SEUS GARGALOS
+                    SEUS PONTOS FRACOS
                   </h3>
                   <div className="space-y-3">
                     {weakStations.map((station) => (
