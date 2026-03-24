@@ -33,7 +33,7 @@ export default function Landing() {
       </header>
 
       {/* ══════════ HERO ══════════ */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 py-20 pt-28 text-center overflow-hidden">
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-32 pt-36 text-center overflow-hidden">
         <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: 'var(--gradient-glow)' }} />
 
         <motion.p
