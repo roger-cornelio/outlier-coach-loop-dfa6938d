@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, Loader2 } from 'lucide-react';
+import { Target, Loader2, BookOpen, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { timeToSeconds, secondsToTime } from './types';
 import type { DiagnosticoMelhoria } from './types';
@@ -142,9 +143,53 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
               <Target className="w-5 h-5 text-primary" />
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Projeção de Evolução</h3>
             </div>
-            <Badge className={TIER_COLORS[tierLabel] || 'bg-muted text-muted-foreground'}>
-              {tierLabel}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/60 hover:bg-secondary border border-border/40 hover:border-primary/30 transition-all text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    <BookOpen className="w-3 h-3" />
+                    Base científica
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4 space-y-3" side="bottom" align="end">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary flex-shrink-0" />
+                    <h4 className="text-sm font-bold text-foreground">Fundamentação Científica</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    A curva de projeção é baseada no princípio de <strong className="text-foreground">rendimentos decrescentes</strong> do treinamento esportivo, documentado na literatura de fisiologia do exercício.
+                  </p>
+                  <div className="bg-secondary/60 rounded-lg p-3 space-y-1.5">
+                    <p className="text-xs font-medium text-foreground">
+                      Haugen, T. et al. (2019)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground italic leading-snug">
+                      "The Training and Development of Elite Sprint Performance: an Integration of Scientific and Best Practice Literature"
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      British Journal of Sports Medicine, 53(20), 1294-1298
+                    </p>
+                  </div>
+                  <div className="bg-secondary/60 rounded-lg p-3 space-y-1.5">
+                    <p className="text-xs font-medium text-foreground">
+                      Mujika, I. & Padilla, S. (2000)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground italic leading-snug">
+                      "Detraining: Loss of Training-Induced Physiological and Performance Adaptations"
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Sports Medicine, 30(3), 145-167
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                    A taxa de evolução mensal considera o nível atual do atleta, aplicando desaceleração progressiva conforme a proximidade ao limite fisiológico individual.
+                  </p>
+                </PopoverContent>
+              </Popover>
+              <Badge className={TIER_COLORS[tierLabel] || 'bg-muted text-muted-foreground'}>
+                {tierLabel}
+              </Badge>
+            </div>
           </div>
 
           {/* Copy / AI text */}
