@@ -29,6 +29,7 @@ interface CoachResult {
 interface OnboardingCoachSelectionProps {
   onCoachSelected: (coachId: string, coachName: string) => void;
   onBack?: () => void;
+  skipLinking?: boolean;
 }
 
 type View = 'choice' | 'search' | 'recommendations';
