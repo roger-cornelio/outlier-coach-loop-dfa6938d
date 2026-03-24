@@ -228,7 +228,7 @@ export default function DiagnosticoGratuito() {
 
       // Process RoxCoach diagnostic data
       const roxData = roxCoachResponse?.data;
-      if (roxData && !roxData.error && !roxData.ok === false && roxData.diagnostico_melhoria) {
+      if (roxData && !roxData.error && roxData.ok !== false && roxData.diagnostico_melhoria) {
         const diagnosticos: RoxCoachDiagnostico[] = (roxData.diagnostico_melhoria || []).map((d: any) => ({
           movement: d.movement || d.station || '',
           metric: d.metric || '',
