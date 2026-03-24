@@ -523,46 +523,48 @@ export default function DiagnosticoGratuito() {
                       <p>
                         Você finalizou o{' '}
                         <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
-                        <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Nós dissecamos a sua prova e
-                        comparamos cada split contra a referência OUTLIER da categoria{' '}
-                        <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
+                        <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Isso te coloca entre os{' '}
+                        <span className="font-bold text-primary">top {100 - (weakStations.length > 0 ? Math.round(scores.reduce((s, sc) => s + sc.percentile_value, 0) / scores.length) : 50)}%</span>{' '}
+                        dos atletas da categoria <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
                       </p>
 
                       <p>
                         Os dados não mentem: identificamos exatamente onde a sua performance
                         está vazando. O seu maior ponto fraco atual é no{' '}
-                        <span className="font-bold text-primary">{METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span>, onde você está no percentil{' '}
-                        <span className="font-bold text-destructive">P{weakStations[0].percentile_value}</span> — abaixo de{' '}
-                        {100 - weakStations[0].percentile_value}% dos atletas da sua categoria.
+                        <span className="font-bold text-primary">{METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
+                        <span className="font-bold text-destructive">{100 - weakStations[0].percentile_value}% dos atletas da sua categoria são mais rápidos que você</span>.
                       </p>
 
-                      {/* Critical stations */}
+                      {/* Critical stations — show % focus instead of percentile */}
                       <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
                         <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                           <AlertTriangle className="w-3.5 h-3.5 text-primary" />
-                          Estações Críticas
+                          Onde Focar
                         </p>
                         <div className="space-y-2">
-                          {weakStations.map((s, i) => (
-                            <div key={s.metric} className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
-                                  {i + 1}
-                                </span>
-                                <span className="text-sm font-semibold text-foreground truncate">
-                                  {METRIC_LABELS[s.metric] || s.metric}
-                                </span>
+                          {weakStations.map((s, i) => {
+                            const focusPct = Math.round((1 / (s.percentile_value || 1)) * 100 / weakStations.reduce((sum, w) => sum + (1 / (w.percentile_value || 1)), 0) * 100);
+                            return (
+                              <div key={s.metric} className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
+                                    {i + 1}
+                                  </span>
+                                  <span className="text-sm font-semibold text-foreground truncate">
+                                    {METRIC_LABELS[s.metric] || s.metric}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0 text-xs">
+                                  <span className="text-muted-foreground">
+                                    <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
+                                  </span>
+                                  <span className="font-bold text-primary">
+                                    {focusPct}% foco
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3 shrink-0 text-xs">
-                                <span className="text-muted-foreground">
-                                  Seu tempo: <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
-                                </span>
-                                <span className="font-bold text-destructive">
-                                  P{s.percentile_value}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         {totalTimeLost > 0 && (
                           <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
@@ -593,12 +595,36 @@ export default function DiagnosticoGratuito() {
                 </motion.div>
               )}
 
-              {/* ─── 4. PLANO DE ATAQUE — 3 pontos ─── */}
-              {weakStations.length > 0 && (
+              {/* ─── 4. PONTOS FORTES ─── */}
+              {strongStations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
+                  className="bg-card rounded-2xl border border-primary/20 p-5 space-y-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-primary" />
+                    <h3 className="font-display text-xs tracking-wider text-foreground">SEUS DESTAQUES</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {strongStations.map((station) => (
+                      <div key={station.metric} className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">{METRIC_LABELS[station.metric] || station.metric}</p>
+                        <p className="text-lg font-bold text-primary mt-1">{formatTimeSec(station.raw_time_sec)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Top {100 - station.percentile_value}%</p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ─── 5. PLANO DE ATAQUE — 3 pontos ─── */}
+              {weakStations.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
                   className="bg-card rounded-2xl border border-primary/20 p-6 space-y-4"
                 >
                   <div className="flex items-center gap-2">
@@ -613,7 +639,7 @@ export default function DiagnosticoGratuito() {
                       {
                         num: '01',
                         title: `Corrigir ${METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
-                        desc: `Treinos específicos para tirar você do P${weakStations[0]?.percentile_value || 0} e colocar acima do P50 — onde a maioria dos atletas competitivos está.`,
+                        desc: `Treinos específicos para tirar você dos ${100 - (weakStations[0]?.percentile_value || 0)}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
                         num: '02',
@@ -632,29 +658,6 @@ export default function DiagnosticoGratuito() {
                           <p className="text-sm font-semibold text-foreground">{item.title}</p>
                           <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.desc}</p>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ─── 5. PONTOS FORTES (compact celebration) ─── */}
-              {strongStations.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9 }}
-                  className="bg-card rounded-2xl border border-primary/20 p-5 space-y-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-primary" />
-                    <h3 className="font-display text-xs tracking-wider text-foreground">SEUS DESTAQUES</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {strongStations.map((station) => (
-                      <div key={station.metric} className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
-                        <p className="text-xs text-muted-foreground">{METRIC_LABELS[station.metric] || station.metric}</p>
-                        <p className="text-lg font-bold text-primary mt-1">P{station.percentile_value}</p>
                       </div>
                     ))}
                   </div>
