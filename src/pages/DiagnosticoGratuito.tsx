@@ -87,7 +87,7 @@ function AnimatedTime({ targetSeconds }: { targetSeconds: number }) {
   return <span>{formatTimeSec(current)}</span>;
 }
 
-type Step = 'search' | 'loading' | 'results';
+type Step = 'search' | 'loading' | 'results' | 'coach-selection';
 
 export default function DiagnosticoGratuito() {
   const [step, setStep] = useState<Step>('search');
