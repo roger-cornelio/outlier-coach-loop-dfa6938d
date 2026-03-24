@@ -428,7 +428,7 @@ export default function DiagnosticoGratuito() {
               <div className="text-center space-y-2">
                 <p className="font-display tracking-wider text-foreground text-lg">ANALISANDO SUA PROVA</p>
                 <p className="text-xs text-muted-foreground">
-                  Cruzando seus splits com 50.000+ resultados HYROX...
+                  Cruzando seus splits com quase 1 milhão de resultados HYROX...
                 </p>
               </div>
             </motion.div>
