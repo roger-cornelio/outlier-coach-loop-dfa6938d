@@ -765,6 +765,12 @@ export function WelcomeScreen() {
                 );
               })}
             </div>
+
+            <motion.button onClick={() => setStep('search')}
+              className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+              ← Voltar
+            </motion.button>
           </motion.div>
         )}
 
