@@ -443,10 +443,10 @@ export default function DiagnosticoGratuito() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm rounded-2xl">
                   <Lock className="w-8 h-8 text-primary mb-4" />
                   <p className="font-display text-sm tracking-wider text-foreground mb-2 text-center px-4">
-                    PLANO DE TREINO COM COACH DEDICADO
+                    TREINE COM O COACH IDEAL PARA VOCÊ
                   </p>
                   <p className="text-xs text-muted-foreground mb-6 text-center max-w-sm px-4">
-                    Seu diagnóstico revelou pontos fracos reais. Um coach dedicado vai montar treinos específicos para atacá-los.
+                    Acesse um treino específico para trabalhar seus pontos fracos e obter a melhor performance. 30 dias grátis.
                   </p>
                   <Link
                     to="/login?mode=signup"
