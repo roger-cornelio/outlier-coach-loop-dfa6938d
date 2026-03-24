@@ -1075,7 +1075,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={() => setStep('coach')}
+              onClick={() => coachAutoLinked ? handleFinish() : setStep('coach')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
