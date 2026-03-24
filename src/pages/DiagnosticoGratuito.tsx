@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import OutlierRadarChart from '@/components/diagnostico/OutlierRadarChart';
+
 import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
