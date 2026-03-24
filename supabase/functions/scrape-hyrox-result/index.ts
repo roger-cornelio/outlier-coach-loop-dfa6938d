@@ -89,6 +89,16 @@ STATION MAPPING:
 - Running (total/aggregate) → run_total_sec
 - Roxzone / Roxzone Time → roxzone_sec
 
+INDIVIDUAL RUNS (CRITICAL - extract each one separately):
+- Running 1 / Run 1 → run_1_sec
+- Running 2 / Run 2 → run_2_sec
+- Running 3 / Run 3 → run_3_sec
+- Running 4 / Run 4 → run_4_sec
+- Running 5 / Run 5 → run_5_sec
+- Running 6 / Run 6 → run_6_sec
+- Running 7 / Run 7 → run_7_sec
+- Running 8 / Run 8 → run_8_sec
+
 Return ONLY valid JSON.`
           },
           {
