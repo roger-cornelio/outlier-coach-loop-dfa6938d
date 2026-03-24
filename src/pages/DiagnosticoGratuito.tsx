@@ -202,14 +202,34 @@ export default function DiagnosticoGratuito() {
   }
 
   // Derived data for results
-  const weakStations = useMemo(() =>
-    [...scores].sort((a, b) => a.percentile_value - b.percentile_value).slice(0, 3),
-    [scores]
-  );
+  // Compute FOCO % using real Meta OUTLIER (p10_sec) gap
+  const stationsWithFocus = useMemo(() => {
+    const withGap = scores
+      .filter((s: any) => s.raw_time_sec > 0 && s.p10_sec > 0 && s.raw_time_sec > s.p10_sec)
+      .map((s: any) => ({
+        ...s,
+        improvement_value: s.raw_time_sec - s.p10_sec,
+      }));
+    const totalImprovement = withGap.reduce((sum: number, s: any) => sum + s.improvement_value, 0);
+    return withGap
+      .map((s: any) => ({
+        ...s,
+        focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
+      }))
+      .sort((a: any, b: any) => b.focusPct - a.focusPct);
+  }, [scores]);
+
+  const weakStations = useMemo(() => stationsWithFocus.slice(0, 5), [stationsWithFocus]);
 
   const strongStations = useMemo(() =>
     [...scores].sort((a, b) => b.percentile_value - a.percentile_value).slice(0, 2),
     [scores]
+  );
+
+  // Total improvement in seconds (real gap)
+  const totalImprovementSec = useMemo(() =>
+    stationsWithFocus.reduce((sum: number, s: any) => sum + s.improvement_value, 0),
+    [stationsWithFocus]
   );
 
   // Convert scraped splits to FatigueIndexCard Split[] format
@@ -232,16 +252,7 @@ export default function DiagnosticoGratuito() {
     return result;
   }, [scrapedData]);
 
-  // Total time lost to weak stations
-  const totalTimeLost = useMemo(() => {
-    if (weakStations.length === 0) return 0;
-    // Estimate: for each weak station, the gap between their time and the P50 benchmark
-    // Simple heuristic: lower percentile = more time lost
-    return weakStations.reduce((sum, s) => {
-      const lostEstimate = Math.max(0, (50 - s.percentile_value) * 1.5); // ~1.5s per percentile point
-      return sum + lostEstimate;
-    }, 0);
-  }, [weakStations]);
+  // (totalTimeLost replaced by totalImprovementSec above)
 
   // Evolution projection
   const totalSeconds = scrapedData?.time_in_seconds || 0;
@@ -542,9 +553,7 @@ export default function DiagnosticoGratuito() {
                           Onde Focar
                         </p>
                         <div className="space-y-2">
-                          {weakStations.map((s, i) => {
-                            const focusPct = Math.round((1 / (s.percentile_value || 1)) * 100 / weakStations.reduce((sum, w) => sum + (1 / (w.percentile_value || 1)), 0) * 100);
-                            return (
+                          {weakStations.map((s: any, i: number) => (
                               <div key={s.metric} className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
@@ -559,18 +568,17 @@ export default function DiagnosticoGratuito() {
                                     <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
                                   </span>
                                   <span className="font-bold text-primary">
-                                    {focusPct}% foco
+                                    {s.focusPct}% foco
                                   </span>
                                 </div>
                               </div>
-                            );
-                          })}
+                          ))}
                         </div>
-                        {totalTimeLost > 0 && (
+                        {totalImprovementSec > 0 && (
                           <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
                             Potencial combinado: cortar{' '}
-                            <span className="font-bold text-primary">{Math.round(totalTimeLost / 60)}+ minutos</span>{' '}
-                            do seu tempo final focando apenas nessas estações.
+                            <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
+                            do seu tempo final focando nessas estações.
                           </p>
                         )}
                       </div>

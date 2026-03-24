@@ -108,6 +108,7 @@ serve(async (req) => {
           metric: m.metric,
           raw_time_sec: m.raw_time_sec,
           percentile_value: calculatePercentile(m.raw_time_sec, band),
+          p10_sec: band.p10_sec,
           data_source: m.data_source || 'real',
         };
       });
