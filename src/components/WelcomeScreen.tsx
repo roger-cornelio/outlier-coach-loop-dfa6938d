@@ -3,7 +3,7 @@
  * 
  * Step 1: Busca automática da prova HYROX
  * Step 2: "PARABÉNS POR ESSE RESULTADO" 
- * Step 3: "MAS PARA SER OUTLIER..." (gargalos)
+ * Step 3: "MAS PARA SER OUTLIER..." (pontos fracos)
  * Step 4: "PRONTO PARA SER FORA DA CURVA?" (CTA)
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
