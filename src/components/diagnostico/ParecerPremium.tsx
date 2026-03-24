@@ -117,7 +117,7 @@ export default function ParecerPremium({ resumo, diagnosticos, onToggleFullAnaly
 
                 <p>
                   Os dados não mentem: identificamos exatamente onde a sua performance
-                  está vazando. O seu maior gargalo atual é no{' '}
+                  está vazando. O seu maior ponto fraco atual é no{' '}
                   <Highlight>{gargalo.movement}</Highlight>, onde você perdeu{' '}
                   <Highlight>{secondsToTime(gargalo.improvement_value)}</Highlight>{' '}
                   para a Meta OUTLIER.

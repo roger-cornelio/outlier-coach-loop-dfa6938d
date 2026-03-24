@@ -446,7 +446,7 @@ export default function DiagnosticoGratuito() {
                     PLANO DE TREINO COM COACH DEDICADO
                   </p>
                   <p className="text-xs text-muted-foreground mb-6 text-center max-w-sm px-4">
-                    Seu diagnóstico revelou gargalos reais. Um coach dedicado vai montar treinos específicos para atacá-los.
+                    Seu diagnóstico revelou pontos fracos reais. Um coach dedicado vai montar treinos específicos para atacá-los.
                   </p>
                   <Link
                     to="/login?mode=signup"
