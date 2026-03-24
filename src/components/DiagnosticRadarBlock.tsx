@@ -1155,9 +1155,9 @@ function MobileBottlenecksBlock({
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="card-elevated rounded-xl px-4 py-3">
         <div className="flex items-center gap-1.5 mb-2">
           <Target className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos de performance</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Pontos fracos de performance</span>
         </div>
-        <p className="text-xs text-muted-foreground text-center py-3">Lance seu primeiro simulado para ver seus gargalos</p>
+        <p className="text-xs text-muted-foreground text-center py-3">Lance seu primeiro simulado para ver seus pontos fracos</p>
       </motion.div>
     );
   }
