@@ -691,6 +691,57 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_scores: {
+        Row: {
+          active_athletes_count: number | null
+          admin_notes: string | null
+          admin_rating: number | null
+          athlete_avg_benchmark_improvement: number | null
+          avg_athlete_retention_days: number | null
+          avg_athlete_sessions_per_week: number | null
+          churned_athletes_count: number | null
+          coach_id: string
+          composite_score: number | null
+          created_at: string
+          id: string
+          is_visible: boolean | null
+          plans_published_last_30d: number | null
+          updated_at: string
+        }
+        Insert: {
+          active_athletes_count?: number | null
+          admin_notes?: string | null
+          admin_rating?: number | null
+          athlete_avg_benchmark_improvement?: number | null
+          avg_athlete_retention_days?: number | null
+          avg_athlete_sessions_per_week?: number | null
+          churned_athletes_count?: number | null
+          coach_id: string
+          composite_score?: number | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          plans_published_last_30d?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active_athletes_count?: number | null
+          admin_notes?: string | null
+          admin_rating?: number | null
+          athlete_avg_benchmark_improvement?: number | null
+          avg_athlete_retention_days?: number | null
+          avg_athlete_sessions_per_week?: number | null
+          churned_athletes_count?: number | null
+          coach_id?: string
+          composite_score?: number | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          plans_published_last_30d?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crm_clientes: {
         Row: {
           created_at: string
@@ -2229,6 +2280,18 @@ export type Database = {
         }[]
       }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_recommended_coaches: {
+        Args: { _limit?: number }
+        Returns: {
+          active_athletes_count: number
+          admin_rating: number
+          box_name: string
+          city: string
+          coach_id: string
+          coach_name: string
+          composite_score: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2257,6 +2320,16 @@ export type Database = {
           profile_id: string
           profile_was_created: boolean
           user_id: string
+        }[]
+      }
+      search_coaches_by_name: {
+        Args: { _search: string }
+        Returns: {
+          box_name: string
+          city: string
+          coach_id: string
+          coach_name: string
+          composite_score: number
         }[]
       }
       search_public_athletes: {
