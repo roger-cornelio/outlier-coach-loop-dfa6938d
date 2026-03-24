@@ -994,7 +994,7 @@ export default function DiagnosticoGratuito() {
                     </div>
                     <div className="bg-secondary/40 rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-foreground">
-                        {Math.floor(gainIn12 / 60)}min
+                        {String(Math.floor(gainIn12 / 60)).padStart(2, '0')}:{String(Math.round(gainIn12 % 60)).padStart(2, '0')}
                       </div>
                       <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho total</div>
                     </div>
