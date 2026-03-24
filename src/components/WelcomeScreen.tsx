@@ -3,7 +3,7 @@
  * 
  * Step 1: Busca automática da prova HYROX
  * Step 2: "PARABÉNS POR ESSE RESULTADO" 
- * Step 3: "MAS PARA SER OUTLIER..." (gargalos)
+ * Step 3: "MAS PARA SER OUTLIER..." (pontos fracos)
  * Step 4: "PRONTO PARA SER FORA DA CURVA?" (CTA)
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -674,7 +674,7 @@ export function WelcomeScreen() {
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-12 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos.
+              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus pontos fracos.
             </motion.p>
 
             <motion.button

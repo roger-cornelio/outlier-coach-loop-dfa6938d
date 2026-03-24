@@ -220,7 +220,7 @@ export default function DiagnosticoGratuito() {
                   DIAGNÓSTICO <span className="text-primary">GRATUITO</span>
                 </h1>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                  Descubra seus pontos fortes e gargalos com base na sua última prova HYROX. Sem cadastro.
+                  Descubra seus pontos fortes e pontos fracos com base na sua última prova HYROX. Sem cadastro.
                 </p>
               </div>
 
@@ -359,7 +359,7 @@ export default function DiagnosticoGratuito() {
                 <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
                   <h3 className="font-display text-sm tracking-wider text-foreground flex items-center gap-2">
                     <Target className="w-4 h-4 text-destructive" />
-                    SEUS GARGALOS
+                    SEUS PONTOS FRACOS
                   </h3>
                   <div className="space-y-3">
                     {weakStations.map((station) => (
@@ -446,7 +446,7 @@ export default function DiagnosticoGratuito() {
                     PLANO DE TREINO COM COACH DEDICADO
                   </p>
                   <p className="text-xs text-muted-foreground mb-6 text-center max-w-sm px-4">
-                    Seu diagnóstico revelou gargalos reais. Um coach dedicado vai montar treinos específicos para atacá-los.
+                    Seu diagnóstico revelou pontos fracos reais. Um coach dedicado vai montar treinos específicos para atacá-los.
                   </p>
                   <Link
                     to="/login?mode=signup"
