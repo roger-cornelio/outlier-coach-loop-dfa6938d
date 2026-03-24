@@ -113,6 +113,8 @@ export default function DiagnosticoGratuito() {
   const [consentGiven, setConsentGiven] = useState(false);
   const [roxCoachDiagnosticos, setRoxCoachDiagnosticos] = useState<RoxCoachDiagnostico[]>([]);
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
+  const [textoIa, setTextoIa] = useState<string | null>(null);
+  const [textoIaLoading, setTextoIaLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
