@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, Loader2 } from 'lucide-react';
+import { Target, Loader2, BookOpen, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { timeToSeconds, secondsToTime } from './types';
 import type { DiagnosticoMelhoria } from './types';
