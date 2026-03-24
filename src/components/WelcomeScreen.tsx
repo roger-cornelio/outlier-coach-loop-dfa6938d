@@ -99,6 +99,71 @@ export function WelcomeScreen() {
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
   const freeDiagConsumedRef = useRef(false);
+  const coachAutoLinkRef = useRef(false);
+
+  // Auto-link coach from free diagnostic (localStorage)
+  // Only links if athlete has NO coach yet — never overwrites existing coach
+  useEffect(() => {
+    if (!user?.id || coachAutoLinkRef.current) return;
+    coachAutoLinkRef.current = true;
+
+    try {
+      const raw = localStorage.getItem('outlier_selected_coach');
+      if (!raw) return;
+
+      const { coachId, coachName } = JSON.parse(raw);
+      localStorage.removeItem('outlier_selected_coach');
+
+      if (!coachId) return;
+
+      // REGRA: Só vincula se o atleta NÃO tem coach
+      if (profile?.coach_id) {
+        console.log('[WELCOME] Athlete already has coach, ignoring localStorage coach selection');
+        return;
+      }
+
+      console.log('[WELCOME] Auto-linking coach from free diagnostic:', coachId, coachName);
+
+      // Link asynchronously, then skip coach step
+      (async () => {
+        try {
+          // Insert into coach_athletes
+          const { error: linkError } = await supabase
+            .from('coach_athletes')
+            .insert({ coach_id: coachId, athlete_id: user.id });
+
+          if (linkError && !linkError.message.includes('duplicate')) {
+            console.error('[WELCOME] Coach link error:', linkError);
+            return;
+          }
+
+          // Update profiles.coach_id (legacy field)
+          const { data: coachProfileRes } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', coachId)
+            .single();
+
+          if (coachProfileRes?.id) {
+            await supabase
+              .from('profiles')
+              .update({ coach_id: coachProfileRes.id })
+              .eq('user_id', user.id);
+          }
+
+          console.log('[WELCOME] Coach auto-linked successfully');
+          toast.success(`Vinculado ao coach ${coachName || ''}!`);
+        } catch (err) {
+          console.error('[WELCOME] Error auto-linking coach:', err);
+        }
+      })();
+
+      // Skip coach step — go directly to finish after onboarding flow
+      // The coach step won't appear since we set this flag
+    } catch (e) {
+      console.warn('[WELCOME] Error reading coach from localStorage:', e);
+    }
+  }, [user?.id, profile?.coach_id]);
 
   // Check for free diagnostic data from localStorage (pre-signup)
   useEffect(() => {
