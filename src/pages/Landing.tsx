@@ -61,7 +61,7 @@ export default function Landing() {
           className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Diagnóstico HYROX gratuito, treino montado por um coach dedicado e feedback de IA em tempo real. Para atletas que querem ser fora da curva.
+          Receba seu diagnóstico gratuito e descubra, com clareza, onde está seu maior potencial de evolução.
         </motion.p>
 
         <motion.div
