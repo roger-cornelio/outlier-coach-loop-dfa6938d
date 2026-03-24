@@ -34,7 +34,7 @@ interface OnboardingCoachSelectionProps {
 
 type View = 'choice' | 'search' | 'recommendations';
 
-export function OnboardingCoachSelection({ onCoachSelected, onBack }: OnboardingCoachSelectionProps) {
+export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking = false }: OnboardingCoachSelectionProps) {
   const { user } = useAuth();
   const [view, setView] = useState<View>('choice');
   const [searchQuery, setSearchQuery] = useState('');
