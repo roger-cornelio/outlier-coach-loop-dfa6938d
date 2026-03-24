@@ -1,16 +1,12 @@
 
 
-## Plano: Aumentar Header da Landing Page
+## Plano: Aumentar Área do Hero da Landing Page
 
-O header está com `py-3` e textos muito pequenos (`text-lg`, `text-xs`). Vou aumentar o padding, o tamanho da wordmark e dos links para dar mais presença visual.
+A seção hero atual usa `min-h-[90vh]`. Vou aumentar para `min-h-screen` (100vh) e ampliar o espaçamento interno para dar mais respiro visual ao conteúdo central.
 
-### Alterações em `src/pages/Landing.tsx`
+### Alterações em `src/pages/Landing.tsx` (linha 36)
 
-1. **Header padding**: `py-3` → `py-5 md:py-6`
-2. **Wordmark**: `!text-lg md:!text-xl` → `!text-2xl md:!text-3xl` (mais impacto)
-3. **Links "Sou Coach" / "Sou Atleta"**: `text-xs md:text-sm` → `text-sm md:text-base`
-4. **Ícones dos links**: `w-3.5 h-3.5` → `w-4 h-4`
-5. **Separador**: `h-4` → `h-5`
-6. **Gap entre links**: `gap-3 md:gap-4` → `gap-4 md:gap-6`
-7. **Container**: `max-w-6xl` → `max-w-7xl` para ocupar mais largura
+1. **Altura mínima**: `min-h-[90vh]` → `min-h-screen` (ocupa a tela inteira)
+2. **Padding vertical**: `py-20 pt-28` → `py-32 pt-36` (mais espaço acima e abaixo)
+3. **Espaço entre descrição e CTA**: `mt-12` → `mt-16` (mais respiro antes do botão)
 
