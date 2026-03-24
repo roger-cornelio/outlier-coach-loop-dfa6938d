@@ -602,6 +602,32 @@ export default function DiagnosticoGratuito() {
               </motion.div>
 
               {/* ─── 2. PARECER OUTLIER ─── */}
+              {roxCoachFailed && weakStations.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="rounded-2xl border border-border bg-card p-6 text-center space-y-3"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted mx-auto">
+                    <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Diagnóstico comparativo temporariamente indisponível
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                    Não foi possível acessar os dados de referência neste momento.
+                    Seus splits e tempo total estão visíveis acima.
+                    Tente novamente em alguns minutos.
+                  </p>
+                  <button
+                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); lastSearchedRef.current = ''; }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    ← Tentar novamente
+                  </button>
+                </motion.div>
+              )}
               {weakStations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
