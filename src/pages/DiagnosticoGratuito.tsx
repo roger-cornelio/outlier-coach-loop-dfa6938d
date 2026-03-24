@@ -89,6 +89,15 @@ function AnimatedTime({ targetSeconds }: { targetSeconds: number }) {
 
 type Step = 'search' | 'loading' | 'results' | 'coach-selection';
 
+interface RoxCoachDiagnostico {
+  movement: string;
+  metric: string;
+  your_score: number;
+  top_1: number;
+  improvement_value: number;
+  percentage: number;
+}
+
 export default function DiagnosticoGratuito() {
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
