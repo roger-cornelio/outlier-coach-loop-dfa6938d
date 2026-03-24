@@ -29,11 +29,12 @@ interface CoachResult {
 interface OnboardingCoachSelectionProps {
   onCoachSelected: (coachId: string, coachName: string) => void;
   onBack?: () => void;
+  skipLinking?: boolean;
 }
 
 type View = 'choice' | 'search' | 'recommendations';
 
-export function OnboardingCoachSelection({ onCoachSelected, onBack }: OnboardingCoachSelectionProps) {
+export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking = false }: OnboardingCoachSelectionProps) {
   const { user } = useAuth();
   const [view, setView] = useState<View>('choice');
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +100,10 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack }: Onboarding
 
   // Link athlete to coach
   const handleSelectCoach = async (coach: CoachResult) => {
+    if (skipLinking) {
+      onCoachSelected(coach.coach_id, coach.coach_name || '');
+      return;
+    }
     if (!user?.id) return;
     setLinking(coach.coach_id);
 

@@ -861,6 +861,7 @@ export default function DiagnosticoGratuito() {
 
 
               <OnboardingCoachSelection
+                skipLinking
                 onCoachSelected={(coachId, coachName) => {
                   try {
                     localStorage.setItem('outlier_selected_coach', JSON.stringify({ coachId, coachName }));
