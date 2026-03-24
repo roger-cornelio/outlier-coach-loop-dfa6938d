@@ -159,8 +159,8 @@ export function WelcomeScreen() {
         }
       })();
 
-      // Skip coach step — go directly to finish after onboarding flow
-      // The coach step won't appear since we set this flag
+      // Mark as auto-linked so CTA buttons skip coach step
+      setCoachAutoLinked(true);
     } catch (e) {
       console.warn('[WELCOME] Error reading coach from localStorage:', e);
     }
