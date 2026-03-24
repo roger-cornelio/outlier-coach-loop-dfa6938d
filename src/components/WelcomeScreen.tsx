@@ -869,6 +869,23 @@ export function WelcomeScreen() {
             </motion.button>
           </motion.div>
         )}
+
+        {/* ===== COACH SELECTION STEP ===== */}
+        {step === 'coach' && (
+          <OnboardingCoachSelection
+            onCoachSelected={(_coachId, _coachName) => {
+              handleFinish();
+            }}
+            onBack={() => {
+              // Go back to whichever CTA was before
+              if (summary) {
+                setStep('cta');
+              } else {
+                setStep('profileCta');
+              }
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
