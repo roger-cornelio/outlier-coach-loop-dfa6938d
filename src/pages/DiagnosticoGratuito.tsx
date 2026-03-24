@@ -759,7 +759,7 @@ export default function DiagnosticoGratuito() {
                     </Link>
 
                     <p className="text-[10px] text-muted-foreground/50">
-                      Sem cartão de crédito · Cancele quando quiser
+                      Cancele quando quiser
                     </p>
                   </div>
                 </div>
