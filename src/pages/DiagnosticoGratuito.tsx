@@ -290,6 +290,32 @@ export default function DiagnosticoGratuito() {
       }
 
       setStep('results');
+
+      // Fire AI parecer generation (non-blocking)
+      const roxDiagData = roxData?.diagnostico_melhoria || [];
+      const roxSplitsData = roxData?.tempos_splits || [];
+      if (roxDiagData.length > 0 || calculatedScores.length > 0) {
+        setTextoIaLoading(true);
+        supabase.functions.invoke('generate-diagnostic-ai', {
+          body: {
+            athlete_name: result.athlete_name,
+            event_name: scrapeData?.event_name || result.event_name,
+            division,
+            finish_time: scrapeData?.formatted_time || result.time_formatted,
+            splits_data: roxSplitsData,
+            diagnostic_data: roxDiagData,
+            coach_style: 'PULSE',
+          },
+        }).then(({ data: aiData }) => {
+          if (aiData?.texto_ia) {
+            setTextoIa(aiData.texto_ia);
+          }
+        }).catch(err => {
+          console.warn('[DIAG_FREE] AI parecer failed:', err);
+        }).finally(() => {
+          setTextoIaLoading(false);
+        });
+      }
     } catch (err: any) {
       console.error('Diagnostic error:', err);
       toast.error(err.message || 'Erro ao gerar diagnóstico. Tente novamente.');
