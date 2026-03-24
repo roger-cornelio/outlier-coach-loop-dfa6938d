@@ -182,8 +182,8 @@ export default function DiagnosticoGratuito() {
       const division = scrapeData?.race_category === 'PRO' ? 'HYROX PRO' : 'HYROX';
       const detectedGender = result.division?.includes('Women') || result.division?.includes('Female') ? 'F' : 'M';
 
-      const { data: percentileData, error: percentileError } = await supabase.functions.invoke('public-calculate-percentiles', {
-        body: { division, gender: detectedGender, metrics: metricsToCalc },
+      const { data: percentileData, error: percentileError } = await supabase.functions.invoke('calculate-hyrox-percentiles', {
+        body: { division, gender: detectedGender, metrics: metricsToCalc, dry_run: true },
       });
 
       if (percentileError) throw new Error('Erro ao calcular percentis');
@@ -194,6 +194,22 @@ export default function DiagnosticoGratuito() {
       }));
 
       setScores(calculatedScores);
+
+      // Save to localStorage for reuse during onboarding signup
+      try {
+        localStorage.setItem('outlier_free_diagnostic', JSON.stringify({
+          scores: calculatedScores,
+          scrapedData: scrapeData,
+          selectedResult: { ...result, division: scrapeData?.race_category || result.division },
+          gender: detectedGender,
+          division,
+          timestamp: Date.now(),
+        }));
+        console.log('[DIAG_FREE] Saved diagnostic to localStorage for onboarding reuse');
+      } catch (e) {
+        console.warn('[DIAG_FREE] Failed to save to localStorage:', e);
+      }
+
       setStep('results');
     } catch (err: any) {
       console.error('Diagnostic error:', err);

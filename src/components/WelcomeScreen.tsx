@@ -98,10 +98,150 @@ export function WelcomeScreen() {
   });
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
+  const freeDiagConsumedRef = useRef(false);
 
-  // Auto-search on mount
+  // Check for free diagnostic data from localStorage (pre-signup)
   useEffect(() => {
-    if (profile?.name && user && !autoSearchedRef.current) {
+    if (!user || freeDiagConsumedRef.current) return;
+    
+    try {
+      const raw = localStorage.getItem('outlier_free_diagnostic');
+      if (!raw) return;
+      
+      const data = JSON.parse(raw);
+      // Expire after 24h
+      if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem('outlier_free_diagnostic');
+        return;
+      }
+
+      freeDiagConsumedRef.current = true;
+      console.log('[WELCOME] Found free diagnostic in localStorage, persisting...');
+
+      // Persist to DB in background, skip to congrats immediately
+      const selectedResult = data.selectedResult as SearchResult;
+      const scrapeData = data.scrapedData;
+
+      setSummary({
+        finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted || null,
+        evento: selectedResult?.event_name || scrapeData?.event_name || null,
+        divisao: selectedResult?.division || scrapeData?.race_category || null,
+        posicao_categoria: null,
+        posicao_geral: null,
+        nome_atleta: selectedResult?.athlete_name || null,
+      });
+      setBottlenecks([]);
+      setStep('congrats');
+
+      // Persist asynchronously
+      (async () => {
+        try {
+          const sourceUrl = selectedResult?.result_url || '';
+
+          // 1. Call proxy-roxcoach for full diagnostic
+          let parsed: ReturnType<typeof parseDiagnosticResponse> | null = null;
+          try {
+            const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
+              body: {
+                athlete_name: selectedResult?.athlete_name,
+                event_name: selectedResult?.event_name,
+                division: selectedResult?.division,
+                season_id: selectedResult?.season_id,
+                result_url: selectedResult?.result_url,
+              },
+            });
+            if (!proxyResult.error && proxyResult.data?.ok !== false) {
+              parsed = parseDiagnosticResponse(proxyResult.data, user.id, sourceUrl);
+              if (!hasDiagnosticData(parsed)) parsed = null;
+            }
+          } catch (e) {
+            console.warn('[WELCOME] proxy-roxcoach failed for free diag, continuing with basic data:', e);
+          }
+
+          // 2. Save diagnostico_resumo + melhoria + splits
+          if (!parsed) {
+            await supabase.from('diagnostico_resumo').insert({
+              atleta_id: user.id,
+              source_url: sourceUrl,
+              evento: selectedResult?.event_name,
+              temporada: String(selectedResult?.season_id || ''),
+              divisao: selectedResult?.division,
+              finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted,
+              nome_atleta: selectedResult?.athlete_name,
+            });
+          } else {
+            parsed.resumoRow.evento = selectedResult?.event_name;
+            parsed.resumoRow.temporada = String(selectedResult?.season_id || '');
+            parsed.resumoRow.divisao = selectedResult?.division;
+            parsed.resumoRow.finish_time = scrapeData?.formatted_time || selectedResult?.time_formatted;
+            parsed.resumoRow.nome_atleta = selectedResult?.athlete_name;
+
+            const { data: insertedResumo } = await supabase
+              .from('diagnostico_resumo')
+              .insert(parsed.resumoRow)
+              .select('id')
+              .single();
+
+            if (insertedResumo?.id) {
+              if (parsed.diagRows.length > 0) {
+                await supabase.from('diagnostico_melhoria').insert(
+                  parsed.diagRows.map(r => ({ ...r, resumo_id: insertedResumo.id }))
+                );
+              }
+              if (parsed.splitRows.length > 0) {
+                await supabase.from('tempos_splits').insert(
+                  parsed.splitRows.map(r => ({ ...r, resumo_id: insertedResumo.id }))
+                );
+              }
+
+              // Update bottlenecks for UI
+              const sorted = [...parsed.diagRows]
+                .filter(d => d.improvement_value > 0)
+                .sort((a, b) => b.improvement_value - a.improvement_value)
+                .slice(0, 3);
+              setBottlenecks(sorted.map(d => ({
+                movement: d.movement,
+                improvement_value: d.improvement_value,
+                percentage: d.percentage,
+              })));
+            }
+          }
+
+          // 3. Save race_results
+          const { idp } = extractIdpFromUrl(sourceUrl);
+          if (idp) {
+            const { data: existing } = await supabase
+              .from('race_results')
+              .select('id')
+              .eq('athlete_id', user.id)
+              .eq('hyrox_idp', idp)
+              .maybeSingle();
+            if (!existing) {
+              await supabase.from('race_results').insert({
+                athlete_id: user.id,
+                hyrox_idp: idp,
+                source_url: sourceUrl,
+                hyrox_event: selectedResult?.event_name,
+              });
+            }
+          }
+
+          // 4. Clear localStorage after successful persist
+          localStorage.removeItem('outlier_free_diagnostic');
+          console.log('[WELCOME] Free diagnostic persisted and localStorage cleared');
+        } catch (e) {
+          console.error('[WELCOME] Error persisting free diagnostic:', e);
+          // Don't block onboarding flow on persistence failure
+        }
+      })();
+    } catch (e) {
+      console.warn('[WELCOME] Error reading free diagnostic from localStorage:', e);
+    }
+  }, [user]);
+
+  // Auto-search on mount (only if no free diag was consumed)
+  useEffect(() => {
+    if (profile?.name && user && !autoSearchedRef.current && !freeDiagConsumedRef.current) {
       autoSearchedRef.current = true;
       setSearchQuery(profile.name);
       executeSearch(profile.name);
