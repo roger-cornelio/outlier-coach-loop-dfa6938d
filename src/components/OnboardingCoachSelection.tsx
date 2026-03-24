@@ -100,6 +100,10 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
   // Link athlete to coach
   const handleSelectCoach = async (coach: CoachResult) => {
+    if (skipLinking) {
+      onCoachSelected(coach.coach_id, coach.coach_name || '');
+      return;
+    }
     if (!user?.id) return;
     setLinking(coach.coach_id);
 
