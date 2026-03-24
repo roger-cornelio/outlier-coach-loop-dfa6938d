@@ -65,7 +65,7 @@ export default function Landing() {
         </motion.p>
 
         <motion.div
-          className="flex justify-center mt-12"
+          className="flex justify-center mt-16"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
         >
           <Link to="/diagnostico-gratuito"
