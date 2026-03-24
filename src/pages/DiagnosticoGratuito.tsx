@@ -273,8 +273,32 @@ export default function DiagnosticoGratuito() {
   }
 
   // Derived data for results
-  // Compute FOCO % using real Meta OUTLIER (p10_sec) gap
+  // Use RoxCoach diagnosticos when available, otherwise fall back to percentile p10_sec
   const stationsWithFocus = useMemo(() => {
+    if (roxCoachDiagnosticos.length > 0) {
+      // Use RoxCoach top_1 data as source of truth
+      const withGap = roxCoachDiagnosticos
+        .filter(d => d.your_score > 0 && d.top_1 > 0 && d.your_score > d.top_1)
+        .map(d => ({
+          metric: d.metric,
+          movement: d.movement,
+          raw_time_sec: d.your_score,
+          top_1: d.top_1,
+          improvement_value: d.improvement_value > 0 ? d.improvement_value : Math.max(0, d.your_score - d.top_1),
+          percentile_value: scores.find(s => s.metric === d.metric)?.percentile_value || 50,
+        }));
+      const totalImprovement = withGap.reduce((sum, s) => sum + s.improvement_value, 0);
+      return withGap
+        .map(s => ({
+          ...s,
+          focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
+        }))
+        .sort((a, b) => b.focusPct - a.focusPct);
+    }
+
+    // Fallback to p10_sec from percentiles (only if RoxCoach didn't fail)
+    if (roxCoachFailed) return [];
+
     const withGap = scores
       .filter((s: any) => s.raw_time_sec > 0 && s.p10_sec > 0 && s.raw_time_sec > s.p10_sec)
       .map((s: any) => ({
@@ -288,7 +312,7 @@ export default function DiagnosticoGratuito() {
         focusPct: totalImprovement > 0 ? Math.round((s.improvement_value / totalImprovement) * 100) : 0,
       }))
       .sort((a: any, b: any) => b.focusPct - a.focusPct);
-  }, [scores]);
+  }, [scores, roxCoachDiagnosticos, roxCoachFailed]);
 
   const weakStations = useMemo(() => stationsWithFocus.slice(0, 5), [stationsWithFocus]);
 
