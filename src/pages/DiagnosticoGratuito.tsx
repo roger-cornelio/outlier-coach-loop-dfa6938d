@@ -683,7 +683,7 @@ export default function DiagnosticoGratuito() {
                       <p>
                         Os dados não mentem: identificamos exatamente onde a sua performance
                         está vazando. O seu maior ponto fraco atual é no{' '}
-                        <span className="font-bold text-primary">{METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
+                        <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
                         <span className="font-bold text-destructive">{100 - weakStations[0].percentile_value}% dos atletas da sua categoria são mais rápidos que você</span>.
                       </p>
 
