@@ -121,7 +121,7 @@ Return ONLY valid JSON.`
                   race_category: { type: "string", enum: ["OPEN", "PRO"], description: "Race division" },
                   time_in_seconds: { type: "number", description: "Total/final time in seconds" },
                   formatted_time: { type: "string", description: "Formatted total time HH:MM:SS" },
-                  splits: {
+                    splits: {
                     type: "object",
                     properties: {
                       run_total_sec: { type: "number" },
@@ -134,6 +134,14 @@ Return ONLY valid JSON.`
                       farmers_sec: { type: "number" },
                       sandbag_sec: { type: "number" },
                       wallballs_sec: { type: "number" },
+                      run_1_sec: { type: "number" },
+                      run_2_sec: { type: "number" },
+                      run_3_sec: { type: "number" },
+                      run_4_sec: { type: "number" },
+                      run_5_sec: { type: "number" },
+                      run_6_sec: { type: "number" },
+                      run_7_sec: { type: "number" },
+                      run_8_sec: { type: "number" },
                     }
                   },
                   confidence: { type: "string", enum: ["high", "medium", "low"] },
