@@ -701,7 +701,7 @@ export default function DiagnosticoGratuito() {
                                     {i + 1}
                                   </span>
                                   <span className="text-sm font-semibold text-foreground truncate">
-                                    {METRIC_LABELS[s.metric] || s.metric}
+                                    {s.movement || METRIC_LABELS[s.metric] || s.metric}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0 text-xs">
