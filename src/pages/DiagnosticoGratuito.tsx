@@ -719,7 +719,7 @@ export default function DiagnosticoGratuito() {
                           Parecer OUTLIER
                         </h3>
                         <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                          Inteligência de Performance · Dados Reais
+                          {textoIa ? 'Análise Avançada · Treinador de Elite' : 'Inteligência de Performance · Dados Reais'}
                         </p>
                       </div>
                     </div>
