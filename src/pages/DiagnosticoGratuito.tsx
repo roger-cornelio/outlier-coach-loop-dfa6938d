@@ -771,13 +771,76 @@ export default function DiagnosticoGratuito() {
                         <Skeleton className="h-4 w-4/6" />
                         <Skeleton className="h-20 w-full rounded-xl" />
                         <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground bg-primary/[0.04] rounded-xl p-4 border border-primary/10">
-                        <Activity className="w-5 h-5 text-primary shrink-0" />
-                        <p>Análise indisponível no momento. Tente novamente mais tarde.</p>
+                      /* Fallback: template-based analysis */
+                      <div className="text-[15px] leading-relaxed text-muted-foreground space-y-4">
+                        <p>
+                          Você finalizou o{' '}
+                          <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
+                          <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Isso te coloca entre os{' '}
+                          <span className="font-bold text-primary">top {(() => {
+                            if (roxCoachDiagnosticos.length > 0) {
+                              const validPcts = roxCoachDiagnosticos.filter(d => d.percentage > 0);
+                              if (validPcts.length > 0) return Math.round(validPcts.reduce((s, d) => s + d.percentage, 0) / validPcts.length);
+                            }
+                            return 100 - (weakStations.length > 0 ? Math.round(scores.reduce((s, sc) => s + sc.percentile_value, 0) / scores.length) : 50);
+                          })()}%</span>{' '}
+                          dos atletas da categoria <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
+                        </p>
+
+                        <p>
+                          Os dados não mentem: identificamos exatamente onde a sua performance
+                          está vazando. O seu maior ponto fraco atual é no{' '}
+                          <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
+                          <span className="font-bold text-destructive">{(() => {
+                            const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0].metric || d.movement === weakStations[0].movement);
+                            if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
+                            return 100 - weakStations[0].percentile_value;
+                          })()}% dos atletas da sua categoria são mais rápidos que você</span>.
+                        </p>
+
+                        {/* Critical stations — show % focus instead of percentile */}
+                        <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
+                          <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-primary" />
+                            Onde Focar
+                          </p>
+                          <div className="space-y-2">
+                            {weakStations.map((s: any, i: number) => (
+                                <div key={s.metric} className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
+                                      {i + 1}
+                                    </span>
+                                    <span className="text-sm font-semibold text-foreground truncate">
+                                      {s.movement || METRIC_LABELS[s.metric] || s.metric}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-3 shrink-0 text-xs">
+                                    <span className="text-muted-foreground">
+                                      <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
+                                    </span>
+                                    <span className="font-bold text-primary">
+                                      {s.focusPct}% foco
+                                    </span>
+                                  </div>
+                                </div>
+                            ))}
+                          </div>
+                          {totalImprovementSec > 0 && (
+                            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                              Potencial combinado: cortar{' '}
+                              <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
+                              do seu tempo final focando nessas estações.
+                            </p>
+                          )}
+                        </div>
+
+                        <p>
+                          A estratégia agora não é treinar mais, é treinar mais inteligente.
+                          Vamos focar em transformar essas fraquezas na sua maior vantagem competitiva.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -817,7 +880,11 @@ export default function DiagnosticoGratuito() {
                       {
                         num: '01',
                         title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
-                        desc: `Treinos específicos para reduzir os ${formatTimeSec(weakStations[0]?.improvement_value || 0)} que te separam da Meta OUTLIER nessa estação.`,
+                        desc: `Treinos específicos para tirar você dos ${(() => {
+                          const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0]?.metric || d.movement === weakStations[0]?.movement);
+                          if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
+                          return 100 - (weakStations[0]?.percentile_value || 0);
+                        })()}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
                       },
                       {
                         num: '02',
