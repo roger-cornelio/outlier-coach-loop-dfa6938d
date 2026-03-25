@@ -148,6 +148,8 @@ export function PerformanceFeedback() {
             workoutTitle: selectedWorkout.stimulus || selectedWorkout.day,
             workoutContent: '',
             athleteLevel: athleteConfig.planTier || 'open',
+            sessionTotalSeconds: sessionTotalSeconds || undefined,
+            sessionEstimatedMinutes: sessionEstimatedMinutes || undefined,
           },
         });
 

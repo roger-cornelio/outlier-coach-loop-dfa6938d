@@ -16,18 +16,20 @@ interface SessionBlock {
   timeInSeconds?: number;
   estimatedTimeSeconds?: number;
   reps?: number;
+  estimatedRounds?: number;
   structureDescription?: string | null;
 }
 
 interface RequestBody {
   coachStyle: CoachStyle;
   gender?: string;
-  // New multi-block payload
   sessionBlocks?: SessionBlock[];
   workoutDay?: string;
   workoutStimulus?: string;
   totalBlocks?: number;
   completedBlocks?: number;
+  sessionTotalSeconds?: number;
+  sessionEstimatedMinutes?: number;
   // Legacy single-block fields
   completed: boolean;
   timeInSeconds?: number;
@@ -46,6 +48,14 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatStopwatch(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h${String(m).padStart(2, '0')}min`;
+  return `${m}min${String(s).padStart(2, '0')}s`;
 }
 
 // Female-specific guidelines
@@ -93,12 +103,32 @@ COMO VOCÊ FALA:
 - Fala como gente: "treino", "tempo", "pegou pesado", "arrasou", "bora"`
 };
 
-function buildSessionContext(blocks: SessionBlock[]): string {
-  if (!blocks || blocks.length === 0) return 'Nenhum bloco registrado.';
-  
-  return blocks.map(b => {
+function buildSessionContext(blocks: SessionBlock[], sessionTotalSeconds?: number, sessionEstimatedMinutes?: number): string {
+  const lines: string[] = [];
+
+  // Session total time
+  if (sessionTotalSeconds && sessionTotalSeconds > 0) {
+    let totalLine = `TEMPO TOTAL DA SESSÃO: ${formatStopwatch(sessionTotalSeconds)}`;
+    if (sessionEstimatedMinutes && sessionEstimatedMinutes > 0) {
+      const realMin = Math.round(sessionTotalSeconds / 60);
+      const diff = realMin - sessionEstimatedMinutes;
+      if (diff < -2) totalLine += ` (${Math.abs(diff)} minutos mais rápido que o estimado de ${sessionEstimatedMinutes}min)`;
+      else if (diff > 2) totalLine += ` (${diff} minutos mais lento que o estimado de ${sessionEstimatedMinutes}min)`;
+      else totalLine += ` (dentro do estimado de ${sessionEstimatedMinutes}min)`;
+    }
+    lines.push(totalLine);
+    lines.push('');
+  }
+
+  if (!blocks || blocks.length === 0) {
+    lines.push('Nenhum bloco registrado.');
+    return lines.join('\n');
+  }
+
+  lines.push('BLOCOS:');
+  for (const b of blocks) {
     let line = `- ${b.title} (${b.format})`;
-    if (b.format === 'for_time' && b.timeInSeconds) {
+    if (b.timeInSeconds && b.timeInSeconds > 0) {
       line += `: fez em ${formatTime(b.timeInSeconds)}`;
       if (b.estimatedTimeSeconds && b.estimatedTimeSeconds > 0) {
         const diff = b.timeInSeconds - b.estimatedTimeSeconds;
@@ -106,16 +136,25 @@ function buildSessionContext(blocks: SessionBlock[]): string {
         else if (diff > 10) line += ` (${formatTime(diff)} mais lento que o estimado de ${formatTime(b.estimatedTimeSeconds)})`;
         else line += ` (dentro do estimado de ${formatTime(b.estimatedTimeSeconds)})`;
       }
-    } else if (b.format === 'amrap' && b.reps) {
+    }
+    if (b.format === 'amrap' && b.reps) {
       line += `: ${b.reps} rounds/reps`;
+      if (b.estimatedRounds && b.estimatedRounds > 0) {
+        const diff = b.reps - b.estimatedRounds;
+        if (diff > 0) line += ` (${diff} acima do esperado de ~${b.estimatedRounds})`;
+        else if (diff < 0) line += ` (${Math.abs(diff)} abaixo do esperado de ~${b.estimatedRounds})`;
+        else line += ` (no alvo: ~${b.estimatedRounds})`;
+      }
       if (b.structureDescription) line += ` em ${b.structureDescription}`;
-    } else if (b.format === 'emom') {
+    } else if (b.format === 'emom' && !b.timeInSeconds) {
       line += ': concluiu';
-    } else if (b.completed) {
+    } else if (b.completed && !b.timeInSeconds && b.format !== 'amrap') {
       line += ': concluiu';
     }
-    return line;
-  }).join('\n');
+    lines.push(line);
+  }
+
+  return lines.join('\n');
 }
 
 serve(async (req) => {
@@ -150,7 +189,7 @@ serve(async (req) => {
     // ========== END AUTHENTICATION ==========
 
     const body: RequestBody = await req.json();
-    const { coachStyle, gender, sessionBlocks, workoutDay, workoutStimulus, totalBlocks, completedBlocks: completedCount } = body;
+    const { coachStyle, gender, sessionBlocks, workoutDay, workoutStimulus, totalBlocks, completedBlocks: completedCount, sessionTotalSeconds, sessionEstimatedMinutes } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -160,27 +199,23 @@ serve(async (req) => {
     const genderGuidelines = gender === 'Feminino' ? FEMALE_GUIDELINES : '';
     const personality = COACH_PERSONALITY[coachStyle] || COACH_PERSONALITY.PULSE;
 
-    // Determine if this is the new multi-block flow or legacy single-block
     const isMultiBlock = sessionBlocks && sessionBlocks.length > 0;
     
     let userPrompt: string;
     
     if (isMultiBlock) {
-      const sessionContext = buildSessionContext(sessionBlocks);
-      const hasTimeBlocks = sessionBlocks.some(b => b.timeInSeconds && b.estimatedTimeSeconds);
+      const sessionContext = buildSessionContext(sessionBlocks, sessionTotalSeconds, sessionEstimatedMinutes);
       
       userPrompt = `O atleta acabou de terminar o treino de ${workoutDay || 'hoje'}${workoutStimulus ? ` (${workoutStimulus})` : ''}.
 
-RESULTADO POR BLOCO:
 ${sessionContext}
 
 ${totalBlocks ? `Total de blocos: ${totalBlocks}, registrados: ${completedCount || sessionBlocks.length}` : ''}
 
-Fale com o atleta sobre a sessão COMO UM TODO. Comente sobre o que ele fez nos blocos, compare tempos quando tiver dados. Se ele foi mais rápido que o estimado, reconheça. Se foi mais lento, comente sem ser cruel.
+Fale com o atleta sobre a sessão COMO UM TODO. Use os dados de tempo REAL de cada bloco e o tempo total da sessão para comentar. Compare tempos reais com estimados quando tiver dados. Se ele foi mais rápido que o estimado, reconheça. Se foi mais lento, comente sem ser cruel.
 
 3-4 frases no máximo. Só o texto, sem aspas, sem introdução. Fale como se tivesse mandando uma mensagem de WhatsApp pro atleta.`;
     } else {
-      // Legacy single-block flow
       const { completed, timeInSeconds, targetSeconds, workoutTitle, workoutContent } = body;
       userPrompt = `O atleta acabou de fazer este treino:
 TREINO: ${workoutTitle}
@@ -202,7 +237,7 @@ VOCÊ ESTÁ FALANDO DIRETAMENTE COM O ATLETA. Imagine que ele acabou de terminar
 
 O QUE VOCÊ FAZ:
 1. Comenta sobre o que ele FEZ (blocos, tempos, se completou)
-2. Dá sua opinião HONESTA
+2. Dá sua opinião HONESTA baseada nos tempos REAIS registrados vs estimados
 3. Termina com algo ESPECÍFICO sobre o treino — nunca com conselho genérico
 
 REGRAS:
@@ -211,6 +246,7 @@ REGRAS:
 - PROIBIDO frases genéricas: "continue evoluindo", "bom trabalho", "treino registrado", "parabéns pelo esforço"
 - Use palavras simples: "treino", "tempo", "ritmo", "força", "cansaço", "fôlego"
 - O feedback deve soar como uma MENSAGEM DE WHATSAPP de um treinador
+- Se tem dados de tempo (cronômetro real), USE ELES na análise — são dados reais medidos durante o treino
 
 ANTI-REPETIÇÃO (CRÍTICO):
 - PROIBIDO terminar com conselho de hidratação, alimentação ou descanso. Nada de: "tomar muita água", "comer bem e descansar", "o corpo merece", "agora é descansar", "bora que amanhã tem mais", "recupera bem", "cuida do corpo"
