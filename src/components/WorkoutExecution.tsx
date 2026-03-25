@@ -707,7 +707,7 @@ export function WorkoutExecution() {
             Complete todos os blocos para finalizar o treino
           </p>
         )}
-
+      </main>
     </div>
   );
 }
