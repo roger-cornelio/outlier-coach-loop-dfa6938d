@@ -372,13 +372,19 @@ export function WorkoutExecution() {
               <h1 className="font-display text-2xl">{DAY_NAMES[displayedWorkout.day]}</h1>
               <p className="text-sm text-muted-foreground">{displayedWorkout.stimulus}</p>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">{displayedWorkout.estimatedTime}min</span>
-            </div>
           </div>
         </div>
       </header>
+
+      {/* Session Stopwatch */}
+      <div className="bg-card border-b border-border">
+        <div className="max-w-4xl mx-auto px-6 py-5 flex flex-col items-center">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">TEMPO DE SESSÃO</p>
+          <p className="font-mono text-4xl md:text-5xl font-bold tracking-wider text-foreground tabular-nums">
+            {formatStopwatch(elapsedSeconds)}
+          </p>
+        </div>
+      </div>
 
       {/* Progress Bar */}
       <div className="bg-secondary h-1">
