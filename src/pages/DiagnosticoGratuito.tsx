@@ -2,10 +2,9 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
@@ -16,6 +15,11 @@ import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import type { Split } from '@/components/diagnostico/types';
+import type { DiagnosticoResumo, DiagnosticoMelhoria } from '@/components/diagnostico/types';
+import PerformanceHighlights from '@/components/diagnostico/PerformanceHighlights';
+import SplitTimesGrid from '@/components/diagnostico/SplitTimesGrid';
+import ParecerPremium from '@/components/diagnostico/ParecerPremium';
+import ImprovementTable from '@/components/diagnostico/ImprovementTable';
 
 interface SearchResult {
   athlete_name: string;
