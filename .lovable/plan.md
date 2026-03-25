@@ -1,41 +1,31 @@
 
 
-## Plano: Equipamentos para Configurações + Campo "Outros" + Visibilidade no Coach
+## Plano: Cronômetro Real de Sessão + Tempo no Feedback
 
-### O que muda para o Atleta
+### O que existe hoje
+Na tela de execução do treino, o tempo exibido no topo (ex: "60min") é apenas uma **estimativa** calculada antes do treino começar. Não mede nada real — é só uma previsão de quanto tempo o treino deveria durar.
 
-1. **Nova seção nas Configurações** ("EQUIPAMENTOS DO MEU BOX") — entre "DADOS DO ATLETA" e "SEU PLANO" no `AthleteConfig.tsx`:
-   - 4 checkboxes inline para os equipamentos HYROX (Sled, SkiErg, Remo, Bike) — marcar o que **NÃO** tem
-   - Campo de texto livre "Outros" para o atleta descrever manualmente restrições adicionais (ex: "não tenho wall ball de 9kg", "box sem corda naval")
-   - Ambos os valores são salvos no banco ao clicar "Salvar" — `unavailable_equipment` (array) e `equipment_notes` (texto) já existem na tabela `profiles`
+### O que vai mudar
 
-2. **Remoção da tela de execução** — o botão "Equipamentos Adaptados", o modal e a substituição automática por regex são removidos do `WorkoutExecution.tsx`
+**1. Cronômetro na tela de treino**
+- Quando o atleta abre o treino, um **cronômetro real** começa a contar automaticamente
+- Ele fica centralizado no topo da tela, acima dos blocos de treino, com visual grande e bonito (estilo digital, fonte mono)
+- O cronômetro conta continuamente enquanto o atleta está treinando
+- Quando o atleta clica em "FINALIZAR TREINO", o cronômetro para e o tempo total é capturado
 
-3. **Remoção dos modais órfãos** — `Dashboard.tsx` e `Index.tsx` também têm o `EquipmentAdaptModal`, serão limpos
+**2. Tempo total aparece no feedback**
+- Na tela de feedback pós-treino, o tempo real da sessão aparece em destaque
+- Mostra uma comparação simples: "Você levou X minutos — o estimado era Y minutos"
+- Esse dado também é enviado junto com o feedback para o coach poder ver
 
-### O que muda para o Coach
-
-4. **Drawer de detalhe do atleta** no `CoachOverviewTab.tsx` — nova seção mostrando:
-   - Badges dos equipamentos indisponíveis (ex: 🛷 Sled, ⛷️ SkiErg)
-   - Texto livre do campo "Outros" se preenchido
-   - Dados vêm da view `coach_athlete_overview` (precisa adicionar `unavailable_equipment` e `equipment_notes` à view)
-
-### Mudanças no banco
-
-5. **Migração SQL** — atualizar a view `coach_athlete_overview` para incluir `p.unavailable_equipment` e `p.equipment_notes` nas colunas retornadas
-6. **Atualizar a função** `get_coach_overview` para retornar os novos campos
-
-### Arquivos modificados
-- `src/components/AthleteConfig.tsx` — nova seção de equipamentos + campo "Outros"
-- `src/components/WorkoutExecution.tsx` — remover botão, modal, lógica de adaptação
-- `src/components/Dashboard.tsx` — remover modal de equipamentos
-- `src/pages/Index.tsx` — remover modal de equipamentos
-- `src/components/CoachOverviewTab.tsx` — exibir equipamentos no drawer
-- `src/hooks/useCoachOverview.ts` — adicionar campos ao tipo `AthleteOverview`
-- **Migração SQL** — atualizar view e RPC
+### O que é removido
+- O tempo estimado estático que aparece hoje no header do treino (aquele "60min" que não significa nada real)
 
 ### O que NÃO muda
-- Tabela `profiles` (colunas `unavailable_equipment` e `equipment_notes` já existem)
-- `useAthleteProfile.ts` (já persiste ambos os campos)
-- `EquipmentAdaptModal.tsx` — será removido por completo
+- A gravação de tempo individual por bloco (FOR TIME, AMRAP) continua igual
+- O cálculo de calorias não é afetado
+- As edge functions de feedback continuam funcionando normalmente
+
+### Resumo
+Sai um número estático sem significado, entra um cronômetro real que mede quanto tempo o atleta realmente treinou, e esse dado aparece no feedback final.
 
