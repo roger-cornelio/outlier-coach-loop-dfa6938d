@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) {
-      console.error('[generate-diagnostic-ai] ANTHROPIC_API_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('[generate-diagnostic-ai] LOVABLE_API_KEY not configured');
       return new Response(JSON.stringify({ error: 'API key não configurada' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -59,15 +59,6 @@ Deno.serve(async (req) => {
 Sua missão é analisar os dados de uma corrida de um atleta (ou dupla), ser direto, altamente técnico, encorajador e focado em resultados.
 
 ${personality}
-
-DADOS DA CORRIDA:
-- Nome(s): ${athlete_name}
-- Evento: ${event_name}
-- Divisão: ${division}
-- Tempo Final: ${finish_time}
-
-TABELA DE SPLITS E DIAGNÓSTICO:
-${jsonPayload}
 
 REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
 - NUNCA utilize segundos brutos no texto final (ex: "328s", "2515 segundos"). Todos os tempos devem estar no formato humano MM:SS (ex: "05:28") ou HH:MM:SS quando aplicável.
@@ -99,23 +90,33 @@ Inclua uma análise de PACE: sabendo que o total de corrida na HYROX é 8km, apr
 ### 3. PRESCRIÇÃO DE TREINO
 Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extremamente específicas de treinamento. Uma delas deve incluir o Pace Alvo (min/km) que o atleta precisa sustentar para atingir o tempo de corrida do próximo nível.`;
 
+    const userContent = `DADOS DA CORRIDA:
+- Nome(s): ${athlete_name}
+- Evento: ${event_name}
+- Divisão: ${division}
+- Tempo Final: ${finish_time}
+
+TABELA DE SPLITS E DIAGNÓSTICO:
+${jsonPayload}
+
+Analise esses dados e gere o parecer completo seguindo a estrutura obrigatória.`;
+
     console.log(`[generate-diagnostic-ai] Coach style: ${coach_style}, athlete: ${athlete_name}`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1500,
+        model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'user', content: systemPrompt },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent },
         ],
       }),
       signal: controller.signal,
@@ -125,7 +126,21 @@ Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extr
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[generate-diagnostic-ai] Anthropic error ${response.status}: ${errText}`);
+      console.error(`[generate-diagnostic-ai] AI gateway error ${response.status}: ${errText}`);
+
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'Muitas requisições. Aguarde um momento e tente novamente.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'Créditos insuficientes. Entre em contato com o suporte.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       return new Response(JSON.stringify({ error: `Erro na API de IA: ${response.status}` }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -133,7 +148,7 @@ Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extr
     }
 
     const result = await response.json();
-    const text = result?.content?.[0]?.text || '';
+    const text = result?.choices?.[0]?.message?.content || '';
 
     console.log(`[generate-diagnostic-ai] Generated ${text.length} chars for ${athlete_name}`);
 
