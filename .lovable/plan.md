@@ -1,41 +1,24 @@
 
 
-## Parecer IA + Percentis Corrigidos no Diagnóstico Gratuito
+## Plano: Frase 01 com tempo real de melhoria na corrida
 
-### Problema atual
+### Mudança
 
-1. **Parecer hardcoded** — O texto do "Parecer OUTLIER" no diagnóstico gratuito é um template estático com frases fixas. No diagnóstico de evolução (ImportarProva), o mesmo bloco usa a Edge Function `generate-diagnostic-ai` que gera texto personalizado com IA (análise de gargalo, pace, prescrição).
+**Arquivo: `src/pages/DiagnosticoGratuito.tsx` (~linha 846-852)**
 
-2. **Percentis imprecisos** — As frases "top X%" e "X% dos atletas são mais rápidos" usam `scores[].percentile_value` (percentis internos do `calculate-hyrox-percentiles`), mas deveriam usar os dados do RoxCoach (`roxCoachDiagnosticos`) que são a mesma fonte de verdade usada na tabela "Onde Focar".
+A frase 01 do "Plano de Ataque" atualmente diz algo como _"Treinos específicos para tirar você dos 88% mais lentos..."_ — texto baseado num percentil que não faz sentido claro para o atleta.
 
-### O que será feito
+**Nova frase 01:**
+- **Título**: mantém `"Corrigir {nome da 1ª estação mais fraca}"`
+- **Descrição**: muda para `"Treinos específicos para diminuir seu pace total em {XX:XX}"`, onde `XX:XX` é o `improvement_value` da estação `run_avg` (ou a soma dos runs) encontrado em `roxCoachDiagnosticos`
+- **Fallback**: se não encontrar dados de run no RoxCoach, usar o `improvement_value` da própria `weakStations[0]` (ex: "diminuir seu tempo de Sled Push em 01:23")
 
-**1. Chamar a IA para gerar o Parecer** (`src/pages/DiagnosticoGratuito.tsx`)
+### Dados
 
-- Após receber os dados do scrape + RoxCoach + percentis, chamar `generate-diagnostic-ai` com os mesmos parâmetros que `ImportarProva.tsx` usa (athlete_name, event_name, division, finish_time, splits_data, diagnostic_data)
-- Coach style fixo `'PULSE'` (diagnóstico gratuito não tem seleção de coach)
-- Guardar o `texto_ia` em um novo state
-- A chamada será não-bloqueante: o resultado aparece assim que disponível, sem travar a renderização dos demais blocos
-
-**2. Renderizar o texto IA no Parecer** (`src/pages/DiagnosticoGratuito.tsx`)
-
-- Quando `texto_ia` estiver disponível, substituir o bloco de template estático (linhas 696-752) pelo componente de Markdown igual ao `ParecerPremium.tsx` (com `ReactMarkdown` e os mesmos estilos de `h3`, `p`, `strong`, `ul`, `li`)
-- Enquanto carrega, mostrar um skeleton/loading sutil dentro do card
-- Fallback: se a IA falhar, manter o template atual como estava
-
-**3. Corrigir os percentis nas frases narrativas** (`src/pages/DiagnosticoGratuito.tsx`)
-
-- **"top X%"**: Usar o percentil do RoxCoach quando disponível. O RoxCoach retorna `percentage` por estação — calcular a média geral ou usar o percentil do finish time total
-- **"X% dos atletas são mais rápidos"**: Para o gargalo (weakStations[0]), usar `weakStations[0].percentage` do RoxCoach em vez de `100 - weakStations[0].percentile_value`
-- Fallback: manter o cálculo atual de `scores` quando RoxCoach não tem dados
-
-### Arquivos modificados
-
-- `src/pages/DiagnosticoGratuito.tsx` — adicionar state `textoIa`, chamada à edge function, renderização condicional com ReactMarkdown, correção dos percentis
+O `roxCoachDiagnosticos` já contém uma linha com `metric === 'run_avg'` cujo `improvement_value` é a diferença em segundos entre o run total do atleta e a meta OUTLIER. Basta localizar essa linha e formatar o valor com `formatTimeSec()`.
 
 ### O que NÃO muda
-
-- Edge function `generate-diagnostic-ai` — já funciona, sem alterações
-- Layout geral da tela (hero, tabela Onde Focar, fadiga, plano de ataque)
-- Lógica de busca e scrape
+- Título da frase 01
+- Frases 02 e 03
+- Nenhum componente ou hook alterado
 
