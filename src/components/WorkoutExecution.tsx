@@ -369,30 +369,6 @@ export function WorkoutExecution() {
 
       {/* Workout Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Equipment Adaptation Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => setIsEquipmentModalOpen(true)}
-            className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all
-              ${savedUnavailableEquipment.length > 0
-                ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
-                : 'border-border bg-secondary/50 hover:bg-secondary hover:border-muted-foreground/50'
-              }
-            `}
-          >
-            <Wrench className="w-4 h-4" />
-            <span className="font-display text-sm tracking-wide">
-              {savedUnavailableEquipment.length > 0 
-                ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
-                : 'TROCAR EQUIPAMENTOS'
-              }
-            </span>
-          </button>
-          <p className="text-xs text-muted-foreground mt-2">
-            Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
-          </p>
-        </div>
 
         <div className="space-y-4 mb-8">
           {displayedWorkout.blocks.map((block, index) => {
@@ -732,22 +708,6 @@ export function WorkoutExecution() {
           </p>
         )}
 
-        {/* Equipment Substitution Button - Bottom */}
-        <button
-          onClick={() => setIsEquipmentModalOpen(true)}
-          className="w-full mt-6 py-3 px-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <Wrench className="w-4 h-4" />
-          <span className="font-display text-sm tracking-wide">SUBSTITUIÇÕES DE EQUIPAMENTOS</span>
-        </button>
-      </main>
-
-      <EquipmentAdaptModal
-        isOpen={isEquipmentModalOpen}
-        onClose={() => setIsEquipmentModalOpen(false)}
-        onApply={handleApplyEquipmentAdaptation}
-        initialSelection={savedUnavailableEquipment}
-      />
     </div>
   );
 }
