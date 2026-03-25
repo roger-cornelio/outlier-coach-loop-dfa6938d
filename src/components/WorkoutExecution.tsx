@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
@@ -90,8 +90,19 @@ function formatSecondsToMinSec(seconds: number): string {
 }
 
 export function WorkoutExecution() {
-  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig, addWorkoutResult, addSessionBlockResult, clearSessionBlockResults } = useOutlierStore();
+  const { selectedWorkout, setCurrentView, athleteConfig, setAthleteConfig, addWorkoutResult, addSessionBlockResult, clearSessionBlockResults, setSessionTotalSeconds, setSessionEstimatedMinutes } = useOutlierStore();
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
+  
+  // Session stopwatch
+  const startTimeRef = useRef(Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
   
@@ -320,6 +331,11 @@ export function WorkoutExecution() {
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   const handleFinishWorkout = () => {
+    // Capture elapsed time
+    const totalSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    setSessionTotalSeconds(totalSeconds);
+    setSessionEstimatedMinutes(selectedWorkout.estimatedTime || 0);
+    
     const sessionResult = {
       workoutId: selectedWorkout.day,
       blockId: `session-${selectedWorkout.day}-${Date.now()}`,
@@ -327,10 +343,17 @@ export function WorkoutExecution() {
       date: new Date().toISOString(),
     };
     addWorkoutResult(sessionResult);
-    console.log('[JOURNEY] Training session registered:', sessionResult);
+    console.log('[JOURNEY] Training session registered:', sessionResult, 'totalSeconds:', totalSeconds);
     
     // Go directly to feedback (skipping ResultRecording)
     setCurrentView('feedback');
+  };
+  
+  const formatStopwatch = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
   return (
