@@ -72,24 +72,37 @@ function BlockRow({ result }: { result: any }) {
     );
   }
 
-  // FOR TIME / Strength with time comparison
-  if (timeInSeconds && estimatedTimeSeconds && estimatedTimeSeconds > 0) {
-    const diff = timeInSeconds - estimatedTimeSeconds;
-    const isPositive = diff < -10; // faster = good
-    const isNegative = diff > 10;
+  // Blocks with time recorded (FOR TIME, EMOM, strength, etc.)
+  if (timeInSeconds && timeInSeconds > 0) {
+    if (estimatedTimeSeconds && estimatedTimeSeconds > 0) {
+      const diff = timeInSeconds - estimatedTimeSeconds;
+      const isPositive = diff < -10; // faster = good
+      const isNegative = diff > 10;
+      return (
+        <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+          <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
+            <span className="text-xs text-muted-foreground w-14 text-right">{formatSecondsToMinSec(estimatedTimeSeconds)}</span>
+            {!isPositive && !isNegative ? (
+              <span className="text-xs text-muted-foreground w-16 text-right">—</span>
+            ) : (
+              <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                {diff < 0 ? '-' : '+'}{formatSecondsToMinSec(Math.abs(diff))}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+    // Time but no estimate
     return (
       <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
         <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
         <div className="flex items-center gap-4">
           <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
-          <span className="text-xs text-muted-foreground w-14 text-right">{formatSecondsToMinSec(estimatedTimeSeconds)}</span>
-          {!isPositive && !isNegative ? (
-            <span className="text-xs text-muted-foreground w-16 text-right">—</span>
-          ) : (
-            <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-              {diff < 0 ? '-' : '+'}{formatSecondsToMinSec(Math.abs(diff))}
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground w-14 text-right">—</span>
+          <span className="text-xs text-muted-foreground w-16 text-right">—</span>
         </div>
       </div>
     );
