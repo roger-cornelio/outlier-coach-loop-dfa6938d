@@ -2,10 +2,9 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
@@ -16,6 +15,11 @@ import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
 import type { Split } from '@/components/diagnostico/types';
+import type { DiagnosticoResumo, DiagnosticoMelhoria } from '@/components/diagnostico/types';
+import PerformanceHighlights from '@/components/diagnostico/PerformanceHighlights';
+import SplitTimesGrid from '@/components/diagnostico/SplitTimesGrid';
+import ParecerPremium from '@/components/diagnostico/ParecerPremium';
+import ImprovementTable from '@/components/diagnostico/ImprovementTable';
 
 interface SearchResult {
   athlete_name: string;
@@ -420,7 +424,79 @@ export default function DiagnosticoGratuito() {
     return result;
   }, [scrapedData]);
 
-  // (totalTimeLost replaced by totalImprovementSec above)
+  // ─── Map data to dashboard component types ───
+  const STATION_SPLIT_KEYS = ['ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'];
+  const STATION_LABELS_MAP: Record<string, string> = {
+    ski: 'Ski Erg', sled_push: 'Sled Push', sled_pull: 'Sled Pull',
+    bbj: 'Burpee Broad Jump', row: 'Rowing', farmers: 'Farmers Carry',
+    sandbag: 'Sandbag Lunges', wallballs: 'Wall Balls',
+  };
+
+  const freeResumo: DiagnosticoResumo = useMemo(() => {
+    const splits = scrapedData?.splits || {};
+    const runTotal = Object.keys(splits)
+      .filter(k => k.startsWith('run_') && k.endsWith('_sec'))
+      .reduce((sum, k) => sum + (splits[k] || 0), 0);
+    const workoutTotal = STATION_SPLIT_KEYS
+      .reduce((sum, k) => sum + (splits[`${k}_sec`] || splits[k] || 0), 0);
+    return {
+      id: 'free-diag',
+      nome_atleta: selectedResult?.athlete_name || null,
+      temporada: selectedResult?.season_id ? `S${selectedResult.season_id}` : null,
+      evento: scrapedData?.event_name || selectedResult?.event_name || null,
+      divisao: scrapedData?.race_category || selectedResult?.division || null,
+      finish_time: scrapedData?.formatted_time || selectedResult?.time_formatted || null,
+      posicao_categoria: null,
+      posicao_geral: null,
+      run_total: runTotal > 0 ? formatTimeSec(runTotal) : null,
+      workout_total: workoutTotal > 0 ? formatTimeSec(workoutTotal) : null,
+      texto_ia: textoIa,
+      source_url: selectedResult?.result_url || null,
+    };
+  }, [scrapedData, selectedResult, textoIa]);
+
+  const freeSplits: Split[] = useMemo(() => {
+    if (!scrapedData?.splits) return [];
+    const splits = scrapedData.splits;
+    const result: Split[] = [];
+    // 8 runs
+    for (let i = 1; i <= 8; i++) {
+      const sec = splits[`run_${i}_sec`] || splits[`run_${i}`] || 0;
+      if (sec > 0) {
+        result.push({ id: `run-${i}`, split_name: `Running ${i}`, time: formatTimeSec(sec) });
+      }
+    }
+    // 8 stations
+    for (const key of STATION_SPLIT_KEYS) {
+      const sec = splits[`${key}_sec`] || splits[key] || 0;
+      if (sec > 0) {
+        result.push({ id: key, split_name: STATION_LABELS_MAP[key] || key, time: formatTimeSec(sec) });
+      }
+    }
+    // Roxzone
+    const roxSec = splits['roxzone_sec'] || splits['roxzone'] || 0;
+    if (roxSec > 0) {
+      result.push({ id: 'roxzone', split_name: 'Roxzone', time: formatTimeSec(roxSec) });
+    }
+    return result;
+  }, [scrapedData]);
+
+  const freeDiagnosticos: DiagnosticoMelhoria[] = useMemo(() => {
+    if (roxCoachDiagnosticos.length === 0) return [];
+    const totalImprov = roxCoachDiagnosticos.reduce((sum, d) => sum + d.improvement_value, 0);
+    return roxCoachDiagnosticos.map((d, i) => ({
+      id: `free-diag-${i}`,
+      movement: d.movement,
+      metric: d.metric,
+      value: 0,
+      your_score: d.your_score,
+      top_1: d.top_1,
+      improvement_value: d.improvement_value,
+      percentage: d.percentage,
+      total_improvement: totalImprov,
+    }));
+  }, [roxCoachDiagnosticos]);
+
 
   // Evolution projection
   const totalSeconds = scrapedData?.time_in_seconds || 0;
@@ -674,176 +750,67 @@ export default function DiagnosticoGratuito() {
                 </motion.p>
               </motion.div>
 
-              {/* ─── 2. PARECER OUTLIER ─── */}
-              {roxCoachFailed && weakStations.length === 0 && (
+              {/* ─── 2. RESULTADO + PARECER + DIAGNÓSTICO ─── */}
+              {roxCoachFailed && freeDiagnosticos.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="rounded-2xl border border-border bg-card p-6 text-center space-y-3"
+                  className="rounded-2xl border border-destructive/30 bg-card p-6 text-center space-y-4"
                 >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted mx-auto">
-                    <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-destructive/10 mx-auto">
+                    <ShieldAlert className="w-6 h-6 text-destructive" />
                   </div>
                   <h3 className="text-sm font-bold text-foreground">
-                    Diagnóstico comparativo temporariamente indisponível
+                    Falha na geração do diagnóstico
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                    Não foi possível acessar os dados de referência neste momento.
-                    Seus splits e tempo total estão visíveis acima.
-                    Tente novamente em alguns minutos.
+                    Não foi possível gerar o diagnóstico comparativo neste momento.
                   </p>
-                  <button
-                    onClick={() => { setStep('search'); setScores([]); setSearchResults([]); setSearchDone(false); setRoxCoachFailed(false); setRoxCoachDiagnosticos([]); setTextoIa(null); setTextoIaLoading(false); lastSearchedRef.current = ''; }}
-                    className="text-xs text-primary hover:underline"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedResult) {
+                        handleSelectResult(selectedResult);
+                      }
+                    }}
+                    className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
                   >
-                    ← Tentar novamente
-                  </button>
+                    <RefreshCw className="w-4 h-4" />
+                    Tente novamente
+                  </Button>
                 </motion.div>
               )}
-              {weakStations.length > 0 && (
+              {freeDiagnosticos.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/[0.04]"
+                  className="space-y-6"
                 >
-                  <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-primary/[0.06] blur-3xl pointer-events-none" />
-                  <div className="relative p-6 space-y-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 border border-primary/20">
-                        <Target className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wide">
-                          Parecer OUTLIER
-                        </h3>
-                        <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                          {textoIa ? 'Análise Avançada · Treinador de Elite' : 'Inteligência de Performance · Dados Reais'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* AI-generated markdown analysis */}
-                    {textoIa ? (
-                      <div className="prose prose-sm max-w-none parecer-markdown">
-                        <ReactMarkdown
-                          components={{
-                            h3: ({ children }) => (
-                              <h3 className="text-orange-500 font-extrabold text-sm uppercase tracking-wide mt-5 mb-2 flex items-center gap-1.5">
-                                {children}
-                              </h3>
-                            ),
-                            p: ({ children }) => (
-                              <p className="text-white/90 text-[15px] leading-relaxed mb-3">
-                                {children}
-                              </p>
-                            ),
-                            strong: ({ children }) => (
-                              <strong className="text-orange-400 font-bold">
-                                {children}
-                              </strong>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className="list-disc list-inside space-y-1 mb-3 text-white/80 text-sm">
-                                {children}
-                              </ul>
-                            ),
-                            ol: ({ children }) => (
-                              <ol className="list-decimal list-inside space-y-1 mb-3 text-white/80 text-sm">
-                                {children}
-                              </ol>
-                            ),
-                            li: ({ children }) => (
-                              <li className="text-white/80 text-sm leading-relaxed">
-                                {children}
-                              </li>
-                            ),
-                          }}
-                        >
-                          {textoIa}
-                        </ReactMarkdown>
-                      </div>
-                    ) : textoIaLoading ? (
-                      <div className="space-y-3">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-5/6" />
-                        <Skeleton className="h-4 w-4/6" />
-                        <Skeleton className="h-20 w-full rounded-xl" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </div>
-                    ) : (
-                      /* Fallback: template-based analysis */
-                      <div className="text-[15px] leading-relaxed text-muted-foreground space-y-4">
-                        <p>
-                          Você finalizou o{' '}
-                          <span className="font-bold text-primary">{selectedResult?.event_name || 'HYROX'}</span> com a marca de{' '}
-                          <span className="font-bold text-primary">{formatTimeSec(totalSeconds)}</span>. Isso te coloca entre os{' '}
-                          <span className="font-bold text-primary">top {(() => {
-                            if (roxCoachDiagnosticos.length > 0) {
-                              const validPcts = roxCoachDiagnosticos.filter(d => d.percentage > 0);
-                              if (validPcts.length > 0) return Math.round(validPcts.reduce((s, d) => s + d.percentage, 0) / validPcts.length);
-                            }
-                            return 100 - (weakStations.length > 0 ? Math.round(scores.reduce((s, sc) => s + sc.percentile_value, 0) / scores.length) : 50);
-                          })()}%</span>{' '}
-                          dos atletas da categoria <span className="font-bold text-primary">{selectedResult?.division || 'Open'}</span>.
-                        </p>
-
-                        <p>
-                          Os dados não mentem: identificamos exatamente onde a sua performance
-                          está vazando. O seu maior ponto fraco atual é no{' '}
-                          <span className="font-bold text-primary">{weakStations[0].movement || METRIC_LABELS[weakStations[0].metric] || weakStations[0].metric}</span> — onde{' '}
-                          <span className="font-bold text-destructive">{(() => {
-                            const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0].metric || d.movement === weakStations[0].movement);
-                            if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
-                            return 100 - weakStations[0].percentile_value;
-                          })()}% dos atletas da sua categoria são mais rápidos que você</span>.
-                        </p>
-
-                        {/* Critical stations — show % focus instead of percentile */}
-                        <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4 space-y-3">
-                          <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                            <AlertTriangle className="w-3.5 h-3.5 text-primary" />
-                            Onde Focar
-                          </p>
-                          <div className="space-y-2">
-                            {weakStations.map((s: any, i: number) => (
-                                <div key={s.metric} className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-extrabold shrink-0">
-                                      {i + 1}
-                                    </span>
-                                    <span className="text-sm font-semibold text-foreground truncate">
-                                      {s.movement || METRIC_LABELS[s.metric] || s.metric}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-3 shrink-0 text-xs">
-                                    <span className="text-muted-foreground">
-                                      <span className="font-semibold text-foreground">{formatTimeSec(s.raw_time_sec)}</span>
-                                    </span>
-                                    <span className="font-bold text-primary">
-                                      {s.focusPct}% foco
-                                    </span>
-                                  </div>
-                                </div>
-                            ))}
-                          </div>
-                          {totalImprovementSec > 0 && (
-                            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
-                              Potencial combinado: cortar{' '}
-                              <span className="font-bold text-primary">{Math.round(totalImprovementSec / 60)}+ minutos</span>{' '}
-                              do seu tempo final focando nessas estações.
-                            </p>
-                          )}
-                        </div>
-
-                        <p>
-                          A estratégia agora não é treinar mais, é treinar mais inteligente.
-                          Vamos focar em transformar essas fraquezas na sua maior vantagem competitiva.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  <PerformanceHighlights resumo={freeResumo} splits={freeSplits} />
+                  <SplitTimesGrid splits={freeSplits} />
+                  <ParecerPremium
+                    resumo={freeResumo}
+                    diagnosticos={freeDiagnosticos}
+                  />
+                  <ImprovementTable diagnosticos={freeDiagnosticos} splits={freeSplits} />
+                </motion.div>
+              )}
+              {/* Loading skeleton while AI parecer generates */}
+              {!roxCoachFailed && freeDiagnosticos.length === 0 && textoIaLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="rounded-2xl border border-border bg-card p-6 space-y-3"
+                >
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/6" />
+                  <Skeleton className="h-20 w-full rounded-xl" />
+                  <Skeleton className="h-4 w-3/4" />
                 </motion.div>
               )}
 
