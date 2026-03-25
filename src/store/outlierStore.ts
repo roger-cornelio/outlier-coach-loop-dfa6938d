@@ -63,6 +63,10 @@ interface OutlierState {
   // Session block results (temporary, not persisted)
   sessionBlockResults: SessionBlockResult[];
   
+  // Session total elapsed time in seconds (set on finish)
+  sessionTotalSeconds: number | null;
+  sessionEstimatedMinutes: number | null;
+  
   // Actions
   setHasHydrated: (v: boolean) => void;
   setCoachStyle: (style: CoachStyle) => void;
@@ -97,6 +101,11 @@ interface OutlierState {
   setSessionBlockResults: (results: SessionBlockResult[]) => void;
   addSessionBlockResult: (result: SessionBlockResult) => void;
   clearSessionBlockResults: () => void;
+  
+  // Session timer
+  setSessionTotalSeconds: (seconds: number) => void;
+  setSessionEstimatedMinutes: (minutes: number) => void;
+  clearSessionTimer: () => void;
 }
 
 export const useOutlierStore = create<OutlierState>()(
@@ -117,6 +126,8 @@ export const useOutlierStore = create<OutlierState>()(
       externalResultsRefreshKey: 0,
       viewingAsAthlete: null,
       sessionBlockResults: [],
+      sessionTotalSeconds: null,
+      sessionEstimatedMinutes: null,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       setCoachStyle: (style) => set({ coachStyle: style }),
@@ -215,7 +226,11 @@ export const useOutlierStore = create<OutlierState>()(
       addSessionBlockResult: (result) => set((state) => ({ 
         sessionBlockResults: [...state.sessionBlockResults.filter(r => r.blockId !== result.blockId), result] 
       })),
-      clearSessionBlockResults: () => set({ sessionBlockResults: [] }),
+      clearSessionBlockResults: () => set({ sessionBlockResults: [], sessionTotalSeconds: null, sessionEstimatedMinutes: null }),
+      
+      setSessionTotalSeconds: (seconds) => set({ sessionTotalSeconds: seconds }),
+      setSessionEstimatedMinutes: (minutes) => set({ sessionEstimatedMinutes: minutes }),
+      clearSessionTimer: () => set({ sessionTotalSeconds: null, sessionEstimatedMinutes: null }),
     }),
     {
       name: 'outlier-store-v2', // NOVO NAME para limpar storage antigo

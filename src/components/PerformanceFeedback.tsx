@@ -105,7 +105,7 @@ function BlockRow({ result }: { result: any }) {
 }
 
 export function PerformanceFeedback() {
-  const { selectedWorkout, athleteConfig, setCurrentView, sessionBlockResults, clearSessionBlockResults } = useOutlierStore();
+  const { selectedWorkout, athleteConfig, setCurrentView, sessionBlockResults, clearSessionBlockResults, sessionTotalSeconds, sessionEstimatedMinutes } = useOutlierStore();
   const { profile } = useAuth();
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -247,6 +247,40 @@ export function PerformanceFeedback() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
+              {/* Session Total Time */}
+              {sessionTotalSeconds != null && sessionTotalSeconds > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="card-elevated p-5 text-center space-y-2"
+                >
+                  <p className="font-display text-xs tracking-[0.2em] text-muted-foreground">TEMPO TOTAL DA SESSÃO</p>
+                  <p className="font-mono text-4xl font-bold text-foreground tabular-nums">
+                    {(() => {
+                      const h = Math.floor(sessionTotalSeconds / 3600);
+                      const m = Math.floor((sessionTotalSeconds % 3600) / 60);
+                      const s = sessionTotalSeconds % 60;
+                      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    })()}
+                  </p>
+                  {sessionEstimatedMinutes != null && sessionEstimatedMinutes > 0 && (() => {
+                    const realMin = Math.round(sessionTotalSeconds / 60);
+                    const diff = realMin - sessionEstimatedMinutes;
+                    const absDiff = Math.abs(diff);
+                    return (
+                      <p className="text-sm text-muted-foreground">
+                        Estimado: {sessionEstimatedMinutes}min
+                        {absDiff >= 2 && (
+                          <span className={`ml-2 font-semibold ${diff < 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ({diff > 0 ? '+' : '-'}{absDiff}min)
+                          </span>
+                        )}
+                      </p>
+                    );
+                  })()}
+                </motion.div>
+              )}
+
               {/* Session Summary */}
               <SessionSummary sessionBlockResults={sessionBlockResults} />
 
