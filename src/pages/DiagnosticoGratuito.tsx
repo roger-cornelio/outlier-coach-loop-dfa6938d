@@ -14,8 +14,8 @@ import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { CalculatedScore } from '@/utils/hyroxPercentileCalculator';
-import type { Split } from '@/components/diagnostico/types';
-import type { DiagnosticoResumo, DiagnosticoMelhoria } from '@/components/diagnostico/types';
+import { timeToSeconds } from '@/components/diagnostico/types';
+import type { Split, DiagnosticoResumo, DiagnosticoMelhoria } from '@/components/diagnostico/types';
 import PerformanceHighlights from '@/components/diagnostico/PerformanceHighlights';
 import SplitTimesGrid from '@/components/diagnostico/SplitTimesGrid';
 import ParecerPremium from '@/components/diagnostico/ParecerPremium';
@@ -841,27 +841,68 @@ export default function DiagnosticoGratuito() {
                   </div>
 
                   <div className="space-y-3">
-                    {[
+                    {(() => {
+                      // ── Frase 01: tempo de melhoria na corrida ──
+                      const runRow = roxCoachDiagnosticos.find(d => d.metric === 'run_avg');
+                      const runImprovement = runRow ? runRow.improvement_value : 0;
+                      const ws0 = weakStations[0];
+                      const frase01Desc = runImprovement > 0
+                        ? `Treinos específicos para diminuir seu pace total em ${formatTimeSec(runImprovement)}.`
+                        : ws0
+                          ? `Treinos específicos para diminuir seu tempo de ${ws0.movement || METRIC_LABELS[ws0.metric] || 'estação'} em ${formatTimeSec(ws0.improvement_value || 0)}.`
+                          : 'Treinos específicos para melhorar seu ponto mais fraco.';
+
+                      // ── Frase 02: fadiga ou 2ª estação ──
+                      const coreRunPaces: number[] = [];
+                      if (fatigueSplits.length >= 8) {
+                        for (const sp of fatigueSplits) {
+                          const num = parseInt(sp.split_name.replace(/\D/g, ''), 10);
+                          if (num >= 2 && num <= 7) {
+                            const sec = timeToSeconds(sp.time);
+                            if (sec > 0) coreRunPaces.push(sec);
+                          }
+                        }
+                      }
+                      const bestPace = coreRunPaces.length >= 6 ? Math.min(...coreRunPaces) : 0;
+                      const worstPace = coreRunPaces.length >= 6 ? Math.max(...coreRunPaces) : 0;
+                      const fatigueIndex = bestPace > 0 ? ((worstPace - bestPace) / bestPace) * 100 : 0;
+
+                      let frase02Title: string;
+                      let frase02Desc: string;
+
+                      if (fatigueIndex > 10) {
+                        frase02Title = 'Blindar sua resistência sob fadiga';
+                        frase02Desc = `Seu pace degrada ${fatigueIndex.toFixed(1)}% entre o melhor e pior split. Protocolos de gestão de pace para eliminar essa queda.`;
+                      } else if (weakStations.length > 1) {
+                        const ws1 = weakStations[1];
+                        frase02Title = `Corrigir ${ws1.movement || METRIC_LABELS[ws1.metric] || 'sua 2ª estação'}`;
+                        const ws1Improvement = ws1.improvement_value || 0;
+                        frase02Desc = ws1Improvement > 0
+                          ? `Treinos direcionados para diminuir seu tempo em ${formatTimeSec(ws1Improvement)}.`
+                          : 'Treinos direcionados para melhorar essa estação crítica.';
+                      } else {
+                        frase02Title = 'Blindar sua resistência sob fadiga';
+                        frase02Desc = 'Protocolos de gestão de pace e resistência muscular para que seu desempenho não desabe nas últimas estações.';
+                      }
+
+                      return [
                       {
                         num: '01',
-                        title: `Corrigir ${weakStations[0]?.movement || METRIC_LABELS[weakStations[0]?.metric] || 'seu ponto fraco'}`,
-                        desc: `Treinos específicos para tirar você dos ${(() => {
-                          const roxMatch = roxCoachDiagnosticos.find(d => d.metric === weakStations[0]?.metric || d.movement === weakStations[0]?.movement);
-                          if (roxMatch && roxMatch.percentage > 0) return Math.round(roxMatch.percentage);
-                          return 100 - (weakStations[0]?.percentile_value || 0);
-                        })()}% mais lentos e colocar entre os mais rápidos da sua categoria.`,
+                        title: `Corrigir ${ws0?.movement || METRIC_LABELS[ws0?.metric] || 'seu ponto fraco'}`,
+                        desc: frase01Desc,
                       },
                       {
                         num: '02',
-                        title: 'Blindar sua resistência sob fadiga',
-                        desc: 'Protocolos de gestão de pace e resistência muscular para que seu desempenho não desabe nas últimas estações.',
+                        title: frase02Title,
+                        desc: frase02Desc,
                       },
                       {
                         num: '03',
                         title: 'Periodização orientada à sua próxima prova',
                         desc: `Plano semanal personalizado com foco em derrubar seu tempo para ${evolution ? formatTimeSec(projectedAt12) : 'o próximo nível'}.`,
                       },
-                    ].map((item) => (
+                    ];
+                    })().map((item) => (
                       <div key={item.num} className="flex gap-3 items-start">
                         <span className="text-2xl font-bold text-primary/30 font-mono leading-none mt-0.5">{item.num}</span>
                         <div>
