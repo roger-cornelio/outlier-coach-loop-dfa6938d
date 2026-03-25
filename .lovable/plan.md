@@ -1,24 +1,52 @@
 
 
-## Plano: Frase 01 com tempo real de melhoria na corrida
+## Problema
 
-### Mudança
+A tela de execução do treino (`WorkoutExecution.tsx`) usa fontes de dados **diferentes** da tela de visualização semanal (`WeeklyTrainingView.tsx`) para tempo e calorias:
 
-**Arquivo: `src/pages/DiagnosticoGratuito.tsx` (~linha 846-852)**
+| Dado | WeeklyTrainingView (antes) | WorkoutExecution (durante) |
+|------|---------------------------|---------------------------|
+| Tempo | `computeBlockMetrics` (motor físico) → fallback `estimateBlock` | `getBlockTimeMeta` (outra lógica) |
+| Kcal | `computeBlockMetrics` → fallback `estimateBlock` | `estimateWorkout` (MET básico) |
 
-A frase 01 do "Plano de Ataque" atualmente diz algo como _"Treinos específicos para tirar você dos 88% mais lentos..."_ — texto baseado num percentil que não faz sentido claro para o atleta.
+Exemplo: um bloco **90' EMOM** aparece como **~90min** antes de iniciar, mas **~15min** durante a execução.
 
-**Nova frase 01:**
-- **Título**: mantém `"Corrigir {nome da 1ª estação mais fraca}"`
-- **Descrição**: muda para `"Treinos específicos para diminuir seu pace total em {XX:XX}"`, onde `XX:XX` é o `improvement_value` da estação `run_avg` (ou a soma dos runs) encontrado em `roxCoachDiagnosticos`
-- **Fallback**: se não encontrar dados de run no RoxCoach, usar o `improvement_value` da própria `weakStations[0]` (ex: "diminuir seu tempo de Sled Push em 01:23")
+## Solução
 
-### Dados
+Alinhar `WorkoutExecution.tsx` para usar **exatamente a mesma lógica** de `WeeklyTrainingView.tsx`:
 
-O `roxCoachDiagnosticos` já contém uma linha com `metric === 'run_avg'` cujo `improvement_value` é a diferença em segundos entre o run total do atleta e a meta OUTLIER. Basta localizar essa linha e formatar o valor com `formatTimeSec()`.
+### Arquivo: `src/components/WorkoutExecution.tsx`
+
+1. **Importar** `computeBlockMetrics` de `@/utils/computeBlockKcalFromParsed`
+
+2. **Substituir o cálculo por bloco** (linhas ~432-437) — trocar:
+   - `getBlockTimeMeta` + `workoutEstimation.blocks[index]`
+   
+   Por:
+   - `computeBlockMetrics` (se `parsedExercises` existe) → fallback `estimateBlock` (mesmo padrão do WeeklyTrainingView)
+
+3. **Remover** o `useMemo` de `workoutEstimation` (linha ~337-340) que usa `estimateWorkout` — não será mais necessário
+
+4. **Manter** o `useMemo` de `biometrics` (linha 342) — continua sendo usado
+
+### Lógica por bloco (idêntica ao WeeklyTrainingView):
+```text
+if (block.parsedExercises && block.parseStatus === 'completed') {
+  → computeBlockMetrics(parsedExercises, biometria, content, title)
+  → dur = metrics.estimatedDurationSec
+  → kcal = metrics.estimatedKcal
+} else {
+  → estimateBlock(block, biometrics, level)
+  → dur = blockEst.estimatedMinutes * 60
+  → kcal = blockEst.estimatedKcal
+}
+estimatedMinutes = Math.round(dur / 60)
+isEstimated = !hasParsedData
+```
 
 ### O que NÃO muda
-- Título da frase 01
-- Frases 02 e 03
-- Nenhum componente ou hook alterado
+- Lógica de recording inline (tempo real do atleta, AMRAP rounds, etc.)
+- `estimatedSeconds` usado para feedback local (comparação real vs estimado) — esse continuará usando `getBlockTimeMeta` internamente no `handleRecordBlock`
+- WeeklyTrainingView — já funciona corretamente
+- Nenhum hook, tipo ou edge function alterado
 
