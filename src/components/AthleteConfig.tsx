@@ -6,9 +6,10 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { type PlanTier, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users, RefreshCw, Wrench, Check } from 'lucide-react';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 import { getCoachDisplayName } from '@/utils/displayName';
 
@@ -83,6 +84,8 @@ export function AthleteConfig() {
   const [altura, setAltura] = useState(athleteConfig?.altura?.toString() || '');
   const [peso, setPeso] = useState(athleteConfig?.peso?.toString() || '');
   const [idade, setIdade] = useState(athleteConfig?.idade?.toString() || '');
+  const [unavailableEquipment, setUnavailableEquipment] = useState<string[]>(athleteConfig?.unavailableEquipment || []);
+  const [equipmentNotes, setEquipmentNotes] = useState(athleteConfig?.equipmentNotes || '');
   const [sexo, setSexo] = useState<'masculino' | 'feminino'>(athleteConfig?.sexo || 'masculino');
 
   // Nome do coach vinculado
@@ -212,8 +215,8 @@ export function AthleteConfig() {
       planTier: currentPlan,
       trainingLevel: currentPlan, // Legacy compatibility
       sessionDuration: sessionDurationForMotor,
-      unavailableEquipment: athleteConfig?.unavailableEquipment || [],
-      equipmentNotes: athleteConfig?.equipmentNotes || '',
+      unavailableEquipment,
+      equipmentNotes,
       coachStyle,
       altura: altura ? parseInt(altura) : undefined,
       peso: peso ? parseFloat(peso) : undefined,
@@ -457,6 +460,68 @@ export function AthleteConfig() {
               ))}
             </div>
           </div>
+        </div>
+      </motion.section>
+
+      {/* Equipment Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-8"
+      >
+        <h2 className="font-display text-2xl mb-2 flex items-center gap-2">
+          <Wrench className="w-6 h-6 text-primary" />
+          EQUIPAMENTOS DO MEU BOX
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Marque o que você <strong>NÃO</strong> tem. Seu coach será notificado para adaptar o treino.
+        </p>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[
+            { id: 'sled', label: 'Sled (Push/Pull)', emoji: '🛷' },
+            { id: 'skierg', label: 'SkiErg', emoji: '⛷️' },
+            { id: 'rower', label: 'Remo (Row)', emoji: '🚣' },
+            { id: 'bike', label: 'Bike / Assault Bike', emoji: '🚴' },
+          ].map((item) => {
+            const isSelected = unavailableEquipment.includes(item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() =>
+                  setUnavailableEquipment((prev) =>
+                    prev.includes(item.id) ? prev.filter((e) => e !== item.id) : [...prev, item.id]
+                  )
+                }
+                className={`
+                  p-3 rounded-lg border-2 transition-all duration-200 
+                  flex items-center gap-2 text-left
+                  ${isSelected
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border bg-secondary/30 hover:border-muted-foreground/50'
+                  }
+                `}
+              >
+                <span className="text-xl">{item.emoji}</span>
+                <span className="font-display text-sm flex-1">{item.label}</span>
+                {isSelected && (
+                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">Outros (descreva o que falta)</label>
+          <Textarea
+            value={equipmentNotes}
+            onChange={(e) => setEquipmentNotes(e.target.value)}
+            placeholder="Ex: não tenho wall ball de 9kg, box sem corda naval..."
+            className="bg-secondary border-border"
+            rows={3}
+          />
         </div>
       </motion.section>
 

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
@@ -10,8 +10,6 @@ import { estimateWorkoutTime } from '@/utils/estimateWorkoutTime';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
-import { EquipmentAdaptModal } from './EquipmentAdaptModal';
-import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
@@ -96,7 +94,7 @@ export function WorkoutExecution() {
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
-  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  
   
   // Inline recording state
   const [recordingBlockId, setRecordingBlockId] = useState<string | null>(null);
@@ -105,30 +103,12 @@ export function WorkoutExecution() {
   const [inputReps, setInputReps] = useState('');
   const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
 
-  const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
-
-  const { workout: displayedWorkout, result: adaptationResult } = useMemo(() => {
-    if (!selectedWorkout) {
-      return { workout: null, result: { adapted: false, substitutions: [], noSubstitutionItems: [] } };
-    }
-    return adaptWorkoutForEquipment(selectedWorkout, savedUnavailableEquipment);
-  }, [selectedWorkout, savedUnavailableEquipment]);
+  const displayedWorkout = selectedWorkout;
 
   if (!selectedWorkout || !displayedWorkout) {
     setCurrentView('dashboard');
     return null;
   }
-
-  const handleApplyEquipmentAdaptation = (unavailableEquipment: string[]) => {
-    if (athleteConfig) {
-      setAthleteConfig({ ...athleteConfig, unavailableEquipment });
-    }
-    if (unavailableEquipment.length > 0) {
-      toast.success('Treino adaptado pro seu box.', { duration: 3000 });
-    } else {
-      toast.success('Adaptações removidas. Treino original restaurado.', { duration: 3000 });
-    }
-  };
 
   const getCompletionAnimation = (coachStyle: string | undefined) => {
     switch (coachStyle) {
