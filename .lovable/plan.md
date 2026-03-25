@@ -1,22 +1,34 @@
 
 
-## Parecer OUTLIER: Sempre usar texto da IA (igual à Evolução)
+## Correção: Migrar `generate-diagnostic-ai` para Lovable AI
 
-### Situação atual
+### Problema
 
-O Diagnóstico Gratuito já chama a mesma edge function `generate-diagnostic-ai` que gera o texto na Evolução. Porém, quando a IA ainda não respondeu ou falha, aparece um **template manual** (o texto que você viu na imagem com "88% dos atletas são mais rápidos") — que usa dados semanticamente errados.
+Os logs mostram claramente:
+```
+Anthropic error 404: model: claude-3-5-sonnet-20241022
+```
 
-### O que muda
+O modelo Anthropic usado na edge function não existe mais. Por isso aparece "Análise indisponível".
 
-**Arquivo: `src/pages/DiagnosticoGratuito.tsx`**
+### Solução
 
-1. **Remover o template fallback** (linhas 776-844) — o bloco inteiro de texto manual com frases de percentil incorretas será eliminado.
+Migrar a edge function `generate-diagnostic-ai` de Anthropic para **Lovable AI Gateway** (que já está disponível com `LOVABLE_API_KEY`).
 
-2. **Sempre esperar o texto da IA** — enquanto carrega, mostrar o skeleton (já existe). Se falhar, mostrar uma mensagem simples tipo "Análise indisponível no momento" em vez do template com dados errados.
+### Mudanças
 
-3. **Garantir que a chamada à IA seja `await`** — atualmente é fire-and-forget (`.then()`). Mudar para aguardar a resposta antes de exibir o card, assim o usuário sempre vê o texto da IA ou o skeleton, nunca o template errado.
+**Arquivo: `supabase/functions/generate-diagnostic-ai/index.ts`**
 
-### Resultado
+1. Trocar a chamada de `https://api.anthropic.com/v1/messages` para `https://ai.gateway.lovable.dev/v1/chat/completions`
+2. Usar `LOVABLE_API_KEY` em vez de `ANTHROPIC_API_KEY`
+3. Formato do body: de Anthropic Messages API para OpenAI-compatible (messages com system + user, model `google/gemini-2.5-flash`)
+4. Formato da resposta: de `result.content[0].text` para `result.choices[0].message.content`
+5. Aumentar timeout de 30s para 60s
+6. Tratar erros 429 (rate limit) e 402 (créditos)
 
-O Parecer OUTLIER no Diagnóstico Gratuito vai exibir exatamente o mesmo tipo de texto gerado por IA que aparece na aba Evolução — com as 3 seções (Leitura da Máquina, Gargalo Tático, Prescrição de Treino) em Markdown formatado.
+### Detalhes técnicos
+
+- Model: `google/gemini-2.5-flash` (bom equilíbrio custo/qualidade para texto longo em PT-BR)
+- O system prompt (personalidade do coach + dados da corrida) vai no campo `messages[0].role: "system"` e o user prompt como `messages[1].role: "user"` pedindo a análise
+- Não precisa de streaming — resposta completa é suficiente para este caso
 
