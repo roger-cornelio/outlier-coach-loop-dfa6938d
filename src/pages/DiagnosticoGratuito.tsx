@@ -424,7 +424,79 @@ export default function DiagnosticoGratuito() {
     return result;
   }, [scrapedData]);
 
-  // (totalTimeLost replaced by totalImprovementSec above)
+  // ─── Map data to dashboard component types ───
+  const STATION_SPLIT_KEYS = ['ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'sandbag', 'wallballs'];
+  const STATION_LABELS_MAP: Record<string, string> = {
+    ski: 'Ski Erg', sled_push: 'Sled Push', sled_pull: 'Sled Pull',
+    bbj: 'Burpee Broad Jump', row: 'Rowing', farmers: 'Farmers Carry',
+    sandbag: 'Sandbag Lunges', wallballs: 'Wall Balls',
+  };
+
+  const freeResumo: DiagnosticoResumo = useMemo(() => {
+    const splits = scrapedData?.splits || {};
+    const runTotal = Object.keys(splits)
+      .filter(k => k.startsWith('run_') && k.endsWith('_sec'))
+      .reduce((sum, k) => sum + (splits[k] || 0), 0);
+    const workoutTotal = STATION_SPLIT_KEYS
+      .reduce((sum, k) => sum + (splits[`${k}_sec`] || splits[k] || 0), 0);
+    return {
+      id: 'free-diag',
+      nome_atleta: selectedResult?.athlete_name || null,
+      temporada: selectedResult?.season_id ? `S${selectedResult.season_id}` : null,
+      evento: scrapedData?.event_name || selectedResult?.event_name || null,
+      divisao: scrapedData?.race_category || selectedResult?.division || null,
+      finish_time: scrapedData?.formatted_time || selectedResult?.time_formatted || null,
+      posicao_categoria: null,
+      posicao_geral: null,
+      run_total: runTotal > 0 ? formatTimeSec(runTotal) : null,
+      workout_total: workoutTotal > 0 ? formatTimeSec(workoutTotal) : null,
+      texto_ia: textoIa,
+      source_url: selectedResult?.result_url || null,
+    };
+  }, [scrapedData, selectedResult, textoIa]);
+
+  const freeSplits: Split[] = useMemo(() => {
+    if (!scrapedData?.splits) return [];
+    const splits = scrapedData.splits;
+    const result: Split[] = [];
+    // 8 runs
+    for (let i = 1; i <= 8; i++) {
+      const sec = splits[`run_${i}_sec`] || splits[`run_${i}`] || 0;
+      if (sec > 0) {
+        result.push({ id: `run-${i}`, split_name: `Running ${i}`, time: formatTimeSec(sec) });
+      }
+    }
+    // 8 stations
+    for (const key of STATION_SPLIT_KEYS) {
+      const sec = splits[`${key}_sec`] || splits[key] || 0;
+      if (sec > 0) {
+        result.push({ id: key, split_name: STATION_LABELS_MAP[key] || key, time: formatTimeSec(sec) });
+      }
+    }
+    // Roxzone
+    const roxSec = splits['roxzone_sec'] || splits['roxzone'] || 0;
+    if (roxSec > 0) {
+      result.push({ id: 'roxzone', split_name: 'Roxzone', time: formatTimeSec(roxSec) });
+    }
+    return result;
+  }, [scrapedData]);
+
+  const freeDiagnosticos: DiagnosticoMelhoria[] = useMemo(() => {
+    if (roxCoachDiagnosticos.length === 0) return [];
+    const totalImprov = roxCoachDiagnosticos.reduce((sum, d) => sum + d.improvement_value, 0);
+    return roxCoachDiagnosticos.map((d, i) => ({
+      id: `free-diag-${i}`,
+      movement: d.movement,
+      metric: d.metric,
+      value: 0,
+      your_score: d.your_score,
+      top_1: d.top_1,
+      improvement_value: d.improvement_value,
+      percentage: d.percentage,
+      total_improvement: totalImprov,
+    }));
+  }, [roxCoachDiagnosticos]);
+
 
   // Evolution projection
   const totalSeconds = scrapedData?.time_in_seconds || 0;
