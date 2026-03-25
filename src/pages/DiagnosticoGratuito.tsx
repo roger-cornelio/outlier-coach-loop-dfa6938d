@@ -789,8 +789,6 @@ export default function DiagnosticoGratuito() {
                   transition={{ delay: 0.3 }}
                   className="space-y-6"
                 >
-                  <PerformanceHighlights resumo={freeResumo} splits={freeSplits} />
-                  <SplitTimesGrid splits={freeSplits} />
                   <ParecerPremium
                     resumo={freeResumo}
                     diagnosticos={freeDiagnosticos}
