@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
 import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
-import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
+import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
+import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { estimateWorkoutTime } from '@/utils/estimateWorkoutTime';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
@@ -334,10 +335,7 @@ export function WorkoutExecution() {
 
   const effectiveLevel: AthleteLevel = 'pro';
   
-  const workoutEstimation = useMemo(() => {
-    if (!displayedWorkout) return null;
-    return estimateWorkout(displayedWorkout, athleteConfig, effectiveLevel);
-  }, [displayedWorkout, athleteConfig, effectiveLevel]);
+  // workoutEstimation removido — cálculo agora é por bloco (mesmo motor do WeeklyTrainingView)
   
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
@@ -429,12 +427,32 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            const blockEstimate = workoutEstimation?.blocks[index];
-            const estimatedKcal = blockEstimate?.estimatedKcal || 0;
+            // Mesma lógica do WeeklyTrainingView: motor físico → fallback estimateBlock
+            let estimatedKcal = 0;
+            let estimatedMinutes = 0;
+            let isEstimated = true;
             
+            const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
+            
+            if (hasParsedData) {
+              const metrics = computeBlockMetrics(
+                block.parsedExercises!,
+                { pesoKg: biometrics.weightKg && biometrics.weightKg > 0 ? biometrics.weightKg : 75, sexo: biometrics.sex },
+                block.content,
+                block.title
+              );
+              estimatedKcal = Math.round(metrics.estimatedKcal || 0);
+              estimatedMinutes = Math.round((metrics.estimatedDurationSec || 0) / 60);
+              isEstimated = false;
+            } else {
+              const blockEst = estimateBlock(block, biometrics, effectiveLevel);
+              estimatedKcal = Math.round(blockEst.estimatedKcal || 0);
+              estimatedMinutes = Math.round((blockEst.estimatedMinutes || 0));
+              isEstimated = true;
+            }
+            
+            // timeMeta still needed for inline recording feedback
             const timeMeta = getBlockTimeMeta(block);
-            const estimatedMinutes = Math.round(timeMeta.durationSecUsed / 60);
-            const isEstimated = timeMeta.source !== 'CONFIRMED';
             
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
             
