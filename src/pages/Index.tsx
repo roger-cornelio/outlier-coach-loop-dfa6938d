@@ -58,8 +58,7 @@ const Index = () => {
   const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig, setAthleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
   
-  // State for equipment modal (triggered from sidebar)
-  
+
   const navigate = useNavigate();
   const location = useLocation();
 
