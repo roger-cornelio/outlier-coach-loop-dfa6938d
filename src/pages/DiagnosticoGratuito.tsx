@@ -901,7 +901,8 @@ export default function DiagnosticoGratuito() {
                         title: 'Periodização orientada à sua próxima prova',
                         desc: `Plano semanal personalizado com foco em derrubar seu tempo para ${evolution ? formatTimeSec(projectedAt12) : 'o próximo nível'}.`,
                       },
-                    ].map((item) => (
+                    ];
+                    })().map((item) => (
                       <div key={item.num} className="flex gap-3 items-start">
                         <span className="text-2xl font-bold text-primary/30 font-mono leading-none mt-0.5">{item.num}</span>
                         <div>
