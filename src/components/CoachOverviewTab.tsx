@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/UserAvatar';
+import { Wrench } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
@@ -228,6 +229,44 @@ function AthleteDetailDrawer({
               </div>
             </div>
           )}
+
+          {/* Equipment restrictions */}
+          {(() => {
+            const equipment = Array.isArray(athlete.unavailable_equipment) 
+              ? athlete.unavailable_equipment as string[]
+              : [];
+            const notes = athlete.equipment_notes;
+            const hasRestrictions = equipment.length > 0 || (notes && notes.trim().length > 0);
+            if (!hasRestrictions) return null;
+            
+            const equipmentLabels: Record<string, string> = {
+              sled: '🛷 Sled',
+              skierg: '⛷️ SkiErg',
+              rower: '🚣 Remo',
+              bike: '🚴 Bike',
+            };
+            
+            return (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wrench className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs text-amber-400 uppercase tracking-wider font-medium">Restrições de Equipamento</span>
+                </div>
+                {equipment.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {equipment.map((eq: string) => (
+                      <Badge key={eq} variant="outline" className="text-xs border-amber-500/30 text-amber-300">
+                        {equipmentLabels[eq] || eq}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {notes && notes.trim() && (
+                  <p className="text-xs text-muted-foreground italic">"{notes}"</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* WhatsApp CTA */}
           <a
