@@ -479,8 +479,8 @@ export function WorkoutExecution() {
                 `}
               >
                 <div className="flex items-start gap-4">
-                  {/* Checkbox - only for auto-complete blocks or completed blocks */}
-                  {isAutoBlock ? (
+                  {/* Checkbox - only for auto-complete blocks */}
+                  {isAutoBlock && (
                     <motion.button
                       onClick={() => isComplete ? handleUncomplete(block.id) : handleAutoComplete(block.id, block.type, index)}
                       className={`
@@ -495,36 +495,6 @@ export function WorkoutExecution() {
                         }
                       `}
                       whileTap={{ scale: 0.9 }}
-                    >
-                      <AnimatePresence mode="wait">
-                        {isComplete && (
-                          <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={getCheckboxAnimation(athleteConfig?.coachStyle, true)}
-                            exit={{ scale: 0, opacity: 0 }}
-                          >
-                            <Check className="w-4 h-4" />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.button>
-                  ) : (
-                    // For chrono blocks: show check when complete, allow uncomplete
-                    <motion.button
-                      onClick={() => isComplete ? handleUncomplete(block.id) : undefined}
-                      disabled={!isComplete}
-                      className={`
-                        mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
-                        ${isComplete
-                          ? athleteConfig?.coachStyle === 'SPARK' 
-                            ? 'bg-yellow-500 border-yellow-500 text-black'
-                            : athleteConfig?.coachStyle === 'IRON'
-                              ? 'bg-zinc-700 border-zinc-700 text-white'
-                              : 'bg-primary border-primary text-primary-foreground'
-                          : 'border-muted-foreground/20'
-                        }
-                        ${!isComplete ? 'cursor-default' : ''}
-                      `}
                     >
                       <AnimatePresence mode="wait">
                         {isComplete && (
