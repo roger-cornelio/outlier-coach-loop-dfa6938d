@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Scale, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Square, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
@@ -30,21 +30,18 @@ function detectBlockFormat(
   blockTitle?: string,
   exerciseLines?: string[]
 ): SessionBlockResult['format'] {
-  // 1. Check structureDescription first
   const sd = (structureDescription || '').toUpperCase();
   if (sd.includes('AMRAP')) return 'amrap';
   if (sd.includes('EMOM')) return 'emom';
   if (sd.includes('FOR TIME') || sd.includes('RFT') || sd.includes('CHIPPER')) return 'for_time';
   if (/\d+\s*(ROUNDS?|RDS?)/.test(sd)) return 'for_time';
   
-  // 2. Check block title (e.g. "15' AMRAP", "EMOM 12'", "3 Rounds For Time")
   const titleUpper = (blockTitle || block.title || '').toUpperCase();
   if (/AMRAP/.test(titleUpper)) return 'amrap';
   if (/EMOM/.test(titleUpper)) return 'emom';
   if (/FOR\s*TIME|RFT|CHIPPER/.test(titleUpper)) return 'for_time';
   if (/\d+\s*(ROUNDS?|RDS?)/.test(titleUpper)) return 'for_time';
   
-  // 3. Check inline __STRUCT: markers in exercise lines
   if (exerciseLines) {
     for (const line of exerciseLines) {
       if (line.startsWith('__STRUCT:')) {
@@ -57,7 +54,6 @@ function detectBlockFormat(
     }
   }
   
-  // 4. Fallback by block type
   if (block.type === 'forca') return 'strength';
   
   return 'other';
@@ -68,25 +64,32 @@ function isAutoCompleteBlock(blockType: string): boolean {
   return ['aquecimento', 'core', 'notas'].includes(blockType);
 }
 
-// Should we ask for time input?
-function needsTimeInput(format: SessionBlockResult['format']): boolean {
-  return format === 'for_time';
-}
-
-// Should we ask for reps input?
+// Does this format need the rounds/reps input?
 function needsRepsInput(format: SessionBlockResult['format']): boolean {
   return format === 'amrap';
 }
 
-// Should we ask for confirmation only?
-function needsConfirmationOnly(format: SessionBlockResult['format']): boolean {
-  return format === 'emom' || format === 'strength';
+// Does this block get a chronometer? Everything except auto-complete blocks
+function needsChronometer(blockType: string): boolean {
+  return !isAutoCompleteBlock(blockType);
 }
 
 function formatSecondsToMinSec(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+// ==================== BLOCK CHRONOMETER STATE ====================
+type BlockTimerState = 'idle' | 'running' | 'stopped';
+
+interface BlockTimerData {
+  state: BlockTimerState;
+  startedAt: number | null;
+  elapsedSeconds: number;
+  isEditing: boolean;
+  editMinutes: string;
+  editSeconds: string;
 }
 
 export function WorkoutExecution() {
@@ -103,16 +106,35 @@ export function WorkoutExecution() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
   
+  // Per-block timer state
+  const [blockTimers, setBlockTimers] = useState<Record<string, BlockTimerData>>({});
   
-  // Inline recording state
-  const [recordingBlockId, setRecordingBlockId] = useState<string | null>(null);
-  const [inputMinutes, setInputMinutes] = useState('');
-  const [inputSeconds, setInputSeconds] = useState('');
+  // AMRAP reps input (only shown after timer stops for AMRAP blocks)
   const [inputReps, setInputReps] = useState('');
   const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
+
+  // Tick all running block timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBlockTimers(prev => {
+        const hasRunning = Object.values(prev).some(t => t.state === 'running');
+        if (!hasRunning) return prev;
+        
+        const next = { ...prev };
+        for (const [id, timer] of Object.entries(next)) {
+          if (timer.state === 'running' && timer.startedAt) {
+            next[id] = { ...timer, elapsedSeconds: Math.floor((Date.now() - timer.startedAt) / 1000) };
+          }
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const displayedWorkout = selectedWorkout;
 
@@ -120,6 +142,60 @@ export function WorkoutExecution() {
     setCurrentView('dashboard');
     return null;
   }
+
+  // ==================== BLOCK TIMER ACTIONS ====================
+  const startBlockTimer = (blockId: string) => {
+    setBlockTimers(prev => ({
+      ...prev,
+      [blockId]: {
+        state: 'running',
+        startedAt: Date.now(),
+        elapsedSeconds: 0,
+        isEditing: false,
+        editMinutes: '',
+        editSeconds: '',
+      }
+    }));
+  };
+
+  const stopBlockTimer = (blockId: string) => {
+    setBlockTimers(prev => {
+      const timer = prev[blockId];
+      if (!timer || timer.state !== 'running') return prev;
+      const finalElapsed = timer.startedAt ? Math.floor((Date.now() - timer.startedAt) / 1000) : timer.elapsedSeconds;
+      return {
+        ...prev,
+        [blockId]: { ...timer, state: 'stopped', elapsedSeconds: finalElapsed }
+      };
+    });
+  };
+
+  const toggleEditBlockTime = (blockId: string) => {
+    setBlockTimers(prev => {
+      const timer = prev[blockId];
+      if (!timer) return prev;
+      if (timer.isEditing) {
+        // Save edited time
+        const mins = parseInt(timer.editMinutes || '0');
+        const secs = parseInt(timer.editSeconds || '0');
+        const newElapsed = mins * 60 + secs;
+        return { ...prev, [blockId]: { ...timer, isEditing: false, elapsedSeconds: newElapsed > 0 ? newElapsed : timer.elapsedSeconds } };
+      } else {
+        // Enter edit mode with current values
+        const mins = Math.floor(timer.elapsedSeconds / 60);
+        const secs = timer.elapsedSeconds % 60;
+        return { ...prev, [blockId]: { ...timer, isEditing: true, editMinutes: String(mins), editSeconds: String(secs) } };
+      }
+    });
+  };
+
+  const updateEditField = (blockId: string, field: 'editMinutes' | 'editSeconds', value: string) => {
+    setBlockTimers(prev => {
+      const timer = prev[blockId];
+      if (!timer) return prev;
+      return { ...prev, [blockId]: { ...timer, [field]: value } };
+    });
+  };
 
   const getCompletionAnimation = (coachStyle: string | undefined) => {
     switch (coachStyle) {
@@ -146,21 +222,15 @@ export function WorkoutExecution() {
     }
   };
 
-  // Estimate expected rounds for AMRAP blocks
   function estimateExpectedRounds(block: typeof displayedWorkout.blocks[0], totalAmrapSeconds: number): number | undefined {
     if (totalAmrapSeconds <= 0) return undefined;
-    
     const estimation = estimateWorkoutTime(block.content || '');
-    
     if (estimation.itemsFound === 0 || estimation.totalMinutes <= 0) return undefined;
-    
     const baseSecondsForOneRound = estimation.breakdown.reduce((sum: number, item: { seconds: number }) => sum + item.seconds, 0);
     if (baseSecondsForOneRound <= 0) return undefined;
-    
     return Math.round(totalAmrapSeconds / baseSecondsForOneRound);
   }
 
-  // Generate local feedback comparing actual vs estimated
   function generateLocalFeedback(format: SessionBlockResult['format'], timeInSeconds?: number, estimatedSeconds?: number, reps?: number, estimatedRounds?: number): string {
     if (format === 'amrap' && reps !== undefined) {
       if (estimatedRounds && estimatedRounds > 0) {
@@ -173,83 +243,23 @@ export function WorkoutExecution() {
       return `${reps} rounds/reps completados`;
     }
     
-    if (format === 'emom') {
-      return 'EMOM concluído ✓';
-    }
-    
     if (format === 'for_time' && timeInSeconds && estimatedSeconds && estimatedSeconds > 0) {
       const diff = timeInSeconds - estimatedSeconds;
       const absDiff = Math.abs(diff);
       const diffFormatted = formatSecondsToMinSec(absDiff);
-      
       if (diff < -10) return `${diffFormatted} mais rápido que o estimado 🔥`;
       if (diff > 10) return `${diffFormatted} mais lento que o estimado`;
       return 'Dentro do tempo estimado ✓';
     }
     
-    if (format === 'strength') {
-      return 'Bloco de força concluído ✓';
+    if (timeInSeconds && timeInSeconds > 0) {
+      return `Concluído em ${formatSecondsToMinSec(timeInSeconds)} ✓`;
     }
     
     return 'Concluído ✓';
   }
 
-  const toggleBlockComplete = (blockId: string, blockType: string, blockIndex: number) => {
-    const isCompleting = !completedBlocks.includes(blockId);
-    
-    if (isCompleting) {
-      // Check if this block type auto-completes
-      if (isAutoCompleteBlock(blockType)) {
-        // Auto-complete without recording
-        setCompletedBlocks((prev) => [...prev, blockId]);
-        setJustCompletedBlock(blockId);
-        setTimeout(() => setJustCompletedBlock(null), 600);
-        
-        const newCompletedCount = completedBlocks.length + 1;
-        const blocksRemaining = displayedWorkout.blocks.length - newCompletedCount;
-        const isLastBlock = blocksRemaining === 0;
-        const message = getBlockCompletionLine(athleteConfig?.coachStyle, blockType, isLastBlock);
-        toast.success(message, { duration: 2000 });
-        
-        if (blockIndex === currentBlockIndex) {
-          setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
-        }
-        return;
-      }
-      
-      // Get block format info
-      const block = displayedWorkout.blocks[blockIndex];
-      const displayData = getBlockDisplayDataFromParsed(block);
-      const blockTitle = getBlockDisplayTitle(block, blockIndex);
-      const format = detectBlockFormat(block, displayData.structureDescription, blockTitle, displayData.exerciseLines);
-      
-      // Check if we need to show inline recording
-      if (needsTimeInput(format) || needsRepsInput(format) || needsConfirmationOnly(format)) {
-        setRecordingBlockId(blockId);
-        setInputMinutes('');
-        setInputSeconds('');
-        setInputReps('');
-        return; // Don't complete yet - wait for recording
-      }
-      
-      // Default: just complete
-      setCompletedBlocks((prev) => [...prev, blockId]);
-      setJustCompletedBlock(blockId);
-      setTimeout(() => setJustCompletedBlock(null), 600);
-      if (blockIndex === currentBlockIndex) {
-        setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
-      }
-    } else {
-      // Uncompleting
-      setCompletedBlocks((prev) => prev.filter((id) => id !== blockId));
-      setBlockFeedbacks((prev) => {
-        const next = { ...prev };
-        delete next[blockId];
-        return next;
-      });
-    }
-  };
-
+  // Handle registering a block after timer is stopped
   const handleRecordBlock = (blockIndex: number) => {
     const block = displayedWorkout.blocks[blockIndex];
     const blockId = block.id;
@@ -259,30 +269,22 @@ export function WorkoutExecution() {
     const timeMeta = getBlockTimeMeta(block);
     const estimatedSeconds = timeMeta.durationSecUsed;
     
-    let timeInSeconds: number | undefined;
+    const timer = blockTimers[blockId];
+    const timeInSeconds = timer?.elapsedSeconds && timer.elapsedSeconds > 0 ? timer.elapsedSeconds : undefined;
+    
     let reps: number | undefined;
-    
-    if (needsTimeInput(format)) {
-      const mins = parseInt(inputMinutes || '0');
-      const secs = parseInt(inputSeconds || '0');
-      timeInSeconds = mins * 60 + secs;
-      if (timeInSeconds === 0) timeInSeconds = undefined;
-    }
-    
     if (needsRepsInput(format)) {
       reps = parseInt(inputReps || '0') || undefined;
     }
     
-    // Calculate estimated rounds for AMRAP
     let estRounds: number | undefined;
     if (format === 'amrap' && estimatedSeconds > 0) {
       estRounds = estimateExpectedRounds(block, estimatedSeconds);
     }
     
-    // Save to store
     const result: SessionBlockResult = {
       blockId,
-      blockTitle: getBlockDisplayTitle(block, blockIndex),
+      blockTitle: blockTitleText,
       blockType: block.type,
       format,
       completed: true,
@@ -294,15 +296,13 @@ export function WorkoutExecution() {
     };
     addSessionBlockResult(result);
     
-    // Generate local feedback
     const feedback = generateLocalFeedback(format, timeInSeconds, estimatedSeconds, reps, estRounds);
     setBlockFeedbacks((prev) => ({ ...prev, [blockId]: feedback }));
     
-    // Complete the block
     setCompletedBlocks((prev) => [...prev, blockId]);
     setJustCompletedBlock(blockId);
     setTimeout(() => setJustCompletedBlock(null), 600);
-    setRecordingBlockId(null);
+    setInputReps('');
     
     if (blockIndex === currentBlockIndex) {
       setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
@@ -315,23 +315,45 @@ export function WorkoutExecution() {
     toast.success(message, { duration: 2000 });
   };
 
-  const handleCancelRecording = () => {
-    setRecordingBlockId(null);
-    setInputMinutes('');
-    setInputSeconds('');
-    setInputReps('');
+  // Auto-complete blocks (aquecimento, core, notas)
+  const handleAutoComplete = (blockId: string, blockType: string, blockIndex: number) => {
+    setCompletedBlocks((prev) => [...prev, blockId]);
+    setJustCompletedBlock(blockId);
+    setTimeout(() => setJustCompletedBlock(null), 600);
+    
+    const newCompletedCount = completedBlocks.length + 1;
+    const blocksRemaining = displayedWorkout.blocks.length - newCompletedCount;
+    const isLastBlock = blocksRemaining === 0;
+    const message = getBlockCompletionLine(athleteConfig?.coachStyle, blockType, isLastBlock);
+    toast.success(message, { duration: 2000 });
+    
+    if (blockIndex === currentBlockIndex) {
+      setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
+    }
+  };
+
+  // Uncomplete a block
+  const handleUncomplete = (blockId: string) => {
+    setCompletedBlocks((prev) => prev.filter((id) => id !== blockId));
+    setBlockFeedbacks((prev) => {
+      const next = { ...prev };
+      delete next[blockId];
+      return next;
+    });
+    // Reset timer
+    setBlockTimers(prev => {
+      const next = { ...prev };
+      delete next[blockId];
+      return next;
+    });
   };
 
   const allBlocksComplete = displayedWorkout.blocks.every((b) => completedBlocks.includes(b.id));
 
   const effectiveLevel: AthleteLevel = 'pro';
-  
-  // workoutEstimation removido — cálculo agora é por bloco (mesmo motor do WeeklyTrainingView)
-  
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
 
   const handleFinishWorkout = () => {
-    // Capture elapsed time
     const totalSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
     setSessionTotalSeconds(totalSeconds);
     setSessionEstimatedMinutes(selectedWorkout.estimatedTime || 0);
@@ -344,8 +366,6 @@ export function WorkoutExecution() {
     };
     addWorkoutResult(sessionResult);
     console.log('[JOURNEY] Training session registered:', sessionResult, 'totalSeconds:', totalSeconds);
-    
-    // Go directly to feedback (skipping ResultRecording)
     setCurrentView('feedback');
   };
   
@@ -398,13 +418,15 @@ export function WorkoutExecution() {
 
       {/* Workout Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-
         <div className="space-y-4 mb-8">
           {displayedWorkout.blocks.map((block, index) => {
             const isComplete = completedBlocks.includes(block.id);
             const isCurrent = index === currentBlockIndex;
             const isJustCompleted = justCompletedBlock === block.id;
-            const isRecording = recordingBlockId === block.id;
+            const timer = blockTimers[block.id];
+            const timerState = timer?.state || 'idle';
+            const isAutoBlock = isAutoCompleteBlock(block.type);
+            const hasChronometer = needsChronometer(block.type);
             
             const effectiveNotes = getEffectiveNotes(block, effectiveLevel);
             const effectiveTargetRange = getEffectiveTargetRange(block, effectiveLevel);
@@ -412,7 +434,6 @@ export function WorkoutExecution() {
             const effectivePace = getEffectiveReferencePace(block, effectiveLevel);
             const pseInfo = effectivePSE ? getPSEInfo(effectivePSE) : null;
             
-            // Mesma lógica do WeeklyTrainingView: motor físico → fallback estimateBlock
             let estimatedKcal = 0;
             let estimatedMinutes = 0;
             let isEstimated = true;
@@ -436,9 +457,7 @@ export function WorkoutExecution() {
               isEstimated = true;
             }
             
-            // timeMeta still needed for inline recording feedback
             const timeMeta = getBlockTimeMeta(block);
-            
             const completionAnim = getCompletionAnimation(athleteConfig?.coachStyle);
             
             const displayData = getBlockDisplayDataFromParsed(block);
@@ -454,41 +473,72 @@ export function WorkoutExecution() {
                 className={`
                   card-elevated p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
-                  ${isComplete && !isRecording ? 'opacity-60' : ''}
+                  ${isComplete ? 'opacity-60' : ''}
                   ${block.isMainWod ? 'ring-2 ring-primary/50' : ''}
                   ${isJustCompleted && athleteConfig?.coachStyle === 'SPARK' ? 'ring-2 ring-yellow-400/50' : ''}
                 `}
               >
                 <div className="flex items-start gap-4">
-                  <motion.button
-                    onClick={() => toggleBlockComplete(block.id, block.type, index)}
-                    disabled={isRecording}
-                    className={`
-                      mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
-                      ${isComplete
-                        ? athleteConfig?.coachStyle === 'SPARK' 
-                          ? 'bg-yellow-500 border-yellow-500 text-black'
-                          : athleteConfig?.coachStyle === 'IRON'
-                            ? 'bg-zinc-700 border-zinc-700 text-white'
-                            : 'bg-primary border-primary text-primary-foreground'
-                        : 'border-muted-foreground/30 hover:border-primary'
-                      }
-                      ${isRecording ? 'opacity-50 cursor-not-allowed' : ''}
-                    `}
-                    whileTap={isRecording ? {} : { scale: 0.9 }}
-                  >
-                    <AnimatePresence mode="wait">
-                      {isComplete && (
-                        <motion.div
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={getCheckboxAnimation(athleteConfig?.coachStyle, true)}
-                          exit={{ scale: 0, opacity: 0 }}
-                        >
-                          <Check className="w-4 h-4" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.button>
+                  {/* Checkbox - only for auto-complete blocks or completed blocks */}
+                  {isAutoBlock ? (
+                    <motion.button
+                      onClick={() => isComplete ? handleUncomplete(block.id) : handleAutoComplete(block.id, block.type, index)}
+                      className={`
+                        mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
+                        ${isComplete
+                          ? athleteConfig?.coachStyle === 'SPARK' 
+                            ? 'bg-yellow-500 border-yellow-500 text-black'
+                            : athleteConfig?.coachStyle === 'IRON'
+                              ? 'bg-zinc-700 border-zinc-700 text-white'
+                              : 'bg-primary border-primary text-primary-foreground'
+                          : 'border-muted-foreground/30 hover:border-primary'
+                        }
+                      `}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <AnimatePresence mode="wait">
+                        {isComplete && (
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={getCheckboxAnimation(athleteConfig?.coachStyle, true)}
+                            exit={{ scale: 0, opacity: 0 }}
+                          >
+                            <Check className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+                  ) : (
+                    // For chrono blocks: show check when complete, allow uncomplete
+                    <motion.button
+                      onClick={() => isComplete ? handleUncomplete(block.id) : undefined}
+                      disabled={!isComplete}
+                      className={`
+                        mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
+                        ${isComplete
+                          ? athleteConfig?.coachStyle === 'SPARK' 
+                            ? 'bg-yellow-500 border-yellow-500 text-black'
+                            : athleteConfig?.coachStyle === 'IRON'
+                              ? 'bg-zinc-700 border-zinc-700 text-white'
+                              : 'bg-primary border-primary text-primary-foreground'
+                          : 'border-muted-foreground/20'
+                        }
+                        ${!isComplete ? 'cursor-default' : ''}
+                      `}
+                    >
+                      <AnimatePresence mode="wait">
+                        {isComplete && (
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={getCheckboxAnimation(athleteConfig?.coachStyle, true)}
+                            exit={{ scale: 0, opacity: 0 }}
+                          >
+                            <Check className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+                  )}
 
                   <div className="flex-1">
                     {/* Header */}
@@ -587,116 +637,138 @@ export function WorkoutExecution() {
                       </div>
                     )}
                     
-                    {/* ==================== INLINE RECORDING PANEL ==================== */}
-                    <AnimatePresence>
-                      {isRecording && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-4 pt-4 border-t border-primary/30"
-                        >
-                          <div className="bg-primary/5 rounded-lg p-4 space-y-4">
-                            {/* FOR TIME - Time input */}
-                            {needsTimeInput(blockFormat) && (
-                              <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="font-display text-sm tracking-wide text-foreground">SEU TEMPO</p>
-                                  {timeMeta.durationSecUsed > 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Estimado: <span className="font-medium text-foreground">{formatSecondsToMinSec(timeMeta.durationSecUsed)}</span>
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="180"
-                                      value={inputMinutes}
-                                      onChange={(e) => setInputMinutes(e.target.value)}
-                                      placeholder="min"
-                                      className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-                                    />
-                                  </div>
-                                  <span className="font-display text-3xl text-muted-foreground">:</span>
-                                  <div className="flex-1">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="59"
-                                      value={inputSeconds}
-                                      onChange={(e) => setInputSeconds(e.target.value)}
-                                      placeholder="seg"
-                                      className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-                                    />
-                                  </div>
-                                </div>
+                    {/* ==================== BLOCK CHRONOMETER ==================== */}
+                    {hasChronometer && !isComplete && (
+                      <div className="mt-4 pt-4 border-t border-border/50">
+                        {/* IDLE: Show START button */}
+                        {timerState === 'idle' && (
+                          <motion.button
+                            onClick={() => startBlockTimer(block.id)}
+                            className="w-full py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-display text-sm tracking-wider flex items-center justify-center gap-2"
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Play className="w-4 h-4" />
+                            INICIAR
+                          </motion.button>
+                        )}
+
+                        {/* RUNNING: Show live timer + STOP button */}
+                        {timerState === 'running' && timer && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-center">
+                              <div className="bg-secondary rounded-xl px-6 py-3">
+                                <p className="font-mono text-3xl font-bold tracking-wider text-foreground tabular-nums text-center">
+                                  {formatSecondsToMinSec(timer.elapsedSeconds)}
+                                </p>
                               </div>
-                            )}
-                            
-                            {/* AMRAP - Reps input */}
+                            </div>
+                            <motion.button
+                              onClick={() => stopBlockTimer(block.id)}
+                              className="w-full py-3 rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity font-display text-sm tracking-wider flex items-center justify-center gap-2"
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Square className="w-4 h-4" />
+                              FINALIZAR
+                            </motion.button>
+                          </div>
+                        )}
+
+                        {/* STOPPED: Show captured time + edit + AMRAP reps + register */}
+                        {timerState === 'stopped' && timer && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-4"
+                          >
+                            {/* Time display / edit */}
+                            <div className="bg-primary/5 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="font-display text-xs tracking-wide text-muted-foreground uppercase">Tempo do bloco</p>
+                                <button
+                                  onClick={() => toggleEditBlockTime(block.id)}
+                                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  {timer.isEditing ? 'Salvar' : 'Editar'}
+                                </button>
+                              </div>
+
+                              {timer.isEditing ? (
+                                <div className="flex items-center gap-3 justify-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="180"
+                                    value={timer.editMinutes}
+                                    onChange={(e) => updateEditField(block.id, 'editMinutes', e.target.value)}
+                                    placeholder="min"
+                                    className="w-20 px-3 py-2 rounded-lg bg-secondary border border-border text-center font-mono text-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                  <span className="font-mono text-2xl text-muted-foreground">:</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    value={timer.editSeconds}
+                                    onChange={(e) => updateEditField(block.id, 'editSeconds', e.target.value)}
+                                    placeholder="seg"
+                                    className="w-20 px-3 py-2 rounded-lg bg-secondary border border-border text-center font-mono text-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="font-mono text-3xl font-bold tracking-wider text-foreground text-center tabular-nums">
+                                  {formatSecondsToMinSec(timer.elapsedSeconds)}
+                                </p>
+                              )}
+
+                              {timeMeta.durationSecUsed > 0 && (
+                                <p className="text-xs text-muted-foreground text-center mt-1">
+                                  Estimado: {formatSecondsToMinSec(timeMeta.durationSecUsed)}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* AMRAP: Rounds input */}
                             {needsRepsInput(blockFormat) && (() => {
                               const amrapEstRounds = timeMeta.durationSecUsed > 0 ? estimateExpectedRounds(block, timeMeta.durationSecUsed) : undefined;
                               return (
-                              <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="font-display text-sm tracking-wide text-foreground">ROUNDS COMPLETADOS</p>
-                                  {amrapEstRounds && amrapEstRounds > 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Esperado: <span className="font-medium text-foreground">~{amrapEstRounds} rounds</span>
-                                    </p>
-                                  )}
+                                <div className="bg-primary/5 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <p className="font-display text-sm tracking-wide text-foreground">ROUNDS COMPLETADOS</p>
+                                    {amrapEstRounds && amrapEstRounds > 0 && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Esperado: <span className="font-medium text-foreground">~{amrapEstRounds} rounds</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={inputReps}
+                                    onChange={(e) => setInputReps(e.target.value)}
+                                    placeholder="Ex: 5"
+                                    className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
                                 </div>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={inputReps}
-                                  onChange={(e) => setInputReps(e.target.value)}
-                                  placeholder="Ex: 5"
-                                  className="w-full px-3 py-3 rounded-lg bg-secondary border border-border text-center font-display text-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                              </div>
                               );
                             })()}
-                            
-                            {/* EMOM / Strength - Confirmation only */}
-                            {needsConfirmationOnly(blockFormat) && (
-                              <div className="text-center">
-                                <p className="font-display text-sm tracking-wide text-foreground mb-2">
-                                  {blockFormat === 'emom' ? 'CONCLUIU O EMOM?' : 'CONCLUIU O BLOCO?'}
-                                </p>
-                                {timeMeta.durationSecUsed > 0 && blockFormat !== 'emom' && (
-                                  <p className="text-xs text-muted-foreground mb-3">
-                                    Tempo estimado: <span className="font-medium">{formatSecondsToMinSec(timeMeta.durationSecUsed)}</span>
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                            
-                            {/* Action buttons */}
-                            <div className="flex gap-3">
-                              <button
-                                onClick={handleCancelRecording}
-                                className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors font-display text-sm"
-                              >
-                                CANCELAR
-                              </button>
-                              <button
-                                onClick={() => handleRecordBlock(index)}
-                                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-display text-sm"
-                              >
-                                REGISTRAR
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+
+                            {/* Register button */}
+                            <motion.button
+                              onClick={() => handleRecordBlock(index)}
+                              className="w-full py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-display text-sm tracking-wider flex items-center justify-center gap-2"
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Check className="w-4 h-4" />
+                              REGISTRAR
+                            </motion.button>
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
                     
                     {/* ==================== BLOCK FEEDBACK (after recording) ==================== */}
-                    {blockFeedback && isComplete && !isRecording && (
+                    {blockFeedback && isComplete && (
                       <motion.div
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
