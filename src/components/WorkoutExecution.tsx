@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
-import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Wrench, Scale, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Play, Flame, Info, Target, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
@@ -10,8 +10,6 @@ import { estimateWorkoutTime } from '@/utils/estimateWorkoutTime';
 import { getEffectiveTargetRange, getEffectiveNotes, getEffectivePSE, getEffectiveReferencePace, getPSEInfo, formatPace } from '@/utils/benchmarkVariants';
 import { toast } from 'sonner';
 import { getBlockCompletionLine } from '@/config/coachCopy';
-import { EquipmentAdaptModal } from './EquipmentAdaptModal';
-import { adaptWorkoutForEquipment } from '@/utils/equipmentAdaptation';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine } from './DSLBlockRenderer';
 
@@ -96,7 +94,7 @@ export function WorkoutExecution() {
   const [completedBlocks, setCompletedBlocks] = useState<string[]>([]);
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [justCompletedBlock, setJustCompletedBlock] = useState<string | null>(null);
-  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  
   
   // Inline recording state
   const [recordingBlockId, setRecordingBlockId] = useState<string | null>(null);
@@ -105,30 +103,12 @@ export function WorkoutExecution() {
   const [inputReps, setInputReps] = useState('');
   const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
 
-  const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
-
-  const { workout: displayedWorkout, result: adaptationResult } = useMemo(() => {
-    if (!selectedWorkout) {
-      return { workout: null, result: { adapted: false, substitutions: [], noSubstitutionItems: [] } };
-    }
-    return adaptWorkoutForEquipment(selectedWorkout, savedUnavailableEquipment);
-  }, [selectedWorkout, savedUnavailableEquipment]);
+  const displayedWorkout = selectedWorkout;
 
   if (!selectedWorkout || !displayedWorkout) {
     setCurrentView('dashboard');
     return null;
   }
-
-  const handleApplyEquipmentAdaptation = (unavailableEquipment: string[]) => {
-    if (athleteConfig) {
-      setAthleteConfig({ ...athleteConfig, unavailableEquipment });
-    }
-    if (unavailableEquipment.length > 0) {
-      toast.success('Treino adaptado pro seu box.', { duration: 3000 });
-    } else {
-      toast.success('Adaptações removidas. Treino original restaurado.', { duration: 3000 });
-    }
-  };
 
   const getCompletionAnimation = (coachStyle: string | undefined) => {
     switch (coachStyle) {
@@ -389,30 +369,6 @@ export function WorkoutExecution() {
 
       {/* Workout Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Equipment Adaptation Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => setIsEquipmentModalOpen(true)}
-            className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all
-              ${savedUnavailableEquipment.length > 0
-                ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
-                : 'border-border bg-secondary/50 hover:bg-secondary hover:border-muted-foreground/50'
-              }
-            `}
-          >
-            <Wrench className="w-4 h-4" />
-            <span className="font-display text-sm tracking-wide">
-              {savedUnavailableEquipment.length > 0 
-                ? `EQUIPAMENTOS ADAPTADOS (${savedUnavailableEquipment.length})`
-                : 'TROCAR EQUIPAMENTOS'
-              }
-            </span>
-          </button>
-          <p className="text-xs text-muted-foreground mt-2">
-            Sem algum equipamento no seu box? Eu adapto sem mudar o estímulo.
-          </p>
-        </div>
 
         <div className="space-y-4 mb-8">
           {displayedWorkout.blocks.map((block, index) => {
@@ -751,23 +707,7 @@ export function WorkoutExecution() {
             Complete todos os blocos para finalizar o treino
           </p>
         )}
-
-        {/* Equipment Substitution Button - Bottom */}
-        <button
-          onClick={() => setIsEquipmentModalOpen(true)}
-          className="w-full mt-6 py-3 px-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <Wrench className="w-4 h-4" />
-          <span className="font-display text-sm tracking-wide">SUBSTITUIÇÕES DE EQUIPAMENTOS</span>
-        </button>
       </main>
-
-      <EquipmentAdaptModal
-        isOpen={isEquipmentModalOpen}
-        onClose={() => setIsEquipmentModalOpen(false)}
-        onApply={handleApplyEquipmentAdaptation}
-        initialSelection={savedUnavailableEquipment}
-      />
     </div>
   );
 }

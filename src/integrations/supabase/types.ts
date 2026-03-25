@@ -2210,12 +2210,14 @@ export type Database = {
           athlete_name: string | null
           coach_id: string | null
           days_inactive: number | null
+          equipment_notes: string | null
           has_plan_this_week: number | null
           last_active_at: string | null
           peso: number | null
           sexo: string | null
           total_benchmarks: number | null
           training_level: string | null
+          unavailable_equipment: Json | null
           workouts_last_7_days: number | null
         }
         Relationships: []
@@ -2270,12 +2272,14 @@ export type Database = {
           athlete_name: string
           coach_id: string
           days_inactive: number
+          equipment_notes: string
           has_plan_this_week: number
           last_active_at: string
           peso: number
           sexo: string
           total_benchmarks: number
           training_level: string
+          unavailable_equipment: Json
           workouts_last_7_days: number
         }[]
       }

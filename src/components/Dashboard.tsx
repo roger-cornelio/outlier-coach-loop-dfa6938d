@@ -4,10 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Wrench, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
 import { calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { deduplicateRaceName } from '@/utils/raceNameDedup';
-import { EquipmentAdaptModal } from './EquipmentAdaptModal';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -122,8 +121,6 @@ export function Dashboard() {
   }, []);
   
   const [activeDay, setActiveDay] = useState<DayOfWeek>(todayDay);
-  const [isAdaptModalOpen, setIsAdaptModalOpen] = useState(false);
-  const savedUnavailableEquipment = athleteConfig?.unavailableEquipment || [];
   const [isGeneratingAdaptation, setIsGeneratingAdaptation] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
 
@@ -316,24 +313,6 @@ export function Dashboard() {
     }
   };
 
-  const handleSaveEquipmentAdaptations = (unavailableEquipment: string[]) => {
-    // Salvar no athleteConfig via store
-    if (athleteConfig) {
-      const { setAthleteConfig } = useOutlierStore.getState();
-      setAthleteConfig({
-        ...athleteConfig,
-        unavailableEquipment,
-      });
-    }
-    
-    if (unavailableEquipment.length > 0) {
-      toast.success('Treino ajustado conforme sua realidade de hoje', { duration: 3000 });
-    } else {
-      toast.success('Adaptações removidas.', { duration: 3000 });
-    }
-  };
-
-  const hasAdaptations = savedUnavailableEquipment.length > 0;
 
   // ============================================
   // ESTIMATIVA DE TEMPO E CALORIAS
@@ -392,13 +371,6 @@ export function Dashboard() {
         {/* Equipment Adapt Button moved to sidebar */}
       </main>
 
-      {/* Equipment Adapt Modal */}
-      <EquipmentAdaptModal
-        isOpen={isAdaptModalOpen}
-        onClose={() => setIsAdaptModalOpen(false)}
-        onApply={handleSaveEquipmentAdaptations}
-        initialSelection={savedUnavailableEquipment}
-      />
 
       {/* Debug Bar */}
       <AthleteWeekDebugBar
