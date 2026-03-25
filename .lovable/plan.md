@@ -1,41 +1,32 @@
 
 
-## Parecer IA + Percentis Corrigidos no Diagnóstico Gratuito
-
-### Problema atual
-
-1. **Parecer hardcoded** — O texto do "Parecer OUTLIER" no diagnóstico gratuito é um template estático com frases fixas. No diagnóstico de evolução (ImportarProva), o mesmo bloco usa a Edge Function `generate-diagnostic-ai` que gera texto personalizado com IA (análise de gargalo, pace, prescrição).
-
-2. **Percentis imprecisos** — As frases "top X%" e "X% dos atletas são mais rápidos" usam `scores[].percentile_value` (percentis internos do `calculate-hyrox-percentiles`), mas deveriam usar os dados do RoxCoach (`roxCoachDiagnosticos`) que são a mesma fonte de verdade usada na tabela "Onde Focar".
+## Correção: Nomes das Estações no Diagnóstico Gratuito
 
 ### O que será feito
 
-**1. Chamar a IA para gerar o Parecer** (`src/pages/DiagnosticoGratuito.tsx`)
+Corrigir os nomes das estações que aparecem em branco/código técnico em 4 pontos da tela:
 
-- Após receber os dados do scrape + RoxCoach + percentis, chamar `generate-diagnostic-ai` com os mesmos parâmetros que `ImportarProva.tsx` usa (athlete_name, event_name, division, finish_time, splits_data, diagnostic_data)
-- Coach style fixo `'PULSE'` (diagnóstico gratuito não tem seleção de coach)
-- Guardar o `texto_ia` em um novo state
-- A chamada será não-bloqueante: o resultado aparece assim que disponível, sem travar a renderização dos demais blocos
+1. **Tabela "Onde Focar"** — mostrar "Ski Erg", "Sled Push" etc. em vez de chaves técnicas vazias
+2. **Texto do gargalo** — "seu maior ponto fraco é no **Ski Erg**" em vez de texto vazio
+3. **Seção "Seus Destaques"** — nomes legíveis nas cards de pontos fortes
+4. **Plano de Ataque** — "Corrigir **Sled Push**" em vez de "Corrigir seu ponto fraco"
 
-**2. Renderizar o texto IA no Parecer** (`src/pages/DiagnosticoGratuito.tsx`)
+### Como
 
-- Quando `texto_ia` estiver disponível, substituir o bloco de template estático (linhas 696-752) pelo componente de Markdown igual ao `ParecerPremium.tsx` (com `ReactMarkdown` e os mesmos estilos de `h3`, `p`, `strong`, `ul`, `li`)
-- Enquanto carrega, mostrar um skeleton/loading sutil dentro do card
-- Fallback: se a IA falhar, manter o template atual como estava
+**1 arquivo: `src/pages/DiagnosticoGratuito.tsx`**
 
-**3. Corrigir os percentis nas frases narrativas** (`src/pages/DiagnosticoGratuito.tsx`)
+Em todos os pontos que usam `METRIC_LABELS[s.metric]`, trocar para priorizar `s.movement` (nome legível vindo do RoxCoach):
 
-- **"top X%"**: Usar o percentil do RoxCoach quando disponível. O RoxCoach retorna `percentage` por estação — calcular a média geral ou usar o percentil do finish time total
-- **"X% dos atletas são mais rápidos"**: Para o gargalo (weakStations[0]), usar `weakStations[0].percentage` do RoxCoach em vez de `100 - weakStations[0].percentile_value`
-- Fallback: manter o cálculo atual de `scores` quando RoxCoach não tem dados
+- Linha 686 (texto gargalo): `weakStations[0].movement || METRIC_LABELS[...] || ...`
+- Linha 704 (tabela Onde Focar): `s.movement || METRIC_LABELS[s.metric] || s.metric`
+- Linha 762 (Seus Destaques): cruzar com `roxCoachDiagnosticos` para pegar o `movement` correspondente
+- Linha 790 (Plano de Ataque): `weakStations[0]?.movement || METRIC_LABELS[...] || 'seu ponto fraco'`
 
-### Arquivos modificados
-
-- `src/pages/DiagnosticoGratuito.tsx` — adicionar state `textoIa`, chamada à edge function, renderização condicional com ReactMarkdown, correção dos percentis
+**Sem tabela de comparação adicional** — a tela continua com o formato atual de venda narrativa, apenas com os nomes corrigidos.
 
 ### O que NÃO muda
-
-- Edge function `generate-diagnostic-ai` — já funciona, sem alterações
-- Layout geral da tela (hero, tabela Onde Focar, fadiga, plano de ataque)
-- Lógica de busca e scrape
+- Cálculo do "Top X%" (média dos percentis)
+- Formato da tabela "Onde Focar" (tempo + % foco)
+- Texto narrativo e tom de venda
+- Nenhuma migration ou alteração de banco
 
