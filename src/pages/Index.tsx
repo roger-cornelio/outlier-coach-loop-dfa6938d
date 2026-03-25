@@ -42,7 +42,7 @@ import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
-import { EquipmentAdaptModal } from "@/components/EquipmentAdaptModal";
+
 
 const LAST_ROUTE_KEY = "outlier_last_route";
 
@@ -59,7 +59,7 @@ const Index = () => {
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
   
   // State for equipment modal (triggered from sidebar)
-  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -321,15 +321,6 @@ const Index = () => {
     return <Screen />;
   };
 
-  // Handler for saving equipment adaptations from sidebar modal
-  const handleSaveEquipmentAdaptations = (unavailableEquipment: string[]) => {
-    if (athleteConfig) {
-      setAthleteConfig({
-        ...athleteConfig,
-        unavailableEquipment,
-      });
-    }
-  };
 
   // Determine if sidebar should be visible (only for main app views, not onboarding)
   const showSidebar = onboardingDecision.isSetupComplete && 
@@ -364,13 +355,6 @@ const Index = () => {
           </AnimatePresence>
         </div>
 
-        {/* Equipment Adapt Modal - triggered from sidebar */}
-        <EquipmentAdaptModal
-          isOpen={isEquipmentModalOpen}
-          onClose={() => setIsEquipmentModalOpen(false)}
-          onApply={handleSaveEquipmentAdaptations}
-          initialSelection={athleteConfig?.unavailableEquipment || []}
-        />
 
         {/* Debug Panel - only in development */}
         <DebugPanel
