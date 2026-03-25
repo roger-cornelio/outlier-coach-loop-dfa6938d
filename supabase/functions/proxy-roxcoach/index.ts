@@ -39,6 +39,7 @@ function buildExternalUrl(paramsInput: {
   }
 
   if (paramsInput.resultUrl) {
+    // External API expects `url`; keep `result_url` too for backward compatibility.
     params.set('url', paramsInput.resultUrl);
     params.set('result_url', paramsInput.resultUrl);
   }
@@ -55,22 +56,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth is OPTIONAL — allow anonymous calls for public diagnostic
     const authHeader = req.headers.get('Authorization');
-    let userId = 'anonymous';
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (authHeader) {
-      try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          global: { headers: { Authorization: authHeader } },
-        });
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) userId = user.id;
-      } catch (authErr) {
-        console.warn('[proxy-roxcoach] Auth validation failed, proceeding as anonymous:', getErrorMessage(authErr));
-      }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const body = await req.json();
@@ -87,7 +92,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[proxy-roxcoach] User ${userId} | athlete=${athlete_name} event=${event_name} division=${division} season=${season_id}`);
+    console.log(`[proxy-roxcoach] User ${user.id} | athlete=${athlete_name} event=${event_name} division=${division} season=${season_id}`);
 
     let idp = '';
     let eventCode = '';
@@ -157,12 +162,14 @@ Deno.serve(async (req) => {
           lastStatus = apiRes.status;
           lastErrorText = errorText;
 
+          // Retry only transient server failures.
           if (apiRes.status >= 500 && attempt < maxAttempts) {
             console.warn(`[proxy-roxcoach] Attempt ${attempt} got ${apiRes.status}, retrying... ${errorText}`);
             await new Promise((r) => setTimeout(r, 3000));
             continue;
           }
 
+          // For non-5xx, break this candidate and try next candidate name (if any).
           break;
         } catch (fetchErr) {
           const errMessage = getErrorMessage(fetchErr);

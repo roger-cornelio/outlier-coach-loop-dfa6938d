@@ -667,14 +667,6 @@ export default function Auth({ context = 'user' }: AuthProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Back to landing */}
-      <Link
-        to="/"
-        className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Voltar
-      </Link>
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -1081,23 +1073,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
             </Link>
           )}
           {mode === 'signup' && (
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={() => switchMode('login')}
-                className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
-              >
-                Já tem conta? Entrar
-              </button>
-              {context === 'user' && (
-                <Link
-                  to="/"
-                  className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs flex items-center gap-1 transition-colors"
-                >
-                  <ArrowLeft className="w-3 h-3" />
-                  Voltar ao início
-                </Link>
-              )}
-            </div>
+            <button
+              onClick={() => switchMode('login')}
+              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
+            >
+              Já tem conta? Entrar
+            </button>
           )}
           {mode === 'forgot-password' && !resetSent && (
             <button

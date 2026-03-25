@@ -3,7 +3,7 @@
  * 
  * Step 1: Busca automática da prova HYROX
  * Step 2: "PARABÉNS POR ESSE RESULTADO" 
- * Step 3: "MAS PARA SER OUTLIER..." (pontos fracos)
+ * Step 3: "MAS PARA SER OUTLIER..." (gargalos)
  * Step 4: "PRONTO PARA SER FORA DA CURVA?" (CTA)
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -18,9 +18,8 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
-import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
@@ -72,7 +71,6 @@ export function WelcomeScreen() {
 
   const [step, setStep] = useState<OnboardingStep>('search');
   const [isSaving, setIsSaving] = useState(false);
-  const [coachAutoLinked, setCoachAutoLinked] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,215 +97,10 @@ export function WelcomeScreen() {
   });
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
-  const freeDiagConsumedRef = useRef(false);
-  const coachAutoLinkRef = useRef(false);
 
-  // Auto-link coach from free diagnostic (localStorage)
-  // Only links if athlete has NO coach yet — never overwrites existing coach
+  // Auto-search on mount
   useEffect(() => {
-    if (!user?.id || coachAutoLinkRef.current) return;
-    coachAutoLinkRef.current = true;
-
-    try {
-      const raw = localStorage.getItem('outlier_selected_coach');
-      if (!raw) return;
-
-      const { coachId, coachName } = JSON.parse(raw);
-      localStorage.removeItem('outlier_selected_coach');
-
-      if (!coachId) return;
-
-      // REGRA: Só vincula se o atleta NÃO tem coach
-      if (profile?.coach_id) {
-        console.log('[WELCOME] Athlete already has coach, ignoring localStorage coach selection');
-        return;
-      }
-
-      console.log('[WELCOME] Auto-linking coach from free diagnostic:', coachId, coachName);
-
-      // Link asynchronously, then skip coach step
-      (async () => {
-        try {
-          // Insert into coach_athletes
-          const { error: linkError } = await supabase
-            .from('coach_athletes')
-            .insert({ coach_id: coachId, athlete_id: user.id });
-
-          if (linkError && !linkError.message.includes('duplicate')) {
-            console.error('[WELCOME] Coach link error:', linkError);
-            return;
-          }
-
-          // Update profiles.coach_id (legacy field)
-          const { data: coachProfileRes } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', coachId)
-            .single();
-
-          if (coachProfileRes?.id) {
-            await supabase
-              .from('profiles')
-              .update({ coach_id: coachProfileRes.id })
-              .eq('user_id', user.id);
-          }
-
-          console.log('[WELCOME] Coach auto-linked successfully');
-          toast.success(`Vinculado ao coach ${coachName || ''}!`);
-        } catch (err) {
-          console.error('[WELCOME] Error auto-linking coach:', err);
-        }
-      })();
-
-      // Mark as auto-linked so CTA buttons skip coach step
-      setCoachAutoLinked(true);
-    } catch (e) {
-      console.warn('[WELCOME] Error reading coach from localStorage:', e);
-    }
-  }, [user?.id, profile?.coach_id]);
-
-  // Check for free diagnostic data from localStorage (pre-signup)
-  useEffect(() => {
-    if (!user || freeDiagConsumedRef.current) return;
-    
-    try {
-      const raw = localStorage.getItem('outlier_free_diagnostic');
-      if (!raw) return;
-      
-      const data = JSON.parse(raw);
-      // Expire after 24h
-      if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
-        localStorage.removeItem('outlier_free_diagnostic');
-        return;
-      }
-
-      freeDiagConsumedRef.current = true;
-      console.log('[WELCOME] Found free diagnostic in localStorage, persisting...');
-
-      // Persist to DB in background, skip to congrats immediately
-      const selectedResult = data.selectedResult as SearchResult;
-      const scrapeData = data.scrapedData;
-
-      setSummary({
-        finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted || null,
-        evento: selectedResult?.event_name || scrapeData?.event_name || null,
-        divisao: selectedResult?.division || scrapeData?.race_category || null,
-        posicao_categoria: null,
-        posicao_geral: null,
-        nome_atleta: selectedResult?.athlete_name || null,
-      });
-      setBottlenecks([]);
-      setStep('congrats');
-
-      // Persist asynchronously
-      (async () => {
-        try {
-          const sourceUrl = selectedResult?.result_url || '';
-
-          // 1. Call proxy-roxcoach for full diagnostic
-          let parsed: ReturnType<typeof parseDiagnosticResponse> | null = null;
-          try {
-            const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
-              body: {
-                athlete_name: selectedResult?.athlete_name,
-                event_name: selectedResult?.event_name,
-                division: selectedResult?.division,
-                season_id: selectedResult?.season_id,
-                result_url: selectedResult?.result_url,
-              },
-            });
-            if (!proxyResult.error && proxyResult.data?.ok !== false) {
-              parsed = parseDiagnosticResponse(proxyResult.data, user.id, sourceUrl);
-              if (!hasDiagnosticData(parsed)) parsed = null;
-            }
-          } catch (e) {
-            console.warn('[WELCOME] proxy-roxcoach failed for free diag, continuing with basic data:', e);
-          }
-
-          // 2. Save diagnostico_resumo + melhoria + splits
-          if (!parsed) {
-            await supabase.from('diagnostico_resumo').insert({
-              atleta_id: user.id,
-              source_url: sourceUrl,
-              evento: selectedResult?.event_name,
-              temporada: String(selectedResult?.season_id || ''),
-              divisao: selectedResult?.division,
-              finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted,
-              nome_atleta: selectedResult?.athlete_name,
-            });
-          } else {
-            parsed.resumoRow.evento = selectedResult?.event_name;
-            parsed.resumoRow.temporada = String(selectedResult?.season_id || '');
-            parsed.resumoRow.divisao = selectedResult?.division;
-            parsed.resumoRow.finish_time = scrapeData?.formatted_time || selectedResult?.time_formatted;
-            parsed.resumoRow.nome_atleta = selectedResult?.athlete_name;
-
-            const { data: insertedResumo } = await supabase
-              .from('diagnostico_resumo')
-              .insert(parsed.resumoRow)
-              .select('id')
-              .single();
-
-            if (insertedResumo?.id) {
-              if (parsed.diagRows.length > 0) {
-                await supabase.from('diagnostico_melhoria').insert(
-                  parsed.diagRows.map(r => ({ ...r, resumo_id: insertedResumo.id }))
-                );
-              }
-              if (parsed.splitRows.length > 0) {
-                await supabase.from('tempos_splits').insert(
-                  parsed.splitRows.map(r => ({ ...r, resumo_id: insertedResumo.id }))
-                );
-              }
-
-              // Update bottlenecks for UI
-              const sorted = [...parsed.diagRows]
-                .filter(d => d.improvement_value > 0)
-                .sort((a, b) => b.improvement_value - a.improvement_value)
-                .slice(0, 3);
-              setBottlenecks(sorted.map(d => ({
-                movement: d.movement,
-                improvement_value: d.improvement_value,
-                percentage: d.percentage,
-              })));
-            }
-          }
-
-          // 3. Save race_results
-          const { idp } = extractIdpFromUrl(sourceUrl);
-          if (idp) {
-            const { data: existing } = await supabase
-              .from('race_results')
-              .select('id')
-              .eq('athlete_id', user.id)
-              .eq('hyrox_idp', idp)
-              .maybeSingle();
-            if (!existing) {
-              await supabase.from('race_results').insert({
-                athlete_id: user.id,
-                hyrox_idp: idp,
-                source_url: sourceUrl,
-                hyrox_event: selectedResult?.event_name,
-              });
-            }
-          }
-
-          // 4. Clear localStorage after successful persist
-          localStorage.removeItem('outlier_free_diagnostic');
-          console.log('[WELCOME] Free diagnostic persisted and localStorage cleared');
-        } catch (e) {
-          console.error('[WELCOME] Error persisting free diagnostic:', e);
-          // Don't block onboarding flow on persistence failure
-        }
-      })();
-    } catch (e) {
-      console.warn('[WELCOME] Error reading free diagnostic from localStorage:', e);
-    }
-  }, [user]);
-
-  // Auto-search on mount (only if no free diag was consumed)
-  useEffect(() => {
-    if (profile?.name && user && !autoSearchedRef.current && !freeDiagConsumedRef.current) {
+    if (profile?.name && user && !autoSearchedRef.current) {
       autoSearchedRef.current = true;
       setSearchQuery(profile.name);
       executeSearch(profile.name);
@@ -781,12 +574,6 @@ export function WelcomeScreen() {
               <ArrowRight className="w-5 h-5" />
               CONTINUAR
             </motion.button>
-
-            <motion.button onClick={() => setStep('search')}
-              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
-              ← Voltar
-            </motion.button>
           </motion.div>
         )}
 
@@ -861,12 +648,6 @@ export function WelcomeScreen() {
               <ArrowRight className="w-5 h-5" />
               CONTINUAR
             </motion.button>
-
-            <motion.button onClick={() => setStep('congrats')}
-              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}>
-              ← Voltar
-            </motion.button>
           </motion.div>
         )}
 
@@ -893,11 +674,11 @@ export function WelcomeScreen() {
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-12 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus pontos fracos.
+              Seu diagnóstico revelou onde melhorar. Um coach dedicado vai montar treinos específicos para seus gargalos.
             </motion.p>
 
             <motion.button
-              onClick={() => coachAutoLinked ? handleFinish() : setStep('coach')}
+              onClick={handleFinish}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -912,12 +693,6 @@ export function WelcomeScreen() {
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
               {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
-            </motion.button>
-
-            <motion.button onClick={() => setStep(bottlenecks.length > 0 ? 'bottlenecks' : 'congrats')}
-              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
-              ← Voltar
             </motion.button>
           </motion.div>
         )}
@@ -971,12 +746,6 @@ export function WelcomeScreen() {
                 );
               })}
             </div>
-
-            <motion.button onClick={() => setStep('search')}
-              className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-              ← Voltar
-            </motion.button>
           </motion.div>
         )}
 
@@ -1075,7 +844,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={() => coachAutoLinked ? handleFinish() : setStep('coach')}
+              onClick={handleFinish}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -1098,23 +867,6 @@ export function WelcomeScreen() {
               ← Voltar
             </motion.button>
           </motion.div>
-        )}
-
-        {/* ===== COACH SELECTION STEP ===== */}
-        {step === 'coach' && (
-          <OnboardingCoachSelection
-            onCoachSelected={(_coachId, _coachName) => {
-              handleFinish();
-            }}
-            onBack={() => {
-              // Go back to whichever CTA was before
-              if (summary) {
-                setStep('cta');
-              } else {
-                setStep('profileCta');
-              }
-            }}
-          />
         )}
       </AnimatePresence>
     </div>

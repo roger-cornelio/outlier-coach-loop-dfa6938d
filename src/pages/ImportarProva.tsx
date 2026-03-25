@@ -547,7 +547,7 @@ export default function ImportarProva() {
               <CheckCircle2 className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Resultado salvo com sucesso</h1>
-            <p className="text-muted-foreground">🔥 Agora vamos encontrar seus pontos fracos de prova.</p>
+            <p className="text-muted-foreground">🔥 Agora vamos encontrar seus gargalos de prova.</p>
             <div className="flex flex-col gap-3">
               <Button variant="outline" className="w-full" onClick={() => window.open(savedUrl, '_blank')}>
                 <ExternalLink className="w-4 h-4 mr-2" /> Ver resultado oficial

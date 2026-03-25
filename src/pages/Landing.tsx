@@ -17,7 +17,7 @@ export default function Landing() {
       {/* ══════════ HEADER FIXO ══════════ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
         <div className="max-w-7xl mx-auto px-6 py-5 md:py-6 flex items-center justify-between">
-          <OutlierWordmark size="md" />
+          <OutlierWordmark size="sm" className="!text-2xl md:!text-3xl" />
           <div className="flex items-center gap-4 md:gap-6">
             <Link to="/login/coach" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               Sou Coach
@@ -61,7 +61,7 @@ export default function Landing() {
           className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Receba seu diagnóstico gratuito e descubra, com clareza, onde está seu maior potencial de evolução.
+          Diagnóstico HYROX gratuito, treino montado por um coach dedicado e feedback de IA em tempo real. Para atletas que querem ser fora da curva.
         </motion.p>
 
         <motion.div
@@ -87,9 +87,9 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Shield, title: 'Coach dedicado com dados reais', desc: 'Seu coach recebe um mapa completo da sua performance e monta treinos que atacam exatamente seus pontos fracos.' },
-            { icon: Activity, title: 'Acompanhamento em tempo real', desc: 'Cada treino gera dados que alimentam seu diagnóstico. Seu coach e você enxergam tudo, sem achismo.' },
-            { icon: TrendingUp, title: 'Evolução visível, feedbacks precisos', desc: 'Acompanhe sua progressão semana a semana com análises baseadas nos seus splits reais, não em fórmulas genéricas.' },
+            { icon: Target, title: 'Treinos genéricos não funcionam', desc: 'Seu coach dedicado analisa seu diagnóstico e monta cada treino pensando nos seus gargalos reais.' },
+            { icon: Brain, title: 'Dados sem interpretação não servem', desc: 'Nosso motor analisa cada split da sua prova e entrega ao coach um mapa completo da sua performance.' },
+            { icon: Shield, title: 'Coach dedicado, resultado real', desc: 'Zero automação genérica. Seu coach usa dados reais para montar treinos que atacam exatamente onde você precisa.' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
@@ -114,7 +114,7 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus pontos fracos em segundos.' },
+              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus gargalos em segundos.' },
               { step: '02', title: 'Conecte-se a um coach', desc: 'Um coach dedicado recebe seu diagnóstico e monta treinos específicos para você.' },
               { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. A IA dá feedback em tempo real. Você evolui com dados.' },
             ].map((item, i) => (
