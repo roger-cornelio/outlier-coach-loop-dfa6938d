@@ -450,7 +450,7 @@ export default function DiagnosticoGratuito() {
       posicao_geral: null,
       run_total: runTotal > 0 ? formatTimeSec(runTotal) : null,
       workout_total: workoutTotal > 0 ? formatTimeSec(workoutTotal) : null,
-      texto_ia: textoIa,
+      texto_ia: null,
       source_url: selectedResult?.result_url || null,
     };
   }, [scrapedData, selectedResult, textoIa]);
