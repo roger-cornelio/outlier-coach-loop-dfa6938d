@@ -446,7 +446,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
 
           {showFullAnalysis && diagnosticScores.hasData && (
             <>
-              <ImprovementTable diagnosticos={diagnosticos} splits={splits} metricScores={diagnosticScores.scores} />
+              <ImprovementTable diagnosticos={diagnosticos} splits={splits} />
 
               <FatigueIndexCard splits={splits} />
 

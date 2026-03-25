@@ -1134,7 +1134,7 @@ function MobilePathToEliteCard({
 }
 
 // ============================================
-// MOBILE BLOCK 3 — GARGALOS DE PERFORMANCE
+// MOBILE BLOCK 3 — PONTOS FRACOS DE PERFORMANCE
 // ============================================
 function MobileBottlenecksBlock({
   scores
@@ -1155,9 +1155,9 @@ function MobileBottlenecksBlock({
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="card-elevated rounded-xl px-4 py-3">
         <div className="flex items-center gap-1.5 mb-2">
           <Target className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos de performance</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Pontos fracos de performance</span>
         </div>
-        <p className="text-xs text-muted-foreground text-center py-3">Lance seu primeiro simulado para ver seus gargalos</p>
+        <p className="text-xs text-muted-foreground text-center py-3">Lance seu primeiro simulado para ver seus pontos fracos</p>
       </motion.div>
     );
   }
@@ -1175,7 +1175,7 @@ function MobileBottlenecksBlock({
 
       <div className="flex items-center gap-1.5 mb-2">
         <Target className="w-3.5 h-3.5 text-amber-500" />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos de performance</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Pontos fracos de performance</span>
       </div>
       <ul className="space-y-1.5">
         {visibleBottlenecks.map((m, i) => {
@@ -1399,7 +1399,7 @@ function MobileAdvancedDataSection({
           <div className="bg-amber-500/5 rounded-lg p-3 border border-amber-500/10">
               <div className="flex items-center gap-1.5 mb-2">
                 <Target className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Gargalos</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Pontos Fracos</span>
               </div>
               <ul className="space-y-1.5">
                 {worstMetrics.map((m, i) => {
