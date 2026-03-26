@@ -24,9 +24,17 @@ const OUTLIER_LEVELS: (LevelOption & { levelKey: ExtendedLevelKey })[] = [
 
 export default function DemoLevelUp() {
   const [active, setActive] = useState<AthleteStatus | null>(null);
+  const [isOutlier, setIsOutlier] = useState(false);
 
-  const handleClick = (status: AthleteStatus) => {
+  const handleCategory = (status: AthleteStatus) => {
     localStorage.removeItem('outlier_level_up_history');
+    setIsOutlier(false);
+    setActive(status);
+  };
+
+  const handleOutlier = (status: AthleteStatus) => {
+    localStorage.removeItem('outlier_level_up_history');
+    setIsOutlier(true);
     setActive(status);
   };
 
