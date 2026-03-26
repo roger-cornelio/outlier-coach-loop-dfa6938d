@@ -1,53 +1,38 @@
 
 
-## Diagnóstico: Contagem de Sessões vs Régua de Progresso
+## Plano: Indicador visual "bolinha" na barra de treinos
 
-### Problema identificado
+### Entendimento
+- A **barra de treinos** (régua) avança com cada sessão (1% por treino, meta de 100)
+- O **número de sessões** embaixo contabiliza corretamente
+- Mas o desbloqueio do nível (virar OPEN OUTLIER) exige **também completar os benchmarks** e bater os tempos
+- Você quer uma **bolinha/marcador** na régua que fique **cinza (bloqueada)** enquanto os benchmarks não forem cumpridos, e só fique **colorida/ativa** quando benchmarks estiverem OK
 
-Existem **dois sistemas de progresso separados** no app que não estão alinhados:
+### Como funciona hoje
+Os escudos (shields) já têm essa lógica: só mostram "★ CONQUISTADO" quando treinos + benchmarks + prova estão completos. Mas a **barra de progresso de treinos** no hero card não tem nenhum indicador visual de que os benchmarks são um pré-requisito.
 
-1. **Jornada OUTLIER** (`useJourneyProgress.ts` → `LevelProgress.tsx`): Conta sessões de treino via `countUniqueTrainingDays()`. Cada dia de treino completado = 1 sessão. Funciona com base em dias únicos do Zustand `workoutResults` + localStorage `outlier-benchmark-history`.
+### Mudança em `src/components/LevelProgress.tsx`
 
-2. **Régua de Progresso** (`progressSystem.ts` → `ProgressRuler.tsx`): Calcula score baseado em **benchmark scores/buckets** (ELITE/STRONG/OK/TOUGH/DNF) com pesos temporais. **Não conta sessões de treino** — conta resultados de benchmark com notas.
+Na barra de **Treinos** (linhas 346-360), adicionar uma **bolinha/círculo** no final da barra (posição 100%):
+- **Cinza/bloqueada**: quando os benchmarks ainda não foram completados (`benchmarksCompleted < benchmarksRequired`)
+- **Verde/ativa com pulso**: quando os benchmarks foram completados — significando que ao atingir 100% de treinos, o nível será desbloqueado
 
-O usuário espera que **cada treino completado suba 1%** da régua (para 100 sessões). Mas a régua atual usa scores de benchmark, não contagem de sessões.
+Visualmente:
+```text
+Treinos                    45 / 100
+[████████████████░░░░░░░░░░░░░░] ⬤ (cinza = benchmarks pendentes)
 
-### Problema secundário: sessões não contabilizadas
-
-O `countUniqueTrainingDays` conta dias únicos (substring 0-10 da data). Se o atleta completa um treino, `addWorkoutResult` salva no Zustand (persistido). **Mas** o `handleFinishWorkout` usa `workoutId: selectedWorkout.day` (ex: 'seg'), e o campo `date` é ISO completo. A contagem deveria funcionar.
-
-Possível causa: o atleta fez "Zerar Sessões" recentemente, ou os `workoutResults` no store estão sendo limpos por algum reset/reload.
-
-### Regra desejada pelo usuário
-- OPEN: 100 sessões de treino → cada treino = 1%
-- A régua do dashboard deve refletir isso
-
-### Plano de correção
-
-**1. Atualizar `training_min_sessions` do OPEN para 100** (migração SQL)
-```sql
-UPDATE status_level_rules SET training_min_sessions = 100 WHERE level_key = 'OPEN';
+Treinos                    45 / 100  
+[████████████████░░░░░░░░░░░░░░] 🟢 (verde = benchmarks OK, falta só treinar)
 ```
 
-**2. Garantir que `saveBenchmarkResult` no `useBenchmarkResults.ts` também salva no localStorage** quando o treino é finalizado
-- Atualmente `handleFinishWorkout` chama `addWorkoutResult` (Zustand) mas **não** chama `saveBenchmarkResult` (que escreve no `outlier-benchmark-history`)
-- `countUniqueTrainingDays` lê de **ambas** as fontes, mas se o localStorage não tem o registro, e o Zustand é limpo (reset), o dado se perde
+- A bolinha fica posicionada no extremo direito da barra (marco de 100%)
+- Tooltip/label abaixo: "Benchmarks pendentes" (cinza) ou "Benchmarks ✓" (verde)
+- Quando treinos = 100% **E** bolinha verde → escudo desbloqueia automaticamente (já funciona via lógica existente)
 
-**3. Em `WorkoutExecution.tsx` → `handleFinishWorkout`**: além de `addWorkoutResult`, também salvar no localStorage `outlier-benchmark-history` diretamente para garantir persistência dupla
-
-**4. Em `LevelProgress.tsx`**: confirmar que a barra de treinos usa `journeyProgress.trainingSessions` / `journeyProgress.targetLevel.trainingRequired` (já está correto)
-
-### Arquivos a alterar
-
-| Arquivo | Mudança |
-|---------|---------|
-| Migração SQL | `training_min_sessions = 100` para OPEN |
-| `src/components/WorkoutExecution.tsx` | Salvar sessão no localStorage `outlier-benchmark-history` ao finalizar treino |
-| `src/hooks/useJourneyProgress.ts` | Nenhuma (já correto) |
-| `src/components/LevelProgress.tsx` | Nenhuma (já correto) |
-
-### Resultado esperado
-- Cada treino completado aparece como +1 sessão na Jornada
-- 100 treinos = 100% da barra para OPEN
-- Dados persistem entre reloads via localStorage + Zustand
+### O que não muda
+- Contagem de sessões (já funciona)
+- Lógica dos escudos (já correta)
+- Requisito de prova oficial para PRO/ELITE
+- A barra de benchmarks separada continua existindo
 
