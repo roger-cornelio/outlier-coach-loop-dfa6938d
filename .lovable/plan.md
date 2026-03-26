@@ -1,52 +1,34 @@
 
 
-## Plano: Cronômetro por Bloco + Simplificação de Registros
+## Plano: Manter frase do "fantasma" como texto secundário + trocar ícone Target por Medal
+
+### Contexto
+O plano anterior propunha condensar a UI da Prova Alvo numa linha compacta. O usuário quer:
+1. **Manter** a frase do 3º colocado ("Se a prova fosse hoje...") como elemento secundário
+2. Usar a mesma engenharia de predição que já calcula o gap
+3. Trocar ícone `Target` por `Medal`
 
 ### O que muda
 
-**1. Cada bloco ganha seu próprio cronômetro**
-- Em vez de clicar no botão de "concluído" e preencher tempo manualmente, o atleta clica em **"INICIAR"** no bloco
-- Um cronômetro começa a contar dentro do bloco (formato MM:SS), visualmente integrado
-- Quando termina, clica em **"FINALIZAR"** — o tempo é capturado automaticamente
-- Após finalizar, o atleta pode editar o tempo manualmente caso queira corrigir (ex: esqueceu de parar)
+**`src/components/DiagnosticRadarBlock.tsx`** — mobile (~L988-1045) e desktop (~L2436-2493):
 
-**2. Blocos que NÃO pedem métricas**
-- Blocos de tipo `aquecimento`, `core`, `notas` continuam como hoje: auto-complete sem pedir nada
-- Blocos de `EMOM` e `força` agora também ganham cronômetro próprio em vez de só pedir confirmação — o tempo registrado vem do cronômetro
+1. **Ícone**: `Target` → `Medal` nas linhas de Prova Alvo (L999 e L2447)
+2. **Layout condensado**: remover o box grande de predição de pódio (barra de progresso + textos empilhados). Substituir por:
+   - Linha principal compacta: `🏅 Nome · Xd · Categoria · Meta HH:MM:SS · [XX% pódio]`
+   - Frase do fantasma como texto secundário discreto logo abaixo, em `text-[10px] text-muted-foreground/60 italic`
+   - Sem card/borda/background — só texto inline
+3. **Badge de pódio**: o `progressPct` vira um badge amber inline no final da linha principal, em vez de barra de progresso
+4. **Frase do fantasma**: mantém exatamente a mesma lógica de cálculo (`gapSec`, `MOCK_PODIUM_SEC`, etc.), apenas muda a apresentação visual para texto secundário/discreto
 
-**3. Blocos de AMRAP**
-- Ganham cronômetro próprio igual aos outros
-- **Além disso**, continuam pedindo o número de rounds/repetições após finalizar o cronômetro
-
-**4. Blocos FOR TIME**
-- Ganham cronômetro próprio — o tempo vem do cronômetro automaticamente
-- Removido o input manual de min:seg como método primário (mas o atleta pode editar depois de parar)
-
-### Fluxo visual do bloco
+### Estrutura visual
 
 ```text
-[Estado inicial]
-  Título do bloco + exercícios
-  [ ▶ INICIAR ]
-
-[Cronômetro rodando]
-  Título do bloco + exercícios
-  ⏱ 03:45 (contando)
-  [ ⏹ FINALIZAR ]
-
-[Finalizado]
-  Título do bloco + exercícios
-  Tempo: 04:12  [✏️ editar]
-  (Se AMRAP: input de rounds aparece aqui)
-  [ ✓ REGISTRAR ]
+🏅 HYROX São Paulo · 45d · PRO 30-34 · Meta 01:08:00  [88%]
+   Se a prova fosse hoje, o 3º colocado chegaria quase 10 min na sua frente.
 ```
 
 ### O que NÃO muda
-- Cronômetro geral da sessão (continua no topo)
-- Blocos auto-complete (aquecimento, core, notas)
-- Dados salvos no store (`SessionBlockResult`)
-- Feedback de performance
-
-### Arquivos modificados
-- `src/components/WorkoutExecution.tsx` — cronômetro por bloco, novo fluxo de início/fim, input de edição manual, remoção do input de tempo FOR TIME
+- Cálculos de predição (MOCK_PODIUM_SEC, gapSec, progressPct)
+- Dados e props (provaAlvo, provaAlvoTargetTime)
+- Nenhum outro componente ou hook
 
