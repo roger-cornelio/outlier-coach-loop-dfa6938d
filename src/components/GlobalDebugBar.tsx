@@ -169,7 +169,7 @@ export function GlobalDebugBar() {
                   }
                 } catch {}
               }
-              location.reload();
+              window.location.reload();
             }}
             style={{
               display: 'flex',
