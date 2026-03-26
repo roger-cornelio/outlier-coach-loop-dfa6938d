@@ -78,6 +78,7 @@ export default function DemoLevelUp() {
         <LevelUpModal
           isOpen={true}
           newStatus={active}
+          isOutlier={isOutlier}
           onContinue={() => setActive(null)}
         />
       )}
