@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Target, Orbit, Plus, Calendar, Users, Trophy, Loader2 } from 'lucide-react';
+import { ArrowLeft, Medal, Orbit, Plus, Calendar, Users, Trophy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +107,7 @@ export default function ProvaAlvo() {
           <Card className="border-primary/30 bg-primary/5">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
+                <Medal className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Prova Alvo da Temporada</CardTitle>
               </div>
             </CardHeader>
@@ -142,7 +142,7 @@ export default function ProvaAlvo() {
             className="flex-1 gap-2"
             variant={provaAlvo ? 'outline' : 'default'}
           >
-            <Target className="h-4 w-4" />
+            <Medal className="h-4 w-4" />
             {provaAlvo ? 'Alterar Prova Alvo' : 'Cadastrar Prova Alvo da Temporada'}
           </Button>
           <Button 
@@ -159,7 +159,7 @@ export default function ProvaAlvo() {
         {provaAlvo && (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+              <Medal className="h-5 w-5 text-primary" />
               Sua Prova Alvo
             </h2>
             <ProvaCardDB race={provaAlvo} onDelete={handleDeleteProva} isAlvo />
