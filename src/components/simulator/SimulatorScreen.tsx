@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft } from 'lucide-react';
+import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,6 +57,11 @@ export function SimulatorScreen() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [activeDivision, setActiveDivision] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Race splits for "Última Prova" column
+  const [raceSplits, setRaceSplits] = useState<Split[]>([]);
+  const [raceFinishTime, setRaceFinishTime] = useState<string | null>(null);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -84,7 +89,40 @@ export function SimulatorScreen() {
 
   useEffect(() => {
     fetchSimulations();
+    fetchRaceSplits();
   }, [user]);
+
+  const fetchRaceSplits = async () => {
+    if (!user) return;
+    const { data: resumo } = await supabase
+      .from('diagnostico_resumo')
+      .select('id, finish_time')
+      .eq('atleta_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (resumo) {
+      setRaceFinishTime(resumo.finish_time);
+      const { data: splitsData } = await supabase
+        .from('tempos_splits')
+        .select('split_name, time')
+        .eq('resumo_id', resumo.id);
+      if (splitsData) setRaceSplits(splitsData as Split[]);
+    }
+  };
+
+  const handleDeleteSimulation = async (id: string) => {
+    if (!confirm('Tem certeza que deseja apagar este simulado?')) return;
+    setDeletingId(id);
+    const { error } = await supabase.from('simulations').delete().eq('id', id);
+    if (error) {
+      toast.error('Erro ao apagar simulado');
+    } else {
+      toast.success('Simulado apagado');
+      setSimulations(prev => prev.filter(s => s.id !== id));
+    }
+    setDeletingId(null);
+  };
 
   const handleStartSetup = () => setViewState('setup');
 
@@ -152,19 +190,24 @@ export function SimulatorScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Calculadora de Pace — usa último simulado */}
+      {/* Calculadora de Pace — usa última prova real + último simulado como target */}
       {simulations.length > 0 && (() => {
         const lastSim = simulations[0];
-        const splits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
+        const simSplits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
           id: String(i),
           split_name: s.type === 'roxzone' ? 'Roxzone' : (PHASE_TO_SPLIT_NAME[s.phase] || s.label),
           time: secondsToTimeStr(s.time_seconds),
         }));
+        // If we have race data, show race as "Última Prova" and simulation time as default target
+        // Otherwise fall back to simulation splits for both
+        const hasRaceData = raceSplits.length > 0;
         return (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <TargetSplitsTable
-              splits={splits}
+              splits={hasRaceData ? simSplits : simSplits}
               finishTime={formatTime(lastSim.total_time)}
+              raceSplits={hasRaceData ? raceSplits : undefined}
+              raceFinishTime={hasRaceData ? raceFinishTime : undefined}
               title="Calculadora de Pace Ideal"
             />
           </motion.div>
@@ -277,6 +320,17 @@ export function SimulatorScreen() {
                             </table>
                           </div>
                         )}
+                        {/* Delete button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSimulation(sim.id); }}
+                          disabled={deletingId === sim.id}
+                        >
+                          {deletingId === sim.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          Apagar simulado
+                        </Button>
                       </div>
                     </CollapsibleContent>
                   </Card>
