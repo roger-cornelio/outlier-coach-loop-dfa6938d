@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 const QA_STORAGE_KEY = 'QA_DEBUG';
 const QA_TOGGLE_EVENT = 'qa-debug-toggle';
 const QA_CODE = 'outlier2024qa';
-const OWNER_WHITELIST = ['roger.bm2016@gmail.com'];
+const OWNER_WHITELIST = ['roger.bm2016@gmail.com', 'roger.cornelio@capitalgrupo.com.br'];
 
 export function useQADebugMode(userEmail?: string | null) {
   const [isQAActive, setIsQAActive] = useState(() => checkQAActive());
