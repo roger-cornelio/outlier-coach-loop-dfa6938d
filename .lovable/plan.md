@@ -1,31 +1,19 @@
 
 
-## Plano: Permitir Debug Bar para qualquer conta do Owner
+## Plano: Ajustes na sidebar do Admin Portal
 
-### Problema
-O `Ctrl+Shift+D` só funciona quando logado com `roger.bm2016@gmail.com`. Se você testa como atleta com outro email, o atalho é ignorado.
+### Mudanças em `src/pages/AdminPortal.tsx`:
 
-### Opções
+1. **Barra de rolagem na navegação**: Envolver o `<nav>` em um container com `overflow-y-auto` e altura calculada para ocupar o espaço disponível (excluindo o header)
 
-**Opção A (recomendada):** Adicionar o email da conta de atleta na whitelist do owner.
-- Alterar `OWNER_EMAIL` para uma lista em `DebugKeyboardToggle.tsx`
-- Alterar `OWNER_WHITELIST` em `useDebugAllowed.ts`
-- Adicionar o email de atleta que você usa para testes
+2. **Remover footer da sidebar**: Apagar o bloco "User Info & Logout" (linhas 339-358) — sem email, sem botão Sair no rodapé
 
-**Opção B:** Usar o modo QA (`Ctrl+Shift+Q`) que funciona em ambiente dev/preview para qualquer email — já está implementado. Basta digitar o código QA (`outlier2024qa`) e a barra aparece.
+3. **Nome do admin no header da sidebar**: Ao lado de "ADMIN", mostrar o nome do perfil (sem email): `ADMIN · Roger`
 
-### Mudança (Opção A)
+4. **Botão Sair no header principal (top-right)**: Adicionar botão de logout com ícone no canto direito do header sticky (linha 369-381), usando `ml-auto`
 
-**`src/components/DebugKeyboardToggle.tsx`**:
-- Trocar `OWNER_EMAIL` (string) por array com ambos os emails
-- Ajustar check: `OWNER_EMAILS.includes(profile.email.toLowerCase())`
-
-**`src/hooks/useDebugAllowed.ts`**:
-- Adicionar o mesmo email na `OWNER_WHITELIST`
-
-**`src/hooks/useQADebugMode.ts`**:
-- Adicionar o mesmo email na `OWNER_WHITELIST`
-
-### Importante
-Preciso saber qual é o email da conta de atleta para adicionar à whitelist. Alternativamente, você pode usar **Ctrl+Shift+Q** agora mesmo (funciona em preview/dev) e digitar o código `outlier2024qa` para ativar a Debug Bar sem precisar de mudança de código.
+### Resultado visual
+- Sidebar: header com "ADMIN · Nome" + nav scrollável com todos os itens
+- Header principal: título da seção à esquerda, botão Sair à direita
+- Sem email visível, sem footer na sidebar
 
