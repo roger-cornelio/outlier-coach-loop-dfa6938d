@@ -21,6 +21,9 @@ import { RacePlanCard, type RacePlanRow } from './RacePlanCard';
 interface TargetSplitsTableProps {
   splits?: Split[];
   finishTime?: string | null;
+  /** Splits from the athlete's last official race (used for "Última Prova" column) */
+  raceSplits?: Split[];
+  raceFinishTime?: string | null;
   title?: string;
   prColumnLabel?: string;
   targetColumnLabel?: string;
@@ -29,18 +32,22 @@ interface TargetSplitsTableProps {
   warningMessage?: string;
 }
 
-export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, targetColumnLabel, emptyMessage, warningMessage }: TargetSplitsTableProps) {
-  const initialTarget = finishTime || '01:08:00';
-  const [targetInput, setTargetInput] = useState(initialTarget);
+export function TargetSplitsTable({ splits, finishTime, raceSplits, raceFinishTime, title, prColumnLabel, targetColumnLabel, emptyMessage, warningMessage }: TargetSplitsTableProps) {
+  // If raceSplits provided, use those for the "Última Prova" column; otherwise fall back to splits
+  const displaySplits = raceSplits || splits;
+  const displayFinishTime = raceSplits ? raceFinishTime : finishTime;
+  // Default target = simulation finish time (finishTime prop) when raceSplits are provided, otherwise finishTime
+  const defaultTarget = raceSplits ? (finishTime || '01:08:00') : (finishTime || '01:08:00');
+  const [targetInput, setTargetInput] = useState(defaultTarget);
   const [showPlanModal, setShowPlanModal] = useState(false);
 
   // Mapeia splits reais do banco para chaves internas usando aliases
   const prSplits = useMemo(() => {
-    if (!splits || splits.length === 0) return null;
+    if (!displaySplits || displaySplits.length === 0) return null;
 
     const mapped: Record<string, number> = {};
 
-    splits.forEach(s => {
+    displaySplits.forEach(s => {
       const sec = timeToSeconds(s.time);
       const key = resolveSplitKey(s.split_name);
       if (key) {
@@ -49,7 +56,7 @@ export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, ta
     });
 
     return Object.keys(mapped).length > 0 ? mapped : null;
-  }, [splits]);
+  }, [displaySplits]);
 
   const targetSec = useMemo(() => parseTimeInput(targetInput), [targetInput]);
 
@@ -75,7 +82,7 @@ export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, ta
     });
   }, [targetSec, prSplits]);
 
-  const finishTimeSec = useMemo(() => finishTime ? parseTimeInput(finishTime) : null, [finishTime]);
+  const finishTimeSec = useMemo(() => displayFinishTime ? parseTimeInput(displayFinishTime) : null, [displayFinishTime]);
 
   const totals = useMemo(() => {
     if (!rows) return null;
@@ -107,8 +114,8 @@ export function TargetSplitsTable({ splits, finishTime, title, prColumnLabel, ta
           {title || 'Target Splits'}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {finishTime
-            ? <>Sua prova atual: <span className="font-bold text-foreground bg-primary/15 px-2 py-0.5 rounded-md border border-primary/25 tabular-nums">{finishTime}</span> <span className="text-xs">· Defina seu tempo-alvo abaixo</span></>
+          {displayFinishTime
+            ? <>Sua prova atual: <span className="font-bold text-foreground bg-primary/15 px-2 py-0.5 rounded-md border border-primary/25 tabular-nums">{displayFinishTime}</span> <span className="text-xs">· Defina seu tempo-alvo abaixo</span></>
             : 'Defina seu tempo-alvo e veja o split necessário em cada estação'}
         </p>
       </CardHeader>
