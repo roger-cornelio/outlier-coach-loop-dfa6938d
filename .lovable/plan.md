@@ -1,19 +1,16 @@
 
 
-## Plano: Ajustes na sidebar do Admin Portal
+## Plano: Definir nome do perfil admin
 
-### Mudanças em `src/pages/AdminPortal.tsx`:
+### Problema
+O perfil de `roger.bm2016@gmail.com` tem o campo `name` como `null` no banco de dados. O código já está correto — ele exibe `· {nome}` quando o nome existe.
 
-1. **Barra de rolagem na navegação**: Envolver o `<nav>` em um container com `overflow-y-auto` e altura calculada para ocupar o espaço disponível (excluindo o header)
+### Solução
+Executar uma migração para atualizar o nome do perfil:
 
-2. **Remover footer da sidebar**: Apagar o bloco "User Info & Logout" (linhas 339-358) — sem email, sem botão Sair no rodapé
+```sql
+UPDATE profiles SET name = 'Roger' WHERE email = 'roger.bm2016@gmail.com';
+```
 
-3. **Nome do admin no header da sidebar**: Ao lado de "ADMIN", mostrar o nome do perfil (sem email): `ADMIN · Roger`
-
-4. **Botão Sair no header principal (top-right)**: Adicionar botão de logout com ícone no canto direito do header sticky (linha 369-381), usando `ml-auto`
-
-### Resultado visual
-- Sidebar: header com "ADMIN · Nome" + nav scrollável com todos os itens
-- Header principal: título da seção à esquerda, botão Sair à direita
-- Sem email visível, sem footer na sidebar
+Após isso, o header da sidebar mostrará **ADMIN · Roger** automaticamente.
 
