@@ -1,34 +1,19 @@
 
 
-## Plano: Manter frase do "fantasma" como texto secundário + trocar ícone Target por Medal
+## Plano: Remover Calculadora de Pace da aba Provas
 
-### Contexto
-O plano anterior propunha condensar a UI da Prova Alvo numa linha compacta. O usuário quer:
-1. **Manter** a frase do 3º colocado ("Se a prova fosse hoje...") como elemento secundário
-2. Usar a mesma engenharia de predição que já calcula o gap
-3. Trocar ícone `Target` por `Medal`
+### Mudança
+Remover o componente `TargetSplitsTable` da aba **Provas** (`src/components/ProvasTab.tsx`), mantendo-o apenas na tela de **Simulados** (`SimulatorScreen.tsx`).
 
 ### O que muda
-
-**`src/components/DiagnosticRadarBlock.tsx`** — mobile (~L988-1045) e desktop (~L2436-2493):
-
-1. **Ícone**: `Target` → `Medal` nas linhas de Prova Alvo (L999 e L2447)
-2. **Layout condensado**: remover o box grande de predição de pódio (barra de progresso + textos empilhados). Substituir por:
-   - Linha principal compacta: `🏅 Nome · Xd · Categoria · Meta HH:MM:SS · [XX% pódio]`
-   - Frase do fantasma como texto secundário discreto logo abaixo, em `text-[10px] text-muted-foreground/60 italic`
-   - Sem card/borda/background — só texto inline
-3. **Badge de pódio**: o `progressPct` vira um badge amber inline no final da linha principal, em vez de barra de progresso
-4. **Frase do fantasma**: mantém exatamente a mesma lógica de cálculo (`gapSec`, `MOCK_PODIUM_SEC`, etc.), apenas muda a apresentação visual para texto secundário/discreto
-
-### Estrutura visual
-
-```text
-🏅 HYROX São Paulo · 45d · PRO 30-34 · Meta 01:08:00  [88%]
-   Se a prova fosse hoje, o 3º colocado chegaria quase 10 min na sua frente.
-```
+**`src/components/ProvasTab.tsx`**:
+- Remover o import de `TargetSplitsTable` e do tipo `Split`
+- Remover todo o bloco de fetch de splits para a calculadora (~L94-140)
+- Remover os estados `splits` e `finishTime`
+- Remover a renderização da `TargetSplitsTable` (~L769-770)
 
 ### O que NÃO muda
-- Cálculos de predição (MOCK_PODIUM_SEC, gapSec, progressPct)
-- Dados e props (provaAlvo, provaAlvoTargetTime)
-- Nenhum outro componente ou hook
+- `SimulatorScreen.tsx` — continua com a Calculadora de Pace funcionando normalmente
+- `EvolutionTab.tsx` — continua com a tabela na aba Evolução
+- Componente `TargetSplitsTable` — permanece intacto
 
