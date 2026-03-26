@@ -793,7 +793,7 @@ export default function DiagnosticoGratuito() {
                     resumo={freeResumo}
                     diagnosticos={freeDiagnosticos}
                   />
-                  <ImprovementTable diagnosticos={freeDiagnosticos} splits={freeSplits} />
+                  {/* ImprovementTable oculta temporariamente — será reintroduzida na aba Evolução */}
                 </motion.div>
               )}
               {/* Loading skeleton while AI parecer generates */}
