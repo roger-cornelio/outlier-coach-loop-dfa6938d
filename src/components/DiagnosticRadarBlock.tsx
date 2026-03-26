@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users, Medal } from 'lucide-react';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
 import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -994,16 +994,14 @@ function MobilePathToEliteCard({
             const gapS = gapSec % 60;
             const gapFormatted = `${String(gapMin).padStart(2, '0')}:${String(gapS).padStart(2, '0')}`;
             return (
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-0.5">
                 <div className="flex items-center gap-2 text-xs flex-wrap">
-                  <Target className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <Medal className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
                   <span className="text-border/40">·</span>
                   <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
                   <span className="text-border/40">·</span>
                   <span className="text-muted-foreground">{provaAlvo.categoria}</span>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">{provaAlvo.participation_type === 'DUPLA' ? 'Doubles' : 'Single'}</span>
                   {provaAlvoTargetTime && (
                     <>
                       <span className="text-border/40">·</span>
@@ -1018,27 +1016,12 @@ function MobilePathToEliteCard({
                       <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
                     </>
                   )}
+                  <span className="ml-auto inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500">{progressPct}%</span>
                 </div>
-          {/* Podium prediction */}
                 {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
-                <div className="bg-muted/10 border border-border/10 rounded-lg p-2.5 space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Proximidade ao pódio ({userCategory})</span>
-                    <span className="font-mono font-semibold text-foreground">{progressPct}%</span>
-                  </div>
-                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
-                    <div 
-                      className="h-full rounded-full bg-amber-500 transition-all duration-700" 
-                      style={{ width: `${progressPct}%` }} 
-                    />
-                  </div>
-                  <p className="text-[11px] font-semibold text-foreground">
-                    Faltam exatos <span className="text-amber-500 font-mono">{gapFormatted}</span> para o Pódio na categoria {userCategory}.
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/70">
+                  <p className="text-[10px] text-muted-foreground/60 italic pl-5.5">
                     👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
                   </p>
-                </div>
                 ); })()}
               </div>
             );
