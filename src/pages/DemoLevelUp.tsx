@@ -24,9 +24,17 @@ const OUTLIER_LEVELS: (LevelOption & { levelKey: ExtendedLevelKey })[] = [
 
 export default function DemoLevelUp() {
   const [active, setActive] = useState<AthleteStatus | null>(null);
+  const [isOutlier, setIsOutlier] = useState(false);
 
-  const handleClick = (status: AthleteStatus) => {
+  const handleCategory = (status: AthleteStatus) => {
     localStorage.removeItem('outlier_level_up_history');
+    setIsOutlier(false);
+    setActive(status);
+  };
+
+  const handleOutlier = (status: AthleteStatus) => {
+    localStorage.removeItem('outlier_level_up_history');
+    setIsOutlier(true);
     setActive(status);
   };
 
@@ -42,7 +50,7 @@ export default function DemoLevelUp() {
           {CATEGORY_LEVELS.map(({ status, label, color }) => (
             <button
               key={`cat-${status}`}
-              onClick={() => handleClick(status)}
+              onClick={() => handleCategory(status)}
               className={`px-6 py-4 rounded-xl font-semibold text-white uppercase tracking-wider transition-colors ${color}`}
             >
               {label}
@@ -56,7 +64,7 @@ export default function DemoLevelUp() {
           {OUTLIER_LEVELS.map(({ status, label, color, levelKey }) => (
             <button
               key={`out-${status}`}
-              onClick={() => handleClick(status)}
+              onClick={() => handleOutlier(status)}
               className={`px-6 py-4 rounded-xl font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-3 ${color}`}
             >
               <ShieldCrest level={levelKey} active className="w-7 h-7" />
@@ -70,6 +78,7 @@ export default function DemoLevelUp() {
         <LevelUpModal
           isOpen={true}
           newStatus={active}
+          isOutlier={isOutlier}
           onContinue={() => setActive(null)}
         />
       )}
