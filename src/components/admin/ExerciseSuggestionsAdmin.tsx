@@ -22,7 +22,7 @@ export function ExerciseSuggestionsAdmin() {
   const [selectedPatterns, setSelectedPatterns] = useState<Record<string, string>>({});
   const [rejectModal, setRejectModal] = useState<{ id: string; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending');
 
   useEffect(() => {
     fetchSuggestions();
@@ -33,6 +33,8 @@ export function ExerciseSuggestionsAdmin() {
 
   const filtered = filter === 'pending'
     ? suggestions.filter(s => s.status === 'pending')
+    : filter === 'approved'
+    ? suggestions.filter(s => s.status === 'approved')
     : suggestions;
 
   const pendingCount = suggestions.filter(s => s.status === 'pending').length;
@@ -78,6 +80,13 @@ export function ExerciseSuggestionsAdmin() {
                 onClick={() => setFilter('pending')}
               >
                 Pendentes
+              </Button>
+              <Button
+                variant={filter === 'approved' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('approved')}
+              >
+                Aprovados
               </Button>
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
