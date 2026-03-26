@@ -190,19 +190,24 @@ export function SimulatorScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Calculadora de Pace — usa último simulado */}
+      {/* Calculadora de Pace — usa última prova real + último simulado como target */}
       {simulations.length > 0 && (() => {
         const lastSim = simulations[0];
-        const splits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
+        const simSplits: Split[] = ((lastSim.splits_data || []) as SplitData[]).map((s, i) => ({
           id: String(i),
           split_name: s.type === 'roxzone' ? 'Roxzone' : (PHASE_TO_SPLIT_NAME[s.phase] || s.label),
           time: secondsToTimeStr(s.time_seconds),
         }));
+        // If we have race data, show race as "Última Prova" and simulation time as default target
+        // Otherwise fall back to simulation splits for both
+        const hasRaceData = raceSplits.length > 0;
         return (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <TargetSplitsTable
-              splits={splits}
+              splits={hasRaceData ? simSplits : simSplits}
               finishTime={formatTime(lastSim.total_time)}
+              raceSplits={hasRaceData ? raceSplits : undefined}
+              raceFinishTime={hasRaceData ? raceFinishTime : undefined}
               title="Calculadora de Pace Ideal"
             />
           </motion.div>
@@ -315,6 +320,17 @@ export function SimulatorScreen() {
                             </table>
                           </div>
                         )}
+                        {/* Delete button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSimulation(sim.id); }}
+                          disabled={deletingId === sim.id}
+                        >
+                          {deletingId === sim.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          Apagar simulado
+                        </Button>
                       </div>
                     </CollapsibleContent>
                   </Card>
