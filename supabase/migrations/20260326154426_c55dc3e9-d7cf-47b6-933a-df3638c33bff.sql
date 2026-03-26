@@ -1,0 +1,1 @@
+UPDATE status_level_rules SET training_min_sessions = 100 WHERE level_key = 'OPEN';

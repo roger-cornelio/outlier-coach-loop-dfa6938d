@@ -12,6 +12,7 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useJourneyProgress, type ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 // Extended level configuration with ELITE
 interface LevelVisualConfig {
@@ -356,7 +357,26 @@ export function LevelProgress() {
                   {journeyProgress.trainingSessions} / {journeyProgress.targetLevel.trainingRequired}
                 </span>
               </div>
-              <Progress value={Math.max(journeyProgress.targetLevel.trainingProgress > 0 ? 2 : 0, journeyProgress.targetLevel.trainingProgress * 100)} className="h-2" />
+              <div className="flex items-center gap-2">
+                <Progress value={Math.max(journeyProgress.targetLevel.trainingProgress > 0 ? 2 : 0, journeyProgress.targetLevel.trainingProgress * 100)} className="h-2 flex-1" />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={`w-4 h-4 rounded-full border-2 shrink-0 transition-all duration-300 ${
+                        journeyProgress.targetLevel.benchmarksCompleted >= journeyProgress.targetLevel.benchmarksRequired
+                          ? 'bg-green-500 border-green-400 shadow-[0_0_8px_rgba(34,197,94,0.5)]'
+                          : 'bg-muted border-muted-foreground/30'
+                      }`} />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {journeyProgress.targetLevel.benchmarksCompleted >= journeyProgress.targetLevel.benchmarksRequired
+                        ? 'Benchmarks ✓'
+                        : `Benchmarks pendentes (${journeyProgress.targetLevel.benchmarksCompleted}/${journeyProgress.targetLevel.benchmarksRequired})`
+                      }
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             
             {/* Benchmarks counter */}
