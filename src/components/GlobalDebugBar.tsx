@@ -154,6 +154,38 @@ export function GlobalDebugBar() {
           <span style={{ color: '#22d3ee' }}>{location.pathname}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!confirm('Zerar todas as sessões de treino? (localStorage será limpo e a página recarregada)')) return;
+              localStorage.removeItem('outlier-benchmark-history');
+              const raw = localStorage.getItem('outlier-store-v2');
+              if (raw) {
+                try {
+                  const store = JSON.parse(raw);
+                  if (store.state) {
+                    store.state.workoutResults = [];
+                    localStorage.setItem('outlier-store-v2', JSON.stringify(store));
+                  }
+                } catch {}
+              }
+              location.reload();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: 'rgba(220, 38, 38, 0.3)',
+              color: '#fca5a5',
+              borderRadius: '4px',
+              fontSize: '11px',
+              border: '1px solid rgba(220, 38, 38, 0.5)',
+              cursor: 'pointer',
+            }}
+          >
+            🗑 Zerar Sessões
+          </button>
           {isQA && (
             <button
               onClick={(e) => {
