@@ -280,7 +280,7 @@ const AdminPortal = () => {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed left-0 top-0 h-full bg-card/50 backdrop-blur-xl border-r border-border/50 z-50 transition-all duration-300",
+          "fixed left-0 top-0 h-full bg-card/50 backdrop-blur-xl border-r border-border/50 z-50 transition-all duration-300 flex flex-col",
           sidebarCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -291,6 +291,7 @@ const AdminPortal = () => {
               <Shield className="w-5 h-5 text-primary" />
               <span className="font-display text-lg font-bold tracking-wide text-primary">
                 ADMIN
+                {profile?.name && <span className="text-muted-foreground font-normal text-sm ml-1">· {profile.name}</span>}
               </span>
             </div>
           )}
@@ -307,55 +308,37 @@ const AdminPortal = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setAdminView(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
-                adminView === item.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-              )}
-              title={sidebarCollapsed ? item.label : undefined}
-            >
-              {item.icon}
-              {!sidebarCollapsed && (
-                <div className="text-left">
-                  <div className="text-sm font-medium">{item.label}</div>
-                  <div className={cn(
-                    "text-xs",
-                    adminView === item.id ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {item.description}
+        <div className="flex-1 overflow-y-auto">
+          <nav className="p-3 space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setAdminView(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
+                  adminView === item.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+                title={sidebarCollapsed ? item.label : undefined}
+              >
+                {item.icon}
+                {!sidebarCollapsed && (
+                  <div className="text-left">
+                    <div className="text-sm font-medium">{item.label}</div>
+                    <div className={cn(
+                      "text-xs",
+                      adminView === item.id ? "text-primary-foreground/70" : "text-muted-foreground"
+                    )}>
+                      {item.description}
+                    </div>
                   </div>
-                </div>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* User Info & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border/50">
-          {!sidebarCollapsed && (
-            <div className="mb-3 px-3">
-              <div className="text-sm font-medium truncate">{profile?.name || profile?.email}</div>
-              <div className="text-xs text-muted-foreground">Superadmin</div>
-            </div>
-          )}
-          <button
-            onClick={handleSignOut}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors",
-              sidebarCollapsed && "justify-center"
-            )}
-            title={sidebarCollapsed ? "Sair" : undefined}
-          >
-            <LogOut className="w-4 h-4" />
-            {!sidebarCollapsed && <span className="text-sm">Sair</span>}
-          </button>
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
+
       </aside>
 
       {/* Main Content */}
@@ -378,6 +361,13 @@ const AdminPortal = () => {
               </p>
             </div>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="ml-auto flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </button>
         </header>
 
         {/* Content Area */}
