@@ -8,12 +8,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle, XCircle, Loader2, Dumbbell, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Dumbbell, Clock, Pencil, Save } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MovementPattern {
   id: string;
   name: string;
   formula_type: string;
+}
+
+interface DeduplicatedExercise {
+  exercise_name: string;
+  movement_pattern_id: string | null;
+  count: number;
+  ids: string[];
+  context_block_title: string | null;
 }
 
 export function ExerciseSuggestionsAdmin() {
@@ -23,6 +32,9 @@ export function ExerciseSuggestionsAdmin() {
   const [rejectModal, setRejectModal] = useState<{ id: string; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending');
+  const [editingExercise, setEditingExercise] = useState<string | null>(null);
+  const [editPatternId, setEditPatternId] = useState<string>('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchSuggestions();
@@ -31,13 +43,69 @@ export function ExerciseSuggestionsAdmin() {
     });
   }, [fetchSuggestions]);
 
+  // Deduplicate approved exercises by name
+  const deduplicatedApproved = (() => {
+    const approved = suggestions.filter(s => s.status === 'approved');
+    const map = new Map<string, DeduplicatedExercise>();
+    for (const s of approved) {
+      const key = s.exercise_name.trim().toLowerCase();
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.count++;
+        existing.ids.push(s.id);
+        // Keep the movement_pattern_id if available
+        if (s.movement_pattern_id && !existing.movement_pattern_id) {
+          existing.movement_pattern_id = s.movement_pattern_id;
+        }
+      } else {
+        map.set(key, {
+          exercise_name: s.exercise_name,
+          movement_pattern_id: s.movement_pattern_id,
+          count: 1,
+          ids: [s.id],
+          context_block_title: s.context_block_title,
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
+
   const filtered = filter === 'pending'
     ? suggestions.filter(s => s.status === 'pending')
     : filter === 'approved'
-    ? suggestions.filter(s => s.status === 'approved')
+    ? [] // handled separately via deduplicatedApproved
     : suggestions;
 
   const pendingCount = suggestions.filter(s => s.status === 'pending').length;
+
+  const handleUpdatePattern = async (exercise: DeduplicatedExercise) => {
+    if (!editPatternId) return;
+    setSaving(true);
+    try {
+      // Update all suggestion records with this exercise name
+      const { error: sugErr } = await supabase
+        .from('exercise_suggestions')
+        .update({ movement_pattern_id: editPatternId } as any)
+        .in('id', exercise.ids) as any;
+      if (sugErr) throw sugErr;
+
+      // Update global_exercises too
+      const { error: geErr } = await supabase
+        .from('global_exercises')
+        .update({ movement_pattern_id: editPatternId })
+        .ilike('name', exercise.exercise_name.trim());
+      if (geErr) throw geErr;
+
+      toast.success(`Padrão de "${exercise.exercise_name}" atualizado.`);
+      setEditingExercise(null);
+      setEditPatternId('');
+      await fetchSuggestions();
+    } catch (err: any) {
+      toast.error('Erro ao atualizar: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleApprove = async (id: string, name: string) => {
     const patternId = selectedPatterns[id];
@@ -103,6 +171,88 @@ export function ExerciseSuggestionsAdmin() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
+          ) : filter === 'approved' ? (
+            deduplicatedApproved.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Nenhum exercício aprovado</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exercício</TableHead>
+                    <TableHead>Padrão de Movimento</TableHead>
+                    <TableHead className="text-center">Sugestões</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deduplicatedApproved.map((ex) => {
+                    const isEditing = editingExercise === ex.exercise_name;
+                    const patternName = ex.movement_pattern_id
+                      ? patterns.find(p => p.id === ex.movement_pattern_id)?.name || '—'
+                      : '—';
+                    return (
+                      <TableRow key={ex.exercise_name}>
+                        <TableCell className="font-medium">{ex.exercise_name}</TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editPatternId}
+                              onValueChange={setEditPatternId}
+                            >
+                              <SelectTrigger className="w-[220px]">
+                                <SelectValue placeholder="Selecionar padrão..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {patterns.map(p => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name}
+                                    <span className="text-xs text-muted-foreground ml-1">({p.formula_type})</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">{patternName}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="text-xs">{ex.count}×</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdatePattern(ex)}
+                                disabled={!editPatternId || saving}
+                              >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setEditingExercise(null); setEditPatternId(''); }}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => { setEditingExercise(ex.exercise_name); setEditPatternId(ex.movement_pattern_id || ''); }}
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-30" />
