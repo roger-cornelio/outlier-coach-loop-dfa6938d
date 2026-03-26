@@ -95,28 +95,44 @@ const LEVELS_ORDER: ExtendedLevelKey[] = ['OPEN', 'PRO', 'ELITE'];
 
 /** Expiration window: 12 months (365 days) */
 const JOURNEY_EXPIRATION_DAYS = 365;
+const STORAGE_KEY = 'outlier-benchmark-history';
 
 function getExpirationCutoff(): string {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - JOURNEY_EXPIRATION_DAYS);
-  return cutoff.toISOString().substring(0, 10); // YYYY-MM-DD
+  return cutoff.toISOString().substring(0, 10);
 }
 
 /**
- * Count unique training days from workoutResults (max 1 per day).
+ * Count unique training days from store + localStorage (max 1 per day).
  * Only counts sessions within the last 12 months.
  */
 function countUniqueTrainingDays(workoutResults: { date: string; blockId?: string }[]): number {
   const cutoff = getExpirationCutoff();
   const uniqueDays = new Set<string>();
+
+  // Source 1: Zustand store
   for (const r of workoutResults) {
     if (r.date) {
-      const day = r.date.substring(0, 10); // YYYY-MM-DD
-      if (day >= cutoff) {
-        uniqueDays.add(day);
-      }
+      const day = r.date.substring(0, 10);
+      if (day >= cutoff) uniqueDays.add(day);
     }
   }
+
+  // Source 2: localStorage (persists across sessions)
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const items: { created_at?: string; completed?: boolean }[] = JSON.parse(stored);
+      for (const item of items) {
+        if (item.completed && item.created_at) {
+          const day = item.created_at.substring(0, 10);
+          if (day >= cutoff) uniqueDays.add(day);
+        }
+      }
+    }
+  } catch { /* noop */ }
+
   return uniqueDays.size;
 }
 
