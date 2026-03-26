@@ -8,12 +8,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle, XCircle, Loader2, Dumbbell, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Dumbbell, Clock, Pencil, Save } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MovementPattern {
   id: string;
   name: string;
   formula_type: string;
+}
+
+interface DeduplicatedExercise {
+  exercise_name: string;
+  movement_pattern_id: string | null;
+  count: number;
+  ids: string[];
+  context_block_title: string | null;
 }
 
 export function ExerciseSuggestionsAdmin() {
@@ -23,6 +32,9 @@ export function ExerciseSuggestionsAdmin() {
   const [rejectModal, setRejectModal] = useState<{ id: string; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending');
+  const [editingExercise, setEditingExercise] = useState<string | null>(null);
+  const [editPatternId, setEditPatternId] = useState<string>('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchSuggestions();
@@ -31,13 +43,69 @@ export function ExerciseSuggestionsAdmin() {
     });
   }, [fetchSuggestions]);
 
+  // Deduplicate approved exercises by name
+  const deduplicatedApproved = (() => {
+    const approved = suggestions.filter(s => s.status === 'approved');
+    const map = new Map<string, DeduplicatedExercise>();
+    for (const s of approved) {
+      const key = s.exercise_name.trim().toLowerCase();
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.count++;
+        existing.ids.push(s.id);
+        // Keep the movement_pattern_id if available
+        if (s.movement_pattern_id && !existing.movement_pattern_id) {
+          existing.movement_pattern_id = s.movement_pattern_id;
+        }
+      } else {
+        map.set(key, {
+          exercise_name: s.exercise_name,
+          movement_pattern_id: s.movement_pattern_id,
+          count: 1,
+          ids: [s.id],
+          context_block_title: s.context_block_title,
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
+
   const filtered = filter === 'pending'
     ? suggestions.filter(s => s.status === 'pending')
     : filter === 'approved'
-    ? suggestions.filter(s => s.status === 'approved')
+    ? [] // handled separately via deduplicatedApproved
     : suggestions;
 
   const pendingCount = suggestions.filter(s => s.status === 'pending').length;
+
+  const handleUpdatePattern = async (exercise: DeduplicatedExercise) => {
+    if (!editPatternId) return;
+    setSaving(true);
+    try {
+      // Update all suggestion records with this exercise name
+      const { error: sugErr } = await supabase
+        .from('exercise_suggestions')
+        .update({ movement_pattern_id: editPatternId } as any)
+        .in('id', exercise.ids) as any;
+      if (sugErr) throw sugErr;
+
+      // Update global_exercises too
+      const { error: geErr } = await supabase
+        .from('global_exercises')
+        .update({ movement_pattern_id: editPatternId })
+        .ilike('name', exercise.exercise_name.trim());
+      if (geErr) throw geErr;
+
+      toast.success(`Padrão de "${exercise.exercise_name}" atualizado.`);
+      setEditingExercise(null);
+      setEditPatternId('');
+      await fetchSuggestions();
+    } catch (err: any) {
+      toast.error('Erro ao atualizar: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleApprove = async (id: string, name: string) => {
     const patternId = selectedPatterns[id];
