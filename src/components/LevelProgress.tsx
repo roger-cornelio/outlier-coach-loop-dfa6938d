@@ -12,6 +12,7 @@ import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useJourneyProgress, type ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 // Extended level configuration with ELITE
 interface LevelVisualConfig {
