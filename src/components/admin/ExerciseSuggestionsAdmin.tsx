@@ -171,6 +171,88 @@ export function ExerciseSuggestionsAdmin() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
+          ) : filter === 'approved' ? (
+            deduplicatedApproved.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Nenhum exercício aprovado</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exercício</TableHead>
+                    <TableHead>Padrão de Movimento</TableHead>
+                    <TableHead className="text-center">Sugestões</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deduplicatedApproved.map((ex) => {
+                    const isEditing = editingExercise === ex.exercise_name;
+                    const patternName = ex.movement_pattern_id
+                      ? patterns.find(p => p.id === ex.movement_pattern_id)?.name || '—'
+                      : '—';
+                    return (
+                      <TableRow key={ex.exercise_name}>
+                        <TableCell className="font-medium">{ex.exercise_name}</TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editPatternId}
+                              onValueChange={setEditPatternId}
+                            >
+                              <SelectTrigger className="w-[220px]">
+                                <SelectValue placeholder="Selecionar padrão..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {patterns.map(p => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name}
+                                    <span className="text-xs text-muted-foreground ml-1">({p.formula_type})</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">{patternName}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="text-xs">{ex.count}×</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdatePattern(ex)}
+                                disabled={!editPatternId || saving}
+                              >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setEditingExercise(null); setEditPatternId(''); }}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => { setEditingExercise(ex.exercise_name); setEditPatternId(ex.movement_pattern_id || ''); }}
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-30" />
