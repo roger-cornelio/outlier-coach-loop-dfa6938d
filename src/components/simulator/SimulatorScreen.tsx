@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft } from 'lucide-react';
+import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,6 +57,11 @@ export function SimulatorScreen() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [activeDivision, setActiveDivision] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Race splits for "Última Prova" column
+  const [raceSplits, setRaceSplits] = useState<Split[]>([]);
+  const [raceFinishTime, setRaceFinishTime] = useState<string | null>(null);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -84,7 +89,40 @@ export function SimulatorScreen() {
 
   useEffect(() => {
     fetchSimulations();
+    fetchRaceSplits();
   }, [user]);
+
+  const fetchRaceSplits = async () => {
+    if (!user) return;
+    const { data: resumo } = await supabase
+      .from('diagnostico_resumo')
+      .select('id, finish_time')
+      .eq('atleta_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (resumo) {
+      setRaceFinishTime(resumo.finish_time);
+      const { data: splitsData } = await supabase
+        .from('tempos_splits')
+        .select('split_name, time')
+        .eq('resumo_id', resumo.id);
+      if (splitsData) setRaceSplits(splitsData as Split[]);
+    }
+  };
+
+  const handleDeleteSimulation = async (id: string) => {
+    if (!confirm('Tem certeza que deseja apagar este simulado?')) return;
+    setDeletingId(id);
+    const { error } = await supabase.from('simulations').delete().eq('id', id);
+    if (error) {
+      toast.error('Erro ao apagar simulado');
+    } else {
+      toast.success('Simulado apagado');
+      setSimulations(prev => prev.filter(s => s.id !== id));
+    }
+    setDeletingId(null);
+  };
 
   const handleStartSetup = () => setViewState('setup');
 
