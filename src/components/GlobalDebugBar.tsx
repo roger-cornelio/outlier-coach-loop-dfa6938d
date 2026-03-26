@@ -31,12 +31,9 @@ export function GlobalDebugBar() {
   const auth = useAuthSafe();
   const linkDebug = useLinkDebug();
 
-  // Desativar completamente em /app (dashboard do atleta) para evitar re-renders
-  const isAthleteRoute = location.pathname === '/app' || location.pathname.startsWith('/app/');
-  
-  // Only show for allowed users with debug flag, and NOT on athlete routes
+  // Only show for allowed users with debug flag
   // Also hide if auth context is not available yet
-  if (!auth || !isAllowed || isAthleteRoute) {
+  if (!auth || !isAllowed) {
     return null;
   }
 
