@@ -1811,7 +1811,11 @@ export function DiagnosticRadarBlock({
         .order('created_at', { ascending: false })
         .limit(1);
       if (data?.length && (data[0] as any).total_time) {
-        setLastSimulationTime((data[0] as any).total_time);
+        const simTime = (data[0] as any).total_time;
+        // Simulados com menos de 30min são testes — ignorar para nível competitivo
+        if (simTime >= 1800) {
+          setLastSimulationTime(simTime);
+        }
       }
     })();
   }, [profile?.user_id, externalResultsRefreshKey]);
