@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine } from 'recharts';
 import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users, Medal } from 'lucide-react';
-import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
+import { calculateEvolutionTimeframe, calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { StatusCrownPreset } from '@/components/ui/StatusCrownPreset';
@@ -984,49 +984,7 @@ function MobilePathToEliteCard({
             </p>
           }
 
-          {/* Prova Alvo inline */}
-          {provaAlvo && (() => {
-            const MOCK_PODIUM_SEC = 4200;
-            const MOCK_CURRENT_SEC = 4797;
-            const gapSec = MOCK_CURRENT_SEC - MOCK_PODIUM_SEC;
-            const progressPct = Math.min(100, Math.round((MOCK_PODIUM_SEC / MOCK_CURRENT_SEC) * 100));
-            const gapMin = Math.floor(gapSec / 60);
-            const gapS = gapSec % 60;
-            const gapFormatted = `${String(gapMin).padStart(2, '0')}:${String(gapS).padStart(2, '0')}`;
-            return (
-              <div className="mt-2 space-y-0.5">
-                <div className="flex items-center gap-2 text-xs flex-wrap">
-                  <Medal className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-                  <span className="text-border/40">·</span>
-                  <span className="font-semibold text-foreground">{provaAlvo.daysUntil}d</span>
-                  <span className="text-border/40">·</span>
-                  <span className="text-muted-foreground">{provaAlvo.categoria}</span>
-                  {provaAlvoTargetTime && (
-                    <>
-                      <span className="text-border/40">·</span>
-                      <span className="text-muted-foreground">Meta</span>
-                      <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
-                    </>
-                  )}
-                  {provaAlvo.partner_name && (
-                    <>
-                      <span className="text-border/40">·</span>
-                      <Users className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
-                    </>
-                  )}
-                  <span className="ml-auto inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500">{progressPct}%</span>
-                </div>
-                {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
-                  <p className="text-[10px] text-muted-foreground/60 italic pl-5.5">
-                    👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
-                  </p>
-                ); })()}
-              </div>
-            );
-          })()}
-          {!provaAlvo && null}
+          {/* Prova Alvo moved to Nível Competitivo panel */}
         </div>
 
         {/* META DE RESULTADO — "Estou aqui → Chego aqui" */}
@@ -2362,6 +2320,19 @@ export function DiagnosticRadarBlock({
                 Nível Competitivo
               </span>
             </div>
+
+            {/* Prova Alvo resumida */}
+            {provaAlvo && (
+              <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
+                <Medal className="w-3 h-3 text-amber-500 shrink-0" />
+                <span className="font-semibold text-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.daysUntil} dias</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               <div className="flex flex-col items-center text-center gap-0.5">
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
@@ -2407,6 +2378,16 @@ export function DiagnosticRadarBlock({
                 {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
               </p>
             )}
+
+            {/* Performance projetada na prova */}
+            {provaAlvo && performanceSnapshot.currentTime && (() => {
+              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              return (
+                <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                  📊 Performance projetada na prova: <span className="font-bold text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                </p>
+              );
+            })()}
           </div>
         )}
 
@@ -2439,49 +2420,7 @@ export function DiagnosticRadarBlock({
           <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
         </div>
 
-        {/* Prova Alvo inline — desktop */}
-        {provaAlvo && (() => {
-          const MOCK_PODIUM_SEC = 4200;
-          const MOCK_CURRENT_SEC = 4797;
-          const gapSec = MOCK_CURRENT_SEC - MOCK_PODIUM_SEC;
-          const progressPct = Math.min(100, Math.round((MOCK_PODIUM_SEC / MOCK_CURRENT_SEC) * 100));
-          const gapMin = Math.floor(gapSec / 60);
-          const gapS = gapSec % 60;
-          const gapFormatted = `${String(gapMin).padStart(2, '0')}:${String(gapS).padStart(2, '0')}`;
-          return (
-            <div className="mb-3 space-y-0.5">
-              <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
-                <Medal className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="text-muted-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-                <span className="text-border/40">·</span>
-                <span className="font-semibold text-foreground">{provaAlvo.daysUntil} dias</span>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
-                {provaAlvoTargetTime && (
-                  <>
-                    <span className="text-border/40">·</span>
-                    <span className="text-muted-foreground">Meta</span>
-                    <span className="font-bold text-primary">{provaAlvoTargetTime}</span>
-                  </>
-                )}
-                {provaAlvo.partner_name && (
-                  <>
-                    <span className="text-border/40">·</span>
-                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-muted-foreground">{provaAlvo.partner_name}</span>
-                  </>
-                )}
-                <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-500">{progressPct}%</span>
-              </div>
-              {(() => { const userCategory = MOCK_USER_AGE_GROUP; return (
-                <p className="text-xs text-muted-foreground/60 italic text-center">
-                  👻 Se a prova fosse hoje, o 3º colocado do seu Age Group chegaria {gapSec >= 60 ? `quase ${Math.round(gapSec / 60)} minutos` : `${gapSec} segundos`} na sua frente.
-                </p>
-              ); })()}
-            </div>
-          );
-        })()}
-        {!provaAlvo && <div className="mb-3" />}
+        <div className="mb-3" />
 
         {/* Visor de Ação Unificado (desktop) */}
         {!performanceSnapshot.currentTime ? (
@@ -2494,6 +2433,19 @@ export function DiagnosticRadarBlock({
                 Nível Competitivo
               </span>
             </div>
+
+            {/* Prova Alvo resumida */}
+            {provaAlvo && (
+              <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
+                <Medal className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span className="font-semibold text-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
+                <span className="text-border/40">·</span>
+                <span className="text-muted-foreground">{provaAlvo.daysUntil} dias</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-4 gap-2">
               {/* Seu Tempo */}
               <div className="flex flex-col items-center text-center gap-0.5">
@@ -2548,6 +2500,16 @@ export function DiagnosticRadarBlock({
                 {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
               </p>
             )}
+
+            {/* Performance projetada na prova */}
+            {provaAlvo && performanceSnapshot.currentTime && (() => {
+              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              return (
+                <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                  📊 Performance projetada na prova: <span className="font-bold text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                </p>
+              );
+            })()}
           </div>
         )}
       </motion.div>
