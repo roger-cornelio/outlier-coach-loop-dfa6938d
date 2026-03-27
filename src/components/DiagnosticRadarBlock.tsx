@@ -2356,6 +2356,12 @@ export function DiagnosticRadarBlock({
         {/* Visor de Ação Unificado (mobile) */}
         {performanceSnapshot.currentTime && (
           <div className="mx-3 mb-3 mt-1 p-3 bg-muted/5 border border-border/15 rounded-xl space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-border/15 mb-1">
+              <Trophy className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Nível Competitivo
+              </span>
+            </div>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               <div className="flex flex-col items-center text-center gap-0.5">
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
@@ -2482,6 +2488,12 @@ export function DiagnosticRadarBlock({
           <ImportProvaInlineCTA />
         ) : (
           <div className="mt-3 p-3 bg-muted/5 border border-border/15 rounded-xl space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-border/15 mb-1">
+              <Trophy className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Nível Competitivo
+              </span>
+            </div>
             <div className="grid grid-cols-4 gap-2">
               {/* Seu Tempo */}
               <div className="flex flex-col items-center text-center gap-0.5">
