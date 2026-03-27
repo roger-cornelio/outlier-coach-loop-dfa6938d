@@ -28,6 +28,7 @@ import { DiagnosticStationsBars } from './DiagnosticStationsBar';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -2387,6 +2388,23 @@ export function DiagnosticRadarBlock({
               </div>
             )}
 
+            {!performanceSnapshot.isGoalReached && (
+              <div className="flex justify-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
+                      💡 Como avanço na régua?
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 text-xs p-3">
+                    <p className="text-muted-foreground leading-relaxed">
+                      A régua avança conforme você realiza <strong>simulados</strong>. Cada simulado mede o quão próximo você está da meta do próximo nível.
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
             {performanceSnapshot.actionPhrase && (
               <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
                 {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
@@ -2580,6 +2598,23 @@ export function DiagnosticRadarBlock({
                   className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{ width: `${performanceSnapshot.progressPercent}%` }}
                 />
+              </div>
+            )}
+
+            {!performanceSnapshot.isGoalReached && (
+              <div className="flex justify-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-[10px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
+                      💡 Como avanço na régua?
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 text-xs p-3">
+                    <p className="text-muted-foreground leading-relaxed">
+                      A régua avança conforme você realiza <strong>simulados</strong>. Cada simulado mede o quão próximo você está da meta do próximo nível.
+                    </p>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
 
