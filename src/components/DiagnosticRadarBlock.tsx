@@ -1806,12 +1806,12 @@ export function DiagnosticRadarBlock({
     (async () => {
       const { data } = await supabase
         .from('simulations')
-        .select('total_time_seconds')
+        .select('total_time')
         .eq('athlete_id', profile.user_id)
         .order('created_at', { ascending: false })
         .limit(1);
-      if (data?.length && (data[0] as any).total_time_seconds) {
-        setLastSimulationTime((data[0] as any).total_time_seconds);
+      if (data?.length && (data[0] as any).total_time) {
+        setLastSimulationTime((data[0] as any).total_time);
       }
     })();
   }, [profile?.user_id, externalResultsRefreshKey]);

@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useOutlierStore } from '@/store/outlierStore';
 import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
