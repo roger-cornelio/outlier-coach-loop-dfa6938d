@@ -207,6 +207,20 @@ export function SimulatorScreen() {
     toast.info('Simulado encerrado. Como a prova não foi concluída, os tempos não foram salvos no seu histórico.', { duration: 5000 });
   };
 
+  if (viewState === 'result' && finishedRaceData) {
+    return (
+      <SimulationResultScreen
+        totalTime={finishedRaceData.total_time}
+        roxzoneTime={finishedRaceData.roxzone_time}
+        coachStyle={coachStyle}
+        onContinue={() => {
+          setViewState('list');
+          setFinishedRaceData(null);
+        }}
+      />
+    );
+  }
+
   if (viewState === 'active') {
     return (
       <ActiveSimulator
