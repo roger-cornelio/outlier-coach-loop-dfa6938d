@@ -12,6 +12,7 @@ import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
+import { SimulationResultScreen } from './SimulationResultScreen';
 import { getHyroxIcon } from './HyroxStationIcons';
 import { TargetSplitsTable } from '@/components/evolution/TargetSplitsTable';
 import { type Split } from '@/components/diagnostico/types';
@@ -77,7 +78,7 @@ interface SimulationRecord {
   splits_data: SplitData[];
 }
 
-type ViewState = 'list' | 'setup' | 'active' | 'compare';
+type ViewState = 'list' | 'setup' | 'active' | 'compare' | 'result';
 
 export function SimulatorScreen() {
   const { user, profile } = useAuth();
@@ -93,6 +94,9 @@ export function SimulatorScreen() {
   // Race splits for "Última Prova" column
   const [raceSplits, setRaceSplits] = useState<Split[]>([]);
   const [raceFinishTime, setRaceFinishTime] = useState<string | null>(null);
+
+  // Result screen data
+  const [finishedRaceData, setFinishedRaceData] = useState<{ total_time: number; roxzone_time: number } | null>(null);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -185,9 +189,11 @@ export function SimulatorScreen() {
       return;
     }
 
-    toast.success('Simulado finalizado!');
     triggerExternalResultsRefresh();
-    setViewState('list');
+    setFinishedRaceData({ total_time: data.total_time, roxzone_time: data.roxzone_time });
+    setViewState('result');
+
+    // Pre-fetch simulations so list is ready when user continues
     await fetchSimulations();
 
     // Auto-expand the just-finished simulation
@@ -200,6 +206,20 @@ export function SimulatorScreen() {
     setViewState('list');
     toast.info('Simulado encerrado. Como a prova não foi concluída, os tempos não foram salvos no seu histórico.', { duration: 5000 });
   };
+
+  if (viewState === 'result' && finishedRaceData) {
+    return (
+      <SimulationResultScreen
+        totalTime={finishedRaceData.total_time}
+        roxzoneTime={finishedRaceData.roxzone_time}
+        coachStyle={coachStyle}
+        onContinue={() => {
+          setViewState('list');
+          setFinishedRaceData(null);
+        }}
+      />
+    );
+  }
 
   if (viewState === 'active') {
     return (
