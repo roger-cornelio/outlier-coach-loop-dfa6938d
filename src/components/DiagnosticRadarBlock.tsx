@@ -2353,74 +2353,54 @@ export function DiagnosticRadarBlock({
           <ImportProvaInlineCTA />
         )}
 
-        {/* Barra de métricas da prova mais recente */}
+        {/* Visor de Ação Unificado (mobile) */}
         {performanceSnapshot.currentTime && (
-          <div className="mx-3 mb-3 mt-1 grid grid-cols-2 gap-1.5 p-2.5 bg-muted/5 border border-border/15 rounded-xl sm:grid-cols-4">
-            {/* Última prova */}
-            <div className="flex flex-col items-center text-center gap-0.5">
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                <Timer className="w-3 h-3" />
-                <span>Última prova</span>
+          <div className="mx-3 mb-3 mt-1 p-3 bg-muted/5 border border-border/15 rounded-xl space-y-2.5">
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              <div className="flex flex-col items-center text-center gap-0.5">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Timer className="w-3 h-3" />
+                  <span>Seu Tempo</span>
+                </div>
+                <span className="font-bold text-xs text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
               </div>
-              <span className="font-bold text-xs text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
+
+              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Target className="w-3 h-3" />
+                  <span>Meta {performanceSnapshot.nextStatusLabel}</span>
+                </div>
+                <span className="font-bold text-xs text-foreground">{performanceSnapshot.nextReqFormatted}</span>
+              </div>
+
+              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Zap className="w-3 h-3" />
+                  <span>Faltam</span>
+                </div>
+                <span className={cn('font-bold text-xs', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
+              </div>
+
+              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <Calendar className="w-3 h-3" />
+                  <span>Previsão</span>
+                </div>
+                <span className={cn('font-bold text-xs', performanceSnapshot.isGoalReached ? 'text-emerald-400' : 'text-foreground')}>{performanceSnapshot.previsaoFormatted}</span>
+              </div>
             </div>
 
-            {/* Status Atual */}
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                <Target className="w-3 h-3" />
-                <span>Status Atual : {performanceSnapshot.currentStatusLabel}</span>
+            {!performanceSnapshot.isGoalReached && (
+              <div className="w-full h-2 bg-secondary/40 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${performanceSnapshot.progressPercent}%` }} />
               </div>
-              <span className="font-bold text-xs text-foreground">{performanceSnapshot.currentReqValue}</span>
-            </div>
+            )}
 
-            {/* Próximo Status */}
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                <Crown className="w-3 h-3" />
-                <span>Próximo : {performanceSnapshot.nextStatusLabel}</span>
-              </div>
-              <span className="font-bold text-xs text-foreground">{performanceSnapshot.nextReqValue}</span>
-            </div>
-
-            {/* GAP */}
-            <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
-                <Zap className="w-3 h-3" />
-                <span>GAP</span>
-              </div>
-              <span className={cn('font-bold text-xs', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Projeção de Evolução — card completo (mobile) */}
-        {evolutionProjection && performanceSnapshot.currentTime && (
-          <div className="mx-3 mb-2 border border-primary/20 bg-card rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-primary" />
-                <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wide">Projeção de Evolução</h3>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider border border-border/30 px-2 py-0.5 rounded-full text-muted-foreground/60">{evolutionProjection.tierLabel}</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              🎯 Com o método OUTLIER, baseado em fisiologia aplicada, essa é a evolução esperada nos próximos 12 meses
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground">{resultadoEsperadoFormatted}</div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
-              </div>
-              <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-primary">{evolutionProjection.ratePerMonth}s</div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
-              </div>
-              <div className="bg-secondary/40 rounded-lg p-2.5 text-center">
-                <div className="text-sm font-bold text-foreground">{gain12mFormatted}</div>
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
-              </div>
-            </div>
+            {performanceSnapshot.actionPhrase && (
+              <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+              </p>
+            )}
           </div>
         )}
 
