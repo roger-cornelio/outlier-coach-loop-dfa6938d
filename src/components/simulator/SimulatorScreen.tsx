@@ -189,9 +189,11 @@ export function SimulatorScreen() {
       return;
     }
 
-    toast.success('Simulado finalizado!');
     triggerExternalResultsRefresh();
-    setViewState('list');
+    setFinishedRaceData({ total_time: data.total_time, roxzone_time: data.roxzone_time });
+    setViewState('result');
+
+    // Pre-fetch simulations so list is ready when user continues
     await fetchSimulations();
 
     // Auto-expand the just-finished simulation
