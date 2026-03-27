@@ -1904,15 +1904,22 @@ export function DiagnosticRadarBlock({
       }
     }
 
-    // Progress bar: % do caminho percorrido em direção à meta
-    // Usar uma janela razoável: de currentTime+30min até nextReqSec
+    // Progress bar: régua de evolução real
+    // 0% = tempo da última prova oficial, 100% = meta do próximo nível
+    // Posição atual = último simulado (se existir e for melhor que a prova oficial)
     let progressPercent = 0;
     if (isGoalReached) {
       progressPercent = 100;
     } else if (currentTime && nextReqSec && gapToNextSec > 0) {
-      // Janela: atleta está a gapToNextSec de distância. Usar 2x o gap como range total
-      const rangeTotal = gapToNextSec * 2;
-      progressPercent = Math.min(100, Math.max(5, ((rangeTotal - gapToNextSec) / rangeTotal) * 100));
+      if (lastSimulationTime && lastSimulationTime < currentTime) {
+        // Régua real: quanto o simulado avançou desde a prova oficial
+        const totalRange = currentTime - nextReqSec;
+        const improved = currentTime - lastSimulationTime;
+        progressPercent = Math.min(100, Math.max(0, (improved / totalRange) * 100));
+      } else {
+        // Sem simulado ou simulado pior que prova = ponto de partida (0%)
+        progressPercent = 0;
+      }
     }
 
     // Previsão de meses usando evolutionProjection
