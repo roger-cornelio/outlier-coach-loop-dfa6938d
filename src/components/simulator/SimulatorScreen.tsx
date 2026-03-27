@@ -35,6 +35,32 @@ function secondsToTimeStr(sec: number): string {
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
+const MIN_VALID_SIM_SECONDS = 1800; // 30 minutos
+
+const INVALID_SIM_MESSAGES: Record<string, string[]> = {
+  IRON: [
+    'Esse tempo não é real. Menos de 30 minutos não vale como simulado. Faz direito ou não faz.',
+    'Resultado descartado. Simulado de verdade leva tempo de verdade.',
+    'Sem atalhos. Abaixo de 30 minutos não entra na conta.',
+  ],
+  PULSE: [
+    'Esse simulado ficou abaixo de 30 minutos e não será contabilizado na sua evolução. Para medir seu progresso real, faça o simulado completo.',
+    'Resultado não validado — precisa ter pelo menos 30 minutos para refletir uma prova real. Tenta de novo com calma.',
+    'Esse tempo não representa um HYROX de verdade. Quando fizer o simulado completo, sua régua vai avançar.',
+  ],
+  SPARK: [
+    'Eiii! 😅 Menos de 30 min não conta como simulado de verdade! Bora fazer um completo pra régua avançar! 🔥',
+    'Esse tempo foi rápido demais! 🚀 Pra valer na evolução, precisa ser um simulado completo (30min+). Bora!',
+    'Resultado não validado! ⚡ Faz o simulado inteiro que aí sim a régua vai voar!',
+  ],
+};
+
+function getInvalidSimMessage(coachStyle: string): string {
+  const style = coachStyle?.toUpperCase() || 'PULSE';
+  const messages = INVALID_SIM_MESSAGES[style] || INVALID_SIM_MESSAGES.PULSE;
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 interface SplitData {
   phase: number;
   label: string;
