@@ -1798,6 +1798,23 @@ export function DiagnosticRadarBlock({
       if (melhorias) setDiagMelhorias(melhorias);
     })();
   }, [profile?.user_id]);
+  // Fetch last simulation time
+  const [lastSimulationTime, setLastSimulationTime] = useState<number | null>(null);
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('simulations')
+        .select('total_time_seconds')
+        .eq('athlete_id', profile.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data?.length && (data[0] as any).total_time_seconds) {
+        setLastSimulationTime((data[0] as any).total_time_seconds);
+      }
+    })();
+  }, [profile?.user_id]);
+
   const { getOfficialCompetitions } = useBenchmarkResults();
 
   // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
@@ -2389,7 +2406,7 @@ export function DiagnosticRadarBlock({
               const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
                 <div className="pt-2 mt-1 border-t border-border/10">
-                  <div className="grid grid-cols-4 gap-1.5 text-center">
+                  <div className="grid grid-cols-5 gap-1 text-center">
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
                       <span className="font-bold text-[10px] text-foreground leading-tight">{displayName}</span>
@@ -2402,6 +2419,10 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Preparação</span>
                       <span className="font-bold text-[10px] text-foreground">{provaAlvo.daysUntil} dias</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Últ. Simulado</span>
+                      <span className="font-bold text-[10px] text-foreground">{lastSimulationTime ? formatOfficialTime(lastSimulationTime) : '—'}</span>
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
@@ -2579,7 +2600,7 @@ export function DiagnosticRadarBlock({
               const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
                 <div className="pt-2 mt-1 border-t border-border/10">
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-5 gap-2 text-center">
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
                       <span className="font-bold text-xs text-foreground leading-tight">{displayName}</span>
@@ -2592,6 +2613,10 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Preparação</span>
                       <span className="font-bold text-xs text-foreground">{provaAlvo.daysUntil} dias</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Últ. Simulado</span>
+                      <span className="font-bold text-xs text-foreground">{lastSimulationTime ? formatOfficialTime(lastSimulationTime) : '—'}</span>
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
