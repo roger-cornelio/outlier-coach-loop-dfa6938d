@@ -1798,6 +1798,23 @@ export function DiagnosticRadarBlock({
       if (melhorias) setDiagMelhorias(melhorias);
     })();
   }, [profile?.user_id]);
+  // Fetch last simulation time
+  const [lastSimulationTime, setLastSimulationTime] = useState<number | null>(null);
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('simulations')
+        .select('total_time_seconds')
+        .eq('athlete_id', profile.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data?.length && (data[0] as any).total_time_seconds) {
+        setLastSimulationTime((data[0] as any).total_time_seconds);
+      }
+    })();
+  }, [profile?.user_id]);
+
   const { getOfficialCompetitions } = useBenchmarkResults();
 
   // Derivar prova anterior e meta do próximo nível (sem chamadas de rede extras)
