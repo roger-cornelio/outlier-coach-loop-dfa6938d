@@ -2429,7 +2429,7 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
                       <span className="font-bold text-[10px] text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
-                    </div>
+                      <span className="text-[7px] text-muted-foreground/70">{usedSimulation ? '(base: simulado)' : '(base: prova oficial)'}</span>
                   </div>
                 </div>
               );
@@ -2625,7 +2625,7 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
                       <span className="font-bold text-xs text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
-                    </div>
+                      <span className="text-[8px] text-muted-foreground/70">{usedSimulation ? '(base: simulado)' : '(base: prova oficial)'}</span>
                   </div>
                 </div>
               );
