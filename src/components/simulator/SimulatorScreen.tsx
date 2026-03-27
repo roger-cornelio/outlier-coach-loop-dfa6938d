@@ -17,8 +17,8 @@ import { TargetSplitsTable } from '@/components/evolution/TargetSplitsTable';
 import { type Split } from '@/components/diagnostico/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { getCoachLine } from '@/config/coachCopy';
+
+
 
 const PHASE_TO_SPLIT_NAME: Record<number, string> = {
   0: 'Running 1', 1: 'Ski Erg', 2: 'Running 2', 3: 'Sled Push',
