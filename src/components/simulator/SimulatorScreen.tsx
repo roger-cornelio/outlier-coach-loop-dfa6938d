@@ -12,6 +12,7 @@ import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
 import { SimuladosComparisonView } from './SimuladosComparisonView';
+import { SimulationResultScreen } from './SimulationResultScreen';
 import { getHyroxIcon } from './HyroxStationIcons';
 import { TargetSplitsTable } from '@/components/evolution/TargetSplitsTable';
 import { type Split } from '@/components/diagnostico/types';
@@ -77,7 +78,7 @@ interface SimulationRecord {
   splits_data: SplitData[];
 }
 
-type ViewState = 'list' | 'setup' | 'active' | 'compare';
+type ViewState = 'list' | 'setup' | 'active' | 'compare' | 'result';
 
 export function SimulatorScreen() {
   const { user, profile } = useAuth();
