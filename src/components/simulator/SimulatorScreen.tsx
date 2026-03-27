@@ -276,6 +276,7 @@ export function SimulatorScreen() {
           {simulations.map((sim, i) => {
             const isOpen = expandedIds.has(sim.id);
             const splits = (sim.splits_data || []) as SplitData[];
+            const isInvalid = sim.total_time < MIN_VALID_SIM_SECONDS;
 
             return (
               <motion.div
