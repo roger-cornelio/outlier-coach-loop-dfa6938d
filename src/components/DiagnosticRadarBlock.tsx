@@ -2352,7 +2352,7 @@ export function DiagnosticRadarBlock({
               <div className="flex flex-col items-center text-center gap-0.5">
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-wider">
                   <Timer className="w-3 h-3" />
-                  <span>Seu Tempo</span>
+                  <span>Última Prova</span>
                 </div>
                 <span className="font-bold text-xs text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
               </div>
@@ -2445,7 +2445,7 @@ export function DiagnosticRadarBlock({
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Categoria</span>
-                      <span className="font-bold text-[10px] text-foreground">{provaAlvo.categoria}</span>
+                      <span className="font-bold text-[10px] text-foreground">{provaAlvo.categoria.replace(/_/g, ' ')}</span>
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Preparação</span>
@@ -2486,7 +2486,7 @@ export function DiagnosticRadarBlock({
                     </div>
                     {performanceSnapshot.currentTime && (
                       <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                        <span className="text-muted-foreground">Seu tempo</span>
+                        <span className="text-muted-foreground">Última Prova</span>
                         <span className="font-semibold">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
                       </div>
                     )}
@@ -2558,11 +2558,11 @@ export function DiagnosticRadarBlock({
             {/* Prova Alvo resumida — moved below the progress bar */}
 
             <div className="grid grid-cols-4 gap-2">
-              {/* Seu Tempo */}
+              {/* Última Prova */}
               <div className="flex flex-col items-center text-center gap-0.5">
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
                   <Timer className="w-3.5 h-3.5" />
-                  <span>Seu Tempo</span>
+                  <span>Última Prova</span>
                 </div>
                 <span className="font-bold text-sm text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
               </div>
@@ -2662,7 +2662,7 @@ export function DiagnosticRadarBlock({
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Categoria</span>
-                      <span className="font-bold text-xs text-foreground">{provaAlvo.categoria}</span>
+                      <span className="font-bold text-xs text-foreground">{provaAlvo.categoria.replace(/_/g, ' ')}</span>
                     </div>
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Preparação</span>
@@ -2703,7 +2703,7 @@ export function DiagnosticRadarBlock({
                     </div>
                     {performanceSnapshot.currentTime && (
                       <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                        <span className="text-muted-foreground">Seu tempo</span>
+                        <span className="text-muted-foreground">Última Prova</span>
                         <span className="font-semibold">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
                       </div>
                     )}
