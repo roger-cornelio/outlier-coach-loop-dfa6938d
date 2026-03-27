@@ -95,6 +95,9 @@ export function SimulatorScreen() {
   const [raceSplits, setRaceSplits] = useState<Split[]>([]);
   const [raceFinishTime, setRaceFinishTime] = useState<string | null>(null);
 
+  // Result screen data
+  const [finishedRaceData, setFinishedRaceData] = useState<{ total_time: number; roxzone_time: number } | null>(null);
+
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
