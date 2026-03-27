@@ -308,6 +308,15 @@ export function SimulatorScreen() {
                       </div>
                     </CollapsibleTrigger>
 
+                    {isInvalid && (
+                      <div className="mx-4 mt-2 mb-1 flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                        <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-destructive leading-relaxed">
+                          {getInvalidSimMessage(coachStyle)}
+                        </p>
+                      </div>
+                    )}
+
                     <CollapsibleContent>
                       <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                         {/* Stats */}
