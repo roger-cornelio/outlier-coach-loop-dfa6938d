@@ -1,61 +1,37 @@
 
 
-## Plano: Visor de Ação Unificado — Status + Projeção de Evolução
+## Plano: Adicionar título "Nível Competitivo" ao Visor de Ação
 
-### Problema atual
-O visor de 4 colunas (Última Prova, Status Atual, Próximo, GAP) é abstrato — mostra tempos de referência entre níveis mas não responde "quanto tempo falta pra eu subir?". A projeção de evolução já tem essa resposta (taxa/mês), mas fica separada num card abaixo.
+O visor unificado (SEU TEMPO / META / FALTAM / PREVISÃO) já aparece tanto no Dashboard quanto no Diagnóstico via `DiagnosticRadarBlock.tsx`. Falta apenas o título para diferenciá-lo da "Jornada Outlier".
 
-### Novo layout proposto
+### Mudança única em `src/components/DiagnosticRadarBlock.tsx`
 
-Substituir as 4 colunas + card de projeção separado por um **visor unificado de 2 linhas**:
+Adicionar um **header** no topo do visor (mobile e desktop) com ícone + título:
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│  SEU TEMPO         META PRO          FALTAM      PREVISÃO  │
-│  01:22:30          01:10:00          ↓ 12m30s    ~8 meses  │
-│                                                             │
-│  [████████████████████░░░░░░░░░░] ← barra de progresso     │
-│                                                             │
-│  "Com evolução de 90s/mês, você atinge PRO em ~8 meses"   │
-└────────────────────────────────────────────────────────────┘
+```
+🏅 NÍVEL COMPETITIVO
 ```
 
-### As 4 colunas novas
+Formato: ícone Trophy + texto "NÍVEL COMPETITIVO" em uppercase tracking-widest, estilo similar ao header da Jornada Outlier.
 
-1. **SEU TEMPO** — tempo da última prova oficial (já existe)
-2. **META [NÍVEL]** — tempo necessário para o próximo nível (ex: "Meta PRO: 01:10:00")
-3. **FALTAM** — gap real do atleta: `currentTime - nextReqSec` (não gap entre referências)
-4. **PREVISÃO** — meses estimados para atingir o próximo nível: `gapSeconds / ratePerMonth` (dados da projeção de evolução)
+**2 pontos de edição:**
 
-**Barra de progresso**: posição do atleta entre seu tempo atual e a meta do próximo nível.
+1. **Visor mobile** (~linha 2358): Inserir header antes do grid de 4 colunas
+2. **Visor desktop** (~linha 2484): Inserir header antes do grid de 4 colunas
 
-**Frase de ação**: "Com evolução de Xs/mês, você atinge [NÍVEL] em ~N meses" — ou "Meta atingida ✓" se já bateu.
-
-### Mudanças técnicas
-
-**Arquivo**: `src/components/DiagnosticRadarBlock.tsx`
-
-1. **`performanceSnapshot` (useMemo, ~linha 1887)**: 
-   - Calcular `gapToNext = currentTime - nextReqSec` (gap real do atleta, não entre referências)
-   - Usar `evolutionProjection.ratePerMonth` para calcular `monthsToNext = Math.ceil(gapToNext / ratePerMonth)`
-   - Gerar `actionPhrase` e `progressPercent`
-
-2. **Grid mobile (linhas 2319-2357)** e **Grid desktop (linhas 2466-2498)**:
-   - Trocar as 4 colunas antigas pelas 4 novas (Seu Tempo, Meta, Faltam, Previsão)
-   - Adicionar barra de progresso visual abaixo
-   - Adicionar frase de ação
-
-3. **Remover card de Projeção de Evolução separado** (linhas 2360-2387 mobile):
-   - O gráfico de 12 meses e os 3 mini-cards (Resultado Esperado, Ganho/mês, Ganho em 12m) são absorvidos pelo visor unificado
-   - Manter o gráfico de linha como um accordion/expandível dentro do visor, para quem quiser ver o detalhe
-
-### Regras
-- Se atleta já é ELITE → "Meta ELITE atingida ✓", sem previsão
-- Se gap < 60s → destaque verde "Quase lá!"
-- Se não há projeção (sem dados) → mostrar "—" na coluna Previsão
+Ambos recebem:
+```html
+<div className="flex items-center gap-2 pb-1.5 border-b border-border/15 mb-1">
+  <Trophy className="w-3.5 h-3.5 text-primary" />
+  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+    Nível Competitivo
+  </span>
+</div>
+```
 
 ### O que não muda
-- Lógica de `calculateEvolutionTimeframe` (fonte dos dados de taxa/mês)
-- Tabelas no banco de dados
-- Card de Projeção de Evolução standalone (`EvolutionProjectionCard.tsx`) — continua disponível para uso em outras telas (Diagnóstico Gratuito)
+- Lógica de cálculo (performanceSnapshot)
+- Layout das 4 colunas, barra, frase de ação
+- Nenhuma tabela no banco
+- PerformanceStatusCard (não está em uso no Dashboard atualmente)
 
