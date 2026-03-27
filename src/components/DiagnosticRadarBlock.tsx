@@ -2321,17 +2321,7 @@ export function DiagnosticRadarBlock({
               </span>
             </div>
 
-            {/* Prova Alvo resumida */}
-            {provaAlvo && (
-              <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
-                <Medal className="w-3 h-3 text-amber-500 shrink-0" />
-                <span className="font-semibold text-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">{provaAlvo.daysUntil} dias</span>
-              </div>
-            )}
+            {/* Prova Alvo resumida — moved below the progress bar */}
 
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               <div className="flex flex-col items-center text-center gap-0.5">
@@ -2379,13 +2369,46 @@ export function DiagnosticRadarBlock({
               </p>
             )}
 
-            {/* Performance projetada na prova */}
+            {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
               const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const fullName = deduplicateRaceName(provaAlvo.nome);
+              const yearMatch = fullName.match(/\b(20\d{2})\b/);
+              const year = yearMatch ? yearMatch[1] : '';
+              const withoutYear = fullName.replace(/\s*20\d{2}\s*/, ' ').trim();
+              const knownPrefixes = ['HYROX', 'BOPE GAMES', 'BOPE', 'IRON MAN', 'SPARTAN'];
+              let eventName = withoutYear;
+              let cityName = '';
+              for (const prefix of knownPrefixes) {
+                if (withoutYear.toUpperCase().startsWith(prefix)) {
+                  eventName = prefix;
+                  cityName = withoutYear.slice(prefix.length).trim();
+                  break;
+                }
+              }
+              const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
-                <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                  📊 Performance projetada na prova: <span className="font-bold text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
-                </p>
+                <div className="pt-2 mt-1 border-t border-border/10">
+                  <div className="grid grid-cols-4 gap-1.5 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
+                      <span className="font-bold text-[10px] text-foreground leading-tight">{displayName}</span>
+                      {cityName && <span className="text-[8px] text-muted-foreground">({cityName})</span>}
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Categoria</span>
+                      <span className="font-bold text-[10px] text-foreground">{provaAlvo.categoria}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Preparação</span>
+                      <span className="font-bold text-[10px] text-foreground">{provaAlvo.daysUntil} dias</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
+                      <span className="font-bold text-[10px] text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                    </div>
+                  </div>
+                </div>
               );
             })()}
 
@@ -2479,17 +2502,7 @@ export function DiagnosticRadarBlock({
               </span>
             </div>
 
-            {/* Prova Alvo resumida */}
-            {provaAlvo && (
-              <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
-                <Medal className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span className="font-semibold text-foreground">{deduplicateRaceName(provaAlvo.nome)}</span>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">{provaAlvo.categoria}</span>
-                <span className="text-border/40">·</span>
-                <span className="text-muted-foreground">{provaAlvo.daysUntil} dias</span>
-              </div>
-            )}
+            {/* Prova Alvo resumida — moved below the progress bar */}
 
             <div className="grid grid-cols-4 gap-2">
               {/* Seu Tempo */}
@@ -2546,13 +2559,46 @@ export function DiagnosticRadarBlock({
               </p>
             )}
 
-            {/* Performance projetada na prova */}
+            {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
               const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const fullName = deduplicateRaceName(provaAlvo.nome);
+              const yearMatch = fullName.match(/\b(20\d{2})\b/);
+              const year = yearMatch ? yearMatch[1] : '';
+              const withoutYear = fullName.replace(/\s*20\d{2}\s*/, ' ').trim();
+              const knownPrefixes = ['HYROX', 'BOPE GAMES', 'BOPE', 'IRON MAN', 'SPARTAN'];
+              let eventName = withoutYear;
+              let cityName = '';
+              for (const prefix of knownPrefixes) {
+                if (withoutYear.toUpperCase().startsWith(prefix)) {
+                  eventName = prefix;
+                  cityName = withoutYear.slice(prefix.length).trim();
+                  break;
+                }
+              }
+              const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
-                <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-                  📊 Performance projetada na prova: <span className="font-bold text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
-                </p>
+                <div className="pt-2 mt-1 border-t border-border/10">
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
+                      <span className="font-bold text-xs text-foreground leading-tight">{displayName}</span>
+                      {cityName && <span className="text-[9px] text-muted-foreground">({cityName})</span>}
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Categoria</span>
+                      <span className="font-bold text-xs text-foreground">{provaAlvo.categoria}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Preparação</span>
+                      <span className="font-bold text-xs text-foreground">{provaAlvo.daysUntil} dias</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
+                      <span className="font-bold text-xs text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                    </div>
+                  </div>
+                </div>
               );
             })()}
 
