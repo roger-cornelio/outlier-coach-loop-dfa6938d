@@ -1763,7 +1763,7 @@ export function DiagnosticRadarBlock({
 }: DiagnosticRadarBlockProps) {
   const { profile } = useAuth();
   const { status, outlierScore, validatingCompetition } = useAthleteStatus();
-  const { athleteConfig } = useOutlierStore();
+  const { athleteConfig, externalResultsRefreshKey } = useOutlierStore();
   const journeyData = useJourneyProgress();
   const isMobile = useIsMobile();
 
@@ -1814,7 +1814,7 @@ export function DiagnosticRadarBlock({
         setLastSimulationTime((data[0] as any).total_time_seconds);
       }
     })();
-  }, [profile?.user_id]);
+  }, [profile?.user_id, externalResultsRefreshKey]);
 
   const { getOfficialCompetitions } = useBenchmarkResults();
 
