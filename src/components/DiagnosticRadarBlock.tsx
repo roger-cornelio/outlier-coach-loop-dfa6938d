@@ -2392,8 +2392,8 @@ export function DiagnosticRadarBlock({
               <div className="flex items-center justify-between gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
-                      💡 Como avanço na régua?
+                    <button className="w-4 h-4 rounded-full border border-amber-500/50 text-amber-500/70 hover:text-amber-500 hover:border-amber-500 transition-colors cursor-pointer bg-transparent flex items-center justify-center text-[8px] font-bold p-0">
+                      i
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 text-xs p-3">
@@ -2609,8 +2609,8 @@ export function DiagnosticRadarBlock({
               <div className="flex items-center justify-between gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-[10px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
-                      💡 Como avanço na régua?
+                    <button className="w-4 h-4 rounded-full border border-amber-500/50 text-amber-500/70 hover:text-amber-500 hover:border-amber-500 transition-colors cursor-pointer bg-transparent flex items-center justify-center text-[9px] font-bold p-0">
+                      i
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 text-xs p-3">
