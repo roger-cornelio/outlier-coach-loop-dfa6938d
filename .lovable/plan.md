@@ -1,50 +1,38 @@
 
 
-## Plano: Prova Alvo dentro do painel "Nível Competitivo"
+## Plano: Frase do "Fantasma" como botão clicável
 
-### O que muda
+### Contexto
+A frase "👻 Se a prova fosse hoje, o 3º colocado..." foi proposta nos mockups anteriores mas nunca implementada. O usuário quer que essa informação apareça como um **botão clicável** (não texto estático) abaixo da régua do "Nível Competitivo".
 
-Mover a informação da **Prova Alvo** para dentro do quadro "Nível Competitivo", com layout mais resumido e incluindo dados de projeção de evolução.
+### O que será feito
 
-### Novo layout do painel
+**Arquivo: `src/components/DiagnosticRadarBlock.tsx`**
+
+1. **Criar a frase do fantasma** usando dados já disponíveis:
+   - `topPercentData.topPercent` → posição relativa (ex: "Top 3%")
+   - `performanceSnapshot.currentTime` → tempo atual do atleta
+   - Frase: `"👻 Se a prova fosse hoje, você estaria no Top {X}% da sua categoria"`
+
+2. **Renderizar como botão `variant="ghost"`** logo após a linha "Performance projetada na prova", tanto no mobile (~linha 2390) quanto no desktop (~linha 2512):
+   - Estilo discreto, texto pequeno, clicável
+   - Ao clicar, abre um **modal/tooltip** com detalhes:
+     - Posição Top% atual
+     - Tempo de referência do nível acima
+     - Quanto precisa melhorar para subir de posição
+
+3. **Sem fantasma se não houver dados** — botão só aparece se `topPercentData.topPercent` existir e `provaAlvo` estiver cadastrada
+
+### Layout
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│  🏆 NÍVEL COMPETITIVO                                        │
-│                                                              │
-│  🏅 BOPE GAMES BH · HYROX PRO · 194 dias                    │
-│                                                              │
-│  SEU TEMPO    META PRO     FALTAM      PREVISÃO              │
-│  1h19m57s     1h13m36s     ↓ 6m21s     ~10 meses            │
-│                                                              │
-│  [████████████████████░░░░░░░]                               │
-│  🎯 Evolução de 39s/mês → PRO em ~10 meses                  │
-│  📊 Performance projetada na prova: 1h15m30s                 │
-└──────────────────────────────────────────────────────────────┘
+  🎯 Com evolução de 39s/mês, você atinge PRO em ~10 meses
+  📊 Performance projetada na prova: 1h15m38s
+  [👻 Se a prova fosse hoje, você estaria no Top 3%]  ← botão clicável
 ```
 
-### Mudanças em `DiagnosticRadarBlock.tsx`
-
-**1. Mover Prova Alvo para dentro do quadro (mobile + desktop)**
-- Remover o bloco separado da Prova Alvo do `MobileHeroBlock` (~linhas 987-1028)
-- Remover o bloco separado "Prova Alvo inline — desktop" (~linhas 2442-2484)
-- Adicionar uma linha resumida logo após o header "NÍVEL COMPETITIVO":
-  - Ícone Medal + Nome da prova + Categoria + Dias restantes
-  - Sem fantasma, sem %, sem partner — manter limpo
-
-**2. Adicionar "Previsão de Performance" usando projeção de evolução**
-- Se houver `provaAlvo` com `daysUntil` e `performanceSnapshot.currentTime`:
-  - Usar `calculateProvaAlvoTarget(currentTime, daysUntil)` (já existe em `evolutionTimeframe.ts`)
-  - Mostrar o tempo projetado para o dia da prova como uma linha extra após a frase de ação
-  - Formato: `📊 Performance projetada: 1h15m30s`
-- Se não houver prova alvo, o painel continua mostrando apenas as 4 colunas normalmente
-
-**3. Renomear "Preparação" (coluna Previsão)**
-- Manter como "Previsão" — é o tempo estimado para atingir o próximo nível competitivo
-
 ### O que não muda
-- Lógica do `performanceSnapshot` (cálculos de gap, previsão)
-- Lógica de `calculateEvolutionTimeframe` e `calculateProvaAlvoTarget`
-- Tabelas no banco de dados
-- Jornada Outlier (bloco separado, continua independente)
+- Lógica de cálculo (performanceSnapshot, topPercent)
+- Grid de 4 colunas, barra de progresso
+- Tabelas no banco
 
