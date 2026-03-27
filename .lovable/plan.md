@@ -1,37 +1,50 @@
 
 
-## Plano: Adicionar título "Nível Competitivo" ao Visor de Ação
+## Plano: Prova Alvo dentro do painel "Nível Competitivo"
 
-O visor unificado (SEU TEMPO / META / FALTAM / PREVISÃO) já aparece tanto no Dashboard quanto no Diagnóstico via `DiagnosticRadarBlock.tsx`. Falta apenas o título para diferenciá-lo da "Jornada Outlier".
+### O que muda
 
-### Mudança única em `src/components/DiagnosticRadarBlock.tsx`
+Mover a informação da **Prova Alvo** para dentro do quadro "Nível Competitivo", com layout mais resumido e incluindo dados de projeção de evolução.
 
-Adicionar um **header** no topo do visor (mobile e desktop) com ícone + título:
+### Novo layout do painel
 
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  🏆 NÍVEL COMPETITIVO                                        │
+│                                                              │
+│  🏅 BOPE GAMES BH · HYROX PRO · 194 dias                    │
+│                                                              │
+│  SEU TEMPO    META PRO     FALTAM      PREVISÃO              │
+│  1h19m57s     1h13m36s     ↓ 6m21s     ~10 meses            │
+│                                                              │
+│  [████████████████████░░░░░░░]                               │
+│  🎯 Evolução de 39s/mês → PRO em ~10 meses                  │
+│  📊 Performance projetada na prova: 1h15m30s                 │
+└──────────────────────────────────────────────────────────────┘
 ```
-🏅 NÍVEL COMPETITIVO
-```
 
-Formato: ícone Trophy + texto "NÍVEL COMPETITIVO" em uppercase tracking-widest, estilo similar ao header da Jornada Outlier.
+### Mudanças em `DiagnosticRadarBlock.tsx`
 
-**2 pontos de edição:**
+**1. Mover Prova Alvo para dentro do quadro (mobile + desktop)**
+- Remover o bloco separado da Prova Alvo do `MobileHeroBlock` (~linhas 987-1028)
+- Remover o bloco separado "Prova Alvo inline — desktop" (~linhas 2442-2484)
+- Adicionar uma linha resumida logo após o header "NÍVEL COMPETITIVO":
+  - Ícone Medal + Nome da prova + Categoria + Dias restantes
+  - Sem fantasma, sem %, sem partner — manter limpo
 
-1. **Visor mobile** (~linha 2358): Inserir header antes do grid de 4 colunas
-2. **Visor desktop** (~linha 2484): Inserir header antes do grid de 4 colunas
+**2. Adicionar "Previsão de Performance" usando projeção de evolução**
+- Se houver `provaAlvo` com `daysUntil` e `performanceSnapshot.currentTime`:
+  - Usar `calculateProvaAlvoTarget(currentTime, daysUntil)` (já existe em `evolutionTimeframe.ts`)
+  - Mostrar o tempo projetado para o dia da prova como uma linha extra após a frase de ação
+  - Formato: `📊 Performance projetada: 1h15m30s`
+- Se não houver prova alvo, o painel continua mostrando apenas as 4 colunas normalmente
 
-Ambos recebem:
-```html
-<div className="flex items-center gap-2 pb-1.5 border-b border-border/15 mb-1">
-  <Trophy className="w-3.5 h-3.5 text-primary" />
-  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-    Nível Competitivo
-  </span>
-</div>
-```
+**3. Renomear "Preparação" (coluna Previsão)**
+- Manter como "Previsão" — é o tempo estimado para atingir o próximo nível competitivo
 
 ### O que não muda
-- Lógica de cálculo (performanceSnapshot)
-- Layout das 4 colunas, barra, frase de ação
-- Nenhuma tabela no banco
-- PerformanceStatusCard (não está em uso no Dashboard atualmente)
+- Lógica do `performanceSnapshot` (cálculos de gap, previsão)
+- Lógica de `calculateEvolutionTimeframe` e `calculateProvaAlvoTarget`
+- Tabelas no banco de dados
+- Jornada Outlier (bloco separado, continua independente)
 
