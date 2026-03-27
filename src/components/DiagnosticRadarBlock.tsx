@@ -2389,7 +2389,7 @@ export function DiagnosticRadarBlock({
             )}
 
             {!performanceSnapshot.isGoalReached && (
-              <div className="flex justify-center">
+              <div className="flex justify-start">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
@@ -2602,7 +2602,7 @@ export function DiagnosticRadarBlock({
             )}
 
             {!performanceSnapshot.isGoalReached && (
-              <div className="flex justify-center">
+              <div className="flex justify-start">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="text-[10px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
