@@ -1,33 +1,25 @@
 
 
-## Plano: Atualizar "Últ. Simulado" e régua ao registrar novo simulado
+## Plano: Corrigir busca do último simulado — coluna errada + refresh ausente
 
-### Problema
-O `useEffect` que busca `lastSimulationTime` na tabela `simulations` (linha ~1804 do `DiagnosticRadarBlock.tsx`) só executa quando `profile?.user_id` muda — ou seja, apenas no mount. Quando o atleta registra um novo simulado, o componente não re-busca o dado, e a régua + coluna "Últ. Simulado" ficam desatualizados.
+### Problema 1: Coluna errada
+O `useEffect` em `DiagnosticRadarBlock.tsx` (linha ~1809) busca `total_time_seconds` da tabela `simulations`, mas essa coluna **não existe**. A coluna real é `total_time`. Por isso `lastSimulationTime` nunca é preenchido, e a régua + "Últ. Simulado" + "Result. Esperado" ficam sem dados.
 
-### Solução
-Adicionar `externalResultsRefreshKey` do store como dependência do `useEffect` que busca o último simulado (linha ~1817). Assim, quando o simulado é registrado e o store dispara `triggerExternalResultsRefresh()`, o componente re-executa a query e atualiza:
+### Problema 2: SimulatorScreen não dispara refresh
+Em `SimulatorScreen.tsx` (linha ~158), após salvar um simulado (`handleFinishRace`), o componente chama `fetchSimulations()` mas **não** chama `triggerExternalResultsRefresh()`. O painel "Nível Competitivo" só re-busca quando esse refresh key muda.
 
-1. O valor exibido em "Últ. Simulado"
-2. O progresso da régua (que depende de `lastSimulationTime`)
-3. O "Resultado Esperado" (que prioriza simulado como base)
+### Correções
 
-### Alteração
+**Arquivo 1: `src/components/DiagnosticRadarBlock.tsx` (~linha 1809)**
+- Trocar `.select('total_time_seconds')` por `.select('total_time')`
+- Trocar `(data[0] as any).total_time_seconds` por `(data[0] as any).total_time`
 
-**Arquivo: `src/components/DiagnosticRadarBlock.tsx`**
-
-- Importar `externalResultsRefreshKey` do `useOutlierStore` (provavelmente já importado)
-- Linha ~1817: adicionar `externalResultsRefreshKey` ao array de dependências do `useEffect`
-
-```typescript
-// De:
-}, [profile?.user_id]);
-
-// Para:
-}, [profile?.user_id, externalResultsRefreshKey]);
-```
+**Arquivo 2: `src/components/simulator/SimulatorScreen.tsx` (~linha 156)**
+- Importar `triggerExternalResultsRefresh` do `useOutlierStore`
+- Chamar `triggerExternalResultsRefresh()` após salvar o simulado em `handleFinishRace`
+- Também chamar após deletar um simulado (~linha 122)
 
 ### O que não muda
-- Lógica de cálculo da régua, projeção, prova alvo
+- Lógica de cálculo da régua, projeção
 - Nenhuma tabela no banco
 
