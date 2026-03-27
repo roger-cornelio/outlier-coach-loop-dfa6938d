@@ -2388,7 +2388,9 @@ export function DiagnosticRadarBlock({
 
             {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
-              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const baseTime = lastSimulationTime ?? performanceSnapshot.currentTime;
+              const projected = calculateProvaAlvoTarget(baseTime, provaAlvo.daysUntil);
+              const usedSimulation = !!lastSimulationTime;
               const fullName = deduplicateRaceName(provaAlvo.nome);
               const yearMatch = fullName.match(/\b(20\d{2})\b/);
               const year = yearMatch ? yearMatch[1] : '';
@@ -2582,7 +2584,9 @@ export function DiagnosticRadarBlock({
 
             {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
-              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const baseTime = lastSimulationTime ?? performanceSnapshot.currentTime;
+              const projected = calculateProvaAlvoTarget(baseTime, provaAlvo.daysUntil);
+              const usedSimulation = !!lastSimulationTime;
               const fullName = deduplicateRaceName(provaAlvo.nome);
               const yearMatch = fullName.match(/\b(20\d{2})\b/);
               const year = yearMatch ? yearMatch[1] : '';
