@@ -2388,6 +2388,51 @@ export function DiagnosticRadarBlock({
                 </p>
               );
             })()}
+
+            {/* Ghost button — Top% position */}
+            {topPercentData.topPercent && topPercentData.shouldShow && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="w-full h-auto py-1 px-2 text-[10px] text-muted-foreground hover:text-foreground">
+                    👻 Se a prova fosse hoje, você estaria no <span className="font-bold text-primary mx-0.5">{topPercentData.topText}</span> da sua categoria
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-sm flex items-center gap-2">
+                      👻 Sua Posição Competitiva
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                      <span className="text-muted-foreground">Posição atual</span>
+                      <span className="font-bold text-primary text-sm">{topPercentData.topText}</span>
+                    </div>
+                    {performanceSnapshot.currentTime && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Seu tempo</span>
+                        <span className="font-semibold">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
+                      </div>
+                    )}
+                    {topPercentData.metaProSeconds && performanceSnapshot.currentTime && performanceSnapshot.currentTime > topPercentData.metaProSeconds && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Meta PRO</span>
+                        <span className="font-semibold">{formatOfficialTime(topPercentData.metaProSeconds)} <span className="text-muted-foreground">(↓ {formatDeltaTime(performanceSnapshot.currentTime - topPercentData.metaProSeconds)})</span></span>
+                      </div>
+                    )}
+                    {topPercentData.metaEliteSeconds && performanceSnapshot.currentTime && performanceSnapshot.currentTime > topPercentData.metaEliteSeconds && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Meta ELITE</span>
+                        <span className="font-semibold">{formatOfficialTime(topPercentData.metaEliteSeconds)} <span className="text-muted-foreground">(↓ {formatDeltaTime(performanceSnapshot.currentTime - topPercentData.metaEliteSeconds)})</span></span>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground text-center pt-1">
+                      Baseado nos tempos de referência da sua faixa etária e categoria
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
 
@@ -2510,6 +2555,51 @@ export function DiagnosticRadarBlock({
                 </p>
               );
             })()}
+
+            {/* Ghost button — Top% position */}
+            {topPercentData.topPercent && topPercentData.shouldShow && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="w-full h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-foreground">
+                    👻 Se a prova fosse hoje, você estaria no <span className="font-bold text-primary mx-0.5">{topPercentData.topText}</span> da sua categoria
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-sm flex items-center gap-2">
+                      👻 Sua Posição Competitiva
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                      <span className="text-muted-foreground">Posição atual</span>
+                      <span className="font-bold text-primary text-sm">{topPercentData.topText}</span>
+                    </div>
+                    {performanceSnapshot.currentTime && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Seu tempo</span>
+                        <span className="font-semibold">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
+                      </div>
+                    )}
+                    {topPercentData.metaProSeconds && performanceSnapshot.currentTime && performanceSnapshot.currentTime > topPercentData.metaProSeconds && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Meta PRO</span>
+                        <span className="font-semibold">{formatOfficialTime(topPercentData.metaProSeconds)} <span className="text-muted-foreground">(↓ {formatDeltaTime(performanceSnapshot.currentTime - topPercentData.metaProSeconds)})</span></span>
+                      </div>
+                    )}
+                    {topPercentData.metaEliteSeconds && performanceSnapshot.currentTime && performanceSnapshot.currentTime > topPercentData.metaEliteSeconds && (
+                      <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                        <span className="text-muted-foreground">Meta ELITE</span>
+                        <span className="font-semibold">{formatOfficialTime(topPercentData.metaEliteSeconds)} <span className="text-muted-foreground">(↓ {formatDeltaTime(performanceSnapshot.currentTime - topPercentData.metaEliteSeconds)})</span></span>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground text-center pt-1">
+                      Baseado nos tempos de referência da sua faixa etária e categoria
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
       </motion.div>
