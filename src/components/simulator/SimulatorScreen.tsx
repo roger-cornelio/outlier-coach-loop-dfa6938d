@@ -54,7 +54,8 @@ interface SimulationRecord {
 type ViewState = 'list' | 'setup' | 'active' | 'compare';
 
 export function SimulatorScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const coachStyle = profile?.coach_style || 'PULSE';
   const { triggerExternalResultsRefresh } = useOutlierStore();
   const [simulations, setSimulations] = useState<SimulationRecord[]>([]);
   const [loading, setLoading] = useState(true);
