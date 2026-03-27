@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useOutlierStore } from '@/store/outlierStore';
 import { formatTime, HYROX_PHASES } from './simulatorConstants';
 import { SimulatorSetupModal } from './SimulatorSetupModal';
 import { ActiveSimulator } from './ActiveSimulator';
@@ -52,6 +53,7 @@ type ViewState = 'list' | 'setup' | 'active' | 'compare';
 
 export function SimulatorScreen() {
   const { user } = useAuth();
+  const { triggerExternalResultsRefresh } = useOutlierStore();
   const [simulations, setSimulations] = useState<SimulationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<ViewState>('list');
@@ -120,6 +122,7 @@ export function SimulatorScreen() {
     } else {
       toast.success('Simulado apagado');
       setSimulations(prev => prev.filter(s => s.id !== id));
+      triggerExternalResultsRefresh();
     }
     setDeletingId(null);
   };
@@ -154,6 +157,7 @@ export function SimulatorScreen() {
     }
 
     toast.success('Simulado finalizado!');
+    triggerExternalResultsRefresh();
     setViewState('list');
     await fetchSimulations();
 
