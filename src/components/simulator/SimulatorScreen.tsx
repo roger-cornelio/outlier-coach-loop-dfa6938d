@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft, Trash2 } from 'lucide-react';
+import { Play, Trophy, Calendar, Clock, ChevronDown, Loader2, ArrowRightLeft, Trash2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +18,8 @@ import { type Split } from '@/components/diagnostico/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+
+
 const PHASE_TO_SPLIT_NAME: Record<number, string> = {
   0: 'Running 1', 1: 'Ski Erg', 2: 'Running 2', 3: 'Sled Push',
   4: 'Running 3', 5: 'Sled Pull', 6: 'Running 4', 7: 'Burpee Broad Jump',
@@ -31,6 +33,32 @@ function secondsToTimeStr(sec: number): string {
   const s = Math.floor(sec % 60);
   if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+const MIN_VALID_SIM_SECONDS = 1800; // 30 minutos
+
+const INVALID_SIM_MESSAGES: Record<string, string[]> = {
+  IRON: [
+    'Esse tempo não é real. Menos de 30 minutos não vale como simulado. Faz direito ou não faz.',
+    'Resultado descartado. Simulado de verdade leva tempo de verdade.',
+    'Sem atalhos. Abaixo de 30 minutos não entra na conta.',
+  ],
+  PULSE: [
+    'Esse simulado ficou abaixo de 30 minutos e não será contabilizado na sua evolução. Para medir seu progresso real, faça o simulado completo.',
+    'Resultado não validado — precisa ter pelo menos 30 minutos para refletir uma prova real. Tenta de novo com calma.',
+    'Esse tempo não representa um HYROX de verdade. Quando fizer o simulado completo, sua régua vai avançar.',
+  ],
+  SPARK: [
+    'Eiii! 😅 Menos de 30 min não conta como simulado de verdade! Bora fazer um completo pra régua avançar! 🔥',
+    'Esse tempo foi rápido demais! 🚀 Pra valer na evolução, precisa ser um simulado completo (30min+). Bora!',
+    'Resultado não validado! ⚡ Faz o simulado inteiro que aí sim a régua vai voar!',
+  ],
+};
+
+function getInvalidSimMessage(coachStyle: string): string {
+  const style = coachStyle?.toUpperCase() || 'PULSE';
+  const messages = INVALID_SIM_MESSAGES[style] || INVALID_SIM_MESSAGES.PULSE;
+  return messages[Math.floor(Math.random() * messages.length)];
 }
 
 interface SplitData {
@@ -52,7 +80,8 @@ interface SimulationRecord {
 type ViewState = 'list' | 'setup' | 'active' | 'compare';
 
 export function SimulatorScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const coachStyle = profile?.coach_style || 'PULSE';
   const { triggerExternalResultsRefresh } = useOutlierStore();
   const [simulations, setSimulations] = useState<SimulationRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -247,6 +276,7 @@ export function SimulatorScreen() {
           {simulations.map((sim, i) => {
             const isOpen = expandedIds.has(sim.id);
             const splits = (sim.splits_data || []) as SplitData[];
+            const isInvalid = sim.total_time < MIN_VALID_SIM_SECONDS;
 
             return (
               <motion.div
@@ -277,6 +307,15 @@ export function SimulatorScreen() {
                         </div>
                       </div>
                     </CollapsibleTrigger>
+
+                    {isInvalid && (
+                      <div className="mx-4 mt-2 mb-1 flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                        <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-destructive leading-relaxed">
+                          {getInvalidSimMessage(coachStyle)}
+                        </p>
+                      </div>
+                    )}
 
                     <CollapsibleContent>
                       <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
