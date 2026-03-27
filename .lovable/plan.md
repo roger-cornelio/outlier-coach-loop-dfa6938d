@@ -1,61 +1,23 @@
 
 
-## Plano: Régua de Evolução Real — Prova Oficial → Simulados → Meta
+## Plano: Dica sobre simulados como botão em qualquer nível da régua
 
-### Lógica atual (problema)
-A régua usa `gapToNextSec * 2` como range, resultando em **50% fixo** sempre. Não reflete evolução real.
+### O que muda
 
-### Nova lógica
+A frase "Realize um simulado para medir o quão próximo você está da meta" deixa de ser texto visível apenas em 0% e passa a ser um **botão discreto sempre visível** abaixo da régua, independente do percentual de progresso.
 
-**Ponto de partida (0%)**: tempo da última prova oficial (`currentTime` = `validatingCompetition.time_in_seconds`)
+### Comportamento
 
-**Ponto de chegada (100%)**: meta do próximo nível (`nextReqSec` = meta PRO ou ELITE)
+- Aparece como um **botão pequeno** (ex: "💡 Como avanço na régua?") abaixo da barra de progresso
+- Ao clicar, exibe um tooltip ou popover com a explicação: "A régua avança conforme você realiza simulados. Cada simulado mede o quão próximo você está da meta."
+- Visível em **qualquer nível** da régua (0%, 46%, 80%...)
+- **Não aparece** apenas se a meta já foi atingida (`isGoalReached`)
 
-**Posição atual**: último simulado (`lastSimulationTime`) se existir, senão fica em 0%
+### Arquivo
 
-```text
-Prova Oficial (0%)  ────────────── Últ. Simulado (X%) ──────── Meta PRO (100%)
-1h19m57s                           1h17m00s                     1h13m36s
-```
-
-**Fórmula:**
-```
-range = officialTime - nextReqSec           // ex: 4797 - 4416 = 381s
-improved = officialTime - lastSimulationTime // ex: 4797 - 4620 = 177s
-progressPercent = (improved / range) * 100   // ex: 46%
-```
-
-### Mudança em `DiagnosticRadarBlock.tsx`
-
-**Arquivo:** `src/components/DiagnosticRadarBlock.tsx` (~linhas 1907-1916)
-
-Substituir o cálculo do `progressPercent`:
-
-```typescript
-let progressPercent = 0;
-if (isGoalReached) {
-  progressPercent = 100;
-} else if (currentTime && nextReqSec && gapToNextSec > 0) {
-  if (lastSimulationTime && lastSimulationTime < currentTime) {
-    // Régua real: quanto o simulado avançou desde a prova oficial
-    const totalRange = currentTime - nextReqSec;
-    const improved = currentTime - lastSimulationTime;
-    progressPercent = Math.min(100, Math.max(0, (improved / totalRange) * 100));
-  } else {
-    // Sem simulado = ponto de partida (0%)
-    progressPercent = 0;
-  }
-}
-```
-
-### Regras
-- Sem simulado → barra em **0%** (ponto de partida é a prova oficial)
-- Simulado pior que prova oficial → **0%** (não regride)
-- Simulado melhor que meta → **100%**
-- Simulado entre prova e meta → **proporcional** ao avanço
+`src/components/DiagnosticRadarBlock.tsx` — mobile e desktop, entre a barra de progresso e a frase de ação. Usar `Popover` ou `Tooltip` para o conteúdo expandido.
 
 ### O que não muda
-- Cálculo de gap, previsão em meses, frase de ação
-- Coluna "Últ. Simulado" e "Result. Esperado"
+- Cálculos, barra, frase de ação
 - Nenhuma tabela no banco
 
