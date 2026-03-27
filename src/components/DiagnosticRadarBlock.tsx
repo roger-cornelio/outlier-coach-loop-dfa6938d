@@ -2389,7 +2389,7 @@ export function DiagnosticRadarBlock({
             )}
 
             {!performanceSnapshot.isGoalReached && (
-              <div className="flex justify-start">
+              <div className="flex items-center justify-between gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
@@ -2402,12 +2402,16 @@ export function DiagnosticRadarBlock({
                     </p>
                   </PopoverContent>
                 </Popover>
+                {performanceSnapshot.actionPhrase && (
+                  <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                    {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+                  </p>
+                )}
               </div>
             )}
-
-            {performanceSnapshot.actionPhrase && (
+            {performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
               <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+                🏆 {performanceSnapshot.actionPhrase}
               </p>
             )}
 
@@ -2602,7 +2606,7 @@ export function DiagnosticRadarBlock({
             )}
 
             {!performanceSnapshot.isGoalReached && (
-              <div className="flex justify-start">
+              <div className="flex items-center justify-between gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="text-[10px] text-amber-500/70 hover:text-amber-500 transition-colors cursor-pointer bg-transparent border-none p-0">
@@ -2615,13 +2619,16 @@ export function DiagnosticRadarBlock({
                     </p>
                   </PopoverContent>
                 </Popover>
+                {performanceSnapshot.actionPhrase && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+                  </p>
+                )}
               </div>
             )}
-
-            {/* Frase de ação */}
-            {performanceSnapshot.actionPhrase && (
+            {performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
               <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-                {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+                🏆 {performanceSnapshot.actionPhrase}
               </p>
             )}
 
