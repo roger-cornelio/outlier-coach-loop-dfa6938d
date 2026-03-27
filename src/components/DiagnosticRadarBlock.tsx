@@ -2388,7 +2388,9 @@ export function DiagnosticRadarBlock({
 
             {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
-              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const baseTime = lastSimulationTime ?? performanceSnapshot.currentTime;
+              const projected = calculateProvaAlvoTarget(baseTime, provaAlvo.daysUntil);
+              const usedSimulation = !!lastSimulationTime;
               const fullName = deduplicateRaceName(provaAlvo.nome);
               const yearMatch = fullName.match(/\b(20\d{2})\b/);
               const year = yearMatch ? yearMatch[1] : '';
@@ -2427,6 +2429,7 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
                       <span className="font-bold text-[10px] text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                      <span className="text-[7px] text-muted-foreground/70">{usedSimulation ? '(base: simulado)' : '(base: prova oficial)'}</span>
                     </div>
                   </div>
                 </div>
@@ -2582,7 +2585,9 @@ export function DiagnosticRadarBlock({
 
             {/* Prova Alvo grid abaixo da régua */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
-              const projected = calculateProvaAlvoTarget(performanceSnapshot.currentTime, provaAlvo.daysUntil);
+              const baseTime = lastSimulationTime ?? performanceSnapshot.currentTime;
+              const projected = calculateProvaAlvoTarget(baseTime, provaAlvo.daysUntil);
+              const usedSimulation = !!lastSimulationTime;
               const fullName = deduplicateRaceName(provaAlvo.nome);
               const yearMatch = fullName.match(/\b(20\d{2})\b/);
               const year = yearMatch ? yearMatch[1] : '';
@@ -2621,6 +2626,7 @@ export function DiagnosticRadarBlock({
                     <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
                       <span className="font-bold text-xs text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                      <span className="text-[8px] text-muted-foreground/70">{usedSimulation ? '(base: simulado)' : '(base: prova oficial)'}</span>
                     </div>
                   </div>
                 </div>
