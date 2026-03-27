@@ -1889,53 +1889,91 @@ export function DiagnosticRadarBlock({
     const proReqSec = topPercentData.metaProSeconds ?? null;
     const eliteReqSec = topPercentData.metaEliteSeconds ?? null;
 
-    // Determine current and next status labels + requirement values
-    let currentStatusLabel = 'OPEN';
+    // Determine next level target
     let nextStatusLabel = 'PRO';
-    let currentReqSec: number | null = proReqSec;
-    let nextReqSec: number | null = eliteReqSec;
+    let nextReqSec: number | null = proReqSec;
+    const isOpen = status === 'open';
+    const isPro = status === 'pro';
+    const isElite = status === 'elite';
 
-    if (status === 'pro') {
-      currentStatusLabel = 'PRO';
+    if (isPro) {
       nextStatusLabel = 'ELITE';
-      currentReqSec = proReqSec;
       nextReqSec = eliteReqSec;
-    } else if (status === 'elite') {
-      currentStatusLabel = 'ELITE';
+    } else if (isElite) {
       nextStatusLabel = 'ELITE';
-      currentReqSec = eliteReqSec;
       nextReqSec = eliteReqSec;
     }
 
-    // Format requirement values
-    const currentReqValue = currentReqSec ? formatOfficialTime(currentReqSec) : '—';
-    const nextReqValue = nextReqSec ? formatOfficialTime(nextReqSec) : '—';
-
-    // GAP = difference between current requirement and next requirement
+    // Gap real do atleta para o próximo nível
+    let gapToNextSec = 0;
     let gapValue = '—';
     let gapClass = 'text-muted-foreground';
-    if (status === 'elite') {
+    let isGoalReached = false;
+
+    if (isElite) {
       gapValue = 'Meta atingida';
       gapClass = 'text-emerald-400';
-    } else if (currentReqSec && nextReqSec) {
-      const gapSec = currentReqSec - nextReqSec;
-      if (gapSec <= 0) {
+      isGoalReached = true;
+    } else if (currentTime && nextReqSec) {
+      gapToNextSec = currentTime - nextReqSec;
+      if (gapToNextSec <= 0) {
         gapValue = 'Meta atingida';
         gapClass = 'text-emerald-400';
+        isGoalReached = true;
+      } else if (gapToNextSec < 60) {
+        gapValue = `↓ ${Math.round(gapToNextSec)}s`;
+        gapClass = 'text-emerald-400 animate-pulse';
       } else {
-        gapValue = `↓ ${formatDeltaTime(gapSec)}`;
+        gapValue = `↓ ${formatDeltaTime(gapToNextSec)}`;
         gapClass = 'text-primary';
       }
     }
 
+    // Progress bar: % do caminho percorrido em direção à meta
+    // Usar uma janela razoável: de currentTime+30min até nextReqSec
+    let progressPercent = 0;
+    if (isGoalReached) {
+      progressPercent = 100;
+    } else if (currentTime && nextReqSec && gapToNextSec > 0) {
+      // Janela: atleta está a gapToNextSec de distância. Usar 2x o gap como range total
+      const rangeTotal = gapToNextSec * 2;
+      progressPercent = Math.min(100, Math.max(5, ((rangeTotal - gapToNextSec) / rangeTotal) * 100));
+    }
+
+    // Previsão de meses usando evolutionProjection
+    let monthsToNext: number | null = null;
+    let ratePerMonth: number | null = null;
+    if (!isGoalReached && gapToNextSec > 0 && currentTime) {
+      const evoData = calculateEvolutionTimeframe(currentTime, gapToNextSec);
+      monthsToNext = evoData.months;
+      ratePerMonth = evoData.ratePerMonth;
+    }
+
+    // Frase de ação
+    let actionPhrase = '';
+    if (isGoalReached) {
+      actionPhrase = `Você já atingiu o nível ${nextStatusLabel}! 🏆`;
+    } else if (monthsToNext && ratePerMonth) {
+      actionPhrase = `Com evolução de ${ratePerMonth}s/mês, você atinge ${nextStatusLabel} em ~${monthsToNext} ${monthsToNext === 1 ? 'mês' : 'meses'}`;
+    } else if (gapToNextSec > 0) {
+      actionPhrase = `Reduza ${formatDeltaTime(gapToNextSec)} para alcançar ${nextStatusLabel}`;
+    }
+
+    const nextReqFormatted = nextReqSec ? formatOfficialTime(nextReqSec) : '—';
+    const previsaoFormatted = isGoalReached ? '✓' : monthsToNext ? `~${monthsToNext} ${monthsToNext === 1 ? 'mês' : 'meses'}` : '—';
+
     return {
       currentTime,
-      currentStatusLabel,
       nextStatusLabel,
-      currentReqValue,
-      nextReqValue,
+      nextReqFormatted,
       gapValue,
       gapClass,
+      isGoalReached,
+      progressPercent,
+      actionPhrase,
+      previsaoFormatted,
+      monthsToNext,
+      ratePerMonth,
     };
   }, [
     validatingCompetition?.time_in_seconds,
