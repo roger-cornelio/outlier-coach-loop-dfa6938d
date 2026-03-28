@@ -1,18 +1,29 @@
 
 
-## Plano: Remover aba Parâmetros do CoachDashboard
+## Plano: Adicionar "Esqueci minha senha" na tela de login do coach
 
-### Alteração
+### Problema
+O coach gui.pimenta tem conta criada mas não lembra a senha. Não existe opção de recuperação na tela `/login/coach`.
 
-**Arquivo: `src/pages/CoachDashboard.tsx`**
+### Alterações
 
-1. Remover o `TabsTrigger` de "parametros" (linhas ~723-727) — incluindo o wrapper `{isSuperAdmin && ...}`
-2. Remover o `case 'parametros'` no render de conteúdo (linhas ~626-627)
-3. Remover import do `AdminParamsEditor` (linha 37) e `Settings2` se não usado em outro lugar
+**1. `src/pages/CoachAuth.tsx`**
+- Adicionar link "Esqueci minha senha" abaixo do campo de senha
+- Ao clicar, exibir um mini-formulário (ou reutilizar o campo de email já preenchido) que chama `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/coach/redefinir-senha' })`
+- Toast de confirmação: "Link de recuperação enviado para seu email"
 
-A aba de Parâmetros continuará acessível apenas pelo portal admin (`/admin`), não mais pelo dashboard do coach.
+**2. Nova página: `src/pages/CoachResetPassword.tsx`**
+- Rota: `/coach/redefinir-senha`
+- Detecta `type=recovery` no hash da URL (Supabase redireciona com isso)
+- Formulário para digitar nova senha + confirmação
+- Chama `supabase.auth.updateUser({ password })` para atualizar
+- Após sucesso, redireciona para `/coach/dashboard`
+
+**3. `src/App.tsx`**
+- Adicionar rota `/coach/redefinir-senha` → `CoachResetPassword`
+- Adicionar na lista `EXCLUDED_LAST_ROUTES`
 
 ### O que não muda
-- O componente `AdminParamsEditor` continua existindo
-- Acesso via portal admin permanece intacto
+- Banco de dados, RPCs, tabelas, RLS
+- Fluxo normal de login/criação de conta
 
