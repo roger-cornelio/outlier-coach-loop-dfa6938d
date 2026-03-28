@@ -98,7 +98,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
     }
   }, [view, loadRecommendations]);
 
-  // Link athlete to coach
+  // Send link request to coach (pending approval)
   const handleSelectCoach = async (coach: CoachResult) => {
     if (skipLinking) {
       onCoachSelected(coach.coach_id, coach.coach_name || '');
@@ -108,47 +108,37 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
     setLinking(coach.coach_id);
 
     try {
-      // Insert into coach_athletes
-      const { error: linkError } = await supabase
-        .from('coach_athletes')
-        .insert({ coach_id: coach.coach_id, athlete_id: user.id });
-
-      if (linkError) {
-        // May already be linked
-        if (linkError.code === '23505') {
-          toast.info('Você já está vinculado a este coach!');
-        } else {
-          throw linkError;
-        }
-      }
-
-      // Update profiles.coach_id (legacy field)
+      // Get athlete profile info for the request
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id')
+        .select('name, email')
         .eq('user_id', user.id)
         .single();
 
-      if (profileData) {
-        const coachProfileRes = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', coach.coach_id)
-          .single();
+      // Insert a pending link request
+      const { error: insertError } = await supabase
+        .from('coach_link_requests')
+        .insert({
+          athlete_id: user.id,
+          coach_id: coach.coach_id,
+          athlete_name: profileData?.name || user.email?.split('@')[0] || '',
+          athlete_email: profileData?.email || user.email || '',
+        });
 
-        if (coachProfileRes.data) {
-          await supabase
-            .from('profiles')
-            .update({ coach_id: coachProfileRes.data.id })
-            .eq('user_id', user.id);
+      if (insertError) {
+        if (insertError.code === '23505') {
+          toast.info('Você já solicitou vínculo com este coach. Aguarde a aprovação.');
+        } else {
+          throw insertError;
         }
+      } else {
+        toast.success(`Solicitação enviada para ${coach.coach_name}! Aguarde a aprovação.`);
       }
 
-      toast.success(`Vinculado ao coach ${coach.coach_name}!`);
       onCoachSelected(coach.coach_id, coach.coach_name || '');
     } catch (err) {
-      console.error('[CoachSelection] Link error:', err);
-      toast.error('Erro ao vincular coach. Tente novamente.');
+      console.error('[CoachSelection] Request error:', err);
+      toast.error('Erro ao enviar solicitação. Tente novamente.');
     } finally {
       setLinking(null);
     }
