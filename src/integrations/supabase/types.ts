@@ -2414,6 +2414,7 @@ export type Database = {
         Args: { _email: string; _user_id: string }
         Returns: boolean
       }
+      unlink_current_coach: { Args: { _athlete_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "coach" | "superadmin"
