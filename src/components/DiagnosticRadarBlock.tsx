@@ -1328,6 +1328,16 @@ export function DiagnosticRadarBlock({
   // Fetch last simulation time
   const [lastSimulationTime, setLastSimulationTime] = useState<number | null>(null);
   useEffect(() => {
+    // Debug override: check localStorage first (owner/QA only)
+    const debugOverride = localStorage.getItem('DEBUG_SIMULATION_TIME');
+    if (debugOverride) {
+      const val = Number(debugOverride);
+      if (!isNaN(val) && val > 0) {
+        setLastSimulationTime(val);
+        return;
+      }
+    }
+
     if (!profile?.user_id) return;
     (async () => {
       const { data } = await supabase
