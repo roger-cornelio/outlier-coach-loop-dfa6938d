@@ -30,6 +30,7 @@ import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, norm
 import type { WorkoutBlock } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
 import { cn } from '@/lib/utils';
+import { extractLineSemantics, SEMANTIC_COLORS, type SemanticSegment } from '@/utils/lineSemanticExtractor';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STRUCTURE BADGE - Badge visual para **ROUNDS**, **EMOM**, **AMRAP**, etc.
@@ -206,6 +207,72 @@ export function ExerciseLine({ line, className }: ExerciseLineProps) {
   return (
     <p className={cn('text-sm text-foreground/80 leading-relaxed', className)}>
       {normalizedText}
+    </p>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEMANTIC EXERCISE LINE - Linha com diferenciação visual por tipo semântico
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface SemanticExerciseLineProps {
+  line: string;
+  className?: string;
+}
+
+/**
+ * Renderiza uma linha de exercício com cada segmento colorido por tipo:
+ * movimento (normal), duração (azul), carga (vermelho), etc.
+ */
+export function SemanticExerciseLine({ line, className }: SemanticExerciseLineProps) {
+  const displayText = line.trim().replace(/^-\s*/, '');
+  const normalizedText = normalizeRestLineForDisplay(displayText);
+  const segments = extractLineSemantics(normalizedText);
+  
+  // Se só tem 1 segmento do tipo movement, renderiza simples
+  if (segments.length <= 1 && segments[0]?.type === 'movement') {
+    return (
+      <p className={cn('text-sm text-foreground/80 leading-relaxed', className)}>
+        {normalizedText}
+      </p>
+    );
+  }
+
+  return (
+    <p className={cn('text-sm leading-relaxed flex flex-wrap items-center gap-x-1 gap-y-0.5', className)}>
+      {segments.map((seg, idx) => {
+        const colors = SEMANTIC_COLORS[seg.type];
+        
+        if (seg.type === 'movement') {
+          return (
+            <span key={idx} className="text-foreground/80">
+              {seg.text}
+            </span>
+          );
+        }
+        
+        if (seg.type === 'parenthetical') {
+          return (
+            <span key={idx} className="text-muted-foreground italic text-xs">
+              {seg.text}
+            </span>
+          );
+        }
+
+        // Metric segments get a colored inline badge
+        return (
+          <span 
+            key={idx} 
+            className={cn(
+              'inline-flex items-center px-1.5 py-0 rounded text-xs font-medium border',
+              colors.bg, colors.text, colors.border
+            )}
+            title={colors.label}
+          >
+            {seg.text}
+          </span>
+        );
+      })}
     </p>
   );
 }

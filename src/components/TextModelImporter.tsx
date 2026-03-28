@@ -36,7 +36,7 @@ import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
 import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
-import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
+import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge, SemanticExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
@@ -2092,7 +2092,7 @@ BLOCO: DESCANSO
                                               </div>
                                             );
                                           }
-                                          return <p key={idx} className="truncate">{normalizeRestLineForDisplay(line)}</p>;
+                                          return <SemanticExerciseLine key={idx} line={line} className="truncate" />;
                                         })}
 
                                         
