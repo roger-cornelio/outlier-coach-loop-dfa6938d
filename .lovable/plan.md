@@ -1,22 +1,26 @@
 
 
-## Plano: Superadmin/Coach em /coach-request → redirecionar para dashboard
+## Plano: Superadmin bypass no CoachAuth
 
 ### Problema
-A página `/coach-request` não verifica se o usuário já tem acesso de coach ou superadmin. Resultado: superadmin vê formulário de solicitação desnecessário.
+O `CoachAuth` (linha 122-133) chama `get_coach_approval_by_email` antes de tentar login. Como `roger.bm2016@gmail.com` não tem registro em `coach_applications`, a RPC retorna `app_exists: false` e redireciona para `/coach-request`.
 
 ### Alteração
 
-**Arquivo: `src/pages/CoachRequest.tsx`**
+**Arquivo: `src/pages/CoachAuth.tsx`**
 
-No início do componente, importar `useAuth` e verificar `isCoach` (que agora inclui superadmin). Se `isCoach === true`, redirecionar imediatamente para `/coach/dashboard` com `<Navigate>`.
+No `handleLogin`, após normalizar o email (linha 119), antes de chamar a RPC, adicionar: tentar login primeiro. Se o login der certo e o usuário tiver role `superadmin` ou `coach`, redirecionar direto para `/coach/dashboard` — sem passar pela RPC de approval.
 
-```
-Se isCoach → Navigate to="/coach/dashboard"
-Senão → renderizar formulário normalmente
-```
+Fluxo corrigido:
+1. Tentar `signInWithPassword`
+2. Se login OK → checar `user_roles`
+3. Se tem `superadmin`, `admin` ou `coach` → vai para `/coach/dashboard`
+4. Se login falha (credentials inválidas) → aí sim chacar a RPC `get_coach_approval_by_email` para decidir o roteamento (request, pending, rejected, set-password)
+
+Isso inverte a ordem: login primeiro, RPC de approval só como fallback para quem não conseguiu logar.
 
 ### O que não muda
-- Formulário em si, banco de dados, fluxo de aprovação
-- Usuários sem role de coach continuam vendo o formulário normalmente
+- Banco de dados, RLS, tabelas
+- Fluxo para coaches normais que ainda não têm conta (continuam passando pela RPC)
+- Redirect automático no `useEffect` (linha 53) para quem já está logado
 
