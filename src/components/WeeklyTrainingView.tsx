@@ -66,6 +66,7 @@ function PrecisionBadge({ confidencePercent }: { confidencePercent: number }) {
 }
 
 
+export function WeeklyTrainingView() {
   const {
     setCurrentView,
     setSelectedWorkout,
