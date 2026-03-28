@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 import { getCoachDisplayName } from '@/utils/displayName';
+import { ChangeCoachModal } from '@/components/ChangeCoachModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLANO CONTRATADO (OPEN / PRO)
@@ -91,6 +92,7 @@ export function AthleteConfig() {
   // Nome do coach vinculado
   const [coachName, setCoachName] = useState<string | null>(null);
   const [coachLoading, setCoachLoading] = useState(true);
+  const [showChangeCoach, setShowChangeCoach] = useState(false);
   const { user } = useAuth();
 
   // Buscar nome do coach vinculado via tabela coach_athletes
@@ -376,12 +378,27 @@ export function AthleteConfig() {
                 </div>
               </div>
               <button
-                onClick={() => toast.info('Para trocar de coach, fale com nosso suporte ou solicite ao seu coach atual.')}
+                onClick={() => setShowChangeCoach(true)}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Trocar coach</span>
               </button>
+              <ChangeCoachModal
+                open={showChangeCoach}
+                onClose={() => setShowChangeCoach(false)}
+                currentCoachName={coachName}
+                onChanged={() => {
+                  setCoachName(null);
+                  setCoachLoading(true);
+                  // Re-fetch coach name
+                  refreshProfile?.();
+                  setTimeout(() => {
+                    setCoachName('Pendente...');
+                    setCoachLoading(false);
+                  }, 500);
+                }}
+              />
             </div>
           </div>
         </div>
