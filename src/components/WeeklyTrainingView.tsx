@@ -6,7 +6,8 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText, Activity } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +39,32 @@ function formatRegisteredTime(totalSeconds: number): string {
   const secs = totalSeconds % 60;
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
+
+function getPrecisionTier(pct: number) {
+  if (pct >= 70) return { color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/30', label: 'Preciso', tip: 'Cálculo biomecânico com dados do exercício. Precisão superior a relógios esportivos.' };
+  if (pct >= 50) return { color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/30', label: 'Estimado', tip: 'Tempo detectado, calorias estimadas por METs. Para maior precisão, use formatos como AMRAP, FOR TIME ou EMOM.' };
+  return { color: 'text-destructive', bg: 'bg-destructive/10 border-destructive/30', label: 'Genérico', tip: 'Estimativa por heurística. Use formatos estruturados (AMRAP, FOR TIME) e defina duração no bloco para melhorar.' };
+}
+
+function PrecisionBadge({ confidencePercent }: { confidencePercent: number }) {
+  if (confidencePercent <= 0) return null;
+  const tier = getPrecisionTier(confidencePercent);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className={`ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium transition-colors ${tier.bg} ${tier.color}`}>
+          <Activity className="w-3 h-3" />
+          {tier.label}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-64 text-xs">
+        <p className="font-medium mb-1">{tier.label} ({confidencePercent}%)</p>
+        <p className="text-muted-foreground">{tier.tip}</p>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 export function WeeklyTrainingView() {
   const {
@@ -511,6 +538,8 @@ export function WeeklyTrainingView() {
                           </span>
                         </div>
                       )}
+                      {/* Precision Badge */}
+                      <PrecisionBadge confidencePercent={blockMet.confidencePercent} />
                     </div>
                   )}
                 </motion.div>
