@@ -159,6 +159,14 @@ export default function CoachSetPassword() {
             return;
           }
 
+          // Mark password_set = true
+          if (applicationId) {
+            await supabase
+              .from('coach_applications')
+              .update({ password_set: true } as any)
+              .eq('id', applicationId);
+          }
+
           // Success
           await refreshSession();
           toast({
@@ -235,6 +243,14 @@ export default function CoachSetPassword() {
             return;
           }
         }
+      }
+
+      // Mark password_set = true in coach_applications
+      if (applicationId) {
+        await supabase
+          .from('coach_applications')
+          .update({ password_set: true } as any)
+          .eq('id', applicationId);
       }
 
       // Success - refresh and redirect DIRECTLY to dashboard
