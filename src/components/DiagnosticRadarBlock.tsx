@@ -2344,13 +2344,13 @@ export function DiagnosticRadarBlock({
         <Button
           size="lg"
           onClick={onStartWorkout}
-          className="w-full font-display text-lg tracking-wider px-6 py-5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg">
+          className="w-full font-display text-xl sm:text-lg tracking-wider px-6 py-5 rounded-2xl sm:rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center gap-3 sm:gap-2 shadow-lg h-16 sm:h-auto">
 
-          <Flame className="w-5 h-5" />
+          <Flame className="w-7 h-7 sm:w-5 sm:h-5" />
           BORA TREINAR
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-6 h-6 sm:w-5 sm:h-5" />
         </Button>
-        <p className="text-muted-foreground/60 text-xs text-center mt-2">Veja seu treino do dia</p>
+        <p className="text-muted-foreground/60 text-[10px] sm:text-xs text-center mt-1.5 sm:mt-2">Veja seu treino do dia</p>
       </motion.div>
     </div>);
 
