@@ -1,29 +1,33 @@
 
 
-## Plano: Adicionar "Esqueci minha senha" na tela de login do coach
+## Plano: Corrigir fluxo de definição de senha do coach
 
 ### Problema
-O coach gui.pimenta tem conta criada mas não lembra a senha. Não existe opção de recuperação na tela `/login/coach`.
+Quando o admin aprova um coach, a edge function `create-coach-user` cria uma conta com senha aleatória e preenche `auth_user_id`. A RPC `get_coach_approval_by_email` usa `auth_user_id IS NOT NULL` como proxy para `has_password`. Resultado: o coach nunca vê a tela de definir senha — recebe "Senha incorreta" direto.
+
+### Solução
+Adicionar coluna `password_set` na tabela `coach_applications` para distinguir "conta criada pelo sistema" de "coach definiu sua própria senha".
 
 ### Alterações
 
-**1. `src/pages/CoachAuth.tsx`**
-- Adicionar link "Esqueci minha senha" abaixo do campo de senha
-- Ao clicar, exibir um mini-formulário (ou reutilizar o campo de email já preenchido) que chama `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/coach/redefinir-senha' })`
-- Toast de confirmação: "Link de recuperação enviado para seu email"
+**1. Migração SQL**
+- Adicionar coluna `password_set boolean DEFAULT false` em `coach_applications`
+- Atualizar RPC `get_coach_approval_by_email`: trocar `(auth_user_id IS NOT NULL)` por `COALESCE(ca.password_set, false)` no campo `has_password`
 
-**2. Nova página: `src/pages/CoachResetPassword.tsx`**
-- Rota: `/coach/redefinir-senha`
-- Detecta `type=recovery` no hash da URL (Supabase redireciona com isso)
-- Formulário para digitar nova senha + confirmação
-- Chama `supabase.auth.updateUser({ password })` para atualizar
-- Após sucesso, redireciona para `/coach/dashboard`
+**2. `src/pages/CoachSetPassword.tsx`**
+- Após definir senha com sucesso (signUp ou update-coach-password), marcar `password_set = true` na `coach_applications` via update direto ou chamada adicional
 
-**3. `src/App.tsx`**
-- Adicionar rota `/coach/redefinir-senha` → `CoachResetPassword`
-- Adicionar na lista `EXCLUDED_LAST_ROUTES`
+**3. `src/pages/CoachAuth.tsx`**
+- Quando login falha com "Invalid credentials" e RPC retorna `approved && !has_password` → redireciona para `/coach/definir-senha` (já funciona, só precisa que o RPC retorne o valor correto)
+
+### Fluxo corrigido
+```text
+Admin aprova → create-coach-user → auth_user_id preenchido, password_set=false
+Coach acessa /login/coach → digita email+senha → login falha
+  → RPC retorna has_password=false → redireciona para /coach/definir-senha
+Coach define senha → password_set=true → login automático → /coach/dashboard
+```
 
 ### O que não muda
-- Banco de dados, RPCs, tabelas, RLS
-- Fluxo normal de login/criação de conta
+- Lógica de aprovação, edge functions existentes, dashboard do coach
 
