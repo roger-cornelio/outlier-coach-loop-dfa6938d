@@ -6,7 +6,8 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText, Activity } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
@@ -511,6 +512,8 @@ export function WeeklyTrainingView() {
                           </span>
                         </div>
                       )}
+                      {/* Precision Badge */}
+                      <PrecisionBadge confidencePercent={blockMet.confidencePercent} />
                     </div>
                   )}
                 </motion.div>
