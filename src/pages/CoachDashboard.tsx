@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
-  LayoutGrid, Settings2, Send, Trash2, UserPlus, UserMinus,
+  LayoutGrid, Send, Trash2, UserPlus, UserMinus,
   AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { CoachFeedbacksTab } from '@/components/CoachFeedbacksTab';
-import { AdminParamsEditor } from '@/components/AdminParamsEditor';
+
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
 import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
@@ -623,8 +623,6 @@ export default function CoachDashboard() {
       case 'feedbacks':
         return <CoachFeedbacksTab />;
 
-      case 'parametros':
-        return <AdminParamsEditor />;
 
       default:
         return null;
@@ -720,12 +718,6 @@ export default function CoachDashboard() {
               <MessageSquare className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
             </TabsTrigger>
-            {isSuperAdmin && (
-              <TabsTrigger value="parametros" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
-                <Settings2 className="w-4 h-4 shrink-0" />
-                <span className="hidden xs:inline sm:inline truncate">Parâmetros</span>
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <motion.div
