@@ -44,6 +44,55 @@ import {
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
 import { motion } from 'framer-motion';
+import { Target, Flame as FlameIcon } from 'lucide-react';
+
+// ─── Onboarding labels ───
+const experienceLabels: Record<string, string> = {
+  never: 'Sem experiência HYROX',
+  spectator: 'Já assistiu provas',
+  '1race': '1 prova realizada',
+  '2plus': '2+ provas',
+};
+const goalLabels: Record<string, string> = {
+  finish: 'Completar prova',
+  improve_time: 'Melhorar tempo',
+  podium: 'Pódio',
+  lifestyle: 'Lifestyle',
+};
+const targetRaceLabels: Record<string, string> = {
+  next3months: 'Prova em 3 meses',
+  next6months: 'Prova em 6 meses',
+  nodate: 'Sem data definida',
+  just_training: 'Só quer treinar',
+};
+
+function OnboardingProfileSection({ athlete }: { athlete: AthleteOverview }) {
+  return (
+    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+      <div className="flex items-center gap-2 mb-2">
+        <Target className="w-4 h-4 text-primary" />
+        <span className="text-xs text-primary uppercase tracking-wider font-medium">Perfil do Atleta</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {athlete.onboarding_experience && (
+          <Badge variant="outline" className="text-xs border-border/50 text-muted-foreground">
+            {experienceLabels[athlete.onboarding_experience] || athlete.onboarding_experience}
+          </Badge>
+        )}
+        {athlete.onboarding_goal && (
+          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+            {goalLabels[athlete.onboarding_goal] || athlete.onboarding_goal}
+          </Badge>
+        )}
+        {athlete.onboarding_target_race && (
+          <Badge variant="outline" className="text-xs border-border/50 text-muted-foreground">
+            {targetRaceLabels[athlete.onboarding_target_race] || athlete.onboarding_target_race}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── Pending Link Requests ───
 interface LinkRequest {
