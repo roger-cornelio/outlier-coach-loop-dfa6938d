@@ -93,6 +93,9 @@ export function useCoachOverview() {
           training_level: p.training_level,
           unavailable_equipment: null,
           equipment_notes: null,
+          onboarding_experience: null,
+          onboarding_goal: null,
+          onboarding_target_race: null,
           days_inactive: p.last_active_at 
             ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
             : Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000),
