@@ -1932,7 +1932,8 @@ export function DiagnosticRadarBlock({
                     <p className="text-muted-foreground leading-relaxed">
                       A régua avança conforme você realiza <strong>simulados</strong>. Cada simulado mede o quão próximo você está da meta do próximo nível.
                     </p>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
                 {performanceSnapshot.actionPhrase && (
                   <p className="text-[11px] text-muted-foreground leading-relaxed text-center flex-1">
                     {performanceSnapshot.actionPhrase}
@@ -1942,7 +1943,7 @@ export function DiagnosticRadarBlock({
             )}
             {performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
               <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-                🏆 {performanceSnapshot.actionPhrase}
+                {performanceSnapshot.actionPhrase}
               </p>
             )}
 
