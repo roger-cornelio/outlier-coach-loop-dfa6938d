@@ -1,33 +1,29 @@
 
 
-## Plano: Corrigir fluxo de definição de senha do coach
+## Plano: Corrigir detecção de duração com aspas (ex: 30" Bike)
 
-### Problema
-Quando o admin aprova um coach, a edge function `create-coach-user` cria uma conta com senha aleatória e preenche `auth_user_id`. A RPC `get_coach_approval_by_email` usa `auth_user_id IS NOT NULL` como proxy para `has_password`. Resultado: o coach nunca vê a tela de definir senha — recebe "Senha incorreta" direto.
+### O que está acontecendo hoje
 
-### Solução
-Adicionar coluna `password_set` na tabela `coach_applications` para distinguir "conta criada pelo sistema" de "coach definiu sua própria senha".
+Quando o coach escreve algo como `30" Bike (60-70 rpm)`, o sistema não reconhece o `30"` como "30 segundos". Por causa disso, a linha inteira é tratada como um exercício desconhecido e aparece na lista de "sugerir exercício" — quando na verdade deveria ser reconhecida normalmente.
 
-### Alterações
+### Por que acontece
 
-**1. Migração SQL**
-- Adicionar coluna `password_set boolean DEFAULT false` em `coach_applications`
-- Atualizar RPC `get_coach_approval_by_email`: trocar `(auth_user_id IS NOT NULL)` por `COALESCE(ca.password_set, false)` no campo `has_password`
+O detector de unidades usa uma regra de "limite de palavra" após os símbolos de segundo (`"`, `''`). Essa regra funciona bem para texto como `30seg`, mas falha para `30"` porque as aspas e o espaço seguinte não formam esse limite — então o sistema simplesmente ignora o match.
 
-**2. `src/pages/CoachSetPassword.tsx`**
-- Após definir senha com sucesso (signUp ou update-coach-password), marcar `password_set = true` na `coach_applications` via update direto ou chamada adicional
+### O que vai mudar
 
-**3. `src/pages/CoachAuth.tsx`**
-- Quando login falha com "Invalid credentials" e RPC retorna `approved && !has_password` → redireciona para `/coach/definir-senha` (já funciona, só precisa que o RPC retorne o valor correto)
+Vamos separar a regra de detecção de segundos em duas:
 
-### Fluxo corrigido
-```text
-Admin aprova → create-coach-user → auth_user_id preenchido, password_set=false
-Coach acessa /login/coach → digita email+senha → login falha
-  → RPC retorna has_password=false → redireciona para /coach/definir-senha
-Coach define senha → password_set=true → login automático → /coach/dashboard
-```
+1. **Uma regra para símbolos** (`"` e `''`) — que não precisa do limite de palavra, porque aspas já são naturalmente um delimitador.
+2. **Uma regra para texto** (`seg`, `sec`, `s`) — que mantém o limite de palavra para evitar falsos positivos.
 
-### O que não muda
-- Lógica de aprovação, edge functions existentes, dashboard do coach
+### Resultado esperado
+
+- Linhas como `30" Bike (60-70 rpm)`, `60" bike`, `45" Prancha` passam a ser reconhecidas corretamente como exercícios com duração em segundos.
+- Não aparecem mais como exercício desconhecido na lista de sugestões.
+- Nenhuma outra parte do sistema é afetada (calorias, adaptação, parser).
+
+### Arquivo alterado
+
+- `src/utils/unitDetection.ts` — apenas a linha do regex de segundos é dividida em duas.
 
