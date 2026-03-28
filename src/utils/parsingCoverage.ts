@@ -11,6 +11,7 @@
 import type { ParseResult } from './structuredTextParser';
 import { detectUnits } from './unitDetection';
 import { levenshteinDistance } from './structuredTextParser';
+import { extractMovementName } from './lineSemanticExtractor';
 
 export type UnmatchedCategory = 'new_exercise' | 'uninterpretable';
 
@@ -407,9 +408,16 @@ export function calculateParsingCoverage(parseResult: ParseResult, exerciseNames
           if (result.hasRecognizedUnit) {
             recognizedMetrics++;
           } else {
-            // Fallback: se o nome-base existe no dicionário, conta como reconhecido
+            // Fallback 1: usar extrator semântico para isolar o nome do movimento
+            const movementName = extractMovementName(line.text);
+            const normalizedMovement = normalizeText(movementName);
+            const movementMatchesDict = normalizedMovement.length >= 2 && normalizedDict.length > 0 && matchesDictionary(normalizedMovement, normalizedDict);
+            
+            // Fallback 2: nome-base clássico
             const baseName = extractBaseExerciseName(line.text);
-            if (baseName.length >= 2 && normalizedDict.length > 0 && matchesDictionary(baseName, normalizedDict)) {
+            const baseMatchesDict = baseName.length >= 2 && normalizedDict.length > 0 && matchesDictionary(baseName, normalizedDict);
+            
+            if (movementMatchesDict || baseMatchesDict) {
               recognizedMetrics++;
             } else {
               unmatchedLines.push({
