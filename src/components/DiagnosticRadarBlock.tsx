@@ -1291,7 +1291,7 @@ export function DiagnosticRadarBlock({
   const { status, outlierScore, validatingCompetition } = useAthleteStatus();
   const { athleteConfig, externalResultsRefreshKey } = useOutlierStore();
   const journeyData = useJourneyProgress();
-  const isMobile = useIsMobile();
+  // isMobile removed — unified responsive layout
 
   // Fetch diagnostico_melhoria + prioridades_treino/direcionamento for the latest resumo
   const [diagMelhorias, setDiagMelhorias] = useState<{ improvement_value: number; movement: string; metric: string; percentage: number }[]>([]);
@@ -1843,7 +1843,7 @@ export function DiagnosticRadarBlock({
   // Mobile-only branch removed — unified responsive layout below
 
   // ============================================
-  // DESKTOP — FULL LAYOUT
+  // UNIFIED RESPONSIVE LAYOUT
   // ============================================
   return (
     <div className="space-y-3">
