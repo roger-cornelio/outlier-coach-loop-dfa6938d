@@ -90,7 +90,7 @@ export default function CoachResetPassword() {
   if (success) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
+        <CheckCircle className="w-12 h-12 text-primary mb-4" />
         <p className="text-foreground font-medium">Senha atualizada!</p>
         <p className="text-muted-foreground text-sm mt-1">Redirecionando...</p>
       </div>
