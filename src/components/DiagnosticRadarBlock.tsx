@@ -35,7 +35,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAthleteStatus } from '@/hooks/useAthleteStatus';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useJourneyProgress } from '@/hooks/useJourneyProgress';
-import { useIsMobile } from '@/hooks/use-mobile';
+// useIsMobile removed — unified responsive layout
 import { useBenchmarkResults } from '@/hooks/useBenchmarkResults';
 import { getEliteTargetSeconds } from './dashboard/PerformanceStatusCard';
 import { useTargetTimes } from '@/hooks/useTargetTimes';
