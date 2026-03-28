@@ -1872,7 +1872,7 @@ export function DiagnosticRadarBlock({
 
             {/* Prova Alvo resumida — moved below the progress bar */}
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {/* Última Prova */}
               <div className="flex flex-col items-center text-center gap-0.5">
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
