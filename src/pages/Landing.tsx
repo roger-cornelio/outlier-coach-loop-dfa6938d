@@ -74,6 +74,15 @@ export default function Landing() {
             RECEBER DIAGNÓSTICO
           </Link>
         </motion.div>
+
+        <motion.div
+          className="mt-5 text-center"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
+        >
+          <Link to="/login?mode=signup" className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4">
+            Ainda não realizei prova oficial
+          </Link>
+        </motion.div>
       </section>
 
       {/* ══════════ PROBLEMA / SOLUÇÃO ══════════ */}
