@@ -3,12 +3,14 @@
  */
 
 import { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Phone, Loader2, ArrowLeft, CheckCircle, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const requestSchema = z.object({
   full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome muito longo'),
@@ -29,6 +31,11 @@ export default function CoachRequest() {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isCoach, loading: authLoading } = useAuth();
+
+  if (!authLoading && isCoach) {
+    return <Navigate to="/coach/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
