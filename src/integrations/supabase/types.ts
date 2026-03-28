@@ -2402,8 +2402,8 @@ export type Database = {
           application_id: string
           approved: boolean
           created: boolean
-          created_at: string
-          status: string
+          out_created_at: string
+          out_status: string
         }[]
       }
       sync_admin_role_from_allowlist: {
