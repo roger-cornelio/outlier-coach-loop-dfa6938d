@@ -63,7 +63,7 @@ interface DiagnosticCounts {
 }
 
 export default function CoachDashboard() {
-  const { profile, isAdmin, refreshProfile, updateProfileOptimistic } = useAuth();
+  const { profile, isAdmin, isSuperAdmin, refreshProfile, updateProfileOptimistic } = useAuth();
   const { logout, isLoggingOut } = useLogout();
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
@@ -720,7 +720,7 @@ export default function CoachDashboard() {
               <MessageSquare className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
             </TabsTrigger>
-            {isAdmin && (
+            {isSuperAdmin && (
               <TabsTrigger value="parametros" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
                 <Settings2 className="w-4 h-4 shrink-0" />
                 <span className="hidden xs:inline sm:inline truncate">Parâmetros</span>
