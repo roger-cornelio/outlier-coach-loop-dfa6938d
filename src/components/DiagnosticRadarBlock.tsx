@@ -1850,10 +1850,10 @@ export function DiagnosticRadarBlock({
 
       {/* BLOCO 1: HEADER — IDENTIDADE + DADOS COMPETITIVOS */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pt-4 pb-2">
-        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-wide text-foreground uppercase mb-2">{athleteName}</h1>
-        <div className="flex items-center justify-center gap-2.5 mb-1">
+        <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold tracking-wide text-foreground uppercase mb-2">{athleteName}</h1>
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 mb-1">
           <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" />
-          <span className="font-bold text-amber-400 tracking-wider text-2xl">{athleteCategory}</span>
+          <span className="font-bold text-amber-400 tracking-wider text-sm sm:text-2xl">{athleteCategory}</span>
         </div>
 
         <div className="mb-3" />
