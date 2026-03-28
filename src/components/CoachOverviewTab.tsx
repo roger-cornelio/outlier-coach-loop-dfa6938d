@@ -4,11 +4,14 @@
  * KPI Cards (verde/amarelo/vermelho) + Lista de Intervenção virtualizada
  * Ordenação: pior → melhor (churn_risk no topo)
  * Drawer lateral com detalhes do atleta
+ * + Seção de solicitações pendentes de vínculo
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCoachOverview, classifyRisk, type AthleteOverview, type RiskLevel } from '@/hooks/useCoachOverview';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Wrench } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Drawer,
   DrawerContent,
@@ -34,9 +38,141 @@ import {
   Calendar,
   Dumbbell,
   RefreshCcw,
+  UserPlus,
+  Check,
+  X,
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
 import { motion } from 'framer-motion';
+
+// ─── Pending Link Requests ───
+interface LinkRequest {
+  id: string;
+  athlete_id: string;
+  athlete_name: string | null;
+  athlete_email: string | null;
+  created_at: string;
+}
+
+function PendingRequestsSection() {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<LinkRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  const fetchRequests = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('coach_link_requests')
+        .select('id, athlete_id, athlete_name, athlete_email, created_at')
+        .eq('coach_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRequests((data as LinkRequest[]) || []);
+    } catch (err) {
+      console.error('[PendingRequests] fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  const handleApprove = async (requestId: string) => {
+    setProcessing(requestId);
+    try {
+      const { error } = await supabase.rpc('approve_coach_link_request', { _request_id: requestId });
+      if (error) throw error;
+      toast.success('Atleta aprovado e vinculado!');
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (err) {
+      console.error('[PendingRequests] approve error:', err);
+      toast.error('Erro ao aprovar solicitação.');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleReject = async (requestId: string) => {
+    setProcessing(requestId);
+    try {
+      const { error } = await supabase.rpc('reject_coach_link_request', { _request_id: requestId });
+      if (error) throw error;
+      toast.info('Solicitação recusada.');
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (err) {
+      console.error('[PendingRequests] reject error:', err);
+      toast.error('Erro ao recusar solicitação.');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  if (loading) return null;
+  if (requests.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-3"
+    >
+      <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <UserPlus className="w-4 h-4 text-primary" />
+        Solicitações de Vínculo
+        <Badge variant="outline" className="border-primary/50 text-primary text-xs">
+          {requests.length}
+        </Badge>
+      </h2>
+
+      <div className="space-y-2">
+        {requests.map((req) => (
+          <Card key={req.id} className="border-primary/30 bg-primary/5">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+              <UserAvatar
+                name={req.athlete_name || req.athlete_email || ''}
+                gender={null}
+                size="sm"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {req.athlete_name || req.athlete_email?.split('@')[0] || 'Atleta'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {req.athlete_email}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-8 w-8 p-0"
+                  onClick={() => handleReject(req.id)}
+                  disabled={processing !== null}
+                >
+                  {processing === req.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-3 gap-1"
+                  onClick={() => handleApprove(req.id)}
+                  disabled={processing !== null}
+                >
+                  {processing === req.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Check className="w-3.5 h-3.5" /> Aprovar</>}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── KPI Card ───
 function KPICard({
@@ -378,6 +514,9 @@ export function CoachOverviewTab() {
           borderClass="border-red-500/30"
         />
       </div>
+
+      {/* Pending Link Requests */}
+      <PendingRequestsSection />
 
       {/* List header */}
       <div className="flex items-center justify-between">

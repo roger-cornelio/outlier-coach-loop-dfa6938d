@@ -691,6 +691,39 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_link_requests: {
+        Row: {
+          athlete_email: string | null
+          athlete_id: string
+          athlete_name: string | null
+          coach_id: string
+          created_at: string
+          id: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          athlete_email?: string | null
+          athlete_id: string
+          athlete_name?: string | null
+          coach_id: string
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          athlete_email?: string | null
+          athlete_id?: string
+          athlete_name?: string | null
+          coach_id?: string
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       coach_scores: {
         Row: {
           active_athletes_count: number | null
@@ -2229,6 +2262,10 @@ export type Database = {
         Args: { _admin_id: string; _application_id: string }
         Returns: boolean
       }
+      approve_coach_link_request: {
+        Args: { _request_id: string }
+        Returns: boolean
+      }
       can_view_athlete_data: {
         Args: { _athlete_id: string; _viewer_id: string }
         Returns: boolean
@@ -2310,6 +2347,10 @@ export type Database = {
       }
       reject_coach_application: {
         Args: { _admin_id: string; _application_id: string; _reason?: string }
+        Returns: boolean
+      }
+      reject_coach_link_request: {
+        Args: { _request_id: string }
         Returns: boolean
       }
       revoke_admin_allowlist: { Args: { _email: string }; Returns: boolean }
