@@ -1935,15 +1935,15 @@ export function DiagnosticRadarBlock({
                   </PopoverContent>
                 </Popover>
                 {performanceSnapshot.actionPhrase && (
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {performanceSnapshot.isGoalReached ? '🏆' : '🎯'} {performanceSnapshot.actionPhrase}
+                  <p className="text-[11px] text-muted-foreground leading-relaxed text-center flex-1">
+                    {performanceSnapshot.actionPhrase}
                   </p>
                 )}
               </div>
             )}
             {performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
               <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-                🏆 {performanceSnapshot.actionPhrase}
+                {performanceSnapshot.actionPhrase}
               </p>
             )}
 
