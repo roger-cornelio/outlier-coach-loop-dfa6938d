@@ -18,6 +18,9 @@ export interface AthleteOverview {
   training_level: string | null;
   unavailable_equipment: string[] | null;
   equipment_notes: string | null;
+  onboarding_experience: string | null;
+  onboarding_goal: string | null;
+  onboarding_target_race: string | null;
   days_inactive: number;
   workouts_last_7_days: number;
   has_plan_this_week: number;
