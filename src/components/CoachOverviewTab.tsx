@@ -515,6 +515,9 @@ export function CoachOverviewTab() {
         />
       </div>
 
+      {/* Pending Link Requests */}
+      <PendingRequestsSection />
+
       {/* List header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
