@@ -119,87 +119,25 @@ export default function CoachAuth() {
     const normalizedEmail = email.toLowerCase().trim();
 
     try {
-      // STEP 1: Check approval status via RPC (fonte da verdade)
-      const approval = await getCoachApprovalByEmail(normalizedEmail);
-      console.log('[CoachAuth] Approval check:', approval);
-
-      // ROUTING LOGIC BASED ON RPC RESULT
-      if (!approval.app_exists) {
-        // No application exists → redirect to request page
-        console.log('[CoachAuth] → /coach-request (no application)');
-        navigate(`/coach-request?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (approval.status === 'pending') {
-        // Pending → redirect to pending page
-        console.log('[CoachAuth] → /coach-pending');
-        navigate('/coach-pending', { replace: true });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (approval.status === 'rejected') {
-        // Rejected → show message
-        console.log('[CoachAuth] → rejected modal');
-        setRejectionMessage('Sua solicitação foi recusada. Entre em contato com o suporte para mais informações.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (approval.approved && !approval.has_password) {
-        // Approved but no account yet → redirect to set password
-        console.log('[CoachAuth] → /coach/definir-senha (approved, no password)');
-        navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // STEP 2: Approved with password → try to login
+      // STEP 1: Try login first (superadmin/coach bypass)
       const { data: signInData, error: loginError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
-      if (loginError) {
-        console.log('[CoachAuth] Login error:', loginError.message);
-        
-        if (loginError.message.includes('Invalid login credentials')) {
-          // Wrong password for existing account
-          toast({
-            title: 'Senha incorreta',
-            description: 'Verifique sua senha e tente novamente.',
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'Erro no login',
-            description: loginError.message,
-            variant: 'destructive',
-          });
+      if (signInData?.user) {
+        // Login succeeded → check roles
+        await refreshSession();
+        const roles = await fetchUserRoles(signInData.user.id);
+        console.log('[CoachAuth] Login OK, roles:', roles);
+
+        if (roles.includes('coach') || roles.includes('admin') || roles.includes('superadmin')) {
+          console.log('[CoachAuth] → /coach/dashboard (has role)');
+          navigate('/coach/dashboard', { replace: true });
+          return;
         }
-        setIsSubmitting(false);
-        return;
-      }
 
-      // STEP 3: Login successful → verify user_roles
-      const userId = signInData.user?.id;
-      if (!userId) {
-        console.error('[CoachAuth] No user ID after login');
-        setIsSubmitting(false);
-        return;
-      }
-
-      await refreshSession();
-      const roles = await fetchUserRoles(userId);
-      console.log('[CoachAuth] User roles:', roles);
-
-      if (roles.includes('coach') || roles.includes('admin') || roles.includes('superadmin')) {
-        console.log('[CoachAuth] → /coach/dashboard (has coach/admin role)');
-        navigate('/coach/dashboard', { replace: true });
-      } else {
-        // Logged in but no coach role → deny access
+        // Logged in but no coach role → deny
         console.log('[CoachAuth] No coach role, signing out');
         await supabase.auth.signOut();
         toast({
@@ -207,7 +145,62 @@ export default function CoachAuth() {
           description: 'Você não tem permissão de coach.',
           variant: 'destructive',
         });
+        setIsSubmitting(false);
+        return;
       }
+
+      // STEP 2: Login failed → check approval status via RPC
+      const isInvalidCredentials = loginError?.message?.includes('Invalid login credentials');
+      
+      if (!isInvalidCredentials && loginError) {
+        // Non-credential error (network, etc.)
+        toast({
+          title: 'Erro no login',
+          description: loginError.message,
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Invalid credentials or no account → check RPC for routing
+      const approval = await getCoachApprovalByEmail(normalizedEmail);
+      console.log('[CoachAuth] Approval check:', approval);
+
+      if (!approval.app_exists) {
+        console.log('[CoachAuth] → /coach-request (no application)');
+        navigate(`/coach-request?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (approval.status === 'pending') {
+        console.log('[CoachAuth] → /coach-pending');
+        navigate('/coach-pending', { replace: true });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (approval.status === 'rejected') {
+        console.log('[CoachAuth] → rejected modal');
+        setRejectionMessage('Sua solicitação foi recusada. Entre em contato com o suporte para mais informações.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (approval.approved && !approval.has_password) {
+        console.log('[CoachAuth] → /coach/definir-senha (approved, no password)');
+        navigate(`/coach/definir-senha?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Has account + wrong password
+      toast({
+        title: 'Senha incorreta',
+        description: 'Verifique sua senha e tente novamente.',
+        variant: 'destructive',
+      });
     } catch (err) {
       console.error('[CoachAuth] Login error:', err);
       toast({
