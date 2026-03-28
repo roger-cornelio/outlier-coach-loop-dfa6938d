@@ -1,29 +1,71 @@
 
 
-## Plano: Corrigir detecção de duração com aspas (ex: 30" Bike)
+## Plano: Extrator semântico de linha + diferenciação visual no editor
 
-### O que está acontecendo hoje
+### Problema
+O sistema trata a linha inteira como um bloco de texto único. Não separa visualmente o que é exercício, duração, carga ou intensidade — nem no parser, nem na tela do coach.
 
-Quando o coach escreve algo como `30" Bike (60-70 rpm)`, o sistema não reconhece o `30"` como "30 segundos". Por causa disso, a linha inteira é tratada como um exercício desconhecido e aparece na lista de "sugerir exercício" — quando na verdade deveria ser reconhecida normalmente.
+### Parte 1 — Extrator semântico de linha (novo utilitário)
 
-### Por que acontece
+**Novo arquivo: `src/utils/lineSemanticExtractor.ts`**
 
-O detector de unidades usa uma regra de "limite de palavra" após os símbolos de segundo (`"`, `''`). Essa regra funciona bem para texto como `30seg`, mas falha para `30"` porque as aspas e o espaço seguinte não formam esse limite — então o sistema simplesmente ignora o match.
+Função `extractLineSemantics(line)` que decompõe qualquer linha em partes tipadas:
 
-### O que vai mudar
+| Tipo | Exemplos | Cor na UI |
+|------|----------|-----------|
+| `movement` | Bike, Back Squat, Pull-ups | branco (texto normal) |
+| `duration` | 30", 5min, 1:30 | azul |
+| `distance` | 1000m, 5km | verde |
+| `reps` | 10, 5x5, 3 rounds | laranja |
+| `load` | 80kg, 32/24kg, 70% | vermelho |
+| `intensity` | PSE 7, Zona 2, FC 150 | vermelho pulsante |
+| `cadence` | 60-70 rpm, pace 4:30/km | roxo |
+| `parenthetical` | (60-70 rpm), (leve) | cinza itálico |
 
-Vamos separar a regra de detecção de segundos em duas:
+Lógica:
+1. Extrair todas as métricas conhecidas via regex (reutilizando patterns do `unitDetection.ts`)
+2. Adicionar patterns novos para carga (`kg`, `lb`, `%`), cadência (`rpm`, `km/h`) e pace (`min/km`)
+3. Remover métricas do texto bruto → o que sobra é o `movement`
+4. Retornar array de `{ type, text, startIndex }` na ordem original
 
-1. **Uma regra para símbolos** (`"` e `''`) — que não precisa do limite de palavra, porque aspas já são naturalmente um delimitador.
-2. **Uma regra para texto** (`seg`, `sec`, `s`) — que mantém o limite de palavra para evitar falsos positivos.
+### Parte 2 — Componente visual `SemanticExerciseLine`
+
+**Arquivo: `src/components/DSLBlockRenderer.tsx`**
+
+Novo componente `SemanticExerciseLine` que substitui `ExerciseLine` na tela de edição:
+- Chama `extractLineSemantics(line)`
+- Renderiza cada segmento com cor/badge específico por tipo
+- Exercício = texto normal
+- Duração = badge azul com ícone de relógio
+- Carga = badge vermelho com ícone de peso
+- Intensidade = badge vermelho forte
+- Cadência = badge roxo
+- Parênteses = texto cinza itálico (sem badge)
+
+### Parte 3 — Integrar no editor
+
+**Arquivo: `src/components/TextModelImporter.tsx`**
+
+- Na tela de edição (mode='edit'), trocar `<ExerciseLine>` e `<p>` por `<SemanticExerciseLine>`
+- Na tela de preview e na view do atleta, manter `<ExerciseLine>` simples (sem poluição visual)
+
+### Parte 4 — Corrigir lista de "Sugerir exercício"
+
+**Arquivo: `src/utils/parsingCoverage.ts`**
+
+- Usar `extractLineSemantics()` para extrair apenas o `movement`
+- Comparar o `movement` contra o dicionário de exercícios (não a linha inteira)
+- Linhas onde o movimento é conhecido + métricas extras = "interpretada" (não vai para sugestão)
 
 ### Resultado esperado
+- Coach vê visualmente cada parte da linha com cor diferente no editor
+- Sistema para de tratar "30" Bike (60-70 rpm)" como exercício desconhecido
+- Lista de sugestão passa a mostrar apenas movimentos realmente desconhecidos
+- Preview do atleta continua limpo (sem badges coloridos)
 
-- Linhas como `30" Bike (60-70 rpm)`, `60" bike`, `45" Prancha` passam a ser reconhecidas corretamente como exercícios com duração em segundos.
-- Não aparecem mais como exercício desconhecido na lista de sugestões.
-- Nenhuma outra parte do sistema é afetada (calorias, adaptação, parser).
-
-### Arquivo alterado
-
-- `src/utils/unitDetection.ts` — apenas a linha do regex de segundos é dividida em duas.
+### Arquivos envolvidos
+- `src/utils/lineSemanticExtractor.ts` (novo)
+- `src/components/DSLBlockRenderer.tsx` (novo componente)
+- `src/components/TextModelImporter.tsx` (trocar renderer na edição)
+- `src/utils/parsingCoverage.ts` (usar movement extraído)
 
