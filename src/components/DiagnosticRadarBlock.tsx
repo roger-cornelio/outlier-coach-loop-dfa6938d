@@ -1969,7 +1969,7 @@ export function DiagnosticRadarBlock({
               const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
                 <div className="pt-2 mt-1 border-t border-border/10">
-                  <div className="grid grid-cols-5 gap-2 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
                       <span className="font-bold text-xs text-foreground leading-tight">{displayName}</span>
