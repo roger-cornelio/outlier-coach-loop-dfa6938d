@@ -1,26 +1,21 @@
 
 
-## Plano: Superadmin bypass no CoachAuth
+## Plano: Fazer Roger Cornelio aparecer como coach na lista
 
 ### Problema
-O `CoachAuth` (linha 122-133) chama `get_coach_approval_by_email` antes de tentar login. Como `roger.bm2016@gmail.com` não tem registro em `coach_applications`, a RPC retorna `app_exists: false` e redireciona para `/coach-request`.
+As RPCs `get_recommended_coaches` e `search_coaches_by_name` buscam apenas da tabela `coach_applications` com `status = 'approved'` e `auth_user_id IS NOT NULL`. Roger (`roger.bm2016@gmail.com`) nunca foi inserido nessa tabela — ele é superadmin e teve a role de coach concedida diretamente.
 
-### Alteração
+### Solução
+Inserir um registro na tabela `coach_applications` para Roger, com status `approved` e `auth_user_id` preenchido. Isso faz ele aparecer automaticamente nas buscas e recomendações sem alterar nenhuma função.
 
-**Arquivo: `src/pages/CoachAuth.tsx`**
+### Alteração (migração SQL)
 
-No `handleLogin`, após normalizar o email (linha 119), antes de chamar a RPC, adicionar: tentar login primeiro. Se o login der certo e o usuário tiver role `superadmin` ou `coach`, redirecionar direto para `/coach/dashboard` — sem passar pela RPC de approval.
-
-Fluxo corrigido:
-1. Tentar `signInWithPassword`
-2. Se login OK → checar `user_roles`
-3. Se tem `superadmin`, `admin` ou `coach` → vai para `/coach/dashboard`
-4. Se login falha (credentials inválidas) → aí sim chacar a RPC `get_coach_approval_by_email` para decidir o roteamento (request, pending, rejected, set-password)
-
-Isso inverte a ordem: login primeiro, RPC de approval só como fallback para quem não conseguiu logar.
+Inserir em `coach_applications`:
+- `full_name`: "Roger Cornelio"
+- `email`: "roger.bm2016@gmail.com"
+- `status`: "approved"
+- `auth_user_id`: (o user_id dele: `1d5b0b82-42c5-4734-a5c3-04a0ccdab1b2`)
 
 ### O que não muda
-- Banco de dados, RLS, tabelas
-- Fluxo para coaches normais que ainda não têm conta (continuam passando pela RPC)
-- Redirect automático no `useEffect` (linha 53) para quem já está logado
+- Funções RPC, código front-end, RLS
 
