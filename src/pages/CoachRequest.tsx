@@ -97,7 +97,7 @@ export default function CoachRequest() {
 
       // If application already exists
       if (!row.created) {
-        const st = String(row.status).toLowerCase();
+        const st = String(row.out_status).toLowerCase();
         if (st === 'pending') {
           toast({
             title: 'Solicitação já registrada',
