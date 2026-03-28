@@ -1,0 +1,1 @@
+CREATE POLICY "Block anon crm_clientes" ON public.crm_clientes FOR ALL TO anon USING (false);
