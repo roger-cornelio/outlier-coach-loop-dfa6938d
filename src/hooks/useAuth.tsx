@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Computed properties - PRIORITY: superadmin > admin > coach > user
   const isSuperAdmin = role === "superadmin";
   const isAdmin = role === "admin" || role === "superadmin";
-  const isCoach = role === "coach";
+  const isCoach = role === "coach" || role === "superadmin";
   const canManageWorkouts = role === "admin" || role === "coach" || role === "superadmin";
 
   // ============================================
