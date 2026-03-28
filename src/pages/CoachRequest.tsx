@@ -73,9 +73,9 @@ export default function CoachRequest() {
         return;
       }
 
-      const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      const rawRow = Array.isArray(data) && data.length > 0 ? data[0] : null;
 
-      if (!row) {
+      if (!rawRow) {
         toast({
           title: 'Erro',
           description: 'Resposta inesperada. Tente novamente.',
@@ -84,6 +84,9 @@ export default function CoachRequest() {
         setIsSubmitting(false);
         return;
       }
+
+      // Cast to handle renamed output columns (out_status, out_created_at)
+      const row = rawRow as any;
 
       // If already approved, redirect to set password
       if (row.approved) {
@@ -97,7 +100,7 @@ export default function CoachRequest() {
 
       // If application already exists
       if (!row.created) {
-        const st = String(row.status).toLowerCase();
+        const st = String(row.out_status || row.status || '').toLowerCase();
         if (st === 'pending') {
           toast({
             title: 'Solicitação já registrada',
