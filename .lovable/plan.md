@@ -1,39 +1,34 @@
 
 
-## Plano: Botões de teste na Debug Bar — Simular Tempo + Simular Sessão
+## Plano: Superadmin com acesso irrestrito a todas as telas
 
-### O que será adicionado
+### Problema
 
-Dois novos botões na `GlobalDebugBar` (visíveis apenas para owner/QA):
+O `useAuth` define `isCoach = role === "coach"` (linha 83). Como superadmin tem `role = "superadmin"`, `isCoach` retorna `false`. Isso causa bloqueios em:
 
-**1. 🧪 Simular Tempo** — testa a régua de Nível Competitivo
-- Abre um prompt pedindo tempo em segundos (ex: `5400` = 1h30min)
-- Salva no localStorage como `DEBUG_SIMULATION_TIME`
-- Dispara evento para o `DiagnosticRadarBlock` recalcular a régua instantaneamente
-- A régua, "Últ. Simulado" e "Result. Esperado" atualizam sem precisar rodar simulado real
+1. **Index.tsx linha 288**: `if (effectiveView === 'coachPerformance' && !isCoach)` → reseta para dashboard
+2. **Index.tsx linha 222**: mesma lógica no useEffect, mas já trata `state !== 'superadmin'`
+3. **Auth.tsx linha 293**: superadmin em `/login` é redirecionado para `/coach/dashboard` se `isCoach`, mas como não é, vai para `/app` — isso está ok, superadmin deve poder acessar `/app`
 
-**2. 🏋️ Simular Sessão** — testa a Jornada Outlier (barra de treinos)
-- Abre um prompt pedindo quantas sessões adicionar (ex: `5`)
-- Para cada sessão, cria um registro fictício no localStorage (`outlier-benchmark-history`) com datas únicas retroativas (ontem, anteontem, etc.)
-- Dispara `triggerExternalResultsRefresh()` para atualizar a barra de jornada e contagem de sessões
+### Alteração
 
-### Como funciona por trás
+**Arquivo: `src/hooks/useAuth.tsx` (linha 83)**
 
-**Simular Tempo**: No `useEffect` do `DiagnosticRadarBlock` que busca `lastSimulationTime`, adiciona checagem de `DEBUG_SIMULATION_TIME` no localStorage antes de consultar o banco. Se existir e o modo debug estiver ativo, usa esse valor direto.
+Mudar de:
+- `isCoach = role === "coach"`
 
-**Simular Sessão**: Insere registros com `{ workout_id: 'debug-N', completed: true, created_at: 'data-retroativa' }` no mesmo formato que treinos reais. A `countUniqueTrainingDays` já lê do localStorage, então a contagem atualiza automaticamente.
+Para:
+- `isCoach = role === "coach" || role === "superadmin"`
 
-### Limpeza
+Isso garante que superadmin herda todas as permissões de coach, assim como já herda as de admin (linha 82). Com isso, superadmin pode acessar views de coach no `/app`, acessar `/coach/dashboard`, e usar qualquer funcionalidade de coach.
 
-O botão "🗑 Zerar Sessões" já existente também limpa os dois overrides (`DEBUG_SIMULATION_TIME` e sessões fictícias).
+**Arquivo: `src/pages/Index.tsx` (linha 288)**
 
-### Arquivos alterados
-
-1. **`src/components/GlobalDebugBar.tsx`** — dois novos botões + limpeza no reset
-2. **`src/components/DiagnosticRadarBlock.tsx`** — checar override de tempo no useEffect do simulado
+Adicionar checagem de superadmin como fallback (já parcialmente feito na linha 222, mas inconsistente na 288):
+- `if (effectiveView === 'coachPerformance' && !isCoach && state !== 'superadmin')` → com a mudança no useAuth, `isCoach` já será `true` para superadmin, tornando esta linha segura automaticamente.
 
 ### O que não muda
-- Lógica real de cálculos
-- Banco de dados (nada fictício é persistido no banco)
-- Comportamento para usuários normais
+- Banco de dados, RLS, tabelas
+- Fluxo de login para coach e atleta
+- AppGate (já permite superadmin em tudo)
 
