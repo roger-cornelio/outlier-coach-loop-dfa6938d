@@ -1,52 +1,39 @@
 
 
-## Plano: Unificar UI mobile e desktop do Dashboard
+## Plano: Botões de teste na Debug Bar — Simular Tempo + Simular Sessão
 
-### Problema
-O `DiagnosticRadarBlock.tsx` tem um `if (isMobile)` na linha 2320 que retorna um layout completamente diferente do desktop. O mobile usa componentes próprios (`MobilePathToEliteCard`, `MobileBottlenecksBlock`, `MobileNextStepBlock`, `MobilePhysiologicalModal`) enquanto o desktop renderiza inline com outro design (header centralizado, Jornada Outlier com shields, Projeção de Evolução com gráfico, Perfil Fisiológico com radar, Periodização).
+### O que será adicionado
 
-### Diferenças principais
+Dois novos botões na `GlobalDebugBar` (visíveis apenas para owner/QA):
 
-| Aspecto | Mobile | Desktop |
-|---------|--------|---------|
-| Header | `MobilePathToEliteCard` (card escuro com gradiente amber) | H1 centralizado + crown + categoria |
-| Meta de Resultado | `ProjectedTimeBlock` dentro do card | Separado no "Visor de Ação" |
-| Jornada Outlier | Inline dentro do `MobilePathToEliteCard` (shields + barra) | Bloco separado com card elevado |
-| Nível Competitivo | Card separado com grid 2+4 cols | Dentro do header com grid 4 cols |
-| Pontos Fracos | `MobileBottlenecksBlock` | Não existe (usa `TrainingPrioritiesBlock`) |
-| Próximo Passo | `MobileNextStepBlock` | Não existe |
-| Perfil Fisiológico | `MobilePhysiologicalModal` (modal) | Collapsible inline com radar |
-| Projeção Evolução | Não existe no mobile | Card completo com gráfico 12 meses |
-| Periodização | Não existe no mobile | Card com texto |
+**1. 🧪 Simular Tempo** — testa a régua de Nível Competitivo
+- Abre um prompt pedindo tempo em segundos (ex: `5400` = 1h30min)
+- Salva no localStorage como `DEBUG_SIMULATION_TIME`
+- Dispara evento para o `DiagnosticRadarBlock` recalcular a régua instantaneamente
+- A régua, "Últ. Simulado" e "Result. Esperado" atualizam sem precisar rodar simulado real
 
-### Solução
+**2. 🏋️ Simular Sessão** — testa a Jornada Outlier (barra de treinos)
+- Abre um prompt pedindo quantas sessões adicionar (ex: `5`)
+- Para cada sessão, cria um registro fictício no localStorage (`outlier-benchmark-history`) com datas únicas retroativas (ontem, anteontem, etc.)
+- Dispara `triggerExternalResultsRefresh()` para atualizar a barra de jornada e contagem de sessões
 
-**Remover a bifurcação `if (isMobile)`** (linha 2320) e usar **um único layout responsivo** para ambos. O layout desktop será a referência, ajustando apenas tamanhos de fonte e espaçamentos com classes Tailwind responsivas (`text-xl sm:text-4xl`, `grid-cols-2 sm:grid-cols-4`, etc.).
+### Como funciona por trás
 
-### Alterações no arquivo `src/components/DiagnosticRadarBlock.tsx`
+**Simular Tempo**: No `useEffect` do `DiagnosticRadarBlock` que busca `lastSimulationTime`, adiciona checagem de `DEBUG_SIMULATION_TIME` no localStorage antes de consultar o banco. Se existir e o modo debug estiver ativo, usa esse valor direto.
 
-1. **Eliminar o bloco `if (isMobile) { return ... }` inteiro** (linhas ~2320–2532)
-2. **Tornar o layout desktop responsivo** com classes Tailwind:
-   - Header: `text-2xl sm:text-4xl md:text-5xl` no nome
-   - Grid de métricas (Nível Competitivo): `grid-cols-2 sm:grid-cols-4` 
-   - Prova Alvo sub-grid: `grid-cols-2 sm:grid-cols-5` com stacking no mobile
-   - Projeção de Evolução: manter, já funciona em telas menores
-   - Perfil Fisiológico (radar): manter Collapsible, já responsivo
-   - Jornada Outlier: shields menores no mobile (`w-12 sm:w-16`)
-   - CTA "BORA TREINAR": manter tamanho grande em ambos
-3. **Remover sub-componentes mobile-only** que ficam sem uso:
-   - `MobilePathToEliteCard`
-   - `MobileBottlenecksBlock`  
-   - `MobileNextStepBlock`
-   - `MobilePhysiologicalModal`
-4. **Adicionar `TrainingPrioritiesBlock`** que existe no desktop mas faltava no mobile
-5. **Manter o `useIsMobile`** apenas se necessário para popover vs tooltip behavior
+**Simular Sessão**: Insere registros com `{ workout_id: 'debug-N', completed: true, created_at: 'data-retroativa' }` no mesmo formato que treinos reais. A `countUniqueTrainingDays` já lê do localStorage, então a contagem atualiza automaticamente.
 
-### Resultado esperado
-Ambas as versões (mobile e desktop) renderizam os mesmos blocos na mesma ordem, com o mesmo design visual — apenas ajustando proporções via breakpoints CSS responsivos.
+### Limpeza
+
+O botão "🗑 Zerar Sessões" já existente também limpa os dois overrides (`DEBUG_SIMULATION_TIME` e sessões fictícias).
+
+### Arquivos alterados
+
+1. **`src/components/GlobalDebugBar.tsx`** — dois novos botões + limpeza no reset
+2. **`src/components/DiagnosticRadarBlock.tsx`** — checar override de tempo no useEffect do simulado
 
 ### O que não muda
-- Lógica de cálculos (régua, projeção, scores)
-- Hooks, store, banco de dados
-- Componentes reutilizados (`JourneyShieldsRow`, `RequirementsChecklist`, `TrainingPrioritiesBlock`, etc.)
+- Lógica real de cálculos
+- Banco de dados (nada fictício é persistido no banco)
+- Comportamento para usuários normais
 
