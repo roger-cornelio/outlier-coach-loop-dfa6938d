@@ -14,6 +14,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
 import CoachSetPassword from "./pages/CoachSetPassword";
+import CoachResetPassword from "./pages/CoachResetPassword";
 import CoachPending from "./pages/CoachPending";
 import CoachRequest from "./pages/CoachRequest";
 import CoachDashboard from "./pages/CoachDashboard";
@@ -40,6 +41,7 @@ const EXCLUDED_LAST_ROUTES = new Set([
   "/coach-request",
   "/coach-pending",
   "/coach/definir-senha",
+  "/coach/redefinir-senha",
   "/coach",
   "/diagnostico-gratuito",
 ]);
@@ -95,6 +97,7 @@ const App = () => (
 
               {/* === COACH ROUTES === */}
               <Route path="/coach/definir-senha" element={<CoachSetPassword />} />
+              <Route path="/coach/redefinir-senha" element={<CoachResetPassword />} />
               <Route path="/coach/dashboard" element={<CoachDashboard />} />
               <Route path="/coach" element={<Navigate to="/coach/dashboard" replace />} />
               <Route path="/coach-pending" element={<CoachPending />} />
