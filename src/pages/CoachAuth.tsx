@@ -332,6 +332,31 @@ export default function CoachAuth() {
               )}
             </div>
 
+            {/* Forgot Password */}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={async () => {
+                  const trimmed = email.trim().toLowerCase();
+                  if (!trimmed || !trimmed.includes('@')) {
+                    toast({ title: 'Digite seu email acima primeiro', variant: 'destructive' });
+                    return;
+                  }
+                  try {
+                    await supabase.auth.resetPasswordForEmail(trimmed, {
+                      redirectTo: `${window.location.origin}/coach/redefinir-senha`,
+                    });
+                    toast({ title: 'Link de recuperação enviado para seu email' });
+                  } catch {
+                    toast({ title: 'Erro ao enviar link', variant: 'destructive' });
+                  }
+                }}
+                className="text-muted-foreground/50 hover:text-muted-foreground text-[11px] transition-colors"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+
             {/* Submit Button */}
             <button
               type="submit"
