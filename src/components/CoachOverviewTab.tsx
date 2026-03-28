@@ -143,9 +143,11 @@ function PendingRequestsSection() {
                 <p className="text-sm font-medium text-foreground truncate">
                   {req.athlete_name || req.athlete_email?.split('@')[0] || 'Atleta'}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {req.athlete_email}
-                </p>
+                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate">
+                    {req.athlete_email}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button
@@ -354,6 +356,11 @@ function AthleteDetailDrawer({
             </div>
             <Progress value={adherencePct} className="h-2 bg-secondary" />
           </div>
+
+          {/* Onboarding Profile */}
+          {(athlete.onboarding_experience || athlete.onboarding_goal || athlete.onboarding_target_race) && (
+            <OnboardingProfileSection athlete={athlete} />
+          )}
 
           {/* Biometrics */}
           {(athlete.peso || athlete.altura) && (
