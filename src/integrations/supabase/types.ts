@@ -1687,6 +1687,9 @@ export type Database = {
           idade: number | null
           last_active_at: string | null
           name: string | null
+          onboarding_experience: string | null
+          onboarding_goal: string | null
+          onboarding_target_race: string | null
           peso: number | null
           session_duration: string | null
           sexo: string | null
@@ -1709,6 +1712,9 @@ export type Database = {
           idade?: number | null
           last_active_at?: string | null
           name?: string | null
+          onboarding_experience?: string | null
+          onboarding_goal?: string | null
+          onboarding_target_race?: string | null
           peso?: number | null
           session_duration?: string | null
           sexo?: string | null
@@ -1731,6 +1737,9 @@ export type Database = {
           idade?: number | null
           last_active_at?: string | null
           name?: string | null
+          onboarding_experience?: string | null
+          onboarding_goal?: string | null
+          onboarding_target_race?: string | null
           peso?: number | null
           session_duration?: string | null
           sexo?: string | null
@@ -2246,6 +2255,9 @@ export type Database = {
           equipment_notes: string | null
           has_plan_this_week: number | null
           last_active_at: string | null
+          onboarding_experience: string | null
+          onboarding_goal: string | null
+          onboarding_target_race: string | null
           peso: number | null
           sexo: string | null
           total_benchmarks: number | null

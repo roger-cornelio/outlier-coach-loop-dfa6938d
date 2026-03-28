@@ -18,6 +18,9 @@ export interface AthleteOverview {
   training_level: string | null;
   unavailable_equipment: string[] | null;
   equipment_notes: string | null;
+  onboarding_experience: string | null;
+  onboarding_goal: string | null;
+  onboarding_target_race: string | null;
   days_inactive: number;
   workouts_last_7_days: number;
   has_plan_this_week: number;
@@ -90,6 +93,9 @@ export function useCoachOverview() {
           training_level: p.training_level,
           unavailable_equipment: null,
           equipment_notes: null,
+          onboarding_experience: null,
+          onboarding_goal: null,
+          onboarding_target_race: null,
           days_inactive: p.last_active_at 
             ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
             : Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000),
