@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { CoachStyleChanger } from '@/components/CoachStyleChanger';
 import { getCoachDisplayName } from '@/utils/displayName';
+import { ChangeCoachModal } from '@/components/ChangeCoachModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLANO CONTRATADO (OPEN / PRO)
