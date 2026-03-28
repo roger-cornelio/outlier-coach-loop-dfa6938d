@@ -48,7 +48,8 @@ export interface DetectedUnit {
 // TEMPO
 const TIME_PATTERNS = [
   // Segundos: "s", "seg", "''"
-  /(\d+)\s*(?:''|"|seg(?:undos?)?|sec(?:onds?)?|s)\b/gi,
+  /(\d+)\s*(?:''|")/gi,
+  /(\d+)\s*(?:seg(?:undos?)?|sec(?:onds?)?|s)\b/gi,
   // Minutos: "min", "'", "minutos"
   /(\d+)\s*(?:'|min(?:utos?)?|minutes?)\b/gi,
   // Horas: "h", "hora", "horas"
