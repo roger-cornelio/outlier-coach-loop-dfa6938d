@@ -2474,8 +2474,14 @@ export function parseStructuredText(text: string): ParseResult {
       const hasContent = currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction;
       
       if (hasContent || hasTrainingStimulus) {
-        // MVP0: NÃO refinar tipo automaticamente - coach deve selecionar
-        // REMOVIDO: currentBlock.type = detectTypeByContent(currentBlock);
+        // Auto-detecção de categoria: refina tipo se ainda é genérico ('conditioning')
+        if (currentBlock.type === 'conditioning') {
+          const refined = detectTypeByContent(currentBlock);
+          if (refined !== 'conditioning') {
+            _log('[CATEGORY_INFER] Conteúdo detectou:', refined, 'para bloco:', currentBlock.title || '(sem título)');
+            currentBlock.type = refined;
+          }
+        }
         
         // Detectar se é opcional pelo conteúdo
         if (/\bopcional\b/i.test(allContent)) {
