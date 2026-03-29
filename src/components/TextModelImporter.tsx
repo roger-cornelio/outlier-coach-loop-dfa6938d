@@ -1944,16 +1944,6 @@ BLOCO: DESCANSO
                                             Selecione categoria
                                           </Badge>
                                         )}
-                                        {isMissingMain && (
-                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
-                                            Marque como Principal
-                                          </Badge>
-                                        )}
-                                        {hasMultipleMain && (
-                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-amber-500 text-amber-600 bg-amber-500/10">
-                                            Múltiplos Principal
-                                          </Badge>
-                                        )}
                                         {hasStructureConflict && (
                                           <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-destructive text-destructive bg-destructive/10">
                                             Conflito de estrutura
