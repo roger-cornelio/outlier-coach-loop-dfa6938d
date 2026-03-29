@@ -43,6 +43,89 @@ interface EstimationResult {
 }
 
 /**
+ * Detect rep scheme lines (e.g. "28, 20, 16" or "21-15-9") and bind to next exercise line.
+ * Returns preprocessed text with rep schemes merged into the next line.
+ */
+function preprocessRepSchemes(text: string): { text: string; extraItems: ExtractedItem[] } {
+  const lines = text.split('\n');
+  const extraItems: ExtractedItem[] = [];
+  const outputLines: string[] = [];
+  let pendingSum = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    
+    // Match lines that are ONLY numbers separated by commas, hyphens, or spaces
+    // e.g. "28, 20, 16" or "21-15-9" or "21 15 9"
+    const repSchemeMatch = trimmed.match(/^(\d{1,4})\s*[,\-/]\s*(\d{1,4})(?:\s*[,\-/]\s*(\d{1,4}))?(?:\s*[,\-/]\s*(\d{1,4}))?$/);
+    
+    if (repSchemeMatch) {
+      const nums = [repSchemeMatch[1], repSchemeMatch[2], repSchemeMatch[3], repSchemeMatch[4]]
+        .filter(Boolean)
+        .map(n => parseInt(n, 10));
+      pendingSum = nums.reduce((a, b) => a + b, 0);
+      // Don't output this line — it will be consumed by the next line
+      continue;
+    }
+
+    // If we have pending reps and this line looks like an exercise
+    if (pendingSum > 0 && trimmed.length > 0) {
+      const lowerTrimmed = trimmed.toLowerCase();
+      
+      // Check if line starts with "cal" (e.g. "cal Air Bike")
+      const calLeaderMatch = lowerTrimmed.match(/^cal\s+(bike|assault\s*bike|air\s*bike|echo\s*bike|assault)/i);
+      if (calLeaderMatch) {
+        extraItems.push({
+          type: 'bike',
+          value: pendingSum,
+          unit: 'cal',
+          seconds: pendingSum * PACING.bike + TRANSITION_TIME,
+        });
+        pendingSum = 0;
+        continue; // line consumed
+      }
+      
+      // Check for other cal patterns
+      if (/^cal\b/i.test(trimmed)) {
+        // Generic cal exercise — treat as bike
+        extraItems.push({
+          type: 'bike',
+          value: pendingSum,
+          unit: 'cal',
+          seconds: pendingSum * PACING.bike + TRANSITION_TIME,
+        });
+        pendingSum = 0;
+        continue;
+      }
+
+      // Otherwise, bind as generic reps to this exercise
+      extraItems.push({
+        type: 'generic',
+        value: pendingSum,
+        unit: 'reps',
+        seconds: pendingSum * PACING.genericRep + TRANSITION_TIME,
+      });
+      pendingSum = 0;
+      // Keep the line in output (exercise name may still have other patterns)
+    }
+
+    outputLines.push(lines[i]);
+  }
+
+  // If pending reps remain at end, add as generic
+  if (pendingSum > 0) {
+    extraItems.push({
+      type: 'generic',
+      value: pendingSum,
+      unit: 'reps',
+      seconds: pendingSum * PACING.genericRep + TRANSITION_TIME,
+    });
+  }
+
+  return { text: outputLines.join('\n'), extraItems };
+}
+
+/**
  * Extrai padrões de volume do texto do treino
  */
 function extractPatterns(text: string): ExtractedItem[] {
