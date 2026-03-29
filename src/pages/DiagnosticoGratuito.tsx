@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight, RefreshCw } from 'lucide-react';
@@ -105,6 +106,8 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -1049,17 +1052,19 @@ export default function DiagnosticoGratuito() {
                     </div>
 
                     <button
-                      onClick={() => setStep('coach-selection')}
+                      onClick={() => user ? navigate('/app') : setStep('coach-selection')}
                       className="inline-flex items-center gap-3 font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40"
                     >
                       <Zap className="w-5 h-5" />
-                      COMEÇAR MEUS 30 DIAS GRÁTIS
+                      {user ? 'ACESSAR MINHA CONTA' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
                       <ArrowRight className="w-4 h-4" />
                     </button>
 
-                    <p className="text-[10px] text-muted-foreground/50">
-                      Cancele quando quiser
-                    </p>
+                    {!user && (
+                      <p className="text-[10px] text-muted-foreground/50">
+                        Cancele quando quiser
+                      </p>
+                    )}
                   </div>
                 </div>
               </motion.div>
