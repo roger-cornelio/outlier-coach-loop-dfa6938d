@@ -634,6 +634,7 @@ export default function DiagnosticoGratuito() {
                   </p>
                   <Link
                     to="/login?mode=signup"
+                    onClick={() => { try { localStorage.setItem('outlier_skip_race_search', 'true'); } catch {} }}
                     className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
                   >
                     Nunca fez HYROX? Crie sua conta e faça o onboarding por perfil
