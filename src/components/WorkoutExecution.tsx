@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
 import { DAY_NAMES, type AthleteLevel } from '@/types/outlier';
@@ -476,7 +477,7 @@ export function WorkoutExecution() {
                   card-elevated p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
                   ${isComplete ? 'opacity-60' : ''}
-                  ${block.isMainWod ? 'ring-2 ring-primary/50' : ''}
+                  ${identifyMainBlock(displayedWorkout.blocks).blockIndex === index ? 'ring-2 ring-primary/50' : ''}
                   ${isJustCompleted && athleteConfig?.coachStyle === 'SPARK' ? 'ring-2 ring-yellow-400/50' : ''}
                 `}
               >
@@ -522,7 +523,7 @@ export function WorkoutExecution() {
                           </h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             <CategoryChip category={block.type} />
-                            {block.isMainWod && (
+                            {identifyMainBlock(displayedWorkout.blocks).blockIndex === index && (
                               <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide uppercase">
                                 WOD Principal
                               </span>
