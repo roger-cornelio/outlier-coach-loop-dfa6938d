@@ -1615,7 +1615,7 @@ BLOCO: DESCANSO
                                             className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
                                           >
                                             <span className="flex-1">{extractMovementName(line.text) || line.text}</span>
-                                            {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                            {suggestedExercises.has((extractMovementName(line.text) || line.text.trim()).toLowerCase()) ? (
                                               <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
                                                 ✓ Enviado
                                               </Badge>
@@ -1625,7 +1625,7 @@ BLOCO: DESCANSO
                                                 variant="ghost"
                                                 className="shrink-0 text-xs h-7 px-2"
                                                 disabled={suggestSubmitting}
-                                                onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                                onClick={() => submitSuggestion(extractMovementName(line.text) || line.text.trim(), line.blockTitle)}
                                               >
                                                 <Send className="w-3 h-3 mr-1" />
                                                 Sugerir
