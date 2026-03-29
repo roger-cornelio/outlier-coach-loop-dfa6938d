@@ -1116,38 +1116,14 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
         // Conflitos de estrutura (EMOM + ROUNDS, etc.) são reportados como issues na EDIÇÃO.
       });
       
-      // Verificar bloco Principal (exatamente 1 por dia)
-      const mainBlocks = day.blocks.filter(b => b.isMainWod);
-      if (mainBlocks.length === 0 && day.blocks.length > 0) {
-        // Nenhum bloco principal - marcar todos os blocos do dia como inválidos
-        day.blocks.forEach((_, blockIndex) => {
-          if (!invalidBlocks.some(ib => ib.dayIndex === dayIndex && ib.blockIndex === blockIndex)) {
-            invalidBlocks.push({ dayIndex, blockIndex, reason: 'no_main' });
-          }
-        });
-      } else if (mainBlocks.length > 1) {
-        // Múltiplos blocos principais
-        day.blocks.forEach((block, blockIndex) => {
-          if (block.isMainWod && !invalidBlocks.some(ib => ib.dayIndex === dayIndex && ib.blockIndex === blockIndex)) {
-            invalidBlocks.push({ dayIndex, blockIndex, reason: 'multiple_main' });
-          }
-        });
-      }
+      // Bloco principal calculado automaticamente — sem validação manual
     });
     
     // Gerar mensagens de erro
     const daysWithoutCategory = new Set(invalidBlocks.filter(ib => ib.reason === 'category').map(ib => ib.dayIndex));
-    const daysWithoutMain = new Set(invalidBlocks.filter(ib => ib.reason === 'no_main').map(ib => ib.dayIndex));
-    const daysWithMultipleMain = new Set(invalidBlocks.filter(ib => ib.reason === 'multiple_main').map(ib => ib.dayIndex));
     
     if (daysWithoutCategory.size > 0) {
       errors.push(`${daysWithoutCategory.size} dia(s) com blocos sem categoria`);
-    }
-    if (daysWithoutMain.size > 0) {
-      errors.push(`${daysWithoutMain.size} dia(s) sem bloco Principal marcado`);
-    }
-    if (daysWithMultipleMain.size > 0) {
-      errors.push(`${daysWithMultipleMain.size} dia(s) com múltiplos blocos Principal`);
     }
     
     return {
@@ -1185,7 +1161,7 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       return;
     }
     
-    // GUARD 3: Categoria + bloco principal
+    // GUARD 3: Categoria obrigatória
     if (!previewValidation.isValid) {
       setPreviewValidationError(previewValidation.errors.join('. '));
       console.log('[PREVIEW_BLOCKED]', { 
