@@ -56,10 +56,11 @@ const METRIC_PATTERNS: MetricPattern[] = [
   { type: 'distance', regex: /\d+(?:[,.]\d+)?\s*km\b/gi },
   { type: 'distance', regex: /\d+\s*m\b/gi },
 
-  // Duration with symbols: 30", 45'', 5', 1'30" (includes smart/curly quotes)
-  { type: 'duration', regex: /\d+\s*['''′]\s*\d+\s*["""″'']{1,2}/g },
-  { type: 'duration', regex: /\d+\s*["""″'']{1,2}/g },
-  { type: 'duration', regex: /\d+\s*['''′]/g },
+  // Duration with symbols: 30", 45'', 5', 1'30" (includes smart/curly quotes via explicit Unicode)
+  { type: 'duration', regex: /\d+\s*[\u0027\u2018\u2019\u2032]\s*\d+\s*[\u0022\u201C\u201D\u2033\u0027\u2018\u2019\u2032]{1,2}/g },
+  { type: 'duration', regex: /\d+\s*[\u0022\u201C\u201D\u2033]{1}/g },
+  { type: 'duration', regex: /\d+\s*\u0027{2}/g },
+  { type: 'duration', regex: /\d+\s*[\u0027\u2018\u2019\u2032]/g },
   // Duration text: "30seg", "5min", "2h"
   { type: 'duration', regex: /\d+\s*(?:seg(?:undos?)?|sec(?:onds?)?)\b/gi },
   { type: 'duration', regex: /\d+\s*min(?:utos?|utes?)?\b/gi },

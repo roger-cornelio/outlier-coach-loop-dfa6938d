@@ -47,11 +47,13 @@ export interface DetectedUnit {
 
 // TEMPO
 const TIME_PATTERNS = [
-  // Segundos: "s", "seg", various quote marks
-  /(\d+)\s*(?:["""″]|''{1,2})/gi,
+  // Segundos: aspas duplas (todas variantes Unicode) ou duas simples
+  /(\d+)\s*[\u0022\u201C\u201D\u2033]/gi,
+  /(\d+)\s*\u0027{2}/gi,
   /(\d+)\s*(?:seg(?:undos?)?|sec(?:onds?)?|s)\b/gi,
-  // Minutos: "min", various single-quote marks, "minutos"
-  /(\d+)\s*(?:['''′]|min(?:utos?)?|minutes?)\b/gi,
+  // Minutos: aspas simples (todas variantes Unicode), "min", "minutos"
+  /(\d+)\s*[\u0027\u2018\u2019\u2032](?![\u0027\u2018\u2019\u2032])/gi,
+  /(\d+)\s*(?:min(?:utos?)?|minutes?)\b/gi,
   // Horas: "h", "hora", "horas"
   /(\d+)\s*(?:h(?:ora)?s?)\b/gi,
   // Formato mm:ss ou hh:mm:ss
