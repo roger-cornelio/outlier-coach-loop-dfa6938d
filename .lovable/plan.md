@@ -1,30 +1,55 @@
 
 
-## Plano: Garantir reconhecimento de aspas ASCII para duração
+## Plano: Adicionar reconhecimento de rep schemes descendentes e "cal" líder ao estimador de tempo
 
-### Problema raiz
+### O que acontece hoje
 
-Os regexes de duração usam aspas Unicode dentro de classes de caracteres (`["""″]`), mas podem **não conter** a aspa ASCII padrão `"` (U+0022) — que é exatamente o que muitos teclados inserem. Se o coach digita `30"` com aspa reta, o sistema não reconhece como tempo e a linha vai parar na lista de "Sugerir exercício".
+O `estimateWorkoutTime.ts` usa regex para extrair padrões como `30 cal Bike` ou `1000m Remo`, mas:
 
-O mesmo pode acontecer com a aspa simples `'` (U+0027) para minutos.
+1. **Rep schemes descendentes** (`28, 20, 16` ou `21-15-9`) não são reconhecidos — os números ficam soltos sem vínculo com o exercício da linha seguinte
+2. **"cal Air Bike"** (cal no começo da linha, sem número na frente) não é reconhecido como calorias de bike
+3. Resultado: a estimativa de tempo fica imprecisa para esses formatos comuns de treino
 
-### Solução
+### O que vai mudar
 
-Substituir as classes de caracteres por versões com **escapes Unicode explícitos**, garantindo que não haja ambiguidade:
+**Arquivo: `src/utils/estimateWorkoutTime.ts`**
 
-- Segundos: `\u0022` (reta), `\u201C` (esquerda curva), `\u201D` (direita curva), `\u2033` (prime duplo), ou `''` (duas simples)
-- Minutos: `\u0027` (reta), `\u2018` (esquerda curva), `\u2019` (direita curva), `\u2032` (prime)
+**1. Detectar rep schemes descendentes e vincular ao exercício seguinte**
 
-### Arquivos alterados
+Antes de rodar os regex de extração, processar o texto linha a linha. Quando encontrar uma linha que é apenas números separados por vírgula ou hífen (ex: `28, 20, 16` ou `21-15-9`), somar os valores e vincular ao exercício da **próxima linha**.
 
-**1. `src/utils/unitDetection.ts`** — TIME_PATTERNS, regexes de segundos e minutos
+Exemplo:
+- Linha 1: `28, 20, 16` → soma = 64
+- Linha 2: `cal Air Bike` → 64 calorias × pacing bike = 320s
 
-**2. `src/utils/lineSemanticExtractor.ts`** — METRIC_PATTERNS, 3 regexes de duração com aspas
+**2. Reconhecer "cal ExercícioNome" como calorias**
+
+Adicionar regex para o padrão onde "cal" vem antes do nome do exercício (sem número na mesma linha). Quando esse padrão é detectado e existe um rep scheme vinculado da linha anterior, usar a soma como quantidade de calorias.
+
+**3. Reconhecer exercício solo após rep scheme como reps genéricas**
+
+Se a linha após o rep scheme não contém "cal", tratar a soma como repetições genéricas daquele exercício.
+
+### Lógica resumida
+
+```text
+Para cada linha do texto:
+  Se linha = apenas números (28,20,16 ou 21-15-9):
+    → guardar soma (64) como "pendingReps"
+  Se linha seguinte começa com "cal":
+    → criar item bike com pendingReps × pacing.bike
+  Senão:
+    → criar item genérico com pendingReps × pacing.genericRep
+  Limpar pendingReps
+```
 
 ### Resultado esperado
 
-- `30" air Bike` → reconhecido como exercício com duração (30 segundos)
-- `60" bike` → idem
-- `2' Air Bike` → reconhecido como duração (2 minutos)
-- Independente do teclado, as aspas sempre são detectadas
+- `28, 20, 16` + `cal Air Bike` → 64 cal × 5s = 320s + transição
+- `7, 5, 3` + `Bar Push Press` → 15 reps × 3s = 45s + transição
+- Multiplicador de rounds continua funcionando normalmente sobre esses valores
+- Nenhuma mudança visual — apenas a precisão da estimativa de tempo nos cards melhora
+
+### Arquivo envolvido
+- `src/utils/estimateWorkoutTime.ts` — nova função de pré-processamento de linhas + regex para "cal NomeExercício"
 
