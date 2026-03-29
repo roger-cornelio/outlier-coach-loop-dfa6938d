@@ -408,8 +408,8 @@ export function WeeklyTrainingView() {
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
               const isEstimated = !hasParsedData;
 
-              // Tempo registrado disponível no WOD principal
-              const isMainWod = block.isMainWod;
+              // Bloco principal automático (por prioridade de categoria + duração)
+              const isMainWod = identifyMainBlock(dayBlocks).blockIndex === index;
               const hasRegisteredTime = isMainWod && dayIsCompleted && dayTimeInSeconds && dayTimeInSeconds > 0;
 
               return (
