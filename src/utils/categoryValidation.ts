@@ -20,15 +20,36 @@
 // ============================================
 
 export const BLOCK_CATEGORIES = [
-  { value: 'aquecimento', label: 'Aquecimento', emoji: '🔥', canBeMain: false },
-  { value: 'forca', label: 'Força', emoji: '💪', canBeMain: true },
-  { value: 'metcon', label: 'Metcon', emoji: '⚡', canBeMain: true },
-  { value: 'especifico', label: 'Específico (HYROX)', emoji: '🛷', canBeMain: true },
-  { value: 'corrida', label: 'Corrida', emoji: '🏃', canBeMain: false }, // MVP0: não pode ser principal
-  { value: 'acessorio', label: 'Acessório', emoji: '🔧', canBeMain: false },
-  { value: 'mobilidade', label: 'Mobilidade', emoji: '🧘', canBeMain: false },
-  { value: 'tecnica', label: 'Técnica', emoji: '🎯', canBeMain: false },
+  { value: 'aquecimento', label: 'Aquecimento', emoji: '🔥' },
+  { value: 'forca', label: 'Força', emoji: '💪' },
+  { value: 'metcon', label: 'Metcon', emoji: '⚡' },
+  { value: 'especifico', label: 'Específico (HYROX)', emoji: '🛷' },
+  { value: 'corrida', label: 'Corrida', emoji: '🏃' },
+  { value: 'acessorio', label: 'Acessório', emoji: '🔧' },
+  { value: 'mobilidade', label: 'Mobilidade', emoji: '🧘' },
+  { value: 'tecnica', label: 'Técnica', emoji: '🎯' },
 ] as const;
+
+// ============================================
+// PRIORIDADE POR CATEGORIA (para corte por tempo)
+// Score final = CATEGORY_PRIORITY_WEIGHT + duraçãoEstimadaMinutos
+// Maior score = maior prioridade = removido por último
+// ============================================
+
+export const CATEGORY_PRIORITY_WEIGHT: Record<string, number> = {
+  corrida: 110,      // NUNCA remover, só reduzir duração
+  metcon: 100,       // Remove por último
+  especifico: 90,    // Remove por último
+  forca: 80,         // Remove se necessário
+  aquecimento: 30,   // Remove cedo
+  acessorio: 20,     // Remove cedo
+  tecnica: 15,       // Remove cedo
+  mobilidade: 10,    // Remove cedo
+  notas: 0,          // Remove primeiro
+};
+
+// Categorias que NUNCA são removidas (apenas reduzidas)
+export const NEVER_REMOVE_CATEGORIES = new Set(['corrida']);
 
 export type BlockCategory = typeof BLOCK_CATEGORIES[number]['value'];
 
@@ -131,12 +152,11 @@ export const VALIDATION_MESSAGES = {
     code: 'CORRIDA_INCOMPLETE',
     message: '❗ Informe distância ou intensidade (Zona, %FC ou pace).',
   },
-  // Principal inválido
+  // Mantido por compatibilidade (não usado mais)
   MAIN_WOD_INVALID: {
     code: 'MAIN_WOD_INVALID',
     message: '❗ Este bloco não pode ser o treino principal do dia.',
   },
-  // Mais de um principal
   MULTIPLE_MAIN_WODS: {
     code: 'MULTIPLE_MAIN_WODS',
     message: '❗ Apenas um treino principal por dia é permitido.',
