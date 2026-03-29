@@ -477,41 +477,7 @@ export function StructuredWorkoutEditor({
         )}
 
         {/* Alerta de dias sem WOD Principal */}
-        {validation.daysWithoutMain > 0 && (
-          <motion.div
-            key="missing-main-alert"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-lg bg-destructive/10 border border-destructive/20"
-          >
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">
-                {validation.daysWithoutMain} dia(s) sem bloco Principal. Marque um bloco como Principal em cada dia.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Alerta de múltiplos WOD Principal no mesmo dia */}
-        {validation.daysWithMultipleMain > 0 && (
-          <motion.div
-            key="multiple-main-wod-alert"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20"
-          >
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-              <p className="text-sm text-amber-600">
-                Atenção: {validation.daysWithMultipleMain} dia(s) com múltiplos blocos marcados como "Principal".
-                Recomendamos apenas um bloco principal por dia.
-              </p>
-            </div>
-          </motion.div>
-        )}
+        {/* Alertas de WOD Principal removidos — prioridade automática */}
       </AnimatePresence>
       {/* Copy educativa colapsável */}
       <Collapsible>
@@ -604,19 +570,7 @@ export function StructuredWorkoutEditor({
                           </Badge>
                         )}
 
-                        {/* Alertas - NÃO mostrar para dias de descanso */}
-                        {!day.isRestDay && dayValidation && dayValidation.multipleMainBlocks && (
-                          <span className="text-xs text-amber-500 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            Múltiplos WOD Principal
-                          </span>
-                        )}
-                        {!day.isRestDay && dayValidation && !dayValidation.hasMainWod && day.blocks.length > 0 && (
-                          <span className="text-xs text-amber-500 flex items-center gap-1">
-                            <Star className="w-3 h-3" />
-                            Falta WOD Principal
-                          </span>
-                        )}
+                        {/* Alertas de Principal removidos — prioridade automática */}
                         {dayValidation && dayValidation.errorCount > 0 && (
                           <span className="text-xs text-destructive">{dayValidation.errorCount} erro(s)</span>
                         )}
