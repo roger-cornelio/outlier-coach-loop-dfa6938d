@@ -272,7 +272,14 @@ export function WeeklyTrainingView() {
               </button>
               <div>
                 <OutlierWordmark size="sm" className="block" />
-                <p className="text-sm text-muted-foreground">Treino Semanal</p>
+                {coachName ? (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <User className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-sm font-medium text-primary">Coach {coachName}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Treino Semanal</p>
+                )}
               </div>
             </div>
             <UserHeader showLogout={true} />
