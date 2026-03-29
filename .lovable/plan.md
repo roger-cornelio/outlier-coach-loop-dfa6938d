@@ -1,38 +1,27 @@
 
 
-## Plano: Refinar UI dos blocos de treino — mais compacta e estética
+## Plano: Aumentar tamanho e melhorar contraste dos badges de estrutura
 
-### Problemas atuais
+### Problema
+Os badges de estrutura (ex: "7·5·3", "3 ROUNDS", "EMOM 12'") estão com `text-[10px]` e cores escuras (`text-slate-600`, `text-primary`) que não contrastam bem com fundo preto/escuro.
 
-1. **Rep scheme badge** (7·5·3) — muito grande: `text-xl font-black`, `px-4 py-2.5`, `border-2`, `rounded-xl`. Ocupa espaço desproporcional
-2. **Block header** — `text-2xl font-bold` para título é excessivo, especialmente com vários blocos por dia
-3. **Structure badges** normais — OK no tamanho, mas inconsistentes com o rep scheme que é gigante
-4. **FullBlockRenderer** — `p-4 border-2 rounded-xl` com `ring-1` no main WOD cria bordas pesadas
-5. **Comment sub-block** — `mt-6` cria gap excessivo
+### Alterações em `src/components/DSLBlockRenderer.tsx`
 
-### Alterações no `src/components/DSLBlockRenderer.tsx`
+**1. Tamanho** — De `text-[10px]` para `text-xs` (12px) em todos os `StructureBadge` (linhas 85, 99)
 
-**1. Rep scheme badge — compactar para tamanho inline**
-- Reduzir de `text-xl font-black px-4 py-2.5 border-2 rounded-xl` para `text-sm font-bold px-2.5 py-1 border rounded-md`
-- Ícone de `w-4 h-4` para `w-3 h-3`
-- Manter o dot separator mas menor
-- Resultado: badge inline consistente com os outros structure badges
+**2. Cores — trocar para tons claros (light mode compat mantida via dark: prefix ou cores neutras claras)**
+- Rep scheme (`slate-500/600`): trocar para `bg-slate-700/30 text-slate-200 border-slate-500/40`
+- Rounds (`primary`): `bg-primary/25 text-primary border-primary/40` (primary já é laranja claro, OK)
+- EMOM (`amber-500/600`): `bg-amber-500/25 text-amber-300 border-amber-500/40`
+- AMRAP (`green-500/600`): `bg-green-500/25 text-green-300 border-green-500/40`
+- FOR TIME (`blue-500/600`): `bg-blue-500/25 text-blue-300 border-blue-500/40`
+- Séries (`purple-500/600`): `bg-purple-500/25 text-purple-300 border-purple-500/40`
+- Default: `bg-primary/25 text-primary border-primary/40`
 
-**2. Block header — reduzir hierarquia visual**
-- Título de `text-2xl` para `text-base` (ou `text-lg` no máximo)
-- CategoryChip + badges na mesma linha do título (flex row) em vez de stack vertical
+**3. Ícones** — De `w-3 h-3` para `w-3.5 h-3.5` para acompanhar o aumento de texto
 
-**3. FullBlockRenderer — cards mais leves**
-- `border-2` → `border`, `p-4` → `p-3`
-- Main WOD: remover `ring-1`, usar apenas `border-primary/40`
+**4. Padding** — De `px-2.5 py-1` para `px-3 py-1.5` para dar mais respiro
 
-**4. Comment sub-block — mais compacto**
-- `mt-6` → `mt-3`
-
-**5. Inline structure badges** — reduzir padding vertical
-- `pt-3 pb-1` → `pt-2 pb-0.5`
-
-### Resultado visual esperado
-
-Badges de estrutura (rounds, EMOM, rep schemes) todos no mesmo tamanho inline. Blocos mais compactos e limpos. Hierarquia visual mantida mas sem elementos oversized.
+### Resultado
+Badges ~20% maiores, com texto claro sobre fundo escuro translúcido — contraste adequado para dark mode.
 
