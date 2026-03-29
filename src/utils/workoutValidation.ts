@@ -123,7 +123,7 @@ export function validateWorkoutForPublish(
   // REGRA MVP0: Validar categoria e bloco Principal em dias não-descanso
   if (workouts && workouts.length > 0) {
     let daysWithMissingCategory = 0;
-    let daysWithoutMain = 0;
+    
 
     for (const day of workouts) {
       const isRestDay = day.isRestDay === true;
