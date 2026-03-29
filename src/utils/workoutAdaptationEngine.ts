@@ -754,7 +754,7 @@ function applyReducedTierStrategy(
   // 1. Remover blocos acessórios
   let filtered = blocks.filter(block => {
     const priority = BLOCK_PRIORITIES[block.type];
-    if (priority?.isAccessory && !block.isMainWod) {
+    if (priority?.isAccessory && block.type !== 'corrida') {
       removed++;
       return false;
     }
@@ -777,7 +777,7 @@ function applyReducedTierStrategy(
   if (currentTime.totalSeconds > targetSeconds) {
     const adjustRatio = Math.max(0.6, targetSeconds / currentTime.totalSeconds);
     filtered = filtered.map(block => {
-      if (block.type === 'conditioning' || block.isMainWod || block.type === 'forca') {
+      if (block.type === 'conditioning' || block.type === 'metcon' || block.type === 'corrida' || block.type === 'forca') {
         return condenseBlockVolumes(block, adjustRatio);
       }
       return block;
@@ -801,9 +801,9 @@ function applyMinimalTierStrategy(
 ): { blocks: WorkoutBlock[]; removed: number } {
   let removed = 0;
   
-  // 1. Manter APENAS conditioning e isMainWod
+  // 1. Manter APENAS conditioning, corrida e metcon
   let kept = blocks.filter(block => {
-    if (block.isMainWod || block.type === 'conditioning') {
+    if (block.type === 'conditioning' || block.type === 'corrida' || block.type === 'metcon') {
       return true;
     }
     // Manter força se não houver conditioning
