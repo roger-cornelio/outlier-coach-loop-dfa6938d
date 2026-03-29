@@ -488,10 +488,6 @@ export default function CoachDashboard() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full overflow-x-auto no-scrollbar mb-6 gap-1">
-            <TabsTrigger value="visao-geral" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
-              <Eye className="w-4 h-4 shrink-0" />
-              <span className="hidden xs:inline sm:inline truncate">Visão Geral</span>
-            </TabsTrigger>
             <TabsTrigger value="atletas" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
               <Users className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Atletas</span>
@@ -503,10 +499,6 @@ export default function CoachDashboard() {
             <TabsTrigger value="programacoes" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
               <Calendar className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Programações</span>
-            </TabsTrigger>
-            <TabsTrigger value="feedbacks" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
-              <MessageSquare className="w-4 h-4 shrink-0" />
-              <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
             </TabsTrigger>
           </TabsList>
 
