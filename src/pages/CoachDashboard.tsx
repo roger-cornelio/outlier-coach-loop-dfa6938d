@@ -33,7 +33,7 @@ import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
-import { CoachFeedbacksTab } from '@/components/CoachFeedbacksTab';
+// CoachFeedbacksTab removed - feedbacks now inline in CoachOverviewTab
 
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
@@ -110,7 +110,7 @@ export default function CoachDashboard() {
   const [lastFetchOk, setLastFetchOk] = useState<boolean | null>(null);
   
   const [showLinkAthleteModal, setShowLinkAthleteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('visao-geral');
+  const [activeTab, setActiveTab] = useState('atletas');
   const [editingWorkout, setEditingWorkout] = useState<CoachWorkout | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticCounts>({
     linksCount: null,
@@ -381,223 +381,13 @@ export default function CoachDashboard() {
   // Renderizar conteúdo baseado na tab selecionada
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'visao-geral':
-        return <CoachOverviewTab />;
-
       case 'atletas':
         return (
-          <>
-            {/* QA Diagnostic Panel */}
-            {isQAActive && (
-              <Card className="mb-4 border-amber-500 bg-amber-500/10">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm text-amber-400">
-                    <AlertTriangle className="w-4 h-4" />
-                    QA Diagnóstico - coach_athletes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
-                    <div>
-                      <span className="text-muted-foreground">linksCount:</span>
-                      <span className={`ml-2 ${diagnostics.linksCount && diagnostics.linksCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {diagnostics.linksCount ?? '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">joinCount:</span>
-                      <span className={`ml-2 ${diagnostics.joinCount && diagnostics.joinCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {diagnostics.joinCount ?? '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">profilesSample:</span>
-                      <span className="ml-2 text-blue-400">{diagnostics.profilesSample ?? '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">error:</span>
-                      <span className="ml-2 text-red-400">{diagnostics.error ?? 'none'}</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    {diagnostics.linksCount !== null && diagnostics.linksCount > 0 && diagnostics.joinCount === 0 && (
-                      <p className="text-amber-400">⚠️ Links existem mas JOIN retorna 0 → RLS de profiles bloqueando</p>
-                    )}
-                    {diagnostics.linksCount === 0 && (
-                      <p className="text-red-400">❌ Nenhum link em coach_athletes → insert não persistindo</p>
-                    )}
-                    {diagnostics.linksCount !== null && diagnostics.linksCount > 0 && diagnostics.joinCount !== null && diagnostics.joinCount > 0 && (
-                      <p className="text-green-400">✅ Links e JOIN funcionando corretamente</p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-3"
-                    onClick={runDiagnostics}
-                  >
-                    Re-rodar diagnóstico
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-            
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="w-5 h-5 text-primary" />
-                    Atletas Vinculados
-                  </CardTitle>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowLinkAthleteModal(true)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Vincular Atleta
-                  </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* QA Debug info */}
-              {isQAActive && (
-                <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded text-xs font-mono">
-                  <span className="text-purple-400">linkedAthletes.length: {linkedAthletes.length}</span>
-                  <span className="ml-3 text-purple-400">lastFetchOk: {lastFetchOk === null ? 'null' : lastFetchOk ? '✓' : '✗'}</span>
-                  {athletesError && <span className="ml-3 text-red-400">error: {athletesError}</span>}
-                </div>
-              )}
-              
-              {loadingAthletes ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : athletesError ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="w-10 h-10 mx-auto text-destructive/50 mb-3" />
-                  <p className="text-sm text-destructive">{athletesError}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => fetchAthletes()}
-                  >
-                    Tentar novamente
-                  </Button>
-                </div>
-              ) : linkedAthletes.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum atleta vinculado ainda.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setShowLinkAthleteModal(true)}
-                  >
-                    <UserPlus className="w-4 h-4 mr-1.5" />
-                    Vincular primeiro atleta
-                  </Button>
-                </div>
-              ) : (
-                <ScrollArea className="max-h-[400px]">
-                  <div className="space-y-2">
-                    {linkedAthletes.map((athlete) => {
-                      // athleteStatus = STATUS REAL calculado de benchmarks (HYROX PRO, Iniciante, etc.)
-                      const statusLabel = athlete.athleteStatus 
-                        ? LEVEL_NAMES[athlete.athleteStatus]
-                        : null;
-                      
-                      // Cores baseadas no status real
-                      const getStatusColors = (status: AthleteStatus | null | undefined) => {
-                        switch (status) {
-                          case 'elite':
-                            return 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/30';
-                          case 'pro':
-                            return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-                          case 'open':
-                            return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-                          default:
-                            return 'bg-muted text-muted-foreground border-border';
-                        }
-                      };
-                      
-                      return (
-                        <div
-                          key={athlete.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50"
-                        >
-                          <UserAvatar
-                            name={athlete.name || athlete.email}
-                            gender={athlete.sexo as 'masculino' | 'feminino' | null}
-                            athleteStatus={athlete.athleteStatus}
-                            size="md"
-                            showGlow
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">
-                              {getDisplayName(athlete)}
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {athlete.name && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {athlete.email}
-                                </p>
-                              )}
-                              {statusLabel && (
-                                <span className="text-xs text-primary">
-                                  • Status atual: {statusLabel}
-                                </span>
-                              )}
-                              {!statusLabel && (
-                                <span className="text-xs text-muted-foreground italic">
-                                  • Sem benchmarks registrados
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {statusLabel ? (
-                              <Badge 
-                                variant="outline" 
-                                className={getStatusColors(athlete.athleteStatus)}
-                              >
-                                {statusLabel}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border">
-                                Novo
-                              </Badge>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleUnlinkAthlete(athlete.user_id, athlete.name || athlete.email)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              title="Desvincular atleta"
-                            >
-                              <UserMinus className="w-4 h-4" />
-                            </Button>
-                            <CoachSuspensionActions
-                              userId={athlete.user_id}
-                              userName={athlete.name}
-                              userEmail={athlete.email}
-                              userStatus={athlete.accountStatus}
-                              onActionComplete={fetchAthletes}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-          </>
+          <CoachOverviewTab
+            onUnlinkAthlete={handleUnlinkAthlete}
+            onShowLinkModal={() => setShowLinkAthleteModal(true)}
+            onAthleteChanged={handleAthleteLinked}
+          />
         );
 
       case 'importar':
@@ -620,8 +410,8 @@ export default function CoachDashboard() {
           />
         );
 
-      case 'feedbacks':
-        return <CoachFeedbacksTab />;
+
+
 
 
       default:
@@ -698,10 +488,6 @@ export default function CoachDashboard() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full overflow-x-auto no-scrollbar mb-6 gap-1">
-            <TabsTrigger value="visao-geral" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
-              <Eye className="w-4 h-4 shrink-0" />
-              <span className="hidden xs:inline sm:inline truncate">Visão Geral</span>
-            </TabsTrigger>
             <TabsTrigger value="atletas" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
               <Users className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Atletas</span>
@@ -713,10 +499,6 @@ export default function CoachDashboard() {
             <TabsTrigger value="programacoes" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
               <Calendar className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline sm:inline truncate">Programações</span>
-            </TabsTrigger>
-            <TabsTrigger value="feedbacks" className="flex-1 min-w-0 gap-1 text-xs sm:text-sm px-2 sm:px-3">
-              <MessageSquare className="w-4 h-4 shrink-0" />
-              <span className="hidden xs:inline sm:inline truncate">Feedbacks</span>
             </TabsTrigger>
           </TabsList>
 
