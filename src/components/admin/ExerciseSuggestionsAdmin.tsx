@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle, XCircle, Loader2, Dumbbell, Clock, Pencil, Save } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Dumbbell, Clock, Pencil, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MovementPattern {
@@ -35,6 +35,8 @@ export function ExerciseSuggestionsAdmin() {
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editPatternId, setEditPatternId] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<DeduplicatedExercise | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchSuggestions();
@@ -104,6 +106,34 @@ export function ExerciseSuggestionsAdmin() {
       toast.error('Erro ao atualizar: ' + err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteApproved = async () => {
+    if (!deleteModal) return;
+    setDeleting(true);
+    try {
+      // Delete from exercise_suggestions
+      const { error: sugErr } = await supabase
+        .from('exercise_suggestions')
+        .delete()
+        .in('id', deleteModal.ids) as any;
+      if (sugErr) throw sugErr;
+
+      // Delete from global_exercises
+      const { error: geErr } = await supabase
+        .from('global_exercises')
+        .delete()
+        .ilike('name', deleteModal.exercise_name.trim());
+      if (geErr) throw geErr;
+
+      toast.success(`"${deleteModal.exercise_name}" excluído do dicionário.`);
+      setDeleteModal(null);
+      await fetchSuggestions();
+    } catch (err: any) {
+      toast.error('Erro ao excluir: ' + err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -237,6 +267,7 @@ export function ExerciseSuggestionsAdmin() {
                               </Button>
                             </div>
                           ) : (
+                            <div className="flex gap-2 justify-end">
                             <Button
                               size="sm"
                               variant="ghost"
@@ -245,6 +276,16 @@ export function ExerciseSuggestionsAdmin() {
                               <Pencil className="w-4 h-4 mr-1" />
                               Editar
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteModal(ex)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Excluir
+                            </Button>
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>
@@ -355,6 +396,25 @@ export function ExerciseSuggestionsAdmin() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectModal(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleReject}>Rejeitar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete approved exercise modal */}
+      <Dialog open={!!deleteModal} onOpenChange={() => setDeleteModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir exercício do dicionário</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir "{deleteModal?.exercise_name}" do dicionário global? Isso removerá o exercício e todas as {deleteModal?.count} sugestão(ões) vinculadas. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteModal(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteApproved} disabled={deleting}>
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Excluir
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
