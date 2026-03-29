@@ -1,41 +1,29 @@
 
 
-## Plano: Normalizar prefixos de equipamento no matching de exercícios
+## Plano: Corrigir parsing de distância decimal em metros (12,5 m)
 
 ### Problema
 
-O dicionário tem "DB Step Box" mas o coach escreve "Kb Step Box". O matching atual compara strings por substring (`includes`), então "kb step box" nunca vai conter "db step box". Resultado: aparece como exercício novo quando na verdade é o mesmo movimento com equipamento diferente.
+O regex de metros (`\d+\s*m\b`) não aceita vírgula nem ponto decimal. Quando o coach escreve `12,5 m`, o sistema quebra em "12," (ignorado) e "5m" (detectado como 5 metros). Resultado: distância errada.
 
-### Solução
+O regex de km já aceita decimal (`\d+(?:[,.]\d+)?\s*km`), mas o de metros não.
 
-Adicionar uma camada de normalização de equipamento no `matchesDictionary`. Antes de comparar, remover prefixos de equipamento conhecidos (KB, DB, BB, Bar, Dumbbell, Kettlebell, Barbell, Single Arm, Double) tanto do nome extraído quanto dos nomes do dicionário.
+### Correção
 
-Se após a remoção o nome-base for igual, é o mesmo exercício.
+Adicionar `(?:[,.]\d+)?` ao regex de metros nos dois arquivos:
 
-### Exemplo
+**1. `src/utils/lineSemanticExtractor.ts` (linha 58)**
+- De: `\d+\s*m\b`
+- Para: `\d+(?:[,.]\d+)?\s*m\b`
 
-```text
-Coach escreve: "Kb Step Box"
-Dicionário tem: "DB Step Box"
-
-Após strip:
-  "kb step box" → "step box"
-  "db step box" → "step box"
-  → Match! ✓
-```
-
-### O que muda
-
-**Arquivo: `src/utils/parsingCoverage.ts`**
-
-1. Nova função `stripEquipmentPrefix(name)` que remove prefixos: `kb`, `db`, `bb`, `bar`, `barbell`, `kettlebell`, `dumbbell`, `single arm`, `double`, `single`
-2. Na função `matchesDictionary`, além da comparação atual, fazer uma segunda comparação com os nomes sem prefixo de equipamento
-3. Na função `fuzzyMatchExerciseName`, aplicar a mesma normalização para evitar falsos positivos de typo
+**2. `src/utils/unitDetection.ts` (linha 66)**
+- De: `(\d+)\s*m\b`
+- Para: `(\d+(?:[,.]\d+)?)\s*m\b`
 
 ### Resultado
 
-- "Kb Step Box" reconhecido se "DB Step Box" existe no dicionário
-- "Barbell Row" reconhecido se "DB Row" existe
-- "Kettlebell Swing" reconhecido se "KB Swing" existe
-- Zero impacto em exercícios sem prefixo de equipamento
+- `12,5 m` → **12,5 m** (verde, distância) como valor único
+- `12.5m` → idem
+- `400m` → continua funcionando normalmente
+- `5 m` → continua funcionando normalmente
 
