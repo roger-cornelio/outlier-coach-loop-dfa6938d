@@ -70,15 +70,7 @@ export function WelcomeScreen() {
   const { athleteConfig } = useOutlierStore();
   const { saveCoachStyle } = useCoachStylePersistence();
 
-  const [step, setStep] = useState<OnboardingStep>(() => {
-    try {
-      if (localStorage.getItem('outlier_skip_race_search') === 'true') {
-        localStorage.removeItem('outlier_skip_race_search');
-        return 'profile';
-      }
-    } catch {}
-    return 'search';
-  });
+  const [step, setStep] = useState<OnboardingStep>('search');
   const [isSaving, setIsSaving] = useState(false);
   const [coachAutoLinked, setCoachAutoLinked] = useState(false);
 
@@ -919,7 +911,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
+              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
             <motion.button onClick={() => setStep(bottlenecks.length > 0 ? 'bottlenecks' : 'congrats')}
@@ -1113,7 +1105,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
+              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
             <motion.button onClick={() => setStep('profileGoal')}

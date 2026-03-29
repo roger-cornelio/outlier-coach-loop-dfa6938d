@@ -115,14 +115,6 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
         .eq('user_id', user.id)
         .single();
 
-      // Clean up old resolved requests for this pair
-      await supabase
-        .from('coach_link_requests')
-        .delete()
-        .eq('athlete_id', user.id)
-        .eq('coach_id', coach.coach_id)
-        .neq('status', 'pending');
-
       // Insert a pending link request
       const { error: insertError } = await supabase
         .from('coach_link_requests')

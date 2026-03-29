@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Loader2, Zap, Target, ChevronRight, Lock, Trophy, AlertTriangle, CheckCircle2, Activity, TrendingDown, Clock, Award, ShieldAlert, ArrowRight, RefreshCw } from 'lucide-react';
@@ -106,8 +105,6 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -122,7 +119,6 @@ export default function DiagnosticoGratuito() {
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const [textoIa, setTextoIa] = useState<string | null>(null);
   const [textoIaLoading, setTextoIaLoading] = useState(false);
-  const [hasExistingAccount, setHasExistingAccount] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
@@ -181,8 +177,8 @@ export default function DiagnosticoGratuito() {
     setTextoIa(null);
     setTextoIaLoading(false);
     try {
-      // Call scrape + RoxCoach proxy + account check in parallel
-      const [scrapeResponse, roxCoachResponse, accountCheck] = await Promise.all([
+      // Call scrape + RoxCoach proxy in parallel
+      const [scrapeResponse, roxCoachResponse] = await Promise.all([
         supabase.functions.invoke('scrape-hyrox-result', {
           body: { url: result.result_url },
         }),
@@ -198,12 +194,7 @@ export default function DiagnosticoGratuito() {
           console.warn('[DIAG_FREE] RoxCoach proxy failed:', err);
           return { data: null, error: err };
         }),
-        Promise.resolve(supabase.rpc('check_profile_exists_by_name', { _name: result.athlete_name }))
-          .then(({ data }) => !!data)
-          .catch(() => false),
       ]);
-
-      setHasExistingAccount(accountCheck);
 
       const { data: scrapeData, error: scrapeError } = scrapeResponse;
 
@@ -643,7 +634,6 @@ export default function DiagnosticoGratuito() {
                   </p>
                   <Link
                     to="/login?mode=signup"
-                    onClick={() => { try { localStorage.setItem('outlier_skip_race_search', 'true'); } catch {} }}
                     className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
                   >
                     Nunca fez HYROX? Crie sua conta e faça o onboarding por perfil
@@ -1058,27 +1048,17 @@ export default function DiagnosticoGratuito() {
                     </div>
 
                     <button
-                      onClick={() => {
-                        if (user) {
-                          navigate('/app');
-                        } else if (hasExistingAccount) {
-                          navigate('/login');
-                        } else {
-                          setStep('coach-selection');
-                        }
-                      }}
+                      onClick={() => setStep('coach-selection')}
                       className="inline-flex items-center gap-3 font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40"
                     >
                       <Zap className="w-5 h-5" />
-                      {(user || hasExistingAccount) ? 'ACESSAR MINHA CONTA' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
+                      COMEÇAR MEUS 30 DIAS GRÁTIS
                       <ArrowRight className="w-4 h-4" />
                     </button>
 
-                    {!user && !hasExistingAccount && (
-                      <p className="text-[10px] text-muted-foreground/50">
-                        Cancele quando quiser
-                      </p>
-                    )}
+                    <p className="text-[10px] text-muted-foreground/50">
+                      Cancele quando quiser
+                    </p>
                   </div>
                 </div>
               </motion.div>
