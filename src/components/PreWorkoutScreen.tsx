@@ -18,6 +18,7 @@ import { useCoachWorkouts } from '@/hooks/useCoachWorkouts';
 import type { CoachStyle, DayOfWeek, DayWorkout } from '@/types/outlier';
 import { Flame, Heart, Zap, Loader2, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildSemanticSummary } from '@/utils/workoutSemanticSummary';
 
 // Coach icons mapping
 const coachIcons: Record<CoachStyle, typeof Flame> = {
@@ -32,72 +33,12 @@ function getCurrentDayOfWeek(): DayOfWeek {
   return days[new Date().getDay()];
 }
 
-// Generate workout technical summary for AI
+// Generate workout technical summary for AI using semantic extraction
 function generateWorkoutSummary(workout: DayWorkout | undefined): string {
   if (!workout || workout.blocks.length === 0) {
     return 'Sem treino programado para hoje.';
   }
-
-  const blockTypes = workout.blocks.map(b => b.type);
-  const hasConditioning = blockTypes.includes('conditioning');
-  const hasStrength = blockTypes.includes('forca');
-  const hasCore = blockTypes.includes('core');
-  const hasRunning = blockTypes.includes('corrida');
-  const hasSpecific = blockTypes.includes('especifico');
-  
-  const muscleGroups: string[] = [];
-  const stimulusTypes: string[] = [];
-  
-  // Analyze content for muscle groups
-  const allContent = workout.blocks.map(b => b.content.toLowerCase()).join(' ');
-  
-  if (allContent.includes('push') || allContent.includes('press') || allContent.includes('supino')) {
-    muscleGroups.push('peitoral', 'tríceps', 'ombros');
-  }
-  if (allContent.includes('pull') || allContent.includes('remada') || allContent.includes('pull-up')) {
-    muscleGroups.push('costas', 'bíceps');
-  }
-  if (allContent.includes('squat') || allContent.includes('agachamento') || allContent.includes('lunge')) {
-    muscleGroups.push('quadríceps', 'glúteos');
-  }
-  if (allContent.includes('deadlift') || allContent.includes('levantamento terra') || allContent.includes('hip thrust')) {
-    muscleGroups.push('posterior de coxa', 'glúteos', 'lombar');
-  }
-  if (allContent.includes('core') || allContent.includes('abs') || allContent.includes('plank')) {
-    muscleGroups.push('core');
-  }
-  
-  // Determine stimulus types
-  if (hasConditioning) stimulusTypes.push('condicionamento metabólico');
-  if (hasStrength) stimulusTypes.push('força');
-  if (hasCore) stimulusTypes.push('estabilização de core');
-  if (hasRunning) stimulusTypes.push('capacidade aeróbica');
-  if (hasSpecific) stimulusTypes.push('trabalho específico HYROX');
-  
-  // Estimate intensity
-  let intensity = 'moderada';
-  if (allContent.includes('amrap') || allContent.includes('for time') || allContent.includes('max')) {
-    intensity = 'alta';
-  } else if (allContent.includes('técnica') || allContent.includes('mobilidade') || allContent.includes('recuperação')) {
-    intensity = 'baixa';
-  }
-  
-  // Estimate duration
-  const totalMinutes = workout.blocks.reduce((sum, b) => sum + (b.durationMinutes || 10), 0);
-  
-  return JSON.stringify({
-    dia: workout.day,
-    estimulo: workout.stimulus || 'treino completo',
-    blocosCount: workout.blocks.length,
-    tiposBloco: [...new Set(blockTypes)],
-    gruposMusculares: [...new Set(muscleGroups)],
-    tiposEstimulo: stimulusTypes,
-    intensidadeGeral: intensity,
-    duracaoEstimadaMinutos: totalMinutes,
-    temConditioning: hasConditioning,
-    temForca: hasStrength,
-    temCorrida: hasRunning,
-  });
+  return buildSemanticSummary(workout.blocks as any);
 }
 
 interface PreWorkoutScreenProps {
