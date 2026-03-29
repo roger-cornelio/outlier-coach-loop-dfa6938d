@@ -22,6 +22,7 @@ import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
+import { User } from 'lucide-react';
 
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
@@ -94,6 +95,22 @@ export function WeeklyTrainingView() {
   } = useAthletePlan();
 
   const completions = useWeekWorkoutCompletions(currentWeek.start);
+
+  // Fetch coach name
+  const [coachName, setCoachName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!profile?.coach_id) { setCoachName(null); return; }
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', profile.coach_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.name) setCoachName(data.name);
+      });
+    return () => { cancelled = true; };
+  }, [profile?.coach_id]);
 
   const [activeDay, setActiveDay] = useState<DayOfWeek>(() => {
     const days: DayOfWeek[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -255,7 +272,14 @@ export function WeeklyTrainingView() {
               </button>
               <div>
                 <OutlierWordmark size="sm" className="block" />
-                <p className="text-sm text-muted-foreground">Treino Semanal</p>
+                {coachName ? (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <User className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-sm font-medium text-primary">Coach {coachName}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Treino Semanal</p>
+                )}
               </div>
             </div>
             <UserHeader showLogout={true} />
