@@ -1,21 +1,12 @@
 
 
-## Plano: Pular busca de prova no onboarding quando veio do fluxo "sem prova"
+## Plano: Mudar copy do botão CTA
 
-### Problema
-Usuário busca no diagnóstico gratuito, não encontra prova, clica "Nunca fez HYROX → Pular", faz cadastro, e cai no onboarding que mostra a mesma tela de busca novamente — redundante.
+### Alteração
 
-### Solução
+**`src/components/WelcomeScreen.tsx`** — Linhas 922 e 1116:
+- De: `'QUERO MEU PLANO DE TREINO'`
+- Para: `'COMEÇAR MEUS 30 DIAS GRÁTIS'`
 
-**1. `src/pages/DiagnosticoGratuito.tsx`** — Ao clicar "Nunca fez HYROX", salvar flag no localStorage:
-```
-localStorage.setItem('outlier_skip_race_search', 'true')
-```
-
-**2. `src/components/WelcomeScreen.tsx`** — No mount, checar essa flag. Se existir:
-- Consumir e remover do localStorage
-- Iniciar direto no step `'profile'` em vez de `'search'`
-
-### Resultado
-Quem já buscou e não encontrou prova vai direto para o questionário de perfil, sem repetir a busca.
+Duas ocorrências do mesmo botão (steps diferentes do onboarding). Ambas serão atualizadas.
 
