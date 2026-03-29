@@ -333,8 +333,11 @@ export function estimateWorkoutTime(workoutContent: string | string[]): Estimati
     };
   }
   
-  // Extrair itens
-  const items = extractPatterns(text);
+  // Pré-processar rep schemes descendentes (28,20,16 → vincula ao exercício seguinte)
+  const { text: processedText, extraItems } = preprocessRepSchemes(text);
+  
+  // Extrair itens do texto processado
+  const items = [...extraItems, ...extractPatterns(processedText)];
   
   // Detectar multiplicador de rounds
   const roundsMultiplier = detectRoundsMultiplier(text);
