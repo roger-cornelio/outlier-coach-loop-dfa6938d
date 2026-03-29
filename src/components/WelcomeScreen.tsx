@@ -919,7 +919,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
+              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
             </motion.button>
 
             <motion.button onClick={() => setStep(bottlenecks.length > 0 ? 'bottlenecks' : 'congrats')}
@@ -1113,7 +1113,7 @@ export function WelcomeScreen() {
               whileTap={!isSaving ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-              {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
+              {isSaving ? 'CARREGANDO...' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
             </motion.button>
 
             <motion.button onClick={() => setStep('profileGoal')}
