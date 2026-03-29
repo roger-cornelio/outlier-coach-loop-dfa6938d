@@ -80,8 +80,8 @@ export const CATEGORY_KEYWORDS: Record<BlockCategory, { title: RegExp[]; content
     content: [/\b(?:sled|sandbag|wall\s*ball|farmer|carry|lunges?)\b/i],
   },
   corrida: {
-    title: [/corrida/i, /running/i, /\brun\b/i, /cardio/i, /ciclismo/i, /cycling/i, /remo/i, /\brow\b/i, /rowing/i, /ski/i, /bike/i, /airbike/i],
-    content: [/\b(?:corrida|run|running|km|pace)\b/i, /\b(?:bike|airbike|assault)\b/i, /\b(?:remo|row|rowing|ski|erg)\b/i],
+    title: [/corrida/i, /running/i, /\brun\b/i, /trote/i],
+    content: [/\b(?:corrida|run|running|trote)\b/i],
   },
   acessorio: {
     title: [/acess[oó]rio/i, /accessory/i, /complementar/i, /auxiliary/i, /auxiliar/i],
