@@ -1,40 +1,38 @@
 
 
-## Plano: Remover marcação manual de bloco principal + destravar preview
+## Plano: Refinar UI dos blocos de treino — mais compacta e estética
 
-### Problema
-A marcação manual de "WOD Principal" (estrela) ainda existe em 3 lugares e bloqueia o avanço para preview/salvar quando não marcada. O sistema de prioridade automática já existe e torna isso redundante.
+### Problemas atuais
 
-### Alterações
+1. **Rep scheme badge** (7·5·3) — muito grande: `text-xl font-black`, `px-4 py-2.5`, `border-2`, `rounded-xl`. Ocupa espaço desproporcional
+2. **Block header** — `text-2xl font-bold` para título é excessivo, especialmente com vários blocos por dia
+3. **Structure badges** normais — OK no tamanho, mas inconsistentes com o rep scheme que é gigante
+4. **FullBlockRenderer** — `p-4 border-2 rounded-xl` com `ring-1` no main WOD cria bordas pesadas
+5. **Comment sub-block** — `mt-6` cria gap excessivo
 
-**1. `src/components/TextModelImporter.tsx`**
-- Remover função `toggleMainWod` (~linha 965-982)
-- Remover botão estrela e tooltip "Marcar como WOD principal" (~linhas 1951-1968)
-- Remover estilo condicional `block.isMainWod` no container do bloco (~linhas 1941-1945) — usar apenas estilo de validação de categoria
+### Alterações no `src/components/DSLBlockRenderer.tsx`
 
-**2. `src/components/CoachSpreadsheetTab.tsx`**
-- Remover `mainWodValidation` useMemo (~linhas 190-210)
-- Remover `mainWodValidation.isValid` da condição `canSaveOrPublish` (~linha 217) — manter apenas `selectedWeek + parsedWorkouts.length > 0`
-- Remover função `toggleMainWod` (~linha 231)
-- Remover bloco de erro visual "WOD Principal faltando" (~linhas 700-715)
-- Remover mensagem "Defina WOD Principal" no botão desabilitado (~linha 787-788)
+**1. Rep scheme badge — compactar para tamanho inline**
+- Reduzir de `text-xl font-black px-4 py-2.5 border-2 rounded-xl` para `text-sm font-bold px-2.5 py-1 border rounded-md`
+- Ícone de `w-4 h-4` para `w-3 h-3`
+- Manter o dot separator mas menor
+- Resultado: badge inline consistente com os outros structure badges
 
-**3. `src/utils/structuredTextParser.ts`**
-- Remover alerta "Nenhum WOD principal definido" (~linhas 3274-3281)
+**2. Block header — reduzir hierarquia visual**
+- Título de `text-2xl` para `text-base` (ou `text-lg` no máximo)
+- CategoryChip + badges na mesma linha do título (flex row) em vez de stack vertical
 
-**4. `src/utils/workoutValidation.ts`**
-- Remover checagem `daysWithoutMain` em `validateWorkoutForPublish` (~linhas 141-155) — manter apenas validação de categoria
+**3. FullBlockRenderer — cards mais leves**
+- `border-2` → `border`, `p-4` → `p-3`
+- Main WOD: remover `ring-1`, usar apenas `border-primary/40`
 
-**5. `src/hooks/useCoachDraft.ts`**
-- Já não valida `isMainWod` no `canSave` — sem mudança necessária
+**4. Comment sub-block — mais compacto**
+- `mt-6` → `mt-3`
 
-### O que NÃO muda
-- `identifyMainBlock()` continua funcionando para calcular automaticamente o bloco principal (badge visual + prioridade de corte)
-- `isMainWod` no tipo `ParsedBlock` permanece no schema por compatibilidade, mas nunca é `true` manualmente
-- Badge "WOD Principal" no `TextModelImporter` preview e `WeeklyTrainingView` continua aparecendo (calculado automaticamente)
+**5. Inline structure badges** — reduzir padding vertical
+- `pt-3 pb-1` → `pt-2 pb-0.5`
 
-### Resultado
-- Coach não precisa mais marcar estrela
-- Único requisito para avançar: todos os blocos categorizados
-- Prioridade calculada automaticamente por peso de categoria + duração
+### Resultado visual esperado
+
+Badges de estrutura (rounds, EMOM, rep schemes) todos no mesmo tamanho inline. Blocos mais compactos e limpos. Hierarquia visual mantida mas sem elementos oversized.
 
