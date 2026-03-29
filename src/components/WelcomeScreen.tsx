@@ -70,7 +70,15 @@ export function WelcomeScreen() {
   const { athleteConfig } = useOutlierStore();
   const { saveCoachStyle } = useCoachStylePersistence();
 
-  const [step, setStep] = useState<OnboardingStep>('search');
+  const [step, setStep] = useState<OnboardingStep>(() => {
+    try {
+      if (localStorage.getItem('outlier_skip_race_search') === 'true') {
+        localStorage.removeItem('outlier_skip_race_search');
+        return 'profile';
+      }
+    } catch {}
+    return 'search';
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [coachAutoLinked, setCoachAutoLinked] = useState(false);
 
