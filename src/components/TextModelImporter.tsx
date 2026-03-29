@@ -1613,7 +1613,13 @@ BLOCO: DESCANSO
                                             key={i}
                                             className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
                                           >
-                                            <span className="flex-1">{line.text}</span>
+                                            <span className="flex-1">{(() => {
+                                              try {
+                                                const { extractMovementName } = require('@/utils/lineSemanticExtractor');
+                                                const name = extractMovementName(line.text);
+                                                return name || line.text;
+                                              } catch { return line.text; }
+                                            })()}</span>
                                             {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
                                               <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
                                                 ✓ Enviado
