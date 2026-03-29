@@ -1,29 +1,27 @@
 
 
-## Plano: Corrigir parsing de distância decimal em metros (12,5 m)
+## Plano: Corrigir exclusão de exercícios aprovados (RLS bloqueando DELETE)
 
-### Problema
+### Causa raiz
 
-O regex de metros (`\d+\s*m\b`) não aceita vírgula nem ponto decimal. Quando o coach escreve `12,5 m`, o sistema quebra em "12," (ignorado) e "5m" (detectado como 5 metros). Resultado: distância errada.
+A tabela `exercise_suggestions` não tem política RLS de DELETE para admins. Só tem INSERT, SELECT e UPDATE. Quando o admin clica "Excluir", o Supabase silenciosamente retorna 0 linhas deletadas (sem erro), mas nada é removido.
 
-O regex de km já aceita decimal (`\d+(?:[,.]\d+)?\s*km`), mas o de metros não.
+A tabela `global_exercises` já tem `FOR ALL` admin policy, então o delete funciona lá. O problema é só em `exercise_suggestions`.
 
 ### Correção
 
-Adicionar `(?:[,.]\d+)?` ao regex de metros nos dois arquivos:
+**1. Migration SQL** — adicionar política de DELETE para admins na tabela `exercise_suggestions`:
 
-**1. `src/utils/lineSemanticExtractor.ts` (linha 58)**
-- De: `\d+\s*m\b`
-- Para: `\d+(?:[,.]\d+)?\s*m\b`
+```sql
+CREATE POLICY "Admins can delete suggestions"
+  ON public.exercise_suggestions FOR DELETE TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'::app_role));
+```
 
-**2. `src/utils/unitDetection.ts` (linha 66)**
-- De: `(\d+)\s*m\b`
-- Para: `(\d+(?:[,.]\d+)?)\s*m\b`
+**2. Código** — nenhuma mudança necessária no `ExerciseSuggestionsAdmin.tsx`. A lógica de `handleDeleteApproved` já está correta, só precisa da permissão no banco.
 
 ### Resultado
 
-- `12,5 m` → **12,5 m** (verde, distância) como valor único
-- `12.5m` → idem
-- `400m` → continua funcionando normalmente
-- `5 m` → continua funcionando normalmente
+- Clicar "Excluir" vai remover da tabela `exercise_suggestions` E da `global_exercises`
+- A lista atualiza automaticamente após exclusão (já chama `fetchSuggestions()`)
 
