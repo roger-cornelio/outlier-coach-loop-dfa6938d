@@ -2332,13 +2332,13 @@ export function parseStructuredText(text: string): ParseResult {
    */
   const createNewBlock = (rawTitle: string, isAutoGen: boolean = false): ParsedBlock => {
     blockCounter++;
-    // MVP0 FIX: Se isAutoGen, título fica VAZIO (fallback só na UI)
-    // NUNCA persistir "BLOCO X" como título real
     const title = isAutoGen ? '' : cleanBlockTitle(rawTitle);
     const isOptional = /\bopcional\b/i.test(rawTitle);
+    // Auto-detectar categoria pelo título
+    const detectedType = rawTitle ? detectBlockType(rawTitle) : '';
     return {
       title,
-      type: '' as any, // MVP0: Categoria OBRIGATÓRIA - coach deve selecionar (NÃO INFERIR)
+      type: (detectedType && detectedType !== 'conditioning' ? detectedType : '') as any,
       format: detectFormat(rawTitle),
       formatDisplay: undefined,
       isMainWod: false,
@@ -2348,8 +2348,8 @@ export function parseStructuredText(text: string): ParseResult {
       lines: [],
       coachNotes: [],
       instructions: [],
-      isAutoGenTitle: isAutoGen || title === '', // Marcar como auto-gen se título ficou vazio
-      rawLines: rawTitle ? [rawTitle] : [], // Preservar título original como primeira rawLine
+      isAutoGenTitle: isAutoGen || title === '',
+      rawLines: rawTitle ? [rawTitle] : [],
     };
   };
 
@@ -2474,10 +2474,10 @@ export function parseStructuredText(text: string): ParseResult {
       const hasContent = currentBlock.items.length > 0 || currentBlock.instructions.length > 0 || currentBlock.instruction;
       
       if (hasContent || hasTrainingStimulus) {
-        // Auto-detecção de categoria: refina tipo se ainda é genérico ('conditioning')
-        if (currentBlock.type === 'conditioning') {
+        // Auto-detecção de categoria: refina tipo se vazio ou genérico
+        if (!currentBlock.type || currentBlock.type === 'conditioning') {
           const refined = detectTypeByContent(currentBlock);
-          if (refined !== 'conditioning') {
+          if (refined && refined !== 'conditioning') {
             _log('[CATEGORY_INFER] Conteúdo detectou:', refined, 'para bloco:', currentBlock.title || '(sem título)');
             currentBlock.type = refined;
           }
