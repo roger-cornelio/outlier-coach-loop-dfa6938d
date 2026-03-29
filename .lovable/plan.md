@@ -1,22 +1,38 @@
 
 
-## Plano: Remover validação residual de bloco Principal no TextModelImporter
+## Plano: Zerar treinos semanais ao trocar de coach
 
 ### Problema
-A validação de preview em `TextModelImporter.tsx` ainda verifica `isMainWod` (linhas 1120-1135), gerando erros "dia(s) sem bloco Principal marcado" que bloqueiam o avanço para preview.
+Quando o atleta troca de coach, os planos antigos do coach anterior continuam aparecendo na visão semanal. O novo coach não consegue publicar livremente porque há conflito com registros existentes (RLS + UPSERT).
 
-### Alteração em `src/components/TextModelImporter.tsx`
+### Solução
 
-**1. Remover checagem de `isMainWod` na validação de preview (linhas 1118-1151)**
-- Remover o bloco que verifica `mainBlocks.length === 0` e `mainBlocks.length > 1`
-- Remover as variáveis `daysWithoutMain` e `daysWithMultipleMain`
-- Remover as mensagens de erro correspondentes
-- Manter apenas a validação de **categoria** (que é a única exigência restante)
+Dois pontos de ação:
 
-**2. Atualizar comentário do GUARD 3 (linha 1188)**
-- De "Categoria + bloco principal" para "Categoria obrigatória"
+**1. Na função `unlink_current_coach` — marcar planos antigos como arquivados**
 
-### Resultado
-- Único bloqueio para preview: blocos sem categoria
-- Bloco principal continua sendo calculado automaticamente (badge visual), mas não bloqueia nada
+Alterar a função RPC para, ao desvincular, mudar o `status` dos planos ativos/publicados para `'archived'` (não deletar — preserva histórico). Isso faz com que o `useAthletePlan` (que filtra `status = 'published'`) não mostre mais esses treinos.
+
+```sql
+-- Dentro de unlink_current_coach, ANTES de deletar coach_athletes:
+UPDATE public.athlete_plans 
+SET status = 'archived'
+WHERE athlete_user_id = _athlete_id 
+  AND status = 'published'
+  AND week_start >= date_trunc('week', now())::date;
+```
+
+Apenas planos da semana atual e futura são arquivados. Planos de semanas passadas permanecem como histórico.
+
+**2. RLS UPDATE policy — já corrigida no plano anterior**
+
+A policy UPDATE via `coach_athletes` já permite que o coach vinculado atualize. Com os planos antigos arquivados, o novo coach faz INSERT limpo sem conflito.
+
+### Dados preservados
+- Planos arquivados continuam no banco (`status = 'archived'`)
+- Registros de execução (`benchmark_results`, `workout_completions`) não são tocados
+- Histórico do atleta permanece intacto
+
+### Arquivo alterado
+- **Migration SQL** — atualizar função `unlink_current_coach` para arquivar planos ativos
 
