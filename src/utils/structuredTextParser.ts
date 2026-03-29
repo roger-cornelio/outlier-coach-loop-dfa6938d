@@ -656,7 +656,26 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   // Aquecimento
   { pattern: /aquec/i, type: 'aquecimento' },
   { pattern: /warm[- ]?up/i, type: 'aquecimento' },
+  { pattern: /ativa[çc][aã]o/i, type: 'aquecimento' },
+  { pattern: /activation/i, type: 'aquecimento' },
   { pattern: /🔥/i, type: 'aquecimento' },
+  
+  // Mobilidade
+  { pattern: /mobilidade/i, type: 'mobilidade' },
+  { pattern: /mobility/i, type: 'mobilidade' },
+  { pattern: /alongamento/i, type: 'mobilidade' },
+  { pattern: /stretch/i, type: 'mobilidade' },
+  { pattern: /flexibilidade/i, type: 'mobilidade' },
+  { pattern: /cool\s*down/i, type: 'mobilidade' },
+  { pattern: /volta\s*[àa]\s*calma/i, type: 'mobilidade' },
+  { pattern: /🧘/i, type: 'mobilidade' },
+  
+  // Técnica
+  { pattern: /t[eé]cnica/i, type: 'tecnica' },
+  { pattern: /skill/i, type: 'tecnica' },
+  { pattern: /drill/i, type: 'tecnica' },
+  { pattern: /progress[aã]o/i, type: 'tecnica' },
+  { pattern: /🎯/i, type: 'tecnica' },
   
   // Força (inclui Grip)
   { pattern: /for[cç]a/i, type: 'forca' },
@@ -670,10 +689,16 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /hyrox/i, type: 'especifico' },
   { pattern: /🛷/i, type: 'especifico' },
   
-  // Core
-  { pattern: /core/i, type: 'core' },
-  { pattern: /abdominal/i, type: 'core' },
-  { pattern: /🎯/i, type: 'core' },
+  // Acessório
+  { pattern: /acess[oó]rio/i, type: 'acessorio' },
+  { pattern: /accessory/i, type: 'acessorio' },
+  { pattern: /complementar/i, type: 'acessorio' },
+  { pattern: /auxiliar/i, type: 'acessorio' },
+  { pattern: /🔧/i, type: 'acessorio' },
+  
+  // Core → Acessório (mapeamento)
+  { pattern: /\bcore\b/i, type: 'acessorio' },
+  { pattern: /abdominal/i, type: 'acessorio' },
   
   // Corrida/Cardio
   { pattern: /corrida/i, type: 'corrida' },
@@ -684,7 +709,7 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /ciclismo/i, type: 'corrida' },
   { pattern: /cycling/i, type: 'corrida' },
   { pattern: /remo/i, type: 'corrida' },
-  { pattern: /row/i, type: 'corrida' },
+  { pattern: /\brow\b/i, type: 'corrida' },
   { pattern: /ski/i, type: 'corrida' },
   { pattern: /🏃/i, type: 'corrida' },
   
@@ -693,15 +718,16 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
   { pattern: /\brest\b/i, type: 'aquecimento' },
   { pattern: /recovery/i, type: 'aquecimento' },
   
-  // Conditioning (WOD, AMRAP, etc) - por último como fallback
-  { pattern: /conditioning/i, type: 'conditioning' },
-  { pattern: /condicionamento/i, type: 'conditioning' },
-  { pattern: /metcon/i, type: 'conditioning' },
-  { pattern: /\bwod\b/i, type: 'conditioning' },
-  { pattern: /amrap/i, type: 'conditioning' },
-  { pattern: /for\s*time/i, type: 'conditioning' },
-  { pattern: /emom/i, type: 'conditioning' },
-  { pattern: /⚡/i, type: 'conditioning' },
+  // Metcon (AMRAP, EMOM, etc) - agora mapeia para 'metcon' em vez de 'conditioning'
+  { pattern: /metcon/i, type: 'metcon' },
+  { pattern: /conditioning/i, type: 'metcon' },
+  { pattern: /condicionamento/i, type: 'metcon' },
+  { pattern: /\bwod\b/i, type: 'metcon' },
+  { pattern: /amrap/i, type: 'metcon' },
+  { pattern: /for\s*time/i, type: 'metcon' },
+  { pattern: /emom/i, type: 'metcon' },
+  { pattern: /tabata/i, type: 'metcon' },
+  { pattern: /⚡/i, type: 'metcon' },
 ];
 
 // Mapeamento de tipo por CONTEÚDO (usado se título não definir tipo)
@@ -710,7 +736,7 @@ const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] =
   { pattern: /\b(?:bike|airbike|assault)\b/i, type: 'corrida' },
   { pattern: /\b(?:remo|row|rowing|ski|erg)\b/i, type: 'corrida' },
   { pattern: /\b(?:sled|sandbag|wall\s*ball|farmer|carry|lunges?)\b/i, type: 'especifico' },
-  { pattern: /\b(?:core|plank|toes?\s*to\s*bar|sit[- ]?up|hollow)\b/i, type: 'core' },
+  { pattern: /\b(?:core|plank|toes?\s*to\s*bar|sit[- ]?up|hollow)\b/i, type: 'acessorio' },
   { pattern: /\b(?:squat|deadlift|press|clean|snatch|jerk)\b/i, type: 'forca' },
 ];
 
