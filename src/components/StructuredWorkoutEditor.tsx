@@ -712,32 +712,7 @@ export function StructuredWorkoutEditor({
                         // ═══════════════════════════════════════════════════════════
                         return (
                           <div key={block.id} className="space-y-2">
-                            {/* Botões Principal/Benchmark acima do editor */}
-                            {/* MVP0: Ocultar botão Principal para dias de descanso */}
-                            {!day.isRestDay && (
-                              <div className="flex items-center gap-2 justify-end">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant={block.isMainWod ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => toggleMainWod(day.day, block.id)}
-                                        className={`h-7 text-xs ${block.isMainWod ? "bg-primary" : ""}`}
-                                      >
-                                        <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? "fill-current" : ""}`} />
-                                        Principal
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Marcar como WOD Principal do dia</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
-                              </div>
-                            )}
+                            {/* Prioridade automática — botão Principal removido */}
 
                             <StructuredBlockEditor
                               block={block}
