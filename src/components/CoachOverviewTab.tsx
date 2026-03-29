@@ -42,6 +42,7 @@ import {
   ChevronDown,
   UserMinus,
   Target,
+  Trophy,
   MessageSquare,
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
@@ -470,21 +471,45 @@ function ExpandableAthleteRow({
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Perfil</span>
               </div>
               {hasOnboarding && (
-                <div className="flex flex-wrap gap-1">
+                <div className="space-y-1.5">
                   {athlete.onboarding_experience && (
-                    <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground">
-                      {experienceLabels[athlete.onboarding_experience] || athlete.onboarding_experience}
-                    </Badge>
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-secondary/60 border border-border/30">
+                      <div className="w-5 h-5 rounded bg-blue-500/20 flex items-center justify-center shrink-0">
+                        <Dumbbell className="w-3 h-3 text-blue-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Experiência</p>
+                        <p className="text-[11px] font-medium text-foreground truncate">
+                          {experienceLabels[athlete.onboarding_experience] || athlete.onboarding_experience}
+                        </p>
+                      </div>
+                    </div>
                   )}
                   {athlete.onboarding_goal && (
-                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
-                      {goalLabels[athlete.onboarding_goal] || athlete.onboarding_goal}
-                    </Badge>
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
+                      <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center shrink-0">
+                        <Target className="w-3 h-3 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Objetivo</p>
+                        <p className="text-[11px] font-medium text-primary truncate">
+                          {goalLabels[athlete.onboarding_goal] || athlete.onboarding_goal}
+                        </p>
+                      </div>
+                    </div>
                   )}
                   {athlete.onboarding_target_race && (
-                    <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground">
-                      {targetRaceLabels[athlete.onboarding_target_race] || athlete.onboarding_target_race}
-                    </Badge>
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-secondary/60 border border-border/30">
+                      <div className="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center shrink-0">
+                        <Trophy className="w-3 h-3 text-emerald-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Meta de Prova</p>
+                        <p className="text-[11px] font-medium text-foreground truncate">
+                          {targetRaceLabels[athlete.onboarding_target_race] || athlete.onboarding_target_race}
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
