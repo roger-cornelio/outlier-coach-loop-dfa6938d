@@ -517,6 +517,7 @@ export function adaptWorkout(
       
       switch (block.type) {
         case 'conditioning':
+        case 'metcon':
           adaptedContent = adaptConditioningBlock(
             block.content,
             Math.min(1.0, levelMult),
@@ -539,6 +540,16 @@ export function adaptWorkout(
             timeAdjustment
           );
           break;
+
+        case 'especifico':
+          // Específico: escalar como conditioning (tem rounds, reps, etc.)
+          adaptedContent = adaptConditioningBlock(
+            block.content,
+            Math.min(1.0, levelMult),
+            Math.min(1.0, genderMult),
+            timeAdjustment
+          );
+          break;
           
         case 'aquecimento':
           // Aquecimento: aplicar apenas ajuste de tempo se necessário
@@ -548,7 +559,8 @@ export function adaptWorkout(
           break;
           
         case 'core':
-          // Core: aplicar multiplicador final (garantido <= 1.0)
+        case 'acessorio':
+          // Core/Acessório: aplicar multiplicador final (garantido <= 1.0)
           adaptedContent = scaleVolumeNumbers(block.content, finalVolumeMult);
           break;
 
@@ -557,9 +569,14 @@ export function adaptWorkout(
           // Mobilidade e Técnica: NUNCA escalar — preservar original do coach
           adaptedContent = block.content;
           break;
+
+        case 'notas':
+          // Notas: preservar original
+          adaptedContent = block.content;
+          break;
           
         default:
-          // Outros tipos: manter original
+          // Tipos desconhecidos: manter original
           adaptedContent = block.content;
       }
     }

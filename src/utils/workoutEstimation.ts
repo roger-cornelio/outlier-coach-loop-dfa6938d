@@ -267,6 +267,22 @@ export function estimateBlock(
           estimatedMinutes = 0;
           confidence = 'high';
           break;
+        case 'mobilidade':
+          estimatedMinutes = 10;
+          confidence = 'medium';
+          break;
+        case 'tecnica':
+          estimatedMinutes = 15;
+          confidence = 'medium';
+          break;
+        case 'acessorio':
+          estimatedMinutes = 10;
+          confidence = 'medium';
+          break;
+        case 'metcon':
+          estimatedMinutes = estimateForTimeMinutes(block.content || '', level);
+          confidence = 'low';
+          break;
         default:
           estimatedMinutes = 10;
           confidence = 'low';
