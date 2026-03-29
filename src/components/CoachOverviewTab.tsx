@@ -539,7 +539,7 @@ function ExpandableAthleteRow({
                   userId={athlete.athlete_id}
                   userName={athlete.athlete_name}
                   userEmail={athlete.athlete_email}
-                  userStatus={athlete.account_status || 'active'}
+                  userStatus={(athlete.account_status as 'active' | 'suspended') || 'active'}
                   onActionComplete={onAthleteChanged}
                 />
               </div>
