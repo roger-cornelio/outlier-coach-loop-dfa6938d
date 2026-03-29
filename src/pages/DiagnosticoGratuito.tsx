@@ -106,6 +106,7 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
