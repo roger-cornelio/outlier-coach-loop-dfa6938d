@@ -38,6 +38,7 @@ import { WeekPeriodSelector, type WeekPeriod } from './WeekPeriodSelector';
 import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
 import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge, SemanticExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
+import { extractMovementName } from '@/utils/lineSemanticExtractor';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { getBlockDisplayTitle, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
@@ -1613,8 +1614,8 @@ BLOCO: DESCANSO
                                             key={i}
                                             className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-amber-500/5 border border-amber-500/10 text-foreground"
                                           >
-                                            <span className="flex-1">{line.text}</span>
-                                            {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                            <span className="flex-1">{extractMovementName(line.text) || line.text}</span>
+                                            {suggestedExercises.has((extractMovementName(line.text) || line.text.trim()).toLowerCase()) ? (
                                               <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
                                                 ✓ Enviado
                                               </Badge>
@@ -1624,7 +1625,7 @@ BLOCO: DESCANSO
                                                 variant="ghost"
                                                 className="shrink-0 text-xs h-7 px-2"
                                                 disabled={suggestSubmitting}
-                                                onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                                onClick={() => submitSuggestion(extractMovementName(line.text) || line.text.trim(), line.blockTitle)}
                                               >
                                                 <Send className="w-3 h-3 mr-1" />
                                                 Sugerir
@@ -1665,9 +1666,9 @@ BLOCO: DESCANSO
                                             className="flex flex-col gap-1 text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10 text-foreground"
                                           >
                                             <div className="flex items-center gap-2">
-                                              <span className="font-mono text-xs flex-1">{line.text}</span>
+                                              <span className="font-mono text-xs flex-1">{extractMovementName(line.text) || line.text}</span>
                                               {/* Botão "É um exercício → Sugerir" */}
-                                              {suggestedExercises.has(line.text.trim().toLowerCase()) ? (
+                                              {suggestedExercises.has((extractMovementName(line.text) || line.text.trim()).toLowerCase()) ? (
                                                 <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
                                                   ✓ Enviado
                                                 </Badge>
@@ -1677,7 +1678,7 @@ BLOCO: DESCANSO
                                                   variant="ghost"
                                                   className="shrink-0 text-xs h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
                                                   disabled={suggestSubmitting}
-                                                  onClick={() => submitSuggestion(line.text.trim(), line.blockTitle)}
+                                                  onClick={() => submitSuggestion(extractMovementName(line.text) || line.text.trim(), line.blockTitle)}
                                                 >
                                                   <Send className="w-3 h-3 mr-1" />
                                                   É exercício
