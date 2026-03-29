@@ -33,6 +33,8 @@ const blockTypeColors: Record<string, string> = {
   especifico: 'border-l-purple-500',
   core: 'border-l-blue-500',
   corrida: 'border-l-green-500',
+  mobilidade: 'border-l-cyan-500',
+  tecnica: 'border-l-indigo-500',
   notas: 'border-l-muted-foreground',
 };
 

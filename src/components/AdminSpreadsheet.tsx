@@ -72,7 +72,7 @@ function parseSpreadsheet(text: string): DayWorkout[] {
         type: currentBlockType,
         title: currentBlockTitle || currentBlockType.toUpperCase(),
         content: currentBlockContent.join('\n').trim(),
-        isMainWod: currentBlockType === 'conditioning' || currentBlockType === 'especifico',
+        // isMainWod removido — prioridade automática por categoria + duração
       });
     }
     currentBlockContent = [];
@@ -312,22 +312,10 @@ export function AdminSpreadsheet() {
   };
 
   // Toggle de bloco principal - GARANTE apenas 1 por dia
+  // toggleBlockMainWod removido — prioridade automática por categoria + duração
   const toggleBlockMainWod = (dayIndex: number, blockIndex: number) => {
-    if (!parsedWorkouts) return;
-    
-    const updated = [...parsedWorkouts];
-    const day = updated[dayIndex];
-    const block = day.blocks[blockIndex];
-    
-    if (block.isMainWod) {
-      // Se já é o principal, remove a marcação (volta para automático)
-      day.blocks = clearMainBlock(day.blocks);
-    } else {
-      // Marca como principal e remove de outros
-      day.blocks = setAsMainBlock(day.blocks, blockIndex);
-    }
-    
-    setParsedWorkouts(updated);
+    // Mantido como no-op para backward compat de UI admin
+    console.log('[AdminSpreadsheet] isMainWod manual desabilitado — prioridade automática ativa');
   };
 
   const updateWodType = (dayIndex: number, blockIndex: number, wodType: WodType | undefined) => {
