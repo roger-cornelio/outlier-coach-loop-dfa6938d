@@ -3271,14 +3271,6 @@ export function parseStructuredText(text: string): ParseResult {
       result.warnings.push(`${getDayName(day.day as DayOfWeek)} sem blocos de treino`);
     }
     
-    // Verificar se tem WOD principal definido - alerta no nível do dia
-    // REGRA: Se TODOS os blocos são opcionais, não exige WOD principal
-    const allBlocksOptional = day.blocks.every(b => b.optional);
-    const hasMainWodInDay = day.blocks.some(b => b.isMainWod);
-    
-    if (!hasMainWodInDay && day.blocks.length > 0 && !allBlocksOptional) {
-      day.alerts.push('Nenhum WOD principal definido');
-    }
   }
   
   _log('\n[AUDIT] ═══════════════════════════════════════════════════════════════');

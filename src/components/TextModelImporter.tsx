@@ -962,39 +962,6 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setEditedDays(next);
   };
 
-  const toggleMainWod = (dayIndex: number, blockIndex: number) => {
-    if (!parseResult || mode !== 'edit') return;
-
-    // Atualiza estrutura (Tela 1)
-    const updated = { ...parseResult };
-    const day = updated.days[dayIndex];
-    const clickedBlock = day.blocks[blockIndex];
-
-    if (clickedBlock.isMainWod) {
-      clickedBlock.isMainWod = false;
-    } else {
-      day.blocks.forEach((block, idx) => {
-        block.isMainWod = idx === blockIndex;
-      });
-    }
-
-    console.debug('[TextModelImporter] toggleMainWod', { dayIndex, blockIndex });
-    updateParseResult(updated);
-
-    // Atualiza fonte efetiva para preview/salvar
-    updateEdited((days) => {
-      const d = days[dayIndex];
-      if (!d) return;
-      const clicked = d.blocks?.[blockIndex];
-      if (!clicked) return;
-
-      const willUnset = Boolean(clicked.isMainWod);
-      d.blocks = d.blocks.map((b, idx) => ({
-        ...b,
-        isMainWod: willUnset ? undefined : (idx === blockIndex ? true : undefined),
-      }));
-    });
-  };
 
   const changeBlockType = (dayIndex: number, blockIndex: number, newType: string) => {
     if (!parseResult || mode !== 'edit') return;
@@ -1938,35 +1905,13 @@ BLOCO: DESCANSO
                                   key={blockIndex}
                                   id={`block-${dayIndex}-${blockIndex}`}
                                   className={`p-4 rounded-2xl transition-all ${
-                                    block.isMainWod 
-                                      ? 'bg-primary/5 ring-1 ring-primary/20 shadow-sm' 
-                                      : hasValidationErrors
-                                        ? 'bg-amber-500/5 ring-1 ring-amber-500/20'
-                                        : 'bg-muted/30'
+                                    hasValidationErrors
+                                      ? 'bg-amber-500/5 ring-1 ring-amber-500/20'
+                                      : 'bg-muted/30'
                                   } ${highlightedBlock?.dayIndex === dayIndex && highlightedBlock?.blockIndex === blockIndex ? 'ring-2 ring-primary' : ''}`}
                                 >
                                   {/* Header do bloco COM CONTROLES */}
                                   <div className="flex items-center gap-2 flex-wrap mb-3">
-                                    {/* Estrela Principal integrada ao título */}
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleMainWod(dayIndex, blockIndex)}
-                                          className={`flex-shrink-0 transition-colors ${
-                                            block.isMainWod
-                                              ? 'text-primary'
-                                              : 'text-muted-foreground/40 hover:text-muted-foreground'
-                                          }`}
-                                        >
-                                          <Star className={`w-4 h-4 ${block.isMainWod ? 'fill-current' : ''}`} />
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Marcar como WOD principal do dia</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-
                                     {/* Título editável — ghost input */}
                                     <Input
                                       value={displayTitle}
