@@ -48,27 +48,25 @@ function getStructureStyle(structure: string): { icon: React.ReactNode; colorCla
   const upper = structure.toUpperCase();
   
   if (upper.includes('ROUND') || upper.includes('RFT')) {
-    return { icon: <Repeat className="w-3 h-3" />, colorClass: 'bg-primary/20 text-primary border-primary/30' };
+    return { icon: <Repeat className="w-3.5 h-3.5" />, colorClass: 'bg-primary/25 text-primary border-primary/40' };
   }
   if (upper.includes('EMOM') || upper.includes('E2MOM') || upper.includes('E3MOM')) {
-    return { icon: <Clock className="w-3 h-3" />, colorClass: 'bg-amber-500/20 text-amber-600 border-amber-500/30' };
+    return { icon: <Clock className="w-3.5 h-3.5" />, colorClass: 'bg-amber-500/25 text-amber-300 border-amber-500/40' };
   }
   if (upper.includes('AMRAP')) {
-    return { icon: <Timer className="w-3 h-3" />, colorClass: 'bg-green-500/20 text-green-600 border-green-500/30' };
+    return { icon: <Timer className="w-3.5 h-3.5" />, colorClass: 'bg-green-500/25 text-green-300 border-green-500/40' };
   }
   if (upper.includes('FOR TIME') || upper.includes('TIME')) {
-    return { icon: <Timer className="w-3 h-3" />, colorClass: 'bg-blue-500/20 text-blue-600 border-blue-500/30' };
+    return { icon: <Timer className="w-3.5 h-3.5" />, colorClass: 'bg-blue-500/25 text-blue-300 border-blue-500/40' };
   }
   if (upper.includes('SÉRIE') || upper.includes('SERIES')) {
-    return { icon: <Dumbbell className="w-3 h-3" />, colorClass: 'bg-purple-500/20 text-purple-600 border-purple-500/30' };
+    return { icon: <Dumbbell className="w-3.5 h-3.5" />, colorClass: 'bg-purple-500/25 text-purple-300 border-purple-500/40' };
   }
-  // Rep scheme badge: "40 · 30 · 20 · 10", "21 · 15 · 9"
   if (/^\d+\s*·/.test(structure.trim())) {
-    return { icon: <ListOrdered className="w-3 h-3" />, colorClass: 'bg-slate-500/20 text-slate-600 border-slate-500/30' };
+    return { icon: <ListOrdered className="w-3.5 h-3.5" />, colorClass: 'bg-slate-700/30 text-slate-200 border-slate-500/40' };
   }
   
-  // Default: primary color
-  return { icon: <Repeat className="w-3 h-3" />, colorClass: 'bg-primary/20 text-primary border-primary/30' };
+  return { icon: <Repeat className="w-3.5 h-3.5" />, colorClass: 'bg-primary/25 text-primary border-primary/40' };
 }
 
 export function StructureBadge({ structure, className }: StructureBadgeProps) {
@@ -82,7 +80,7 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
       <Badge 
         variant="outline" 
         className={cn(
-          'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
+          'font-bold uppercase tracking-wide text-xs px-3 py-1.5 border gap-1.5',
           colorClass,
           className
         )}
@@ -97,7 +95,7 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
     <Badge 
       variant="outline" 
       className={cn(
-        'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
+        'font-bold uppercase tracking-wide text-xs px-3 py-1.5 border gap-1.5',
         colorClass,
         className
       )}
@@ -125,8 +123,8 @@ export function IntensityBadge({ intensity, className }: IntensityBadgeProps) {
     <Badge 
       variant="outline" 
       className={cn(
-        'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
-        'bg-red-600/20 text-red-500 border-red-600/30',
+        'font-bold uppercase tracking-wide text-xs px-3 py-1.5 border gap-1.5',
+        'bg-red-600/25 text-red-400 border-red-600/40',
         className
       )}
     >
