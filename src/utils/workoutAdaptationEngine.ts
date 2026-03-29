@@ -1008,23 +1008,9 @@ function applyLevelSexVolumes(
  * Se nenhum estiver marcado, usa identificação automática.
  */
 function ensureMainBlockMarked(blocks: WorkoutBlock[]): WorkoutBlock[] {
-  // Verificar se já existe bloco marcado manualmente
-  const hasManualMain = blocks.some(b => b.isMainWod === true);
-  if (hasManualMain) {
-    return blocks;
-  }
-  
-  // Usar identificação automática
-  const mainResult = identifyMainBlock(blocks);
-  if (mainResult.blockIndex < 0) {
-    return blocks;
-  }
-  
-  // Marcar o bloco identificado
-  return blocks.map((block, index) => ({
-    ...block,
-    isMainWod: index === mainResult.blockIndex ? true : undefined,
-  }));
+  // Prioridade automática — não precisa mais marcar manualmente
+  // Mantido para backward compat, mas não altera blocos
+  return blocks;
 }
 
 // ============================================
@@ -1278,7 +1264,7 @@ export function validateAdaptation(
   if (tier && tier !== 'full' && tempoAdaptado < tempoOriginal) {
     const hasAccessories = adapted.blocks.some(block => {
       const priority = BLOCK_PRIORITIES[block.type];
-      return priority?.isAccessory && !block.isMainWod;
+      return priority?.isAccessory && block.type !== 'corrida';
     });
     
     if (hasAccessories) {
@@ -1289,7 +1275,7 @@ export function validateAdaptation(
   // REGRA 3: Treino condensado deve ter apenas 1 bloco principal
   if (tier === 'condensed') {
     const mainBlocks = adapted.blocks.filter(block => 
-      block.isMainWod || block.type === 'conditioning' || block.type === 'forca'
+      block.type === 'conditioning' || block.type === 'metcon' || block.type === 'corrida' || block.type === 'forca'
     );
     
     if (mainBlocks.length > 1) {
