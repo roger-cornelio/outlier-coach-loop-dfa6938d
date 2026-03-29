@@ -78,24 +78,18 @@ export function StructureBadge({ structure, className }: StructureBadgeProps) {
   const isRepScheme = /^\d+\s*·/.test(structure.trim());
   
   if (isRepScheme) {
-    const parts = structure.split('·').map(p => p.trim()).filter(Boolean);
     return (
-      <div className={cn(
-        'inline-flex items-center gap-2 rounded-xl border-2 border-primary/40 bg-primary/10 px-4 py-2.5',
-        className
-      )}>
-        <ListOrdered className="w-4 h-4 text-primary flex-shrink-0" />
-        <div className="flex items-center gap-1.5">
-          {parts.map((num, idx) => (
-            <span key={idx} className="flex items-center gap-1.5">
-              <span className="text-xl font-black text-primary tracking-tight">{num}</span>
-              {idx < parts.length - 1 && (
-                <span className="text-primary/50 text-base font-bold">·</span>
-              )}
-            </span>
-          ))}
-        </div>
-      </div>
+      <Badge 
+        variant="outline" 
+        className={cn(
+          'font-bold uppercase tracking-wide text-[10px] px-2.5 py-1 border gap-1.5',
+          colorClass,
+          className
+        )}
+      >
+        {icon}
+        {structure}
+      </Badge>
     );
   }
   
@@ -293,7 +287,7 @@ export function CommentSubBlock({ comments, className, showLabel = true }: Comme
   
   return (
     <div className={cn(
-      'mt-6 pl-4 py-3 border-l-2 border-primary/40 bg-muted/20 rounded-r-lg',
+      'mt-3 pl-3 py-2 border-l-2 border-primary/40 bg-muted/20 rounded-r-lg',
       className
     )}>
       <div className="flex items-start gap-3">
@@ -366,20 +360,16 @@ export function BlockHeader({ title, category, isMainWod, blockIndex, className 
   const displayTitle = normalizeBlockTitle(title) || `Bloco ${blockIndex + 1}`;
   
   return (
-    <div className={cn('space-y-2', className)}>
-      {/* NÍVEL 1: Título - maior peso e tamanho */}
-      <h4 className="font-display text-2xl font-bold tracking-tight text-foreground uppercase">
+    <div className={cn('flex items-center gap-2 flex-wrap', className)}>
+      <h4 className="font-display text-base font-bold tracking-tight text-foreground uppercase">
         {displayTitle}
       </h4>
-      {/* NÍVEL 2: Chips de metadata */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <CategoryChip category={category} />
-        {isMainWod && (
-          <Badge className="bg-primary text-primary-foreground text-xs font-bold uppercase px-3 py-1">
-            WOD Principal
-          </Badge>
-        )}
-      </div>
+      <CategoryChip category={category} />
+      {isMainWod && (
+        <Badge className="bg-primary text-primary-foreground text-[10px] font-bold uppercase px-2 py-0.5">
+          WOD Principal
+        </Badge>
+      )}
     </div>
   );
 }
@@ -447,9 +437,9 @@ export function FullBlockRenderer({
 }: FullBlockRendererProps) {
   return (
     <div className={cn(
-      'p-4 rounded-xl border-2',
+      'p-3 rounded-lg border',
       isMainWod 
-        ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20' 
+        ? 'border-primary/40 bg-primary/5' 
         : 'border-border bg-card',
       className
     )}>
@@ -477,7 +467,7 @@ export function FullBlockRenderer({
             if (line.startsWith(STRUCT_LINE_PREFIX)) {
               const structLabel = line.slice(STRUCT_LINE_PREFIX.length);
               return (
-                <div key={idx} className="pt-3 pb-1">
+              <div key={idx} className="pt-2 pb-0.5">
                   <StructureBadge structure={structLabel} />
                 </div>
               );
@@ -486,7 +476,7 @@ export function FullBlockRenderer({
             if (line.startsWith(INTENSITY_LINE_PREFIX)) {
               const intensityLabel = line.slice(INTENSITY_LINE_PREFIX.length);
               return (
-                <div key={idx} className="pt-2 pb-1">
+              <div key={idx} className="pt-1.5 pb-0.5">
                   <IntensityBadge intensity={intensityLabel} />
                 </div>
               );
