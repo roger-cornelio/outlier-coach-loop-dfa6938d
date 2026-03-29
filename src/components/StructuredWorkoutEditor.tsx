@@ -363,19 +363,10 @@ export function StructuredWorkoutEditor({
         if (!validation.hasWeek) {
           setError("Selecione a semana de referência");
         } else if ((validation.daysWithContent ?? 0) === 0) {
-          // T0: Semana vazia - anti-acidente
           setError("Adicione pelo menos 1 dia de treino para publicar a semana.");
         } else if ((validation.daysWithMissingCategory ?? 0) > 0) {
-          // Categoria obrigatória
           setError(`${validation.daysWithMissingCategory} dia(s) com blocos sem categoria selecionada.`);
-        } else if ((validation.daysWithoutMain ?? 0) > 0) {
-          // WOD Principal obrigatório
-          setError(`${validation.daysWithoutMain} dia(s) sem bloco Principal marcado.`);
-        } else if ((validation.daysWithMultipleMain ?? 0) > 0) {
-          // Múltiplos principais
-          setError(`${validation.daysWithMultipleMain} dia(s) com múltiplos blocos Principal.`);
         } else if ((validation.errorsInContentDays ?? 0) > 0) {
-          // Outros erros
           setError(`Corrija os erros nos dias com conteúdo antes de ${status === "published" ? "publicar" : "salvar"}`);
         } else {
           setError("Verifique os dias com conteúdo");
