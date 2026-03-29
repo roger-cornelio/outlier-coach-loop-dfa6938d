@@ -732,9 +732,7 @@ const TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
 
 // Mapeamento de tipo por CONTEÚDO (usado se título não definir tipo)
 const CONTENT_TYPE_PATTERNS: { pattern: RegExp; type: WorkoutBlock['type'] }[] = [
-  { pattern: /\b(?:corrida|run|running|km|pace)\b/i, type: 'corrida' },
-  { pattern: /\b(?:bike|airbike|assault)\b/i, type: 'corrida' },
-  { pattern: /\b(?:remo|row|rowing|ski|erg)\b/i, type: 'corrida' },
+  { pattern: /\b(?:corrida|run|running|trote)\b/i, type: 'corrida' },
   { pattern: /\b(?:sled|sandbag|wall\s*ball|farmer|carry|lunges?)\b/i, type: 'especifico' },
   { pattern: /\b(?:core|plank|toes?\s*to\s*bar|sit[- ]?up|hollow)\b/i, type: 'acessorio' },
   { pattern: /\b(?:squat|deadlift|press|clean|snatch|jerk)\b/i, type: 'forca' },
