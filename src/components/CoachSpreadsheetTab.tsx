@@ -187,35 +187,12 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
   // OBRIGATÓRIO: Semana de referência
   const [selectedWeek, setSelectedWeek] = useState<WeekPeriod | null>(null);
 
-  // Validação: cada dia deve ter exatamente 1 WOD principal
-  const mainWodValidation = useMemo(() => {
-    if (!parsedWorkouts) return { isValid: true, missingDays: [] };
-    
-    const missingDays: string[] = [];
-    
-    for (const workout of parsedWorkouts) {
-      // Verificar se há WOD principal definido (manual ou auto)
-      const hasManualMain = workout.blocks.some(b => b.isMainWod === true);
-      const autoMain = identifyMainBlock(workout.blocks);
-      
-      if (!hasManualMain && autoMain.blockIndex === -1) {
-        missingDays.push(DAY_NAMES[workout.day]);
-      }
-    }
-    
-    return {
-      isValid: missingDays.length === 0,
-      missingDays,
-    };
-  }, [parsedWorkouts]);
-
-  // Validação: não pode salvar/publicar sem semana E sem WOD principal em todos os dias
+  // Validação: não pode salvar/publicar sem semana
   const canSaveOrPublish = useMemo(() => {
     return selectedWeek !== null && 
            parsedWorkouts !== null && 
-           parsedWorkouts.length > 0 &&
-           mainWodValidation.isValid;
-  }, [selectedWeek, parsedWorkouts, mainWodValidation.isValid]);
+           parsedWorkouts.length > 0;
+  }, [selectedWeek, parsedWorkouts]);
 
   const handleClearWorkouts = () => {
     setSpreadsheetText('');
@@ -227,30 +204,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
     setError(null);
   };
 
-  // Toggle WOD principal para um bloco específico (máximo 1 por dia)
-  const toggleMainWod = (dayIndex: number, blockIndex: number) => {
-    if (!parsedWorkouts) return;
-    
-    const updated = [...parsedWorkouts];
-    const day = updated[dayIndex];
-    const clickedBlock = day.blocks[blockIndex];
-    
-    // Se já está marcado como principal manual, remove
-    if (clickedBlock.isMainWod === true) {
-      clickedBlock.isMainWod = undefined;
-    } else {
-      // Remove marcação de todos os outros blocos do dia
-      day.blocks.forEach((block, idx) => {
-        if (idx === blockIndex) {
-          block.isMainWod = true;
-        } else {
-          block.isMainWod = undefined;
-        }
-      });
-    }
-    
-    setParsedWorkouts(updated);
-  };
 
   const processSpreadsheet = async () => {
     if (!spreadsheetText.trim()) {
@@ -698,24 +651,6 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
               </div>
             )}
 
-            {/* Erro de WOD Principal faltando */}
-            {!mainWodValidation.isValid && (
-              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-destructive">
-                      WOD Principal não definido
-                    </p>
-                    <p className="text-xs text-destructive/80 mt-1">
-                      {mainWodValidation.missingDays.map(day => 
-                        getMainBlockCopy().missingError(day)
-                      ).join('\n')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Configurações de salvamento */}
             <div className="pt-4 border-t border-border space-y-4">
@@ -784,9 +719,7 @@ export function CoachSpreadsheetTab({ linkedAthletes, loadingAthletes = false, i
                     <TooltipContent>
                       {!selectedWeek 
                         ? <p>Selecione a semana de referência para salvar</p>
-                        : !mainWodValidation.isValid
-                          ? <p>Defina WOD Principal em todos os dias</p>
-                          : <p>Adicione treinos para salvar</p>
+                        : <p>Adicione treinos para salvar</p>
                       }
                     </TooltipContent>
                   )}

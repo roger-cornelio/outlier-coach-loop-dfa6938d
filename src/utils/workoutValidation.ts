@@ -123,7 +123,7 @@ export function validateWorkoutForPublish(
   // REGRA MVP0: Validar categoria e bloco Principal em dias não-descanso
   if (workouts && workouts.length > 0) {
     let daysWithMissingCategory = 0;
-    let daysWithoutMain = 0;
+    
 
     for (const day of workouts) {
       const isRestDay = day.isRestDay === true;
@@ -138,21 +138,11 @@ export function validateWorkoutForPublish(
         daysWithMissingCategory++;
       }
 
-      // Verificar se tem pelo menos 1 bloco Principal
-      const hasMain = day.blocks.some((b) => b.isMainWod === true);
-      if (!hasMain) {
-        daysWithoutMain++;
-      }
     }
 
     if (daysWithMissingCategory > 0) {
       errors.push(`${daysWithMissingCategory} dia(s) com blocos sem categoria.`);
       console.log('[VALIDATION_ERROR] reason="missing_category" count=' + daysWithMissingCategory);
-    }
-
-    if (daysWithoutMain > 0) {
-      errors.push(`${daysWithoutMain} dia(s) sem bloco Principal marcado.`);
-      console.log('[VALIDATION_ERROR] reason="missing_main_wod" count=' + daysWithoutMain);
     }
   }
 
