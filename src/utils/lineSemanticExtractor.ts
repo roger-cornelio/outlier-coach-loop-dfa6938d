@@ -55,7 +55,7 @@ const METRIC_PATTERNS: MetricPattern[] = [
 
   // Distance: "1000m", "5km", "400m"
   { type: 'distance', regex: /\d+(?:[,.]\d+)?\s*km\b/gi },
-  { type: 'distance', regex: /\d+\s*m\b/gi },
+  { type: 'distance', regex: /\d+(?:[,.]\d+)?\s*m\b/gi },
 
   // Duration with symbols: 30", 45'', 5', 1'30" (includes smart/curly quotes via explicit Unicode)
   { type: 'duration', regex: /\d+\s*[\u0027\u2018\u2019\u2032]\s*\d+\s*[\u0022\u201C\u201D\u2033\u0027\u2018\u2019\u2032]{1,2}/g },

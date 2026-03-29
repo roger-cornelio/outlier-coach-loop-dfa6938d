@@ -63,7 +63,7 @@ const TIME_PATTERNS = [
 // DISTÂNCIA
 const DISTANCE_PATTERNS = [
   // Metros: "m"
-  /(\d+)\s*m\b/gi,
+  /(\d+(?:[,.]\d+)?)\s*m\b/gi,
   // Quilômetros: "km"
   /(\d+(?:[,.]\d+)?)\s*km\b/gi,
 ];
