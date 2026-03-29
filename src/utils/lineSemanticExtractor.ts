@@ -73,6 +73,12 @@ const METRIC_PATTERNS: MetricPattern[] = [
   { type: 'reps', regex: /\d+\s*(?:reps?|repetições?|repeticoes?)\b/gi },
   // Cal: "30 cal", "25/20 cal"
   { type: 'reps', regex: /\d+(?:\s*\/\s*\d+)?\s*cal\b/gi },
+
+  // Leading unilateral reps: "8/8 Kb Step Box" (must be followed by text, not a unit)
+  { type: 'reps', regex: /^\d+\s*\/\s*\d+(?=\s+[a-zA-ZÀ-ÿ])/g },
+
+  // Leading simple reps: "10 Burpees" (only at start, followed by text, not a unit)
+  { type: 'reps', regex: /^\d{1,4}(?=\s+[a-zA-ZÀ-ÿ])/g },
 ];
 
 // ============================================

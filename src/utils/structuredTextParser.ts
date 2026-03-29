@@ -2629,9 +2629,10 @@ export function parseStructuredText(text: string): ParseResult {
       return { weight: `${rpeMatch[1].toUpperCase()} ${rpeMatch[2]}`, isAlert: false };
     }
     
-    const rxMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*(?:kg)?/);
+    const rxMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*(?:kg|lb)\b/i);
     if (rxMatch) {
-      return { weight: `${rxMatch[1]}/${rxMatch[2]}kg`, isAlert: false };
+      const unit = line.match(/(\d+)\s*\/\s*(\d+)\s*(kg|lb)\b/i)?.[3] || 'kg';
+      return { weight: `${rxMatch[1]}/${rxMatch[2]}${unit}`, isAlert: false };
     }
     
     const kgMatch = line.match(/(\d+(?:[.,]\d+)?)\s*kg\b/i);
