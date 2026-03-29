@@ -80,6 +80,8 @@ const REPS_STRUCTURE_PATTERNS = [
   /\b(?:emom|e\d+mom|amrap|for\s*time|rft|tabata)\b/gi,
   // Reps explícito
   /(\d+)\s*(?:reps?|repeti[çc][õo]es?)\b/gi,
+  // Leading "cal" without number: "cal Air Bike"
+  /^cal\b/gi,
 ];
 
 // ESFORÇO / INTENSIDADE
@@ -90,6 +92,8 @@ const EFFORT_PATTERNS = [
   /\b(?:zona|zone)\s*(\d+)/gi,
   // FC/HR: "FC 140", "HR 150"
   /\b(?:fc|hr)\s*[:=]?\s*(\d+)/gi,
+  // Max effort
+  /\bmax\b/gi,
 ];
 
 // ============================================
