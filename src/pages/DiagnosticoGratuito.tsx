@@ -122,6 +122,7 @@ export default function DiagnosticoGratuito() {
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const [textoIa, setTextoIa] = useState<string | null>(null);
   const [textoIaLoading, setTextoIaLoading] = useState(false);
+  const [hasExistingAccount, setHasExistingAccount] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
 
@@ -180,8 +181,8 @@ export default function DiagnosticoGratuito() {
     setTextoIa(null);
     setTextoIaLoading(false);
     try {
-      // Call scrape + RoxCoach proxy in parallel
-      const [scrapeResponse, roxCoachResponse] = await Promise.all([
+      // Call scrape + RoxCoach proxy + account check in parallel
+      const [scrapeResponse, roxCoachResponse, accountCheck] = await Promise.all([
         supabase.functions.invoke('scrape-hyrox-result', {
           body: { url: result.result_url },
         }),
@@ -197,7 +198,12 @@ export default function DiagnosticoGratuito() {
           console.warn('[DIAG_FREE] RoxCoach proxy failed:', err);
           return { data: null, error: err };
         }),
+        supabase.rpc('check_profile_exists_by_name', { _name: result.athlete_name })
+          .then(({ data }) => !!data)
+          .catch(() => false),
       ]);
+
+      setHasExistingAccount(accountCheck);
 
       const { data: scrapeData, error: scrapeError } = scrapeResponse;
 
@@ -1052,15 +1058,23 @@ export default function DiagnosticoGratuito() {
                     </div>
 
                     <button
-                      onClick={() => user ? navigate('/app') : setStep('coach-selection')}
+                      onClick={() => {
+                        if (user) {
+                          navigate('/app');
+                        } else if (hasExistingAccount) {
+                          navigate('/login');
+                        } else {
+                          setStep('coach-selection');
+                        }
+                      }}
                       className="inline-flex items-center gap-3 font-display text-sm tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40"
                     >
                       <Zap className="w-5 h-5" />
-                      {user ? 'ACESSAR MINHA CONTA' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
+                      {(user || hasExistingAccount) ? 'ACESSAR MINHA CONTA' : 'COMEÇAR MEUS 30 DIAS GRÁTIS'}
                       <ArrowRight className="w-4 h-4" />
                     </button>
 
-                    {!user && (
+                    {!user && !hasExistingAccount && (
                       <p className="text-[10px] text-muted-foreground/50">
                         Cancele quando quiser
                       </p>
