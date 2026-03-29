@@ -1,53 +1,38 @@
 
 
-## Plano: Corrigir detecção por conteúdo + Análise de impacto
+## Plano: Separar bike/remo/ski da categoria "Corrida"
 
-### Bug encontrado
+### Problema
 
-A função `detectTypeByContent` (linha 2567) tem uma guarda errada:
+Bike, remo e ski estão sendo detectados como "Corrida" tanto no `categoryValidation.ts` (keywords) quanto no `structuredTextParser.ts` (CONTENT_TYPE_PATTERNS). O usuário define que **Corrida = corrida pura** (run/running). Bike, remo e ski são cardio mas não são corrida.
 
-```
-if (block.type !== 'conditioning') return block.type;
-```
+### Decisão de design
 
-O `createNewBlock` define `type: ''` quando o título não é reconhecido. Na hora de refinar, o código em `saveCurrentBlock` (linha 2478) entra corretamente (`!currentBlock.type` é true para `''`), mas `detectTypeByContent` recebe `block.type = ''`, que **não é** `'conditioning'`, então a guarda retorna `''` imediatamente sem analisar o conteúdo.
+Bike/remo/ski isolados devem ser classificados como **Metcon** (condicionamento), não como Corrida. Corrida é exclusivamente: run, running, corrida, trote, pace, km (quando associado a corrida).
 
-### Correção
+### Alterações
 
-**`src/utils/structuredTextParser.ts`** — 1 linha:
+**1. `src/utils/categoryValidation.ts`**
+- Linha 83: remover `/ciclismo/i, /cycling/i, /remo/i, /\brow\b/i, /rowing/i, /ski/i, /bike/i, /airbike/i` das keywords de título de `corrida`
+- Linha 84: remover os 2 regexes de bike e remo/ski do content de `corrida`
+- Manter apenas: `corrida, running, run, trote, pace` como keywords de corrida
 
-Linha 2567: mudar de `block.type !== 'conditioning'` para `block.type && block.type !== 'conditioning'`, para que `''` também passe pela análise de conteúdo.
+**2. `src/utils/structuredTextParser.ts`**
+- Linha 736: remover `{ pattern: /\b(?:bike|airbike|assault)\b/i, type: 'corrida' }`
+- Linha 737: remover `{ pattern: /\b(?:remo|row|rowing|ski|erg)\b/i, type: 'corrida' }`
+- Blocos com bike/remo/ski sem formato metcon cairão no fallback `metcon` (linha 2599), que é o comportamento correto
 
-Os `CONTENT_TYPE_PATTERNS` já existem e cobrem corrida, específico, acessório e força por conteúdo. A detecção por formato (AMRAP/EMOM/Tabata) também já existe nas linhas 2577-2584. Tudo isso já funciona — só não era alcançado por causa da guarda.
+### Sobre marcação de bloco principal
 
-### Assertividade após correção
+Já removida no plano anterior aprovado. Confirmar se ainda há resíduos de `isMainWod` toggle no editor — se houver, remover nesta mesma entrega.
 
-Sem a correção, blocos sem título reconhecido ficavam com `type: ''` (sem categoria). Com a correção:
+### Resultado
 
-- Título reconhecido → **95%** (já funcionava)
-- Formato AMRAP/EMOM/Tabata/For Time → **95%** (passa a funcionar)
-- Conteúdo com corrida/bike/remo → **90%** (passa a funcionar)
-- Conteúdo com sled/wall ball/farmer → **85%** (passa a funcionar)
-- Conteúdo com squat/deadlift/press + padrão NxM → **80%** (passa a funcionar)
-- Blocos com exercícios mas sem sinal claro → fallback `metcon` (linha 2599)
-
-**Assertividade geral: ~88-90%** (antes era ~40% porque só título funcionava)
-
-### Impacto real de marcar Força como Metcon (ou vice-versa)
-
-O impacto é **baixo no cálculo de calorias/tempo**, mas **médio na adaptação por tempo**:
-
-| Aspecto | Impacto |
-|---------|---------|
-| **Calorias (kcal)** | Nenhum — o motor calcula por exercício individual (MET + carga + reps), não pela categoria do bloco |
-| **Tempo estimado** | Nenhum — calculado pela soma dos exercícios, não pela categoria |
-| **Prioridade de corte** | **Médio** — Força tem peso 80, Metcon tem peso 100. Um bloco de Força marcado como Metcon será protegido como se fosse mais importante, e blocos reais de Metcon podem ser cortados antes dele |
-| **Ordem de remoção** | **Médio** — Na adaptação por tempo, Força (prioridade 5) é removida antes de Metcon (prioridade 2). Trocar inverte essa ordem |
-| **Feedback da IA** | **Baixo** — Os prompts mencionam a categoria mas a IA analisa o conteúdo real |
-
-**Resumo**: Marcar errado não quebra cálculos, mas pode fazer o motor de adaptação proteger/cortar o bloco errado quando o atleta tem menos tempo disponível.
-
-### Arquivo alterado
-
-1. **`src/utils/structuredTextParser.ts`** — Linha 2567: corrigir guarda do `detectTypeByContent`
+| Conteúdo | Antes | Depois |
+|----------|-------|--------|
+| "5km corrida" | corrida ✅ | corrida ✅ |
+| "2000m remo" | corrida ❌ | metcon ✅ |
+| "20min bike" | corrida ❌ | metcon ✅ |
+| "Ski Erg 1000m" | corrida ❌ | metcon ✅ |
+| "AMRAP com 400m run" | metcon ✅ | metcon ✅ |
 
