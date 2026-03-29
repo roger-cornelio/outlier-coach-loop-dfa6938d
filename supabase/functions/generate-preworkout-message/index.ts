@@ -124,26 +124,37 @@ serve(async (req) => {
 
     if (mode === 'daily_summary') {
       systemPrompt = DAILY_SUMMARY_PROMPTS[coachStyle] || DAILY_SUMMARY_PROMPTS.PULSE;
-      userPrompt = `Baseado no RESUMO TÉCNICO do treino de hoje:
+      userPrompt = `Baseado no RESUMO SEMÂNTICO ESTRUTURADO do treino de hoje:
 
 ${workoutSummary}
 
-Gere um resumo do treino do dia em EXATAMENTE 2-3 frases que:
-1. Explique o OBJETIVO principal do treino (ex: "força + condicionamento", "resistência muscular")
-2. Aponte o momento mais INTENSO/DIFÍCIL do treino — onde o atleta vai "sangrar mais" (ex: "o AMRAP de 15 min vai testar seu fôlego", "o bloco de força vai pedir tudo das pernas")
-3. Motive o atleta a fazer o treino, no seu estilo de coach
-4. Seja ESPECÍFICO — use informações reais dos blocos, nunca invente estímulos
+FORMATO DO RESUMO: Cada exercício vem decomposto em segmentos tipados:
+- "reps:" = repetições ou calorias
+- "carga:" = peso usado (kg/lb/%)
+- "tempo:" = duração do exercício  
+- "dist:" = distância
+- "intensidade:" = nível de esforço (PSE, max, zona)
+- "cadência:" = ritmo (rpm, pace)
+
+Use EXATAMENTE os dados fornecidos. Gere 2-3 frases que:
+1. Explique o OBJETIVO principal — cite os tipos de bloco e estímulos reais
+2. Aponte o momento mais INTENSO — use cargas, repetições e intensidades reais do resumo
+3. Motive o atleta no seu estilo de coach
+4. NUNCA invente exercícios, cargas ou estímulos que não estejam no resumo
 5. NÃO cumprimente nem diga "hoje" no início${genderContext}
 
 Responda APENAS com o texto, sem introduções.`;
     } else {
       systemPrompt = COACH_PROMPTS[coachStyle] || COACH_PROMPTS.PULSE;
-      userPrompt = `Baseado no RESUMO TÉCNICO do treino de hoje:
+      userPrompt = `Baseado no RESUMO SEMÂNTICO ESTRUTURADO do treino de hoje:
 
 ${workoutSummary}
 
+FORMATO: Cada linha tem segmentos tipados (reps, carga, tempo, dist, intensidade, cadência).
+Use esses dados para ser ESPECÍFICO sobre o treino.
+
 Gere uma mensagem motivacional de pré-treino (máximo 2 frases) que:
-1. Seja ESPECÍFICA sobre o objetivo do treino de hoje
+1. Seja ESPECÍFICA — mencione cargas, exercícios ou estímulos reais do resumo
 2. NÃO invente estímulos que não existam no resumo
 3. Prepare mentalmente o atleta para o que vem
 4. Mantenha seu estilo de coach${genderContext}

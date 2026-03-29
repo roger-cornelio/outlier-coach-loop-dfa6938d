@@ -16,6 +16,7 @@ import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
+import { buildSemanticSummary } from '@/utils/workoutSemanticSummary';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
@@ -181,15 +182,7 @@ export function WeeklyTrainingView() {
 
   const buildWorkoutSummaryText = useCallback((workout: typeof currentWorkout) => {
     if (!workout || workout.isRestDay) return '';
-    return workout.blocks
-      .filter(b => b.type !== 'notas')
-      .map(b => {
-        const title = getBlockDisplayTitle(b, 0);
-        const data = getBlockDisplayDataFromParsed(b);
-        const lines = data.exerciseLines.slice(0, 5).join(', ');
-        return `[${b.type.toUpperCase()}] ${title}${b.isMainWod ? ' (WOD Principal)' : ''}: ${lines || b.content?.slice(0, 100) || ''}`;
-      })
-      .join('\n');
+    return buildSemanticSummary(workout.blocks as any);
   }, []);
 
   useEffect(() => {
