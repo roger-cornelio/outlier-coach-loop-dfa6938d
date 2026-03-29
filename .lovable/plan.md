@@ -1,36 +1,41 @@
 
 
-## Plano: Corrigir 3 falhas de reconhecimento semântico
+## Plano: Normalizar prefixos de equipamento no matching de exercícios
 
-### Problemas encontrados
+### Problema
 
-1. **`cal Air Bike`** — o regex de calorias exige número antes de "cal" (`\d+ cal`). Quando "cal" vem sozinho no início da linha, não é reconhecido.
+O dicionário tem "DB Step Box" mas o coach escreve "Kb Step Box". O matching atual compara strings por substring (`includes`), então "kb step box" nunca vai conter "db step box". Resultado: aparece como exercício novo quando na verdade é o mesmo movimento com equipamento diferente.
 
-2. **`125 kgs`** — o regex de carga usa `kg\b` (word boundary). Como "kgs" tem um "s" depois, o boundary não bate e a carga não é detectada. O mesmo vale para "lbs".
+### Solução
 
-3. **`Max Sled Push`** — "Max" não está em nenhum padrão. Deveria ser reconhecido como intensidade (esforço máximo).
+Adicionar uma camada de normalização de equipamento no `matchesDictionary`. Antes de comparar, remover prefixos de equipamento conhecidos (KB, DB, BB, Bar, Dumbbell, Kettlebell, Barbell, Single Arm, Double) tanto do nome extraído quanto dos nomes do dicionário.
 
-### Correções
+Se após a remoção o nome-base for igual, é o mesmo exercício.
 
-**Arquivo: `src/utils/lineSemanticExtractor.ts`**
+### Exemplo
 
-1. **Carga plural** — mudar `kg|lb` para `kgs?|lbs?` no regex de load (linha 49)
-2. **"cal" líder** — adicionar novo regex de reps: `^\bcal\b` no início da linha, tipo `reps`
-3. **"Max" como intensidade** — adicionar regex: `\bMax\b` seguido de nome de exercício, tipo `intensity`
+```text
+Coach escreve: "Kb Step Box"
+Dicionário tem: "DB Step Box"
 
-**Arquivo: `src/utils/unitDetection.ts`**
+Após strip:
+  "kb step box" → "step box"
+  "db step box" → "step box"
+  → Match! ✓
+```
 
-1. **Carga plural** — mesma correção `kgs?|lbs?` nos padrões existentes (se houver detecção de carga)
-2. **"cal" líder** — adicionar ao REPS_STRUCTURE_PATTERNS
-3. **"Max" como esforço** — adicionar ao EFFORT_PATTERNS
+### O que muda
 
-### Resultado esperado
+**Arquivo: `src/utils/parsingCoverage.ts`**
 
-- `cal Air Bike` → **cal** (laranja, reps) + **Air Bike** (branco, exercício)
-- `Max Sled Push 125 kgs` → **Max** (vermelho, intensidade) + **Sled Push** (branco, exercício) + **125 kgs** (vermelho, carga)
-- `80kgs` → reconhecido como carga normalmente
+1. Nova função `stripEquipmentPrefix(name)` que remove prefixos: `kb`, `db`, `bb`, `bar`, `barbell`, `kettlebell`, `dumbbell`, `single arm`, `double`, `single`
+2. Na função `matchesDictionary`, além da comparação atual, fazer uma segunda comparação com os nomes sem prefixo de equipamento
+3. Na função `fuzzyMatchExerciseName`, aplicar a mesma normalização para evitar falsos positivos de typo
 
-### Arquivos
-- `src/utils/lineSemanticExtractor.ts` (3 ajustes nos METRIC_PATTERNS)
-- `src/utils/unitDetection.ts` (3 ajustes correspondentes)
+### Resultado
+
+- "Kb Step Box" reconhecido se "DB Step Box" existe no dicionário
+- "Barbell Row" reconhecido se "DB Row" existe
+- "Kettlebell Swing" reconhecido se "KB Swing" existe
+- Zero impacto em exercícios sem prefixo de equipamento
 
