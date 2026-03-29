@@ -18,6 +18,7 @@ import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine, IntensityB
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
 import { buildSemanticSummary } from '@/utils/workoutSemanticSummary';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
+import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
@@ -408,8 +409,8 @@ export function WeeklyTrainingView() {
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
               const isEstimated = !hasParsedData;
 
-              // Tempo registrado disponível no WOD principal
-              const isMainWod = block.isMainWod;
+              // Bloco principal automático (por prioridade de categoria + duração)
+              const isMainWod = identifyMainBlock(currentWorkout.blocks).blockIndex === index;
               const hasRegisteredTime = isMainWod && dayIsCompleted && dayTimeInSeconds && dayTimeInSeconds > 0;
 
               return (

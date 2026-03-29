@@ -310,40 +310,29 @@ export function useCoachDraft() {
     // Semana precisa ter pelo menos 1 dia com conteúdo
     const hasContentDays = daysWithContent.length >= 1;
 
-    // VALIDAÇÃO MVP0: categoria + bloco principal
+    // VALIDAÇÃO: categoria obrigatória (prioridade automática — sem validação de Principal)
     let missingCategory = 0;
-    let missingMainWod = 0;
 
     for (const day of daysWithContent) {
       const isRestDay = day.isRestDay === true;
-      if (isRestDay) continue; // Descanso não exige validação
+      if (isRestDay) continue;
 
-      // Verificar se todos os blocos têm categoria
       for (const block of day.blocks) {
         if (!block.type) {
           missingCategory++;
         }
       }
-
-      // Verificar se tem pelo menos 1 bloco Principal
-      const hasMain = day.blocks.some((b) => b.isMainWod === true);
-      if (!hasMain) {
-        missingMainWod++;
-      }
     }
 
-    const hasValidationErrors = missingCategory > 0 || missingMainWod > 0;
+    const hasValidationErrors = missingCategory > 0;
 
-    // Pode salvar se: semana selecionada + tem conteúdo + sem erros
     const result = draft.weekId !== null && hasContentDays && !hasBlockingErrors && !hasValidationErrors;
 
-    // Log de diagnóstico (apenas em debug)
     if (import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true') {
       console.log("[PUBLISH_GUARD] useCoachDraft", {
         daysWithContent: daysWithContent.length,
         hasBlockingErrors,
         missingCategory,
-        missingMainWod,
         canSave: result,
       });
     }

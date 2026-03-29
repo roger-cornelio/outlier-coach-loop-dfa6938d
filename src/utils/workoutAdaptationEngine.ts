@@ -754,7 +754,7 @@ function applyReducedTierStrategy(
   // 1. Remover blocos acessórios
   let filtered = blocks.filter(block => {
     const priority = BLOCK_PRIORITIES[block.type];
-    if (priority?.isAccessory && !block.isMainWod) {
+    if (priority?.isAccessory && block.type !== 'corrida') {
       removed++;
       return false;
     }
@@ -777,7 +777,7 @@ function applyReducedTierStrategy(
   if (currentTime.totalSeconds > targetSeconds) {
     const adjustRatio = Math.max(0.6, targetSeconds / currentTime.totalSeconds);
     filtered = filtered.map(block => {
-      if (block.type === 'conditioning' || block.isMainWod || block.type === 'forca') {
+      if (block.type === 'conditioning' || block.type === 'metcon' || block.type === 'corrida' || block.type === 'forca') {
         return condenseBlockVolumes(block, adjustRatio);
       }
       return block;
@@ -801,9 +801,9 @@ function applyMinimalTierStrategy(
 ): { blocks: WorkoutBlock[]; removed: number } {
   let removed = 0;
   
-  // 1. Manter APENAS conditioning e isMainWod
+  // 1. Manter APENAS conditioning, corrida e metcon
   let kept = blocks.filter(block => {
-    if (block.isMainWod || block.type === 'conditioning') {
+    if (block.type === 'conditioning' || block.type === 'corrida' || block.type === 'metcon') {
       return true;
     }
     // Manter força se não houver conditioning
@@ -1008,23 +1008,9 @@ function applyLevelSexVolumes(
  * Se nenhum estiver marcado, usa identificação automática.
  */
 function ensureMainBlockMarked(blocks: WorkoutBlock[]): WorkoutBlock[] {
-  // Verificar se já existe bloco marcado manualmente
-  const hasManualMain = blocks.some(b => b.isMainWod === true);
-  if (hasManualMain) {
-    return blocks;
-  }
-  
-  // Usar identificação automática
-  const mainResult = identifyMainBlock(blocks);
-  if (mainResult.blockIndex < 0) {
-    return blocks;
-  }
-  
-  // Marcar o bloco identificado
-  return blocks.map((block, index) => ({
-    ...block,
-    isMainWod: index === mainResult.blockIndex ? true : undefined,
-  }));
+  // Prioridade automática — não precisa mais marcar manualmente
+  // Mantido para backward compat, mas não altera blocos
+  return blocks;
 }
 
 // ============================================
@@ -1278,7 +1264,7 @@ export function validateAdaptation(
   if (tier && tier !== 'full' && tempoAdaptado < tempoOriginal) {
     const hasAccessories = adapted.blocks.some(block => {
       const priority = BLOCK_PRIORITIES[block.type];
-      return priority?.isAccessory && !block.isMainWod;
+      return priority?.isAccessory && block.type !== 'corrida';
     });
     
     if (hasAccessories) {
@@ -1289,7 +1275,7 @@ export function validateAdaptation(
   // REGRA 3: Treino condensado deve ter apenas 1 bloco principal
   if (tier === 'condensed') {
     const mainBlocks = adapted.blocks.filter(block => 
-      block.isMainWod || block.type === 'conditioning' || block.type === 'forca'
+      block.type === 'conditioning' || block.type === 'metcon' || block.type === 'corrida' || block.type === 'forca'
     );
     
     if (mainBlocks.length > 1) {

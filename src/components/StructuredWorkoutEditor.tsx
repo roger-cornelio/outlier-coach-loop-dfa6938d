@@ -156,69 +156,39 @@ export function StructuredWorkoutEditor({
     const dayValidations: Record<DayOfWeek, DayValidation & { multipleMainBlocks: boolean; isRestDay: boolean; missingCategory: boolean }> =
       {} as any;
     let totalErrors = 0;
-    let daysWithoutMain = 0;
-    let daysWithMultipleMain = 0;
     let daysWithMissingCategory = 0;
 
     for (const day of days) {
-      // MVP0: Dias de descanso NÃO exigem WOD Principal e NÃO contam erros de validação de WOD
       const isRestDay = day.isRestDay === true;
 
-      // Validar todos os blocos
       const blockValidation = validateAllBlocks(day.blocks);
       totalErrors += blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0);
 
-      // Verificar se todos os blocos têm categoria/tipo (OBRIGATÓRIO para dias não-descanso)
       const blocksWithoutCategory = isRestDay ? 0 : day.blocks.filter((b) => !b.type).length;
       const hasMissingCategory = blocksWithoutCategory > 0;
       if (hasMissingCategory) {
         daysWithMissingCategory++;
       }
 
-      // Verificar WOD Principal - APENAS para dias de treino (não descanso)
+      // Prioridade automática: bloco principal é calculado, não marcado
+      // Não precisa mais validar isMainWod manual
       const workoutBlocks = day.blocks.map(structuredToWorkoutBlock);
       const mainBlock = identifyMainBlock(workoutBlocks);
-      const manualMainCount = day.blocks.filter((b) => b.isMainWod === true).length;
-      const hasManualMain = manualMainCount > 0;
-      const hasMain = hasManualMain || mainBlock.blockIndex !== -1;
-      const multipleMainBlocks = manualMainCount > 1;
-
-      // MVP0: Só contar problemas de WOD para dias que NÃO são descanso
-      if (!isRestDay) {
-        if (multipleMainBlocks) {
-          daysWithMultipleMain++;
-        }
-
-        if (!hasMain && day.blocks.length > 0) {
-          daysWithoutMain++;
-        }
-      }
+      const hasMain = mainBlock.blockIndex !== -1;
 
       dayValidations[day.day] = {
-        hasMainWod: isRestDay ? true : hasMain, // Descanso sempre "tem" WOD (não precisa)
+        hasMainWod: isRestDay ? true : hasMain,
         allBlocksValid: blockValidation.isValid,
         errorCount: blockValidation.blockErrors.reduce((sum, b) => sum + b.errors.length, 0),
-        multipleMainBlocks: isRestDay ? false : multipleMainBlocks,
+        multipleMainBlocks: false, // Não existe mais marcação manual múltipla
         isRestDay,
         missingCategory: hasMissingCategory,
       };
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    // REGRA DE PUBLICAÇÃO SEMANAL (V3):
-    // - Permite 1-7 dias com conteúdo (não exige semana completa)
-    // - Dias vazios NÃO bloqueiam publicação
-    // - Bloqueia APENAS se:
-    //   (A) Semana vazia (0 dias com conteúdo) → anti-acidente
-    //   (B) Qualquer dia com conteúdo tem bloco sem categoria (exceto descanso)
-    //   (C) Qualquer dia não-descanso não tem bloco Principal
-    // ════════════════════════════════════════════════════════════════════════════
-
-    // Contar dias com conteúdo (pelo menos 1 bloco)
     const daysWithContent = days.filter((d) => d.blocks.length > 0);
     const daysEmpty = days.filter((d) => d.blocks.length === 0);
 
-    // Erros APENAS em dias com conteúdo (incluindo categoria + principal)
     const errorsInContentDays = Object.entries(dayValidations)
       .filter(([dayKey, val]) => {
         const dayData = days.find((d) => d.day === dayKey);
@@ -226,26 +196,18 @@ export function StructuredWorkoutEditor({
       })
       .reduce((sum, [, val]) => {
         let count = val.errorCount;
-        if (!val.hasMainWod) count++;
-        if (val.multipleMainBlocks) count++;
         if (val.missingCategory) count++;
         return sum + count;
       }, 0);
 
-    // Pode salvar/publicar se:
-    // - Tem pelo menos 1 dia com conteúdo (não vazio)
-    // - Semana selecionada
-    // - Nenhum erro nos dias com conteúdo
     const canPublish = daysWithContent.length >= 1 && selectedWeek !== null && errorsInContentDays === 0;
 
-    // Log de diagnóstico (apenas em debug)
     if (import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_PARSER === 'true') {
       console.log("[PUBLISH_GUARD]", {
         daysWithContent: daysWithContent.length,
         daysEmpty: daysEmpty.length,
         errorsInContentDays,
         daysWithMissingCategory,
-        daysWithoutMain,
         canPublish,
       });
     }
@@ -253,8 +215,8 @@ export function StructuredWorkoutEditor({
     return {
       dayValidations,
       totalErrors,
-      daysWithoutMain,
-      daysWithMultipleMain,
+      daysWithoutMain: 0, // Sempre 0 — prioridade automática
+      daysWithMultipleMain: 0,
       daysWithMissingCategory,
       hasAnyDay: days.length > 0,
       hasWeek: selectedWeek !== null,
@@ -332,22 +294,7 @@ export function StructuredWorkoutEditor({
     );
   }, []);
 
-  const toggleMainWod = useCallback((dayValue: DayOfWeek, blockId: string) => {
-    setDays((prev) =>
-      prev.map((day) => {
-        if (day.day !== dayValue) return day;
-        // MVP0: Não permitir marcar Principal em dia de descanso
-        if (day.isRestDay) return day;
-        return {
-          ...day,
-          blocks: day.blocks.map((block) => ({
-            ...block,
-            isMainWod: block.id === blockId ? !block.isMainWod : false,
-          })),
-        };
-      }),
-    );
-  }, []);
+  // toggleMainWod removido — prioridade automática por categoria + duração
 
   // MVP0: Toggle dia de descanso
   const toggleRestDay = useCallback((dayValue: DayOfWeek) => {
@@ -358,8 +305,6 @@ export function StructuredWorkoutEditor({
         return {
           ...day,
           isRestDay: newIsRestDay,
-          // MVP0: Se marcar como descanso, limpar isMainWod de todos os blocos
-          blocks: newIsRestDay ? day.blocks.map((block) => ({ ...block, isMainWod: false })) : day.blocks,
         };
       }),
     );
@@ -418,19 +363,10 @@ export function StructuredWorkoutEditor({
         if (!validation.hasWeek) {
           setError("Selecione a semana de referência");
         } else if ((validation.daysWithContent ?? 0) === 0) {
-          // T0: Semana vazia - anti-acidente
           setError("Adicione pelo menos 1 dia de treino para publicar a semana.");
         } else if ((validation.daysWithMissingCategory ?? 0) > 0) {
-          // Categoria obrigatória
           setError(`${validation.daysWithMissingCategory} dia(s) com blocos sem categoria selecionada.`);
-        } else if ((validation.daysWithoutMain ?? 0) > 0) {
-          // WOD Principal obrigatório
-          setError(`${validation.daysWithoutMain} dia(s) sem bloco Principal marcado.`);
-        } else if ((validation.daysWithMultipleMain ?? 0) > 0) {
-          // Múltiplos principais
-          setError(`${validation.daysWithMultipleMain} dia(s) com múltiplos blocos Principal.`);
         } else if ((validation.errorsInContentDays ?? 0) > 0) {
-          // Outros erros
           setError(`Corrija os erros nos dias com conteúdo antes de ${status === "published" ? "publicar" : "salvar"}`);
         } else {
           setError("Verifique os dias com conteúdo");
@@ -541,41 +477,7 @@ export function StructuredWorkoutEditor({
         )}
 
         {/* Alerta de dias sem WOD Principal */}
-        {validation.daysWithoutMain > 0 && (
-          <motion.div
-            key="missing-main-alert"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-lg bg-destructive/10 border border-destructive/20"
-          >
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">
-                {validation.daysWithoutMain} dia(s) sem bloco Principal. Marque um bloco como Principal em cada dia.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Alerta de múltiplos WOD Principal no mesmo dia */}
-        {validation.daysWithMultipleMain > 0 && (
-          <motion.div
-            key="multiple-main-wod-alert"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20"
-          >
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-              <p className="text-sm text-amber-600">
-                Atenção: {validation.daysWithMultipleMain} dia(s) com múltiplos blocos marcados como "Principal".
-                Recomendamos apenas um bloco principal por dia.
-              </p>
-            </div>
-          </motion.div>
-        )}
+        {/* Alertas de WOD Principal removidos — prioridade automática */}
       </AnimatePresence>
       {/* Copy educativa colapsável */}
       <Collapsible>
@@ -668,19 +570,7 @@ export function StructuredWorkoutEditor({
                           </Badge>
                         )}
 
-                        {/* Alertas - NÃO mostrar para dias de descanso */}
-                        {!day.isRestDay && dayValidation && dayValidation.multipleMainBlocks && (
-                          <span className="text-xs text-amber-500 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            Múltiplos WOD Principal
-                          </span>
-                        )}
-                        {!day.isRestDay && dayValidation && !dayValidation.hasMainWod && day.blocks.length > 0 && (
-                          <span className="text-xs text-amber-500 flex items-center gap-1">
-                            <Star className="w-3 h-3" />
-                            Falta WOD Principal
-                          </span>
-                        )}
+                        {/* Alertas de Principal removidos — prioridade automática */}
                         {dayValidation && dayValidation.errorCount > 0 && (
                           <span className="text-xs text-destructive">{dayValidation.errorCount} erro(s)</span>
                         )}
@@ -776,32 +666,7 @@ export function StructuredWorkoutEditor({
                         // ═══════════════════════════════════════════════════════════
                         return (
                           <div key={block.id} className="space-y-2">
-                            {/* Botões Principal/Benchmark acima do editor */}
-                            {/* MVP0: Ocultar botão Principal para dias de descanso */}
-                            {!day.isRestDay && (
-                              <div className="flex items-center gap-2 justify-end">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant={block.isMainWod ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => toggleMainWod(day.day, block.id)}
-                                        className={`h-7 text-xs ${block.isMainWod ? "bg-primary" : ""}`}
-                                      >
-                                        <Star className={`w-3 h-3 mr-1 ${block.isMainWod ? "fill-current" : ""}`} />
-                                        Principal
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Marcar como WOD Principal do dia</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                {/* REGRA MVP0: Benchmark removido do Coach - apenas Admin pode definir */}
-                              </div>
-                            )}
+                            {/* Prioridade automática — botão Principal removido */}
 
                             <StructuredBlockEditor
                               block={block}
