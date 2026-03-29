@@ -1,12 +1,25 @@
 
 
-## Plano: Mudar copy do botão CTA
+## Plano: Botão condicional — "Acessar minha conta" para usuários logados
 
-### Alteração
+### Problema
+No diagnóstico gratuito, o CTA sempre mostra "COMEÇAR MEUS 30 DIAS GRÁTIS" mesmo se o usuário já está cadastrado/logado. Para usuários autenticados, deveria mostrar "ACESSAR MINHA CONTA" e ir direto para `/app`.
 
-**`src/components/WelcomeScreen.tsx`** — Linhas 922 e 1116:
-- De: `'QUERO MEU PLANO DE TREINO'`
-- Para: `'COMEÇAR MEUS 30 DIAS GRÁTIS'`
+### Alterações em `src/pages/DiagnosticoGratuito.tsx`
 
-Duas ocorrências do mesmo botão (steps diferentes do onboarding). Ambas serão atualizadas.
+**1. Importar `useAuth`** e detectar sessão ativa:
+```typescript
+import { useAuth } from '@/hooks/useAuth';
+const { user } = useAuth();
+```
+
+**2. Botão CTA condicional** (linha ~1051-1058):
+- Se `user` existe → texto "ACESSAR MINHA CONTA", `navigate('/app')`
+- Se não → texto atual "COMEÇAR MEUS 30 DIAS GRÁTIS", `setStep('coach-selection')`
+
+**3. Subtexto condicional** (linha ~1060-1062):
+- Se logado → esconder "Cancele quando quiser"
+
+### Resultado
+Usuários logados veem "ACESSAR MINHA CONTA" e vão direto para `/app`. Novos usuários continuam no fluxo de onboarding.
 
