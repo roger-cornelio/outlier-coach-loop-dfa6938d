@@ -368,13 +368,11 @@ export function validateBlockByCategory(
 }
 
 /**
- * Valida se um bloco pode ser marcado como Principal
+ * @deprecated Prioridade automática substituiu marcação manual. Retorna true para categorias de alta prioridade.
  */
 export function canBlockBeMain(category: string | null | undefined): boolean {
   if (!category) return false;
-  
-  const categoryConfig = BLOCK_CATEGORIES.find(c => c.value === category);
-  return categoryConfig?.canBeMain ?? false;
+  return (CATEGORY_PRIORITY_WEIGHT[category] ?? 0) >= 80;
 }
 
 /**
