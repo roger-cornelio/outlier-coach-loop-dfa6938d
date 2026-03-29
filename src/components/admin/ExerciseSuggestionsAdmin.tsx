@@ -267,6 +267,7 @@ export function ExerciseSuggestionsAdmin() {
                               </Button>
                             </div>
                           ) : (
+                            <div className="flex gap-2 justify-end">
                             <Button
                               size="sm"
                               variant="ghost"
