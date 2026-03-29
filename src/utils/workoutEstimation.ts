@@ -45,6 +45,8 @@ const BLOCK_TYPE_METS: Record<string, number> = {
   especifico: 6.5,
   core: 3.5,
   corrida: 9.0,
+  mobilidade: 2.5,
+  tecnica: 3.0,
   notas: 0,
 };
 

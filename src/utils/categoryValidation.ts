@@ -25,7 +25,9 @@ export const BLOCK_CATEGORIES = [
   { value: 'metcon', label: 'Metcon', emoji: '⚡', canBeMain: true },
   { value: 'especifico', label: 'Específico (HYROX)', emoji: '🛷', canBeMain: true },
   { value: 'corrida', label: 'Corrida', emoji: '🏃', canBeMain: false }, // MVP0: não pode ser principal
-  { value: 'acessorio', label: 'Acessório', emoji: '🎯', canBeMain: false },
+  { value: 'acessorio', label: 'Acessório', emoji: '🔧', canBeMain: false },
+  { value: 'mobilidade', label: 'Mobilidade', emoji: '🧘', canBeMain: false },
+  { value: 'tecnica', label: 'Técnica', emoji: '🎯', canBeMain: false },
 ] as const;
 
 export type BlockCategory = typeof BLOCK_CATEGORIES[number]['value'];
@@ -285,6 +287,8 @@ export function validateBlockByCategory(
   switch (category) {
     case 'aquecimento':
     case 'acessorio':
+    case 'mobilidade':
+    case 'tecnica':
       // Livre - sem validação adicional
       return { isValid: true, errorCode: null, errorMessage: null, flags };
     
