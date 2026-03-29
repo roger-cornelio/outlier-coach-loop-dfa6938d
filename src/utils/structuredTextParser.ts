@@ -2564,7 +2564,7 @@ export function parseStructuredText(text: string): ParseResult {
   // Detecta tipo pelo CONTEÚDO (chamado após bloco completo)
   const detectTypeByContent = (block: ParsedBlock): WorkoutBlock['type'] => {
     // Se já tem tipo definido pelo título (não é conditioning genérico), mantém
-    if (block.type !== 'conditioning') return block.type;
+    if (block.type && block.type !== 'conditioning') return block.type;
     
     // Verifica conteúdo das instruções
     const allContent = [
