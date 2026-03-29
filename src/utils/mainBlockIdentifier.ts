@@ -72,6 +72,7 @@ export function estimateBlockDuration(block: WorkoutBlock): number {
   // Fallback baseado no tipo
   switch (block.type) {
     case 'conditioning':
+    case 'metcon':
       return 15;
     case 'corrida':
       return 20;
@@ -80,6 +81,7 @@ export function estimateBlockDuration(block: WorkoutBlock): number {
     case 'especifico':
       return 12;
     case 'core':
+    case 'acessorio':
       return 8;
     case 'aquecimento':
       return 10;
@@ -87,6 +89,8 @@ export function estimateBlockDuration(block: WorkoutBlock): number {
       return 10;
     case 'tecnica':
       return 15;
+    case 'notas':
+      return 0;
     default:
       return 5;
   }
