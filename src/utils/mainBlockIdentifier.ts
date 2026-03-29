@@ -22,7 +22,7 @@
 import type { WorkoutBlock, DayWorkout } from '@/types/outlier';
 
 // Tipos de bloco que NUNCA devem ser principais (para validação)
-const NEVER_MAIN_TYPES: WorkoutBlock['type'][] = ['aquecimento', 'notas'];
+const NEVER_MAIN_TYPES: WorkoutBlock['type'][] = ['aquecimento', 'notas', 'mobilidade', 'tecnica'];
 
 export interface MainBlockResult {
   block: WorkoutBlock | null;
@@ -83,6 +83,10 @@ export function estimateBlockDuration(block: WorkoutBlock): number {
       return 8;
     case 'aquecimento':
       return 10;
+    case 'mobilidade':
+      return 10;
+    case 'tecnica':
+      return 15;
     default:
       return 5;
   }

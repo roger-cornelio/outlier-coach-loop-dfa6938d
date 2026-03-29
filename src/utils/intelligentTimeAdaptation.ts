@@ -56,13 +56,15 @@ export interface BlockWithPriority {
 // ============================================
 
 const REMOVAL_PRIORITY: Record<string, number> = {
-  notas: 10,      // Notas não ocupam tempo real
-  core: 9,        // Core é acessório
-  especifico: 8,  // Específico é acessório  
-  corrida: 7,     // Corrida pode ser secundária
-  forca: 5,       // Força tem prioridade média
-  conditioning: 2, // Conditioning geralmente é o WOD principal
-  aquecimento: 1,  // Aquecimento deve ser mantido se possível
+  notas: 10,        // Notas não ocupam tempo real
+  mobilidade: 9.5,  // Mobilidade é removível primeiro
+  tecnica: 9.2,     // Técnica é removível cedo
+  core: 9,          // Core é acessório
+  especifico: 8,    // Específico é acessório  
+  corrida: 7,       // Corrida pode ser secundária
+  forca: 5,         // Força tem prioridade média
+  conditioning: 2,  // Conditioning geralmente é o WOD principal
+  aquecimento: 1,   // Aquecimento deve ser mantido se possível
 };
 
 // Duração mínima para o bloco principal (em minutos)
@@ -122,6 +124,10 @@ function estimateBlockMinutes(block: WorkoutBlock): number {
       return 8;
     case 'aquecimento':
       return 10;
+    case 'mobilidade':
+      return 10;
+    case 'tecnica':
+      return 15;
     case 'notas':
       return 0;
     default:

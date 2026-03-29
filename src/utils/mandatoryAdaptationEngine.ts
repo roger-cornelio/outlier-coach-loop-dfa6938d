@@ -24,7 +24,7 @@ import { detectUnits, canAutoAdjust, type UnitConfidence } from './unitDetection
 
 export type TrainingLevel = 'base' | 'progressivo' | 'performance';
 export type Gender = 'masculino' | 'feminino';
-export type BlockType = 'conditioning' | 'forca' | 'corrida' | 'aquecimento' | 'core' | 'especifico' | 'notas';
+export type BlockType = 'conditioning' | 'forca' | 'corrida' | 'aquecimento' | 'core' | 'especifico' | 'notas' | 'mobilidade' | 'tecnica' | 'acessorio' | 'metcon';
 
 // ============================================
 // PARÂMETROS OBRIGATÓRIOS DO USUÁRIO
@@ -550,6 +550,12 @@ export function adaptWorkout(
         case 'core':
           // Core: aplicar multiplicador final (garantido <= 1.0)
           adaptedContent = scaleVolumeNumbers(block.content, finalVolumeMult);
+          break;
+
+        case 'mobilidade':
+        case 'tecnica':
+          // Mobilidade e Técnica: NUNCA escalar — preservar original do coach
+          adaptedContent = block.content;
           break;
           
         default:

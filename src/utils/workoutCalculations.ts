@@ -128,6 +128,8 @@ function estimateFromContent(block: WorkoutBlock): number | null {
     case 'especifico': return 25;
     case 'core': return 10;
     case 'corrida': return 15;
+    case 'mobilidade': return 10;
+    case 'tecnica': return 15;
     case 'notas': return null;
     default: return 10;
   }

@@ -81,7 +81,7 @@ export interface LevelTargetRanges {
 
 export interface WorkoutBlock {
   id: string;
-  type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
+  type: 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas' | 'mobilidade' | 'tecnica' | 'acessorio' | 'metcon';
   title: string;
   content: string; // Base content (used when no level variants)
   // MVP0: Linhas de treino e comentários parseados
