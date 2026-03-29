@@ -169,8 +169,10 @@ export function extractMovementName(line: string): string {
     .map(s => s.text.trim())
     .filter(Boolean);
   
-  // Remove números soltos no início (leading rep count like "10 Burpees" → "Burpees")
+  // Remove leading unilateral reps (e.g. "8/8 Kb Step Box" → "Kb Step Box")
   let movement = movementParts.join(' ').trim();
+  movement = movement.replace(/^\d+\s*\/\s*\d+\s+/, '');
+  // Remove leading simple reps (e.g. "10 Burpees" → "Burpees")
   movement = movement.replace(/^\d+\s+/, '');
   // Remove trailing isolated numbers
   movement = movement.replace(/\s+\d+$/, '');
