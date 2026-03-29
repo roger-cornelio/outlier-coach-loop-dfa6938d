@@ -42,6 +42,7 @@ import {
   ChevronDown,
   UserMinus,
   Target,
+  Trophy,
   MessageSquare,
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
