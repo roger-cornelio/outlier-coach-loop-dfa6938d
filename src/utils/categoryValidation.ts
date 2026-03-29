@@ -54,6 +54,102 @@ export const NEVER_REMOVE_CATEGORIES = new Set(['corrida']);
 export type BlockCategory = typeof BLOCK_CATEGORIES[number]['value'];
 
 // ============================================
+// KEYWORDS PARA AUTO-DETECÇÃO DE CATEGORIA
+// ============================================
+
+/**
+ * Dicionário de keywords por categoria (PT e EN).
+ * Usado pelo parser para inferir automaticamente a categoria do bloco.
+ * Prioridade: título > formato > conteúdo.
+ */
+export const CATEGORY_KEYWORDS: Record<BlockCategory, { title: RegExp[]; content: RegExp[] }> = {
+  aquecimento: {
+    title: [/aquec/i, /warm[- ]?up/i, /ativa[çc][aã]o/i, /activation/i],
+    content: [],
+  },
+  forca: {
+    title: [/for[cç]a/i, /strength/i, /grip/i],
+    content: [/\b(?:squat|deadlift|press|clean|snatch|jerk|agachamento|supino|levantamento)\b/i],
+  },
+  metcon: {
+    title: [/metcon/i, /conditioning/i, /condicionamento/i, /\bwod\b/i],
+    content: [],
+  },
+  especifico: {
+    title: [/espec[ií]fico/i, /specific/i, /hyrox/i],
+    content: [/\b(?:sled|sandbag|wall\s*ball|farmer|carry|lunges?)\b/i],
+  },
+  corrida: {
+    title: [/corrida/i, /running/i, /\brun\b/i, /cardio/i, /ciclismo/i, /cycling/i, /remo/i, /\brow\b/i, /rowing/i, /ski/i, /bike/i, /airbike/i],
+    content: [/\b(?:corrida|run|running|km|pace)\b/i, /\b(?:bike|airbike|assault)\b/i, /\b(?:remo|row|rowing|ski|erg)\b/i],
+  },
+  acessorio: {
+    title: [/acess[oó]rio/i, /accessory/i, /complementar/i, /auxiliary/i, /auxiliar/i],
+    content: [],
+  },
+  mobilidade: {
+    title: [/mobilidade/i, /mobility/i, /alongamento/i, /stretch/i, /flexibilidade/i, /flexibility/i, /cool\s*down/i, /volta\s*[àa]\s*calma/i],
+    content: [],
+  },
+  tecnica: {
+    title: [/t[eé]cnica/i, /skill/i, /drill/i, /progressão/i, /progression/i],
+    content: [],
+  },
+};
+
+/**
+ * Formatos que indicam Metcon automaticamente
+ */
+export const METCON_FORMATS = new Set(['amrap', 'emom', 'for_time', 'tabata']);
+
+/**
+ * Infere a categoria de um bloco a partir de título, formato e conteúdo.
+ * Retorna { category, confidence } ou null se nenhum sinal forte.
+ */
+export function inferBlockCategory(
+  title: string,
+  format: string | null | undefined,
+  content: string
+): { category: BlockCategory; confidence: 'high' | 'medium' | 'low' } | null {
+  const titleLower = (title || '').toLowerCase();
+  const contentLower = (content || '').toLowerCase();
+
+  // PRIORIDADE 1: Título (alta confiança)
+  for (const [cat, kw] of Object.entries(CATEGORY_KEYWORDS) as [BlockCategory, { title: RegExp[]; content: RegExp[] }][]) {
+    if (kw.title.some(re => re.test(titleLower))) {
+      return { category: cat, confidence: 'high' };
+    }
+  }
+
+  // PRIORIDADE 2: Formato detectado → metcon (alta confiança)
+  if (format && METCON_FORMATS.has(format)) {
+    return { category: 'metcon', confidence: 'high' };
+  }
+
+  // PRIORIDADE 3: Conteúdo (média confiança)
+  // Verificar padrões de força: "NxM" sem formato AMRAP/EMOM
+  const hasStrengthPattern = /\d+\s*[xX×]\s*\d+/.test(contentLower) && !format;
+  if (hasStrengthPattern) {
+    // Check if also has HYROX stations — if so, it's específico
+    const hasHyroxStations = CATEGORY_KEYWORDS.especifico.content.some(re => re.test(contentLower));
+    if (hasHyroxStations) {
+      return { category: 'especifico', confidence: 'medium' };
+    }
+    return { category: 'forca', confidence: 'medium' };
+  }
+
+  // Content patterns
+  for (const [cat, kw] of Object.entries(CATEGORY_KEYWORDS) as [BlockCategory, { title: RegExp[]; content: RegExp[] }][]) {
+    if (kw.content.length > 0 && kw.content.some(re => re.test(contentLower))) {
+      return { category: cat, confidence: 'medium' };
+    }
+  }
+
+  // Nenhum sinal → null (caller decide fallback)
+  return null;
+}
+
+// ============================================
 // LISTA FINAL DE FORMATOS (MVP0)
 // ============================================
 
