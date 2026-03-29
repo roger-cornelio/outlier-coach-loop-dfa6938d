@@ -285,6 +285,7 @@ export function ExerciseSuggestionsAdmin() {
                               <Trash2 className="w-4 h-4 mr-1" />
                               Excluir
                             </Button>
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>
