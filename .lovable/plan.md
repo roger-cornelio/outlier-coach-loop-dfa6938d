@@ -1,62 +1,35 @@
 
 
-## Plano: Aba única "Atletas" com linhas expandíveis (accordion inline)
+## Plano: Prioridade Automática com Corrida no Topo
 
-### Conceito
+### Mudança vs plano anterior
 
-Em vez de drawer ou sheet, cada atleta é uma **linha horizontal clicável** que **expande para baixo** mostrando todas as informações em layout horizontal (grid de colunas). O coach vê a lista completa e clica para expandir/recolher qualquer atleta sem sair da tela.
+A única diferença é a **tabela de prioridade**. Corrida passa a ter a prioridade mais alta (peso 110), e tem uma regra especial: **nunca é removida**, apenas tem a duração reduzida.
 
-### Layout visual
+### Tabela de prioridade (atualizada)
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ [KPIs: Total | Em Alta | Atenção | Risco]    [Vincular] [Atualizar]│
-├─────────────────────────────────────────────────────────────────────┤
-│ 🔴 João Silva       3 dias ausente    40% adesão    📱 WhatsApp   │
-│ ▼ EXPANDIDO ────────────────────────────────────────────────────── │
-│ ┌──────────────┬──────────────┬──────────────┬───────────────────┐ │
-│ │  Stats       │  Perfil      │  Feedbacks   │  Ações            │ │
-│ │  Dias: 3     │  Exp: 2+     │  📅 De: Até: │  [Desvincular]   │ │
-│ │  Treinos: 2  │  Meta: Tempo │  ▸ 28/03     │  [Suspender]     │ │
-│ │  Adesão: 40% │  Bio: 80kg   │  ▸ 25/03     │  [WhatsApp CTA]  │ │
-│ │  Bench: 5    │  Equip: Sled │              │                   │ │
-│ └──────────────┴──────────────┴──────────────┴───────────────────┘ │
-├─────────────────────────────────────────────────────────────────────┤
-│ 🟡 Maria Souza      1 dia ausente     80% adesão    📱 WhatsApp   │
-│   (recolhido — clica pra expandir)                                 │
-├─────────────────────────────────────────────────────────────────────┤
-│ 🟢 Pedro Costa      0 dias ausente    100% adesão   📱 WhatsApp   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Prioridade | Categoria | Peso | Regra de corte |
+|-----------|-----------|------|----------------|
+| 1 (mais alta) | **Corrida** | **110** | **Nunca remove, só reduz duração** |
+| 2 | Metcon | 100 | Remove por último |
+| 3 | Específico (HYROX) | 90 | Remove por último |
+| 4 | Força | 80 | Remove se necessário |
+| 5 | Aquecimento | 30 | Remove cedo |
+| 6 | Acessório | 20 | Remove cedo |
+| 7 | Técnica | 15 | Remove cedo |
+| 8 | Mobilidade | 10 | Remove cedo |
+| 9 (mais baixa) | Notas | 0 | Remove primeiro |
 
-### O que muda para o coach
+### Lógica de corte por tempo
 
-- **5 abas → 3 abas**: Atletas | Importar | Programações
-- Clica na linha do atleta → expande inline com 4 colunas horizontais
-- Feedbacks com filtro de data (date picker) dentro da coluna de feedbacks
-- Pode ter vários atletas expandidos ao mesmo tempo
-- Tudo na mesma página, sem modal/drawer/sheet
+Quando o treino excede o tempo disponível do atleta:
 
-### Detalhes técnicos
-
-**Virtualização**: Precisa ser removida da lista (accordion com altura variável não funciona bem com virtualização fixa de 64px). Para 200 atletas com linhas de ~64px recolhidas, o DOM é leve (~200 divs simples). Se necessário, adicionar paginação (50 por página).
-
-**Componente**: Usar `Collapsible` do Radix (já existe no projeto) para cada linha de atleta.
+1. Remove blocos de baixa prioridade (Notas → Mobilidade → Técnica → Acessório → Aquecimento)
+2. Se ainda não cabe, remove Força
+3. Se ainda não cabe, reduz duração de Metcon/Específico
+4. **Corrida nunca é removida** — apenas tem a duração diminuída (ex: 5km vira 3km, 30min vira 20min)
 
 ### Arquivos alterados
 
-1. **`src/pages/CoachDashboard.tsx`**
-   - Remover tabs "visao-geral", "atletas", "feedbacks"
-   - 3 tabs: "atletas" (CoachOverviewTab), "importar", "programacoes"
-   - Mover botão "Vincular Atleta" e ações (desvincular/suspender) como props para CoachOverviewTab
-   - Remover import de CoachFeedbacksTab
-
-2. **`src/components/CoachOverviewTab.tsx`**
-   - Remover `Drawer` e `AthleteDetailDrawer`
-   - Remover virtualização (`useVirtualizer`)
-   - Cada `AthleteRow` vira `Collapsible` — linha recolhida = row atual, expandida = grid 4 colunas
-   - Coluna "Feedbacks": date range picker (Calendar + Popover existentes) + query lazy por `athlete_id` + datas, limit 10, collapsible por data
-   - Coluna "Ações": botões Desvincular, Suspender, WhatsApp (recebe callbacks via props)
-   - Botão "Vincular Atleta" no header da lista
-   - Paginação simples (50 por página) se `athletes.length > 50`
+Todos os mesmos do plano anterior, com a tabela de pesos ajustada e uma flag `neverRemove: true` para Corrida no `mainBlockIdentifier.ts`. A função `getRemovableBlocks` vai excluir blocos de Corrida da lista de removíveis. A função `sortBlocksForTimeAdaptation` vai colocar Corrida como último bloco a ser tocado, e quando tocado, apenas reduz volume (distância/tempo) em vez de remover.
 
