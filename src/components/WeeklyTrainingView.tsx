@@ -96,6 +96,22 @@ export function WeeklyTrainingView() {
 
   const completions = useWeekWorkoutCompletions(currentWeek.start);
 
+  // Fetch coach name
+  const [coachName, setCoachName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!profile?.coach_id) { setCoachName(null); return; }
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', profile.coach_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.name) setCoachName(data.name);
+      });
+    return () => { cancelled = true; };
+  }, [profile?.coach_id]);
+
   const [activeDay, setActiveDay] = useState<DayOfWeek>(() => {
     const days: DayOfWeek[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
     const today = new Date().getDay();
