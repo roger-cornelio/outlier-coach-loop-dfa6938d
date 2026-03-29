@@ -65,13 +65,33 @@ function extractBaseExerciseName(text: string): string {
 }
 
 /**
+ * Remove prefixos de equipamento para comparação agnóstica.
+ * Ex: "kb step box" → "step box", "dumbbell row" → "row"
+ */
+function stripEquipmentPrefix(name: string): string {
+  return name
+    .replace(/\b(single\s+arm|kettlebell|dumbbell|barbell|double|single|kb|db|bb|bar)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Verifica se o nome-base extraído contém algum exercício do dicionário.
+ * Faz duas passadas: comparação direta e comparação sem prefixo de equipamento.
  */
 function matchesDictionary(baseName: string, normalizedDict: string[]): boolean {
   if (!baseName || baseName.length < 2) return false;
+  const strippedBase = stripEquipmentPrefix(baseName);
   for (const dictName of normalizedDict) {
     if (!dictName) continue;
+    // Passada 1: comparação direta
     if (baseName.includes(dictName) || dictName.includes(baseName)) {
+      return true;
+    }
+    // Passada 2: comparação sem prefixo de equipamento
+    const strippedDict = stripEquipmentPrefix(dictName);
+    if (strippedBase.length >= 2 && strippedDict.length >= 2 &&
+        (strippedBase.includes(strippedDict) || strippedDict.includes(strippedBase))) {
       return true;
     }
   }
@@ -255,6 +275,10 @@ export function fuzzyMatchExerciseName(
     // Exact match (including plural variants) → no warning needed
     if (normalized === normName) return null;
     if (stripPlural(normalized) === stripPlural(normName)) return null;
+    // Equipment-agnostic exact match
+    const strippedNorm = stripEquipmentPrefix(normalized);
+    const strippedName = stripEquipmentPrefix(normName);
+    if (strippedNorm.length >= 2 && strippedName.length >= 2 && strippedNorm === strippedName) return null;
     
     const dist = levenshteinDistance(normalized, normName);
     // Threshold: max 1 for short terms (≤ 5 chars), max 2 for longer
@@ -269,6 +293,8 @@ export function fuzzyMatchExerciseName(
       const normAlias = normalizeForFuzzy(alias);
       if (normalized === normAlias) return null;
       if (stripPlural(normalized) === stripPlural(normAlias)) return null;
+      const strippedAlias = stripEquipmentPrefix(normAlias);
+      if (strippedNorm.length >= 2 && strippedAlias.length >= 2 && strippedNorm === strippedAlias) return null;
       
       const aliasDist = levenshteinDistance(normalized, normAlias);
       const aliasMaxDist = normAlias.length <= 5 ? 1 : 2;
