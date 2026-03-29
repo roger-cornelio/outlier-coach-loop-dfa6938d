@@ -53,6 +53,7 @@ export interface BlockWithPriority {
 
 // ============================================
 // PRIORIDADES DE REMOÇÃO (maior = remover primeiro)
+// Invertido do CATEGORY_PRIORITY_WEIGHT: categorias com peso ALTO lá têm remoção BAIXA aqui
 // ============================================
 
 const REMOVAL_PRIORITY: Record<string, number> = {
@@ -61,12 +62,12 @@ const REMOVAL_PRIORITY: Record<string, number> = {
   tecnica: 9.2,     // Técnica é removível cedo
   core: 9,          // Core é acessório
   acessorio: 8.5,   // Acessório é removível
-  especifico: 8,    // Específico é acessório  
-  corrida: 7,       // Corrida pode ser secundária
+  aquecimento: 7,   // Aquecimento pode ser removido
   forca: 5,         // Força tem prioridade média
+  especifico: 3,    // Específico HYROX remove por último
   conditioning: 2,  // Conditioning geralmente é o WOD principal
   metcon: 2,        // Metcon = mesma prioridade de conditioning
-  aquecimento: 1,   // Aquecimento deve ser mantido se possível
+  corrida: 0,       // Corrida NUNCA é removida (apenas reduzida)
 };
 
 // Duração mínima para o bloco principal (em minutos)
@@ -148,20 +149,24 @@ export function classifyBlocksWithPriority(blocks: WorkoutBlock[]): BlockWithPri
   const mainIndex = mainResult.blockIndex;
   
   return blocks.map((block, index) => {
-    const isMain = index === mainIndex || block.isMainWod === true;
+    const isMain = index === mainIndex;
     
-    // Bloco principal tem prioridade máxima (nunca remover)
-    // Blocos com isMainWod manual também têm prioridade máxima
+    // Corrida: prioridade 0 (nunca remover, só reduzir)
+    // Bloco principal: prioridade 0
     let priority = REMOVAL_PRIORITY[block.type] ?? 5;
     
-    if (isMain) {
-      priority = 0; // Prioridade máxima, nunca remover
+    if (isMain || block.type === 'corrida') {
+      priority = 0;
     }
     
     const estimatedMinutes = estimateBlockMinutes(block);
     
-    // Notas e blocos sem tempo não são removíveis (não fazem diferença)
-    const isRemovable = block.type !== 'notas' && estimatedMinutes > 0 && !isMain;
+    // Notas e blocos sem tempo não são removíveis
+    // Corrida não é removível (apenas reduzível)
+    const isRemovable = block.type !== 'notas' 
+      && block.type !== 'corrida'
+      && estimatedMinutes > 0 
+      && !isMain;
     
     return {
       block,
