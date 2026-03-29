@@ -198,7 +198,7 @@ export default function DiagnosticoGratuito() {
           console.warn('[DIAG_FREE] RoxCoach proxy failed:', err);
           return { data: null, error: err };
         }),
-        supabase.rpc('check_profile_exists_by_name', { _name: result.athlete_name })
+        Promise.resolve(supabase.rpc('check_profile_exists_by_name', { _name: result.athlete_name }))
           .then(({ data }) => !!data)
           .catch(() => false),
       ]);
