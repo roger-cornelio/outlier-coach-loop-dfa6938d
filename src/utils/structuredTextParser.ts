@@ -2573,14 +2573,30 @@ export function parseStructuredText(text: string): ParseResult {
       ...block.items.map(i => i.movement)
     ].join(' ');
     
+    // Check format: AMRAP/EMOM/ForTime/Tabata → metcon
+    if (block.format && /^(amrap|emom|for_time|tabata)$/i.test(block.format)) {
+      return 'metcon';
+    }
+    
+    // Check content for metcon structure markers
+    if (/\b(?:amrap|emom|for\s*time|tabata|time\s*cap)\b/i.test(allContent)) {
+      return 'metcon';
+    }
+    
+    // Content-based pattern matching
     for (const { pattern, type } of CONTENT_TYPE_PATTERNS) {
       if (pattern.test(allContent)) {
         return type;
       }
     }
     
-    // Fallback final: Conditioning
-    return 'conditioning';
+    // Strength heuristic: NxM pattern without metcon structure
+    if (/\d+\s*[xX×]\s*\d+/.test(allContent)) {
+      return 'forca';
+    }
+    
+    // Fallback final: metcon (was 'conditioning', now defaults to metcon for blocks with exercises)
+    return block.items.length > 0 ? 'metcon' : 'conditioning';
   };
 
   const detectFormat = (line: string): string => {
