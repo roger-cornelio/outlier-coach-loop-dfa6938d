@@ -40,13 +40,14 @@ const METRIC_PATTERNS: MetricPattern[] = [
   // Cadence: "60-70 rpm", "80 rpm", "25 km/h"
   { type: 'cadence', regex: /\d+(?:\s*[-–]\s*\d+)?\s*(?:rpm|km\/h|min\/km)\b/gi },
 
-  // Intensity: PSE/RPE/Zona/FC/HR
+  // Intensity: PSE/RPE/Zona/FC/HR/Max
   { type: 'intensity', regex: /\b(?:pse|rpe)\s*[:=]?\s*\d+/gi },
   { type: 'intensity', regex: /\b(?:zona|zone)\s*\d+/gi },
   { type: 'intensity', regex: /\b(?:fc|hr)\s*[:=]?\s*\d+/gi },
+  { type: 'intensity', regex: /\bmax\b/gi },
 
-  // Load: "80kg", "32/24kg", "70%", "60lb", "@80kg", "@75%"
-  { type: 'load', regex: /@?\s*\d+(?:\s*\/\s*\d+)?\s*(?:kg|lb)\b/gi },
+  // Load: "80kg", "32/24kg", "70%", "60lb", "@80kg", "@75%", "125kgs"
+  { type: 'load', regex: /@?\s*\d+(?:\s*\/\s*\d+)?\s*(?:kgs?|lbs?)\b/gi },
   { type: 'load', regex: /@?\s*\d+\s*%/g },
 
   // Tempo notation: "@3010", "@2111"
@@ -72,8 +73,9 @@ const METRIC_PATTERNS: MetricPattern[] = [
   { type: 'reps', regex: /\d+\s*[x×]\s*\d+/gi },
   { type: 'reps', regex: /\d+\s*(?:rounds?|rodadas?|séries?|series?|sets?)\b/gi },
   { type: 'reps', regex: /\d+\s*(?:reps?|repetições?|repeticoes?)\b/gi },
-  // Cal: "30 cal", "25/20 cal"
+  // Cal: "30 cal", "25/20 cal", "cal Air Bike"
   { type: 'reps', regex: /\d+(?:\s*\/\s*\d+)?\s*cal\b/gi },
+  { type: 'reps', regex: /^cal\b/gi },
 
   // Leading unilateral reps: "8/8 Kb Step Box" (must be followed by text, not a unit)
   { type: 'reps', regex: /^\d+\s*\/\s*\d+(?=\s+[a-zA-ZÀ-ÿ])/g },
