@@ -1,25 +1,23 @@
 
 
-## Plano: Botão condicional — "Acessar minha conta" para usuários logados
+## Plano: Corrigir vinculação de coach no onboarding
 
 ### Problema
-No diagnóstico gratuito, o CTA sempre mostra "COMEÇAR MEUS 30 DIAS GRÁTIS" mesmo se o usuário já está cadastrado/logado. Para usuários autenticados, deveria mostrar "ACESSAR MINHA CONTA" e ir direto para `/app`.
+Quando um atleta tenta se vincular a um coach durante o cadastro, dá erro se já existiu qualquer solicitação anterior (aprovada, rejeitada ou expirada) para o mesmo coach. Isso acontece porque o banco só permite uma única solicitação por par atleta-coach, independente do status.
 
-### Alterações em `src/pages/DiagnosticoGratuito.tsx`
+### Solução
 
-**1. Importar `useAuth`** e detectar sessão ativa:
-```typescript
-import { useAuth } from '@/hooks/useAuth';
-const { user } = useAuth();
-```
+**1. Banco de dados** — Flexibilizar a regra de unicidade:
+- Permitir múltiplas solicitações históricas (rejeitadas, aprovadas antigas)
+- Bloquear apenas duplicatas **pendentes** — ou seja, o atleta não pode ter duas solicitações abertas para o mesmo coach ao mesmo tempo
 
-**2. Botão CTA condicional** (linha ~1051-1058):
-- Se `user` existe → texto "ACESSAR MINHA CONTA", `navigate('/app')`
-- Se não → texto atual "COMEÇAR MEUS 30 DIAS GRÁTIS", `setStep('coach-selection')`
-
-**3. Subtexto condicional** (linha ~1060-1062):
-- Se logado → esconder "Cancele quando quiser"
+**2. Tela de seleção de coach** — Antes de criar uma nova solicitação:
+- Limpar solicitações antigas que já foram resolvidas (rejeitadas/aprovadas)
+- Criar a nova solicitação normalmente
+- Se já existir uma pendente, avisar o atleta que já está aguardando aprovação
 
 ### Resultado
-Usuários logados veem "ACESSAR MINHA CONTA" e vão direto para `/app`. Novos usuários continuam no fluxo de onboarding.
+- Atletas podem re-solicitar coaches após rejeição ou troca
+- Histórico não bloqueia novas tentativas
+- Duplicatas pendentes continuam sendo impedidas
 
