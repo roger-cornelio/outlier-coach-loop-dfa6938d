@@ -80,6 +80,7 @@ import {
 import { normalizeRestLineForDisplay, normalizeBlockTitle, normalizeDayLabel, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import type { DayOfWeek, DayWorkout } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
+import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { StructuredErrorDisplay, RecommendedModelBlock } from './StructuredErrorDisplay';
 import { useCoachDraft, type DraftMode } from '@/hooks/useCoachDraft';
 import { calculateParsingCoverage, type CoverageReport, type UnmatchedLine, type UnmatchedCategory, detectExerciseTypos, type ExerciseTypoWarning } from '@/utils/parsingCoverage';
@@ -391,7 +392,7 @@ function PreviewDayCard({ dayWorkout, dayName, isRestDay }: PreviewDayCardProps)
                 const estimatedMinutes = Math.round(blockMet.durationSec / 60);
                 const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
                 const isEstimated = !hasParsedData;
-                const isMainWod = identifyMainBlock(selectedDay.blocks).blockIndex === idx;
+                const isMainWod = identifyMainBlock(dayWorkout.blocks || []).blockIndex === idx;
 
                 const { exerciseLines, coachNotes: commentLines, structureDescription } = displayData;
 
