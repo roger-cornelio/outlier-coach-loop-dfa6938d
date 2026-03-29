@@ -463,7 +463,7 @@ export function getBucketFeedbackCategory(bucket: string): keyof CoachCopySet['f
 // WORKOUT FOCUS COPY GENERATOR
 // ============================================================================
 
-type BlockType = 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas';
+type BlockType = 'aquecimento' | 'conditioning' | 'forca' | 'especifico' | 'core' | 'corrida' | 'notas' | 'mobilidade' | 'tecnica' | 'acessorio' | 'metcon';
 
 interface WorkoutBlock {
   type: BlockType;
