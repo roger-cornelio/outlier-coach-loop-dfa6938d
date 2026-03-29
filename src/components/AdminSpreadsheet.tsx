@@ -317,7 +317,6 @@ export function AdminSpreadsheet() {
     // Mantido como no-op para backward compat de UI admin
     console.log('[AdminSpreadsheet] isMainWod manual desabilitado — prioridade automática ativa');
   };
-  };
 
   const updateWodType = (dayIndex: number, blockIndex: number, wodType: WodType | undefined) => {
     if (!parsedWorkouts) return;
