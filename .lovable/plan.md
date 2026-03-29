@@ -1,35 +1,48 @@
 
 
-## Plano: Prioridade Automática com Corrida no Topo
+## Plano: Auto-detecção de categoria de bloco pelo parser
 
-### Mudança vs plano anterior
+### Viabilidade e Assertividade Estimada
 
-A única diferença é a **tabela de prioridade**. Corrida passa a ter a prioridade mais alta (peso 110), e tem uma regra especial: **nunca é removida**, apenas tem a duração reduzida.
+O parser já extrai título do bloco, formato (AMRAP/EMOM/Rounds/Tabata), e conteúdo dos exercícios. Com essas 3 fontes de sinal, a detecção automática alcança diferentes níveis de assertividade por categoria:
 
-### Tabela de prioridade (atualizada)
+| Categoria | Sinal principal | Assertividade estimada |
+|-----------|----------------|----------------------|
+| **Aquecimento** | Título contém "warm up", "aquecimento", "ativação" | **95%** |
+| **Metcon** | Formato AMRAP/EMOM/Tabata/For Time detectado | **95%** |
+| **Força** | Padrão "4x8", "5x3" sem AMRAP/EMOM + título "força/strength" | **85%** |
+| **Corrida** | Conteúdo só tem running/corrida + distância/tempo | **90%** |
+| **Específico (HYROX)** | Título contém "HYROX", "específico", ou tem estações HYROX (sled, wall balls + running) | **80%** |
+| **Acessório** | Título contém "acessório", "accessory", "complementar" | **90%** |
+| **Mobilidade** | Título contém "mobilidade", "mobility", "alongamento", "stretching" | **95%** |
+| **Técnica** | Título contém "técnica", "skill", "drill" | **90%** |
 
-| Prioridade | Categoria | Peso | Regra de corte |
-|-----------|-----------|------|----------------|
-| 1 (mais alta) | **Corrida** | **110** | **Nunca remove, só reduz duração** |
-| 2 | Metcon | 100 | Remove por último |
-| 3 | Específico (HYROX) | 90 | Remove por último |
-| 4 | Força | 80 | Remove se necessário |
-| 5 | Aquecimento | 30 | Remove cedo |
-| 6 | Acessório | 20 | Remove cedo |
-| 7 | Técnica | 15 | Remove cedo |
-| 8 | Mobilidade | 10 | Remove cedo |
-| 9 (mais baixa) | Notas | 0 | Remove primeiro |
+**Assertividade geral ponderada: ~88-90%**
 
-### Lógica de corte por tempo
+Os 10% de erro são casos ambíguos como:
+- "Força" vs "Acessório" (supino pesado 3x5 vs supino leve 3x15 — mesma estrutura, intenção diferente)
+- "Metcon" vs "Específico" (circuito com estações HYROX misturadas)
+- Blocos sem título claro
 
-Quando o treino excede o tempo disponível do atleta:
+### Como funciona
 
-1. Remove blocos de baixa prioridade (Notas → Mobilidade → Técnica → Acessório → Aquecimento)
-2. Se ainda não cabe, remove Força
-3. Se ainda não cabe, reduz duração de Metcon/Específico
-4. **Corrida nunca é removida** — apenas tem a duração diminuída (ex: 5km vira 3km, 30min vira 20min)
+1. Parser processa o texto normalmente (já faz hoje)
+2. Ao finalizar cada bloco, uma função `inferBlockCategory()` analisa:
+   - **Título** (prioridade 1): match por keywords em PT/EN
+   - **Formato** (prioridade 2): AMRAP/EMOM/Tabata → metcon
+   - **Conteúdo** (prioridade 3): tipos de exercício encontrados
+3. O resultado preenche `block.type` automaticamente
+4. Coach vê a categoria pré-selecionada no dropdown e pode alterar manualmente
 
 ### Arquivos alterados
 
-Todos os mesmos do plano anterior, com a tabela de pesos ajustada e uma flag `neverRemove: true` para Corrida no `mainBlockIdentifier.ts`. A função `getRemovableBlocks` vai excluir blocos de Corrida da lista de removíveis. A função `sortBlocksForTimeAdaptation` vai colocar Corrida como último bloco a ser tocado, e quando tocado, apenas reduz volume (distância/tempo) em vez de remover.
+1. **`src/utils/structuredTextParser.ts`** — Criar função `inferBlockCategory()` que retorna a categoria mais provável. Remover o comentário "MVP0: NÃO refinar tipo automaticamente" e ativar a inferência. Retorna `{ category: string, confidence: 'high' | 'medium' | 'low' }`.
+
+2. **`src/utils/categoryValidation.ts`** — Adicionar dicionário `CATEGORY_KEYWORDS` com as keywords por categoria (PT e EN) usado pela inferência.
+
+3. **`src/components/StructuredWorkoutEditor.tsx`** — Nenhuma mudança funcional. O dropdown já permite alteração manual. Opcionalmente, mostrar um indicador visual (ex: borda amarela) quando a confiança é "low" para sugerir revisão ao coach.
+
+### Regra de fallback
+
+Se nenhum sinal forte é encontrado → `block.type = 'conditioning'` (comportamento atual mantido). Coach altera manualmente.
 
