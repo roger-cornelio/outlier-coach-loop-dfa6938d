@@ -1,27 +1,32 @@
 
 
-## Plano: Corrigir exclusão de exercícios aprovados (RLS bloqueando DELETE)
+## Plano: Adicionar categorias "Mobilidade" e "Técnica"
 
-### Causa raiz
+### Resumo
+Adicionar duas novas categorias de bloco ao sistema, com emojis, e trocar o emoji de Acessório para evitar duplicação.
 
-A tabela `exercise_suggestions` não tem política RLS de DELETE para admins. Só tem INSERT, SELECT e UPDATE. Quando o admin clica "Excluir", o Supabase silenciosamente retorna 0 linhas deletadas (sem erro), mas nada é removido.
+### Categorias finais (8 total)
+| Emoji | Categoria | Pode ser principal? |
+|-------|-----------|-------------------|
+| 🔥 | Aquecimento | Não |
+| 💪 | Força | Sim |
+| ⚡ | Metcon | Sim |
+| 🛷 | Específico (HYROX) | Sim |
+| 🏃 | Corrida | Não |
+| 🔧 | Acessório | Não |
+| 🧘 | **Mobilidade** | Não |
+| 🎯 | **Técnica** | Não |
 
-A tabela `global_exercises` já tem `FOR ALL` admin policy, então o delete funciona lá. O problema é só em `exercise_suggestions`.
+### Comportamento
+- Ambas sem validação de conteúdo (coach escreve livremente)
+- Motor de adaptação **não escala** esses blocos (preserva original)
+- IA recebe labels `[MOBILIDADE]` e `[TÉCNICA]` nos prompts
 
-### Correção
-
-**1. Migration SQL** — adicionar política de DELETE para admins na tabela `exercise_suggestions`:
-
-```sql
-CREATE POLICY "Admins can delete suggestions"
-  ON public.exercise_suggestions FOR DELETE TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'::app_role));
-```
-
-**2. Código** — nenhuma mudança necessária no `ExerciseSuggestionsAdmin.tsx`. A lógica de `handleDeleteApproved` já está correta, só precisa da permissão no banco.
-
-### Resultado
-
-- Clicar "Excluir" vai remover da tabela `exercise_suggestions` E da `global_exercises`
-- A lista atualiza automaticamente após exclusão (já chama `fetchSuggestions()`)
+### Arquivos alterados
+1. **`src/utils/categoryValidation.ts`** — adicionar 2 categorias no array, trocar emoji de acessório, adicionar 2 cases no switch
+2. **`src/utils/mandatoryAdaptationEngine.ts`** — adicionar types e cases (sem scaling)
+3. **`src/utils/workoutCalculations.ts`** — tempos estimados (mobilidade: 10min, técnica: 15min)
+4. **`src/utils/workoutEstimation.ts`** — fallback de estimativa
+5. **`src/utils/intelligentTimeAdaptation.ts`** — tempos mínimos
+6. **`src/utils/mainBlockIdentifier.ts`** — pesos de prioridade baixos
 
