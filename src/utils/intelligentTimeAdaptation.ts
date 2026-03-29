@@ -60,10 +60,12 @@ const REMOVAL_PRIORITY: Record<string, number> = {
   mobilidade: 9.5,  // Mobilidade é removível primeiro
   tecnica: 9.2,     // Técnica é removível cedo
   core: 9,          // Core é acessório
+  acessorio: 8.5,   // Acessório é removível
   especifico: 8,    // Específico é acessório  
   corrida: 7,       // Corrida pode ser secundária
   forca: 5,         // Força tem prioridade média
   conditioning: 2,  // Conditioning geralmente é o WOD principal
+  metcon: 2,        // Metcon = mesma prioridade de conditioning
   aquecimento: 1,   // Aquecimento deve ser mantido se possível
 };
 
