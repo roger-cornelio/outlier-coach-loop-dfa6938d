@@ -952,6 +952,148 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setRestDays(newRestDays);
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SPLIT / MERGE SESSÕES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const hasDualSession = (dayIndex: number): boolean => {
+    if (!parseResult) return false;
+    const day = parseResult.days[dayIndex];
+    if (!day) return false;
+    const dayKey = day.day || 'seg';
+    return parseResult.days.filter(d => d.day === dayKey).length > 1;
+  };
+
+  const splitDayIntoSessions = (dayIndex: number) => {
+    if (!parseResult || mode !== 'edit') return;
+
+    const day = parseResult.days[dayIndex];
+    if (!day) return;
+
+    // Create new session 2 entry (empty blocks)
+    const newSession: typeof day = {
+      ...day,
+      blocks: [],
+      isRestDay: false,
+    };
+
+    // Update parseResult: insert after current day, mark sessions
+    const updatedParseResult = { ...parseResult };
+    const newDays = [...updatedParseResult.days];
+    
+    // Mark session on original
+    newDays[dayIndex] = { ...newDays[dayIndex] };
+    
+    // Insert session 2 after
+    newDays.splice(dayIndex + 1, 0, newSession);
+    updatedParseResult.days = newDays;
+    updateParseResult(updatedParseResult);
+
+    // Update effectiveDays
+    if (effectiveDays) {
+      const next = cloneDays(effectiveDays);
+      const dayKey = (day.day || 'seg') as DayOfWeek;
+      
+      // Mark original as session 1
+      next[dayIndex].session = 1;
+      
+      // Insert session 2
+      const newWorkout: DayWorkout = {
+        day: dayKey,
+        stimulus: '',
+        estimatedTime: 0,
+        blocks: [],
+        isRestDay: false,
+        session: 2,
+      };
+      next.splice(dayIndex + 1, 0, newWorkout);
+      
+      setEditedDays(next);
+    }
+
+    // Update restDays indices (shift everything after dayIndex)
+    const newRestDays: Record<number, boolean> = {};
+    Object.entries(restDays).forEach(([key, val]) => {
+      const idx = parseInt(key);
+      if (idx <= dayIndex) {
+        newRestDays[idx] = val;
+      } else {
+        newRestDays[idx + 1] = val;
+      }
+    });
+    setRestDays(newRestDays);
+
+    toast({
+      title: "Sessão 2 criada",
+      description: `${getDayName(day.day || 'seg')} agora tem 2 sessões`,
+    });
+  };
+
+  const mergeDaySessions = (dayIndex: number) => {
+    if (!parseResult || mode !== 'edit') return;
+
+    const day = parseResult.days[dayIndex];
+    if (!day) return;
+    const dayKey = day.day || 'seg';
+
+    // Find all indices with same day
+    const sameDay = parseResult.days
+      .map((d, i) => ({ d, i }))
+      .filter(({ d }) => d.day === dayKey);
+
+    if (sameDay.length < 2) return;
+
+    // Merge all blocks into the first occurrence
+    const updatedParseResult = { ...parseResult };
+    const firstIdx = sameDay[0].i;
+    const mergedBlocks = sameDay.flatMap(({ d }) => d.blocks || []);
+    
+    const newDays = updatedParseResult.days.filter((_, i) => {
+      // Keep only the first occurrence of this day
+      return i === firstIdx || updatedParseResult.days[i].day !== dayKey;
+    });
+    newDays[firstIdx] = { ...newDays[firstIdx], blocks: mergedBlocks };
+    updatedParseResult.days = newDays;
+    updateParseResult(updatedParseResult);
+
+    // Update effectiveDays
+    if (effectiveDays) {
+      const next = cloneDays(effectiveDays);
+      const sameDayEffective = next
+        .map((d, i) => ({ d, i }))
+        .filter(({ d }) => d.day === dayKey);
+
+      if (sameDayEffective.length >= 2) {
+        const firstEffIdx = sameDayEffective[0].i;
+        const allBlocks = sameDayEffective.flatMap(({ d }) => d.blocks || []);
+        
+        const merged = next.filter((d, i) => {
+          return i === firstEffIdx || d.day !== dayKey;
+        });
+        merged[firstEffIdx] = { 
+          ...merged[firstEffIdx], 
+          blocks: allBlocks,
+          session: undefined,
+          sessionLabel: undefined,
+        };
+        setEditedDays(merged);
+      }
+    }
+
+    toast({
+      title: "Sessões unidas",
+      description: `${getDayName(dayKey)} voltou a ter 1 sessão`,
+    });
+  };
+
+  const updateSessionLabel = (dayIndex: number, label: string) => {
+    updateEdited((days) => {
+      if (days[dayIndex]) {
+        days[dayIndex].sessionLabel = label || undefined;
+      }
+    });
+  };
+
   // ───────────────────────────────────────────────────────────────────────────
   // effectiveDays (fonte única pós-edição)
   // - Se existir editedDays: usar editedDays
