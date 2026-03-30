@@ -29,7 +29,8 @@ import {
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
   Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare,
-  Wand2, Send, Clock, Flame, ChevronDown, ChevronUp
+  Wand2, Send, Clock, Flame, ChevronDown, ChevronUp,
+  CopyPlus, Merge
 } from 'lucide-react';
 import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
