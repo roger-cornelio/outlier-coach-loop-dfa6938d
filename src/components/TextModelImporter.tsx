@@ -2015,6 +2015,20 @@ BLOCO: DESCANSO
                           </div>
                         ) : (
                           <div className="space-y-4">
+                            {/* Session label input for dual sessions */}
+                            {isDual && (
+                              <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+                                <Badge variant="outline" className="border-primary/40 text-primary font-semibold shrink-0">
+                                  Sessão {sessionNum}
+                                </Badge>
+                                <Input
+                                  value={sessionLabel}
+                                  onChange={(e) => updateSessionLabel(dayIndex, e.target.value)}
+                                  placeholder="ex: Manhã, 18:00"
+                                  className="h-8 text-sm max-w-[200px]"
+                                />
+                              </div>
+                            )}
                             {day.blocks.map((block, blockIndex) => {
                               // Normalizar título (remover prefixo "BLOCO:" se existir)
                               const rawTitle = block.title?.trim() || '';
