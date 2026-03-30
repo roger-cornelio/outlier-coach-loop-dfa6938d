@@ -126,7 +126,17 @@ export function WeeklyTrainingView() {
   // FONTE ÚNICA: usar planWorkouts do useAthletePlan (filtrado por week_start)
   // Isso garante que cada semana mostra APENAS os treinos daquela semana
   const displayWorkouts = planWorkouts.length > 0 ? planWorkouts : [];
-  const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+  
+  // Agrupar workouts do dia ativo por sessão
+  const dayWorkouts = useMemo(() => {
+    const matches = displayWorkouts.filter((w) => w.day === activeDay);
+    if (matches.length <= 1) return matches;
+    // Ordenar por sessão (1 antes de 2)
+    return [...matches].sort((a, b) => (a.session || 1) - (b.session || 1));
+  }, [displayWorkouts, activeDay]);
+  
+  const currentWorkout = dayWorkouts[0] || null;
+  const hasDualSessions = dayWorkouts.length > 1;
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
@@ -311,9 +321,11 @@ export function WeeklyTrainingView() {
         {/* Day Tabs */}
         <div className="flex gap-1 py-4 overflow-x-auto border-b border-border mb-6">
           {dayTabs.map((day) => {
-            const hasWorkout = displayWorkouts.some((w) => w.day === day);
-            const completion = completions.get(day);
-            const isCompleted = !!completion?.completed;
+            const dayMatchCount = displayWorkouts.filter((w) => w.day === day).length;
+            const hasWorkout = dayMatchCount > 0;
+            const hasDualSessionsForDay = dayMatchCount > 1;
+            const completionData = completions.get(day);
+            const isCompleted = !!completionData?.completed;
 
             return (
               <button
@@ -333,6 +345,9 @@ export function WeeklyTrainingView() {
                 `}
               >
                 {DAY_NAMES[day].slice(0, 3).toUpperCase()}
+                {hasDualSessionsForDay && (
+                  <span className="text-[10px] font-bold opacity-60">×2</span>
+                )}
                 {isCompleted && (
                   <CheckCircle2 className={`w-3.5 h-3.5 ${activeDay === day ? 'text-primary-foreground' : 'text-primary'}`} />
                 )}
@@ -358,9 +373,31 @@ export function WeeklyTrainingView() {
             {/* Day Header */}
             <div className="mb-4">
               <h2 className="font-display text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
-              
+            </div>
+
+            {/* Render each session */}
+            {dayWorkouts.map((sessionWorkout, sessionIdx) => {
+              const sessionLabel = hasDualSessions
+                ? (sessionWorkout.sessionLabel || `Sessão ${sessionWorkout.session || sessionIdx + 1}`)
+                : null;
+
+              return (
+                <div key={`session-${sessionWorkout.session || sessionIdx}`} className="space-y-4">
+                  {/* Session Header */}
+                  {sessionLabel && (
+                    <div className="flex items-center gap-3 pt-2">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <Zap className="w-4 h-4 text-primary" />
+                        <span className="font-display text-sm font-bold text-primary uppercase tracking-wider">
+                          {sessionLabel}
+                        </span>
+                      </div>
+                      <div className="flex-1 h-px bg-border/50" />
+                    </div>
+                  )}
+
               {/* Rest Day */}
-              {currentWorkout.isRestDay && (
+              {sessionWorkout.isRestDay && (
                 <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 mb-4">
                   <div className="flex items-center gap-3">
                     <Clock className="w-5 h-5 text-blue-500" />
@@ -370,12 +407,14 @@ export function WeeklyTrainingView() {
               )}
               
               {/* Workout stats */}
-              {!currentWorkout.isRestDay && (
+              {!sessionWorkout.isRestDay && (
                 <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
-                    <span>{currentWorkout.stimulus}</span>
+                    <span>{sessionWorkout.stimulus}</span>
                   </div>
+                  {sessionIdx === 0 && (
+                    <>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     <span className="font-medium text-foreground">
@@ -390,12 +429,13 @@ export function WeeklyTrainingView() {
                       <span className="text-xs text-muted-foreground/60">(estimado)</span>
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* AI Daily Summary */}
-            {!currentWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
+            {/* AI Daily Summary — only on first session */}
+            {sessionIdx === 0 && !sessionWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -421,22 +461,24 @@ export function WeeklyTrainingView() {
             )}
 
             {/* Workout Blocks */}
-            {currentWorkout.blocks.map((block, index) => {
+            {sessionWorkout.blocks.map((block, index) => {
               const displayData = getBlockDisplayDataFromParsed(block);
               
               if (!displayData.hasContent) {
                 return null;
               }
               
-              // Usar métricas pré-computadas (mesma fonte do header)
-              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false };
+              // Usar métricas pré-computadas (mesma fonte do header) — only for session 1
+              const blockMet = sessionIdx === 0
+                ? (blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false })
+                : { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false };
               const estimatedKcal = blockMet.kcal;
               const estimatedMinutes = Math.round(blockMet.durationSec / 60);
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
               const isEstimated = !hasParsedData;
 
               // Bloco principal automático (por prioridade de categoria + duração)
-              const isMainWod = identifyMainBlock(currentWorkout.blocks).blockIndex === index;
+              const isMainWod = identifyMainBlock(sessionWorkout.blocks).blockIndex === index;
               const hasRegisteredTime = isMainWod && dayIsCompleted && dayTimeInSeconds && dayTimeInSeconds > 0;
 
               return (
@@ -563,6 +605,9 @@ export function WeeklyTrainingView() {
                     </div>
                   )}
                 </motion.div>
+              );
+            })}
+                </div>
               );
             })}
 

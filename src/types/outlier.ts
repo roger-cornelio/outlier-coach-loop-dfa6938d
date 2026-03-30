@@ -173,6 +173,8 @@ export interface DayWorkout {
   estimatedTime: number;
   blocks: WorkoutBlock[];
   isRestDay?: boolean; // MVP0: Dia de descanso não exige WOD Principal
+  session?: number; // 1 ou 2 — para dias com duas sessões (default: 1)
+  sessionLabel?: string; // Label opcional do coach (ex: "Manhã", "18:00")
 }
 
 export interface WorkoutResult {
