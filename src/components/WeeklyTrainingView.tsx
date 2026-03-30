@@ -126,7 +126,17 @@ export function WeeklyTrainingView() {
   // FONTE ÚNICA: usar planWorkouts do useAthletePlan (filtrado por week_start)
   // Isso garante que cada semana mostra APENAS os treinos daquela semana
   const displayWorkouts = planWorkouts.length > 0 ? planWorkouts : [];
-  const currentWorkout = displayWorkouts.find((w) => w.day === activeDay);
+  
+  // Agrupar workouts do dia ativo por sessão
+  const dayWorkouts = useMemo(() => {
+    const matches = displayWorkouts.filter((w) => w.day === activeDay);
+    if (matches.length <= 1) return matches;
+    // Ordenar por sessão (1 antes de 2)
+    return [...matches].sort((a, b) => (a.session || 1) - (b.session || 1));
+  }, [displayWorkouts, activeDay]);
+  
+  const currentWorkout = dayWorkouts[0] || null;
+  const hasDualSessions = dayWorkouts.length > 1;
   const hasAnyWorkouts = displayWorkouts.length > 0;
 
   const biometrics = useMemo(() => getUserBiometrics(athleteConfig), [athleteConfig]);
