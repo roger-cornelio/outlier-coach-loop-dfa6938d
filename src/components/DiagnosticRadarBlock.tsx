@@ -1868,11 +1868,132 @@ export function DiagnosticRadarBlock({
 
         <div className="mb-3" />
 
-        {/* Visor de Ação Unificado (desktop) */}
-        {!performanceSnapshot.currentTime ? (
+        {/* CTA para importar prova quando não tem dados */}
+        {!performanceSnapshot.currentTime && (
           <ImportProvaInlineCTA />
-        ) : (
-          <div className="mt-3 p-4 bg-gradient-to-b from-card/80 to-card/40 border border-border/30 rounded-xl space-y-3">
+        )}
+      </motion.div>
+
+      {/* BLOCO 2.5: JORNADA OUTLIER */}
+      {(() => {
+        const journey = journeyData;
+        if (journey.loading || journey.allLevels.length === 0) return null;
+
+        const { targetLevel, currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journey;
+        const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
+        const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
+
+        const BENCHMARK_ICONS = [Target, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, HeartPulse, Swords];
+        const benchmarksRequired = targetLevel.benchmarksRequired || 3;
+        const benchmarksCompleted = targetLevel.benchmarksCompleted || 0;
+        const milestones = Array.from({ length: benchmarksRequired }, (_, i) => {
+          const position = ((i + 1) / (benchmarksRequired + 1)) * 100;
+          return {
+            position,
+            icon: BENCHMARK_ICONS[i % BENCHMARK_ICONS.length],
+            label: `Benchmark ${i + 1}`,
+            index: i,
+            completed: i < benchmarksCompleted,
+            unlocked: progressToTarget >= position,
+          };
+        });
+
+
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.075 }} className="card-elevated rounded-2xl overflow-hidden">
+            <div className="px-4 py-3">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">Jornada Outlier</span>
+                </div>
+                
+              </div>
+
+
+              {/* ELITE state */}
+              {isAtTop ?
+              <div className="text-center py-4">
+                  <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" className="mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-foreground">Você está no topo</p>
+                  <p className="text-xs text-muted-foreground mt-1">Modo manutenção — mantenha sua consistência.</p>
+                </div> :
+
+              <>
+                  <div className="mb-4">
+                    <div className="text-center mb-1">
+                      <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
+                    </div>
+                    <div className="relative h-8 w-full rounded-full bg-secondary overflow-visible">
+                      <div className="absolute inset-0 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${progressToTarget}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }} className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                      </div>
+                      {milestones.map((ms) => {
+                      const Icon = ms.icon;
+                      return (
+                        <div key={ms.index} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10" style={{ left: `${ms.position}%` }}>
+                            <button
+                              onClick={() => {
+                                if (ms.completed) {
+                                  toast.success(`Benchmark ${ms.index + 1} concluído! ✓`);
+                                } else if (!ms.unlocked) {
+                                  toast.info('Benchmark ainda não disponível. Continue treinando para desbloquear!');
+                                } else {
+                                  toast.info(`Benchmark ${ms.index + 1} desbloqueado — registre seu resultado!`);
+                                }
+                              }}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                                ms.completed
+                                  ? 'bg-primary border-primary text-primary-foreground scale-105'
+                                  : ms.unlocked
+                                    ? 'bg-muted border-orange-500/60 text-orange-400 animate-pulse'
+                                    : 'bg-muted/60 border-border/40 text-muted-foreground/40 cursor-not-allowed'
+                              }`}
+                            >
+                              {ms.completed ? <Check className="w-3.5 h-3.5" /> : ms.unlocked ? <Icon className="w-3.5 h-3.5" /> : <Lock className="w-2.5 h-2.5" />}
+                            </button>
+                          </div>);
+                    })}
+                      {isCapped && <div className="absolute top-0 h-full w-px bg-destructive" style={{ left: `${journey.capPercent}%` }} />}
+                    </div>
+                    {isCapped &&
+                  <p className="text-[10px] text-destructive mt-1.5 flex items-center gap-1">
+                         <Lock className="w-3 h-3" />Travado em {journey.capPercent}% sem prova oficial
+                       </p>
+                   }
+                  </div>
+
+                  {/* Journey Shields — OPEN / PRO / ELITE */}
+                  <JourneyShieldsRow journeyData={journeyData} />
+
+                  {/* REQUISITOS PARA {targetLevel} — UNIFIED CHECKLIST */}
+                  <div className="rounded-lg border border-border/30 p-3">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Target className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
+                    </div>
+                    <RequirementsChecklist
+                      journeyData={journeyData}
+                      showNextLevelButton
+                    />
+
+                  </div>
+                </>
+              }
+            </div>
+          </motion.div>);
+
+      })()}
+
+      {/* NÍVEL COMPETITIVO — painel independente */}
+      {performanceSnapshot.currentTime && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="p-4 bg-gradient-to-b from-card/80 to-card/40 border border-border/30 rounded-xl space-y-3">
             <div className="flex items-center gap-2 pb-2 border-b border-border/20 mb-1">
               <Trophy className="w-4 h-4 text-primary" />
               <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
@@ -1882,7 +2003,6 @@ export function DiagnosticRadarBlock({
 
             {/* 4 metric cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {/* Última Prova */}
               <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
                   <Timer className="w-3.5 h-3.5 text-primary/70" />
@@ -1890,8 +2010,6 @@ export function DiagnosticRadarBlock({
                 </div>
                 <span className="font-extrabold text-lg text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
               </div>
-
-              {/* Meta próximo nível */}
               <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
                   <Target className="w-3.5 h-3.5 text-primary/70" />
@@ -1899,8 +2017,6 @@ export function DiagnosticRadarBlock({
                 </div>
                 <span className="font-extrabold text-lg text-foreground">{performanceSnapshot.nextReqFormatted}</span>
               </div>
-
-              {/* Faltam */}
               <div className={cn(
                 'rounded-lg p-3 flex flex-col items-center text-center gap-1 border',
                 performanceSnapshot.isGoalReached
@@ -1913,8 +2029,6 @@ export function DiagnosticRadarBlock({
                 </div>
                 <span className={cn('font-extrabold text-lg', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
               </div>
-
-              {/* Previsão */}
               <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
                   <Calendar className="w-3.5 h-3.5 text-primary/70" />
@@ -2058,124 +2172,8 @@ export function DiagnosticRadarBlock({
               </Dialog>
             )}
           </div>
-        )}
-      </motion.div>
-
-      {/* BLOCO 2.5: JORNADA OUTLIER */}
-      {(() => {
-        const journey = journeyData;
-        if (journey.loading || journey.allLevels.length === 0) return null;
-
-        const { targetLevel, currentLevelLabel, targetLevelLabel, progressToTarget, isAtTop, isCapped } = journey;
-        const missingBenchmarks = Math.max(0, targetLevel.benchmarksRequired - targetLevel.benchmarksCompleted);
-        const missingSessions = Math.max(0, targetLevel.trainingRequired - targetLevel.trainingSessions);
-
-        const BENCHMARK_ICONS = [Target, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, HeartPulse, Swords];
-        const benchmarksRequired = targetLevel.benchmarksRequired || 3;
-        const benchmarksCompleted = targetLevel.benchmarksCompleted || 0;
-        const milestones = Array.from({ length: benchmarksRequired }, (_, i) => {
-          const position = ((i + 1) / (benchmarksRequired + 1)) * 100;
-          return {
-            position,
-            icon: BENCHMARK_ICONS[i % BENCHMARK_ICONS.length],
-            label: `Benchmark ${i + 1}`,
-            index: i,
-            completed: i < benchmarksCompleted,
-            unlocked: progressToTarget >= position,
-          };
-        });
-
-
-        return (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.075 }} className="card-elevated rounded-2xl overflow-hidden">
-            <div className="px-4 py-3">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
-                  <span className="text-[10px] font-bold tracking-wider uppercase text-orange-500">Jornada Outlier</span>
-                </div>
-                
-              </div>
-
-
-              {/* ELITE state */}
-              {isAtTop ?
-              <div className="text-center py-4">
-                  <StatusCrownPreset status={status} size="lg" colorClass="text-amber-400" className="mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-foreground">Você está no topo</p>
-                  <p className="text-xs text-muted-foreground mt-1">Modo manutenção — mantenha sua consistência.</p>
-                </div> :
-
-              <>
-                  <div className="mb-4">
-                    <div className="text-center mb-1">
-                      <span className="text-3xl font-bold text-foreground font-display">{progressToTarget}%</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{currentLevelLabel}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{targetLevelLabel}</span>
-                    </div>
-                    <div className="relative h-8 w-full rounded-full bg-secondary overflow-visible">
-                      <div className="absolute inset-0 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${progressToTarget}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }} className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
-                      </div>
-                      {milestones.map((ms) => {
-                      const Icon = ms.icon;
-                      return (
-                        <div key={ms.index} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10" style={{ left: `${ms.position}%` }}>
-                            <button
-                              onClick={() => {
-                                if (ms.completed) {
-                                  toast.success(`Benchmark ${ms.index + 1} concluído! ✓`);
-                                } else if (!ms.unlocked) {
-                                  toast.info('Benchmark ainda não disponível. Continue treinando para desbloquear!');
-                                } else {
-                                  toast.info(`Benchmark ${ms.index + 1} desbloqueado — registre seu resultado!`);
-                                }
-                              }}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                                ms.completed
-                                  ? 'bg-primary border-primary text-primary-foreground scale-105'
-                                  : ms.unlocked
-                                    ? 'bg-muted border-orange-500/60 text-orange-400 animate-pulse'
-                                    : 'bg-muted/60 border-border/40 text-muted-foreground/40 cursor-not-allowed'
-                              }`}
-                            >
-                              {ms.completed ? <Check className="w-3.5 h-3.5" /> : ms.unlocked ? <Icon className="w-3.5 h-3.5" /> : <Lock className="w-2.5 h-2.5" />}
-                            </button>
-                          </div>);
-                    })}
-                      {isCapped && <div className="absolute top-0 h-full w-px bg-destructive" style={{ left: `${journey.capPercent}%` }} />}
-                    </div>
-                    {isCapped &&
-                  <p className="text-[10px] text-destructive mt-1.5 flex items-center gap-1">
-                         <Lock className="w-3 h-3" />Travado em {journey.capPercent}% sem prova oficial
-                       </p>
-                   }
-                  </div>
-
-                  {/* Journey Shields — OPEN / PRO / ELITE */}
-                  <JourneyShieldsRow journeyData={journeyData} />
-
-                  {/* REQUISITOS PARA {targetLevel} — UNIFIED CHECKLIST */}
-                  <div className="rounded-lg border border-border/30 p-3">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Target className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Requisitos para {targetLevelLabel}</span>
-                    </div>
-                    <RequirementsChecklist
-                      journeyData={journeyData}
-                      showNextLevelButton
-                    />
-
-                  </div>
-                </>
-              }
-            </div>
-          </motion.div>);
-
-      })()}
+        </motion.div>
+      )}
 
       {/* Projeção de Evolução — card completo (desktop) */}
       {evolutionProjection && performanceSnapshot.currentTime && (
