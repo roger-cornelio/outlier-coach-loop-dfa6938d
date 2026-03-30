@@ -324,7 +324,8 @@ export function WeeklyTrainingView() {
             const dayMatchCount = displayWorkouts.filter((w) => w.day === day).length;
             const hasWorkout = dayMatchCount > 0;
             const hasDualSessionsForDay = dayMatchCount > 1;
-            const isCompleted = !!completion?.completed;
+            const completionData = completions.get(day);
+            const isCompleted = !!completionData?.completed;
 
             return (
               <button
@@ -344,6 +345,9 @@ export function WeeklyTrainingView() {
                 `}
               >
                 {DAY_NAMES[day].slice(0, 3).toUpperCase()}
+                {hasDualSessionsForDay && (
+                  <span className="text-[10px] font-bold opacity-60">×2</span>
+                )}
                 {isCompleted && (
                   <CheckCircle2 className={`w-3.5 h-3.5 ${activeDay === day ? 'text-primary-foreground' : 'text-primary'}`} />
                 )}
