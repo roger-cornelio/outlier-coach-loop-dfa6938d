@@ -29,7 +29,8 @@ import {
   FileText, AlertCircle, CheckCircle, Eye, Trash2, 
   AlertTriangle, Star, Loader2, Moon, MoreVertical, Pencil, 
   Puzzle, Copy, ArrowLeft, ArrowRight, Save, MessageSquare,
-  Wand2, Send, Clock, Flame, ChevronDown, ChevronUp
+  Wand2, Send, Clock, Flame, ChevronDown, ChevronUp,
+  CopyPlus, Merge
 } from 'lucide-react';
 import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
@@ -951,6 +952,148 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setRestDays(newRestDays);
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SPLIT / MERGE SESSÕES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const hasDualSession = (dayIndex: number): boolean => {
+    if (!parseResult) return false;
+    const day = parseResult.days[dayIndex];
+    if (!day) return false;
+    const dayKey = day.day || 'seg';
+    return parseResult.days.filter(d => d.day === dayKey).length > 1;
+  };
+
+  const splitDayIntoSessions = (dayIndex: number) => {
+    if (!parseResult || mode !== 'edit') return;
+
+    const day = parseResult.days[dayIndex];
+    if (!day) return;
+
+    // Create new session 2 entry (empty blocks)
+    const newSession: typeof day = {
+      ...day,
+      blocks: [],
+      isRestDay: false,
+    };
+
+    // Update parseResult: insert after current day, mark sessions
+    const updatedParseResult = { ...parseResult };
+    const newDays = [...updatedParseResult.days];
+    
+    // Mark session on original
+    newDays[dayIndex] = { ...newDays[dayIndex] };
+    
+    // Insert session 2 after
+    newDays.splice(dayIndex + 1, 0, newSession);
+    updatedParseResult.days = newDays;
+    updateParseResult(updatedParseResult);
+
+    // Update effectiveDays
+    if (effectiveDays) {
+      const next = cloneDays(effectiveDays);
+      const dayKey = (day.day || 'seg') as DayOfWeek;
+      
+      // Mark original as session 1
+      next[dayIndex].session = 1;
+      
+      // Insert session 2
+      const newWorkout: DayWorkout = {
+        day: dayKey,
+        stimulus: '',
+        estimatedTime: 0,
+        blocks: [],
+        isRestDay: false,
+        session: 2,
+      };
+      next.splice(dayIndex + 1, 0, newWorkout);
+      
+      setEditedDays(next);
+    }
+
+    // Update restDays indices (shift everything after dayIndex)
+    const newRestDays: Record<number, boolean> = {};
+    Object.entries(restDays).forEach(([key, val]) => {
+      const idx = parseInt(key);
+      if (idx <= dayIndex) {
+        newRestDays[idx] = val;
+      } else {
+        newRestDays[idx + 1] = val;
+      }
+    });
+    setRestDays(newRestDays);
+
+    toast({
+      title: "Sessão 2 criada",
+      description: `${getDayName(day.day || 'seg')} agora tem 2 sessões`,
+    });
+  };
+
+  const mergeDaySessions = (dayIndex: number) => {
+    if (!parseResult || mode !== 'edit') return;
+
+    const day = parseResult.days[dayIndex];
+    if (!day) return;
+    const dayKey = day.day || 'seg';
+
+    // Find all indices with same day
+    const sameDay = parseResult.days
+      .map((d, i) => ({ d, i }))
+      .filter(({ d }) => d.day === dayKey);
+
+    if (sameDay.length < 2) return;
+
+    // Merge all blocks into the first occurrence
+    const updatedParseResult = { ...parseResult };
+    const firstIdx = sameDay[0].i;
+    const mergedBlocks = sameDay.flatMap(({ d }) => d.blocks || []);
+    
+    const newDays = updatedParseResult.days.filter((_, i) => {
+      // Keep only the first occurrence of this day
+      return i === firstIdx || updatedParseResult.days[i].day !== dayKey;
+    });
+    newDays[firstIdx] = { ...newDays[firstIdx], blocks: mergedBlocks };
+    updatedParseResult.days = newDays;
+    updateParseResult(updatedParseResult);
+
+    // Update effectiveDays
+    if (effectiveDays) {
+      const next = cloneDays(effectiveDays);
+      const sameDayEffective = next
+        .map((d, i) => ({ d, i }))
+        .filter(({ d }) => d.day === dayKey);
+
+      if (sameDayEffective.length >= 2) {
+        const firstEffIdx = sameDayEffective[0].i;
+        const allBlocks = sameDayEffective.flatMap(({ d }) => d.blocks || []);
+        
+        const merged = next.filter((d, i) => {
+          return i === firstEffIdx || d.day !== dayKey;
+        });
+        merged[firstEffIdx] = { 
+          ...merged[firstEffIdx], 
+          blocks: allBlocks,
+          session: undefined,
+          sessionLabel: undefined,
+        };
+        setEditedDays(merged);
+      }
+    }
+
+    toast({
+      title: "Sessões unidas",
+      description: `${getDayName(dayKey)} voltou a ter 1 sessão`,
+    });
+  };
+
+  const updateSessionLabel = (dayIndex: number, label: string) => {
+    updateEdited((days) => {
+      if (days[dayIndex]) {
+        days[dayIndex].sessionLabel = label || undefined;
+      }
+    });
+  };
+
   // ───────────────────────────────────────────────────────────────────────────
   // effectiveDays (fonte única pós-edição)
   // - Se existir editedDays: usar editedDays
@@ -1768,18 +1911,39 @@ BLOCO: DESCANSO
                 {(parseResult.days ?? []).map((day, dayIndex) => {
                   const dayName = day.day ? getDayName(day.day) : 'Dia não definido';
                   const isRestDay = restDays[dayIndex] || false;
+                  const dayKey = day.day || 'seg';
+                  const isDual = hasDualSession(dayIndex);
+                  
+                  // Determine session number for display
+                  const sameDayEntries = (parseResult.days ?? [])
+                    .map((d, i) => ({ d, i }))
+                    .filter(({ d }) => d.day === dayKey);
+                  const sessionIdx = sameDayEntries.findIndex(({ i }) => i === dayIndex);
+                  const sessionNum = isDual ? sessionIdx + 1 : 0;
+                  
+                  // Get sessionLabel from effectiveDays
+                  const effectiveDay = effectiveDays?.[dayIndex];
+                  const sessionLabel = effectiveDay?.sessionLabel || '';
                   
                   return (
                     <AccordionItem 
-                      key={day.day || `day-${dayIndex}`} 
+                      key={`day-${dayIndex}`} 
                       value={`day-${dayIndex}`}
                       className="border border-border/50 rounded-2xl overflow-hidden shadow-sm bg-card"
                     >
                       <AccordionTrigger className="px-5 py-4 min-h-[64px] hover:no-underline hover:bg-muted/40">
-                        <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
+                        <div className="flex items-center gap-3 flex-wrap flex-1 text-left">
                           <span className="font-bold text-lg uppercase tracking-wide text-foreground">
                             {dayName}
                           </span>
+                          
+                          {isDual && sessionNum > 0 && (
+                            <Badge variant="outline" className="border-primary/40 text-primary font-semibold text-xs px-2 py-0.5">
+                              Sessão {sessionNum}
+                              {sessionLabel && ` · ${sessionLabel}`}
+                            </Badge>
+                          )}
+                          
                           <span className="text-sm text-muted-foreground">
                             {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
                           </span>
@@ -1792,6 +1956,39 @@ BLOCO: DESCANSO
                           )}
                           
                           <div className="flex-1" />
+                          
+                          {/* Botão dividir/unir sessões */}
+                          <div onClick={(e) => e.stopPropagation()}>
+                            {!isDual && !isRestDay ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    onClick={() => splitDayIntoSessions(dayIndex)}
+                                  >
+                                    <CopyPlus className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Dividir em 2 sessões</TooltipContent>
+                              </Tooltip>
+                            ) : isDual && sessionNum === 1 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => mergeDaySessions(dayIndex)}
+                                  >
+                                    <Merge className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Unir sessões</TooltipContent>
+                              </Tooltip>
+                            ) : null}
+                          </div>
                           
                           {/* Toggle de descanso */}
                           <div 
@@ -1818,6 +2015,20 @@ BLOCO: DESCANSO
                           </div>
                         ) : (
                           <div className="space-y-4">
+                            {/* Session label input for dual sessions */}
+                            {isDual && (
+                              <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+                                <Badge variant="outline" className="border-primary/40 text-primary font-semibold shrink-0">
+                                  Sessão {sessionNum}
+                                </Badge>
+                                <Input
+                                  value={sessionLabel}
+                                  onChange={(e) => updateSessionLabel(dayIndex, e.target.value)}
+                                  placeholder="ex: Manhã, 18:00"
+                                  className="h-8 text-sm max-w-[200px]"
+                                />
+                              </div>
+                            )}
                             {day.blocks.map((block, blockIndex) => {
                               // Normalizar título (remover prefixo "BLOCO:" se existir)
                               const rawTitle = block.title?.trim() || '';
