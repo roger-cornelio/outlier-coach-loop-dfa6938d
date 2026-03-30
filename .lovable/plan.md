@@ -1,43 +1,36 @@
 
 
-## Plano: Duas sessões no mesmo dia (Sessão 1 / Sessão 2)
+## Plano: Botão "Dividir em 2 sessões" no editor do coach
 
-### Modelo
+### Como funciona
 
-Cada `DayWorkout` ganha um campo opcional `session?: number` (1 ou 2, default 1). Quando o coach escreve dois treinos para o mesmo dia (ex: duas "seg"), o sistema os diferencia por sessão. O atleta vê "Sessão 1" e "Sessão 2" como abas ou cards separados dentro do mesmo dia.
+No header de cada dia (AccordionTrigger), ao lado do toggle de "Descanso", adicionar um botão/ícone que divide aquele dia em duas sessões. O dia original vira "Sessão 1" (mantém todos os blocos) e uma "Sessão 2" vazia é criada logo abaixo. O coach pode então mover blocos entre sessões ou adicionar novos.
+
+Se o dia já tem 2 sessões, o botão muda para "Unir sessões" (merge de volta).
 
 ### Alterações
 
-**1. Tipo `DayWorkout` — `src/types/outlier.ts`**
-- Adicionar `session?: number` (1 | 2)
-- Adicionar `sessionLabel?: string` (opcional, ex: "Manhã", "Tarde", ou horário sugerido "06:00")
+**1. `src/components/TextModelImporter.tsx`**
 
-**2. Editor do coach — `src/components/TextModelImporter.tsx`**
-- Ao detectar dois blocos com o mesmo dia (ex: dois "DIA: SEG"), atribuir automaticamente `session: 1` e `session: 2`
-- Permitir que o coach edite o `sessionLabel` (campo texto livre opcional, ex: "Manhã" ou "18:00")
-- Na preview, mostrar "Sessão 1" e "Sessão 2" separadas dentro do mesmo dia
+- **Agrupar dias por nome** na renderização do edit mode: detectar quando dois entries consecutivos no `parseResult.days` têm o mesmo `day` (já indica sessão dupla)
+- **Botão "Dividir"** no AccordionTrigger de cada dia (ao lado do toggle Descanso):
+  - Ao clicar: duplica o entry no `parseResult.days` e no `effectiveDays` com `session: 1` no original e `session: 2` no novo (vazio)
+  - Atualiza `parseResult` e `editedDays` via `updateParseResult` + `updateEdited`
+- **Botão "Unir"** quando o dia já tem 2 sessões: merge os blocos de volta em um só entry
+- **Label visual**: quando um dia tem 2 sessões, mostrar "Sessão 1" e "Sessão 2" no título do AccordionItem
+- **SessionLabel editável**: campo de texto pequeno (placeholder "ex: Manhã, 18:00") que aparece só em dias com 2 sessões
 
-**3. Visão do atleta — `src/components/WeeklyTrainingView.tsx`**
-- Ao renderizar o dia ativo, agrupar workouts por `session`
-- Se houver 2 sessões: mostrar header "Sessão 1 · {label}" e "Sessão 2 · {label}" como separadores visuais
-- Se houver 1 sessão (padrão): comportamento atual, sem mudanças visuais
+**2. Nova função `splitDayIntoSessions`**
+- Recebe `dayIndex`, insere novo entry após o dia atual
+- Atribui `session: 1` ao existente e `session: 2` ao novo
+- O novo entry tem `blocks: []` (coach adiciona via editor)
 
-**4. Publicação — `src/components/PublishToAthletesModal.tsx`**
-- Sem alteração de schema no banco — o campo `session` viaja dentro do `plan_json.workouts[]` como parte do `DayWorkout`
-- O merge por dia precisa considerar `session` como parte da chave de deduplicação (day + session)
+**3. Nova função `mergeDaySessions`**
+- Recebe `dayIndex`, encontra o par de sessões do mesmo dia
+- Concatena blocos em um só entry, remove `session` field
 
-**5. Completions — `src/hooks/useWeekWorkoutCompletions.ts`**
-- Adaptar para suportar conclusão por sessão (session 1 e session 2 independentes)
-
-**6. Dashboard — `src/components/DashboardBlocks.tsx`**
-- `TodayWorkoutBlock`: se hoje tem 2 sessões, mostrar a próxima não concluída
-
-### Sem alteração de banco
-Tudo viaja no JSON (`plan_json.workouts[]`). A tabela `athlete_plans` não muda.
-
-### UX para o coach
-O coach cola o texto com dois blocos "DIA: SEG" — o parser detecta e cria Sessão 1 e Sessão 2 automaticamente. Ele pode dar um label opcional (horário sugerido).
-
-### UX para o atleta
-Na tela semanal, o dia com duas sessões mostra dois cards separados com indicação "Sessão 1" / "Sessão 2" + label do coach se houver. Cada sessão tem seu próprio botão de conclusão.
+### UX
+- Ícone: `Copy` ou `Split` com tooltip "Dividir em 2 sessões"
+- Dias com sessão dupla mostram sub-header colorido "Sessão 1" / "Sessão 2" dentro do accordion
+- Campo de label opcional aparece inline no sub-header
 
