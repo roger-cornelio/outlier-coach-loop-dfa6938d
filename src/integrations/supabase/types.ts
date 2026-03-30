@@ -2285,6 +2285,10 @@ export type Database = {
         Args: { _athlete_id: string; _viewer_id: string }
         Returns: boolean
       }
+      check_profile_exists_by_name: {
+        Args: { _name: string }
+        Returns: boolean
+      }
       coach_find_athlete_by_email: { Args: { _email: string }; Returns: Json }
       ensure_superadmin_role: {
         Args: { _email: string; _user_id: string }

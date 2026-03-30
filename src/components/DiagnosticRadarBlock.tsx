@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine } from 'recharts';
-import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users, Medal } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, Info, Target, Crown, TrendingUp, Flame, ChevronRight, Star, Trophy, Lock, BarChart3, Check, X, Calendar, Dumbbell, Timer, Zap, Mountain, Crosshair, Gauge, Footprints, Bike, HeartPulse, Swords, AlertTriangle, Loader2, Clock, BookOpen, ExternalLink, Users, Medal, Flag } from 'lucide-react';
 import { calculateEvolutionTimeframe, calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { MOCK_USER_AGE_GROUP } from '@/utils/evolutionUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -1872,92 +1872,94 @@ export function DiagnosticRadarBlock({
         {!performanceSnapshot.currentTime ? (
           <ImportProvaInlineCTA />
         ) : (
-          <div className="mt-3 p-3 bg-muted/5 border border-border/15 rounded-xl space-y-2.5">
-            <div className="flex items-center gap-2 pb-1.5 border-b border-border/15 mb-1">
-              <Trophy className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+          <div className="mt-3 p-4 bg-gradient-to-b from-card/80 to-card/40 border border-border/30 rounded-xl space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/20 mb-1">
+              <Trophy className="w-4 h-4 text-primary" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
                 Nível Competitivo
               </span>
             </div>
 
-            {/* Prova Alvo resumida — moved below the progress bar */}
-
+            {/* 4 metric cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {/* Última Prova */}
-              <div className="flex flex-col items-center text-center gap-0.5">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Timer className="w-3.5 h-3.5" />
+              <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  <Timer className="w-3.5 h-3.5 text-primary/70" />
                   <span>Última Prova</span>
                 </div>
-                <span className="font-bold text-sm text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
+                <span className="font-extrabold text-lg text-foreground">{formatOfficialTime(performanceSnapshot.currentTime)}</span>
               </div>
 
               {/* Meta próximo nível */}
-              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Target className="w-3.5 h-3.5" />
+              <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  <Target className="w-3.5 h-3.5 text-primary/70" />
                   <span>Meta {performanceSnapshot.nextStatusLabel}</span>
                 </div>
-                <span className="font-bold text-sm text-foreground">{performanceSnapshot.nextReqFormatted}</span>
+                <span className="font-extrabold text-lg text-foreground">{performanceSnapshot.nextReqFormatted}</span>
               </div>
 
               {/* Faltam */}
-              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Zap className="w-3.5 h-3.5" />
+              <div className={cn(
+                'rounded-lg p-3 flex flex-col items-center text-center gap-1 border',
+                performanceSnapshot.isGoalReached
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : 'bg-amber-500/10 border-amber-500/30'
+              )}>
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  <Zap className="w-3.5 h-3.5 text-primary/70" />
                   <span>Faltam</span>
                 </div>
-                <span className={cn('font-bold text-sm', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
+                <span className={cn('font-extrabold text-lg', performanceSnapshot.gapClass)}>{performanceSnapshot.gapValue}</span>
               </div>
 
               {/* Previsão */}
-              <div className="flex flex-col items-center text-center gap-0.5 border-l border-border/10">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Calendar className="w-3.5 h-3.5" />
+              <div className="bg-card/50 border border-border/20 rounded-lg p-3 flex flex-col items-center text-center gap-1">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+                  <Calendar className="w-3.5 h-3.5 text-primary/70" />
                   <span>Previsão</span>
                 </div>
-                <span className={cn('font-bold text-sm', performanceSnapshot.isGoalReached ? 'text-emerald-400' : 'text-foreground')}>{performanceSnapshot.previsaoFormatted}</span>
+                <span className={cn('font-extrabold text-lg', performanceSnapshot.isGoalReached ? 'text-emerald-400' : 'text-foreground')}>{performanceSnapshot.previsaoFormatted}</span>
               </div>
             </div>
 
-            {/* Barra de progresso */}
+            {/* Progress bar */}
             {!performanceSnapshot.isGoalReached && (
-              <div className="w-full h-2 bg-secondary/40 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${performanceSnapshot.progressPercent}%` }}
-                />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-3 bg-secondary/40 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-500"
+                    style={{ width: `${performanceSnapshot.progressPercent}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground min-w-[36px] text-right">{performanceSnapshot.progressPercent}%</span>
               </div>
             )}
 
-            {!performanceSnapshot.isGoalReached && (
-              <div className="flex items-center justify-between gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-4 h-4 rounded-full border border-amber-500/50 text-amber-500/70 hover:text-amber-500 hover:border-amber-500 transition-colors cursor-pointer bg-transparent flex items-center justify-center text-[9px] font-bold p-0">
-                      i
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 text-xs p-3">
-                    <p className="text-muted-foreground leading-relaxed">
-                      A régua avança conforme você realiza <strong>simulados</strong>. Cada simulado mede o quão próximo você está da meta do próximo nível.
-                    </p>
-                  </PopoverContent>
-                </Popover>
-                {performanceSnapshot.actionPhrase && (
-                  <p className="text-[11px] text-muted-foreground leading-relaxed text-center flex-1">
+            {/* Action phrase */}
+            {!performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <p className="text-xs text-muted-foreground leading-relaxed text-center cursor-help hover:text-foreground/70 transition-colors">
                     {performanceSnapshot.actionPhrase}
+                    <Info className="w-3 h-3 inline-block ml-1 opacity-50" />
                   </p>
-                )}
-              </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 text-xs p-3">
+                  <p className="text-muted-foreground leading-relaxed">
+                    A régua avança conforme você realiza <strong>simulados</strong>. Cada simulado mede o quão próximo você está da meta do próximo nível.
+                  </p>
+                </PopoverContent>
+              </Popover>
             )}
             {performanceSnapshot.isGoalReached && performanceSnapshot.actionPhrase && (
-              <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
                 {performanceSnapshot.actionPhrase}
               </p>
             )}
 
-            {/* Prova Alvo grid abaixo da régua */}
+            {/* Prova Alvo section */}
             {provaAlvo && performanceSnapshot.currentTime && (() => {
               const baseTime = lastSimulationTime ?? performanceSnapshot.currentTime;
               const projected = calculateProvaAlvoTarget(baseTime, provaAlvo.daysUntil);
@@ -1978,28 +1980,32 @@ export function DiagnosticRadarBlock({
               }
               const displayName = `${eventName}${year ? ` ${year}` : ''}`;
               return (
-                <div className="pt-2 mt-1 border-t border-border/10">
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Prova Alvo</span>
-                      <span className="font-bold text-xs text-foreground leading-tight">{displayName}</span>
+                <div className="pt-3 mt-1 border-t border-border/20">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Flag className="w-3.5 h-3.5 text-primary/70" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Prova Alvo</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="bg-card/40 border border-border/15 rounded-md p-2 flex flex-col items-center gap-0.5 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Evento</span>
+                      <span className="font-bold text-sm text-foreground leading-tight">{displayName}</span>
                       {cityName && <span className="text-[9px] text-muted-foreground">({cityName})</span>}
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Categoria</span>
-                      <span className="font-bold text-xs text-foreground">{provaAlvo.categoria.replace(/_/g, ' ')}</span>
+                    <div className="bg-card/40 border border-border/15 rounded-md p-2 flex flex-col items-center gap-0.5 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</span>
+                      <span className="font-bold text-sm text-foreground">{provaAlvo.categoria.replace(/_/g, ' ')}</span>
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Preparação</span>
-                      <span className="font-bold text-xs text-foreground">{provaAlvo.daysUntil} dias</span>
+                    <div className="bg-card/40 border border-border/15 rounded-md p-2 flex flex-col items-center gap-0.5 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Preparação</span>
+                      <span className="font-bold text-sm text-foreground">{provaAlvo.daysUntil} dias</span>
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Últ. Simulado</span>
-                      <span className="font-bold text-xs text-foreground">{lastSimulationTime ? formatOfficialTime(lastSimulationTime) : '—'}</span>
+                    <div className="bg-card/40 border border-border/15 rounded-md p-2 flex flex-col items-center gap-0.5 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Últ. Simulado</span>
+                      <span className="font-bold text-sm text-foreground">{lastSimulationTime ? formatOfficialTime(lastSimulationTime) : '—'}</span>
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 border-l border-border/10">
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
-                      <span className="font-bold text-xs text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
+                    <div className="bg-card/40 border border-border/15 rounded-md p-2 flex flex-col items-center gap-0.5 text-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Result. Esperado</span>
+                      <span className="font-bold text-sm text-foreground">{formatOfficialTime(projected.targetSeconds)}</span>
                       <span className="text-[8px] text-muted-foreground/70">{usedSimulation ? '(base: simulado)' : '(base: prova oficial)'}</span>
                     </div>
                   </div>
