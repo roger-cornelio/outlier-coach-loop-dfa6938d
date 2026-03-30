@@ -368,9 +368,31 @@ export function WeeklyTrainingView() {
             {/* Day Header */}
             <div className="mb-4">
               <h2 className="font-display text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
-              
+            </div>
+
+            {/* Render each session */}
+            {dayWorkouts.map((sessionWorkout, sessionIdx) => {
+              const sessionLabel = hasDualSessions
+                ? (sessionWorkout.sessionLabel || `Sessão ${sessionWorkout.session || sessionIdx + 1}`)
+                : null;
+
+              return (
+                <div key={`session-${sessionWorkout.session || sessionIdx}`} className="space-y-4">
+                  {/* Session Header */}
+                  {sessionLabel && (
+                    <div className="flex items-center gap-3 pt-2">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <Zap className="w-4 h-4 text-primary" />
+                        <span className="font-display text-sm font-bold text-primary uppercase tracking-wider">
+                          {sessionLabel}
+                        </span>
+                      </div>
+                      <div className="flex-1 h-px bg-border/50" />
+                    </div>
+                  )}
+
               {/* Rest Day */}
-              {currentWorkout.isRestDay && (
+              {sessionWorkout.isRestDay && (
                 <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 mb-4">
                   <div className="flex items-center gap-3">
                     <Clock className="w-5 h-5 text-blue-500" />
@@ -380,12 +402,14 @@ export function WeeklyTrainingView() {
               )}
               
               {/* Workout stats */}
-              {!currentWorkout.isRestDay && (
+              {!sessionWorkout.isRestDay && (
                 <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
-                    <span>{currentWorkout.stimulus}</span>
+                    <span>{sessionWorkout.stimulus}</span>
                   </div>
+                  {sessionIdx === 0 && (
+                    <>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     <span className="font-medium text-foreground">
@@ -399,6 +423,8 @@ export function WeeklyTrainingView() {
                       <span className="text-orange-500 font-medium">~{totalCalories} kcal</span>
                       <span className="text-xs text-muted-foreground/60">(estimado)</span>
                     </div>
+                  )}
+                    </>
                   )}
                 </div>
               )}
