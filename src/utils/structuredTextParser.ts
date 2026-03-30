@@ -2829,9 +2829,17 @@ export function parseStructuredText(text: string): ParseResult {
       inCommentTagMode = false;
       inTrainingTagMode = false;
       
-      // Criar nova entrada de dia
-      currentDayEntry = result.days.find(d => d.day === detectedDay) || null;
-      if (!currentDayEntry) {
+      // Criar nova entrada de dia (SEMPRE cria novo entry — dias duplicados viram sessões separadas)
+      // Se já existe um entry com o mesmo dia, criamos outro (o conversor atribui session: 1 e session: 2)
+      const existingDayEntry = result.days.find(d => d.day === detectedDay);
+      if (existingDayEntry && existingDayEntry.blocks.length > 0) {
+        // Dia duplicado: criar novo entry (será sessão 2)
+        currentDayEntry = { day: detectedDay, blocks: [], alerts: [] };
+        result.days.push(currentDayEntry);
+      } else if (existingDayEntry) {
+        // Mesmo dia sem blocos ainda — reutilizar
+        currentDayEntry = existingDayEntry;
+      } else {
         currentDayEntry = { day: detectedDay, blocks: [], alerts: [] };
         result.days.push(currentDayEntry);
       }
