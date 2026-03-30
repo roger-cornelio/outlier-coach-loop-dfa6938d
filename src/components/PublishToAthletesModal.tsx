@@ -318,14 +318,22 @@ export function PublishToAthletesModal({
           const existingWorkouts: any[] = existingJson?.workouts || [];
 
           if (existingWorkouts.length > 0) {
-            // Chaves dos dias sendo publicados agora (day label OU scheduledDate)
+            // Chaves dos dias sendo publicados agora (day + session para deduplicação)
             const newDayKeys = new Set(
-              normalizedWorkouts.map((w: any) => w.day || w.dayLabel || w.scheduledDate)
+              normalizedWorkouts.map((w: any) => {
+                const dayKey = w.day || w.dayLabel || w.scheduledDate;
+                const session = w.session || 1;
+                return `${dayKey}__s${session}`;
+              })
             );
 
             // Manter dias antigos que NÃO estão na nova publicação
             const keptFromExisting = existingWorkouts.filter(
-              (w: any) => !newDayKeys.has(w.day || w.dayLabel || w.scheduledDate)
+              (w: any) => {
+                const dayKey = w.day || w.dayLabel || w.scheduledDate;
+                const session = w.session || 1;
+                return !newDayKeys.has(`${dayKey}__s${session}`);
+              }
             );
 
             mergedWorkouts = [...keptFromExisting, ...normalizedWorkouts];
