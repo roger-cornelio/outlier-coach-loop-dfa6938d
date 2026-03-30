@@ -430,8 +430,8 @@ export function WeeklyTrainingView() {
               )}
             </div>
 
-            {/* AI Daily Summary */}
-            {!currentWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
+            {/* AI Daily Summary — only on first session */}
+            {sessionIdx === 0 && !sessionWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -457,22 +457,24 @@ export function WeeklyTrainingView() {
             )}
 
             {/* Workout Blocks */}
-            {currentWorkout.blocks.map((block, index) => {
+            {sessionWorkout.blocks.map((block, index) => {
               const displayData = getBlockDisplayDataFromParsed(block);
               
               if (!displayData.hasContent) {
                 return null;
               }
               
-              // Usar métricas pré-computadas (mesma fonte do header)
-              const blockMet = blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false };
+              // Usar métricas pré-computadas (mesma fonte do header) — only for session 1
+              const blockMet = sessionIdx === 0
+                ? (blockMetricsMap.perBlock[index] || { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false })
+                : { kcal: 0, durationSec: 0, confidencePercent: 0, showStats: false, visible: false };
               const estimatedKcal = blockMet.kcal;
               const estimatedMinutes = Math.round(blockMet.durationSec / 60);
               const hasParsedData = block.parsedExercises && block.parsedExercises.length > 0 && block.parseStatus === 'completed';
               const isEstimated = !hasParsedData;
 
               // Bloco principal automático (por prioridade de categoria + duração)
-              const isMainWod = identifyMainBlock(currentWorkout.blocks).blockIndex === index;
+              const isMainWod = identifyMainBlock(sessionWorkout.blocks).blockIndex === index;
               const hasRegisteredTime = isMainWod && dayIsCompleted && dayTimeInSeconds && dayTimeInSeconds > 0;
 
               return (
@@ -599,6 +601,9 @@ export function WeeklyTrainingView() {
                     </div>
                   )}
                 </motion.div>
+              );
+            })}
+                </div>
               );
             })}
 
