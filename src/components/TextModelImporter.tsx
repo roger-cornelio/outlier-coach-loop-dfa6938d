@@ -800,11 +800,26 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
       result.needsDaySelection = false;
 
       // Converter para DayWorkout[] (fonte única para Preview/Publicar/Atleta)
-      const workouts: DayWorkout[] = result.days.map((day) => ({
-        day: (day.day || 'seg') as DayOfWeek,
+      // Detectar dias duplicados para atribuir session: 1 e session: 2
+      const dayOccurrenceCount: Record<string, number> = {};
+      result.days.forEach((day) => {
+        const key = day.day || 'seg';
+        dayOccurrenceCount[key] = (dayOccurrenceCount[key] || 0) + 1;
+      });
+      const daySessionTracker: Record<string, number> = {};
+
+      const workouts: DayWorkout[] = result.days.map((day) => {
+        const dayKey = (day.day || 'seg') as DayOfWeek;
+        const hasDualSessions = (dayOccurrenceCount[dayKey] || 0) > 1;
+        daySessionTracker[dayKey] = (daySessionTracker[dayKey] || 0) + 1;
+        const sessionNumber = hasDualSessions ? daySessionTracker[dayKey] : undefined;
+        
+        return {
+        day: dayKey,
         stimulus: '',
         estimatedTime: 60,
         isRestDay: day.isRestDay || false,
+        ...(sessionNumber ? { session: sessionNumber } : {}),
         blocks: day.blocks.map((block, idx) => {
           const parsedLines = block.lines || [];
 
