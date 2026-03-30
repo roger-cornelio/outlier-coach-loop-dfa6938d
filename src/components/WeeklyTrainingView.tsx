@@ -321,8 +321,9 @@ export function WeeklyTrainingView() {
         {/* Day Tabs */}
         <div className="flex gap-1 py-4 overflow-x-auto border-b border-border mb-6">
           {dayTabs.map((day) => {
-            const hasWorkout = displayWorkouts.some((w) => w.day === day);
-            const completion = completions.get(day);
+            const dayMatchCount = displayWorkouts.filter((w) => w.day === day).length;
+            const hasWorkout = dayMatchCount > 0;
+            const hasDualSessionsForDay = dayMatchCount > 1;
             const isCompleted = !!completion?.completed;
 
             return (
