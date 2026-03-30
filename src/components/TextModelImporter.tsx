@@ -1911,18 +1911,39 @@ BLOCO: DESCANSO
                 {(parseResult.days ?? []).map((day, dayIndex) => {
                   const dayName = day.day ? getDayName(day.day) : 'Dia não definido';
                   const isRestDay = restDays[dayIndex] || false;
+                  const dayKey = day.day || 'seg';
+                  const isDual = hasDualSession(dayIndex);
+                  
+                  // Determine session number for display
+                  const sameDayEntries = (parseResult.days ?? [])
+                    .map((d, i) => ({ d, i }))
+                    .filter(({ d }) => d.day === dayKey);
+                  const sessionIdx = sameDayEntries.findIndex(({ i }) => i === dayIndex);
+                  const sessionNum = isDual ? sessionIdx + 1 : 0;
+                  
+                  // Get sessionLabel from effectiveDays
+                  const effectiveDay = effectiveDays?.[dayIndex];
+                  const sessionLabel = effectiveDay?.sessionLabel || '';
                   
                   return (
                     <AccordionItem 
-                      key={day.day || `day-${dayIndex}`} 
+                      key={`day-${dayIndex}`} 
                       value={`day-${dayIndex}`}
                       className="border border-border/50 rounded-2xl overflow-hidden shadow-sm bg-card"
                     >
                       <AccordionTrigger className="px-5 py-4 min-h-[64px] hover:no-underline hover:bg-muted/40">
-                        <div className="flex items-center gap-4 flex-wrap flex-1 text-left">
+                        <div className="flex items-center gap-3 flex-wrap flex-1 text-left">
                           <span className="font-bold text-lg uppercase tracking-wide text-foreground">
                             {dayName}
                           </span>
+                          
+                          {isDual && sessionNum > 0 && (
+                            <Badge variant="outline" className="border-primary/40 text-primary font-semibold text-xs px-2 py-0.5">
+                              Sessão {sessionNum}
+                              {sessionLabel && ` · ${sessionLabel}`}
+                            </Badge>
+                          )}
+                          
                           <span className="text-sm text-muted-foreground">
                             {day.blocks.length} bloco{day.blocks.length !== 1 ? 's' : ''}
                           </span>
@@ -1935,6 +1956,39 @@ BLOCO: DESCANSO
                           )}
                           
                           <div className="flex-1" />
+                          
+                          {/* Botão dividir/unir sessões */}
+                          <div onClick={(e) => e.stopPropagation()}>
+                            {!isDual && !isRestDay ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    onClick={() => splitDayIntoSessions(dayIndex)}
+                                  >
+                                    <CopyPlus className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Dividir em 2 sessões</TooltipContent>
+                              </Tooltip>
+                            ) : isDual && sessionNum === 1 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => mergeDaySessions(dayIndex)}
+                                  >
+                                    <Merge className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Unir sessões</TooltipContent>
+                              </Tooltip>
+                            ) : null}
+                          </div>
                           
                           {/* Toggle de descanso */}
                           <div 
