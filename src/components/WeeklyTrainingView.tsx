@@ -428,7 +428,6 @@ export function WeeklyTrainingView() {
                   )}
                 </div>
               )}
-            </div>
 
             {/* AI Daily Summary — only on first session */}
             {sessionIdx === 0 && !sessionWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
