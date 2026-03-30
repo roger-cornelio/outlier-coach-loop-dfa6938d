@@ -876,7 +876,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
             isBenchmark: block.isBenchmark || undefined,
           };
         }),
-      }));
+      };
+      });
 
       const durationMs = Math.round(performance.now() - t0);
       if (durationMs > 1000) {
