@@ -1677,6 +1677,39 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_change_requests: {
+        Row: {
+          athlete_user_id: string
+          coach_id: string | null
+          created_at: string | null
+          current_plan: string
+          id: string
+          requested_plan: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          athlete_user_id: string
+          coach_id?: string | null
+          created_at?: string | null
+          current_plan: string
+          id?: string
+          requested_plan: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          athlete_user_id?: string
+          coach_id?: string | null
+          created_at?: string | null
+          current_plan?: string
+          id?: string
+          requested_plan?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           altura: number | null
