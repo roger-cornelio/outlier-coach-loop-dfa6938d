@@ -347,7 +347,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
             <motion.p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-              Rankeados por avaliação, retenção de atletas e resultados na plataforma.
+              Com base no seu diagnóstico e perfil, estes são os coaches mais indicados para acelerar sua evolução.
             </motion.p>
 
             <div className="max-w-md mx-auto space-y-3 mb-6">
