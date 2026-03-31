@@ -565,7 +565,7 @@ export function WelcomeScreen() {
   }
 
   async function handleSkip() {
-    setStep('profile');
+    setStep('profileConfig');
   }
 
   const experienceOptions = [
