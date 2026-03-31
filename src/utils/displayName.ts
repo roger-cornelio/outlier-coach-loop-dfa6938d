@@ -92,8 +92,3 @@ export function getCoachDisplayName(coachProfile: ProfileLike | null | undefined
   const displayName = getDisplayName(coachProfile);
   return displayName === 'Usuário' ? 'Coach' : displayName;
 }
-  if (!coachProfile) return 'Coach';
-  
-  const displayName = getDisplayName(coachProfile);
-  return displayName === 'Usuário' ? 'Coach' : displayName;
-}
