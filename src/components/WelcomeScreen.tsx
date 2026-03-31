@@ -104,6 +104,7 @@ export function WelcomeScreen() {
   const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(null);
   const [cfgCoachStyle, setCfgCoachStyle] = useState<CoachStyle>('PULSE');
   const [cfgSessionDuration, setCfgSessionDuration] = useState<SessionDuration>(60);
+  const [selectedPlan, setSelectedPlan] = useState<'open' | 'pro' | null>(null);
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
   const freeDiagConsumedRef = useRef(false);
