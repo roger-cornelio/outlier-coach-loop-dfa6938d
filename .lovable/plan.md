@@ -1,50 +1,23 @@
 
 
-## Fluxo Completo de Onboarding — Explicação
+## Plano: Atualizar copy da tela de Coach Selection
 
-O onboarding tem duas fases: a fase de diagnóstico (para quem tem prova HYROX) e a fase de cadastro (obrigatória para todos).
+### Alterações em `src/components/OnboardingCoachSelection.tsx`
 
-### Fase 1 — Diagnóstico (opcional, só para quem tem prova)
+**Tela "choice"**
+- Headline: `"CONECTE-SE AO SEU COACH"` → `"SEU COACH IDEAL"`
+- Sub: → `"Analisamos seu perfil e selecionamos os coaches mais compatíveis com seus objetivos e nível de performance."`
+- Botão 2 label: `"QUERO UM COACH"` → `"VER SELEÇÃO OUTLIER"`
+- Botão 2 sub: `"Ver coaches recomendados"` → `"Coaches selecionados para o seu perfil"`
 
-```text
-Busca → Resultado → Gargalos → Chamada para ação
-  ↕         ↕           ↕              ↕
-  —       Busca      Resultado    Gargalos/Resultado
-```
+**Tela "search" — coach não encontrado**
+- Texto: → `"Seu coach ainda não está na plataforma. Veja os coaches que a Outlier selecionou para seu perfil:"`
+- Botão: `"VER COACHES RECOMENDADOS"` → `"VER SELEÇÃO PARA MEU PERFIL"`
 
-1. **Busca** — O atleta digita seu nome para encontrar resultados de provas HYROX
-2. **Resultado** — Mostra o tempo da prova e a posição no ranking
-3. **Gargalos** — Exibe os 3 maiores pontos fracos identificados nos dados da prova
-4. **Chamada para ação** — Tela motivacional: "Pronto para ser fora da curva?"
+**Tela "recommendations"**
+- Headline: `"COACHES RECOMENDADOS"` → `"SELECIONADOS PARA VOCÊ"`
+- Sub: → `"Com base no seu diagnóstico e perfil, estes são os coaches mais indicados para acelerar sua evolução."`
+- Loading: `"Carregando recomendações..."` → `"Analisando compatibilidade..."`
 
-Cada tela tem um botão "Voltar" que retorna à tela anterior (indicado pelas setas verticais ↕).
-
----
-
-### Fase 2 — Cadastro (todos passam por aqui)
-
-```text
-CTA → Biometria → Experiência → Objetivo → Motivacional → Coach → Plano → FIM
- ↕        ↕            ↕            ↕            ↕            ↕       ↕
- —    CTA/Busca    Biometria    Experiência    Objetivo    Motivacional  Coach
-```
-
-1. **CTA** — Tela de chamada para ação (ponto de entrada para quem não tem prova)
-2. **Biometria** — Dados simples: peso, altura, idade, sexo, estilo de coach, tempo disponível
-3. **Experiência** — Nível de experiência com HYROX (nunca fez, já fez provas, etc.)
-4. **Objetivo** — O que o atleta quer alcançar (completar, melhorar tempo, pódio, etc.)
-5. **Motivacional** — Tela de reforço antes das escolhas finais
-6. **Coach** — Escolha do treinador + tela de confirmação de solicitação
-7. **Plano** — Escolha entre ESSENCIAL (open) ou PERFORMANCE (pro)
-8. **FIM** — Salva tudo no banco e vai para o dashboard
-
-O botão "Voltar" de cada tela retorna exatamente à tela anterior na sequência (indicado pela linha de baixo do diagrama).
-
----
-
-### Resumo da lógica
-
-- **Quem tem prova**: passa pelas 4 telas de diagnóstico primeiro, depois entra na fase de cadastro
-- **Quem não tem prova**: pula direto para a fase de cadastro a partir do CTA
-- **Todos os dados são salvos de uma vez só** no final, quando o atleta clica "CONTINUAR" na tela de plano
+**Manter sem alteração**: botão "JÁ TENHO COACH", tela de confirmação, tela de busca.
 
