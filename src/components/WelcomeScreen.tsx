@@ -1055,6 +1055,161 @@ export function WelcomeScreen() {
           </motion.div>
         )}
 
+        {/* ===== PROFILE CONFIG: Biometria + Coach Style + Tempo ===== */}
+        {step === 'profileConfig' && (
+          <motion.div key="profileConfig" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-xl w-full">
+
+            <motion.div className="mb-6" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Scale className="w-8 h-8 text-primary" />
+              </div>
+            </motion.div>
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+              CONFIGURE SEU PERFIL
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-8"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              Esses dados personalizam seus treinos e feedbacks.
+            </motion.p>
+
+            <div className="max-w-md mx-auto space-y-8">
+              {/* Section 1: Biometria */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Dados Biométricos</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="relative">
+                    <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgPeso}
+                      onChange={(e) => setCfgPeso(e.target.value)}
+                      placeholder="Peso (kg)"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgAltura}
+                      onChange={(e) => setCfgAltura(e.target.value)}
+                      placeholder="Altura (cm)"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgIdade}
+                      onChange={(e) => setCfgIdade(e.target.value)}
+                      placeholder="Idade"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {(['masculino', 'feminino'] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setCfgSexo(s)}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-display tracking-wide transition-all ${
+                          cfgSexo === s
+                            ? 'bg-primary/20 border-primary/50 text-primary ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 text-muted-foreground hover:border-primary/30'
+                        }`}
+                      >
+                        {s === 'masculino' ? '♂ M' : '♀ F'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Section 2: Estilo de Treinador */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Estilo de Treinador</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { key: 'IRON' as CoachStyle, icon: Flame, label: 'IRON', desc: 'Intenso e direto' },
+                    { key: 'PULSE' as CoachStyle, icon: Heart, label: 'PULSE', desc: 'Equilibrado e motivador' },
+                    { key: 'SPARK' as CoachStyle, icon: Zap, label: 'SPARK', desc: 'Criativo e dinâmico' },
+                  ]).map((opt) => {
+                    const Icon = opt.icon;
+                    const selected = cfgCoachStyle === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setCfgCoachStyle(opt.key)}
+                        className={`p-4 rounded-xl border transition-all text-center flex flex-col items-center gap-2 ${
+                          selected
+                            ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-full ${selected ? 'bg-primary/30' : 'bg-secondary'}`}>
+                          <Icon className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </div>
+                        <p className="font-display text-xs tracking-wider text-foreground">{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
+              {/* Section 3: Tempo Disponível */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Tempo Disponível para Treino</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { key: 60 as SessionDuration, label: '60 min', desc: 'Sessão padrão' },
+                    { key: 'ilimitado' as SessionDuration, label: 'SEM LIMITE', desc: 'Treino completo' },
+                  ]).map((opt) => {
+                    const selected = cfgSessionDuration === opt.key;
+                    return (
+                      <button
+                        key={String(opt.key)}
+                        onClick={() => setCfgSessionDuration(opt.key)}
+                        className={`p-4 rounded-xl border transition-all text-center flex flex-col items-center gap-2 ${
+                          selected
+                            ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                        }`}
+                      >
+                        <Timer className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <p className="font-display text-sm tracking-wider text-foreground">{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Continue button */}
+            <motion.button
+              onClick={() => setStep('profileCta')}
+              className="mt-10 font-display text-lg tracking-widest px-12 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30 flex items-center gap-3 mx-auto"
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+              <ArrowRight className="w-5 h-5" />
+              CONTINUAR
+            </motion.button>
+
+            <motion.button onClick={() => setStep('profileGoal')}
+              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
+              ← Voltar
+            </motion.button>
+          </motion.div>
+        )}
+
         {/* ===== PROFILE CTA: Motivational close ===== */}
         {step === 'profileCta' && (
           <motion.div key="profileCta" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
