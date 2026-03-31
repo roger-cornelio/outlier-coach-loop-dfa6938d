@@ -1279,7 +1279,7 @@ export function WelcomeScreen() {
               {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
-            <motion.button onClick={() => setStep('profileConfig')}
+            <motion.button onClick={() => setStep('profileGoal')}
               className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
               ← Voltar
