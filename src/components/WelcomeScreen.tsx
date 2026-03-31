@@ -538,8 +538,22 @@ export function WelcomeScreen() {
 
   async function handleFinish() {
     setIsSaving(true);
-    const result = await saveCoachStyle('PULSE');
+    const selectedStyle = cfgCoachStyle || 'PULSE';
+    const result = await saveCoachStyle(selectedStyle);
     if (result.success) {
+      // Persist config fields
+      if (user?.id) {
+        await supabase.from('profiles').update({
+          peso: cfgPeso ? parseFloat(cfgPeso) : null,
+          altura: cfgAltura ? parseInt(cfgAltura) : null,
+          idade: cfgIdade ? parseInt(cfgIdade) : null,
+          sexo: cfgSexo || null,
+          session_duration: String(cfgSessionDuration),
+          onboarding_experience: profileAnswers.experience,
+          onboarding_goal: profileAnswers.goal,
+          onboarding_target_race: profileAnswers.targetRace,
+        }).eq('user_id', user.id);
+      }
       setCurrentView('dashboard');
     } else {
       toast.error('Erro ao iniciar. Tente novamente.');
