@@ -111,8 +111,7 @@ export function WelcomeScreen() {
   const freeDiagConsumedRef = useRef(false);
   const coachAutoLinkRef = useRef(false);
 
-  // Auto-link coach from free diagnostic (localStorage)
-  // Only links if athlete has NO coach yet — never overwrites existing coach
+  // Auto-link coach from free diagnostic → create coach_link_requests (pending approval)
   useEffect(() => {
     if (!user?.id || coachAutoLinkRef.current) return;
     coachAutoLinkRef.current = true;
@@ -126,50 +125,42 @@ export function WelcomeScreen() {
 
       if (!coachId) return;
 
-      // REGRA: Só vincula se o atleta NÃO tem coach
       if (profile?.coach_id) {
         console.log('[WELCOME] Athlete already has coach, ignoring localStorage coach selection');
         return;
       }
 
-      console.log('[WELCOME] Auto-linking coach from free diagnostic:', coachId, coachName);
+      console.log('[WELCOME] Creating coach link request from free diagnostic:', coachId, coachName);
 
-      // Link asynchronously, then skip coach step
+      // Create a pending link request instead of direct link
       (async () => {
         try {
-          // Insert into coach_athletes
-          const { error: linkError } = await supabase
-            .from('coach_athletes')
-            .insert({ coach_id: coachId, athlete_id: user.id });
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('user_id', user.id)
+            .single();
 
-          if (linkError && !linkError.message.includes('duplicate')) {
-            console.error('[WELCOME] Coach link error:', linkError);
+          const { error: insertError } = await supabase
+            .from('coach_link_requests')
+            .insert({
+              athlete_id: user.id,
+              coach_id: coachId,
+              athlete_name: profileData?.name || user.email?.split('@')[0] || '',
+              athlete_email: profileData?.email || user.email || '',
+            });
+
+          if (insertError && insertError.code !== '23505') {
+            console.error('[WELCOME] Coach link request error:', insertError);
             return;
           }
 
-          // Update profiles.coach_id (legacy field)
-          const { data: coachProfileRes } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', coachId)
-            .single();
-
-          if (coachProfileRes?.id) {
-            await supabase
-              .from('profiles')
-              .update({ coach_id: coachProfileRes.id })
-              .eq('user_id', user.id);
-          }
-
-          console.log('[WELCOME] Coach auto-linked successfully');
-          toast.success(`Vinculado ao coach ${coachName || ''}!`);
+          console.log('[WELCOME] Coach link request created successfully');
+          toast.success(`Solicitação enviada para ${coachName || 'coach'}!`);
         } catch (err) {
-          console.error('[WELCOME] Error auto-linking coach:', err);
+          console.error('[WELCOME] Error creating coach link request:', err);
         }
       })();
-
-      // Mark as auto-linked so CTA buttons skip coach step
-      setCoachAutoLinked(true);
     } catch (e) {
       console.warn('[WELCOME] Error reading coach from localStorage:', e);
     }
