@@ -44,6 +44,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
   const [searchDone, setSearchDone] = useState(false);
   const [loadingRecs, setLoadingRecs] = useState(false);
   const [linking, setLinking] = useState<string | null>(null);
+  const [selectedCoach, setSelectedCoach] = useState<CoachResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Search coaches by name
