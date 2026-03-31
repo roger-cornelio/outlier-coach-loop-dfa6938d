@@ -19,13 +19,13 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 py-5 md:py-6 flex items-center justify-between">
           <OutlierWordmark size="md" />
           <div className="flex items-center gap-4 md:gap-6">
-            <Link to="/login/coach" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-              Sou Coach
+            <Link to="/login" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+              Já Sou Outlier
               <ArrowRight className="w-4 h-4" />
             </Link>
             <span className="h-5 border-r border-border/40" />
-            <Link to="/login" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-              Sou Atleta
+            <Link to="/login/coach" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+              Sou Coach
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
