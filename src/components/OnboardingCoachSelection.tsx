@@ -146,54 +146,70 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
     }
   };
 
-  const CoachCard = ({ coach, rank }: { coach: CoachResult; rank?: number }) => (
-    <motion.button
-      onClick={() => handleSelectCoach(coach)}
-      disabled={linking !== null}
-      className="w-full text-left p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-primary/30 transition-all duration-200 group"
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-    >
-      <div className="flex items-center gap-4">
-        {rank && (
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-display ${
-            rank === 1 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
-          }`}>
-            {rank}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-display text-base tracking-wide text-foreground truncate">
-            {coach.coach_name || 'Coach'}
-          </p>
-          <div className="flex items-center gap-3 mt-1">
-            {coach.box_name && (
-              <span className="text-xs text-muted-foreground truncate">{coach.box_name}</span>
-            )}
-            {coach.city && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {coach.city}
-              </span>
-            )}
-          </div>
-          {coach.admin_rating && coach.admin_rating > 0 && (
-            <div className="flex items-center gap-1 mt-1">
-              {Array.from({ length: Math.min(coach.admin_rating, 5) }).map((_, i) => (
-                <Star key={i} className="w-3 h-3 text-primary fill-primary" />
-              ))}
+  const isValidBoxName = (name: string | null) => name && name !== '0' && name.trim().length > 1;
+
+  const CoachCard = ({ coach, rank }: { coach: CoachResult; rank?: number }) => {
+    const isTop = rank === 1;
+    return (
+      <motion.button
+        onClick={() => handleSelectCoach(coach)}
+        disabled={linking !== null}
+        className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
+          isTop
+            ? 'border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/60'
+            : 'border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-primary/30'
+        }`}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+      >
+        <div className="flex items-center gap-4">
+          {rank && (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-display ${
+              isTop ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+            }`}>
+              {isTop ? <Trophy className="w-4 h-4" /> : rank}
             </div>
           )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-display text-lg font-semibold tracking-wide text-foreground truncate">
+                {coach.coach_name || 'Coach'}
+              </p>
+              {isTop && (
+                <span className="bg-primary/20 text-primary text-[10px] font-display tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap">
+                  RECOMENDADO
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-1">
+              {isValidBoxName(coach.box_name) && (
+                <span className="text-xs text-muted-foreground truncate">{coach.box_name}</span>
+              )}
+              {coach.city && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {coach.city}
+                </span>
+              )}
+            </div>
+            {coach.admin_rating && coach.admin_rating > 0 && (
+              <div className="flex items-center gap-1 mt-1">
+                {Array.from({ length: Math.min(coach.admin_rating, 5) }).map((_, i) => (
+                  <Star key={i} className="w-3 h-3 text-primary fill-primary" />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {linking === coach.coach_id ? (
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            ) : (
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {linking === coach.coach_id ? (
-            <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          ) : (
-            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-          )}
-        </div>
-      </div>
-    </motion.button>
-  );
+      </motion.button>
+    );
+  };
 
   return (
     <motion.div
