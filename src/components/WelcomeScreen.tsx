@@ -1294,7 +1294,7 @@ export function WelcomeScreen() {
 
             <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-              ESCOLHA SUA EXPERIÊNCIA
+              ESCOLHA SEU PLANO
             </motion.h1>
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-10"
