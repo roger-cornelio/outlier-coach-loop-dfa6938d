@@ -133,10 +133,11 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
           throw insertError;
         }
       } else {
-        toast.success(`Solicitação enviada para ${coach.coach_name}! Aguarde a aprovação.`);
+        toast.success(`Solicitação enviada para ${coach.coach_name}!`);
       }
 
-      onCoachSelected(coach.coach_id, coach.coach_name || '');
+      setSelectedCoach(coach);
+      setView('confirmation');
     } catch (err) {
       console.error('[CoachSelection] Request error:', err);
       toast.error('Erro ao enviar solicitação. Tente novamente.');
