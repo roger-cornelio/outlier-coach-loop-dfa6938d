@@ -97,6 +97,7 @@ export function useCoachOverview() {
           onboarding_experience: null,
           onboarding_goal: null,
           onboarding_target_race: null,
+          session_duration: (p as any).session_duration ?? null,
           days_inactive: p.last_active_at 
             ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
             : Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000),
