@@ -476,7 +476,7 @@ export function WelcomeScreen() {
         parsed.resumoRow.temporada = String(result.season_id);
         parsed.resumoRow.divisao = result.division;
         parsed.resumoRow.finish_time = result.time_formatted;
-        parsed.resumoRow.nome_atleta = result.athlete_name;
+        parsed.resumoRow.nome_atleta = normalizeAthleteName(result.athlete_name);
 
         const { data: insertedResumo, error: resumoError } = await supabase
           .from('diagnostico_resumo')

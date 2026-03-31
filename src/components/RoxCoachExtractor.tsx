@@ -306,7 +306,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     parsed.resumoRow.temporada = String(result.season_id);
     parsed.resumoRow.divisao = result.division;
     parsed.resumoRow.finish_time = result.time_formatted;
-    parsed.resumoRow.nome_atleta = result.athlete_name;
+    parsed.resumoRow.nome_atleta = normalizeAthleteName(result.athlete_name);
 
     // Insert resumo first to get its ID for linking
     const { data: insertedResumo, error: resumoError } = await supabase
