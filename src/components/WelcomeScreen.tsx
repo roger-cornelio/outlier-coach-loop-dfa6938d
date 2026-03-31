@@ -233,7 +233,7 @@ export function WelcomeScreen() {
               temporada: String(selectedResult?.season_id || ''),
               divisao: selectedResult?.division,
               finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted,
-              nome_atleta: selectedResult?.athlete_name,
+              nome_atleta: normalizeAthleteName(selectedResult?.athlete_name),
             });
           } else {
             parsed.resumoRow.evento = selectedResult?.event_name;
