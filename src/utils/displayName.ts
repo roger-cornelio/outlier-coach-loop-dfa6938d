@@ -68,7 +68,30 @@ export function getDisplayName(profile: ProfileLike | null | undefined): string 
  * Retorna o nome de exibição de um coach
  * Mesma lógica de getDisplayName, com fallback específico
  */
+/**
+ * Normaliza nomes de atletas que vêm no formato "SOBRENOME, NOME" (padrão HYROX)
+ * para "Nome Sobrenome"
+ */
+export function normalizeAthleteName(name: string | null | undefined): string {
+  const raw = name?.trim() ?? '';
+  if (!raw || !raw.includes(',')) return raw;
+  const [lastName, firstName] = raw.split(',').map(p => p.trim());
+  if (!firstName) return raw;
+  // Title case
+  const titleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return titleCase([firstName, lastName].filter(Boolean).join(' '));
+}
+
+/**
+ * Retorna o nome de exibição de um coach
+ * Mesma lógica de getDisplayName, com fallback específico
+ */
 export function getCoachDisplayName(coachProfile: ProfileLike | null | undefined): string {
+  if (!coachProfile) return 'Coach';
+  
+  const displayName = getDisplayName(coachProfile);
+  return displayName === 'Usuário' ? 'Coach' : displayName;
+}
   if (!coachProfile) return 'Coach';
   
   const displayName = getDisplayName(coachProfile);
