@@ -32,7 +32,7 @@ interface OnboardingCoachSelectionProps {
   skipLinking?: boolean;
 }
 
-type View = 'choice' | 'search' | 'recommendations';
+type View = 'choice' | 'search' | 'recommendations' | 'confirmation';
 
 export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking = false }: OnboardingCoachSelectionProps) {
   const { user } = useAuth();
