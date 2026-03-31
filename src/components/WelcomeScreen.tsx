@@ -240,7 +240,7 @@ export function WelcomeScreen() {
             parsed.resumoRow.temporada = String(selectedResult?.season_id || '');
             parsed.resumoRow.divisao = selectedResult?.division;
             parsed.resumoRow.finish_time = scrapeData?.formatted_time || selectedResult?.time_formatted;
-            parsed.resumoRow.nome_atleta = selectedResult?.athlete_name;
+            parsed.resumoRow.nome_atleta = normalizeAthleteName(selectedResult?.athlete_name);
 
             const { data: insertedResumo } = await supabase
               .from('diagnostico_resumo')
