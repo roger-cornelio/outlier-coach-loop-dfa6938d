@@ -522,7 +522,7 @@ function ExpandableAthleteRow({
                   )}
                 </div>
               )}
-              {!hasOnboarding && !athlete.peso && !athlete.altura && !hasEquipment && (
+              {!hasOnboarding && !athlete.peso && !athlete.altura && !athlete.sexo && !athlete.session_duration && !hasEquipment && (
                 <p className="text-xs text-muted-foreground italic">Sem dados de perfil</p>
               )}
             </div>
