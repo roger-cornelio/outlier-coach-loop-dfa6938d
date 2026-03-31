@@ -1,5 +1,8 @@
 project_id = "hfcpwmzmymkibrvsbgry"
 
+[auth]
+rate_limit_email_sent = 100
+
 [functions.generate-workout-feedback]
 verify_jwt = false
 

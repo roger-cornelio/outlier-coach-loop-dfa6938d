@@ -342,7 +342,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
+          if (error.message.toLowerCase().includes('rate limit')) {
+            toast({
+              title: 'Muitas tentativas',
+              description: 'Nossos servidores estão processando muitas requisições. Aguarde alguns minutos e tente novamente.',
+              variant: 'destructive',
+            });
+          } else if (error.message.includes('Invalid login credentials')) {
             toast({
               title: 'Erro no login',
               description: 'Email ou senha incorretos.',
@@ -377,7 +383,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
         });
 
         if (error) {
-          if (error.message.includes('already registered')) {
+          if (error.message.toLowerCase().includes('rate limit')) {
+            toast({
+              title: 'Muitas tentativas',
+              description: 'Nossos servidores estão processando muitos cadastros. Aguarde alguns minutos e tente novamente.',
+              variant: 'destructive',
+            });
+          } else if (error.message.includes('already registered')) {
             toast({
               title: 'Email já cadastrado',
               description: 'Este email já está registrado. Tente fazer login.',
@@ -405,11 +417,19 @@ export default function Auth({ context = 'user' }: AuthProps) {
         });
 
         if (error) {
-          toast({
-            title: 'Erro',
-            description: error.message,
-            variant: 'destructive',
-          });
+          if (error.message.toLowerCase().includes('rate limit')) {
+            toast({
+              title: 'Muitas tentativas',
+              description: 'Nossos servidores estão processando muitas requisições. Aguarde alguns minutos e tente novamente.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Erro',
+              description: error.message,
+              variant: 'destructive',
+            });
+          }
         } else {
           setResetSent(true);
           toast({
