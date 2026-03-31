@@ -99,6 +99,14 @@ export function WelcomeScreen() {
     targetRace: null,
   });
 
+  // Config fields for profileConfig step
+  const [cfgPeso, setCfgPeso] = useState('');
+  const [cfgAltura, setCfgAltura] = useState('');
+  const [cfgIdade, setCfgIdade] = useState('');
+  const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(profile?.sexo as any || null);
+  const [cfgCoachStyle, setCfgCoachStyle] = useState<CoachStyle>('PULSE');
+  const [cfgSessionDuration, setCfgSessionDuration] = useState<SessionDuration>(60);
+
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
   const freeDiagConsumedRef = useRef(false);
   const coachAutoLinkRef = useRef(false);
