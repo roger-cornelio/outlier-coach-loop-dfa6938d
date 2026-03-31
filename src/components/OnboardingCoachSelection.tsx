@@ -215,12 +215,12 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
             <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-3"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              CONECTE-SE AO SEU COACH
+              SEU COACH IDEAL
             </motion.h1>
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-10 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-              Todo atleta Outlier treina com um coach dedicado. Vamos encontrar o seu.
+              Analisamos seu perfil e selecionamos os coaches mais compatíveis com seus objetivos e nível de performance.
             </motion.p>
 
             <motion.div className="flex flex-col gap-4 max-w-sm mx-auto"
@@ -247,8 +247,8 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
                   <UserPlus className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-display text-lg tracking-wide text-foreground">QUERO UM COACH</p>
-                  <p className="text-sm text-muted-foreground">Ver coaches recomendados</p>
+                   <p className="font-display text-lg tracking-wide text-foreground">VER SELEÇÃO OUTLIER</p>
+                   <p className="text-sm text-muted-foreground">Coaches selecionados para o seu perfil</p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
@@ -305,16 +305,16 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
                   <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-3">
                     <AlertCircle className="w-7 h-7 text-amber-500" />
                   </div>
-                  <p className="font-display text-lg text-foreground mb-1">COACH NÃO ENCONTRADO</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Seu coach ainda não está na Outlier. Veja nossos coaches recomendados:
+                   <p className="font-display text-lg text-foreground mb-1">COACH NÃO ENCONTRADO</p>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Seu coach ainda não está na plataforma. Veja os coaches que a Outlier selecionou para seu perfil:
                   </p>
                   <button
                     onClick={() => setView('recommendations')}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-display tracking-wide hover:opacity-90 transition-opacity"
                   >
                     <Trophy className="w-4 h-4" />
-                    VER COACHES RECOMENDADOS
+                    VER SELEÇÃO PARA MEU PERFIL
                   </button>
                 </motion.div>
               )}
@@ -342,19 +342,19 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
             <motion.h1 className="font-display text-2xl md:text-3xl tracking-widest text-foreground mb-2"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              COACHES RECOMENDADOS
+              SELECIONADOS PARA VOCÊ
             </motion.h1>
 
             <motion.p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-              Rankeados por avaliação, retenção de atletas e resultados na plataforma.
+              Com base no seu diagnóstico e perfil, estes são os coaches mais indicados para acelerar sua evolução.
             </motion.p>
 
             <div className="max-w-md mx-auto space-y-3 mb-6">
               {loadingRecs && (
                 <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Carregando recomendações...</span>
+                  <span className="text-sm">Analisando compatibilidade...</span>
                 </div>
               )}
 
