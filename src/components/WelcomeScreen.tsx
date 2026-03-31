@@ -16,7 +16,7 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon, Check, Crown, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
