@@ -95,7 +95,6 @@ export function WelcomeScreen() {
   const [profileAnswers, setProfileAnswers] = useState<ProfileAnswers>({
     experience: null,
     goal: null,
-    targetRace: null,
   });
 
   // Config fields for profileConfig step
