@@ -1,19 +1,28 @@
 
 
-## Plano: Garantir que a tela de vinculação com coach sempre apareça
+## Plano: Tela de confirmação após selecionar coach
 
 ### Problema
-Quando o atleta vem do diagnóstico gratuito, o coach é auto-vinculado via localStorage e `coachAutoLinked = true`. Isso faz com que os botões nas telas `profileCta` e `profileConfig` pulem direto para `handleFinish()`, sem nunca mostrar a tela de seleção/confirmação do coach.
+Após selecionar o coach, o toast aparece mas o `handleFinish()` é chamado imediatamente, navegando para o dashboard. O atleta não tem tempo de ver a confirmação.
 
 ### Solução
-Na tela `profileCta`, o botão deve **sempre** avançar para `setStep('coach')`, independente de `coachAutoLinked`. O auto-link do localStorage já garante que o coach estará vinculado — a tela `coach` serve como confirmação visual para o atleta saber quem é seu treinador.
+Em vez de chamar `handleFinish()` direto no `onCoachSelected`, mostrar uma tela intermediária de confirmação dentro do `OnboardingCoachSelection` (nova view `confirmation`).
 
-### Alteração
+### Alterações
 
-**`src/components/WelcomeScreen.tsx`**
-1. Linha 923: mudar `coachAutoLinked ? handleFinish() : setStep('coach')` para `setStep('coach')`
-2. Linhas 1257-1260: mesmo ajuste — sempre `setStep('coach')`
-3. Na tela `coach` (`OnboardingCoachSelection`), se já houver coach auto-vinculado, mostrar confirmação em vez de busca (isso já pode estar implementado no componente)
+**`src/components/OnboardingCoachSelection.tsx`**
+1. Adicionar `'confirmation'` ao tipo `View`
+2. Adicionar state `selectedCoach` para guardar o coach selecionado
+3. Após inserir o `coach_link_requests` com sucesso, em vez de chamar `onCoachSelected` imediato, setar `view = 'confirmation'` e guardar o coach
+4. Nova view `confirmation` — visual consistente com o onboarding:
+   - Ícone de check animado (verde)
+   - "SOLICITAÇÃO ENVIADA!" como headline
+   - Nome do coach em destaque
+   - Texto: "Seu coach receberá a solicitação e poderá aprovar o vínculo. Enquanto isso, vamos configurar sua experiência."
+   - Botão "CONTINUAR" que chama `onCoachSelected(selectedCoach)`
 
-Resultado: o atleta sempre vê a tela do coach antes de finalizar, seja para confirmar o auto-vinculado ou para escolher um novo.
+**`src/components/WelcomeScreen.tsx`** — sem alteração (o callback já chama `handleFinish`)
+
+### Resultado
+O atleta vê uma tela clara de confirmação com o nome do coach antes de avançar para o dashboard.
 
