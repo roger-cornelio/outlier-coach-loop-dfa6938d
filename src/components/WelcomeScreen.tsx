@@ -1202,7 +1202,7 @@ export function WelcomeScreen() {
                     session_duration: String(cfgSessionDuration),
                   }).eq('user_id', user.id);
                 }
-                setStep('profileCta');
+                setStep('profile');
               }}
               className="mt-10 font-display text-lg tracking-widest px-12 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30 flex items-center gap-3 mx-auto"
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
