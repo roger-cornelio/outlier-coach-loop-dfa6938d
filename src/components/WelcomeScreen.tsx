@@ -26,7 +26,6 @@ type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
   goal: 'finish' | 'improve_time' | 'podium' | 'lifestyle' | null;
-  targetRace: 'next3months' | 'next6months' | 'nodate' | 'just_training' | null;
 }
 
 interface SearchResult {
