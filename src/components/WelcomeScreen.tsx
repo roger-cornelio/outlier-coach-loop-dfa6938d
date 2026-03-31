@@ -920,7 +920,7 @@ export function WelcomeScreen() {
             </motion.p>
 
             <motion.button
-              onClick={() => coachAutoLinked ? handleFinish() : setStep('coach')}
+              onClick={() => setStep('profileConfig')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
