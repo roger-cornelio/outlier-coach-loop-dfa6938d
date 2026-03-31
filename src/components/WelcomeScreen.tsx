@@ -26,7 +26,6 @@ type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
   goal: 'finish' | 'improve_time' | 'podium' | 'lifestyle' | null;
-  targetRace: 'next3months' | 'next6months' | 'nodate' | 'just_training' | null;
 }
 
 interface SearchResult {
@@ -73,7 +72,7 @@ export function WelcomeScreen() {
 
   const [step, setStep] = useState<OnboardingStep>('search');
   const [isSaving, setIsSaving] = useState(false);
-  const [coachAutoLinked, setCoachAutoLinked] = useState(false);
+  
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +95,6 @@ export function WelcomeScreen() {
   const [profileAnswers, setProfileAnswers] = useState<ProfileAnswers>({
     experience: null,
     goal: null,
-    targetRace: null,
   });
 
   // Config fields for profileConfig step
@@ -111,8 +109,7 @@ export function WelcomeScreen() {
   const freeDiagConsumedRef = useRef(false);
   const coachAutoLinkRef = useRef(false);
 
-  // Auto-link coach from free diagnostic (localStorage)
-  // Only links if athlete has NO coach yet — never overwrites existing coach
+  // Auto-link coach from free diagnostic → create coach_link_requests (pending approval)
   useEffect(() => {
     if (!user?.id || coachAutoLinkRef.current) return;
     coachAutoLinkRef.current = true;
@@ -126,50 +123,42 @@ export function WelcomeScreen() {
 
       if (!coachId) return;
 
-      // REGRA: Só vincula se o atleta NÃO tem coach
       if (profile?.coach_id) {
         console.log('[WELCOME] Athlete already has coach, ignoring localStorage coach selection');
         return;
       }
 
-      console.log('[WELCOME] Auto-linking coach from free diagnostic:', coachId, coachName);
+      console.log('[WELCOME] Creating coach link request from free diagnostic:', coachId, coachName);
 
-      // Link asynchronously, then skip coach step
+      // Create a pending link request instead of direct link
       (async () => {
         try {
-          // Insert into coach_athletes
-          const { error: linkError } = await supabase
-            .from('coach_athletes')
-            .insert({ coach_id: coachId, athlete_id: user.id });
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('user_id', user.id)
+            .single();
 
-          if (linkError && !linkError.message.includes('duplicate')) {
-            console.error('[WELCOME] Coach link error:', linkError);
+          const { error: insertError } = await supabase
+            .from('coach_link_requests')
+            .insert({
+              athlete_id: user.id,
+              coach_id: coachId,
+              athlete_name: profileData?.name || user.email?.split('@')[0] || '',
+              athlete_email: profileData?.email || user.email || '',
+            });
+
+          if (insertError && insertError.code !== '23505') {
+            console.error('[WELCOME] Coach link request error:', insertError);
             return;
           }
 
-          // Update profiles.coach_id (legacy field)
-          const { data: coachProfileRes } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', coachId)
-            .single();
-
-          if (coachProfileRes?.id) {
-            await supabase
-              .from('profiles')
-              .update({ coach_id: coachProfileRes.id })
-              .eq('user_id', user.id);
-          }
-
-          console.log('[WELCOME] Coach auto-linked successfully');
-          toast.success(`Vinculado ao coach ${coachName || ''}!`);
+          console.log('[WELCOME] Coach link request created successfully');
+          toast.success(`Solicitação enviada para ${coachName || 'coach'}!`);
         } catch (err) {
-          console.error('[WELCOME] Error auto-linking coach:', err);
+          console.error('[WELCOME] Error creating coach link request:', err);
         }
       })();
-
-      // Mark as auto-linked so CTA buttons skip coach step
-      setCoachAutoLinked(true);
     } catch (e) {
       console.warn('[WELCOME] Error reading coach from localStorage:', e);
     }
@@ -538,12 +527,17 @@ export function WelcomeScreen() {
 
   async function handleFinish() {
     setIsSaving(true);
-    const selectedStyle = cfgCoachStyle || 'PULSE';
-    const result = await saveCoachStyle(selectedStyle);
-    if (result.success) {
-      // Persist config fields
+    try {
+      const selectedStyle = cfgCoachStyle || 'PULSE';
+      const result = await saveCoachStyle(selectedStyle);
+      if (!result.success) {
+        toast.error('Erro ao iniciar. Tente novamente.');
+        setIsSaving(false);
+        return;
+      }
+      // Persist config fields atomically
       if (user?.id) {
-        await supabase.from('profiles').update({
+        const { error: updateError } = await supabase.from('profiles').update({
           peso: cfgPeso ? parseFloat(cfgPeso) : null,
           altura: cfgAltura ? parseInt(cfgAltura) : null,
           idade: cfgIdade ? parseInt(cfgIdade) : null,
@@ -551,14 +545,21 @@ export function WelcomeScreen() {
           session_duration: String(cfgSessionDuration),
           onboarding_experience: profileAnswers.experience,
           onboarding_goal: profileAnswers.goal,
-          onboarding_target_race: profileAnswers.targetRace,
         }).eq('user_id', user.id);
+        if (updateError) {
+          console.error('[WELCOME] Profile update error:', updateError);
+          toast.error('Erro ao salvar perfil. Tente novamente.');
+          setIsSaving(false);
+          return;
+        }
       }
       setCurrentView('dashboard');
-    } else {
-      toast.error('Erro ao iniciar. Tente novamente.');
+    } catch (err) {
+      console.error('[WELCOME] handleFinish error:', err);
+      toast.error('Erro inesperado. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   }
 
   async function handleSkip() {
@@ -579,12 +580,6 @@ export function WelcomeScreen() {
     { key: 'lifestyle' as const, icon: Dumbbell, label: 'LIFESTYLE', desc: 'Treinar no formato HYROX' },
   ];
 
-  const targetRaceOptions = [
-    { key: 'next3months' as const, label: 'NOS PRÓXIMOS 3 MESES', desc: 'Prova confirmada em breve' },
-    { key: 'next6months' as const, label: 'NOS PRÓXIMOS 6 MESES', desc: 'Planejando para o semestre' },
-    { key: 'nodate' as const, label: 'SEM DATA DEFINIDA', desc: 'Quero me preparar com calma' },
-    { key: 'just_training' as const, label: 'SÓ QUERO TREINAR', desc: 'Sem compromisso com prova' },
-  ];
 
   function getMotivationalMessage(): string {
     if (profileAnswers.goal === 'podium') return 'Seu objetivo é ambicioso. Vamos construir o caminho até o pódio.';
@@ -920,7 +915,7 @@ export function WelcomeScreen() {
             </motion.p>
 
             <motion.button
-              onClick={() => setStep('profileConfig')}
+              onClick={() => setStep('profile')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -995,7 +990,7 @@ export function WelcomeScreen() {
               })}
             </div>
 
-            <motion.button onClick={() => setStep('search')}
+            <motion.button onClick={() => setStep(summary ? 'cta' : 'search')}
               className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
               ← Voltar
@@ -1192,9 +1187,21 @@ export function WelcomeScreen() {
               </motion.div>
             </div>
 
-            {/* Continue button */}
+            {/* Continue button — save config intermediário */}
             <motion.button
-              onClick={() => setStep('profileCta')}
+              onClick={async () => {
+                // Salvar dados intermediários antes de avançar
+                if (user?.id) {
+                  await supabase.from('profiles').update({
+                    peso: cfgPeso ? parseFloat(cfgPeso) : null,
+                    altura: cfgAltura ? parseInt(cfgAltura) : null,
+                    idade: cfgIdade ? parseInt(cfgIdade) : null,
+                    sexo: cfgSexo || null,
+                    session_duration: String(cfgSessionDuration),
+                  }).eq('user_id', user.id);
+                }
+                setStep('profileCta');
+              }}
               className="mt-10 font-display text-lg tracking-widest px-12 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30 flex items-center gap-3 mx-auto"
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
@@ -1284,14 +1291,7 @@ export function WelcomeScreen() {
             onCoachSelected={(_coachId, _coachName) => {
               handleFinish();
             }}
-            onBack={() => {
-              // Go back to whichever CTA was before
-              if (summary) {
-                setStep('cta');
-              } else {
-                setStep('profileCta');
-              }
-            }}
+            onBack={() => setStep('profileCta')}
           />
         )}
       </AnimatePresence>
