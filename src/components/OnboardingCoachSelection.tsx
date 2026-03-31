@@ -220,7 +220,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-10 max-w-sm mx-auto"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-              Todo atleta Outlier treina com um coach dedicado. Vamos encontrar o seu.
+              Analisamos seu perfil e selecionamos os coaches mais compatíveis com seus objetivos e nível de performance.
             </motion.p>
 
             <motion.div className="flex flex-col gap-4 max-w-sm mx-auto"
