@@ -1253,17 +1253,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={async () => {
-                // Persist onboarding answers before moving on
-                if (user?.id && (profileAnswers.experience || profileAnswers.goal || profileAnswers.targetRace)) {
-                  supabase.from('profiles').update({
-                    onboarding_experience: profileAnswers.experience,
-                    onboarding_goal: profileAnswers.goal,
-                    onboarding_target_race: profileAnswers.targetRace,
-                  }).eq('user_id', user.id).then(({ error }) => {
-                    if (error) console.warn('[WelcomeScreen] Failed to persist onboarding answers:', error.message);
-                  });
-                }
+              onClick={() => {
                 if (coachAutoLinked) {
                   handleFinish();
                 } else {
