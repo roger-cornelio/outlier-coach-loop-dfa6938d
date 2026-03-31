@@ -95,6 +95,62 @@ export function AthleteConfig() {
   const [showChangeCoach, setShowChangeCoach] = useState(false);
   const { user } = useAuth();
 
+  // Plan change request state
+  const [pendingPlanRequest, setPendingPlanRequest] = useState<{ requested_plan: string; status: string } | null>(null);
+  const [submittingPlanRequest, setSubmittingPlanRequest] = useState(false);
+
+  // Fetch pending plan change request
+  useEffect(() => {
+    const fetchPendingRequest = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('plan_change_requests')
+        .select('requested_plan, status')
+        .eq('athlete_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setPendingPlanRequest(data as any);
+    };
+    fetchPendingRequest();
+  }, [user?.id]);
+
+  const handleRequestPlanChange = async (requestedTier: PlanTier) => {
+    if (!user?.id || submittingPlanRequest) return;
+    setSubmittingPlanRequest(true);
+    try {
+      // Get coach_id from coach_athletes
+      const { data: link } = await supabase
+        .from('coach_athletes')
+        .select('coach_id')
+        .eq('athlete_id', user.id)
+        .maybeSingle();
+
+      const { error } = await supabase
+        .from('plan_change_requests')
+        .insert({
+          athlete_user_id: user.id,
+          coach_id: link?.coach_id || null,
+          current_plan: currentPlan,
+          requested_plan: requestedTier,
+        });
+      if (error) throw error;
+      setPendingPlanRequest({ requested_plan: requestedTier, status: 'pending' });
+      const isUpgrade = requestedTier === 'pro';
+      toast.success(
+        isUpgrade
+          ? 'Solicitação de upgrade enviada ao seu coach!'
+          : 'Solicitação de downgrade enviada ao seu coach!'
+      );
+    } catch (err) {
+      console.error('[AthleteConfig] Plan request error:', err);
+      toast.error('Erro ao enviar solicitação');
+    } finally {
+      setSubmittingPlanRequest(false);
+    }
+  };
+
   // Buscar nome do coach vinculado via tabela coach_athletes
   useEffect(() => {
     const fetchCoachName = async () => {
