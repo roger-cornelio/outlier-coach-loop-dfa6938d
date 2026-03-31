@@ -1,28 +1,52 @@
 
 
-## Plano: Tela de confirmação após selecionar coach
+## Plano: Tela de seleção de plano no onboarding
 
-### Problema
-Após selecionar o coach, o toast aparece mas o `handleFinish()` é chamado imediatamente, navegando para o dashboard. O atleta não tem tempo de ver a confirmação.
+### Alterações em `src/components/WelcomeScreen.tsx`
 
-### Solução
-Em vez de chamar `handleFinish()` direto no `onCoachSelected`, mostrar uma tela intermediária de confirmação dentro do `OnboardingCoachSelection` (nova view `confirmation`).
+**1. Tipo e estado**
+- Adicionar `'planSelection'` ao `OnboardingStep`
+- Novo state: `selectedPlan: 'open' | 'pro' | null`
 
-### Alterações
+**2. Navegação**
+- `profileCta` botão → `setStep('planSelection')`
+- `planSelection` botão CONTINUAR → `setStep('coach')`
+- `coach` onBack → `setStep('planSelection')`
 
-**`src/components/OnboardingCoachSelection.tsx`**
-1. Adicionar `'confirmation'` ao tipo `View`
-2. Adicionar state `selectedCoach` para guardar o coach selecionado
-3. Após inserir o `coach_link_requests` com sucesso, em vez de chamar `onCoachSelected` imediato, setar `view = 'confirmation'` e guardar o coach
-4. Nova view `confirmation` — visual consistente com o onboarding:
-   - Ícone de check animado (verde)
-   - "SOLICITAÇÃO ENVIADA!" como headline
-   - Nome do coach em destaque
-   - Texto: "Seu coach receberá a solicitação e poderá aprovar o vínculo. Enquanto isso, vamos configurar sua experiência."
-   - Botão "CONTINUAR" que chama `onCoachSelected(selectedCoach)`
+**3. Nova tela `planSelection`**
 
-**`src/components/WelcomeScreen.tsx`** — sem alteração (o callback já chama `handleFinish`)
+Headline: **ESCOLHA SUA EXPERIÊNCIA**
+Sub: "Acesso completo à plataforma em ambos os planos."
 
-### Resultado
-O atleta vê uma tela clara de confirmação com o nome do coach antes de avançar para o dashboard.
+**Card ESSENCIAL** (open)
+- Tagline grande e bold: **"Seu treino. Seus dados. Sua evolução."**
+- Subtítulo: "Treino inteligente que ataca seus pontos fracos"
+- Bullets:
+  - Programação semanal personalizada pelo seu coach
+  - Diagnóstico de performance baseado em dados reais
+  - Treinos adaptados às suas fraquezas identificadas
+  - Acompanhamento de evolução e benchmarks
+  - Acesso completo: simulador, análises e métricas
+
+**Card PERFORMANCE** (pro) — badge "RECOMENDADO"
+- Tagline grande e bold: **"Pra quem quer ir além."**
+- Subtítulo: "Evolução acelerada com foco cirúrgico nos seus gaps"
+- Bullets:
+  - Tudo do Essencial +
+  - Periodização avançada e individualizada
+  - Treinos que atacam suas deficiências com precisão máxima
+  - Acompanhamento próximo do coach com feedbacks detalhados
+  - Análise aprofundada dos seus pontos de melhoria
+  - Prioridade no suporte e ajustes de treino
+
+Botão "CONTINUAR" (ativo só com plano selecionado)
+Botão "← Voltar" → `setStep('profileCta')`
+
+**4. Persistência**
+- No `handleFinish`, incluir `training_level: selectedPlan || 'open'` no update do profiles
+
+### Hierarquia visual dos cards
+1. **Tagline** — texto grande, bold, destaque máximo (text-2xl/3xl)
+2. **Subtítulo** — texto médio, cor muted (text-base)
+3. **Bullets** — texto menor, lista com ícones check
 
