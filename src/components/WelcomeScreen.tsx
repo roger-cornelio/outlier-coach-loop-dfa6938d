@@ -194,7 +194,7 @@ export function WelcomeScreen() {
         divisao: selectedResult?.division || scrapeData?.race_category || null,
         posicao_categoria: null,
         posicao_geral: null,
-        nome_atleta: selectedResult?.athlete_name || null,
+        nome_atleta: normalizeAthleteName(selectedResult?.athlete_name) || null,
       });
       setBottlenecks([]);
       setStep('congrats');
