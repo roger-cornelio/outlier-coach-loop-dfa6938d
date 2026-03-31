@@ -247,8 +247,8 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
                   <UserPlus className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-display text-lg tracking-wide text-foreground">QUERO UM COACH</p>
-                  <p className="text-sm text-muted-foreground">Ver coaches recomendados</p>
+                   <p className="font-display text-lg tracking-wide text-foreground">VER SELEÇÃO OUTLIER</p>
+                   <p className="text-sm text-muted-foreground">Coaches selecionados para o seu perfil</p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
