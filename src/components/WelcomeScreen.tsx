@@ -529,12 +529,17 @@ export function WelcomeScreen() {
 
   async function handleFinish() {
     setIsSaving(true);
-    const selectedStyle = cfgCoachStyle || 'PULSE';
-    const result = await saveCoachStyle(selectedStyle);
-    if (result.success) {
-      // Persist config fields
+    try {
+      const selectedStyle = cfgCoachStyle || 'PULSE';
+      const result = await saveCoachStyle(selectedStyle);
+      if (!result.success) {
+        toast.error('Erro ao iniciar. Tente novamente.');
+        setIsSaving(false);
+        return;
+      }
+      // Persist config fields atomically
       if (user?.id) {
-        await supabase.from('profiles').update({
+        const { error: updateError } = await supabase.from('profiles').update({
           peso: cfgPeso ? parseFloat(cfgPeso) : null,
           altura: cfgAltura ? parseInt(cfgAltura) : null,
           idade: cfgIdade ? parseInt(cfgIdade) : null,
@@ -542,14 +547,21 @@ export function WelcomeScreen() {
           session_duration: String(cfgSessionDuration),
           onboarding_experience: profileAnswers.experience,
           onboarding_goal: profileAnswers.goal,
-          onboarding_target_race: profileAnswers.targetRace,
         }).eq('user_id', user.id);
+        if (updateError) {
+          console.error('[WELCOME] Profile update error:', updateError);
+          toast.error('Erro ao salvar perfil. Tente novamente.');
+          setIsSaving(false);
+          return;
+        }
       }
       setCurrentView('dashboard');
-    } else {
-      toast.error('Erro ao iniciar. Tente novamente.');
+    } catch (err) {
+      console.error('[WELCOME] handleFinish error:', err);
+      toast.error('Erro inesperado. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   }
 
   async function handleSkip() {
