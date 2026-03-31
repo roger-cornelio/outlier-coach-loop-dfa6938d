@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
