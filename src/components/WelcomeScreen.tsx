@@ -1429,9 +1429,9 @@ export function WelcomeScreen() {
         {step === 'coach' && (
           <OnboardingCoachSelection
             onCoachSelected={(_coachId, _coachName) => {
-              handleFinish();
+              setStep('planSelection');
             }}
-            onBack={() => setStep('planSelection')}
+            onBack={() => setStep('profileCta')}
           />
         )}
       </AnimatePresence>
