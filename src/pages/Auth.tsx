@@ -383,7 +383,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
         });
 
         if (error) {
-          if (error.message.includes('already registered')) {
+          if (error.message.toLowerCase().includes('rate limit')) {
+            toast({
+              title: 'Muitas tentativas',
+              description: 'Nossos servidores estão processando muitos cadastros. Aguarde alguns minutos e tente novamente.',
+              variant: 'destructive',
+            });
+          } else if (error.message.includes('already registered')) {
             toast({
               title: 'Email já cadastrado',
               description: 'Este email já está registrado. Tente fazer login.',
