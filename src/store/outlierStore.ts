@@ -195,20 +195,24 @@ export const useOutlierStore = create<OutlierState>()(
       triggerExternalResultsRefresh: () => set((state) => ({ externalResultsRefreshKey: state.externalResultsRefreshKey + 1 })),
       resetConfig: () => set({ coachStyle: null, athleteConfig: null, currentView: 'welcome' }),
       
-      resetToDefaults: () => set({
-        athleteConfig: null,
-        workoutResults: [],
-        baseWorkouts: [],
-        adaptedWorkouts: [],
-        adaptationPending: false,
-        lastAdaptationTimestamp: null,
-        weeklyWorkouts: [],
-        currentView: 'welcome',
-        selectedDay: null,
-        selectedWorkout: null,
-        externalResultsRefreshKey: 0,
-        viewingAsAthlete: null,
-      }),
+      resetToDefaults: () => {
+        // Clean up localStorage benchmark history to prevent session leakage
+        try { localStorage.removeItem('outlier-benchmark-history'); } catch {}
+        set({
+          athleteConfig: null,
+          workoutResults: [],
+          baseWorkouts: [],
+          adaptedWorkouts: [],
+          adaptationPending: false,
+          lastAdaptationTimestamp: null,
+          weeklyWorkouts: [],
+          currentView: 'welcome',
+          selectedDay: null,
+          selectedWorkout: null,
+          externalResultsRefreshKey: 0,
+          viewingAsAthlete: null,
+        });
+      },
       
       resetUserPreferencesOnly: () => set({
         athleteConfig: null,

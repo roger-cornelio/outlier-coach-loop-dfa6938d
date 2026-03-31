@@ -31,13 +31,14 @@ export function useLogout() {
       resetToDefaults();
       console.log('[useLogout] Store resetado');
       
-      // STEP 3: Limpar localStorage relacionado a auth e navegação
+      // STEP 3: Limpar localStorage relacionado a auth, navegação e dados de sessão
       const keysToRemove = Object.keys(localStorage).filter(
         key => key.includes('supabase') || 
                key.includes('auth') || 
                key.includes('session') ||
                key === 'outlier_week_user_navigated' ||
-               key === 'outlier_last_route'
+               key === 'outlier_last_route' ||
+               key === 'outlier-benchmark-history'
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
       
