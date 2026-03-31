@@ -417,11 +417,19 @@ export default function Auth({ context = 'user' }: AuthProps) {
         });
 
         if (error) {
-          toast({
-            title: 'Erro',
-            description: error.message,
-            variant: 'destructive',
-          });
+          if (error.message.toLowerCase().includes('rate limit')) {
+            toast({
+              title: 'Muitas tentativas',
+              description: 'Nossos servidores estão processando muitas requisições. Aguarde alguns minutos e tente novamente.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Erro',
+              description: error.message,
+              variant: 'destructive',
+            });
+          }
         } else {
           setResetSent(true);
           toast({
