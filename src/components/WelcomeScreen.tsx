@@ -468,7 +468,7 @@ export function WelcomeScreen() {
           divisao: result.division,
           posicao_categoria: null,
           posicao_geral: null,
-          nome_atleta: result.athlete_name,
+          nome_atleta: normalizeAthleteName(result.athlete_name),
         });
         setBottlenecks([]);
       } else {
