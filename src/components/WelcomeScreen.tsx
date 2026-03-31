@@ -459,7 +459,7 @@ export function WelcomeScreen() {
           temporada: String(result.season_id),
           divisao: result.division,
           finish_time: result.time_formatted,
-          nome_atleta: result.athlete_name,
+          nome_atleta: normalizeAthleteName(result.athlete_name),
         });
 
         setSummary({
