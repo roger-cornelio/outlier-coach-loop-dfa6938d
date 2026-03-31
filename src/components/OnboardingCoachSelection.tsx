@@ -354,7 +354,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
               {loadingRecs && (
                 <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Carregando recomendações...</span>
+                  <span className="text-sm">Analisando compatibilidade...</span>
                 </div>
               )}
 
