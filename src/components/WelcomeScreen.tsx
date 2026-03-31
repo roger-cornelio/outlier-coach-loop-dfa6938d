@@ -1293,14 +1293,7 @@ export function WelcomeScreen() {
             onCoachSelected={(_coachId, _coachName) => {
               handleFinish();
             }}
-            onBack={() => {
-              // Go back to whichever CTA was before
-              if (summary) {
-                setStep('cta');
-              } else {
-                setStep('profileCta');
-              }
-            }}
+            onBack={() => setStep('profileCta')}
           />
         )}
       </AnimatePresence>
