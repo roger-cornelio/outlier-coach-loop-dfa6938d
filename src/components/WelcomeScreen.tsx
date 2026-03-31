@@ -103,7 +103,7 @@ export function WelcomeScreen() {
   const [cfgPeso, setCfgPeso] = useState('');
   const [cfgAltura, setCfgAltura] = useState('');
   const [cfgIdade, setCfgIdade] = useState('');
-  const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(profile?.sexo as any || null);
+  const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(null);
   const [cfgCoachStyle, setCfgCoachStyle] = useState<CoachStyle>('PULSE');
   const [cfgSessionDuration, setCfgSessionDuration] = useState<SessionDuration>(60);
 
