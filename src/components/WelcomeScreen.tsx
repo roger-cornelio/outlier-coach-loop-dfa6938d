@@ -1189,9 +1189,21 @@ export function WelcomeScreen() {
               </motion.div>
             </div>
 
-            {/* Continue button */}
+            {/* Continue button — save config intermediário */}
             <motion.button
-              onClick={() => setStep('profileCta')}
+              onClick={async () => {
+                // Salvar dados intermediários antes de avançar
+                if (user?.id) {
+                  await supabase.from('profiles').update({
+                    peso: cfgPeso ? parseFloat(cfgPeso) : null,
+                    altura: cfgAltura ? parseInt(cfgAltura) : null,
+                    idade: cfgIdade ? parseInt(cfgIdade) : null,
+                    sexo: cfgSexo || null,
+                    session_duration: String(cfgSessionDuration),
+                  }).eq('user_id', user.id);
+                }
+                setStep('profileCta');
+              }}
               className="mt-10 font-display text-lg tracking-widest px-12 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30 flex items-center gap-3 mx-auto"
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
