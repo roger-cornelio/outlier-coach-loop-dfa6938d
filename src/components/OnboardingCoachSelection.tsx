@@ -314,7 +314,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-display tracking-wide hover:opacity-90 transition-opacity"
                   >
                     <Trophy className="w-4 h-4" />
-                    VER COACHES RECOMENDADOS
+                    VER SELEÇÃO PARA MEU PERFIL
                   </button>
                 </motion.div>
               )}
