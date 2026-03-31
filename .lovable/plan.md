@@ -1,44 +1,66 @@
 
 
-## Plano: Mensagem amigável para rate limit + aumentar limite de emails/hora
+## Plano: Sistema de solicitação de mudança de plano (Athlete → Coach)
 
-### Problema
-Quando o rate limit de email é atingido (erro 429 `email rate limit exceeded`), a mensagem técnica é exibida diretamente ao usuário. Além disso, o limite padrão de emails por hora é muito baixo para um app que pode viralizar.
+### Contexto
+Atualmente, ao clicar no plano alternativo, o atleta recebe apenas um toast dizendo "fale com seu coach". O objetivo é criar um fluxo real de solicitação.
 
-### 1. Mensagem amigável no signup (Auth.tsx)
+### 1. Criar tabela `plan_change_requests` (migration)
 
-**Arquivo**: `src/pages/Auth.tsx` (linhas ~379-391)
+```sql
+CREATE TABLE public.plan_change_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  coach_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  current_plan TEXT NOT NULL,       -- 'open' ou 'pro'
+  requested_plan TEXT NOT NULL,     -- 'open' ou 'pro'
+  status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'approved', 'rejected'
+  created_at TIMESTAMPTZ DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
 
-Adicionar tratamento específico para rate limit no bloco de erros do signup:
+ALTER TABLE public.plan_change_requests ENABLE ROW LEVEL SECURITY;
 
-```typescript
-if (error.message.includes('rate limit')) {
-  toast({
-    title: 'Muitas tentativas',
-    description: 'Nossos servidores estão processando muitos cadastros. Aguarde alguns minutos e tente novamente.',
-    variant: 'destructive',
-  });
-} else if (error.message.includes('already registered')) {
-  // ... existing
-}
+-- Atleta vê suas próprias requests
+CREATE POLICY "athlete_own_requests" ON public.plan_change_requests
+  FOR SELECT TO authenticated
+  USING (athlete_user_id = auth.uid());
+
+-- Atleta cria request
+CREATE POLICY "athlete_insert_request" ON public.plan_change_requests
+  FOR INSERT TO authenticated
+  WITH CHECK (athlete_user_id = auth.uid());
+
+-- Coach vê requests dos seus atletas
+CREATE POLICY "coach_view_requests" ON public.plan_change_requests
+  FOR SELECT TO authenticated
+  USING (coach_id = auth.uid());
+
+-- Coach atualiza status
+CREATE POLICY "coach_update_requests" ON public.plan_change_requests
+  FOR UPDATE TO authenticated
+  USING (coach_id = auth.uid());
 ```
 
-Também adicionar o mesmo tratamento no bloco de forgot-password (linha ~407) e login (linha ~344), caso rate limit apareça nesses fluxos.
+### 2. Alterações no `AthleteConfig.tsx` (seção SEU PLANO)
 
-### 2. Aumentar rate limit de emails
+- Ao clicar no plano alternativo, inserir um registro em `plan_change_requests` com status `pending`
+- Trocar o toast genérico por confirmação: "Solicitação de upgrade/downgrade enviada ao seu coach"
+- Exibir banner abaixo dos botões de plano quando existir request pendente:
+  - Upgrade: "⬆️ Upgrade para PERFORMANCE solicitado — aguardando aprovação do coach"
+  - Downgrade: "⬇️ Downgrade para ESSENCIAL solicitado — aguardando aprovação do coach"
+- Desabilitar clique no plano alternativo enquanto houver request pendente
+- Buscar request pendente no mount via query simples
 
-**Arquivo**: `supabase/config.toml`
+### 3. Alterações no `CoachOverviewTab.tsx` (dashboard do coach)
 
-Adicionar configuração de rate limit de email na seção `[auth]`:
+- Na área expandida do atleta, exibir badge/alerta quando há `plan_change_requests` pendente
+- Mostrar: "🔔 Solicitação de [UPGRADE/DOWNGRADE] para [PLANO]" com botões Aprovar / Rejeitar
+- Aprovar: atualiza `profiles.training_level`, seta status `approved`, seta `resolved_at`
+- Rejeitar: seta status `rejected`, seta `resolved_at`
 
-```toml
-[auth]
-rate_limit_email_sent = 100
-```
-
-Isso aumenta de 3-4 emails/hora (padrão) para 100/hora, suportando muito mais cadastros simultâneos.
-
-### Resumo
-- 1 arquivo de código alterado (`Auth.tsx`) — tratamento de erro amigável
-- 1 arquivo de config alterado (`config.toml`) — aumento do rate limit
+### Resumo de arquivos
+- 1 migration SQL (nova tabela + RLS)
+- `src/components/AthleteConfig.tsx` — lógica de request + banner pendente
+- `src/components/CoachOverviewTab.tsx` — exibição + aprovação/rejeição
 
