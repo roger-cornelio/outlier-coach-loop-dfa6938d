@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import { normalizeAthleteName } from '@/utils/displayName';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoxCoachExtractorProps {

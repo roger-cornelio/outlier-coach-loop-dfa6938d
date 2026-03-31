@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeAthleteName } from '@/utils/displayName';
 
 import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';

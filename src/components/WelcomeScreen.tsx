@@ -14,6 +14,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import { normalizeAthleteName } from '@/utils/displayName';
 import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon, Check, Crown, Shield } from 'lucide-react';
