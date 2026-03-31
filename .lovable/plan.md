@@ -1,66 +1,46 @@
 
 
-## Plano: Sistema de solicitação de mudança de plano (Athlete → Coach)
+## Plano: Corrigir ordem do nome de atletas brasileiros (Sobrenome, Nome → Nome Sobrenome)
 
-### Contexto
-Atualmente, ao clicar no plano alternativo, o atleta recebe apenas um toast dizendo "fale com seu coach". O objetivo é criar um fluxo real de solicitação.
+### Problema
+O HYROX retorna nomes no formato "CORNÉLIO, ROGER" (sobrenome primeiro). O app exibe assim direto, quando deveria mostrar "Roger Cornélio".
 
-### 1. Criar tabela `plan_change_requests` (migration)
+### Solução
 
-```sql
-CREATE TABLE public.plan_change_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  athlete_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  coach_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  current_plan TEXT NOT NULL,       -- 'open' ou 'pro'
-  requested_plan TEXT NOT NULL,     -- 'open' ou 'pro'
-  status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'approved', 'rejected'
-  created_at TIMESTAMPTZ DEFAULT now(),
-  resolved_at TIMESTAMPTZ
-);
+**1. Criar utilidade `normalizeAthleteName` no frontend**
 
-ALTER TABLE public.plan_change_requests ENABLE ROW LEVEL SECURITY;
+**Arquivo**: `src/utils/displayName.ts`
 
--- Atleta vê suas próprias requests
-CREATE POLICY "athlete_own_requests" ON public.plan_change_requests
-  FOR SELECT TO authenticated
-  USING (athlete_user_id = auth.uid());
+Adicionar função que detecta o formato "SOBRENOME, NOME" (com vírgula) e inverte para "NOME SOBRENOME":
 
--- Atleta cria request
-CREATE POLICY "athlete_insert_request" ON public.plan_change_requests
-  FOR INSERT TO authenticated
-  WITH CHECK (athlete_user_id = auth.uid());
-
--- Coach vê requests dos seus atletas
-CREATE POLICY "coach_view_requests" ON public.plan_change_requests
-  FOR SELECT TO authenticated
-  USING (coach_id = auth.uid());
-
--- Coach atualiza status
-CREATE POLICY "coach_update_requests" ON public.plan_change_requests
-  FOR UPDATE TO authenticated
-  USING (coach_id = auth.uid());
+```typescript
+export function normalizeAthleteName(name: string): string {
+  const raw = name?.trim() ?? '';
+  if (!raw || !raw.includes(',')) return raw;
+  const [lastName, firstName] = raw.split(',').map(p => p.trim());
+  return [firstName, lastName].filter(Boolean).join(' ') || raw;
+}
 ```
 
-### 2. Alterações no `AthleteConfig.tsx` (seção SEU PLANO)
+**2. Aplicar normalização nos pontos de entrada dos dados**
 
-- Ao clicar no plano alternativo, inserir um registro em `plan_change_requests` com status `pending`
-- Trocar o toast genérico por confirmação: "Solicitação de upgrade/downgrade enviada ao seu coach"
-- Exibir banner abaixo dos botões de plano quando existir request pendente:
-  - Upgrade: "⬆️ Upgrade para PERFORMANCE solicitado — aguardando aprovação do coach"
-  - Downgrade: "⬇️ Downgrade para ESSENCIAL solicitado — aguardando aprovação do coach"
-- Desabilitar clique no plano alternativo enquanto houver request pendente
-- Buscar request pendente no mount via query simples
+Onde `athlete_name` do scraping é armazenado em `nome_atleta`:
 
-### 3. Alterações no `CoachOverviewTab.tsx` (dashboard do coach)
+- `src/components/WelcomeScreen.tsx` — nas linhas onde seta `nome_atleta: selectedResult?.athlete_name` (4 ocorrências)
+- `src/pages/DiagnosticoGratuito.tsx` — onde seta `nome_atleta: selectedResult?.athlete_name`
+- `src/components/RoxCoachExtractor.tsx` — onde seta `nome_atleta: result.athlete_name`
+- `src/pages/ImportarProva.tsx` — onde usa `parsed.resumoRow.nome_atleta`
 
-- Na área expandida do atleta, exibir badge/alerta quando há `plan_change_requests` pendente
-- Mostrar: "🔔 Solicitação de [UPGRADE/DOWNGRADE] para [PLANO]" com botões Aprovar / Rejeitar
-- Aprovar: atualiza `profiles.training_level`, seta status `approved`, seta `resolved_at`
-- Rejeitar: seta status `rejected`, seta `resolved_at`
+Em cada ponto, envolver com `normalizeAthleteName()`.
 
-### Resumo de arquivos
-- 1 migration SQL (nova tabela + RLS)
-- `src/components/AthleteConfig.tsx` — lógica de request + banner pendente
-- `src/components/CoachOverviewTab.tsx` — exibição + aprovação/rejeição
+**3. Normalizar também nos resultados de busca (search-hyrox-athlete)**
+
+**Arquivo**: `supabase/functions/search-hyrox-athlete/index.ts` (linha 215)
+
+Aplicar a mesma lógica de inversão no `athleteName` retornado antes de pushá-lo nos results. Isso corrige na origem para que todos os consumidores recebam o nome correto.
+
+### Resumo
+- 1 utilidade adicionada (`displayName.ts`)
+- 1 edge function corrigida (search-hyrox-athlete)
+- 3-4 componentes atualizados para normalizar na entrada
 
