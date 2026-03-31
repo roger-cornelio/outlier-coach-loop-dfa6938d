@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Search, Users, UserPlus, Star, MapPin, Loader2, ArrowRight, ChevronLeft, Trophy, AlertCircle } from 'lucide-react';
+import { Search, Users, UserPlus, Star, MapPin, Loader2, ArrowRight, ChevronLeft, Trophy, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 interface CoachResult {
@@ -32,7 +32,7 @@ interface OnboardingCoachSelectionProps {
   skipLinking?: boolean;
 }
 
-type View = 'choice' | 'search' | 'recommendations';
+type View = 'choice' | 'search' | 'recommendations' | 'confirmation';
 
 export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking = false }: OnboardingCoachSelectionProps) {
   const { user } = useAuth();
@@ -44,6 +44,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
   const [searchDone, setSearchDone] = useState(false);
   const [loadingRecs, setLoadingRecs] = useState(false);
   const [linking, setLinking] = useState<string | null>(null);
+  const [selectedCoach, setSelectedCoach] = useState<CoachResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Search coaches by name
@@ -132,10 +133,11 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
           throw insertError;
         }
       } else {
-        toast.success(`Solicitação enviada para ${coach.coach_name}! Aguarde a aprovação.`);
+        toast.success(`Solicitação enviada para ${coach.coach_name}!`);
       }
 
-      onCoachSelected(coach.coach_id, coach.coach_name || '');
+      setSelectedCoach(coach);
+      setView('confirmation');
     } catch (err) {
       console.error('[CoachSelection] Request error:', err);
       toast.error('Erro ao enviar solicitação. Tente novamente.');
@@ -377,6 +379,49 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
               className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors flex items-center gap-1 mx-auto">
               <ChevronLeft className="w-3 h-3" /> Voltar
             </button>
+          </motion.div>
+        )}
+        {/* ===== CONFIRMATION: Solicitação enviada ===== */}
+        {view === 'confirmation' && selectedCoach && (
+          <motion.div key="confirmation" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="flex flex-col items-center">
+            <motion.div className="mb-6" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+            </motion.div>
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-3"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+              SOLICITAÇÃO ENVIADA!
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-2 max-w-sm mx-auto"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              Vínculo solicitado com
+            </motion.p>
+
+            <motion.p className="font-display text-lg md:text-xl tracking-wide text-primary mb-6"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+              {selectedCoach.coach_name}
+              {selectedCoach.box_name && <span className="text-muted-foreground text-sm ml-2">({selectedCoach.box_name})</span>}
+            </motion.p>
+
+            <motion.p className="text-muted-foreground text-xs md:text-sm mb-10 max-w-xs mx-auto text-center"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+              Seu coach receberá a solicitação e poderá aprovar o vínculo. Enquanto isso, vamos configurar sua experiência.
+            </motion.p>
+
+            <motion.button
+              onClick={() => onCoachSelected(selectedCoach.coach_id, selectedCoach.coach_name || '')}
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground font-display tracking-widest text-lg hover:opacity-90 transition-opacity"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              CONTINUAR
+              <ArrowRight className="w-5 h-5" />
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
