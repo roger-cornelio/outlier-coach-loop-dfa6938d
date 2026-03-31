@@ -1398,7 +1398,9 @@ export function WelcomeScreen() {
             </div>
 
             <motion.button
-              onClick={() => setStep('coach')}
+              onClick={() => {
+                handleFinish();
+              }}
               disabled={!selectedPlan}
               className={`
                 font-display text-lg tracking-widest px-14 py-5 rounded-xl
@@ -1415,7 +1417,7 @@ export function WelcomeScreen() {
               CONTINUAR
             </motion.button>
 
-            <motion.button onClick={() => setStep('profileCta')}
+            <motion.button onClick={() => setStep('coach')}
               className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
               ← Voltar
