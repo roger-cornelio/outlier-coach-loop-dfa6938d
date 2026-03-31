@@ -125,7 +125,7 @@ export default function Landing() {
             {[
               { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus pontos fracos em segundos.' },
               { step: '02', title: 'Conecte-se a um coach', desc: 'Um coach dedicado recebe seu diagnóstico e monta treinos específicos para você.' },
-              { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. A IA dá feedback em tempo real. Você evolui com dados.' },
+              { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. Nós te damos feedback em tempo real. Você evolui com dados.' },
             ].map((item, i) => (
               <motion.div key={i} className="text-center"
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
