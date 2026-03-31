@@ -14,6 +14,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
