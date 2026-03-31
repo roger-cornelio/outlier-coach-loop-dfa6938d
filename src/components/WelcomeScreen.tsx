@@ -546,6 +546,7 @@ export function WelcomeScreen() {
           session_duration: String(cfgSessionDuration),
           onboarding_experience: profileAnswers.experience,
           onboarding_goal: profileAnswers.goal,
+          training_level: selectedPlan || 'open',
         }).eq('user_id', user.id);
         if (updateError) {
           console.error('[WELCOME] Profile update error:', updateError);
