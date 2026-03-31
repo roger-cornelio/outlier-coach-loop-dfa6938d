@@ -340,6 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           // User signed out - reset store completamente
           resetToDefaults();
+          localStorage.removeItem('outlier-benchmark-history');
           previousUserIdRef.current = null;
           profileFetchedForUserRef.current = null;
 
