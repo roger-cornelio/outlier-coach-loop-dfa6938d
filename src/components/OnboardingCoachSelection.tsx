@@ -305,9 +305,9 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
                   <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-3">
                     <AlertCircle className="w-7 h-7 text-amber-500" />
                   </div>
-                  <p className="font-display text-lg text-foreground mb-1">COACH NÃO ENCONTRADO</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Seu coach ainda não está na Outlier. Veja nossos coaches recomendados:
+                   <p className="font-display text-lg text-foreground mb-1">COACH NÃO ENCONTRADO</p>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Seu coach ainda não está na plataforma. Veja os coaches que a Outlier selecionou para seu perfil:
                   </p>
                   <button
                     onClick={() => setView('recommendations')}
