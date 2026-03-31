@@ -570,12 +570,6 @@ export function WelcomeScreen() {
     { key: 'lifestyle' as const, icon: Dumbbell, label: 'LIFESTYLE', desc: 'Treinar no formato HYROX' },
   ];
 
-  const targetRaceOptions = [
-    { key: 'next3months' as const, label: 'NOS PRÓXIMOS 3 MESES', desc: 'Prova confirmada em breve' },
-    { key: 'next6months' as const, label: 'NOS PRÓXIMOS 6 MESES', desc: 'Planejando para o semestre' },
-    { key: 'nodate' as const, label: 'SEM DATA DEFINIDA', desc: 'Quero me preparar com calma' },
-    { key: 'just_training' as const, label: 'SÓ QUERO TREINAR', desc: 'Sem compromisso com prova' },
-  ];
 
   function getMotivationalMessage(): string {
     if (profileAnswers.goal === 'podium') return 'Seu objetivo é ambicioso. Vamos construir o caminho até o pódio.';
