@@ -316,6 +316,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Reset profile fetch tracker for new user
             profileFetchedForUserRef.current = null;
             resetToDefaults();
+            // Clear benchmark history to prevent session leakage between users
+            localStorage.removeItem('outlier-benchmark-history');
           }
           
           previousUserIdRef.current = session.user.id;
