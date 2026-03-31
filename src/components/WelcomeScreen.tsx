@@ -14,6 +14,7 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import { normalizeAthleteName } from '@/utils/displayName';
 import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon, Check, Crown, Shield } from 'lucide-react';
@@ -193,7 +194,7 @@ export function WelcomeScreen() {
         divisao: selectedResult?.division || scrapeData?.race_category || null,
         posicao_categoria: null,
         posicao_geral: null,
-        nome_atleta: selectedResult?.athlete_name || null,
+        nome_atleta: normalizeAthleteName(selectedResult?.athlete_name) || null,
       });
       setBottlenecks([]);
       setStep('congrats');
@@ -232,14 +233,14 @@ export function WelcomeScreen() {
               temporada: String(selectedResult?.season_id || ''),
               divisao: selectedResult?.division,
               finish_time: scrapeData?.formatted_time || selectedResult?.time_formatted,
-              nome_atleta: selectedResult?.athlete_name,
+              nome_atleta: normalizeAthleteName(selectedResult?.athlete_name),
             });
           } else {
             parsed.resumoRow.evento = selectedResult?.event_name;
             parsed.resumoRow.temporada = String(selectedResult?.season_id || '');
             parsed.resumoRow.divisao = selectedResult?.division;
             parsed.resumoRow.finish_time = scrapeData?.formatted_time || selectedResult?.time_formatted;
-            parsed.resumoRow.nome_atleta = selectedResult?.athlete_name;
+            parsed.resumoRow.nome_atleta = normalizeAthleteName(selectedResult?.athlete_name);
 
             const { data: insertedResumo } = await supabase
               .from('diagnostico_resumo')
@@ -458,7 +459,7 @@ export function WelcomeScreen() {
           temporada: String(result.season_id),
           divisao: result.division,
           finish_time: result.time_formatted,
-          nome_atleta: result.athlete_name,
+          nome_atleta: normalizeAthleteName(result.athlete_name),
         });
 
         setSummary({
@@ -467,7 +468,7 @@ export function WelcomeScreen() {
           divisao: result.division,
           posicao_categoria: null,
           posicao_geral: null,
-          nome_atleta: result.athlete_name,
+          nome_atleta: normalizeAthleteName(result.athlete_name),
         });
         setBottlenecks([]);
       } else {
@@ -475,7 +476,7 @@ export function WelcomeScreen() {
         parsed.resumoRow.temporada = String(result.season_id);
         parsed.resumoRow.divisao = result.division;
         parsed.resumoRow.finish_time = result.time_formatted;
-        parsed.resumoRow.nome_atleta = result.athlete_name;
+        parsed.resumoRow.nome_atleta = normalizeAthleteName(result.athlete_name);
 
         const { data: insertedResumo, error: resumoError } = await supabase
           .from('diagnostico_resumo')

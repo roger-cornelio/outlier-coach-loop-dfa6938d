@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import { normalizeAthleteName } from '@/utils/displayName';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoxCoachExtractorProps {
@@ -285,7 +286,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
         temporada: String(result.season_id),
         divisao: result.division,
         finish_time: result.time_formatted,
-        nome_atleta: result.athlete_name,
+        nome_atleta: normalizeAthleteName(result.athlete_name),
       };
 
       const { error: resumoError } = await supabase
@@ -305,7 +306,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
     parsed.resumoRow.temporada = String(result.season_id);
     parsed.resumoRow.divisao = result.division;
     parsed.resumoRow.finish_time = result.time_formatted;
-    parsed.resumoRow.nome_atleta = result.athlete_name;
+    parsed.resumoRow.nome_atleta = normalizeAthleteName(result.athlete_name);
 
     // Insert resumo first to get its ID for linking
     const { data: insertedResumo, error: resumoError } = await supabase

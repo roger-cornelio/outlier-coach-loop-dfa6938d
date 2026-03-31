@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeAthleteName } from '@/utils/displayName';
 
 import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
@@ -441,7 +442,7 @@ export default function DiagnosticoGratuito() {
       .reduce((sum, k) => sum + (splits[`${k}_sec`] || splits[k] || 0), 0);
     return {
       id: 'free-diag',
-      nome_atleta: selectedResult?.athlete_name || null,
+      nome_atleta: normalizeAthleteName(selectedResult?.athlete_name) || null,
       temporada: selectedResult?.season_id ? `S${selectedResult.season_id}` : null,
       evento: scrapedData?.event_name || selectedResult?.event_name || null,
       divisao: scrapedData?.race_category || selectedResult?.division || null,

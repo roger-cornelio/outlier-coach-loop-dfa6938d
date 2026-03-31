@@ -212,7 +212,13 @@ function extractResultEntries(html: string, seasonId: number, eventName: string,
     if (!linkMatch) continue;
 
     const rawUrl = linkMatch[1].replace(/&amp;/g, "&");
-    const athleteName = linkMatch[2].replace(/<[^>]*>/g, "").trim();
+    const rawName = linkMatch[2].replace(/<[^>]*>/g, "").trim();
+    // Normalize "LASTNAME, FIRSTNAME" → "Firstname Lastname"
+    const athleteName = rawName.includes(",")
+      ? rawName.split(",").map((p: string) => p.trim()).reverse().filter(Boolean)
+          .map((w: string) => w.split(" ").map((s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(" "))
+          .join(" ")
+      : rawName;
 
     // Must have idp parameter
     if (!rawUrl.includes("idp=")) continue;
