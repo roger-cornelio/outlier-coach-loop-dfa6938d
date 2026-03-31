@@ -286,7 +286,7 @@ export default function RoxCoachExtractor({ onSuccess, mode = 'full' }: RoxCoach
         temporada: String(result.season_id),
         divisao: result.division,
         finish_time: result.time_formatted,
-        nome_atleta: result.athlete_name,
+        nome_atleta: normalizeAthleteName(result.athlete_name),
       };
 
       const { error: resumoError } = await supabase
