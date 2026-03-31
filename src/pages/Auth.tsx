@@ -403,13 +403,12 @@ export default function Auth({ context = 'user' }: AuthProps) {
             });
           }
         } else {
+          // Auto-confirm ativo: usuário já está logado automaticamente
+          // O useEffect de onAuthStateChange cuidará do redirect
           toast({
             title: 'Conta criada!',
-            description: 'Você já pode fazer login.',
+            description: 'Entrando no app...',
           });
-          setMode('login');
-          setName('');
-          setPassword('');
         }
       } else if (mode === 'forgot-password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
