@@ -95,6 +95,62 @@ export function AthleteConfig() {
   const [showChangeCoach, setShowChangeCoach] = useState(false);
   const { user } = useAuth();
 
+  // Plan change request state
+  const [pendingPlanRequest, setPendingPlanRequest] = useState<{ requested_plan: string; status: string } | null>(null);
+  const [submittingPlanRequest, setSubmittingPlanRequest] = useState(false);
+
+  // Fetch pending plan change request
+  useEffect(() => {
+    const fetchPendingRequest = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('plan_change_requests')
+        .select('requested_plan, status')
+        .eq('athlete_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setPendingPlanRequest(data as any);
+    };
+    fetchPendingRequest();
+  }, [user?.id]);
+
+  const handleRequestPlanChange = async (requestedTier: PlanTier) => {
+    if (!user?.id || submittingPlanRequest) return;
+    setSubmittingPlanRequest(true);
+    try {
+      // Get coach_id from coach_athletes
+      const { data: link } = await supabase
+        .from('coach_athletes')
+        .select('coach_id')
+        .eq('athlete_id', user.id)
+        .maybeSingle();
+
+      const { error } = await supabase
+        .from('plan_change_requests')
+        .insert({
+          athlete_user_id: user.id,
+          coach_id: link?.coach_id || null,
+          current_plan: currentPlan,
+          requested_plan: requestedTier,
+        });
+      if (error) throw error;
+      setPendingPlanRequest({ requested_plan: requestedTier, status: 'pending' });
+      const isUpgrade = requestedTier === 'pro';
+      toast.success(
+        isUpgrade
+          ? 'Solicitação de upgrade enviada ao seu coach!'
+          : 'Solicitação de downgrade enviada ao seu coach!'
+      );
+    } catch (err) {
+      console.error('[AthleteConfig] Plan request error:', err);
+      toast.error('Erro ao enviar solicitação');
+    } finally {
+      setSubmittingPlanRequest(false);
+    }
+  };
+
   // Buscar nome do coach vinculado via tabela coach_athletes
   useEffect(() => {
     const fetchCoachName = async () => {
@@ -563,25 +619,25 @@ export function AthleteConfig() {
             const info = PLAN_DISPLAY[tier];
             const Icon = info.icon;
             const isCurrent = currentPlan === tier;
-            const otherTier = tier === 'open' ? 'pro' : 'open';
             const isUpgrade = tier === 'pro' && currentPlan === 'open';
+            const hasPendingForThis = pendingPlanRequest?.requested_plan === tier;
+            const isDisabled = !!pendingPlanRequest || submittingPlanRequest;
             
             return (
               <button
                 key={tier}
+                disabled={isCurrent || isDisabled}
                 onClick={() => {
-                  if (!isCurrent) {
-                    toast.info(
-                      isUpgrade
-                        ? 'Entre em contato com seu coach para fazer upgrade para o plano Performance.'
-                        : 'Entre em contato com seu coach para solicitar downgrade para o plano Essencial.'
-                    );
+                  if (!isCurrent && !isDisabled) {
+                    handleRequestPlanChange(tier);
                   }
                 }}
                 className={`flex flex-col items-center gap-2 px-4 py-4 rounded-lg border-2 transition-all duration-200 ${
                   isCurrent
                     ? 'border-primary bg-primary/10'
-                    : 'border-border bg-card hover:bg-secondary'
+                    : hasPendingForThis
+                    ? 'border-amber-500/50 bg-amber-500/5'
+                    : 'border-border bg-card hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
               >
                 <Icon className={`w-6 h-6 ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -589,12 +645,24 @@ export function AthleteConfig() {
                   {info.label}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {isCurrent ? 'Plano atual' : isUpgrade ? 'Fazer upgrade' : 'Fazer downgrade'}
+                  {isCurrent ? 'Plano atual' : hasPendingForThis ? 'Solicitado' : isUpgrade ? 'Solicitar upgrade' : 'Solicitar downgrade'}
                 </span>
               </button>
             );
           })}
         </div>
+        
+        {/* Banner de solicitação pendente */}
+        {pendingPlanRequest && (
+          <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-200">
+              {pendingPlanRequest.requested_plan === 'pro'
+                ? '⬆️ Upgrade para PERFORMANCE solicitado — aguardando aprovação do coach'
+                : '⬇️ Downgrade para ESSENCIAL solicitado — aguardando aprovação do coach'}
+            </p>
+          </div>
+        )}
       </motion.section>
 
       {/* Duration Selection */}

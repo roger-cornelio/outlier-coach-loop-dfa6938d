@@ -357,6 +357,79 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
   );
 }
 
+// ─── Plan Change Request inline ───
+function PlanChangeRequestAlert({ athleteId, onResolved }: { athleteId: string; onResolved: () => void }) {
+  const [request, setRequest] = useState<{ id: string; current_plan: string; requested_plan: string } | null>(null);
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('plan_change_requests')
+        .select('id, current_plan, requested_plan')
+        .eq('athlete_user_id', athleteId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setRequest(data as any);
+    };
+    fetch();
+  }, [athleteId]);
+
+  if (!request) return null;
+
+  const isUpgrade = request.requested_plan === 'pro';
+  const planLabel = isUpgrade ? 'PERFORMANCE' : 'ESSENCIAL';
+
+  const handleAction = async (approve: boolean) => {
+    setProcessing(true);
+    try {
+      if (approve) {
+        // Update profile training_level
+        await supabase
+          .from('profiles')
+          .update({ training_level: request.requested_plan })
+          .eq('user_id', athleteId);
+      }
+      // Update request status
+      await supabase
+        .from('plan_change_requests')
+        .update({ status: approve ? 'approved' : 'rejected', resolved_at: new Date().toISOString() })
+        .eq('id', request.id);
+
+      toast.success(approve ? `Plano alterado para ${planLabel}` : 'Solicitação rejeitada');
+      setRequest(null);
+      onResolved();
+    } catch {
+      toast.error('Erro ao processar solicitação');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-3 mb-3">
+      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground">
+          🔔 Solicitação de {isUpgrade ? 'UPGRADE' : 'DOWNGRADE'} para {planLabel}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Button size="sm" variant="outline" className="h-7 text-[10px] border-red-500/30 text-red-400 hover:bg-red-500/10 px-2"
+          onClick={() => handleAction(false)} disabled={processing}>
+          {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+        </Button>
+        <Button size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 gap-1"
+          onClick={() => handleAction(true)} disabled={processing}>
+          {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Check className="w-3 h-3" /> Aprovar</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Expandable Athlete Row ───
 function ExpandableAthleteRow({
   athlete,
@@ -430,6 +503,9 @@ function ExpandableAthleteRow({
 
       <CollapsibleContent>
         <div className={`border-l-2 ${borderColor} bg-secondary/20 px-3 sm:px-4 py-4 rounded-br-lg`}>
+          {/* Plan change request alert */}
+          <PlanChangeRequestAlert athleteId={athlete.athlete_id} onResolved={onAthleteChanged} />
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Col 1: Stats */}
             <div className="space-y-2">
