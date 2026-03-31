@@ -14,13 +14,14 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
+import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileCta' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
@@ -97,6 +98,14 @@ export function WelcomeScreen() {
     goal: null,
     targetRace: null,
   });
+
+  // Config fields for profileConfig step
+  const [cfgPeso, setCfgPeso] = useState('');
+  const [cfgAltura, setCfgAltura] = useState('');
+  const [cfgIdade, setCfgIdade] = useState('');
+  const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(null);
+  const [cfgCoachStyle, setCfgCoachStyle] = useState<CoachStyle>('PULSE');
+  const [cfgSessionDuration, setCfgSessionDuration] = useState<SessionDuration>(60);
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
   const freeDiagConsumedRef = useRef(false);
@@ -529,8 +538,22 @@ export function WelcomeScreen() {
 
   async function handleFinish() {
     setIsSaving(true);
-    const result = await saveCoachStyle('PULSE');
+    const selectedStyle = cfgCoachStyle || 'PULSE';
+    const result = await saveCoachStyle(selectedStyle);
     if (result.success) {
+      // Persist config fields
+      if (user?.id) {
+        await supabase.from('profiles').update({
+          peso: cfgPeso ? parseFloat(cfgPeso) : null,
+          altura: cfgAltura ? parseInt(cfgAltura) : null,
+          idade: cfgIdade ? parseInt(cfgIdade) : null,
+          sexo: cfgSexo || null,
+          session_duration: String(cfgSessionDuration),
+          onboarding_experience: profileAnswers.experience,
+          onboarding_goal: profileAnswers.goal,
+          onboarding_target_race: profileAnswers.targetRace,
+        }).eq('user_id', user.id);
+      }
       setCurrentView('dashboard');
     } else {
       toast.error('Erro ao iniciar. Tente novamente.');
@@ -1003,7 +1026,7 @@ export function WelcomeScreen() {
                   <motion.button key={opt.key}
                     onClick={() => {
                       setProfileAnswers(prev => ({ ...prev, goal: opt.key }));
-                      setTimeout(() => setStep('profileCta'), 400);
+                      setTimeout(() => setStep('profileConfig'), 400);
                     }}
                     className={`p-5 rounded-xl border transition-all text-center group flex flex-col items-center gap-3 ${
                       selected
@@ -1027,6 +1050,161 @@ export function WelcomeScreen() {
             <motion.button onClick={() => setStep('profile')}
               className="text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+              ← Voltar
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* ===== PROFILE CONFIG: Biometria + Coach Style + Tempo ===== */}
+        {step === 'profileConfig' && (
+          <motion.div key="profileConfig" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-xl w-full">
+
+            <motion.div className="mb-6" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Scale className="w-8 h-8 text-primary" />
+              </div>
+            </motion.div>
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+              CONFIGURE SEU PERFIL
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-8"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              Esses dados personalizam seus treinos e feedbacks.
+            </motion.p>
+
+            <div className="max-w-md mx-auto space-y-8">
+              {/* Section 1: Biometria */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Dados Biométricos</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="relative">
+                    <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgPeso}
+                      onChange={(e) => setCfgPeso(e.target.value)}
+                      placeholder="Peso (kg)"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgAltura}
+                      onChange={(e) => setCfgAltura(e.target.value)}
+                      placeholder="Altura (cm)"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={cfgIdade}
+                      onChange={(e) => setCfgIdade(e.target.value)}
+                      placeholder="Idade"
+                      className="pl-10 bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {(['masculino', 'feminino'] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setCfgSexo(s)}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-display tracking-wide transition-all ${
+                          cfgSexo === s
+                            ? 'bg-primary/20 border-primary/50 text-primary ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 text-muted-foreground hover:border-primary/30'
+                        }`}
+                      >
+                        {s === 'masculino' ? '♂ M' : '♀ F'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Section 2: Estilo de Treinador */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Estilo de Treinador</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { key: 'IRON' as CoachStyle, icon: Flame, label: 'IRON', desc: 'Intenso e direto' },
+                    { key: 'PULSE' as CoachStyle, icon: Heart, label: 'PULSE', desc: 'Equilibrado e motivador' },
+                    { key: 'SPARK' as CoachStyle, icon: Zap, label: 'SPARK', desc: 'Criativo e dinâmico' },
+                  ]).map((opt) => {
+                    const Icon = opt.icon;
+                    const selected = cfgCoachStyle === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setCfgCoachStyle(opt.key)}
+                        className={`p-4 rounded-xl border transition-all text-center flex flex-col items-center gap-2 ${
+                          selected
+                            ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-full ${selected ? 'bg-primary/30' : 'bg-secondary'}`}>
+                          <Icon className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </div>
+                        <p className="font-display text-xs tracking-wider text-foreground">{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
+              {/* Section 3: Tempo Disponível */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-medium">Tempo Disponível para Treino</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { key: 60 as SessionDuration, label: '60 min', desc: 'Sessão padrão' },
+                    { key: 'ilimitado' as SessionDuration, label: 'SEM LIMITE', desc: 'Treino completo' },
+                  ]).map((opt) => {
+                    const selected = cfgSessionDuration === opt.key;
+                    return (
+                      <button
+                        key={String(opt.key)}
+                        onClick={() => setCfgSessionDuration(opt.key)}
+                        className={`p-4 rounded-xl border transition-all text-center flex flex-col items-center gap-2 ${
+                          selected
+                            ? 'bg-primary/20 border-primary/50 ring-2 ring-primary/30'
+                            : 'bg-secondary/50 border-border/50 hover:border-primary/30 hover:bg-secondary/80'
+                        }`}
+                      >
+                        <Timer className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <p className="font-display text-sm tracking-wider text-foreground">{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Continue button */}
+            <motion.button
+              onClick={() => setStep('profileCta')}
+              className="mt-10 font-display text-lg tracking-widest px-12 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30 flex items-center gap-3 mx-auto"
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+              <ArrowRight className="w-5 h-5" />
+              CONTINUAR
+            </motion.button>
+
+            <motion.button onClick={() => setStep('profileGoal')}
+              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
               ← Voltar
             </motion.button>
           </motion.div>
@@ -1075,17 +1253,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={async () => {
-                // Persist onboarding answers before moving on
-                if (user?.id && (profileAnswers.experience || profileAnswers.goal || profileAnswers.targetRace)) {
-                  supabase.from('profiles').update({
-                    onboarding_experience: profileAnswers.experience,
-                    onboarding_goal: profileAnswers.goal,
-                    onboarding_target_race: profileAnswers.targetRace,
-                  }).eq('user_id', user.id).then(({ error }) => {
-                    if (error) console.warn('[WelcomeScreen] Failed to persist onboarding answers:', error.message);
-                  });
-                }
+              onClick={() => {
                 if (coachAutoLinked) {
                   handleFinish();
                 } else {
@@ -1108,7 +1276,7 @@ export function WelcomeScreen() {
               {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
-            <motion.button onClick={() => setStep('profileGoal')}
+            <motion.button onClick={() => setStep('profileConfig')}
               className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
               ← Voltar

@@ -21,6 +21,7 @@ export interface AthleteOverview {
   onboarding_experience: string | null;
   onboarding_goal: string | null;
   onboarding_target_race: string | null;
+  session_duration: string | null;
   days_inactive: number;
   workouts_last_7_days: number;
   has_plan_this_week: number;
@@ -77,7 +78,7 @@ export function useCoachOverview() {
         const athleteIds = links.map(l => l.athlete_id);
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, name, email, sexo, status, last_active_at, peso, altura, training_level, created_at')
+          .select('user_id, name, email, sexo, status, last_active_at, peso, altura, training_level, created_at, session_duration')
           .in('user_id', athleteIds);
 
         const fallbackAthletes: AthleteOverview[] = (profiles || []).map(p => ({
@@ -96,6 +97,7 @@ export function useCoachOverview() {
           onboarding_experience: null,
           onboarding_goal: null,
           onboarding_target_race: null,
+          session_duration: (p as any).session_duration ?? null,
           days_inactive: p.last_active_at 
             ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
             : Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000),

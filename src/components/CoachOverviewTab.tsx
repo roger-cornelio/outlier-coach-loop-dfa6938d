@@ -488,10 +488,20 @@ function ExpandableAthleteRow({
                   )}
                 </div>
               )}
-              {(athlete.peso || athlete.altura) && (
-                <div className="flex gap-3 text-xs text-foreground">
+              {(athlete.peso || athlete.altura || athlete.sexo || athlete.session_duration) && (
+                <div className="flex flex-wrap gap-2 text-xs text-foreground">
+                  {athlete.sexo && (
+                    <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground">
+                      {athlete.sexo === 'masculino' ? '♂ Masculino' : '♀ Feminino'}
+                    </Badge>
+                  )}
                   {athlete.peso && <span>{athlete.peso}kg</span>}
                   {athlete.altura && <span>{athlete.altura}cm</span>}
+                  {athlete.session_duration && (
+                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                      ⏱ {athlete.session_duration === 'ilimitado' ? 'Sem limite' : `${athlete.session_duration} min`}
+                    </Badge>
+                  )}
                 </div>
               )}
               {hasEquipment && (
@@ -512,7 +522,7 @@ function ExpandableAthleteRow({
                   )}
                 </div>
               )}
-              {!hasOnboarding && !athlete.peso && !athlete.altura && !hasEquipment && (
+              {!hasOnboarding && !athlete.peso && !athlete.altura && !athlete.sexo && !athlete.session_duration && !hasEquipment && (
                 <p className="text-xs text-muted-foreground italic">Sem dados de perfil</p>
               )}
             </div>
