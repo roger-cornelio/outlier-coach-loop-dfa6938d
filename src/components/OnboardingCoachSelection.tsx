@@ -215,7 +215,7 @@ export function OnboardingCoachSelection({ onCoachSelected, onBack, skipLinking 
 
             <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-3"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              CONECTE-SE AO SEU COACH
+              SEU COACH IDEAL
             </motion.h1>
 
             <motion.p className="text-muted-foreground text-sm md:text-base mb-10 max-w-sm mx-auto"
