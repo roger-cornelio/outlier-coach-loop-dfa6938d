@@ -1,28 +1,19 @@
 
 
-## Plano: Sexo nas configurações do onboarding + visível no perfil do coach
+## Plano: Garantir que a tela de vinculação com coach sempre apareça
 
-### Alterações
+### Problema
+Quando o atleta vem do diagnóstico gratuito, o coach é auto-vinculado via localStorage e `coachAutoLinked = true`. Isso faz com que os botões nas telas `profileCta` e `profileConfig` pulem direto para `handleFinish()`, sem nunca mostrar a tela de seleção/confirmação do coach.
 
-**1. `src/components/WelcomeScreen.tsx`** — Nova tela `profileConfig`
-- Incluir toggle Masculino/Feminino junto com Peso, Altura, Idade
-- Persistir `sexo` no `handleFinish` (update profiles)
-- Mesmo visual das demais telas de onboarding
+### Solução
+Na tela `profileCta`, o botão deve **sempre** avançar para `setStep('coach')`, independente de `coachAutoLinked`. O auto-link do localStorage já garante que o coach estará vinculado — a tela `coach` serve como confirmação visual para o atleta saber quem é seu treinador.
 
-**2. `src/components/CoachOverviewTab.tsx`** — Coluna "Perfil" do atleta expandido
-- Exibir badge com sexo do atleta (ex: "♂ Masculino" / "♀ Feminino") ao lado de peso/altura
-- O campo `sexo` já existe no `AthleteOverview` e já é carregado pelo hook
+### Alteração
 
-**3. `src/hooks/useCoachOverview.ts`** — Incluir `session_duration` no fallback (já tem `sexo`)
+**`src/components/WelcomeScreen.tsx`**
+1. Linha 923: mudar `coachAutoLinked ? handleFinish() : setStep('coach')` para `setStep('coach')`
+2. Linhas 1257-1260: mesmo ajuste — sempre `setStep('coach')`
+3. Na tela `coach` (`OnboardingCoachSelection`), se já houver coach auto-vinculado, mostrar confirmação em vez de busca (isso já pode estar implementado no componente)
 
-### Resumo da tela `profileConfig`
-4 seções visuais:
-1. **Biometria**: Peso, Altura, Idade, Sexo (M/F toggle)
-2. **Estilo de treinador**: IRON / PULSE / SPARK (cards)
-3. **Tempo disponível**: 60 min / Sem limite (cards)
-
-### Coach vê no painel
-Na expansão do atleta, coluna "Perfil": badge de sexo + badge de tempo disponível + dados existentes (peso, altura, onboarding, equipamentos)
-
-Sem migration — todos os campos já existem na tabela `profiles`.
+Resultado: o atleta sempre vê a tela do coach antes de finalizar, seja para confirmar o auto-vinculado ou para escolher um novo.
 
