@@ -16,12 +16,12 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { parseDiagnosticResponse, hasDiagnosticData } from '@/utils/diagnosticParser';
 import type { CoachStyle, SessionDuration } from '@/types/outlier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
-import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon } from 'lucide-react';
+import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, ChevronRight, Target, Dumbbell, Timer, Flame, RefreshCw, Heart, Scale, Ruler, Calendar as CalendarIcon, Check, Crown, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'planSelection' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
@@ -104,6 +104,7 @@ export function WelcomeScreen() {
   const [cfgSexo, setCfgSexo] = useState<'masculino' | 'feminino' | null>(null);
   const [cfgCoachStyle, setCfgCoachStyle] = useState<CoachStyle>('PULSE');
   const [cfgSessionDuration, setCfgSessionDuration] = useState<SessionDuration>(60);
+  const [selectedPlan, setSelectedPlan] = useState<'open' | 'pro' | null>(null);
 
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Atleta';
   const freeDiagConsumedRef = useRef(false);
@@ -545,6 +546,7 @@ export function WelcomeScreen() {
           session_duration: String(cfgSessionDuration),
           onboarding_experience: profileAnswers.experience,
           onboarding_goal: profileAnswers.goal,
+          training_level: selectedPlan || 'open',
         }).eq('user_id', user.id);
         if (updateError) {
           console.error('[WELCOME] Profile update error:', updateError);
@@ -1260,7 +1262,7 @@ export function WelcomeScreen() {
             </motion.div>
 
             <motion.button
-              onClick={() => setStep('coach')}
+              onClick={() => setStep('planSelection')}
               disabled={isSaving}
               className={`
                 font-display text-xl tracking-widest px-16 py-6 rounded-xl
@@ -1285,13 +1287,149 @@ export function WelcomeScreen() {
           </motion.div>
         )}
 
+        {/* ===== PLAN SELECTION STEP ===== */}
+        {step === 'planSelection' && (
+          <motion.div key="planSelection" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="text-center z-10 max-w-3xl w-full">
+
+            <motion.h1 className="font-display text-2xl md:text-4xl tracking-widest text-foreground mb-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              ESCOLHA SUA EXPERIÊNCIA
+            </motion.h1>
+
+            <motion.p className="text-muted-foreground text-sm md:text-base mb-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              Acesso completo à plataforma em ambos os planos.
+            </motion.p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+              {/* ESSENCIAL */}
+              <motion.button
+                onClick={() => setSelectedPlan('open')}
+                className={`text-left p-6 md:p-8 rounded-2xl border-2 transition-all duration-300 ${
+                  selectedPlan === 'open'
+                    ? 'border-primary bg-primary/5 shadow-lg shadow-primary/20 ring-1 ring-primary/30'
+                    : 'border-border/50 bg-card/50 hover:border-border hover:bg-card/80'
+                }`}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2.5 rounded-xl ${selectedPlan === 'open' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <span className="font-display text-lg tracking-widest text-foreground">ESSENCIAL</span>
+                </div>
+
+                <p className="font-display text-xl md:text-2xl tracking-wide text-foreground mb-2">
+                  Seu treino. Seus dados. Sua evolução.
+                </p>
+
+                <p className="text-sm text-muted-foreground mb-5">
+                  Treino inteligente que ataca seus pontos fracos
+                </p>
+
+                <ul className="space-y-2.5">
+                  {[
+                    'Programação semanal personalizada pelo seu coach',
+                    'Diagnóstico de performance baseado em dados reais',
+                    'Treinos adaptados às suas fraquezas identificadas',
+                    'Acompanhamento de evolução e benchmarks',
+                    'Acesso completo: simulador, análises e métricas',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.button>
+
+              {/* PERFORMANCE */}
+              <motion.button
+                onClick={() => setSelectedPlan('pro')}
+                className={`text-left p-6 md:p-8 rounded-2xl border-2 transition-all duration-300 relative ${
+                  selectedPlan === 'pro'
+                    ? 'border-primary bg-primary/5 shadow-lg shadow-primary/20 ring-1 ring-primary/30'
+                    : 'border-border/50 bg-card/50 hover:border-border hover:bg-card/80'
+                }`}
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              >
+                {/* Badge RECOMENDADO */}
+                <div className="absolute -top-3 right-4 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-display tracking-widest shadow-md">
+                  RECOMENDADO
+                </div>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2.5 rounded-xl ${selectedPlan === 'pro' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <span className="font-display text-lg tracking-widest text-foreground">PERFORMANCE</span>
+                </div>
+
+                <p className="font-display text-xl md:text-2xl tracking-wide text-foreground mb-2">
+                  Pra quem quer ir além.
+                </p>
+
+                <p className="text-sm text-muted-foreground mb-5">
+                  Evolução acelerada com foco cirúrgico nos seus gaps
+                </p>
+
+                <ul className="space-y-2.5">
+                  <li className="flex items-start gap-2 text-sm text-primary font-medium">
+                    <Check className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>Tudo do Essencial +</span>
+                  </li>
+                  {[
+                    'Periodização avançada e individualizada',
+                    'Treinos que atacam suas deficiências com precisão máxima',
+                    'Acompanhamento próximo do coach com feedbacks detalhados',
+                    'Análise aprofundada dos seus pontos de melhoria',
+                    'Prioridade no suporte e ajustes de treino',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.button>
+            </div>
+
+            <motion.button
+              onClick={() => setStep('coach')}
+              disabled={!selectedPlan}
+              className={`
+                font-display text-lg tracking-widest px-14 py-5 rounded-xl
+                transition-all duration-300 flex items-center justify-center gap-3 mx-auto
+                ${selectedPlan
+                  ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }
+              `}
+              whileHover={selectedPlan ? { scale: 1.03 } : {}}
+              whileTap={selectedPlan ? { scale: 0.97 } : {}}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+              <ArrowRight className="w-5 h-5" />
+              CONTINUAR
+            </motion.button>
+
+            <motion.button onClick={() => setStep('profileCta')}
+              className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+              ← Voltar
+            </motion.button>
+          </motion.div>
+        )}
+
         {/* ===== COACH SELECTION STEP ===== */}
         {step === 'coach' && (
           <OnboardingCoachSelection
             onCoachSelected={(_coachId, _coachName) => {
               handleFinish();
             }}
-            onBack={() => setStep('profileCta')}
+            onBack={() => setStep('planSelection')}
           />
         )}
       </AnimatePresence>
