@@ -1542,7 +1542,7 @@ export function DiagnosticRadarBlock({
       const monthIdx = (now.getMonth() + i) % 12;
       return {
         month: monthNames[monthIdx],
-        tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
+        tempo: Math.round(Math.max(0, currentSec - (evolutionProjection.ratePerMonth * i))),
       };
     });
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
