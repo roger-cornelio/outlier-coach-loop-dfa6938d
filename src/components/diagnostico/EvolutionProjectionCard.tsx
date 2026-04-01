@@ -38,7 +38,7 @@ function buildProjectionData(currentSeconds: number, ratePerMonth: number) {
   const now = new Date();
   const points = [];
   for (let i = 0; i <= 12; i++) {
-    const projected = Math.max(3600, currentSeconds - (ratePerMonth * i));
+    const projected = Math.max(0, currentSeconds - (ratePerMonth * i));
     const monthIdx = (now.getMonth() + i) % 12;
     points.push({
       month: monthNames[monthIdx],
@@ -67,7 +67,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
 
   const targetSeconds = useMemo(() => {
     if (!evolution || currentSeconds <= 0) return 0;
-    return Math.max(3600, currentSeconds - totalGap);
+    return Math.max(0, currentSeconds - totalGap);
   }, [currentSeconds, totalGap, evolution]);
 
   const top3Gaps = useMemo(() => {
@@ -120,8 +120,8 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
 
   const { tierLabel, ratePerMonth, gapFormatted } = evolution;
 
-  const projectedAt12 = Math.max(3600, currentSeconds - (ratePerMonth * 12));
-  const gainIn12 = currentSeconds - projectedAt12;
+  const projectedAt12 = Math.max(0, currentSeconds - (ratePerMonth * 12));
+  const gainIn12 = Math.max(0, currentSeconds - projectedAt12);
   const gainFormatted = (() => {
     const m = Math.floor(gainIn12 / 60);
     const s = Math.round(gainIn12 % 60);

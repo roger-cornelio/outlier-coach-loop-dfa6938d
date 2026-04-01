@@ -521,15 +521,15 @@ export default function DiagnosticoGratuito() {
     const now = new Date();
     const points = [];
     for (let i = 0; i <= 12; i++) {
-      const projected = Math.max(3600, totalSeconds - (evolution.ratePerMonth * i));
+      const projected = Math.max(0, totalSeconds - (evolution.ratePerMonth * i));
       const monthIdx = (now.getMonth() + i) % 12;
       points.push({ month: monthNames[monthIdx], tempo: Math.round(projected) });
     }
     return points;
   }, [totalSeconds, evolution]);
 
-  const projectedAt12 = evolution ? Math.max(3600, totalSeconds - (evolution.ratePerMonth * 12)) : 0;
-  const gainIn12 = totalSeconds - projectedAt12;
+  const projectedAt12 = evolution ? Math.max(0, totalSeconds - (evolution.ratePerMonth * 12)) : 0;
+  const gainIn12 = Math.max(0, totalSeconds - projectedAt12);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

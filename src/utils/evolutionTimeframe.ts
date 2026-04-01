@@ -67,8 +67,8 @@ export function calculateProvaAlvoTarget(
   const months = Math.max(0, daysUntilRace / 30);
   const projectedGainSeconds = Math.round(months * ratePerMonth);
 
-  // Meta = tempo atual - ganho projetado, com piso de 3600s
-  const targetSeconds = Math.max(3600, currentFinishTimeSeconds - projectedGainSeconds);
+  // Meta = tempo atual - ganho projetado (sem piso artificial)
+  const targetSeconds = Math.max(0, currentFinishTimeSeconds - projectedGainSeconds);
 
   return { targetSeconds, projectedGainSeconds, tierLabel, ratePerMonth };
 }

@@ -1542,7 +1542,7 @@ export function DiagnosticRadarBlock({
       const monthIdx = (now.getMonth() + i) % 12;
       return {
         month: monthNames[monthIdx],
-        tempo: Math.round(Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * i))),
+        tempo: Math.round(Math.max(0, currentSec - (evolutionProjection.ratePerMonth * i))),
       };
     });
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
@@ -1550,8 +1550,8 @@ export function DiagnosticRadarBlock({
   const gain12mFormatted = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
     const currentSec = validatingCompetition.time_in_seconds;
-    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
-    const gain = currentSec - projectedAt12;
+    const projectedAt12 = Math.max(0, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const gain = Math.max(0, currentSec - projectedAt12);
     const m = Math.floor(gain / 60);
     const s = Math.round(gain % 60);
     return s > 0 ? `${m}min ${s}s` : `${m} min`;
@@ -1560,7 +1560,7 @@ export function DiagnosticRadarBlock({
   const resultadoEsperadoFormatted = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
     const currentSec = validatingCompetition.time_in_seconds;
-    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const projectedAt12 = Math.max(0, currentSec - (evolutionProjection.ratePerMonth * 12));
     const h = Math.floor(projectedAt12 / 3600);
     const m = Math.floor((projectedAt12 % 3600) / 60);
     const s = Math.round(projectedAt12 % 60);
@@ -1571,7 +1571,7 @@ export function DiagnosticRadarBlock({
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return 0;
     const currentSec = validatingCompetition.time_in_seconds;
     const totalGapSec = evolutionProjection.ratePerMonth * evolutionProjection.months;
-    return Math.max(3600, currentSec - totalGapSec);
+    return Math.max(0, currentSec - totalGapSec);
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
 
 
