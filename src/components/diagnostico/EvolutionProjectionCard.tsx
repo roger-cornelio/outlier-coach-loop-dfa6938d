@@ -78,6 +78,14 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
       .map(d => ({ movement: d.movement, gap: secondsToTime(d.improvement_value) }));
   }, [diagnosticos]);
 
+  // Elite-specific: focus areas text (must be before early return)
+  const eliteFocusText = useMemo(() => {
+    const tierLabel = evolution?.tierLabel;
+    if (tierLabel !== 'Elite' || top3Gaps.length === 0) return null;
+    const areas = top3Gaps.map(g => g.movement).join(', ');
+    return `Foco técnico: ${areas}`;
+  }, [evolution?.tierLabel, top3Gaps]);
+
   useEffect(() => {
     if (!evolution || aiText || loadingAi) return;
 
@@ -119,6 +127,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
   if (!finishTime || diagnosticos.length === 0 || !evolution) return null;
 
   const { tierLabel, ratePerMonth, gapFormatted } = evolution;
+  const isElite = tierLabel === 'Elite';
 
   const projectedAt12 = Math.max(0, currentSeconds - (ratePerMonth * 12));
   const gainIn12 = Math.max(0, currentSeconds - projectedAt12);
@@ -141,7 +150,9 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Projeção de Evolução</h3>
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">
+                {isElite ? 'Performance de Elite' : 'Projeção de Evolução'}
+              </h3>
             </div>
             <div className="flex items-center gap-2">
               <Popover>
@@ -192,8 +203,30 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </div>
           </div>
 
-          {/* Copy / AI text */}
-          {loadingAi ? (
+          {/* Copy / AI text — Elite gets a specific message */}
+          {isElite ? (
+            <div className="space-y-2">
+              {loadingAi ? (
+                <div className="flex items-center gap-2 py-3 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Gerando análise personalizada...</span>
+                </div>
+              ) : aiText ? (
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {aiText}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  ⚡ Seu tempo já é referência. Neste nível, a evolução vem de <strong className="text-foreground">consistência</strong>, <strong className="text-foreground">transições mais rápidas</strong> e <strong className="text-foreground">execução sob fadiga</strong> — não de volume bruto. Cada segundo conta.
+                </p>
+              )}
+              {eliteFocusText && (
+                <p className="text-xs text-primary/80 font-medium">
+                  {eliteFocusText}
+                </p>
+              )}
+            </div>
+          ) : loadingAi ? (
             <div className="flex items-center gap-2 py-3 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">Gerando projeção personalizada...</span>
@@ -271,19 +304,25 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
             </div>
           )}
 
-          {/* Metric boxes */}
+          {/* Metric boxes — Elite shows different labels */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-foreground">{resultadoEsperado}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Resultado esperado</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                {isElite ? 'Projeção 12m' : 'Resultado esperado'}
+              </div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-primary">{ratePerMonth}s</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho/mês</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                {isElite ? 'Ajuste/mês' : 'Ganho/mês'}
+              </div>
             </div>
             <div className="bg-secondary/40 rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-foreground">{gainFormatted}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Ganho em 12m</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                {isElite ? 'Margem técnica' : 'Ganho em 12m'}
+              </div>
             </div>
           </div>
         </CardContent>
