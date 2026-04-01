@@ -1560,7 +1560,7 @@ export function DiagnosticRadarBlock({
   const resultadoEsperadoFormatted = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
     const currentSec = validatingCompetition.time_in_seconds;
-    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const projectedAt12 = Math.max(0, currentSec - (evolutionProjection.ratePerMonth * 12));
     const h = Math.floor(projectedAt12 / 3600);
     const m = Math.floor((projectedAt12 % 3600) / 60);
     const s = Math.round(projectedAt12 % 60);
