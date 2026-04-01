@@ -1550,8 +1550,8 @@ export function DiagnosticRadarBlock({
   const gain12mFormatted = useMemo(() => {
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return '';
     const currentSec = validatingCompetition.time_in_seconds;
-    const projectedAt12 = Math.max(3600, currentSec - (evolutionProjection.ratePerMonth * 12));
-    const gain = currentSec - projectedAt12;
+    const projectedAt12 = Math.max(0, currentSec - (evolutionProjection.ratePerMonth * 12));
+    const gain = Math.max(0, currentSec - projectedAt12);
     const m = Math.floor(gain / 60);
     const s = Math.round(gain % 60);
     return s > 0 ? `${m}min ${s}s` : `${m} min`;
