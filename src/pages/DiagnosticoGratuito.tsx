@@ -309,6 +309,10 @@ export default function DiagnosticoGratuito() {
         setRoxCoachFailed(true);
       }
 
+      // Determine processed diagnosticos for cache
+      const processedDiagnosticos = roxCoachDiagnosticos.length > 0 ? roxCoachDiagnosticos : [];
+      const wasRoxCoachFailed = !(roxData && !roxData.error && roxData.ok !== false && roxData.diagnostico_melhoria?.length > 0);
+
       // Save to localStorage for reuse during onboarding signup
       try {
         localStorage.setItem('outlier_free_diagnostic', JSON.stringify({
@@ -323,6 +327,36 @@ export default function DiagnosticoGratuito() {
         console.log('[DIAG_FREE] Saved diagnostic to localStorage for onboarding reuse');
       } catch (e) {
         console.warn('[DIAG_FREE] Failed to save to localStorage:', e);
+      }
+
+      // Save to sessionStorage for instant reload cache (30min TTL)
+      try {
+        const cacheKey = getDiagCacheKey(result.result_url);
+        const diagsToCache = (roxData?.diagnostico_melhoria || []).map((d: any) => {
+          const yourScore = parseScore(d.your_score);
+          const top1 = parseScore(d.top_1);
+          const improvement = parseScore(d.improvement_value) || Math.max(0, yourScore - top1);
+          return {
+            movement: d.movement || d.station || '',
+            metric: d.metric || '',
+            your_score: yourScore,
+            top_1: top1,
+            improvement_value: improvement,
+            percentage: parseScore(d.percentage),
+          };
+        }).filter((d: any) => d.top_1 > 0);
+
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          scrapedData: scrapeData,
+          scores: calculatedScores,
+          roxCoachDiagnosticos: diagsToCache,
+          roxCoachFailed: wasRoxCoachFailed,
+          textoIa: null, // Will be updated after AI generation
+          timestamp: Date.now(),
+        }));
+        console.log('[DIAG_FREE] Saved to sessionStorage cache');
+      } catch (e) {
+        // Ignore cache write failures
       }
 
       setStep('results');
