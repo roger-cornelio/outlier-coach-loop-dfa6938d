@@ -1,46 +1,28 @@
 
 
-## Plano: Corrigir ordem do nome de atletas brasileiros (Sobrenome, Nome → Nome Sobrenome)
+## Plano: Corrigir projeção negativa para atletas Elite
 
-### Problema
-O HYROX retorna nomes no formato "CORNÉLIO, ROGER" (sobrenome primeiro). O app exibe assim direto, quando deveria mostrar "Roger Cornélio".
+### O que está acontecendo?
+O sistema tem um "piso" fixo de 1 hora (3600 segundos) programado internamente. Quando um atleta Elite já tem um tempo **abaixo de 1 hora** (ex: 59:15), o sistema calcula que o "tempo projetado" seria 1:00:00 — que é **pior** do que o tempo atual. Isso gera aquele número negativo na tela (-7:-45).
 
-### Solução
+### O que vamos fazer?
 
-**1. Criar utilidade `normalizeAthleteName` no frontend**
+**1. Remover o piso artificial de 1 hora**
+O sistema não vai mais travar em 1:00:00. Se o atleta já faz 59 minutos, a projeção vai continuar calculando normalmente para baixo (58min, 57min, etc).
 
-**Arquivo**: `src/utils/displayName.ts`
+**2. Proteger contra números negativos**
+Mesmo que algum cálculo dê resultado estranho, o sistema nunca vai mostrar valores negativos. O mínimo será sempre zero.
 
-Adicionar função que detecta o formato "SOBRENOME, NOME" (com vírgula) e inverte para "NOME SOBRENOME":
+**3. Mensagem especial para atletas de Elite**
+Quando o ganho projetado for muito pequeno (menos de 1 minuto em 12 meses — o que é normal para quem já está no topo), ao invés de mostrar "ganho de 4 segundos", vamos exibir uma mensagem tipo:
 
-```typescript
-export function normalizeAthleteName(name: string): string {
-  const raw = name?.trim() ?? '';
-  if (!raw || !raw.includes(',')) return raw;
-  const [lastName, firstName] = raw.split(',').map(p => p.trim());
-  return [firstName, lastName].filter(Boolean).join(' ') || raw;
-}
-```
+> **"Performance de Elite"** — Seu tempo já é referência. A evolução agora está nos detalhes: consistência, transições e execução sob fadiga.
 
-**2. Aplicar normalização nos pontos de entrada dos dados**
+### Onde mexemos?
+- No cálculo de projeção (remover o piso de 1h)
+- Na tela de diagnóstico gratuito (proteger contra negativos)
+- No card de projeção de evolução (mesma proteção + mensagem Elite)
 
-Onde `athlete_name` do scraping é armazenado em `nome_atleta`:
-
-- `src/components/WelcomeScreen.tsx` — nas linhas onde seta `nome_atleta: selectedResult?.athlete_name` (4 ocorrências)
-- `src/pages/DiagnosticoGratuito.tsx` — onde seta `nome_atleta: selectedResult?.athlete_name`
-- `src/components/RoxCoachExtractor.tsx` — onde seta `nome_atleta: result.athlete_name`
-- `src/pages/ImportarProva.tsx` — onde usa `parsed.resumoRow.nome_atleta`
-
-Em cada ponto, envolver com `normalizeAthleteName()`.
-
-**3. Normalizar também nos resultados de busca (search-hyrox-athlete)**
-
-**Arquivo**: `supabase/functions/search-hyrox-athlete/index.ts` (linha 215)
-
-Aplicar a mesma lógica de inversão no `athleteName` retornado antes de pushá-lo nos results. Isso corrige na origem para que todos os consumidores recebam o nome correto.
-
-### Resumo
-- 1 utilidade adicionada (`displayName.ts`)
-- 1 edge function corrigida (search-hyrox-athlete)
-- 3-4 componentes atualizados para normalizar na entrada
+### Resultado esperado
+Atletas sub-1h não verão mais números negativos. Verão uma mensagem que reconhece seu nível e orienta sobre o que realmente importa nessa fase.
 
