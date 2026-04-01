@@ -379,6 +379,16 @@ export default function DiagnosticoGratuito() {
         }).then(({ data: aiData }) => {
           if (aiData?.texto_ia) {
             setTextoIa(aiData.texto_ia);
+            // Update cache with AI text
+            try {
+              const cacheKey = getDiagCacheKey(result.result_url);
+              const cached = sessionStorage.getItem(cacheKey);
+              if (cached) {
+                const c = JSON.parse(cached);
+                c.textoIa = aiData.texto_ia;
+                sessionStorage.setItem(cacheKey, JSON.stringify(c));
+              }
+            } catch (e) { /* ignore */ }
           }
         }).catch(err => {
           console.warn('[DIAG_FREE] AI parecer failed:', err);
