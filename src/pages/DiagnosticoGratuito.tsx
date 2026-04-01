@@ -170,6 +170,9 @@ export default function DiagnosticoGratuito() {
     }
   }
 
+  // Cache key for diagnostic results (sessionStorage)
+  const getDiagCacheKey = (url: string) => `diag_cache_${btoa(url).slice(0, 40)}`;
+
   async function handleSelectResult(result: SearchResult) {
     setSelectedResult(result);
     setStep('loading');
@@ -177,6 +180,34 @@ export default function DiagnosticoGratuito() {
     setRoxCoachDiagnosticos([]);
     setTextoIa(null);
     setTextoIaLoading(false);
+
+    // Check sessionStorage cache first
+    try {
+      const cacheKey = getDiagCacheKey(result.result_url);
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const c = JSON.parse(cached);
+        const ageMs = Date.now() - (c.timestamp || 0);
+        // Cache valid for 30 minutes
+        if (ageMs < 30 * 60 * 1000) {
+          console.log('[DIAG_FREE] Cache hit for', result.athlete_name);
+          setScrapedData(c.scrapedData);
+          setScores(c.scores || []);
+          if (c.roxCoachDiagnosticos?.length > 0) {
+            setRoxCoachDiagnosticos(c.roxCoachDiagnosticos);
+            setRoxCoachFailed(false);
+          } else {
+            setRoxCoachFailed(c.roxCoachFailed ?? true);
+          }
+          setTextoIa(c.textoIa || null);
+          setStep('results');
+          return;
+        }
+      }
+    } catch (e) {
+      // Cache read failed, proceed normally
+    }
+
     try {
       // Call scrape + RoxCoach proxy in parallel
       const [scrapeResponse, roxCoachResponse] = await Promise.all([
