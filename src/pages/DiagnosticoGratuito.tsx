@@ -504,11 +504,15 @@ export default function DiagnosticoGratuito() {
   const classification = totalSeconds > 0 ? getClassificationBadge(totalSeconds) : null;
 
   const totalGap = useMemo(() => {
+    if (roxCoachDiagnosticos.length > 0) {
+      return roxCoachDiagnosticos.reduce((sum, d) => sum + Math.max(0, d.improvement_value), 0);
+    }
+    // Fallback: percentile-based estimate when no RoxCoach data
     return scores.reduce((sum, s) => {
       const gap = Math.max(0, (80 - s.percentile_value) * 1.2);
       return sum + gap;
     }, 0);
-  }, [scores]);
+  }, [roxCoachDiagnosticos, scores]);
 
   const evolution = useMemo(() => {
     if (totalSeconds <= 0 || totalGap <= 0) return null;
