@@ -67,7 +67,7 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
 
   const targetSeconds = useMemo(() => {
     if (!evolution || currentSeconds <= 0) return 0;
-    return Math.max(3600, currentSeconds - totalGap);
+    return Math.max(0, currentSeconds - totalGap);
   }, [currentSeconds, totalGap, evolution]);
 
   const top3Gaps = useMemo(() => {
