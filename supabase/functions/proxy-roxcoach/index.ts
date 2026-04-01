@@ -49,6 +49,76 @@ function buildExternalUrl(paramsInput: {
   return `${EXTERNAL_API_BASE}?${params.toString()}`;
 }
 
+/**
+ * Check if we have cached diagnostic data in the DB for this source_url.
+ * Returns { resumo, diagnosticos, splits } or null.
+ */
+async function checkDbCache(supabase: any, sourceUrl: string) {
+  try {
+    const { data: resumo } = await supabase
+      .from('diagnostico_resumo')
+      .select('id, nome_atleta, evento, divisao, finish_time, posicao_categoria, posicao_geral, run_total, workout_total, texto_ia, source_url, temporada')
+      .eq('source_url', sourceUrl)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!resumo?.id) return null;
+
+    const [diagResult, splitsResult] = await Promise.all([
+      supabase
+        .from('diagnostico_melhoria')
+        .select('movement, metric, value, your_score, top_1, improvement_value, percentage, total_improvement')
+        .eq('resumo_id', resumo.id),
+      supabase
+        .from('tempos_splits')
+        .select('split_name, time')
+        .eq('resumo_id', resumo.id),
+    ]);
+
+    const diagnosticos = diagResult.data || [];
+    const splits = splitsResult.data || [];
+
+    if (diagnosticos.length === 0 && splits.length === 0) return null;
+
+    console.log(`[proxy-roxcoach] DB cache HIT for ${sourceUrl} — ${diagnosticos.length} diagnostics, ${splits.length} splits`);
+
+    return {
+      resumo: {
+        nome_atleta: resumo.nome_atleta,
+        temporada: resumo.temporada,
+        evento: resumo.evento,
+        divisao: resumo.divisao,
+        finish_time: resumo.finish_time,
+        posicao_categoria: resumo.posicao_categoria,
+        posicao_geral: resumo.posicao_geral,
+        run_total: resumo.run_total,
+        workout_total: resumo.workout_total,
+        texto_ia: resumo.texto_ia,
+        source_url: resumo.source_url,
+      },
+      diagnostico_melhoria: diagnosticos.map((d: any) => ({
+        movement: d.movement,
+        metric: d.metric,
+        value: d.value,
+        your_score: d.your_score,
+        top_1: d.top_1,
+        improvement_value: d.improvement_value,
+        percentage: d.percentage,
+        total_improvement: d.total_improvement,
+      })),
+      tempos_splits: splits.map((s: any) => ({
+        split_name: s.split_name,
+        time: s.time,
+      })),
+      _source: 'db_cache',
+    };
+  } catch (err) {
+    console.warn('[proxy-roxcoach] DB cache check failed:', getErrorMessage(err));
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,9 +129,12 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let userId = 'anonymous';
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
     if (authHeader) {
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseAnonKey, {
           global: { headers: { Authorization: authHeader } },
@@ -89,6 +162,18 @@ Deno.serve(async (req) => {
 
     console.log(`[proxy-roxcoach] User ${userId} | athlete=${athlete_name} event=${event_name} division=${division} season=${season_id}`);
 
+    // 1. Check DB cache first (instant response if available)
+    if (result_url) {
+      const cached = await checkDbCache(supabaseAdmin, result_url);
+      if (cached) {
+        return new Response(JSON.stringify(cached), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // 2. No cache — call external API
     let idp = '';
     let eventCode = '';
     if (result_url) {

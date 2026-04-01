@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) {
-      console.error('[generate-diagnostic-ai] ANTHROPIC_API_KEY not configured');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('[generate-diagnostic-ai] LOVABLE_API_KEY not configured');
       return new Response(JSON.stringify({ error: 'API key não configurada' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -102,21 +102,20 @@ Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extr
     console.log(`[generate-diagnostic-ai] Coach style: ${coach_style}, athlete: ${athlete_name}`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${lovableApiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1500,
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'user', content: systemPrompt },
         ],
+        max_tokens: 1500,
       }),
       signal: controller.signal,
     });
@@ -125,7 +124,7 @@ Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extr
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[generate-diagnostic-ai] Anthropic error ${response.status}: ${errText}`);
+      console.error(`[generate-diagnostic-ai] AI error ${response.status}: ${errText}`);
       return new Response(JSON.stringify({ error: `Erro na API de IA: ${response.status}` }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -133,7 +132,7 @@ Com base no gargalo identificado acima, forneça 2-3 diretrizes práticas e extr
     }
 
     const result = await response.json();
-    const text = result?.content?.[0]?.text || '';
+    const text = result?.choices?.[0]?.message?.content || '';
 
     console.log(`[generate-diagnostic-ai] Generated ${text.length} chars for ${athlete_name}`);
 
