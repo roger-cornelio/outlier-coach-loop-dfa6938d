@@ -78,6 +78,14 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
       .map(d => ({ movement: d.movement, gap: secondsToTime(d.improvement_value) }));
   }, [diagnosticos]);
 
+  // Elite-specific: focus areas text (must be before early return)
+  const eliteFocusText = useMemo(() => {
+    const tierLabel = evolution?.tierLabel;
+    if (tierLabel !== 'Elite' || top3Gaps.length === 0) return null;
+    const areas = top3Gaps.map(g => g.movement).join(', ');
+    return `Foco técnico: ${areas}`;
+  }, [evolution?.tierLabel, top3Gaps]);
+
   useEffect(() => {
     if (!evolution || aiText || loadingAi) return;
 
@@ -129,13 +137,6 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
     return s > 0 ? `${m}min ${s}s` : `${m} minutos`;
   })();
   const resultadoEsperado = formatSecondsToHHMMSS(projectedAt12);
-
-  // Elite-specific: focus areas text
-  const eliteFocusText = useMemo(() => {
-    if (!isElite || top3Gaps.length === 0) return null;
-    const areas = top3Gaps.map(g => g.movement).join(', ');
-    return `Foco técnico: ${areas}`;
-  }, [isElite, top3Gaps]);
 
   return (
     <motion.div
