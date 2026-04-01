@@ -120,8 +120,8 @@ export default function EvolutionProjectionCard({ finishTime, diagnosticos, athl
 
   const { tierLabel, ratePerMonth, gapFormatted } = evolution;
 
-  const projectedAt12 = Math.max(3600, currentSeconds - (ratePerMonth * 12));
-  const gainIn12 = currentSeconds - projectedAt12;
+  const projectedAt12 = Math.max(0, currentSeconds - (ratePerMonth * 12));
+  const gainIn12 = Math.max(0, currentSeconds - projectedAt12);
   const gainFormatted = (() => {
     const m = Math.floor(gainIn12 / 60);
     const s = Math.round(gainIn12 % 60);

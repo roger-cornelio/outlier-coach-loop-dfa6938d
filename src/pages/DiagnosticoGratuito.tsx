@@ -528,8 +528,8 @@ export default function DiagnosticoGratuito() {
     return points;
   }, [totalSeconds, evolution]);
 
-  const projectedAt12 = evolution ? Math.max(3600, totalSeconds - (evolution.ratePerMonth * 12)) : 0;
-  const gainIn12 = totalSeconds - projectedAt12;
+  const projectedAt12 = evolution ? Math.max(0, totalSeconds - (evolution.ratePerMonth * 12)) : 0;
+  const gainIn12 = Math.max(0, totalSeconds - projectedAt12);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

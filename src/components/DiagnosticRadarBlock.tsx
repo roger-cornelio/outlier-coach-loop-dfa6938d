@@ -1571,7 +1571,7 @@ export function DiagnosticRadarBlock({
     if (!evolutionProjection || !validatingCompetition?.time_in_seconds) return 0;
     const currentSec = validatingCompetition.time_in_seconds;
     const totalGapSec = evolutionProjection.ratePerMonth * evolutionProjection.months;
-    return Math.max(3600, currentSec - totalGapSec);
+    return Math.max(0, currentSec - totalGapSec);
   }, [evolutionProjection, validatingCompetition?.time_in_seconds]);
 
 
