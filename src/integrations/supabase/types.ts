@@ -834,6 +834,39 @@ export type Database = {
           },
         ]
       }
+      diagnostic_leads: {
+        Row: {
+          athlete_name_searched: string
+          converted: boolean
+          created_at: string
+          division: string | null
+          event_name: string | null
+          id: string
+          result_url: string | null
+          user_id: string
+        }
+        Insert: {
+          athlete_name_searched: string
+          converted?: boolean
+          created_at?: string
+          division?: string | null
+          event_name?: string | null
+          id?: string
+          result_url?: string | null
+          user_id: string
+        }
+        Update: {
+          athlete_name_searched?: string
+          converted?: boolean
+          created_at?: string
+          division?: string | null
+          event_name?: string | null
+          id?: string
+          result_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diagnostico_melhoria: {
         Row: {
           atleta_id: string

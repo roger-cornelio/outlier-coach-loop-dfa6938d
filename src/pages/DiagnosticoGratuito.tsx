@@ -10,6 +10,8 @@ import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeAthleteName } from '@/utils/displayName';
+import { useAuth } from '@/hooks/useAuth';
+import { isNameSimilar } from '@/utils/nameSimilarity';
 
 import { FatigueIndexCard } from '@/components/evolution/FatigueIndexCard';
 import { calculateEvolutionTimeframe } from '@/utils/evolutionTimeframe';
@@ -106,6 +108,8 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
+  const { user, profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -120,8 +124,23 @@ export default function DiagnosticoGratuito() {
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const [textoIa, setTextoIa] = useState<string | null>(null);
   const [textoIaLoading, setTextoIaLoading] = useState(false);
+  const [nameMismatchWarning, setNameMismatchWarning] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
+
+  // Redirect to signup if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login?mode=signup&redirect=/diagnostico-gratuito');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Pre-fill search with profile name
+  useEffect(() => {
+    if (profile?.name && !searchQuery) {
+      setSearchQuery(profile.name);
+    }
+  }, [profile?.name]);
 
   const executeSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
@@ -164,7 +183,15 @@ export default function DiagnosticoGratuito() {
 
   function handleQueryChange(value: string) {
     setSearchQuery(value);
+    setNameMismatchWarning(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    
+    // Check name similarity against registered profile name
+    if (profile?.name && value.trim().length >= 3 && !isNameSimilar(profile.name, value.trim())) {
+      setNameMismatchWarning(true);
+      return; // Don't search if name is too different
+    }
+    
     if (value.trim().length >= 3) {
       debounceRef.current = setTimeout(() => executeSearch(value), 800);
     }
@@ -360,6 +387,20 @@ export default function DiagnosticoGratuito() {
       }
 
       setStep('results');
+
+      // Save lead to CRM table (non-blocking)
+      if (user?.id) {
+        supabase.from('diagnostic_leads').insert({
+          user_id: user.id,
+          athlete_name_searched: result.athlete_name,
+          event_name: result.event_name,
+          division: result.division,
+          result_url: result.result_url,
+        }).then(({ error: leadError }) => {
+          if (leadError) console.warn('[DIAG_FREE] Lead tracking error:', leadError);
+          else console.log('[DIAG_FREE] Lead saved to CRM');
+        });
+      }
 
       // Fire AI parecer generation (non-blocking)
       const roxDiagData = roxData?.diagnostico_melhoria || [];
@@ -641,7 +682,7 @@ export default function DiagnosticoGratuito() {
                   DIAGNÓSTICO <span className="text-primary">GRATUITO</span>
                 </h1>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                  Descubra seus pontos fortes e pontos fracos com base na sua última prova HYROX. Sem cadastro.
+                 Descubra seus pontos fortes e pontos fracos com base na sua última prova HYROX.
                 </p>
               </div>
 
@@ -700,7 +741,20 @@ export default function DiagnosticoGratuito() {
                 )}
               </div>
 
-              {!searchDone && !searching && consentGiven && (
+              {/* Name mismatch warning */}
+              {nameMismatchWarning && (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-center space-y-2">
+                  <ShieldAlert className="w-6 h-6 text-destructive mx-auto" />
+                  <p className="text-sm text-foreground font-medium">
+                    Busca restrita ao seu perfil
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Você só pode acessar diagnósticos vinculados ao seu nome cadastrado. Se seu nome de prova é diferente, ajuste incluindo variações (ex: nome do meio).
+                  </p>
+                </div>
+              )}
+
+              {!nameMismatchWarning && !searchDone && !searching && consentGiven && (
                 <p className="text-xs text-center text-muted-foreground">
                   Buscamos seu resultado diretamente no site oficial do HYROX
                 </p>
