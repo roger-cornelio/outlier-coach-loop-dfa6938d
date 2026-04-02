@@ -220,6 +220,108 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ══════════ NÚMEROS — MÉTRICAS DE IMPACTO ══════════ */}
+      <section className="px-6 py-16 bg-card/50">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { value: 500, suffix: '+', label: 'Diagnósticos gerados' },
+            { value: 12, suffix: 'min', label: 'Melhoria média identificada' },
+            { value: 98, suffix: '%', label: 'Precisão do diagnóstico' },
+            { value: 3, suffix: '', label: 'Open · Pro · Elite' },
+          ].map((item, i) => (
+            <motion.div key={i}
+              className="p-5 rounded-xl bg-card border border-border text-center"
+              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
+              <p className="font-display text-3xl md:text-4xl text-primary">
+                <AnimatedCounter target={item.value} suffix={item.suffix} />
+              </p>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">{item.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════ ANTES & DEPOIS ══════════ */}
+      <section className="px-6 py-20 max-w-5xl mx-auto">
+        <motion.h2
+          className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
+        >
+          TRANSFORMAÇÕES <span className="text-primary">REAIS</span>
+        </motion.h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {transformations.map((t, i) => (
+            <motion.div key={i}
+              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
+              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="font-display text-sm tracking-wide text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.city}</p>
+                </div>
+                <span className="text-[10px] font-display tracking-wider text-primary bg-primary/10 px-2 py-1 rounded-md">
+                  {t.from.level} → {t.to.level}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-center flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Antes</p>
+                  <p className="font-display text-lg text-muted-foreground line-through">{t.from.time}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="text-center flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Depois</p>
+                  <p className="font-display text-lg text-foreground">{t.to.time}</p>
+                </div>
+              </div>
+
+              <Progress value={t.progress} className="h-1.5 mb-3" />
+
+              <p className="text-primary font-display text-sm tracking-wide mb-2">-{t.improvement}</p>
+              <div className="flex flex-wrap gap-1">
+                {t.stations.map((s, j) => (
+                  <span key={j} className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-0.5">{s}</span>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════ DEPOIMENTOS ══════════ */}
+      <section className="px-6 py-20 bg-card/50">
+        <div className="max-w-5xl mx-auto">
+          <motion.h2
+            className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
+          >
+            QUEM JÁ É <span className="text-primary">OUTLIER</span>
+          </motion.h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <motion.div key={i}
+                className="p-6 rounded-2xl bg-card border border-border relative"
+                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
+                <Quote className="w-8 h-8 text-primary/20 absolute top-4 right-4" />
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6 italic">"{t.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-xs">
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-display tracking-wide text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.city} · {t.category}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ══════════ DIFERENCIAIS ══════════ */}
       <section className="px-6 py-20 max-w-5xl mx-auto">
         <motion.h2
