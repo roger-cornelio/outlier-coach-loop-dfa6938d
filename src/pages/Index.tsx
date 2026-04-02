@@ -42,6 +42,7 @@ import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 
 const LAST_ROUTE_KEY = "outlier_last_route";
@@ -353,6 +354,9 @@ const Index = () => {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Guided onboarding tour for new athletes */}
+        {showSidebar && <OnboardingTour />}
 
 
         {/* Debug Panel - only in development */}
