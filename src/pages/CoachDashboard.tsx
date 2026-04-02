@@ -72,6 +72,7 @@ export default function CoachDashboard() {
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
   const { setDiagnosticCounts, setFetchResult } = useLinkDebug();
+  const coachTour = useCoachOnboardingTour();
 
   // Coach display name editing
   const [isEditingName, setIsEditingName] = useState(false);
