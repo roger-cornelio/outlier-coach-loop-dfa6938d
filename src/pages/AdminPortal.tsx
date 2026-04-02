@@ -19,6 +19,7 @@ import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
 import { CRMAdmin } from "@/components/admin/CRMAdmin";
 import { ExerciseSuggestionsAdmin } from "@/components/admin/ExerciseSuggestionsAdmin";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { BusinessMetricsDashboard } from "@/components/admin/BusinessMetricsDashboard";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
