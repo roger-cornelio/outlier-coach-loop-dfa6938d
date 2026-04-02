@@ -36,7 +36,7 @@ import { CoachProgramsTab } from '@/components/CoachProgramsTab';
 import { CoachOnboarding } from '@/components/CoachOnboarding';
 import { CoachTour } from '@/components/CoachTour';
 import { useCoachOnboardingTour } from '@/hooks/useCoachOnboardingTour';
-import { HelpCircle } from 'lucide-react';
+
 // CoachFeedbacksTab removed - feedbacks now inline in CoachOverviewTab
 
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
