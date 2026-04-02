@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   ArrowRight, Target, Brain, BarChart3, Zap, Users, 
   TrendingUp, Shield, Activity, ChevronRight, Quote
