@@ -355,6 +355,9 @@ const Index = () => {
           </AnimatePresence>
         </div>
 
+        {/* Guided onboarding tour for new athletes */}
+        {showSidebar && <OnboardingTour />}
+
 
         {/* Debug Panel - only in development */}
         <DebugPanel
