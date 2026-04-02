@@ -19,6 +19,7 @@ import { StationValenceAdmin } from "@/components/admin/StationValenceAdmin";
 import { CRMAdmin } from "@/components/admin/CRMAdmin";
 import { ExerciseSuggestionsAdmin } from "@/components/admin/ExerciseSuggestionsAdmin";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { BusinessMetricsDashboard } from "@/components/admin/BusinessMetricsDashboard";
 import DemoLevelUp from "@/pages/DemoLevelUp";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,11 +45,12 @@ import {
   Grid3X3,
   Contact,
   Lightbulb,
-  BarChart3
+  BarChart3,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions" | "analytics";
+export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions" | "analytics" | "businessMetrics";
 
 interface NavItem {
   id: AdminView;
@@ -58,6 +60,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    id: "businessMetrics",
+    label: "Métricas",
+    icon: <TrendingUp className="w-5 h-5" />,
+    description: "LTV, churn, funil e conversão"
+  },
   {
     id: "analytics",
     label: "Analytics",
@@ -157,7 +165,7 @@ const navItems: NavItem[] = [
 ];
 
 const AdminPortal = () => {
-  const [adminView, setAdminView] = useState<AdminView>("crm");
+  const [adminView, setAdminView] = useState<AdminView>("businessMetrics");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, isAdmin, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -268,6 +276,8 @@ const AdminPortal = () => {
         return <DemoLevelUp />;
       case "analytics":
         return <AnalyticsDashboard />;
+      case "businessMetrics":
+        return <BusinessMetricsDashboard />;
       default:
         return <AthleteStatusAdmin />;
     }
