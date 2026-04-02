@@ -155,7 +155,7 @@ export default function Landing() {
           className="flex justify-center mt-16"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
         >
-          <Link to="/diagnostico-gratuito"
+          <Link to={diagnosticHref}
             className="font-display text-lg tracking-widest px-12 py-5 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40 flex items-center gap-3 justify-center">
             <Zap className="w-6 h-6" />
             RECEBER DIAGNÓSTICO

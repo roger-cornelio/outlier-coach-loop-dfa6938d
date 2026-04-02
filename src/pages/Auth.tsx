@@ -282,6 +282,9 @@ export default function Auth({ context = 'user' }: AuthProps) {
     }
 
     // CONTEXT: USER (default) - normal athlete flow
+    // Check for redirect param first
+    const redirectParam = searchParams.get('redirect');
+
     // If admin accessing /login, redirect to /painel-admin
     if (isAdmin) {
       console.log(`[NAV][Auth] from=/login to=/painel-admin reason=admin_at_user_login ts=${new Date().toISOString()}`);
@@ -293,6 +296,13 @@ export default function Auth({ context = 'user' }: AuthProps) {
     if (isCoach) {
       console.log(`[NAV][Auth] from=/login to=/coach/dashboard reason=coach_at_user_login ts=${new Date().toISOString()}`);
       navigate('/coach/dashboard');
+      return;
+    }
+
+    // If redirect param exists, go there (used by diagnostic gate flow)
+    if (redirectParam && redirectParam.startsWith('/')) {
+      console.log(`[NAV][Auth] from=/login to=${redirectParam} reason=redirect_param ts=${new Date().toISOString()}`);
+      navigate(redirectParam);
       return;
     }
 
