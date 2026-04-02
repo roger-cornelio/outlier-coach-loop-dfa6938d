@@ -1,15 +1,97 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { 
   ArrowRight, Target, Brain, BarChart3, Zap, Users, 
-  TrendingUp, Shield, Activity, ChevronRight 
+  TrendingUp, Shield, Activity, ChevronRight, Quote
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.6 } }),
 };
+
+function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!isInView) return;
+    const duration = 1500;
+    const steps = 40;
+    const increment = target / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [isInView, target]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+}
+
+const transformations = [
+  {
+    name: 'Marcos Oliveira',
+    city: 'São Paulo',
+    from: { level: 'Open', time: '1:32:45' },
+    to: { level: 'Pro', time: '1:18:22' },
+    improvement: '14:23',
+    stations: ['Sled Push', 'SkiErg', 'Wall Balls'],
+    progress: 72,
+  },
+  {
+    name: 'Carolina Mendes',
+    city: 'Rio de Janeiro',
+    from: { level: 'Pro', time: '1:12:30' },
+    to: { level: 'Elite', time: '0:59:15' },
+    improvement: '13:15',
+    stations: ['Rowing', 'Burpee Broad Jump', 'Farmers Carry'],
+    progress: 88,
+  },
+  {
+    name: 'Rafael Teixeira',
+    city: 'Belo Horizonte',
+    from: { level: 'Open', time: '1:45:10' },
+    to: { level: 'Open', time: '1:28:40' },
+    improvement: '16:30',
+    stations: ['Sled Pull', 'SkiErg', 'Sandbag Lunges'],
+    progress: 55,
+  },
+];
+
+const testimonials = [
+  {
+    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
+    name: 'Marcos O.',
+    city: 'São Paulo',
+    category: 'Open → Pro',
+    initials: 'MO',
+  },
+  {
+    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
+    name: 'Carolina M.',
+    city: 'Rio de Janeiro',
+    category: 'Pro → Elite',
+    initials: 'CM',
+  },
+  {
+    quote: 'Achava que meu problema era cardio, mas o diagnóstico mostrou que eram as estações. Mudou tudo.',
+    name: 'Rafael T.',
+    city: 'Belo Horizonte',
+    category: 'Open',
+    initials: 'RT',
+  },
+];
 
 export default function Landing() {
   return (
@@ -132,6 +214,108 @@ export default function Landing() {
                 <span className="font-display text-5xl text-primary/30">{item.step}</span>
                 <h3 className="font-display text-lg tracking-wide text-foreground mt-2 mb-2">{item.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ NÚMEROS — MÉTRICAS DE IMPACTO ══════════ */}
+      <section className="px-6 py-16 bg-card/50">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { value: 500, suffix: '+', label: 'Diagnósticos gerados' },
+            { value: 12, suffix: 'min', label: 'Melhoria média identificada' },
+            { value: 98, suffix: '%', label: 'Precisão do diagnóstico' },
+            { value: 3, suffix: '', label: 'Open · Pro · Elite' },
+          ].map((item, i) => (
+            <motion.div key={i}
+              className="p-5 rounded-xl bg-card border border-border text-center"
+              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
+              <p className="font-display text-3xl md:text-4xl text-primary">
+                <AnimatedCounter target={item.value} suffix={item.suffix} />
+              </p>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">{item.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════ ANTES & DEPOIS ══════════ */}
+      <section className="px-6 py-20 max-w-5xl mx-auto">
+        <motion.h2
+          className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
+        >
+          TRANSFORMAÇÕES <span className="text-primary">REAIS</span>
+        </motion.h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {transformations.map((t, i) => (
+            <motion.div key={i}
+              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
+              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="font-display text-sm tracking-wide text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.city}</p>
+                </div>
+                <span className="text-[10px] font-display tracking-wider text-primary bg-primary/10 px-2 py-1 rounded-md">
+                  {t.from.level} → {t.to.level}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-center flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Antes</p>
+                  <p className="font-display text-lg text-muted-foreground line-through">{t.from.time}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="text-center flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Depois</p>
+                  <p className="font-display text-lg text-foreground">{t.to.time}</p>
+                </div>
+              </div>
+
+              <Progress value={t.progress} className="h-1.5 mb-3" />
+
+              <p className="text-primary font-display text-sm tracking-wide mb-2">-{t.improvement}</p>
+              <div className="flex flex-wrap gap-1">
+                {t.stations.map((s, j) => (
+                  <span key={j} className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-0.5">{s}</span>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════ DEPOIMENTOS ══════════ */}
+      <section className="px-6 py-20 bg-card/50">
+        <div className="max-w-5xl mx-auto">
+          <motion.h2
+            className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
+          >
+            QUEM JÁ É <span className="text-primary">OUTLIER</span>
+          </motion.h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <motion.div key={i}
+                className="p-6 rounded-2xl bg-card border border-border relative"
+                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
+                <Quote className="w-8 h-8 text-primary/20 absolute top-4 right-4" />
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6 italic">"{t.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-xs">
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-display tracking-wide text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.city} · {t.category}</p>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
