@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X, HelpCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
