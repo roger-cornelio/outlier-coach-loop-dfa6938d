@@ -108,6 +108,8 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
+  const { user, profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -122,8 +124,23 @@ export default function DiagnosticoGratuito() {
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const [textoIa, setTextoIa] = useState<string | null>(null);
   const [textoIaLoading, setTextoIaLoading] = useState(false);
+  const [nameMismatchWarning, setNameMismatchWarning] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedRef = useRef('');
+
+  // Redirect to signup if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login?mode=signup&redirect=/diagnostico-gratuito');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Pre-fill search with profile name
+  useEffect(() => {
+    if (profile?.name && !searchQuery) {
+      setSearchQuery(profile.name);
+    }
+  }, [profile?.name]);
 
   const executeSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
