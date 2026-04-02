@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Users, LogOut, FileText,
   LayoutGrid, Send, Trash2, UserPlus, UserMinus,
-  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X
+  AlertTriangle, Upload, Calendar, Eye, MessageSquare, Pencil, Check, X, HelpCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -33,6 +33,10 @@ import { motion } from 'framer-motion';
 import { CoachSpreadsheetTab } from '@/components/CoachSpreadsheetTab';
 import { CoachOverviewTab } from '@/components/CoachOverviewTab';
 import { CoachProgramsTab } from '@/components/CoachProgramsTab';
+import { CoachOnboarding } from '@/components/CoachOnboarding';
+import { CoachTour } from '@/components/CoachTour';
+import { useCoachOnboardingTour } from '@/hooks/useCoachOnboardingTour';
+
 // CoachFeedbacksTab removed - feedbacks now inline in CoachOverviewTab
 
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
@@ -68,6 +72,7 @@ export default function CoachDashboard() {
   const { toast } = useToast();
   const { isQAActive } = useQADebugMode();
   const { setDiagnosticCounts, setFetchResult } = useLinkDebug();
+  const coachTour = useCoachOnboardingTour();
 
   // Coach display name editing
   const [isEditingName, setIsEditingName] = useState(false);
@@ -480,6 +485,19 @@ export default function CoachDashboard() {
               )}
               {isLoggingOut ? 'Saindo...' : 'Sair'}
             </Button>
+
+            {/* Help button to re-trigger tour */}
+            {!coachTour.onboardingActive && !coachTour.tourActive && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={coachTour.startTour}
+                className="h-9 w-9 text-muted-foreground hover:text-primary"
+                title="Tour guiado"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -518,6 +536,26 @@ export default function CoachDashboard() {
         open={showLinkAthleteModal}
         onOpenChange={setShowLinkAthleteModal}
         onSuccess={handleAthleteLinked}
+      />
+
+      {/* Coach Onboarding + Tour */}
+      <CoachOnboarding
+        active={coachTour.onboardingActive}
+        step={coachTour.onboardingStep}
+        totalSteps={coachTour.totalOnboardingSlides}
+        slide={coachTour.onboardingSlide}
+        onNext={coachTour.nextOnboardingStep}
+        onPrev={coachTour.prevOnboardingStep}
+        onSkip={coachTour.skipOnboarding}
+      />
+      <CoachTour
+        active={coachTour.tourActive}
+        step={coachTour.tourStep}
+        totalSteps={coachTour.totalTourSteps}
+        stepData={coachTour.tourStepData}
+        onNext={coachTour.nextTourStep}
+        onPrev={coachTour.prevTourStep}
+        onSkip={coachTour.skipTour}
       />
     </div>
   );
