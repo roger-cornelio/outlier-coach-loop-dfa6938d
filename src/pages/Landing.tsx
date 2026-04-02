@@ -94,6 +94,10 @@ const testimonials = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+  // If logged in, diagnostic CTA goes directly; if not, goes to signup with redirect
+  const diagnosticHref = user ? '/diagnostico-gratuito' : '/login?mode=signup&redirect=/diagnostico-gratuito';
+
   return (
     <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
       {/* ══════════ HEADER FIXO ══════════ */}
