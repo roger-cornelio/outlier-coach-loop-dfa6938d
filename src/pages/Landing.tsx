@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { 
   ArrowRight, Target, Brain, BarChart3, Zap, Users, 
-  TrendingUp, Shield, Activity, ChevronRight 
+  TrendingUp, Shield, Activity, ChevronRight, Quote
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
