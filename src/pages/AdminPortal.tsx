@@ -61,6 +61,12 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
+    id: "businessMetrics",
+    label: "Métricas",
+    icon: <TrendingUp className="w-5 h-5" />,
+    description: "LTV, churn, funil e conversão"
+  },
+  {
     id: "analytics",
     label: "Analytics",
     icon: <BarChart3 className="w-5 h-5" />,
