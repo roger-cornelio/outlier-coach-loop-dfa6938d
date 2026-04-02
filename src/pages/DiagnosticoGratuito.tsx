@@ -741,7 +741,20 @@ export default function DiagnosticoGratuito() {
                 )}
               </div>
 
-              {!searchDone && !searching && consentGiven && (
+              {/* Name mismatch warning */}
+              {nameMismatchWarning && (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-center space-y-2">
+                  <ShieldAlert className="w-6 h-6 text-destructive mx-auto" />
+                  <p className="text-sm text-foreground font-medium">
+                    Busca restrita ao seu perfil
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Você só pode acessar diagnósticos vinculados ao seu nome cadastrado. Se seu nome de prova é diferente, ajuste incluindo variações (ex: nome do meio).
+                  </p>
+                </div>
+              )}
+
+              {!nameMismatchWarning && !searchDone && !searching && consentGiven && (
                 <p className="text-xs text-center text-muted-foreground">
                   Buscamos seu resultado diretamente no site oficial do HYROX
                 </p>
