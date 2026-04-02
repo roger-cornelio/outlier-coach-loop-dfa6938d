@@ -537,6 +537,26 @@ export default function CoachDashboard() {
         onOpenChange={setShowLinkAthleteModal}
         onSuccess={handleAthleteLinked}
       />
+
+      {/* Coach Onboarding + Tour */}
+      <CoachOnboarding
+        active={coachTour.onboardingActive}
+        step={coachTour.onboardingStep}
+        totalSteps={coachTour.totalOnboardingSlides}
+        slide={coachTour.onboardingSlide}
+        onNext={coachTour.nextOnboardingStep}
+        onPrev={coachTour.prevOnboardingStep}
+        onSkip={coachTour.skipOnboarding}
+      />
+      <CoachTour
+        active={coachTour.tourActive}
+        step={coachTour.tourStep}
+        totalSteps={coachTour.totalTourSteps}
+        stepData={coachTour.tourStepData}
+        onNext={coachTour.nextTourStep}
+        onPrev={coachTour.prevTourStep}
+        onSkip={coachTour.skipTour}
+      />
     </div>
   );
 }
