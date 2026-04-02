@@ -388,6 +388,20 @@ export default function DiagnosticoGratuito() {
 
       setStep('results');
 
+      // Save lead to CRM table (non-blocking)
+      if (user?.id) {
+        supabase.from('diagnostic_leads').insert({
+          user_id: user.id,
+          athlete_name_searched: result.athlete_name,
+          event_name: result.event_name,
+          division: result.division,
+          result_url: result.result_url,
+        }).then(({ error: leadError }) => {
+          if (leadError) console.warn('[DIAG_FREE] Lead tracking error:', leadError);
+          else console.log('[DIAG_FREE] Lead saved to CRM');
+        });
+      }
+
       // Fire AI parecer generation (non-blocking)
       const roxDiagData = roxData?.diagnostico_melhoria || [];
       const roxSplitsData = roxData?.tempos_splits || [];
