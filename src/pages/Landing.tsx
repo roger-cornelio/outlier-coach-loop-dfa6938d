@@ -13,6 +13,86 @@ const fadeUp = {
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.6 } }),
 };
 
+function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!isInView) return;
+    const duration = 1500;
+    const steps = 40;
+    const increment = target / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [isInView, target]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+}
+
+const transformations = [
+  {
+    name: 'Marcos Oliveira',
+    city: 'São Paulo',
+    from: { level: 'Open', time: '1:32:45' },
+    to: { level: 'Pro', time: '1:18:22' },
+    improvement: '14:23',
+    stations: ['Sled Push', 'SkiErg', 'Wall Balls'],
+    progress: 72,
+  },
+  {
+    name: 'Carolina Mendes',
+    city: 'Rio de Janeiro',
+    from: { level: 'Pro', time: '1:12:30' },
+    to: { level: 'Elite', time: '0:59:15' },
+    improvement: '13:15',
+    stations: ['Rowing', 'Burpee Broad Jump', 'Farmers Carry'],
+    progress: 88,
+  },
+  {
+    name: 'Rafael Teixeira',
+    city: 'Belo Horizonte',
+    from: { level: 'Open', time: '1:45:10' },
+    to: { level: 'Open', time: '1:28:40' },
+    improvement: '16:30',
+    stations: ['Sled Pull', 'SkiErg', 'Sandbag Lunges'],
+    progress: 55,
+  },
+];
+
+const testimonials = [
+  {
+    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
+    name: 'Marcos O.',
+    city: 'São Paulo',
+    category: 'Open → Pro',
+    initials: 'MO',
+  },
+  {
+    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
+    name: 'Carolina M.',
+    city: 'Rio de Janeiro',
+    category: 'Pro → Elite',
+    initials: 'CM',
+  },
+  {
+    quote: 'Achava que meu problema era cardio, mas o diagnóstico mostrou que eram as estações. Mudou tudo.',
+    name: 'Rafael T.',
+    city: 'Belo Horizonte',
+    category: 'Open',
+    initials: 'RT',
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
