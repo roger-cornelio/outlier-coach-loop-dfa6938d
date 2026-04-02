@@ -165,7 +165,7 @@ const navItems: NavItem[] = [
 ];
 
 const AdminPortal = () => {
-  const [adminView, setAdminView] = useState<AdminView>("crm");
+  const [adminView, setAdminView] = useState<AdminView>("businessMetrics");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, isAdmin, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
