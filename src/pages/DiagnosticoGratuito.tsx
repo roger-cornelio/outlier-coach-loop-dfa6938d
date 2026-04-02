@@ -183,7 +183,15 @@ export default function DiagnosticoGratuito() {
 
   function handleQueryChange(value: string) {
     setSearchQuery(value);
+    setNameMismatchWarning(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    
+    // Check name similarity against registered profile name
+    if (profile?.name && value.trim().length >= 3 && !isNameSimilar(profile.name, value.trim())) {
+      setNameMismatchWarning(true);
+      return; // Don't search if name is too different
+    }
+    
     if (value.trim().length >= 3) {
       debounceRef.current = setTimeout(() => executeSearch(value), 800);
     }
