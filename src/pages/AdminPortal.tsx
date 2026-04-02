@@ -276,6 +276,8 @@ const AdminPortal = () => {
         return <DemoLevelUp />;
       case "analytics":
         return <AnalyticsDashboard />;
+      case "businessMetrics":
+        return <BusinessMetricsDashboard />;
       default:
         return <AthleteStatusAdmin />;
     }
