@@ -755,16 +755,15 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     }
     
     // ─────────────────────────────────────────────────────────────────────────
-    // DENTRO DE "> COMENTÁRIO"
+    // DENTRO DE SEÇÃO DE COMENTÁRIO
     // ─────────────────────────────────────────────────────────────────────────
     if (inCommentSection) {
-      // Texto dentro de "> COMENTÁRIO" que NÃO estava em parênteses → ALERTA
-      alerts.push({
-        type: 'COMMENT_NOT_IN_PARENS',
-        message: 'Dentro de > COMENTÁRIO, todo comentário deve estar entre ( ).',
-        line: trimmed,
-        lineIndex
-      });
+      if (inFenceTrainingSection === false && /^\[COMENT[ÁA]RIO\]$/i.test(trimmed)) {
+        // Already handled above, skip
+        continue;
+      }
+      // Fence mode [COMENTÁRIO]: lines go directly to coachNotes
+      coachNotes.push(content);
       continue;
     }
     
