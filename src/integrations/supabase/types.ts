@@ -2392,6 +2392,7 @@ export type Database = {
         Returns: boolean
       }
       coach_find_athlete_by_email: { Args: { _email: string }; Returns: Json }
+      deactivate_coach: { Args: { _coach_user_id: string }; Returns: boolean }
       ensure_superadmin_role: {
         Args: { _email: string; _user_id: string }
         Returns: boolean
