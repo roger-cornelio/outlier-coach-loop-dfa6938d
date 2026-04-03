@@ -186,8 +186,8 @@ export default function DiagnosticoGratuito() {
     setNameMismatchWarning(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     
-    // Check name similarity against registered profile name
-    if (profile?.name && value.trim().length >= 3 && !isNameSimilar(profile.name, value.trim())) {
+    // Check name similarity against registered profile name (superadmin bypasses)
+    if (!isSuperAdmin && profile?.name && value.trim().length >= 3 && !isNameSimilar(profile.name, value.trim())) {
       setNameMismatchWarning(true);
       return; // Don't search if name is too different
     }

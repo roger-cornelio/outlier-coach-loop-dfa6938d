@@ -63,6 +63,22 @@ export function AppGate({ children }: AppGateProps) {
       console.log(`[GATE][AppGate] ALLOWING password reset flow - mode=reset detected ts=${new Date().toISOString()}`);
       return <>{children}</>;
     }
+
+    // Exceção: usuário logado em /diagnostico-gratuito → redirecionar (exceto superadmin)
+    if (pathname === '/diagnostico-gratuito' && state !== 'anon' && state !== 'loading' && !loading) {
+      if (state === 'superadmin') {
+        // Superadmin pode acessar diagnóstico logado
+        return <>{children}</>;
+      }
+      if (state === 'admin') {
+        return <Navigate to="/painel-admin" replace />;
+      }
+      if (state === 'coach') {
+        return <Navigate to="/coach/dashboard" replace />;
+      }
+      // athlete
+      return <Navigate to="/app" replace />;
+    }
     
     // Exceção: usuário já autenticado em /login → redirecionar para destino apropriado
     if (pathname === '/login' && state !== 'anon' && state !== 'loading' && !loading) {
