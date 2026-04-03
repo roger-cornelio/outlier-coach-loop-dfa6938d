@@ -127,8 +127,11 @@ const Index = () => {
     console.log(`[GATE][Index] currentView=${currentView} isSetupComplete=${onboardingDecision.isSetupComplete} first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} lastRoute=${lastRoute} viewRestoredFromStorage=${viewRestoredFromStorage} outlier_week_anchor=${outlierWeekAnchor} ts=${new Date().toISOString()}`);
     // ================================
 
+    // ===== PRIORIDADE 0: SUPERADMIN FORCE ONBOARDING (mesmo com setup completo) =====
+    const forceOnboarding = searchParams.get('force-onboarding') === '1';
+
     // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
-    if (onboardingDecision.isSetupComplete) {
+    if (onboardingDecision.isSetupComplete && !forceOnboarding) {
       // Sincronizar coach_style se necessário
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
