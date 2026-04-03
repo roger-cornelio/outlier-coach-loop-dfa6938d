@@ -251,12 +251,11 @@ function BlockResultRow({ result }: { result: any }) {
 }
 
 // ─── Inline Feedbacks Column (lazy-loaded with date filter) ───
-function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
-  const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 30));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
+function AthleteFeedbacksColumn({ athleteId, dateRange }: { athleteId: string; dateRange: DateRange }) {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [limit, setLimit] = useState(30);
 
   const fetchFeedbacks = useCallback(async () => {
     setLoading(true);
@@ -265,10 +264,10 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
         .from('workout_session_feedback' as any)
         .select('*')
         .eq('athlete_id', athleteId)
-        .gte('created_at', dateFrom.toISOString())
-        .lte('created_at', dateTo.toISOString())
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString())
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(limit);
       if (error) throw error;
       setFeedbacks(data || []);
     } catch (err) {
@@ -277,43 +276,22 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [athleteId, dateFrom, dateTo]);
+  }, [athleteId, dateRange.from, dateRange.to, limit]);
 
   useEffect(() => { fetchFeedbacks(); }, [fetchFeedbacks]);
+
+  const sumSessionTime = (blockResults: any[]): number | null => {
+    if (!blockResults?.length) return null;
+    const total = blockResults.reduce((sum: number, r: any) => sum + (r.timeInSeconds || 0), 0);
+    return total > 0 ? total : null;
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
         <MessageSquare className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Feedbacks</span>
-      </div>
-      {/* Date filters */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
-              <CalendarIcon className="w-3 h-3" />
-              {format(dateFrom, 'dd/MM', { locale: ptBR })}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)}
-              className={cn("p-3 pointer-events-auto")} />
-          </PopoverContent>
-        </Popover>
-        <span className="text-[10px] text-muted-foreground">→</span>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
-              <CalendarIcon className="w-3 h-3" />
-              {format(dateTo, 'dd/MM', { locale: ptBR })}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)}
-              className={cn("p-3 pointer-events-auto")} />
-          </PopoverContent>
-        </Popover>
+        {!loading && <Badge variant="secondary" className="text-[9px] h-4 px-1">{feedbacks.length}</Badge>}
       </div>
 
       {loading ? (
@@ -327,6 +305,8 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
           {feedbacks.map((fb: any) => {
             const dateStr = new Date(fb.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             const isExpanded = expandedId === fb.id;
+            const totalSec = sumSessionTime(fb.block_results);
+            const totalMin = totalSec ? Math.round(totalSec / 60) : null;
             return (
               <div key={fb.id} className="border border-border/30 rounded bg-secondary/30">
                 <button
@@ -334,13 +314,21 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
                   onClick={() => setExpandedId(isExpanded ? null : fb.id)}
                 >
                   <span className="font-medium text-foreground">{dateStr} — {fb.workout_day || 'Sessão'}</span>
-                  {fb.workout_stimulus && (
-                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{fb.workout_stimulus}</Badge>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {totalMin && (
+                      <Badge variant="outline" className="text-[9px] h-4 px-1 border-primary/30 text-primary">{totalMin}min</Badge>
+                    )}
+                    {fb.workout_stimulus && (
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1">{fb.workout_stimulus}</Badge>
+                    )}
+                  </div>
                   <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>
                 {isExpanded && (
                   <div className="px-2 pb-2 space-y-1">
+                    {totalMin && (
+                      <div className="text-[10px] text-primary font-medium mb-1">⏱ {totalMin} min total</div>
+                    )}
                     {fb.block_results?.map((r: any, i: number) => (
                       <BlockResultRow key={i} result={r} />
                     ))}
@@ -354,6 +342,11 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
               </div>
             );
           })}
+          {feedbacks.length >= limit && (
+            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setLimit(l => l + 30)}>
+              Carregar mais
+            </Button>
+          )}
         </div>
       )}
     </div>
