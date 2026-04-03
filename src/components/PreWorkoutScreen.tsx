@@ -181,7 +181,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="font-display text-3xl md:text-4xl uppercase tracking-[0.2em] font-bold text-primary mb-4"
+          className="font-display text-2xl sm:text-3xl md:text-4xl uppercase tracking-[0.2em] font-bold text-primary mb-4"
         >
           {currentCoachStyle}
         </motion.h1>
