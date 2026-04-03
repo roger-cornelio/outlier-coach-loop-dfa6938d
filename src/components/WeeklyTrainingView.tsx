@@ -270,8 +270,14 @@ export function WeeklyTrainingView() {
     setCurrentView('dashboard');
   };
 
+  const handlePullRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+  const { containerRef: pullRef, isRefreshing: isPullRefreshing, pullProgress, pullDistance } = usePullToRefresh(handlePullRefresh);
+
   return (
-    <div className="min-h-screen">
+    <div ref={pullRef} className="min-h-screen">
+      <PullToRefreshIndicator pullDistance={pullDistance} pullProgress={pullProgress} isRefreshing={isPullRefreshing} />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
