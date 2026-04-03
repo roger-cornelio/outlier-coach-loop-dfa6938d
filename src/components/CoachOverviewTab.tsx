@@ -534,8 +534,9 @@ function ExpandableAthleteRow({
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <RiskBadge risk={risk} />
+              <WeeklyStatusBadge athleteId={athlete.athlete_id} />
               {athlete.training_level && (
                 <span className="text-[10px] text-muted-foreground uppercase">{athlete.training_level}</span>
               )}
