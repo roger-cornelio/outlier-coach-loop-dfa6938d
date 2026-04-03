@@ -1,32 +1,18 @@
 
 
-## Plano: Adicionar "Prova Alvo" no onboarding do atleta
+## Plano: Adicionar sub-slogan na tela de boas-vindas
 
-### Problema
-O atleta só pode cadastrar sua prova alvo depois de completar o onboarding, na tela dedicada. Essa informação deveria ser coletada durante o setup inicial, já que impacta diretamente o dashboard (countdown, metas, periodização).
+### Mudança
 
-### Onde inserir
-No fluxo do onboarding (WelcomeScreen.tsx), entre o step `profileGoal` (qual seu objetivo) e `profileCta` (motivacional). Um novo step chamado `provaAlvo` onde o atleta:
+No `AthleteWelcomeScreen.tsx`, inserir duas linhas de sub-slogan entre o headline ("VOCÊ ESTÁ PRESTES A SE TORNAR OUTLIER.") e o card do coach:
 
-1. Vê a pergunta "Você já tem uma prova alvo?"
-2. Pode responder **SIM** → abre mini-formulário inline (busca em discovered_events + cadastro manual)
-3. Pode responder **AINDA NÃO** → pula para o próximo step
+**Linha 1:** "Treino comum não é mais uma opção."
+**Linha 2:** "Pronto para ser fora da curva?"
 
-### Mini-formulário inline (sem modal)
-- Busca por nome em `discovered_events` (reutilizando lógica do EventSearchPanel)
-- Se não encontrar, formulário manual simplificado: Nome da prova, Categoria (dropdown HYROX), Data, Cidade
-- Ao salvar, insere na tabela `athlete_races` com `race_type = 'ALVO'`
+### Estilo
+- `text-muted-foreground`, itálico, `text-lg md:text-xl`
+- Fade-in animado (delay após headline)
 
-### Sincronização
-- **CRM**: A prova alvo já é acessível via `athlete_races` que o CRM consulta. Adicionar o campo `onboarding_target_race` no profile com o nome da prova para consulta rápida.
-- **Dashboard**: Já usa `useAthleteRaces()` para mostrar a prova alvo — não precisa de mudança.
-
-### Arquivos alterados
-1. **`src/components/WelcomeScreen.tsx`** — Novo step `provaAlvo` entre `profileGoal` e `profileCta`, com busca de eventos + form manual inline
-2. **`src/components/admin/crm/VisaoGeralTab.tsx`** — Exibir prova alvo na ficha do CRM (se existir no `athlete_races`)
-
-### Fluxo atualizado
-```text
-profileConfig → profile → profileGoal → [NOVO: provaAlvo] → profileCta → coach → planSelection
-```
+### Arquivo alterado
+1. **`src/components/AthleteWelcomeScreen.tsx`** — Inserir `<motion.p>` com as duas linhas entre o headline (linha ~93) e o card do coach (linha ~96)
 
