@@ -201,7 +201,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
               </p>
             </div>
           ) : (
-            <p className="text-xl md:text-2xl text-white font-medium italic text-center leading-relaxed">
+            <p className="text-lg sm:text-xl md:text-2xl text-white font-medium italic text-center leading-relaxed">
               "{preWorkoutMessage}"
             </p>
           )}
