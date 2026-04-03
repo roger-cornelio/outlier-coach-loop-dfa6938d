@@ -37,7 +37,7 @@ import { CoachOnboarding } from '@/components/CoachOnboarding';
 import { CoachTour } from '@/components/CoachTour';
 import { useCoachOnboardingTour } from '@/hooks/useCoachOnboardingTour';
 
-// CoachFeedbacksTab removed - feedbacks now inline in CoachOverviewTab
+import { NotificationBell } from '@/components/NotificationBell';
 
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
