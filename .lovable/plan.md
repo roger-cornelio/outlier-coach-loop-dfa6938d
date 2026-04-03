@@ -1,53 +1,30 @@
 
 
-## Plano: QA Automatizado com Relatório
+## Plano: Correções Pendentes do QA
 
-### O que vou fazer
+### Status atual
+- ✅ RLS em `diagnostic_leads` — já corrigido
+- ⚠️ React ref warning em `AthleteWeekDebugBar` — precisa corrigir
+- ⏭️ 4 SKIPs — requerem teste manual (coach→atleta, upload, senha, signup)
 
-Rodar os testes do checklist usando browser automation + consultas ao banco, e gerar um relatório em `/mnt/documents/QA_REPORT_BETA.md` com status de cada item (PASS / FAIL / SKIP).
+### Correção: ref warning em AthleteWeekDebugBar
 
-### Pré-requisito: conta de teste
+**`src/components/AthleteWeekDebugBar.tsx`**
+- Envolver o componente com `React.forwardRef` para aceitar refs corretamente
+- Importar `forwardRef` do React
+- Manter a interface `AthleteWeekDebugBarProps` inalterada
 
-Preciso criar uma conta via signup no preview. Vou:
-1. Navegar até `/login` no preview
-2. Criar conta com email de teste (ex: `qa-test-XXXX@outlier.test`)
-3. Como auto-confirm está ativo, a conta fica pronta imediatamente
+### Atualização do relatório
 
-### Testes que posso rodar automaticamente
+**`/mnt/documents/QA_REPORT_BETA.md`**
+- Atualizar status do teste #11 (diagnostic_leads RLS) para PASS
+- Atualizar status do teste #35 (console warning) para PASS
+- Recalcular score final: de 83% → ~88% (37/42 PASS)
 
-| Categoria | Testes | Método |
-|---|---|---|
-| **Landing & rotas públicas** | Landing carrega, links funcionam, 404 funciona | Browser |
-| **Diagnóstico gratuito** | Busca atleta, renderização do parecer | Browser |
-| **Signup & onboarding** | Cadastro, tour guiado aparece, etapas do setup | Browser |
-| **Dashboard atleta** | Carrega após setup, navegação semanal, tabs | Browser |
-| **Login coach** | Tela carrega, validação de campos | Browser |
-| **Admin portal** | Tela carrega (se logado como superadmin) | Browser |
-| **Dados no banco** | Perfil criado, roles corretas, RLS funciona | psql |
-| **Mobile responsivo** | Principais telas em viewport 390x844 | Browser |
-
-### Testes que preciso SKIPAR (requerem ação manual)
-
-- Coach publicar treino completo (precisa de coach real com atletas)
-- Stripe/pagamento
-- Email de recuperação de senha (precisa de email real)
-- Upload de screenshot de prova
-
-### Entregável
-
-Arquivo `QA_REPORT_BETA.md` com:
-- Data/hora de execução
-- Cada teste com status (PASS/FAIL/SKIP)
-- Screenshots dos failures
-- Resumo final com % de aprovação
-
-### Sequência de execução
-
-1. Consultar banco (perfis, roles, tabelas) — validações de dados
-2. Testar rotas públicas (landing, diagnóstico, 404)
-3. Criar conta de teste via signup no preview
-4. Testar onboarding completo
-5. Testar dashboard do atleta
-6. Testar responsividade mobile
-7. Gerar relatório final
+### O que continua pendente (teste manual)
+Estes 4 itens não podem ser automatizados e ficam como checklist manual:
+1. Coach publica treino → atleta recebe
+2. Upload de screenshot de prova
+3. Recuperação de senha com email real
+4. Signup de conta nova (sem sessão ativa)
 
