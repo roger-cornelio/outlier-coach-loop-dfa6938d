@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
-import { z } from 'zod';
 import { useCoachApplication } from '@/hooks/useCoachApplication';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
