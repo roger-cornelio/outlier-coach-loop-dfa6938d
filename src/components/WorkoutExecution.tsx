@@ -789,6 +789,11 @@ export function WorkoutExecution() {
           </p>
         )}
       </main>
+
+      {/* Celebration overlay */}
+      {showCelebration && (
+        <WorkoutCelebration onComplete={handleCelebrationComplete} />
+      )}
     </div>
   );
 }

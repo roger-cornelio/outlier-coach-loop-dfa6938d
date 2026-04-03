@@ -61,6 +61,9 @@ const Index = () => {
   const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig, setAthleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
   
+  // Initialize dark mode
+  useDarkMode();
+  
 
   const navigate = useNavigate();
   const location = useLocation();
