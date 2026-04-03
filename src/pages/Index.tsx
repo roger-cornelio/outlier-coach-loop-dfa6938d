@@ -42,6 +42,8 @@ import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { useDarkMode } from "@/hooks/useDarkMode";
 import { OnboardingTour } from "@/components/OnboardingTour";
 
 
@@ -58,6 +60,9 @@ function loadLastRoute(): string | null {
 const Index = () => {
   const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig, setAthleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
+  
+  // Initialize dark mode
+  useDarkMode();
   
 
   const navigate = useNavigate();
@@ -334,9 +339,9 @@ const Index = () => {
           <AppSidebar />
         )}
         
-        {/* Mobile Nav - hamburger menu for mobile (only after setup complete) */}
+        {/* Mobile Bottom Nav - tab bar for mobile (only after setup complete) */}
         {showSidebar && (
-          <MobileNav />
+          <MobileBottomNav />
         )}
         
         {/* Main content area */}
@@ -344,10 +349,10 @@ const Index = () => {
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               className="min-h-screen pb-20"
             >
               {renderView()}

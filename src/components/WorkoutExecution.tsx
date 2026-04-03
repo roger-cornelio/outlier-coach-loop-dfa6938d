@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { WorkoutCelebration } from './WorkoutCelebration';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
@@ -119,6 +120,7 @@ export function WorkoutExecution() {
   // AMRAP reps input (only shown after timer stops for AMRAP blocks)
   const [inputReps, setInputReps] = useState('');
   const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // Tick all running block timers
   useEffect(() => {
@@ -369,8 +371,13 @@ export function WorkoutExecution() {
     };
     addWorkoutResult(sessionResult);
     console.log('[JOURNEY] Training session registered:', sessionResult, 'totalSeconds:', totalSeconds);
-    setCurrentView('feedback');
+    setShowCelebration(true);
   };
+
+  const handleCelebrationComplete = useCallback(() => {
+    setShowCelebration(false);
+    setCurrentView('feedback');
+  }, [setCurrentView]);
   
   const formatStopwatch = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -782,6 +789,11 @@ export function WorkoutExecution() {
           </p>
         )}
       </main>
+
+      {/* Celebration overlay */}
+      {showCelebration && (
+        <WorkoutCelebration onComplete={handleCelebrationComplete} />
+      )}
     </div>
   );
 }

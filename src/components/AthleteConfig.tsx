@@ -6,7 +6,9 @@ import { useCoachStylePersistence } from '@/hooks/useCoachStylePersistence';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { type PlanTier, type SessionDuration, type AthleteConfig as AthleteConfigType } from '@/types/outlier';
-import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users, RefreshCw, Wrench, Check } from 'lucide-react';
+import { ArrowLeft, AlertCircle, User, Trophy, TrendingUp, MessageCircle, Crown, Loader2, Users, RefreshCw, Wrench, Check, Moon, Sun } from 'lucide-react';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { Switch } from '@/components/ui/switch';
 import { useAdaptationPipeline } from '@/hooks/useAdaptationPipeline';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +57,7 @@ export function AthleteConfig() {
   const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
   const { saveProfileConfig, updateName, isSaving: isSavingProfile, resetAthleteData } = useAthleteProfile();
+  const { isDark, toggle: toggleDarkMode } = useDarkMode();
   
   // REGRA MESTRA: Detectar primeiro setup APENAS via first_setup_completed
   // NÃO usar inferência de coach_style ou outros campos
@@ -689,6 +692,26 @@ export function AthleteConfig() {
               <span className="font-body font-medium">{option.label}</span>
             </button>
           ))}
+        </div>
+      </motion.section>
+
+      {/* Aparência */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="space-y-3"
+      >
+        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          Aparência
+        </h3>
+        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
+          <div>
+            <p className="text-sm font-medium text-foreground">Modo Escuro</p>
+            <p className="text-xs text-muted-foreground">Alterar tema do aplicativo</p>
+          </div>
+          <Switch checked={isDark} onCheckedChange={toggleDarkMode} />
         </div>
       </motion.section>
 
