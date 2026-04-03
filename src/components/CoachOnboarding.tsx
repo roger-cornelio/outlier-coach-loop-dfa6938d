@@ -1,12 +1,19 @@
 /**
  * CoachOnboarding - 3-step fullscreen welcome for new coaches
+ * Uses Lucide icons in circles with OUTLIER palette.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, icons } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ONBOARDING_SLIDES, type OnboardingSlide } from '@/hooks/useCoachOnboardingTour';
+
+function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const IconComp = icons[name as keyof typeof icons];
+  if (!IconComp) return null;
+  return <IconComp className={className} />;
+}
 
 interface CoachOnboardingProps {
   active: boolean;
@@ -45,7 +52,9 @@ export function CoachOnboarding({ active, step, totalSteps, slide, onNext, onPre
           className="relative z-10 w-full max-w-md"
         >
           <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-            {/* Skip */}
+            {/* Orange gradient header */}
+            <div className="h-1 bg-gradient-to-r from-primary to-primary/60" />
+
             <button
               onClick={onSkip}
               className="absolute top-4 right-4 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10"
@@ -54,24 +63,22 @@ export function CoachOnboarding({ active, step, totalSteps, slide, onNext, onPre
               <X className="w-4 h-4" />
             </button>
 
-            {/* Progress */}
-            <div className="px-6 pt-5">
+            <div className="px-6 pt-4">
               <Progress value={progress} className="h-1.5" />
               <p className="text-xs text-muted-foreground mt-2 tracking-wide">
                 {step + 1} de {totalSteps}
               </p>
             </div>
 
-            {/* Content */}
             <div className="px-6 pt-6 pb-4">
               <motion.div
                 key={`icon-${step}`}
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                className="text-5xl mb-5 text-center"
+                className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5"
               >
-                {slide.icon}
+                <LucideIcon name={slide.lucideIcon} className="w-8 h-8 text-primary" />
               </motion.div>
 
               <h2 className="font-display text-xl md:text-2xl tracking-wide font-bold text-foreground mb-3 text-center">
@@ -92,7 +99,7 @@ export function CoachOnboarding({ active, step, totalSteps, slide, onNext, onPre
                       transition={{ delay: 0.15 + i * 0.1 }}
                       className="flex items-start gap-2.5 text-sm text-muted-foreground"
                     >
-                      <span className="text-primary mt-0.5">•</span>
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                       <span>{bullet}</span>
                     </motion.li>
                   ))}
@@ -112,7 +119,6 @@ export function CoachOnboarding({ active, step, totalSteps, slide, onNext, onPre
               ))}
             </div>
 
-            {/* Actions */}
             <div className="px-6 pb-6 pt-2 flex items-center gap-3">
               {!isFirst && (
                 <Button variant="ghost" size="sm" onClick={onPrev} className="gap-1">
@@ -128,7 +134,7 @@ export function CoachOnboarding({ active, step, totalSteps, slide, onNext, onPre
               <div className="flex-1" />
               <Button onClick={onNext} size="sm" className="gap-1 min-w-[120px]">
                 {isLast ? (
-                  'Vamos lá! 🔥'
+                  'Vamos lá! 💪'
                 ) : (
                   <>
                     Próximo
