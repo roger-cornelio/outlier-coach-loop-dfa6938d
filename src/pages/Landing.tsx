@@ -321,7 +321,7 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Link to="/coach-request"
-                className="inline-flex items-center gap-3 font-display text-base tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
+                className="inline-flex items-center gap-3 font-display text-sm sm:text-base tracking-widest px-6 py-3 sm:px-8 sm:py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
                 QUERO SER COACH OUTLIER
                 <ArrowRight className="w-5 h-5" />
               </Link>
