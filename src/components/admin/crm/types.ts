@@ -22,6 +22,8 @@ export interface UnifiedUser {
   onboarding_target_race: string | null;
   unavailable_equipment: any;
   equipment_notes: string | null;
+  telefone: string | null;
+  coach_style: string | null;
   // Computed
   computedStatus: UserStatus;
   leadScore: LeadScore;
@@ -55,4 +57,5 @@ export interface AthleteDetail {
   weeksSinceSignup: number;
   avgSessionsPerWeek: number;
   platformDuration: string;
+  targetRace: { nome: string; race_date: string; categoria: string; race_type: string } | null;
 }
