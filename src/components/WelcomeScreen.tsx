@@ -1025,7 +1025,7 @@ export function WelcomeScreen() {
                   <motion.button key={opt.key}
                     onClick={() => {
                       setProfileAnswers(prev => ({ ...prev, goal: opt.key }));
-                      setTimeout(() => setStep('profileCta'), 400);
+                      setTimeout(() => setStep('provaAlvo'), 400);
                     }}
                     className={`p-5 rounded-xl border transition-all text-center group flex flex-col items-center gap-3 ${
                       selected
