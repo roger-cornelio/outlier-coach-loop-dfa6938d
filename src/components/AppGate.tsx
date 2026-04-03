@@ -82,7 +82,12 @@ export function AppGate({ children }: AppGateProps) {
     
     // Exceção: usuário já autenticado em /login → redirecionar para destino apropriado
     if (pathname === '/login' && state !== 'anon' && state !== 'loading' && !loading) {
-      if (state === 'admin' || state === 'superadmin') {
+      // Superadmin entra como atleta pelo /login (acesso irrestrito, testar experiência)
+      if (state === 'superadmin') {
+        console.log(`[NAV][AppGate] from=${pathname} to=/app first_setup_completed=${firstSetupCompleted} reason=superadmin_as_athlete ts=${new Date().toISOString()}`);
+        return <Navigate to="/app" replace />;
+      }
+      if (state === 'admin') {
         console.log(`[NAV][AppGate] from=${pathname} to=/painel-admin first_setup_completed=${firstSetupCompleted} reason=admin_authenticated ts=${new Date().toISOString()}`);
         return <Navigate to="/painel-admin" replace />;
       }
