@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Loader2, 
   Shield, 
-  Users,
+  
   UserPlus, 
   Settings2, 
   Target,
