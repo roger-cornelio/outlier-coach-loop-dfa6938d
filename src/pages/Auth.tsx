@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus, AlertCircle, Phone } from 'lucide-react';
 import { CoachApplicationModal } from '@/components/CoachApplicationModal';
 import { QAActivationModal } from '@/components/QAActivationModal';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
@@ -28,6 +28,7 @@ const signupSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
   sexo: z.enum(['masculino', 'feminino'], { required_error: 'Selecione o sexo' }),
+  telefone: z.string().trim().min(8, 'Telefone inválido').max(20, 'Telefone muito longo'),
 });
 
 const forgotSchema = z.object({
@@ -51,7 +52,8 @@ export default function Auth({ context = 'user' }: AuthProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [sexo, setSexo] = useState<'masculino' | 'feminino' | ''>('');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string }>({});
+  const [telefone, setTelefone] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string; telefone?: string }>({});
   const [resetSent, setResetSent] = useState(false);
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
@@ -317,7 +319,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       if (mode === 'login') {
         loginSchema.parse({ email, password });
       } else if (mode === 'signup') {
-        signupSchema.parse({ name, email, password, sexo: sexo || undefined });
+        signupSchema.parse({ name, email, password, sexo: sexo || undefined, telefone });
       } else if (mode === 'reset-password') {
         resetPasswordSchema.parse({ password, confirmPassword });
       } else {
@@ -327,13 +329,14 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return true;
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string } = {};
+        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string; telefone?: string } = {};
         err.errors.forEach((error) => {
           if (error.path[0] === 'name') fieldErrors.name = error.message;
           if (error.path[0] === 'email') fieldErrors.email = error.message;
           if (error.path[0] === 'password') fieldErrors.password = error.message;
           if (error.path[0] === 'confirmPassword') fieldErrors.confirmPassword = error.message;
           if (error.path[0] === 'sexo') fieldErrors.sexo = error.message;
+          if (error.path[0] === 'telefone') fieldErrors.telefone = error.message;
         });
         setErrors(fieldErrors);
       }
@@ -380,7 +383,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       } else if (mode === 'signup') {
         const redirectUrl = `${window.location.origin}/`;
         
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -388,9 +391,18 @@ export default function Auth({ context = 'user' }: AuthProps) {
             data: {
               name: name.trim(),
               sexo: sexo,
+              telefone: telefone.trim(),
             },
           },
         });
+
+        if (!error && signUpData?.user) {
+          // Update profile with telefone (triggers CRM sync)
+          await supabase
+            .from('profiles')
+            .update({ telefone: telefone.trim() })
+            .eq('user_id', signUpData.user.id);
+        }
 
         if (error) {
           if (error.message.toLowerCase().includes('rate limit')) {
@@ -923,6 +935,26 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   </div>
                 )}
 
+                {/* Phone field (signup only) */}
+                {mode === 'signup' && (
+                  <div>
+                    <div className="relative">
+                      <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                      <input
+                        type="tel"
+                        value={telefone}
+                        onChange={(e) => setTelefone(e.target.value)}
+                        className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.telefone ? 'border-destructive/50' : 'border-border/30'
+                        }`}
+                        placeholder="Telefone (WhatsApp)"
+                      />
+                    </div>
+                    {errors.telefone && (
+                      <p className="text-destructive text-xs mt-1">{errors.telefone}</p>
+                    )}
+                  </div>
+                )}
                 {/* Sex selection (signup only) */}
                 {mode === 'signup' && (
                   <div>

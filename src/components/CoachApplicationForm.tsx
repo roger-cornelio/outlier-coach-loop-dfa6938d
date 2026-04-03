@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 import { useCoachApplication } from '@/hooks/useCoachApplication';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,13 +19,15 @@ import {
   XCircle,
   Send,
   AlertCircle,
-  Lock
+  Lock,
+  Phone
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const applicationSchema = z.object({
   full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100),
   email: z.string().trim().email('Email inválido').max(255),
+  telefone: z.string().trim().min(8, 'Telefone inválido').max(20, 'Telefone muito longo'),
   instagram: z.string().trim().max(50).optional(),
   box_name: z.string().trim().max(100).optional(),
   city: z.string().trim().max(100).optional(),
@@ -39,6 +42,7 @@ export function CoachApplicationForm() {
   
   const [formData, setFormData] = useState({
     full_name: profile?.name || '',
+    telefone: '',
     instagram: '',
     box_name: '',
     city: '',
@@ -50,6 +54,7 @@ export function CoachApplicationForm() {
     if (application && status === 'rejected') {
       setFormData({
         full_name: application.full_name || profile?.name || '',
+        telefone: '',
         instagram: application.instagram || '',
         box_name: application.box_name || '',
         city: application.city || '',
@@ -79,6 +84,13 @@ export function CoachApplicationForm() {
       });
 
       if (success) {
+        // Insert into CRM
+        await supabase.from('crm_clientes').insert({
+          nome: validated.full_name,
+          telefone: validated.telefone,
+          instagram: validated.instagram || null,
+        });
+        
         toast.success('Solicitação enviada!', {
           description: 'Aguarde a aprovação do administrador.',
         });
@@ -211,6 +223,7 @@ function ApplicationFormFields({
 }: {
   formData: {
     full_name: string;
+    telefone: string;
     instagram: string;
     box_name: string;
     city: string;
@@ -279,6 +292,27 @@ function ApplicationFormFields({
             </p>
           </div>
 
+          {/* Telefone */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Telefone (WhatsApp) *
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="tel"
+                value={formData.telefone}
+                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                  errors.telefone ? 'border-destructive' : 'border-border'
+                }`}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            {errors.telefone && (
+              <p className="text-destructive text-sm mt-1">{errors.telefone}</p>
+            )}
+          </div>
           {/* Instagram */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">

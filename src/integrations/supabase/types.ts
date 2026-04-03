@@ -1798,6 +1798,7 @@ export type Database = {
           status: string
           suspended_at: string | null
           suspended_by: string | null
+          telefone: string | null
           training_level: string | null
           unavailable_equipment: Json | null
           user_id: string
@@ -1823,6 +1824,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspended_by?: string | null
+          telefone?: string | null
           training_level?: string | null
           unavailable_equipment?: Json | null
           user_id: string
@@ -1848,6 +1850,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspended_by?: string | null
+          telefone?: string | null
           training_level?: string | null
           unavailable_equipment?: Json | null
           user_id?: string
