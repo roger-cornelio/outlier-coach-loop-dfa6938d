@@ -127,7 +127,7 @@ export function ResultRecording() {
           className="w-full max-w-md"
         >
           {/* WOD Info */}
-          <div className={`card-elevated p-6 mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
+          <div className={`card-elevated p-4 sm:p-6 mb-6 sm:mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
             <div className="flex items-center gap-2 mb-2">
               <h3 className="font-display text-xl">{mainWod.title}</h3>
               {isBenchmark && (
