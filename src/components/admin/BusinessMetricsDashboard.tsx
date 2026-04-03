@@ -85,7 +85,7 @@ export function BusinessMetricsDashboard() {
       supabase.from("coach_athletes").select("*").gte("created_at", prevRangeStr.from).lte("created_at", prevRangeStr.to),
       supabase.from("diagnostic_leads").select("*").gte("created_at", rangeStr.from).lte("created_at", rangeStr.to),
       supabase.from("diagnostic_leads").select("*").gte("created_at", prevRangeStr.from).lte("created_at", prevRangeStr.to),
-      supabase.from("profiles").select("id, name, role, created_at"),
+      supabase.from("profiles").select("id, user_id, name, role, created_at"),
     ]);
 
     setAthleteLinks(linksRes.data || []);
