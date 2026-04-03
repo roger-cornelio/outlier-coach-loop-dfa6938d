@@ -74,12 +74,13 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
     }
   }
 
-  // Recalculate percentages for all rows based on total improvement
-  const totalImprovement = rows.reduce((sum, d) => sum + d.improvement_value, 0);
-  if (totalImprovement > 0) {
+  // Recalculate percentages using weighted formula from the proportion engine
+  const focusResults = computeTrainingFocus(rows);
+  if (focusResults.length > 0) {
+    const focusMap = new Map(focusResults.map(f => [f.movement, f.focusPercent]));
     rows = rows.map(d => ({
       ...d,
-      percentage: d.improvement_value > 0 ? (d.improvement_value / totalImprovement) * 100 : 0,
+      percentage: focusMap.get(d.movement) ?? 0,
     }));
   }
 
