@@ -1,30 +1,50 @@
 
 
-## Plano: Correções Pendentes do QA
+## Plano: Badge Visual para "carga pro" / "carga open"
 
-### Status atual
-- ✅ RLS em `diagnostic_leads` — já corrigido
-- ⚠️ React ref warning em `AthleteWeekDebugBar` — precisa corrigir
-- ⏭️ 4 SKIPs — requerem teste manual (coach→atleta, upload, senha, signup)
+### O que muda
 
-### Correção: ref warning em AthleteWeekDebugBar
+Quando o coach escreve `Sled Push (carga pro)` ou `Wall Balls (carga open)`, o sistema reconhece o texto entre parênteses como uma **carga oficial HYROX** e exibe um badge com cor diferenciada (laranja HYROX) em vez do cinza padrão de parênteses.
 
-**`src/components/AthleteWeekDebugBar.tsx`**
-- Envolver o componente com `React.forwardRef` para aceitar refs corretamente
-- Importar `forwardRef` do React
-- Manter a interface `AthleteWeekDebugBarProps` inalterada
+### Arquivos alterados
 
-### Atualização do relatório
+**1. `src/config/hyroxOfficialWeights.ts`** (novo)
+- Dicionário com pesos oficiais por estação, divisão e sexo
+- Função `resolveHyroxLoad(station, division, sex)` → `{ kg, display }`
 
-**`/mnt/documents/QA_REPORT_BETA.md`**
-- Atualizar status do teste #11 (diagnostic_leads RLS) para PASS
-- Atualizar status do teste #35 (console warning) para PASS
-- Recalcular score final: de 83% → ~88% (37/42 PASS)
+```text
+┌─────────────────────┬──────────┬──────────┬──────────┬──────────┐
+│ Estação              │ Open M   │ Open F   │ Pro M    │ Pro F    │
+├─────────────────────┼──────────┼──────────┼──────────┼──────────┤
+│ Sled Push            │ 102 kg   │  72 kg   │ 152 kg   │ 102 kg   │
+│ Sled Pull            │  78 kg   │  48 kg   │ 103 kg   │  78 kg   │
+│ Farmers Carry        │ 2×24 kg  │ 2×16 kg  │ 2×32 kg  │ 2×24 kg  │
+│ Sandbag Lunges       │  20 kg   │  10 kg   │  30 kg   │  20 kg   │
+│ Wall Balls           │   6 kg   │   4 kg   │   9 kg   │   6 kg   │
+└─────────────────────┴──────────┴──────────┴──────────┴──────────┘
+```
 
-### O que continua pendente (teste manual)
-Estes 4 itens não podem ser automatizados e ficam como checklist manual:
-1. Coach publica treino → atleta recebe
-2. Upload de screenshot de prova
-3. Recuperação de senha com email real
-4. Signup de conta nova (sem sessão ativa)
+**2. `src/utils/lineSemanticExtractor.ts`**
+- Novo `SemanticType`: `'hyrox_load'`
+- Regex para detectar `(carga pro)` e `(carga open)` (case-insensitive)
+- Classificar como `hyrox_load` em vez de `parenthetical`
+- Adicionar cor ao `SEMANTIC_COLORS`:
+  ```
+  hyrox_load: { bg: 'bg-orange-500/15', text: 'text-orange-500', border: 'border-orange-500/30', label: 'Carga HYROX' }
+  ```
+
+**3. `src/components/DSLBlockRenderer.tsx`**
+- Tratar `hyrox_load` no renderer: badge laranja com ícone de escudo ou peso
+- Tooltip mostra o peso real resolvido (ex: "Carga Pro Masculino: 152kg")
+
+### Resultado visual
+
+```text
+Coach escreve:  Sled Push 50m (carga pro)
+                          ↓
+Renderiza:  [Sled Push] [50m] [🟠 carga pro]
+                 cinza   verde    laranja
+```
+
+O coach vê imediatamente que o sistema reconheceu a carga oficial HYROX pela cor laranja diferenciada.
 
