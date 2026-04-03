@@ -1,28 +1,19 @@
 
 
-## Plano: Loading com frases rotativas em vez de spinner
+## Plano: Superadmin testa onboarding sem criar conta nova
 
-### O que muda
+### Problema
+Hoje, o superadmin (roger.bm2016@gmail.com) já completou o setup, então sempre vai direto pro dashboard. Não tem como ver as telas que um atleta novo vê (escolha de coach, configuração, boas-vindas).
 
-**Arquivo:** `src/pages/Index.tsx` — linhas 236-242
+### Solução
+Quando o superadmin acessar `/app?force-onboarding=1`, o sistema ignora que o setup já foi feito e mostra o onboarding completo desde o início — como se fosse um atleta novo.
 
-Substituir o spinner genérico por uma sequência de frases que trocam automaticamente com animação suave:
+Qualquer outro usuário que tente usar esse parâmetro será ignorado. Só funciona para superadmin.
 
-1. **"Preparando sua experiência..."** (0s)
-2. **"Entendendo sua prova..."** (2.5s)
-3. **"Avaliando splits reais..."** (5s)
-4. **"Quase lá..."** (7.5s)
-
-Cada frase aparece com fade-in/fade-out usando Framer Motion (já importado no arquivo). O spinner continua visível mas menor, acima do texto.
-
-### Implementação
-
-- Criar um state `phraseIndex` com `useState(0)`
-- `useEffect` com `setInterval` de 2.5s que incrementa o índice ciclicamente
-- Array de frases fixo
-- Animação com `AnimatePresence` + `motion.p` (key = phraseIndex) para transição suave entre frases
+### Como usar
+- Acessar `outlierdev.lovable.app/app?force-onboarding=1` → vê todo o fluxo de onboarding
+- Acessar `outlierdev.lovable.app/app` normalmente → vai pro dashboard como sempre
 
 ### Arquivo alterado
-
-1. **`src/pages/Index.tsx`** — Bloco de loading (linhas 236-242)
+1. **`src/pages/Index.tsx`** — Adicionar verificação do parâmetro de URL antes da lógica de navegação
 
