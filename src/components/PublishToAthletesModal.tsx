@@ -100,7 +100,14 @@ export function PublishToAthletesModal({
   } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
   const [athletesWithExistingPlan, setAthletesWithExistingPlan] = useState<Set<string>>(new Set());
-
+  
+  // Adaptation state
+  const [athleteAdaptations, setAthleteAdaptations] = useState<Map<string, {
+    enabled: boolean;
+    emphasis: StationEmphasis[];
+    athleteName: string;
+  }>>(new Map());
+  const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
   // Calcula o período da semana a partir de weekStart
   const weekPeriodLabel = weekStart 
     ? (() => {
