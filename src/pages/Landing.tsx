@@ -239,9 +239,10 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {transformations.map((t, i) => (
             <motion.div key={i}
-              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
+              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors flex flex-col"
               initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
-              <div className="flex items-center justify-between mb-4">
+              
+              <div className="flex items-baseline justify-between mb-6">
                 <div>
                   <p className="font-display text-sm tracking-wide text-foreground">{t.name}</p>
                   <p className="text-xs text-muted-foreground">{t.city}</p>
@@ -251,37 +252,15 @@ export default function Landing() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-center flex-1">
-                  <p className="text-xs text-muted-foreground mb-1">Antes</p>
-                  <p className="font-display text-lg text-muted-foreground line-through">{t.from.time}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-primary flex-shrink-0" />
-                <div className="text-center flex-1">
-                  <p className="text-xs text-muted-foreground mb-1">Depois</p>
-                  <p className="font-display text-lg text-foreground">{t.to.time}</p>
-                </div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-display text-xl text-muted-foreground/60 line-through">{t.from.time}</p>
+                <ArrowRight className="w-4 h-4 text-primary/40 flex-shrink-0" />
+                <p className="font-display text-xl text-foreground">{t.to.time}</p>
               </div>
 
-              <Progress value={t.progress} className="h-1.5 mb-3" />
+              <p className="text-primary font-display text-xs tracking-widest mb-6">-{t.improvement}</p>
 
-              <p className="text-primary font-display text-sm tracking-wide mb-2">-{t.improvement}</p>
-              <div className="flex flex-wrap gap-1 mb-5">
-                {t.stations.map((s, j) => (
-                  <span key={j} className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-0.5">{s}</span>
-                ))}
-              </div>
-
-              <div className="border-t border-border/50 pt-4 relative">
-                <Quote className="w-6 h-6 text-primary/15 absolute top-3 right-0" />
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3 italic pr-6">"{t.quote}"</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-[10px]">
-                    {t.initials}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{t.name} · {t.city}</p>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground/70 leading-relaxed italic flex-1">"{t.quote}"</p>
             </motion.div>
           ))}
         </div>
