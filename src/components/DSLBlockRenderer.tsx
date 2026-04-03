@@ -25,7 +25,7 @@
  */
 
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell, ListOrdered, Activity } from 'lucide-react';
+import { MessageSquare, AlertTriangle, Repeat, Clock, Timer, Dumbbell, ListOrdered, Activity, Weight } from 'lucide-react';
 import { normalizeBlockTitle, normalizeRestLineForDisplay, isStructureLine, normalizeStructureLabel, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
 import type { WorkoutBlock } from '@/types/outlier';
 import { BLOCK_CATEGORIES } from '@/utils/categoryValidation';
@@ -247,6 +247,24 @@ export function SemanticExerciseLine({ line, className }: SemanticExerciseLinePr
           return (
             <span key={idx} className="text-muted-foreground italic text-xs">
               {seg.text}
+            </span>
+          );
+        }
+
+        // HYROX load badge — orange with weight icon
+        if (seg.type === 'hyrox_load') {
+          const colors = SEMANTIC_COLORS[seg.type];
+          return (
+            <span
+              key={idx}
+              className={cn(
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border uppercase tracking-wide',
+                colors.bg, colors.text, colors.border
+              )}
+              title={colors.label}
+            >
+              <Weight className="w-3 h-3" />
+              {seg.text.replace(/[()]/g, '')}
             </span>
           );
         }

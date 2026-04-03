@@ -13,7 +13,8 @@ export type SemanticType =
   | 'load' 
   | 'intensity' 
   | 'cadence' 
-  | 'parenthetical';
+  | 'parenthetical'
+  | 'hyrox_load';
 
 export interface SemanticSegment {
   type: SemanticType;
@@ -31,8 +32,10 @@ interface MetricPattern {
 }
 
 const METRIC_PATTERNS: MetricPattern[] = [
+  // HYROX load tags — must come BEFORE generic parenthetical
+  { type: 'hyrox_load', regex: /\(carga\s+(?:pro|open)\)/gi },
+
   // Parenthetical — tudo entre parênteses
-  { type: 'parenthetical', regex: /\([^)]*\)/g },
 
   // Pace: "pace 4:30/km", "pace 5:00"
   { type: 'cadence', regex: /\bpace\s+\d{1,2}:\d{2}(?:\/km)?\b/gi },
@@ -196,4 +199,5 @@ export const SEMANTIC_COLORS: Record<SemanticType, { bg: string; text: string; b
   intensity:     { bg: 'bg-red-600/20',        text: 'text-red-400',           border: 'border-red-600/30',      label: 'Intensidade' },
   cadence:       { bg: 'bg-purple-500/15',     text: 'text-purple-500',        border: 'border-purple-500/30',   label: 'Cadência' },
   parenthetical: { bg: 'bg-transparent',       text: 'text-muted-foreground',  border: '',                       label: 'Nota' },
+  hyrox_load:    { bg: 'bg-orange-500/15',      text: 'text-orange-500',        border: 'border-orange-500/30',   label: 'Carga HYROX' },
 };
