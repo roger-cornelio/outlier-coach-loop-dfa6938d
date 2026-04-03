@@ -108,7 +108,7 @@ interface RoxCoachDiagnostico {
 }
 
 export default function DiagnosticoGratuito() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState('');
