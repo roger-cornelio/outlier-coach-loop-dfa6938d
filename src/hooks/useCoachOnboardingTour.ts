@@ -5,13 +5,14 @@
  * 1. Onboarding (3 fullscreen slides) — first-time welcome
  * 2. Tour (5 steps) — guided dashboard walkthrough
  * 
- * Both persisted via localStorage.
+ * Both persisted via localStorage scoped by userId.
  */
 
 import { useState, useCallback } from 'react';
+import { useAppState } from './useAppState';
 
-const ONBOARDING_SEEN_KEY = 'outlier_coach_onboarding_seen';
-const TOUR_SEEN_KEY = 'outlier_coach_tour_seen';
+const ONBOARDING_SEEN_PREFIX = 'outlier_coach_onboarding_seen_';
+const TOUR_SEEN_PREFIX = 'outlier_coach_tour_seen_';
 
 // ── Onboarding Steps (fullscreen slides) ──
 
@@ -102,9 +103,15 @@ export const TOUR_STEPS: TourStep[] = [
 ];
 
 export function useCoachOnboardingTour() {
+  const { user } = useAppState();
+  const userId = user?.id;
+  const onboardingKey = userId ? `${ONBOARDING_SEEN_PREFIX}${userId}` : null;
+  const tourKey = userId ? `${TOUR_SEEN_PREFIX}${userId}` : null;
+
   // Onboarding state
   const [onboardingActive, setOnboardingActive] = useState(() => {
-    try { return !localStorage.getItem(ONBOARDING_SEEN_KEY); } catch { return false; }
+    if (!onboardingKey) return false;
+    try { return !localStorage.getItem(onboardingKey); } catch { return false; }
   });
   const [onboardingStep, setOnboardingStep] = useState(0);
 
@@ -113,37 +120,49 @@ export function useCoachOnboardingTour() {
   const [tourStep, setTourStep] = useState(0);
 
   // ── Onboarding controls ──
+  const completeOnboarding = useCallback(() => {
+    setOnboardingActive(false);
+    setOnboardingStep(0);
+    if (onboardingKey) {
+      try { localStorage.setItem(onboardingKey, 'true'); } catch {}
+    }
+    // Auto-start tour after onboarding
+    if (tourKey) {
+      const tourSeen = localStorage.getItem(tourKey);
+      if (!tourSeen) {
+        setTimeout(() => {
+          setTourStep(0);
+          setTourActive(true);
+        }, 500);
+      }
+    }
+  }, [onboardingKey, tourKey]);
+
   const nextOnboardingStep = useCallback(() => {
     if (onboardingStep < ONBOARDING_SLIDES.length - 1) {
       setOnboardingStep(s => s + 1);
     } else {
       completeOnboarding();
     }
-  }, [onboardingStep]);
+  }, [onboardingStep, completeOnboarding]);
 
   const prevOnboardingStep = useCallback(() => {
     if (onboardingStep > 0) setOnboardingStep(s => s - 1);
   }, [onboardingStep]);
-
-  const completeOnboarding = useCallback(() => {
-    setOnboardingActive(false);
-    setOnboardingStep(0);
-    try { localStorage.setItem(ONBOARDING_SEEN_KEY, 'true'); } catch {}
-    // Auto-start tour after onboarding
-    const tourSeen = localStorage.getItem(TOUR_SEEN_KEY);
-    if (!tourSeen) {
-      setTimeout(() => {
-        setTourStep(0);
-        setTourActive(true);
-      }, 500);
-    }
-  }, []);
 
   const skipOnboarding = useCallback(() => {
     completeOnboarding();
   }, [completeOnboarding]);
 
   // ── Tour controls ──
+  const completeTour = useCallback(() => {
+    setTourActive(false);
+    setTourStep(0);
+    if (tourKey) {
+      try { localStorage.setItem(tourKey, 'true'); } catch {}
+    }
+  }, [tourKey]);
+
   const startTour = useCallback(() => {
     setTourStep(0);
     setTourActive(true);
@@ -155,17 +174,11 @@ export function useCoachOnboardingTour() {
     } else {
       completeTour();
     }
-  }, [tourStep]);
+  }, [tourStep, completeTour]);
 
   const prevTourStep = useCallback(() => {
     if (tourStep > 0) setTourStep(s => s - 1);
   }, [tourStep]);
-
-  const completeTour = useCallback(() => {
-    setTourActive(false);
-    setTourStep(0);
-    try { localStorage.setItem(TOUR_SEEN_KEY, 'true'); } catch {}
-  }, []);
 
   const skipTour = useCallback(() => {
     completeTour();
