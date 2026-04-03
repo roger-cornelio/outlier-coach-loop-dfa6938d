@@ -873,6 +873,7 @@ export function PublishToAthletesModal({
           </DialogTitle>
           <DialogDescription>
             {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
+            {currentStep === 'adaptation' && 'Revise a adaptação de volume por diagnóstico.'}
             {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
           </DialogDescription>
         </DialogHeader>
