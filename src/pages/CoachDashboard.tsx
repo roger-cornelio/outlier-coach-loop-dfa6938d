@@ -460,7 +460,7 @@ export default function CoachDashboard() {
                     </button>
                   ) : (
                     <>
-                      <h1 className="text-xl font-bold text-primary tracking-tight">
+                    <h1 className="text-lg sm:text-xl font-bold text-primary tracking-tight">
                         {coachDisplayName}
                       </h1>
                       <button onClick={handleStartEditName} className="opacity-0 group-hover:opacity-100 transition-opacity">
