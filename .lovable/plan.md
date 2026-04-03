@@ -1,110 +1,105 @@
 
 
-## Plano: Polish Mobile nos Fluxos Críticos (430px)
+## Plano: Polish Completo — Mobile (430px) + Web — Admin, Coach e Atleta
 
-### Problema Identificado
+### Escopo Total
 
-Após análise visual e de código, os seguintes problemas existem na viewport de 430px:
-
----
-
-### 1. Landing Page — Header crowded
-
-O header fixo (`Landing.tsx` linha 87) usa `px-6 py-5` e coloca dois links ("Já Sou Outlier" e "Sou Coach") lado a lado com `gap-4`. Em 430px, isso fica apertado e o separador vertical (`span.h-5.border-r`) ocupa espaço desnecessário.
-
-**Correção:**
-- Reduzir padding do header para `px-4 py-3` no mobile
-- Diminuir font dos links para `text-xs` no mobile
-- Esconder separador vertical em mobile (`hidden sm:inline`)
-- Reduzir gap para `gap-2` no mobile
-
-### 2. Landing Page — CTA buttons overflow
-
-O botão "RECEBER DIAGNÓSTICO" (linha 140) usa `px-12 py-5 text-lg` — funciona mas é largo demais. O CTA final "COMECE AGORA" usa `px-16 py-6 text-xl` — pode sair da tela em 430px.
-
-**Correção:**
-- CTA hero: `px-8 py-4 text-base sm:px-12 sm:py-5 sm:text-lg`
-- CTA final: `px-10 py-5 text-lg sm:px-16 sm:py-6 sm:text-xl`
-
-### 3. Landing Page — Coach section button + badge wrap
-
-Na seção "Para Coaches" (linha 322-331), o botão e o badge de "aprovação sujeita" ficam em `flex-col sm:flex-row`, mas o botão usa `text-base px-8` — apertado em 430px.
-
-**Correção:**
-- Botão: `text-sm px-6 py-3 sm:text-base sm:px-8 sm:py-4`
-
-### 4. Dashboard — Main content padding
-
-`Dashboard.tsx` usa `px-6 py-6` no `<main>` (linha 341). Em 430px, 24px de padding cada lado consome 48px, deixando apenas 382px de conteúdo.
-
-**Correção:**
-- `px-4 sm:px-6 py-4 sm:py-6`
-
-### 5. WeeklyTrainingView — Header e content padding
-
-Header usa `px-6 py-4` (linha 274) e content usa `px-6 py-8` (linha 301). Bloco de exercício usa `p-6` (linha 491). Tudo consome padding excessivo em mobile.
-
-**Correção:**
-- Header: `px-4 sm:px-6 py-3 sm:py-4`
-- Content main: `px-4 sm:px-6 py-6 sm:py-8`
-- Block cards: `p-4 sm:p-6`
-- Day tabs: ajustar `min-w-[52px]` para `min-w-[44px]` e `text-lg` para `text-base sm:text-lg`
-- Day name header (`text-3xl` linha 375): `text-2xl sm:text-3xl`
-- Block title (`text-2xl` linha 499): `text-xl sm:text-2xl`
-
-### 6. WeeklyTrainingView — "Iniciar Treino" button
-
-O botão (linha 616-624) usa `text-xl px-8 py-5` — ocupa muito espaço vertical em mobile.
-
-**Correção:**
-- `text-lg px-6 py-4 sm:text-xl sm:px-8 sm:py-5`
-
-### 7. CoachOverviewTab — Expanded grid 4-col em mobile
-
-O grid expandido (linha 507) usa `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`. Já é responsivo, mas o padding interno `px-3 sm:px-4` e o tamanho do conteúdo pode ser otimizado.
-
-**Correção:**
-- O grid já funciona razoavelmente, mas os 4 blocos em coluna no mobile geram scroll excessivo. Agrupar Stats + Perfil em um `grid-cols-2` interno quando em mobile:
-  ```
-  grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4
-  ```
-  Com Stats e Perfil ficando lado a lado no mobile, e Feedbacks + Ações abaixo.
-
-### 8. MobileNav — Menu hamburger overlap com conteúdo
-
-O botão fixo (linha 126) usa `top-4 left-4` e pode sobrepor conteúdo. Está funcionando, mas precisa de `safe-area-inset` para notch de iPhones.
-
-**Correção:**
-- Adicionar `pt-[env(safe-area-inset-top)]` ao botão
-- Ou: wrapper com `top-[max(1rem,env(safe-area-inset-top))]`
-
-### 9. Auth Page — Hero branding too large on mobile
-
-Logo "OUTLIER" em `size="hero"` (linha 724) e tagline com `tracking-[0.25em]` e `mb-12` (linha 715) deixam muito espaço antes do form de login.
-
-**Correção:**
-- Reduzir `mb-12` para `mb-8 sm:mb-12`
-- Ajustar OutlierWordmark com um size prop menor no mobile via CSS (ou usar `size="xl"` condicionalmente)
-
-### 10. Simulator Screen — Splits table text-xs pode ficar cortado
-
-Em `SimulatorScreen.tsx`, a tabela de splits (que vem do `TargetSplitsTable`) precisa de scroll horizontal em 430px.
-
-**Correção:**
-- Wrap com `overflow-x-auto` se não existir
+O app tem **3 acessos distintos** (Atleta, Coach, Admin) com ~25 telas/abas que precisam de polish responsivo. O trabalho será dividido em **4 batches** para execução organizada.
 
 ---
 
-### Arquivos alterados
+### Regra Geral de Polish (aplicada a todos os arquivos)
 
-1. **`src/pages/Landing.tsx`** — Header padding, CTA sizes, coach button
-2. **`src/components/Dashboard.tsx`** — Main padding
-3. **`src/components/WeeklyTrainingView.tsx`** — Header, content, block cards, tabs, CTA
-4. **`src/components/CoachOverviewTab.tsx`** — Expanded grid layout mobile
-5. **`src/components/MobileNav.tsx`** — Safe area inset
-6. **`src/pages/Auth.tsx`** — Hero spacing reduction
+```text
+PADDING:     px-6 → px-3 sm:px-6    |  py-6 → py-4 sm:py-6
+CARDS:       p-6  → p-4 sm:p-6      |  p-8 → p-5 sm:p-8
+FONTS:       text-3xl → text-2xl sm:text-3xl
+             text-2xl → text-xl sm:text-2xl
+             text-xl  → text-lg sm:text-xl
+BUTTONS:     px-8 py-5 → px-6 py-4 sm:px-8 sm:py-5
+GAPS:        gap-6 → gap-4 sm:gap-6
+GRIDS:       Garantir grid-cols-1 no mobile com sm:grid-cols-2
+MODALS:      DialogContent → max-w-[95vw] sm:max-w-lg, p-4 sm:p-6
+TABS:        text-xs no mobile, text-sm no sm:
+ICONS:       w-6 h-6 → w-5 h-5 sm:w-6 sm:h-6
+OVERFLOW:    Tabelas com overflow-x-auto, textos com truncate
+```
 
-### Sem alteração no banco
+---
 
-Todas as mudanças são CSS/Tailwind — zero impacto em dados ou lógica.
+### Batch 1 — Fluxo Atleta (telas do dia-a-dia)
+
+| Arquivo | O que muda |
+|---|---|
+| `Dashboard.tsx` | Padding main já ajustado, verificar cards internos |
+| `WeeklyTrainingView.tsx` | Já ajustado, verificar exercício lines e completion buttons |
+| `WorkoutExecution.tsx` | Block cards p-6→p-4, timer font size, exercise text truncate |
+| `PreWorkoutScreen.tsx` | Coach message container padding, CTA button sizing |
+| `PerformanceFeedback.tsx` | Session summary table spacing, feedback form padding |
+| `ResultRecording.tsx` | Form inputs padding, submit button sizing |
+| `BenchmarksScreen.tsx` | Já bom, verificar tabs text-xs consistency |
+| `DiagnosticRadarBlock.tsx` | Charts height reduzir no mobile, section gaps |
+| `AthleteConfig.tsx` | Form sections padding, option cards sizing |
+| `AthleteHeroIdentity.tsx` | Avatar + text layout em mobile |
+
+### Batch 2 — Fluxo Coach (dashboard + tabs)
+
+| Arquivo | O que muda |
+|---|---|
+| `CoachDashboard.tsx` | Header padding px-4→px-3 mobile, tab triggers text-xs |
+| `CoachOverviewTab.tsx` | Já ajustado grid-cols-2, verificar KPI cards |
+| `CoachSpreadsheetTab.tsx` | Textarea e preview cards padding, action buttons |
+| `CoachProgramsTab.tsx` | Workout cards padding, action buttons row wrap |
+| `PublishToAthletesModal.tsx` | Modal max-width, athlete list scroll, step indicators |
+| `CoachAuth.tsx` | Login form centering, input sizes |
+| `CoachPending.tsx` | Container padding |
+| `LinkAthleteModal.tsx` | Modal padding e input sizes |
+
+### Batch 3 — Fluxo Admin
+
+| Arquivo | O que muda |
+|---|---|
+| `AdminPortal.tsx` | Sidebar: hidden no mobile com hamburger toggle, main content p-6→p-3 sm:p-6 |
+| `admin/BusinessMetricsDashboard.tsx` | KPI grid responsivo |
+| `admin/AnalyticsDashboard.tsx` | Charts container padding |
+| `admin/ServiceQualityDashboard.tsx` | Tables overflow-x-auto |
+| `admin/CRMAdmin.tsx` | Table responsivo |
+| `UserManagement.tsx` | Table/list responsivo |
+| `CoachApplicationsAdmin.tsx` | Cards padding |
+
+### Batch 4 — Páginas Standalone
+
+| Arquivo | O que muda |
+|---|---|
+| `Landing.tsx` | Já ajustado, verificar seções restantes |
+| `Auth.tsx` | Já ajustado, verificar form inputs |
+| `DiagnosticoGratuito.tsx` | Search + results cards padding, chart sizing |
+| `ImportarProva.tsx` | Steps padding, search input, results cards |
+| `ProvaAlvo.tsx` | Cards padding, form layout |
+| `Nutricao.tsx` | Já tem p-3 sm:p-6, verificar cards |
+| `MedicinaDoEsporte.tsx` | Mesma verificação |
+| `simulator/SimulatorScreen.tsx` | Phase cards, splits table overflow-x-auto |
+| `simulator/ActiveSimulator.tsx` | Timer display, station cards |
+
+---
+
+### Detalhes Técnicos Críticos
+
+**AdminPortal (sidebar no mobile):**
+A sidebar fixa de 256px é inacessível em 430px. Solução: no mobile, sidebar fica `hidden` por padrão com um botão hamburger no header que abre como overlay (position fixed, z-50). Sidebar expanded = overlay escuro + sidebar desliza da esquerda.
+
+**Modais grandes (PublishToAthletesModal, BlockEditorModal):**
+Todos os `DialogContent` que usam `max-w-2xl` ou `max-w-4xl` ganham `max-w-[95vw] sm:max-w-2xl` para não cortar conteúdo no mobile.
+
+**Tabelas (admin, splits, benchmarks):**
+Wrap com `<div className="overflow-x-auto -mx-3 px-3">` para permitir scroll horizontal sem quebrar layout.
+
+---
+
+### Estimativa
+
+- **~25 arquivos** com alterações CSS/Tailwind
+- **0 alterações no banco** ou lógica
+- **4 batches** sequenciais para controle de qualidade
+- Foco: padding, font-size, grid breakpoints, overflow, modal sizing
 
