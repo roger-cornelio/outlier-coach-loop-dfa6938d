@@ -79,10 +79,11 @@ export function VisaoGeralTab() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profilesRes, coachLinksRes, rolesRes] = await Promise.all([
+      const [profilesRes, coachLinksRes, rolesRes, coachScoresRes] = await Promise.all([
         supabase.from("profiles").select("id, user_id, name, email, sexo, idade, peso, altura, training_level, session_duration, first_setup_completed, status, created_at, last_active_at, coach_id, onboarding_experience, onboarding_goal, onboarding_target_race, unavailable_equipment, equipment_notes").order("created_at", { ascending: false }),
         supabase.from("coach_athletes").select("athlete_id, coach_id, created_at"),
         supabase.from("user_roles").select("user_id, role"),
+        supabase.from("coach_scores").select("coach_id, composite_score, active_athletes_count, admin_rating"),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
