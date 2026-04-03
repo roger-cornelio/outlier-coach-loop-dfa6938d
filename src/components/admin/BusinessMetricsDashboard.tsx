@@ -219,10 +219,10 @@ export function BusinessMetricsDashboard() {
           subtitle={`${churnedAthletes} atleta(s) perdido(s)`}
         />
         <KpiCard
-          title="LTV Estimado"
-          value={`R$ ${ltv.toFixed(0)}`}
+          title="Tempo Médio na Plataforma"
+          value={avgTenureDays >= 30 ? `${(avgTenureDays / 30).toFixed(1)} meses` : `${avgTenureDays.toFixed(0)} dias`}
           icon={<DollarSign className="w-4 h-4" />}
-          subtitle={`~${avgTenureDays.toFixed(0)} dias média`}
+          subtitle={`${athleteLinks.length} vínculo(s) analisado(s)`}
         />
       </div>
 
