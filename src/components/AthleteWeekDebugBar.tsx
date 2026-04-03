@@ -12,7 +12,7 @@
  * - Botões rápidos de navegação
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { Bug, ChevronLeft, ChevronRight, RotateCcw, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ interface AthleteWeekDebugBarProps {
 
 const DEBUG_STORAGE_KEY = 'ATHLETE_WEEK_DEBUG';
 
-export function AthleteWeekDebugBar({
+export const AthleteWeekDebugBar = forwardRef<HTMLDivElement, AthleteWeekDebugBarProps>(({
   now,
   currentWeekStart,
   selectedWeekStart,
@@ -49,7 +49,7 @@ export function AthleteWeekDebugBar({
   onReset,
   canGoToPrev,
   canGoToNext,
-}: AthleteWeekDebugBarProps) {
+}, ref) => {
   const [isVisible, setIsVisible] = useState(() => {
     // Check URL param
     if (typeof window !== 'undefined') {
@@ -113,6 +113,7 @@ export function AthleteWeekDebugBar({
 
   return (
     <div 
+      ref={ref}
       className={cn(
         "fixed bottom-0 left-0 right-0 z-[99999] bg-black/95 border-t-2 border-yellow-500/50 font-mono text-xs",
         isExpanded ? "" : "h-10"
@@ -272,7 +273,9 @@ export function AthleteWeekDebugBar({
       )}
     </div>
   );
-}
+});
+
+AthleteWeekDebugBar.displayName = 'AthleteWeekDebugBar';
 
 // Helper component for data items
 function DataItem({ 
