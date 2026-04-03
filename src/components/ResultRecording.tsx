@@ -120,7 +120,7 @@ export function ResultRecording() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
+      <main className="flex-1 flex items-center justify-center px-3 sm:px-6 py-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
