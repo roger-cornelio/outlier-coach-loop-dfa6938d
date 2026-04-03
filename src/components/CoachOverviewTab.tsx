@@ -15,11 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
+import { PeriodFilter, type DateRange } from '@/components/admin/PeriodFilter';
 import { Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
@@ -43,6 +45,7 @@ import {
   UserMinus,
   Target,
   MessageSquare,
+  Search,
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
 import { motion } from 'framer-motion';
