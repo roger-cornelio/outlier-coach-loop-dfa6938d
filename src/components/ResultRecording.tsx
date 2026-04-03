@@ -176,7 +176,7 @@ export function ResultRecording() {
               <button
                 onClick={() => setCompleted(false)}
                 className={`
-                  p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
+                  p-4 sm:p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
                   ${completed === false
                     ? 'border-status-below bg-status-below/10'
                     : 'border-border hover:border-muted-foreground'
