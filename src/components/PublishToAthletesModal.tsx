@@ -454,7 +454,7 @@ export function PublishToAthletesModal({
           coach_id: profile.id,
           week_start: weekStart, // YYYY-MM-DD string (segunda-feira)
           scheduled_date: weekStart,
-          plan_json: { workouts: mergedWorkouts },
+          plan_json: { workouts: mergedWorkouts, ...adaptationMeta },
           title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),
