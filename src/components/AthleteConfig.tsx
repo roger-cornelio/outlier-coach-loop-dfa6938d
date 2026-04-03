@@ -343,7 +343,7 @@ export function AthleteConfig() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8"
       >
         {/* Só mostra botão voltar se NÃO for primeiro setup */}
         {!isFirstSetup && (
