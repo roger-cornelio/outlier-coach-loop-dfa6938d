@@ -78,13 +78,7 @@ const navItems: NavItem[] = [
     icon: <Contact className="w-5 h-5" />,
     description: "Clientes e leads"
   },
-  { 
-    id: "users", 
-    label: "Usuários", 
-    icon: <Users className="w-5 h-5" />,
-    description: "Gestão de usuários"
-  },
-  { 
+  {
     id: "coachApplications", 
     label: "Solicitações", 
     icon: <UserPlus className="w-5 h-5" />,
