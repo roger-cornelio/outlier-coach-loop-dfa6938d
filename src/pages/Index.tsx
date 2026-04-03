@@ -339,9 +339,9 @@ const Index = () => {
           <AppSidebar />
         )}
         
-        {/* Mobile Nav - hamburger menu for mobile (only after setup complete) */}
+        {/* Mobile Bottom Nav - tab bar for mobile (only after setup complete) */}
         {showSidebar && (
-          <MobileNav />
+          <MobileBottomNav />
         )}
         
         {/* Main content area */}
