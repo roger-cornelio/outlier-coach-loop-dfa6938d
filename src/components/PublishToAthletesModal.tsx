@@ -854,6 +854,8 @@ export function PublishToAthletesModal({
     switch (currentStep) {
       case 'athletes':
         return selectedAthletes.size > 0 && athletes.length > 0;
+      case 'adaptation':
+        return true; // Always can proceed - adaptation is optional
       case 'confirm':
         return canPublish;
       default:
