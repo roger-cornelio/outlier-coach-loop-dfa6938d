@@ -372,7 +372,7 @@ export function WeeklyTrainingView() {
           <div className="space-y-4">
             {/* Day Header */}
             <div className="mb-4">
-              <h2 className="font-display text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
+              <h2 className="font-display text-2xl sm:text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
             </div>
 
             {/* Render each session */}
