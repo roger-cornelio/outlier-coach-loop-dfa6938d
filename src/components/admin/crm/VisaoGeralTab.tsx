@@ -266,7 +266,17 @@ export function VisaoGeralTab() {
                       ? `${coachAthleteCount.get(u.user_id) || 0} atleta(s)`
                       : u.coach_name || "—"}
                   </TableCell>
-                  <TableCell className="text-sm">{u.training_level || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {u.userRole === "coach"
+                      ? <Badge className={
+                          (u.coachScore ?? 0) >= 7 ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                          : (u.coachScore ?? 0) >= 4 ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                          : "bg-red-500/15 text-red-700 dark:text-red-400"
+                        }>
+                          {(u.coachScore ?? 0).toFixed(1)} pts
+                        </Badge>
+                      : u.training_level || "—"}
+                  </TableCell>
                   <TableCell className="text-sm">{u.first_setup_completed ? "✅" : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
