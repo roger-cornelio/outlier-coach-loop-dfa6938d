@@ -788,7 +788,23 @@ export function PublishToAthletesModal({
                   {title || 'Treino sem título'}
                 </span>
               </div>
-            </div>
+
+              {/* Resumo de adaptação */}
+              {(() => {
+                const adaptedCount = Array.from(athleteAdaptations.values()).filter(a => a.enabled && a.emphasis.length > 0).length;
+                const noAdaptCount = selectedAthletes.size - adaptedCount;
+                if (adaptedCount > 0) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        {adaptedCount} com adaptação · {noAdaptCount} sem adaptação
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
             {/* Aviso quando semana não definida */}
             {!weekStart && (
