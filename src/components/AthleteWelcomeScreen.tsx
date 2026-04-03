@@ -93,6 +93,17 @@ export function AthleteWelcomeScreen() {
           VOCÊ ESTÁ PRESTES A SE TORNAR OUTLIER.
         </motion.h1>
 
+        {/* Sub-slogan "fora da curva" */}
+        <motion.p
+          className="text-lg md:text-xl text-muted-foreground italic mb-10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          Treino comum não é mais uma opção.<br />
+          Pronto para ser fora da curva?
+        </motion.p>
+
         {/* D) Card do Coach - Destaque forte, mostra valor da personalização */}
         {coachCopy && (
           <motion.div
