@@ -828,12 +828,19 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
 
 /**
  * Verifica se uma linha é EXECUTÁVEL (treino válido)
- * MVP0: Agora só verifica se começa com "- "
+ * Usa mesma lógica de fenceValidation: número + unidade/estrutura válida
  */
 export function isExecutableLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return true; // Linha vazia é "válida" (não bloqueia)
-  return trimmed.startsWith('- ') || trimmed.startsWith('-');
+  
+  // REGRA 1: Deve conter pelo menos um número
+  const hasNumber = /\d/.test(trimmed);
+  if (!hasNumber) return false;
+  
+  // REGRA 2: Deve conter unidade ou estrutura válida
+  const EXECUTABLE_UNITS = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|minutos?\b|['']|PSE|RPE|Z[1-5]|Zona\s*[1-5]|EMOM|AMRAP|For\s*Time|RFT|Tabata|rest|descanso|rounds?|sets?|séries?|%|kg\b|lb\b|cal\b|calorias?\b|kcal\b)/i;
+  return EXECUTABLE_UNITS.test(trimmed);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
