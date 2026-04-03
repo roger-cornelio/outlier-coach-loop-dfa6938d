@@ -85,7 +85,7 @@ export function BusinessMetricsDashboard() {
       supabase.from("coach_athletes").select("*").gte("created_at", prevRangeStr.from).lte("created_at", prevRangeStr.to),
       supabase.from("diagnostic_leads").select("*").gte("created_at", rangeStr.from).lte("created_at", rangeStr.to),
       supabase.from("diagnostic_leads").select("*").gte("created_at", prevRangeStr.from).lte("created_at", prevRangeStr.to),
-      supabase.from("profiles").select("id, name, role, created_at"),
+      supabase.from("profiles").select("id, user_id, name, role, created_at"),
     ]);
 
     setAthleteLinks(linksRes.data || []);
@@ -151,16 +151,16 @@ export function BusinessMetricsDashboard() {
 
     athleteLinks.forEach((l: any) => {
       if (!coachMap[l.coach_id]) {
-        const p = profiles.find((p: any) => p.id === l.coach_id);
-        coachMap[l.coach_id] = { name: p?.name || "Coach", athletes: new Set(), prevAthletes: new Set() };
+        const p = profiles.find((p: any) => p.user_id === l.coach_id);
+        coachMap[l.coach_id] = { name: p?.name || l.coach_id.slice(0, 8), athletes: new Set(), prevAthletes: new Set() };
       }
       coachMap[l.coach_id].athletes.add(l.athlete_id);
     });
 
     prevAthleteLinks.forEach((l: any) => {
       if (!coachMap[l.coach_id]) {
-        const p = profiles.find((p: any) => p.id === l.coach_id);
-        coachMap[l.coach_id] = { name: p?.name || "Coach", athletes: new Set(), prevAthletes: new Set() };
+        const p = profiles.find((p: any) => p.user_id === l.coach_id);
+        coachMap[l.coach_id] = { name: p?.name || l.coach_id.slice(0, 8), athletes: new Set(), prevAthletes: new Set() };
       }
       coachMap[l.coach_id].prevAthletes.add(l.athlete_id);
     });
