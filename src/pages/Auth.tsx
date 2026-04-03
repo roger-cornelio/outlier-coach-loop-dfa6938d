@@ -935,6 +935,26 @@ export default function Auth({ context = 'user' }: AuthProps) {
                   </div>
                 )}
 
+                {/* Phone field (signup only) */}
+                {mode === 'signup' && (
+                  <div>
+                    <div className="relative">
+                      <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                      <input
+                        type="tel"
+                        value={telefone}
+                        onChange={(e) => setTelefone(e.target.value)}
+                        className={`w-full pl-8 pr-3 py-2 bg-background/50 border rounded text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 ${
+                          errors.telefone ? 'border-destructive/50' : 'border-border/30'
+                        }`}
+                        placeholder="Telefone (WhatsApp)"
+                      />
+                    </div>
+                    {errors.telefone && (
+                      <p className="text-destructive text-xs mt-1">{errors.telefone}</p>
+                    )}
+                  </div>
+                )}
                 {/* Sex selection (signup only) */}
                 {mode === 'signup' && (
                   <div>
