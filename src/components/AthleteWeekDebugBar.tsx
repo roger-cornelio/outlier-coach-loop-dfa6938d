@@ -35,7 +35,7 @@ interface AthleteWeekDebugBarProps {
 
 const DEBUG_STORAGE_KEY = 'ATHLETE_WEEK_DEBUG';
 
-export function AthleteWeekDebugBar({
+export const AthleteWeekDebugBar = forwardRef<HTMLDivElement, AthleteWeekDebugBarProps>(({
   now,
   currentWeekStart,
   selectedWeekStart,
@@ -49,7 +49,7 @@ export function AthleteWeekDebugBar({
   onReset,
   canGoToPrev,
   canGoToNext,
-}: AthleteWeekDebugBarProps) {
+}, ref) => {
   const [isVisible, setIsVisible] = useState(() => {
     // Check URL param
     if (typeof window !== 'undefined') {
