@@ -57,4 +57,5 @@ export interface AthleteDetail {
   weeksSinceSignup: number;
   avgSessionsPerWeek: number;
   platformDuration: string;
+  targetRace: { nome: string; race_date: string; categoria: string; race_type: string } | null;
 }
