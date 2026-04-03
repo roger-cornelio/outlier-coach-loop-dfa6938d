@@ -1,23 +1,28 @@
 
 
-## Plano: Atualizar Métricas de Impacto na Landing
+## Plano: Loading com frases rotativas em vez de spinner
 
-**Arquivo:** `src/pages/Landing.tsx` — array de métricas (~linhas 214-227)
+### O que muda
 
-### Mudanças
+**Arquivo:** `src/pages/Index.tsx` — linhas 236-242
 
-1. Adicionar campo `prefix` opcional ao array de métricas
-2. Substituir os 3 cards:
+Substituir o spinner genérico por uma sequência de frases que trocam automaticamente com animação suave:
 
-| Prefix | Valor | Sufixo | Label |
-|--------|-------|--------|-------|
-| − | 14 | min | No resultado dos atletas |
-| | 92 | % | Subiram de categoria nos primeiros 6 meses |
-| | 98 | % | Precisão do diagnóstico e ajuste de treinos |
+1. **"Preparando sua experiência..."** (0s)
+2. **"Entendendo sua prova..."** (2.5s)
+3. **"Avaliando splits reais..."** (5s)
+4. **"Quase lá..."** (7.5s)
 
-3. No render, exibir `item.prefix` (quando existir) antes do `AnimatedCounter`
+Cada frase aparece com fade-in/fade-out usando Framer Motion (já importado no arquivo). O spinner continua visível mas menor, acima do texto.
+
+### Implementação
+
+- Criar um state `phraseIndex` com `useState(0)`
+- `useEffect` com `setInterval` de 2.5s que incrementa o índice ciclicamente
+- Array de frases fixo
+- Animação com `AnimatePresence` + `motion.p` (key = phraseIndex) para transição suave entre frases
 
 ### Arquivo alterado
 
-1. **`src/pages/Landing.tsx`** — Métricas de impacto
+1. **`src/pages/Index.tsx`** — Bloco de loading (linhas 236-242)
 
