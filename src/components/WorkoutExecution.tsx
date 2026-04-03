@@ -383,8 +383,8 @@ export function WorkoutExecution() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setCurrentView('dashboard')}
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
@@ -392,7 +392,7 @@ export function WorkoutExecution() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex-1">
-              <h1 className="font-display text-2xl">{DAY_NAMES[displayedWorkout.day]}</h1>
+              <h1 className="font-display text-xl sm:text-2xl">{DAY_NAMES[displayedWorkout.day]}</h1>
               <p className="text-sm text-muted-foreground">{displayedWorkout.stimulus}</p>
             </div>
           </div>
@@ -401,9 +401,9 @@ export function WorkoutExecution() {
 
       {/* Session Stopwatch */}
       <div className="bg-card border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex flex-col items-center">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-5 flex flex-col items-center">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">TEMPO DE SESSÃO</p>
-          <p className="font-mono text-4xl md:text-5xl font-bold tracking-wider text-foreground tabular-nums">
+          <p className="font-mono text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider text-foreground tabular-nums">
             {formatStopwatch(elapsedSeconds)}
           </p>
         </div>
@@ -420,7 +420,7 @@ export function WorkoutExecution() {
       </div>
 
       {/* Workout Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="space-y-4 mb-8">
           {displayedWorkout.blocks.map((block, index) => {
             const isComplete = completedBlocks.includes(block.id);
@@ -474,7 +474,7 @@ export function WorkoutExecution() {
                 animate={isJustCompleted ? completionAnim.complete : { opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={`
-                  card-elevated p-6 border-l-4 transition-all duration-300
+                  card-elevated p-4 sm:p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
                   ${isComplete ? 'opacity-60' : ''}
                   ${identifyMainBlock(displayedWorkout.blocks).blockIndex === index ? 'ring-2 ring-primary/50' : ''}
@@ -762,7 +762,7 @@ export function WorkoutExecution() {
           onClick={handleFinishWorkout}
           disabled={!allBlocksComplete}
           className={`
-            w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all
+            w-full font-display text-lg sm:text-xl tracking-wider px-6 py-4 sm:px-8 sm:py-5 rounded-lg transition-all
             flex items-center justify-center gap-3
             ${allBlocksComplete
               ? 'bg-primary text-primary-foreground hover:opacity-90'

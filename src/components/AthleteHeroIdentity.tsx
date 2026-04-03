@@ -57,10 +57,10 @@ export function AthleteHeroIdentity({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn('flex flex-col items-center text-center py-6', className)}
+      className={cn('flex flex-col items-center text-center py-4 sm:py-6', className)}
     >
       {/* Nome do Atleta - Grande e Bold */}
-      <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-wide text-foreground uppercase mb-3">
+      <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-wide text-foreground uppercase mb-2 sm:mb-3">
         {name}
       </h1>
       

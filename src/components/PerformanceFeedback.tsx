@@ -231,7 +231,7 @@ export function PerformanceFeedback() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto px-6 py-4">
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={handleGoToDashboard}
@@ -239,13 +239,13 @@ export function PerformanceFeedback() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="font-display text-2xl">FEEDBACK</h1>
+            <h1 className="font-display text-xl sm:text-2xl">FEEDBACK</h1>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-3 sm:px-6 py-4 sm:py-8">
         <div className="max-w-md mx-auto">
           {isLoading ? (
             <motion.div
@@ -304,7 +304,7 @@ export function PerformanceFeedback() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="card-elevated p-6"
+                className="card-elevated p-4 sm:p-6"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-primary" />
@@ -365,7 +365,7 @@ export function PerformanceFeedback() {
               >
                 <button
                   onClick={handleGoToDashboard}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-primary text-primary-foreground font-display text-lg hover:opacity-90 transition-opacity"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-lg bg-primary text-primary-foreground font-display text-base sm:text-lg hover:opacity-90 transition-opacity"
                 >
                   <Home className="w-5 h-5" />
                   DASHBOARD

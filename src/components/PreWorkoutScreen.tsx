@@ -149,7 +149,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -171,9 +171,9 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
             repeat: Infinity,
             repeatDelay: 2
           }}
-          className="mb-6 p-6 rounded-full bg-primary/20 ring-4 ring-primary/30 shadow-lg shadow-primary/20"
+          className="mb-4 sm:mb-6 p-4 sm:p-6 rounded-full bg-primary/20 ring-4 ring-primary/30 shadow-lg shadow-primary/20"
         >
-          <CoachIcon className="w-12 h-12 text-primary" />
+          <CoachIcon className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
         </motion.div>
 
         {/* Coach Name */}
@@ -181,7 +181,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="font-display text-3xl md:text-4xl uppercase tracking-[0.2em] font-bold text-primary mb-4"
+          className="font-display text-2xl sm:text-3xl md:text-4xl uppercase tracking-[0.2em] font-bold text-primary mb-4"
         >
           {currentCoachStyle}
         </motion.h1>
@@ -191,7 +191,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="w-full px-8 py-10 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-xl shadow-primary/10 mb-10"
+          className="w-full px-5 sm:px-8 py-6 sm:py-10 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-xl shadow-primary/10 mb-6 sm:mb-10"
         >
           {isLoading || isLoadingWorkouts ? (
             <div className="flex flex-col items-center gap-4">
@@ -201,7 +201,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
               </p>
             </div>
           ) : (
-            <p className="text-xl md:text-2xl text-white font-medium italic text-center leading-relaxed">
+            <p className="text-lg sm:text-xl md:text-2xl text-white font-medium italic text-center leading-relaxed">
               "{preWorkoutMessage}"
             </p>
           )}
@@ -215,7 +215,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           onClick={handleContinue}
           disabled={isLoading || isLoadingWorkouts}
           className={`
-            font-display text-xl md:text-2xl tracking-widest px-12 py-5 rounded-xl
+            font-display text-lg sm:text-xl md:text-2xl tracking-widest px-8 sm:px-12 py-4 sm:py-5 rounded-xl
             transition-all duration-300 flex items-center justify-center gap-3
             ${!isLoading && !isLoadingWorkouts
               ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
@@ -226,7 +226,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           whileTap={!isLoading && !isLoadingWorkouts ? { scale: 0.98 } : {}}
         >
           BORA TREINAR
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </motion.button>
 
         {/* Skip to settings link */}

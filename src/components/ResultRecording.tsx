@@ -106,7 +106,7 @@ export function ResultRecording() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto px-6 py-4">
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setCurrentView('workout')}
@@ -114,22 +114,22 @@ export function ResultRecording() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="font-display text-2xl">REGISTRAR RESULTADO</h1>
+            <h1 className="font-display text-xl sm:text-2xl">REGISTRAR RESULTADO</h1>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
+      <main className="flex-1 flex items-center justify-center px-3 sm:px-6 py-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
           {/* WOD Info */}
-          <div className={`card-elevated p-6 mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
+          <div className={`card-elevated p-4 sm:p-6 mb-6 sm:mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-display text-xl">{mainWod.title}</h3>
+              <h3 className="font-display text-lg sm:text-xl">{mainWod.title}</h3>
               {isBenchmark && (
                 <span className="px-2 py-0.5 text-xs font-bold bg-status-excellent/20 text-status-excellent rounded">
                   BENCHMARK
@@ -157,34 +157,34 @@ export function ResultRecording() {
           </div>
 
           {/* Completed Question */}
-          <div className="mb-8">
-            <h2 className="font-display text-2xl mb-4">COMPLETOU O TREINO?</h2>
+          <div className="mb-6 sm:mb-8">
+            <h2 className="font-display text-xl sm:text-2xl mb-4">COMPLETOU O TREINO?</h2>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setCompleted(true)}
                 className={`
-                  p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
+                  p-4 sm:p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
                   ${completed === true
                     ? 'border-status-good bg-status-good/10'
                     : 'border-border hover:border-muted-foreground'
                   }
                 `}
               >
-                <Check className={`w-8 h-8 ${completed === true ? 'text-status-good' : 'text-muted-foreground'}`} />
-                <span className="font-display text-xl">SIM</span>
+                <Check className={`w-6 h-6 sm:w-8 sm:h-8 ${completed === true ? 'text-status-good' : 'text-muted-foreground'}`} />
+                <span className="font-display text-lg sm:text-xl">SIM</span>
               </button>
               <button
                 onClick={() => setCompleted(false)}
                 className={`
-                  p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
+                  p-4 sm:p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
                   ${completed === false
                     ? 'border-status-below bg-status-below/10'
                     : 'border-border hover:border-muted-foreground'
                   }
                 `}
               >
-                <X className={`w-8 h-8 ${completed === false ? 'text-status-below' : 'text-muted-foreground'}`} />
-                <span className="font-display text-xl">NÃO</span>
+                <X className={`w-6 h-6 sm:w-8 sm:h-8 ${completed === false ? 'text-status-below' : 'text-muted-foreground'}`} />
+                <span className="font-display text-lg sm:text-xl">NÃO</span>
               </button>
             </div>
           </div>
@@ -197,7 +197,7 @@ export function ResultRecording() {
               className="mb-8"
             >
               <div className="flex items-center gap-2 mb-4">
-                <h2 className="font-display text-2xl">TEMPO DO WOD</h2>
+                <h2 className="font-display text-xl sm:text-2xl">TEMPO DO WOD</h2>
                 {timeRequired && (
                   <span className="flex items-center gap-1 text-xs text-status-attention">
                     <AlertCircle className="w-3 h-3" />
@@ -215,10 +215,10 @@ export function ResultRecording() {
                     value={minutes}
                     onChange={(e) => setMinutes(e.target.value)}
                     placeholder="00"
-                    className="w-full px-4 py-4 rounded-lg bg-secondary border border-border text-center font-display text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 rounded-lg bg-secondary border border-border text-center font-display text-2xl sm:text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-                <span className="font-display text-4xl text-muted-foreground pt-6">:</span>
+                <span className="font-display text-3xl sm:text-4xl text-muted-foreground pt-6">:</span>
                 <div className="flex-1">
                   <label className="text-sm text-muted-foreground mb-2 block">Segundos</label>
                   <input
@@ -228,7 +228,7 @@ export function ResultRecording() {
                     value={seconds}
                     onChange={(e) => setSeconds(e.target.value)}
                     placeholder="00"
-                    className="w-full px-4 py-4 rounded-lg bg-secondary border border-border text-center font-display text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 rounded-lg bg-secondary border border-border text-center font-display text-2xl sm:text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -263,7 +263,7 @@ export function ResultRecording() {
             onClick={handleSubmit}
             disabled={completed === null || (timeRequired && !isValidTime()) || isSaving}
             className={`
-              w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all flex items-center justify-center gap-3
+              w-full font-display text-lg sm:text-xl tracking-wider px-6 py-4 sm:px-8 sm:py-5 rounded-lg transition-all flex items-center justify-center gap-3
               ${completed !== null && (!timeRequired || isValidTime()) && !isSaving
                 ? 'bg-primary text-primary-foreground hover:opacity-90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'

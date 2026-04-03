@@ -338,12 +338,12 @@ export function AthleteConfig() {
   };
 
   return (
-    <div className="min-h-screen px-6 py-8 max-w-4xl mx-auto">
+    <div className="min-h-screen px-3 sm:px-6 py-4 sm:py-8 max-w-4xl mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8"
       >
         {/* Só mostra botão voltar se NÃO for primeiro setup */}
         {!isFirstSetup && (
@@ -355,7 +355,7 @@ export function AthleteConfig() {
           </button>
         )}
         <div>
-          <h1 className="font-display text-4xl">{isFirstSetup ? 'CONFIGURE SEU TREINO' : 'CONFIGURAÇÃO'}</h1>
+          <h1 className="font-display text-2xl sm:text-4xl">{isFirstSetup ? 'CONFIGURE SEU TREINO' : 'CONFIGURAÇÃO'}</h1>
           <p className="text-muted-foreground">{isFirstSetup ? 'Personalize sua experiência' : 'Ajuste seu treino'}</p>
         </div>
       </motion.div>
@@ -386,10 +386,10 @@ export function AthleteConfig() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
-          <User className="w-6 h-6 text-primary" />
+        <h2 className="font-display text-xl sm:text-2xl mb-3 sm:mb-4 flex items-center gap-2">
+          <User className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
           PERFIL
         </h2>
         <div className="max-w-md">

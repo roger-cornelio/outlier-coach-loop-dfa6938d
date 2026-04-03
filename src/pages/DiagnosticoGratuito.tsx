@@ -654,7 +654,7 @@ export default function DiagnosticoGratuito() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-border">
         <Link to="/">
           <OutlierWordmark size="sm" />
         </Link>
@@ -666,7 +666,7 @@ export default function DiagnosticoGratuito() {
         </Link>
       </header>
 
-      <div className="max-w-2xl mx-auto px-6 py-12">
+      <div className="max-w-2xl mx-auto px-3 sm:px-6 py-6 sm:py-12">
         <AnimatePresence mode="wait">
           {/* ═══ STEP: SEARCH ═══ */}
           {step === 'search' && (
