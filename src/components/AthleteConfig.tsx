@@ -338,7 +338,7 @@ export function AthleteConfig() {
   };
 
   return (
-    <div className="min-h-screen px-6 py-8 max-w-4xl mx-auto">
+    <div className="min-h-screen px-3 sm:px-6 py-4 sm:py-8 max-w-4xl mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
