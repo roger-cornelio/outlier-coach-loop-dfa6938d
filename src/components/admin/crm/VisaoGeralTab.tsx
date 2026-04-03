@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UnifiedUser, StatusFilter } from "./types";
 import { computeUserStatus, computeLeadScore, statusLabels, statusColors, fmtDate } from "./utils";
 import { AthleteDetailSheet } from "./AthleteDetailSheet";
@@ -41,6 +45,19 @@ const roleColors: Record<UserRole, string> = {
 
 type RoleFilter = "todos" | UserRole;
 
+function getCoachStatus(lastActiveAt: string | null): "ativo" | "inativo" {
+  if (!lastActiveAt) return "inativo";
+  const daysSince = (Date.now() - new Date(lastActiveAt).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSince <= 14 ? "ativo" : "inativo";
+}
+
+function getSortPriority(userRole: UserRole, status: string): number {
+  if (userRole === "coach") return 0;
+  if (userRole === "superadmin" || userRole === "admin") return 1;
+  if (status === "inativo") return 2;
+  return 3;
+}
+
 export function VisaoGeralTab() {
   const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole })[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +68,8 @@ export function VisaoGeralTab() {
   const [page, setPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState<UnifiedUser | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 300);
@@ -71,7 +90,6 @@ export function VisaoGeralTab() {
       const coachLinks = coachLinksRes.data ?? [];
       const userRoles = rolesRes.data ?? [];
 
-      // Build role map: user_id -> highest role
       const roleMap = new Map<string, UserRole>();
       for (const ur of userRoles) {
         const current = roleMap.get(ur.user_id);
@@ -83,7 +101,6 @@ export function VisaoGeralTab() {
         }
       }
 
-      // Coach profiles
       const coachIds = [...new Set(coachLinks.map(l => l.coach_id))];
       let coachMap = new Map<string, { name: string; email: string }>();
       if (coachIds.length > 0) {
@@ -97,8 +114,12 @@ export function VisaoGeralTab() {
       const unified = profiles.map(p => {
         const link = linkMap.get(p.user_id);
         const coach = link ? coachMap.get(link.coach_id) : null;
-        const computedStatus = computeUserStatus(p.last_active_at, link?.coach_id ?? p.coach_id, p.status);
         const userRole = roleMap.get(p.user_id) ?? "atleta";
+
+        const computedStatus = userRole === "coach"
+          ? getCoachStatus(p.last_active_at)
+          : computeUserStatus(p.last_active_at, link?.coach_id ?? p.coach_id, p.status);
+
         return {
           ...p,
           coach_id: link?.coach_id ?? p.coach_id,
@@ -111,6 +132,13 @@ export function VisaoGeralTab() {
         };
       });
 
+      unified.sort((a, b) => {
+        const pa = getSortPriority(a.userRole, a.computedStatus);
+        const pb = getSortPriority(b.userRole, b.computedStatus);
+        if (pa !== pb) return pa - pb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
       setAllUsers(unified);
     } catch (err: any) {
       toast.error("Erro ao carregar usuários: " + err.message);
@@ -120,6 +148,22 @@ export function VisaoGeralTab() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDeactivateCoach = async () => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      const { error } = await supabase.rpc("deactivate_coach", { _coach_user_id: deactivateTarget.userId });
+      if (error) throw error;
+      toast.success(`Coach ${deactivateTarget.name} desativado com sucesso`);
+      setDeactivateTarget(null);
+      fetchData();
+    } catch (err: any) {
+      toast.error("Erro ao desativar coach: " + err.message);
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const filtered = allUsers.filter(u => {
     if (statusFilter !== "todos" && u.computedStatus !== statusFilter) return false;
@@ -134,9 +178,15 @@ export function VisaoGeralTab() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
+  const coachAthleteCount = new Map<string, number>();
+  allUsers.forEach(u => {
+    if (u.coach_id) {
+      coachAthleteCount.set(u.coach_id, (coachAthleteCount.get(u.coach_id) || 0) + 1);
+    }
+  });
+
   return (
     <div className="space-y-4">
-      {/* Status filter chips */}
       <div className="flex flex-wrap gap-2">
         {FILTER_OPTIONS.map(f => (
           <Button key={f.value} variant={statusFilter === f.value ? "default" : "outline"} size="sm" onClick={() => { setStatusFilter(f.value); setPage(0); }}>
@@ -146,7 +196,6 @@ export function VisaoGeralTab() {
         ))}
       </div>
 
-      {/* Role filter chips */}
       <div className="flex flex-wrap gap-2">
         <span className="text-xs text-muted-foreground self-center mr-1">Tipo:</span>
         {(["todos", "atleta", "coach", "admin", "superadmin"] as RoleFilter[]).map(r => (
@@ -178,14 +227,15 @@ export function VisaoGeralTab() {
               <TableHead>Nível</TableHead>
               <TableHead>Setup</TableHead>
               <TableHead>Último Acesso</TableHead>
-              <TableHead className="text-right">Cadastro</TableHead>
+              <TableHead>Cadastro</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-12"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-12"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
             ) : paged.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</TableCell></TableRow>
             ) : (
               paged.map(u => (
                 <TableRow key={u.id} className="cursor-pointer" onClick={() => { setSelectedUser(u); setSheetOpen(true); }}>
@@ -201,11 +251,30 @@ export function VisaoGeralTab() {
                   <TableCell>
                     <Badge className={statusColors[u.computedStatus]}>{statusLabels[u.computedStatus]}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{u.coach_name || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {u.userRole === "coach"
+                      ? `${coachAthleteCount.get(u.user_id) || 0} atleta(s)`
+                      : u.coach_name || "—"}
+                  </TableCell>
                   <TableCell className="text-sm">{u.training_level || "—"}</TableCell>
                   <TableCell className="text-sm">{u.first_setup_completed ? "✅" : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
+                  <TableCell className="text-right">
+                    {u.userRole === "coach" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeactivateTarget({ userId: u.user_id, name: u.name || "Coach" });
+                        }}
+                      >
+                        <ShieldOff className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -224,6 +293,30 @@ export function VisaoGeralTab() {
       )}
 
       <AthleteDetailSheet user={selectedUser} open={sheetOpen} onOpenChange={setSheetOpen} />
+
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desativar Coach</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja desativar <strong>{deactivateTarget?.name}</strong>? Isso irá:
+              <ul className="list-disc ml-4 mt-2 space-y-1">
+                <li>Remover a permissão de coach</li>
+                <li>Desvincular todos os atletas</li>
+                <li>Marcar a aplicação como desativada</li>
+              </ul>
+              Esta ação não pode ser desfeita facilmente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeactivateCoach} disabled={deactivating} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deactivating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Desativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
