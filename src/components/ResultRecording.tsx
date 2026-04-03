@@ -197,7 +197,7 @@ export function ResultRecording() {
               className="mb-8"
             >
               <div className="flex items-center gap-2 mb-4">
-                <h2 className="font-display text-2xl">TEMPO DO WOD</h2>
+                <h2 className="font-display text-xl sm:text-2xl">TEMPO DO WOD</h2>
                 {timeRequired && (
                   <span className="flex items-center gap-1 text-xs text-status-attention">
                     <AlertCircle className="w-3 h-3" />
