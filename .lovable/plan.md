@@ -1,30 +1,71 @@
 
 
-## Plano: Fix Tour Guiado — Persistência por Usuário
+## Plano: Checklist de QA Completo — Pré-Beta
 
-### Problema
+Vou gerar um documento Markdown completo em `/mnt/documents/` com todos os fluxos críticos organizados por persona (Atleta, Coach, Admin) e funcionalidade.
 
-O tour usa `localStorage.getItem('outlier_onboarding_tour_seen')` sem diferenciar por usuário. Se alguém faz logout e cria outra conta no mesmo browser, o tour não aparece porque a key já existe da conta anterior.
+### Estrutura do checklist
 
-### Solução
+**1. Autenticação & Onboarding**
+- Cadastro de atleta novo → tour guiado aparece
+- Login/logout/relogin → dados persistem
+- Recuperação de senha
+- Auto-confirm email (verificar se está habilitado)
+- Onboarding completo (10 etapas: busca → diagnóstico → biometria → coach → plano)
 
-Incluir o `userId` na key do localStorage para isolar o estado por conta.
+**2. Fluxo do Atleta**
+- Dashboard carrega treinos do banco
+- Visualização semanal (WeekNavigator)
+- Execução de treino → registro de resultado → feedback
+- Benchmarks e evolução
+- Diagnóstico gratuito (/diagnostico-gratuito)
+- Importar prova (/importar-prova)
+- Prova alvo (/prova-alvo)
+- Simulador HYROX
+- Troca de coach (solicitação)
 
-### Alterações
+**3. Fluxo do Coach**
+- Login coach (/login/coach)
+- Definir senha (primeiro acesso)
+- Coach dashboard: visão geral, planilha, treinos, benchmarks, feedbacks
+- Criar/importar/publicar treino (draft → published)
+- Aprovar/rejeitar solicitações de vínculo de atleta
+- Vincular/desvincular atleta
 
-**`src/hooks/useOnboardingTour.ts`**
-- Mudar a key de `outlier_onboarding_tour_seen` para `outlier_onboarding_tour_seen_${userId}`
-- Aceitar `userId` como parâmetro ou obtê-lo internamente via `useAuth`
-- `shouldShowTour()` passa a checar a key com userId
+**4. Fluxo Coach → Atleta (já documentado, expandido)**
+- Coach publica treino → atleta vê no dashboard
+- Atleta reloga → treino persiste
+- Reset blindado funciona
 
-**`src/components/OnboardingTour.tsx`**
-- Passar o userId do contexto de auth para o hook (se necessário)
+**5. Fluxo de Aplicação para Coach**
+- Usuário submete aplicação (/coach-request)
+- Aparece como pending
+- Admin aprova → cria user com role coach
+- Coach recebe acesso e define senha
 
-**`src/hooks/useCoachOnboardingTour.ts`**
-- Mesmo fix: keys `outlier_coach_onboarding_seen_${userId}` e `outlier_coach_tour_seen_${userId}`
+**6. Admin Portal**
+- Todas as abas funcionam (métricas, CRM, aplicações, benchmarks, etc.)
+- Filtro de período funciona em métricas
+- Gestão de usuários (suspender, roles)
 
-### Impacto
-- Cada conta tem seu próprio estado de tour
-- Contas existentes que já viram o tour: a key antiga fica órfã (sem efeito), o tour aparece uma vez com a nova key — comportamento aceitável
-- Sem migration, sem mudança de banco
+**7. Diagnóstico Gratuito (Funil de Vendas)**
+- Busca por atleta na API RoxCoach
+- Parecer OUTLIER renderiza corretamente
+- Plano de Ataque com frases dinâmicas
+- CTA de conversão funciona
+- Tracking de lead (diagnostic_leads)
+
+**8. Cross-cutting**
+- Mobile responsivo (principais telas)
+- Persistência localStorage por userId (tour, preferências)
+- RLS policies: atleta não vê dados de outro atleta
+- Session refresh banner funciona
+- Erros de rede mostram feedback adequado
+
+### Implementação
+
+Um arquivo `QA_CHECKLIST_BETA.md` gerado em `/mnt/documents/` com checkboxes prontos para uso, organizados por seção, com indicação de pré-requisitos e resultados esperados.
+
+### Arquivos alterados
+- Nenhum arquivo do projeto — apenas geração de artefato em `/mnt/documents/`
 
