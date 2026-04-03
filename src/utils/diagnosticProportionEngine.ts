@@ -102,32 +102,51 @@ export interface WeightedFocusResult {
 }
 
 /**
- * Calcula o foco ponderado para cada estação usando a fórmula:
- *   foco = 0.6 × timeWeight + 0.4 × impactWeight
+ * Calcula o foco ponderado para cada estação.
  * 
- * Cruza a tabela fixa com o gap individual (improvement_value).
- * Retorna percentuais normalizados que somam ~100%.
+ * Blend de duas perspectivas:
+ *   - 60% gap individual (improvement_value normalizado)
+ *   - 40% prioridade tática do esporte (0.6×timeWeight + 0.4×impactWeight)
+ * 
+ * Isso corrige o viés da fórmula linear pura (que superestima estações longas)
+ * sem ignorar o gap real do atleta.
  */
 export function computeTrainingFocus(diagnosticos: DiagnosticoMelhoria[]): WeightedFocusResult[] {
   if (diagnosticos.length === 0) return [];
 
-  const rawResults = diagnosticos.map(d => {
-    const stationW = resolveStationWeight(d.movement);
-    const baseWeight = 0.6 * stationW.timeWeight + 0.4 * stationW.impactWeight;
-    // Multiplica pelo gap individual para personalizar
-    const individualWeight = baseWeight * Math.max(0, d.improvement_value);
+  // 1. Percentual linear do gap individual
+  const totalImprovement = diagnosticos.reduce((s, d) => s + Math.max(0, d.improvement_value), 0);
+
+  // 2. Prioridade tática fixa por estação
+  const sportWeights = diagnosticos.map(d => {
+    const sw = resolveStationWeight(d.movement);
+    return 0.6 * sw.timeWeight + 0.4 * sw.impactWeight;
+  });
+  const totalSportWeight = sportWeights.reduce((s, w) => s + w, 0);
+
+  // 3. Blend: 60% gap individual + 40% prioridade tática
+  const INDIVIDUAL_WEIGHT = 0.6;
+  const SPORT_WEIGHT = 0.4;
+
+  const rawResults = diagnosticos.map((d, i) => {
+    const individualPct = totalImprovement > 0 
+      ? (Math.max(0, d.improvement_value) / totalImprovement) 
+      : 0;
+    const sportPct = totalSportWeight > 0 
+      ? (sportWeights[i] / totalSportWeight) 
+      : 0;
+    const blended = INDIVIDUAL_WEIGHT * individualPct + SPORT_WEIGHT * sportPct;
     return {
       movement: d.movement,
-      rawWeight: individualWeight,
+      rawWeight: blended,
       focusPercent: 0,
     };
   });
 
-  const totalRaw = rawResults.reduce((sum, r) => sum + r.rawWeight, 0);
-
-  if (totalRaw > 0) {
+  const totalBlended = rawResults.reduce((s, r) => s + r.rawWeight, 0);
+  if (totalBlended > 0) {
     for (const r of rawResults) {
-      r.focusPercent = (r.rawWeight / totalRaw) * 100;
+      r.focusPercent = (r.rawWeight / totalBlended) * 100;
     }
   }
 
