@@ -84,6 +84,13 @@ export function CoachApplicationForm() {
       });
 
       if (success) {
+        // Insert into CRM
+        await supabase.from('crm_clientes').insert({
+          nome: validated.full_name,
+          telefone: validated.telefone,
+          instagram: validated.instagram || null,
+        });
+        
         toast.success('Solicitação enviada!', {
           description: 'Aguarde a aprovação do administrador.',
         });
