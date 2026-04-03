@@ -15,7 +15,7 @@ interface EvolutionTabProps {
 
 export function EvolutionTab({ splits, finishTime }: EvolutionTabProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-6 space-y-6">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-bold text-foreground">

@@ -6,6 +6,7 @@ import { ArrowLeft, Home, Zap, Loader2, TrendingUp, TrendingDown, Minus, Send, C
 import { supabase } from '@/integrations/supabase/client';
 import { getCoachLine } from '@/config/coachCopy';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useSaveSessionFeedback } from '@/hooks/useAthleteFeedbacks';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,10 +32,10 @@ function SessionSummary({ sessionBlockResults }: { sessionBlockResults: any[] })
         {/* Header */}
         <div className="flex items-center justify-between pb-1 border-b border-border/50">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 flex-1">Bloco</span>
-          <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-muted-foreground/60">
-            <span className="w-14 text-right">Feito</span>
-            <span className="w-14 text-right">Esper.</span>
-            <span className="w-16 text-right">Diff</span>
+          <div className="flex items-center gap-2 sm:gap-4 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+            <span className="w-12 sm:w-14 text-right">Feito</span>
+            <span className="w-12 sm:w-14 text-right">Esper.</span>
+            <span className="w-14 sm:w-16 text-right">Diff</span>
           </div>
         </div>
 
@@ -57,13 +58,13 @@ function BlockRow({ result }: { result: any }) {
     return (
       <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
         <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-foreground w-14 text-right">{reps}r</span>
-          <span className="text-xs text-muted-foreground w-14 text-right">~{estimatedRounds}r</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="text-xs text-foreground w-12 sm:w-14 text-right">{reps}r</span>
+          <span className="text-xs text-muted-foreground w-12 sm:w-14 text-right">~{estimatedRounds}r</span>
           {isNeutral ? (
-            <span className="text-xs text-muted-foreground w-16 text-right">🎯</span>
+            <span className="text-xs text-muted-foreground w-14 sm:w-16 text-right">🎯</span>
           ) : (
-            <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+            <span className={`text-xs font-semibold w-14 sm:w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? '+' : ''}{diff}r
             </span>
           )}
@@ -81,13 +82,13 @@ function BlockRow({ result }: { result: any }) {
       return (
         <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
           <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
-            <span className="text-xs text-muted-foreground w-14 text-right">{formatSecondsToMinSec(estimatedTimeSeconds)}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs text-foreground w-12 sm:w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
+            <span className="text-xs text-muted-foreground w-12 sm:w-14 text-right">{formatSecondsToMinSec(estimatedTimeSeconds)}</span>
             {!isPositive && !isNegative ? (
-              <span className="text-xs text-muted-foreground w-16 text-right">—</span>
+              <span className="text-xs text-muted-foreground w-14 sm:w-16 text-right">—</span>
             ) : (
-              <span className={`text-xs font-semibold w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+              <span className={`text-xs font-semibold w-14 sm:w-16 text-right ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
                 {diff < 0 ? '-' : '+'}{formatSecondsToMinSec(Math.abs(diff))}
               </span>
             )}
@@ -99,10 +100,10 @@ function BlockRow({ result }: { result: any }) {
     return (
       <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
         <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
-          <span className="text-xs text-muted-foreground w-14 text-right">—</span>
-          <span className="text-xs text-muted-foreground w-16 text-right">—</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="text-xs text-foreground w-12 sm:w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
+          <span className="text-xs text-muted-foreground w-12 sm:w-14 text-right">—</span>
+          <span className="text-xs text-muted-foreground w-14 sm:w-16 text-right">—</span>
         </div>
       </div>
     );
@@ -251,10 +252,37 @@ export function PerformanceFeedback() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center gap-4 py-20"
+              className="space-y-6"
             >
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="text-muted-foreground">Analisando sua sessão...</p>
+              {/* Skeleton: tempo total */}
+              <div className="card-elevated p-5 space-y-3">
+                <Skeleton className="h-3 w-32 mx-auto" />
+                <Skeleton className="h-10 w-28 mx-auto" />
+                <Skeleton className="h-3 w-20 mx-auto" />
+              </div>
+              {/* Skeleton: resumo sessão */}
+              <div className="card-elevated p-4 space-y-3">
+                <Skeleton className="h-3 w-36" />
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-24" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-14" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Skeleton: feedback coach */}
+              <div className="card-elevated p-4 sm:p-6 space-y-3">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
             </motion.div>
           ) : (
             <motion.div
