@@ -214,3 +214,152 @@ export function computeStationEmphasis(diagnosticos: DiagnosticoMelhoria[]): Sta
     };
   });
 }
+
+// ════════════════════════════════════════════════════════════════
+// APLICAÇÃO DE ÊNFASE NOS TREINOS (PUBLISH FLOW)
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * Identifica qual estação HYROX um bloco de treino representa,
+ * analisando tipo do bloco e conteúdo textual.
+ * Retorna o multiplicador correspondente ou 1.0 se não houver match.
+ */
+function resolveBlockMultiplier(
+  block: { type?: string; content?: string; title?: string },
+  emphasisMap: Map<string, number>
+): number {
+  const searchTexts = [
+    block.type || '',
+    block.content || '',
+    block.title || '',
+  ].join(' ').toLowerCase();
+
+  // Blocos protegidos: nunca alterar aquecimento, mobilidade, notas
+  const protectedTypes = ['aquecimento', 'warmup', 'mobilidade', 'notas', 'nota'];
+  if (protectedTypes.some(t => searchTexts.includes(t))) return 1.0;
+
+  // Proteger blocos de força com %1RM
+  if (searchTexts.includes('%1rm') || searchTexts.includes('% 1rm')) return 1.0;
+
+  // Tentar match com cada movimento no emphasisMap
+  for (const [movement, multiplier] of emphasisMap) {
+    const lower = movement.toLowerCase();
+    if (searchTexts.includes(lower)) return multiplier;
+  }
+
+  return 1.0;
+}
+
+/**
+ * Escala um número dentro de uma string de conteúdo de treino.
+ * Arredonda de forma inteligente baseado na magnitude.
+ */
+function scaleNumericValue(value: number, multiplier: number): number {
+  if (multiplier === 1.0) return value;
+  const scaled = value * multiplier;
+  // Para valores >= 100 (metros), arredondar para 10
+  if (value >= 100) return Math.round(scaled / 10) * 10;
+  // Para valores >= 10, arredondar para 5
+  if (value >= 10) return Math.round(scaled / 5) * 5;
+  // Para valores pequenos, manter inteiro
+  return Math.max(1, Math.round(scaled));
+}
+
+/**
+ * Aplica multiplicador de ênfase no conteúdo textual de um bloco.
+ * Escala números de reps, metros, calorias sem alterar exercícios.
+ */
+function scaleBlockContent(content: string, multiplier: number): string {
+  if (multiplier === 1.0 || !content) return content;
+
+  return content.replace(
+    /\b(\d{1,4})\s*(m|cal|reps?|rounds?|x|metros?)?\b/gi,
+    (match, numStr, unit) => {
+      const num = parseInt(numStr, 10);
+      if (!Number.isFinite(num) || num <= 0) return match;
+      // Não escalar números muito pequenos (provavelmente séries) ou muito grandes (timestamps)
+      if (num < 3 || num > 5000) return match;
+      const scaled = scaleNumericValue(num, multiplier);
+      return unit ? `${scaled}${unit}` : `${scaled}`;
+    }
+  );
+}
+
+export interface AdaptedWorkoutResult {
+  /** Workouts com volume ajustado */
+  workouts: any[];
+  /** Workouts originais para rollback */
+  originalWorkouts: any[];
+  /** Snapshot dos multiplicadores aplicados */
+  emphasisSnapshot: StationEmphasis[];
+}
+
+/**
+ * Aplica multiplicadores de ênfase por estação nos treinos.
+ * 
+ * - Não muta os workouts originais (deep clone)
+ * - Protege blocos de aquecimento, mobilidade e %1RM
+ * - Ajusta campos numéricos em parsedExercises e conteúdo textual
+ * - Volume-neutro: multiplicadores somam ≈ N
+ * 
+ * @param workouts Array de DayWorkout originais
+ * @param emphasis Array de StationEmphasis do engine
+ * @returns Workouts adaptados + originais para auditoria
+ */
+export function applyEmphasisToWorkouts(
+  workouts: any[],
+  emphasis: StationEmphasis[]
+): AdaptedWorkoutResult {
+  // Deep clone para não mutar original
+  const originalWorkouts = JSON.parse(JSON.stringify(workouts));
+  const adaptedWorkouts = JSON.parse(JSON.stringify(workouts));
+
+  // Criar mapa movement → multiplier
+  const emphasisMap = new Map<string, number>();
+  for (const e of emphasis) {
+    emphasisMap.set(e.movement.toLowerCase(), e.multiplier);
+  }
+
+  for (const day of adaptedWorkouts) {
+    if (day.isRestDay || !day.blocks) continue;
+
+    for (const block of day.blocks) {
+      const multiplier = resolveBlockMultiplier(block, emphasisMap);
+      if (multiplier === 1.0) continue;
+
+      // Escalar conteúdo textual
+      if (block.content && typeof block.content === 'string') {
+        block.content = scaleBlockContent(block.content, multiplier);
+      }
+
+      // Escalar rawLines se existirem
+      if (Array.isArray(block.rawLines)) {
+        block.rawLines = block.rawLines.map((line: string) =>
+          scaleBlockContent(line, multiplier)
+        );
+      }
+
+      // Escalar parsedExercises se existirem
+      if (Array.isArray(block.parsedExercises)) {
+        for (const ex of block.parsedExercises) {
+          if (ex.reps && typeof ex.reps === 'number') {
+            ex.reps = scaleNumericValue(ex.reps, multiplier);
+          }
+          if (ex.distanceMeters && typeof ex.distanceMeters === 'number') {
+            ex.distanceMeters = scaleNumericValue(ex.distanceMeters, multiplier);
+          }
+          if (ex.durationSeconds && typeof ex.durationSeconds === 'number') {
+            ex.durationSeconds = scaleNumericValue(ex.durationSeconds, multiplier);
+          }
+          // Não alterar sets (estrutura do treino) nem carga (%1RM)
+        }
+      }
+    }
+  }
+
+  return {
+    workouts: adaptedWorkouts,
+    originalWorkouts,
+    emphasisSnapshot: emphasis,
+  };
+}
