@@ -15,11 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
+import { PeriodFilter, type DateRange } from '@/components/admin/PeriodFilter';
 import { Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
@@ -43,6 +45,7 @@ import {
   UserMinus,
   Target,
   MessageSquare,
+  Search,
 } from 'lucide-react';
 import { getDisplayName } from '@/utils/displayName';
 import { motion } from 'framer-motion';
@@ -248,12 +251,11 @@ function BlockResultRow({ result }: { result: any }) {
 }
 
 // ─── Inline Feedbacks Column (lazy-loaded with date filter) ───
-function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
-  const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 30));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
+function AthleteFeedbacksColumn({ athleteId, dateRange }: { athleteId: string; dateRange: DateRange }) {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [limit, setLimit] = useState(30);
 
   const fetchFeedbacks = useCallback(async () => {
     setLoading(true);
@@ -262,10 +264,10 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
         .from('workout_session_feedback' as any)
         .select('*')
         .eq('athlete_id', athleteId)
-        .gte('created_at', dateFrom.toISOString())
-        .lte('created_at', dateTo.toISOString())
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString())
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(limit);
       if (error) throw error;
       setFeedbacks(data || []);
     } catch (err) {
@@ -274,43 +276,22 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [athleteId, dateFrom, dateTo]);
+  }, [athleteId, dateRange.from, dateRange.to, limit]);
 
   useEffect(() => { fetchFeedbacks(); }, [fetchFeedbacks]);
+
+  const sumSessionTime = (blockResults: any[]): number | null => {
+    if (!blockResults?.length) return null;
+    const total = blockResults.reduce((sum: number, r: any) => sum + (r.timeInSeconds || 0), 0);
+    return total > 0 ? total : null;
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
         <MessageSquare className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Feedbacks</span>
-      </div>
-      {/* Date filters */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
-              <CalendarIcon className="w-3 h-3" />
-              {format(dateFrom, 'dd/MM', { locale: ptBR })}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)}
-              className={cn("p-3 pointer-events-auto")} />
-          </PopoverContent>
-        </Popover>
-        <span className="text-[10px] text-muted-foreground">→</span>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
-              <CalendarIcon className="w-3 h-3" />
-              {format(dateTo, 'dd/MM', { locale: ptBR })}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)}
-              className={cn("p-3 pointer-events-auto")} />
-          </PopoverContent>
-        </Popover>
+        {!loading && <Badge variant="secondary" className="text-[9px] h-4 px-1">{feedbacks.length}</Badge>}
       </div>
 
       {loading ? (
@@ -324,6 +305,8 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
           {feedbacks.map((fb: any) => {
             const dateStr = new Date(fb.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             const isExpanded = expandedId === fb.id;
+            const totalSec = sumSessionTime(fb.block_results);
+            const totalMin = totalSec ? Math.round(totalSec / 60) : null;
             return (
               <div key={fb.id} className="border border-border/30 rounded bg-secondary/30">
                 <button
@@ -331,13 +314,21 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
                   onClick={() => setExpandedId(isExpanded ? null : fb.id)}
                 >
                   <span className="font-medium text-foreground">{dateStr} — {fb.workout_day || 'Sessão'}</span>
-                  {fb.workout_stimulus && (
-                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{fb.workout_stimulus}</Badge>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {totalMin && (
+                      <Badge variant="outline" className="text-[9px] h-4 px-1 border-primary/30 text-primary">{totalMin}min</Badge>
+                    )}
+                    {fb.workout_stimulus && (
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1">{fb.workout_stimulus}</Badge>
+                    )}
+                  </div>
                   <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>
                 {isExpanded && (
                   <div className="px-2 pb-2 space-y-1">
+                    {totalMin && (
+                      <div className="text-[10px] text-primary font-medium mb-1">⏱ {totalMin} min total</div>
+                    )}
                     {fb.block_results?.map((r: any, i: number) => (
                       <BlockResultRow key={i} result={r} />
                     ))}
@@ -351,6 +342,11 @@ function AthleteFeedbacksColumn({ athleteId }: { athleteId: string }) {
               </div>
             );
           })}
+          {feedbacks.length >= limit && (
+            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setLimit(l => l + 30)}>
+              Carregar mais
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -435,10 +431,12 @@ function ExpandableAthleteRow({
   athlete,
   onUnlink,
   onAthleteChanged,
+  dateRange,
 }: {
   athlete: AthleteOverview;
   onUnlink: (id: string, name: string) => void;
   onAthleteChanged: () => void;
+  dateRange: DateRange;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const risk = classifyRisk(athlete);
@@ -604,7 +602,7 @@ function ExpandableAthleteRow({
             </div>
 
             {/* Col 3: Feedbacks */}
-            <AthleteFeedbacksColumn athleteId={athlete.athlete_id} />
+            <AthleteFeedbacksColumn athleteId={athlete.athlete_id} dateRange={dateRange} />
 
             {/* Col 4: Ações */}
             <div className="space-y-2">
@@ -651,11 +649,25 @@ export function CoachOverviewTab({
 }) {
   const { athletes, kpis, loading, error, refetch } = useCoachOverview();
   const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
 
-  const totalPages = Math.ceil(athletes.length / PAGE_SIZE);
+  const filteredAthletes = useMemo(() => {
+    if (!searchTerm.trim()) return athletes;
+    const term = searchTerm.toLowerCase();
+    return athletes.filter(a =>
+      (a.athlete_name?.toLowerCase().includes(term)) ||
+      a.athlete_email.toLowerCase().includes(term)
+    );
+  }, [athletes, searchTerm]);
+
+  const totalPages = Math.ceil(filteredAthletes.length / PAGE_SIZE);
   const paginatedAthletes = useMemo(() =>
-    athletes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [athletes, page]
+    filteredAthletes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filteredAthletes, page]
   );
 
   const handleUnlink = useCallback((athleteId: string, name: string) => {
@@ -705,12 +717,28 @@ export function CoachOverviewTab({
       {/* Pending Link Requests */}
       <PendingRequestsSection />
 
+      {/* Search + Period Filter */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar atleta por nome ou email..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+        <PeriodFilter value={dateRange} onChange={setDateRange} />
+      </div>
+
       {/* List header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Users className="w-4 h-4 text-primary" />
           Atletas
-          <span className="text-muted-foreground font-normal">({athletes.length})</span>
+          <span className="text-muted-foreground font-normal">
+            ({filteredAthletes.length}{searchTerm ? ` de ${athletes.length}` : ''})
+          </span>
         </h2>
         <div className="flex items-center gap-2">
           {onShowLinkModal && (
@@ -725,11 +753,13 @@ export function CoachOverviewTab({
       </div>
 
       {/* Athletes list */}
-      {athletes.length === 0 ? (
+      {filteredAthletes.length === 0 ? (
         <div className="text-center py-12">
           <Users className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum atleta vinculado.</p>
-          {onShowLinkModal && (
+          <p className="text-sm text-muted-foreground">
+            {searchTerm ? 'Nenhum atleta encontrado.' : 'Nenhum atleta vinculado.'}
+          </p>
+          {!searchTerm && onShowLinkModal && (
             <Button variant="outline" size="sm" className="mt-4" onClick={onShowLinkModal}>
               <UserPlus className="w-4 h-4 mr-1.5" /> Vincular primeiro atleta
             </Button>
@@ -743,6 +773,7 @@ export function CoachOverviewTab({
               athlete={athlete}
               onUnlink={handleUnlink}
               onAthleteChanged={handleChanged}
+              dateRange={dateRange}
             />
           ))}
         </div>
