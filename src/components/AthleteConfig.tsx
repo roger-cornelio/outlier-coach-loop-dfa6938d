@@ -661,8 +661,8 @@ export function AthleteConfig() {
             <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
             <p className="text-sm text-amber-200">
               {pendingPlanRequest.requested_plan === 'pro'
-                ? '⬆️ Upgrade para PERFORMANCE solicitado — aguardando aprovação do coach'
-                : '⬇️ Downgrade para ESSENCIAL solicitado — aguardando aprovação do coach'}
+                ? 'Solicitação de upgrade para PERFORMANCE enviada. Aguardando aprovação do seu coach.'
+                : 'Solicitação de mudança para ESSENCIAL enviada. Aguardando aprovação do seu coach.'}
             </p>
           </div>
         )}
