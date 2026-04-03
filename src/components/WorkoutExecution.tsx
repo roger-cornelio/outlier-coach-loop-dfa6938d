@@ -392,7 +392,7 @@ export function WorkoutExecution() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex-1">
-              <h1 className="font-display text-2xl">{DAY_NAMES[displayedWorkout.day]}</h1>
+              <h1 className="font-display text-xl sm:text-2xl">{DAY_NAMES[displayedWorkout.day]}</h1>
               <p className="text-sm text-muted-foreground">{displayedWorkout.stimulus}</p>
             </div>
           </div>
