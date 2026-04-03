@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 const applicationSchema = z.object({
   full_name: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100),
   email: z.string().trim().email('Email inválido').max(255),
+  telefone: z.string().trim().min(8, 'Telefone inválido').max(20, 'Telefone muito longo'),
   instagram: z.string().trim().max(50).optional(),
   box_name: z.string().trim().max(100).optional(),
   city: z.string().trim().max(100).optional(),
