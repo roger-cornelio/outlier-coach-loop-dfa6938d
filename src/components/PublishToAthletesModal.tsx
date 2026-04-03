@@ -61,8 +61,8 @@ export interface PublishToAthletesModalProps {
   workoutId?: string | null;
 }
 
-// Step enum for the wizard - agora só 2 steps
-type PublishStep = 'athletes' | 'confirm';
+// Step enum for the wizard - 3 steps: athletes → adaptation review → confirm
+type PublishStep = 'athletes' | 'adaptation' | 'confirm';
 
 export function PublishToAthletesModal({ 
   open, 
