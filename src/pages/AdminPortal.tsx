@@ -366,7 +366,10 @@ const AdminPortal = () => {
       <main 
         className={cn(
           "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-16" : "ml-64"
+          // Mobile: no margin (sidebar is overlay)
+          "ml-0",
+          // Desktop: margin based on sidebar state
+          sidebarCollapsed ? "md:ml-16" : "md:ml-64"
         )}
       >
         {/* Top Header */}
