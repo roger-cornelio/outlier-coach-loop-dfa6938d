@@ -28,6 +28,7 @@ const signupSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(100, 'Senha muito longa'),
   sexo: z.enum(['masculino', 'feminino'], { required_error: 'Selecione o sexo' }),
+  telefone: z.string().trim().min(8, 'Telefone inválido').max(20, 'Telefone muito longo'),
 });
 
 const forgotSchema = z.object({
