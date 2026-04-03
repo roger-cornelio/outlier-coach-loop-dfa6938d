@@ -84,17 +84,17 @@ export default function Landing() {
     <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
       {/* ══════════ HEADER FIXO ══════════ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
-        <div className="max-w-7xl mx-auto px-6 py-5 md:py-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 sm:py-5 md:py-6 flex items-center justify-between">
           <OutlierWordmark size="md" />
-          <div className="flex items-center gap-4 md:gap-6">
-            <Link to="/login" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+            <Link to="/login" className="font-display text-xs sm:text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               Já Sou Outlier
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
-            <span className="h-5 border-r border-border/40" />
-            <Link to="/login/coach" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+            <span className="h-5 border-r border-border/40 hidden sm:inline" />
+            <Link to="/login/coach" className="font-display text-xs sm:text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               Sou Coach
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
           </div>
         </div>
