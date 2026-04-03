@@ -123,7 +123,7 @@ export function MobileNav() {
         <Button
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg"
+          className="fixed top-[max(1rem,env(safe-area-inset-top))] left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg"
           aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5 text-foreground" />

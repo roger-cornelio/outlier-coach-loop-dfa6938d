@@ -345,7 +345,7 @@ export default function Landing() {
           </div>
 
           <Link to="/login?mode=signup"
-            className="inline-flex items-center gap-3 font-display text-xl tracking-widest px-16 py-6 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40">
+            className="inline-flex items-center gap-3 font-display text-lg sm:text-xl tracking-widest px-10 py-5 sm:px-16 sm:py-6 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40">
             <Zap className="w-5 h-5" />
             COMECE AGORA
           </Link>

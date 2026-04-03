@@ -712,7 +712,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
         className="w-full max-w-md md:max-w-xl z-10 flex flex-col items-center"
       >
         {/* HERO BRANDING - Maximum emphasis */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           {/* Logo - Conditional: OUTLIER for user, text for coach/admin */}
           <motion.div 
             className="mb-3"

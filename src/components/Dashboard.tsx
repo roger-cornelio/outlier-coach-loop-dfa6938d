@@ -338,7 +338,7 @@ export function Dashboard() {
   return (
     <div className="min-h-screen">
       {/* Content - Dashboard OUTLIER */}
-      <main className="max-w-6xl mx-auto px-6 py-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         
         {/* Header removido - agora está dentro do DiagnosticRadarBlock */}
         
