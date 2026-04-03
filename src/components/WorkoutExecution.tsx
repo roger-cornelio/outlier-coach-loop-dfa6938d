@@ -474,7 +474,7 @@ export function WorkoutExecution() {
                 animate={isJustCompleted ? completionAnim.complete : { opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={`
-                  card-elevated p-6 border-l-4 transition-all duration-300
+                  card-elevated p-4 sm:p-6 border-l-4 transition-all duration-300
                   ${blockTypeColors[block.type] || 'border-l-border'}
                   ${isComplete ? 'opacity-60' : ''}
                   ${identifyMainBlock(displayedWorkout.blocks).blockIndex === index ? 'ring-2 ring-primary/50' : ''}
