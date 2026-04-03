@@ -743,14 +743,32 @@ export default function DiagnosticoGratuito() {
 
               {/* Name mismatch warning */}
               {nameMismatchWarning && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-center space-y-2">
-                  <ShieldAlert className="w-6 h-6 text-destructive mx-auto" />
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-3">
+                  <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto" />
                   <p className="text-sm text-foreground font-medium">
-                    Busca restrita ao seu perfil
+                    O nome digitado não corresponde ao seu cadastro
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Você só pode acessar diagnósticos vinculados ao seu nome cadastrado. Se seu nome de prova é diferente, ajuste incluindo variações (ex: nome do meio).
+                    Seu nome cadastrado é <span className="font-semibold text-foreground">{profile?.name}</span>. 
+                    O diagnóstico gratuito está vinculado ao seu perfil. Se você compete com um nome diferente, 
+                    atualize seu perfil com o nome de prova.
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      if (profile?.name) {
+                        setSearchQuery(profile.name);
+                        setNameMismatchWarning(false);
+                        lastSearchedRef.current = '';
+                        setTimeout(() => executeSearch(profile.name), 100);
+                      }
+                    }}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1.5" />
+                    Usar meu nome cadastrado
+                  </Button>
                 </div>
               )}
 
