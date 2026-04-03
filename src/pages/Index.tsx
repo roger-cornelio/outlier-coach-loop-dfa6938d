@@ -240,10 +240,31 @@ const Index = () => {
 
   // Show loading while checking auth/profile (não navegar enquanto carrega)
   // Também bloqueia render enquanto decisão de onboarding não é determinística
+  // Rotating loading phrases
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
   if (state === 'loading' || profileLoading || !profileLoaded || !onboardingDecision.canRedirect) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={phraseIndex}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.3 }}
+            className="text-sm text-muted-foreground tracking-wide"
+          >
+            {LOADING_PHRASES[phraseIndex]}
+          </motion.p>
+        </AnimatePresence>
       </div>
     );
   }
