@@ -10,6 +10,7 @@ import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import { GlobalDebugBar } from "@/components/GlobalDebugBar";
 import { useParamsSync } from "@/hooks/useParamsSync";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
@@ -85,6 +86,7 @@ const App = () => (
           <Sonner />
           <SessionRefreshBanner />
           <DebugKeyboardToggle />
+          <ErrorBoundary fallbackTitle="Algo deu errado">
           <AppGate>
             <Routes>
               {/* Main app route (protected) */}
@@ -123,6 +125,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppGate>
+          </ErrorBoundary>
           
           {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
           <GlobalDebugBar />

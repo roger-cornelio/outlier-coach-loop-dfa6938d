@@ -37,7 +37,7 @@ import { CoachOnboarding } from '@/components/CoachOnboarding';
 import { CoachTour } from '@/components/CoachTour';
 import { useCoachOnboardingTour } from '@/hooks/useCoachOnboardingTour';
 
-// CoachFeedbacksTab removed - feedbacks now inline in CoachOverviewTab
+import { NotificationBell } from '@/components/NotificationBell';
 
 import type { CoachWorkout } from '@/hooks/useCoachWorkouts';
 import { LinkAthleteModal } from '@/components/LinkAthleteModal';
@@ -471,20 +471,23 @@ export default function CoachDashboard() {
                 </div>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )}
-              {isLoggingOut ? 'Saindo...' : 'Sair'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2"
+              >
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                {isLoggingOut ? 'Saindo...' : 'Sair'}
+              </Button>
+            </div>
 
             {/* Help button to re-trigger tour */}
             {!coachTour.onboardingActive && !coachTour.tourActive && (
