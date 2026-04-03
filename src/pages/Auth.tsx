@@ -319,7 +319,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       if (mode === 'login') {
         loginSchema.parse({ email, password });
       } else if (mode === 'signup') {
-        signupSchema.parse({ name, email, password, sexo: sexo || undefined });
+        signupSchema.parse({ name, email, password, sexo: sexo || undefined, telefone });
       } else if (mode === 'reset-password') {
         resetPasswordSchema.parse({ password, confirmPassword });
       } else {
