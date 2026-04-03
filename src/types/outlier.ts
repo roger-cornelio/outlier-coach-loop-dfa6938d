@@ -229,9 +229,9 @@ export const DAY_NAMES: Record<DayOfWeek, string> = {
 };
 
 export const LEVEL_NAMES: Record<AthleteStatus, string> = {
-  open: 'OPEN',
-  pro: 'PRO',
-  elite: 'ELITE',
+  open: 'OPEN OUTLIER',
+  pro: 'PRO OUTLIER',
+  elite: 'ELITE OUTLIER',
 };
 
 // Nomes dos níveis de treino (escolha do usuário)
