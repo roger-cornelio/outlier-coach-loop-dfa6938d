@@ -57,6 +57,13 @@ function loadLastRoute(): string | null {
   }
 }
 
+const LOADING_PHRASES = [
+  "Preparando sua experiência...",
+  "Entendendo sua prova...",
+  "Avaliando splits reais...",
+  "Quase lá...",
+];
+
 const Index = () => {
   const { hasHydrated, currentView, setCurrentView, coachStyle, setCoachStyle, athleteConfig, setAthleteConfig } = useOutlierStore();
   const { state, isCoach, canManageWorkouts, profile, profileLoaded, profileLoading } = useAppState();
