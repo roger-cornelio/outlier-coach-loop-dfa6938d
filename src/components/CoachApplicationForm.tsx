@@ -292,6 +292,27 @@ function ApplicationFormFields({
             </p>
           </div>
 
+          {/* Telefone */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Telefone (WhatsApp) *
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="tel"
+                value={formData.telefone}
+                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                className={`w-full pl-10 pr-4 py-2.5 bg-secondary border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                  errors.telefone ? 'border-destructive' : 'border-border'
+                }`}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            {errors.telefone && (
+              <p className="text-destructive text-sm mt-1">{errors.telefone}</p>
+            )}
+          </div>
           {/* Instagram */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
