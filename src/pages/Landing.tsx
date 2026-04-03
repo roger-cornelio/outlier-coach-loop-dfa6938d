@@ -303,15 +303,15 @@ export default function Landing() {
             </div>
 
             <p className="text-lg text-foreground mb-6 font-medium">
-              Escale sua operação sem perder a qualidade 1:1.
+              Receba novos atletas e escale sua operação com controle total.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
-                'Motor adapta volume por atleta automaticamente',
-                'Você revisa e aprova antes de publicar',
-                'Diagnóstico individual alimenta os ajustes',
-                'Publicação personalizada com 1 clique',
+                'Receba novos atletas todos os dias',
+                'Escale sua operação sem perder qualidade',
+                'Controle os treinos e saiba exatamente como melhorar cada atleta',
+                'Motor de adaptação inteligente: ajusta o treino baseado nas características de cada atleta',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ChevronRight className="w-4 h-4 text-primary flex-shrink-0" />
