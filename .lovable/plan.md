@@ -1,66 +1,54 @@
 
 
-## Plano: CRM Unificado 360° com Detalhe do Atleta
+## Plano: Tour Interativo com Visual OUTLIER (Atleta + Coach)
 
-### Visão Geral
+### Resumo
 
-Reescrever o `CRMAdmin` com 3 abas: **Visão Geral** (tabela unificada de todos os usuários), **Leads Diagnóstico** (tabela de `diagnostic_leads`), e as abas existentes (Clientes/Leads manuais + Duplas). Ao clicar em qualquer usuário na Visão Geral, abre um modal/drawer com ficha completa do atleta.
+Redesenhar os tours de atleta e coach para: (1) usar ícones Lucide e paleta OUTLIER em vez de emojis, (2) simular a navegação real com mini bottom nav destacando a aba ativa, (3) mostrar previews esquemáticos do conteúdo de cada aba, (4) exibir apenas na primeira vez (já funciona via localStorage — manter comportamento atual).
 
-### Aba "Visão Geral" — Tabela Unificada
+### Regra de exibição
 
-Cruza `profiles` + `coach_athletes` + `diagnostic_leads` para montar uma lista única com:
+O tour já é exibido apenas uma vez por usuário (localStorage com `userId`). Isso não muda. O coach já tem botão de ajuda para reativar manualmente — manter.
 
-| Coluna | Fonte |
-|--------|-------|
-| Nome, Email | `profiles` |
-| Status | Calculado: Ativo (last_active < 14d), Inativo (> 14d), Suspenso, Sem coach |
-| Coach vinculado | `coach_athletes` → `profiles` (nome do coach) |
-| Nível | `profiles.training_level` |
-| Setup completo | `profiles.first_setup_completed` |
-| Cadastro | `profiles.created_at` |
-| Último acesso | `profiles.last_active_at` |
+### Mudanças — Atleta
 
-**Filtros rápidos** (chips): Todos · Ativos · Inativos · Vinculados · Sem Coach · Suspensos
+**1. `src/hooks/useOnboardingTour.ts`**
+- Reduzir de 7 para 5 steps, alinhados às 5 abas reais: Dashboard, Treino, Evolução, Provas, Config
+- Trocar emojis por nomes de ícones Lucide (ex: `LayoutDashboard`, `Calendar`, `TrendingUp`, `Target`, `Settings`)
+- Adicionar campo `tabId` mapeando para o id da aba na bottom nav
+- Adicionar campo `previewItems` — lista de 2-3 labels do conteúdo daquela aba
 
-**Busca** por nome/email.
+**2. `src/components/OnboardingTour.tsx`** — Redesign completo:
+- Ícones Lucide renderizados em círculo com `bg-primary/10 text-primary` (orange)
+- **Mini bottom nav** dentro do card: replica os 5 tabs, aba atual highlighted em orange
+- **Preview cards** esquemáticos no corpo: 2-3 mini cards com ícone + label representando features da aba (usando `bg-secondary`, `border-border`)
+- Animação de slide horizontal entre steps
+- Gradiente orange sutil no topo do card
+- Manter progress bar, dots, botões Próximo/Voltar
 
-### Aba "Leads Diagnóstico"
+### Mudanças — Coach
 
-Lista de `diagnostic_leads` com: nome buscado, evento, divisão, data, se converteu. Cruzamento com `profiles` via `user_id` para mostrar se o lead virou usuário cadastrado.
+**3. `src/hooks/useCoachOnboardingTour.ts`**
+- Aplicar o mesmo padrão nos `TOUR_STEPS` do coach: ícones Lucide, `tabId`, `previewItems`
+- Onboarding slides (3 fullscreen) mantêm emojis pois são conceituais, não mapeiam abas
 
-### Modal de Detalhe do Atleta (ao clicar na linha)
+**4. `src/components/CoachTour.tsx`** — Mesmo redesign visual:
+- Mini nav com abas do coach (Atletas, Importar, Programações, Vincular)
+- Preview cards esquemáticos
+- Ícones Lucide + paleta OUTLIER
+- Reutilizar componentes/estilos do tour de atleta onde possível
 
-Abre um `Sheet` (drawer lateral) com ficha completa, buscando dados de múltiplas tabelas:
-
-**Seção 1 — Perfil**
-- Nome, email, sexo, idade, peso, altura
-- Nível de treino, duração de sessão, equipamentos indisponíveis
-- Objetivos do onboarding (experiência, goal, target race)
-- Data de cadastro, último acesso, status da conta
-
-**Seção 2 — Engajamento**
-- Tempo na plataforma: diferença entre `created_at` e `now()` (ex: "3 meses e 12 dias")
-- Total de sessões registradas: `COUNT` de `workout_session_feedback` do atleta
-- Frequência média: sessões / semanas desde cadastro
-- Total de benchmarks realizados: `COUNT` de `benchmark_outlier_results`
-- Provas cadastradas: `COUNT` de `athlete_races`
-
-**Seção 3 — Vínculo**
-- Coach atual (nome + email) ou "Sem coach"
-- Data de vinculação (`coach_athletes.created_at`)
-- Histórico de diagnósticos: lista de `diagnostic_leads` do user
-
-**Seção 4 — Qualificação (Lead Score visual)**
-- Badge automático baseado em regras simples:
-  - **Hot** 🔴: > 10 sessões ou setup completo + ativo
-  - **Warm** 🟡: cadastro completo mas < 5 sessões
-  - **Cold** 🔵: só diagnóstico ou inativo > 30 dias
+**5. `src/components/CoachOnboarding.tsx`**
+- Trocar emojis dos slides por ícones Lucide em círculo com estilo OUTLIER
+- Manter bullets e estrutura, apenas atualizar visual
 
 ### Arquivos alterados
 
-1. **`src/components/admin/CRMAdmin.tsx`** — Reescrever completamente: adicionar aba "Visão Geral" como default, aba "Leads Diagnóstico", manter abas existentes. Incluir componente de detalhe (Sheet) com todas as seções acima.
+1. `src/hooks/useOnboardingTour.ts` — Steps reduzidos + campos Lucide
+2. `src/components/OnboardingTour.tsx` — Redesign completo
+3. `src/hooks/useCoachOnboardingTour.ts` — Tour steps com Lucide
+4. `src/components/CoachTour.tsx` — Redesign visual
+5. `src/components/CoachOnboarding.tsx` — Ícones Lucide nos slides
 
 ### Sem alteração no banco
-
-Todos os dados já existem em `profiles`, `coach_athletes`, `diagnostic_leads`, `workout_session_feedback`, `benchmark_outlier_results`, `athlete_races`. Queries client-side com joins manuais via JS.
 
