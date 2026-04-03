@@ -298,7 +298,7 @@ export function WeeklyTrainingView() {
       </header>
 
       {/* Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Week Navigator */}
         <div className="mb-6 pb-4 border-b border-border">
           <WeekNavigator
