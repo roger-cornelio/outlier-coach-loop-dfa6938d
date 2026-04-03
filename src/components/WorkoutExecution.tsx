@@ -120,6 +120,7 @@ export function WorkoutExecution() {
   // AMRAP reps input (only shown after timer stops for AMRAP blocks)
   const [inputReps, setInputReps] = useState('');
   const [blockFeedbacks, setBlockFeedbacks] = useState<Record<string, string>>({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // Tick all running block timers
   useEffect(() => {
