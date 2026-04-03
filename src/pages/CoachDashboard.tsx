@@ -471,20 +471,23 @@ export default function CoachDashboard() {
                 </div>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )}
-              {isLoggingOut ? 'Saindo...' : 'Sair'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2"
+              >
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                {isLoggingOut ? 'Saindo...' : 'Sair'}
+              </Button>
+            </div>
 
             {/* Help button to re-trigger tour */}
             {!coachTour.onboardingActive && !coachTour.tourActive && (
