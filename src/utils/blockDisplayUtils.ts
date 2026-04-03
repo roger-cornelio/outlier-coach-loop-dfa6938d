@@ -797,6 +797,18 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
       continue;
     }
     
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FENCE MODE: Dentro de [TREINO], classificar via isExecutableLine
+    // Linhas executáveis vão para exerciseLines, não-executáveis são ignoradas
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (inFenceTrainingSection) {
+      if (isExecutableLine(content)) {
+        exerciseLines.push(content);
+      }
+      // Non-executable lines in fence training section are silently skipped
+      continue;
+    }
+    
     // PARECE EXERCÍCIO MAS NÃO TEM HÍFEN → ALERTA
     if (looksLikeExercise(content)) {
       alerts.push({
