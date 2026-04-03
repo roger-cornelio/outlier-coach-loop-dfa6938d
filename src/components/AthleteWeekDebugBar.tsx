@@ -113,6 +113,7 @@ export const AthleteWeekDebugBar = forwardRef<HTMLDivElement, AthleteWeekDebugBa
 
   return (
     <div 
+      ref={ref}
       className={cn(
         "fixed bottom-0 left-0 right-0 z-[99999] bg-black/95 border-t-2 border-yellow-500/50 font-mono text-xs",
         isExpanded ? "" : "h-10"
