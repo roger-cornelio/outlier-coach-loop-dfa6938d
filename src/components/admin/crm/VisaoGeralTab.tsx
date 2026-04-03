@@ -134,6 +134,7 @@ export function VisaoGeralTab() {
           computedStatus,
           leadScore: computeLeadScore(0, p.first_setup_completed, p.last_active_at, false),
           userRole,
+          coachScore: userRole === "coach" ? (scoreMap.get(p.user_id) ?? 0) : null,
         };
       });
 
