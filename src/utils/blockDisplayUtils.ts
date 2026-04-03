@@ -575,8 +575,8 @@ export function isBlockTitle(line: string): boolean {
  */
 function isCommentSectionStart(line: string): boolean {
   const trimmed = line.trim();
-  // Aceita: "> COMENTÁRIO", ">COMENTÁRIO", "COMENTÁRIO", "> COMENTARIO"
-  return /^>?\s*COMENT[ÁA]RIO$/i.test(trimmed);
+  // Aceita: "> COMENTÁRIO", ">COMENTÁRIO", "COMENTÁRIO", "> COMENTARIO", "[COMENTÁRIO]"
+  return /^>?\s*COMENT[ÁA]RIO$/i.test(trimmed) || /^\[COMENT[ÁA]RIO\]$/i.test(trimmed);
 }
 
 /**
