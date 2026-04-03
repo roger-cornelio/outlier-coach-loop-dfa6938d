@@ -199,4 +199,5 @@ export const SEMANTIC_COLORS: Record<SemanticType, { bg: string; text: string; b
   intensity:     { bg: 'bg-red-600/20',        text: 'text-red-400',           border: 'border-red-600/30',      label: 'Intensidade' },
   cadence:       { bg: 'bg-purple-500/15',     text: 'text-purple-500',        border: 'border-purple-500/30',   label: 'Cadência' },
   parenthetical: { bg: 'bg-transparent',       text: 'text-muted-foreground',  border: '',                       label: 'Nota' },
+  hyrox_load:    { bg: 'bg-orange-500/15',      text: 'text-orange-500',        border: 'border-orange-500/30',   label: 'Carga HYROX' },
 };
