@@ -239,7 +239,7 @@ export function PerformanceFeedback() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="font-display text-2xl">FEEDBACK</h1>
+            <h1 className="font-display text-xl sm:text-2xl">FEEDBACK</h1>
           </div>
         </div>
       </header>
