@@ -2,12 +2,13 @@
  * useOnboardingTour - Manages guided tour state for new athletes
  * 
  * Shows tour only ONCE after first_setup_completed transitions to true.
- * Uses localStorage to track if tour was already seen.
+ * Uses localStorage scoped by userId to track if tour was already seen.
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAppState } from './useAppState';
 
-const TOUR_SEEN_KEY = 'outlier_onboarding_tour_seen';
+const TOUR_SEEN_PREFIX = 'outlier_onboarding_tour_seen_';
 
 export interface TourStep {
   id: string;
@@ -63,22 +64,38 @@ export const TOUR_STEPS: TourStep[] = [
 ];
 
 export function useOnboardingTour() {
+  const { user } = useAppState();
+  const userId = user?.id;
+  const storageKey = userId ? `${TOUR_SEEN_PREFIX}${userId}` : null;
+
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Check if tour should show (only once, after setup complete)
+  // Check if tour should show (only once per user, after setup complete)
   const shouldShowTour = useCallback(() => {
+    if (!storageKey) return false;
     try {
-      return !localStorage.getItem(TOUR_SEEN_KEY);
+      return !localStorage.getItem(storageKey);
     } catch {
       return false;
     }
-  }, []);
+  }, [storageKey]);
 
   const startTour = useCallback(() => {
     setCurrentStep(0);
     setIsActive(true);
   }, []);
+
+  const completeTour = useCallback(() => {
+    setIsActive(false);
+    setCurrentStep(0);
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, 'true');
+    } catch {
+      // silent
+    }
+  }, [storageKey]);
 
   const nextStep = useCallback(() => {
     if (currentStep < TOUR_STEPS.length - 1) {
@@ -86,23 +103,13 @@ export function useOnboardingTour() {
     } else {
       completeTour();
     }
-  }, [currentStep]);
+  }, [currentStep, completeTour]);
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
-
-  const completeTour = useCallback(() => {
-    setIsActive(false);
-    setCurrentStep(0);
-    try {
-      localStorage.setItem(TOUR_SEEN_KEY, 'true');
-    } catch {
-      // silent
-    }
-  }, []);
 
   const skipTour = useCallback(() => {
     completeTour();
