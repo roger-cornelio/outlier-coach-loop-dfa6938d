@@ -287,11 +287,22 @@ const AdminPortal = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)] flex">
+      {/* Mobile sidebar overlay */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-black/60 z-40 transition-opacity md:hidden",
+          !sidebarCollapsed ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setSidebarCollapsed(true)}
+      />
+      
       {/* Sidebar */}
       <aside 
         className={cn(
           "fixed left-0 top-0 h-full bg-card/50 backdrop-blur-xl border-r border-border/50 z-50 transition-all duration-300 flex flex-col",
-          sidebarCollapsed ? "w-16" : "w-64"
+          // Mobile: hidden when collapsed, full overlay when open
+          "md:translate-x-0",
+          sidebarCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "translate-x-0 w-64"
         )}
       >
         {/* Sidebar Header */}
