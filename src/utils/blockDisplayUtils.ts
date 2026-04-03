@@ -575,8 +575,8 @@ export function isBlockTitle(line: string): boolean {
  */
 function isCommentSectionStart(line: string): boolean {
   const trimmed = line.trim();
-  // Aceita: "> COMENTÁRIO", ">COMENTÁRIO", "COMENTÁRIO", "> COMENTARIO"
-  return /^>?\s*COMENT[ÁA]RIO$/i.test(trimmed);
+  // Aceita: "> COMENTÁRIO", ">COMENTÁRIO", "COMENTÁRIO", "> COMENTARIO", "[COMENTÁRIO]"
+  return /^>?\s*COMENT[ÁA]RIO$/i.test(trimmed) || /^\[COMENT[ÁA]RIO\]$/i.test(trimmed);
 }
 
 /**
@@ -612,8 +612,9 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   const alerts: ParseAlert[] = [];
   const headerLines: string[] = [];
   const structures: WorkoutStructure[] = [];
-  
+   
   let inCommentSection = false;
+  let inFenceTrainingSection = false;
   
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const rawLine = lines[lineIndex];
@@ -621,6 +622,20 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     
     // Linha vazia - ignorar
     if (!trimmed) continue;
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FENCE TAGS: [TREINO] e [COMENTÁRIO] — delimitadores de seção
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (/^\[TREINO\]$/i.test(trimmed)) {
+      inFenceTrainingSection = true;
+      inCommentSection = false;
+      continue;
+    }
+    if (/^\[COMENT[ÁA]RIO\]$/i.test(trimmed)) {
+      inFenceTrainingSection = false;
+      inCommentSection = true;
+      continue;
+    }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // DSL EXPLÍCITO: PRIORIDADE ABSOLUTA
@@ -740,16 +755,15 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     }
     
     // ─────────────────────────────────────────────────────────────────────────
-    // DENTRO DE "> COMENTÁRIO"
+    // DENTRO DE SEÇÃO DE COMENTÁRIO
     // ─────────────────────────────────────────────────────────────────────────
     if (inCommentSection) {
-      // Texto dentro de "> COMENTÁRIO" que NÃO estava em parênteses → ALERTA
-      alerts.push({
-        type: 'COMMENT_NOT_IN_PARENS',
-        message: 'Dentro de > COMENTÁRIO, todo comentário deve estar entre ( ).',
-        line: trimmed,
-        lineIndex
-      });
+      if (inFenceTrainingSection === false && /^\[COMENT[ÁA]RIO\]$/i.test(trimmed)) {
+        // Already handled above, skip
+        continue;
+      }
+      // Fence mode [COMENTÁRIO]: lines go directly to coachNotes
+      coachNotes.push(content);
       continue;
     }
     
@@ -779,6 +793,18 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     if (isStructuralLine(content)) {
       // Inserir como marcador __STRUCT: inline para preservar ordem intercalada
       exerciseLines.push(`__STRUCT:${content}`);
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FENCE MODE: Dentro de [TREINO], classificar via isExecutableLine
+    // Linhas executáveis vão para exerciseLines, não-executáveis são ignoradas
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (inFenceTrainingSection) {
+      if (isExecutableLine(content)) {
+        exerciseLines.push(content);
+      }
+      // Non-executable lines in fence training section are silently skipped
       continue;
     }
     
@@ -828,12 +854,19 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
 
 /**
  * Verifica se uma linha é EXECUTÁVEL (treino válido)
- * MVP0: Agora só verifica se começa com "- "
+ * Usa mesma lógica de fenceValidation: número + unidade/estrutura válida
  */
 export function isExecutableLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return true; // Linha vazia é "válida" (não bloqueia)
-  return trimmed.startsWith('- ') || trimmed.startsWith('-');
+  
+  // REGRA 1: Deve conter pelo menos um número
+  const hasNumber = /\d/.test(trimmed);
+  if (!hasNumber) return false;
+  
+  // REGRA 2: Deve conter unidade ou estrutura válida
+  const EXECUTABLE_UNITS = /(?:reps?|rep|x|m\b|km\b|s\b|seg\b|sec\b|min\b|minutos?\b|['']|PSE|RPE|Z[1-5]|Zona\s*[1-5]|EMOM|AMRAP|For\s*Time|RFT|Tabata|rest|descanso|rounds?|sets?|séries?|%|kg\b|lb\b|cal\b|calorias?\b|kcal\b)/i;
+  return EXECUTABLE_UNITS.test(trimmed);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

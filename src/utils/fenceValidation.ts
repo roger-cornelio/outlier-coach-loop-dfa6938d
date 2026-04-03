@@ -323,20 +323,28 @@ function isBlockTitle(line: string): boolean {
   // Ignorar delimitadores
   if (/^\[(?:TREINO|COMENT[ÁA]RIO)\]/i.test(trimmed)) return false;
   
-  // Título de bloco: linha em maiúsculas ou capitalizada, com letras
-  // E que tenha pelo menos 3 caracteres
+  // Título de bloco: linha curta em maiúsculas, com letras
   if (trimmed.length < 3) return false;
   
-  // Verificar se é uma linha que parece título (maiúsculas ou capitalizada)
-  const isUpperCase = trimmed === trimmed.toUpperCase();
-  const startsWithCapital = /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/.test(trimmed);
-  const hasLetters = /[a-zA-ZÀ-ÿ]/.test(trimmed);
-  
   // Não deve começar com número (seria exercício)
-  const startsWithNumber = /^\d/.test(trimmed);
-  if (startsWithNumber) return false;
+  if (/^\d/.test(trimmed)) return false;
   
-  return hasLetters && (isUpperCase || startsWithCapital) && trimmed.length >= 3;
+  // Não deve começar com "- " (seria exercício)
+  if (trimmed.startsWith('-')) return false;
+  
+  // Não deve terminar com ponto final (seria frase explicativa)
+  if (/\.\s*$/.test(trimmed)) return false;
+  
+  // Deve ter letras
+  if (!/[a-zA-ZÀ-ÿ]/.test(trimmed)) return false;
+  
+  // Não deve ter mais de 5 palavras (títulos de bloco são curtos)
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount > 5) return false;
+  
+  // Deve ser ALL UPPERCASE para ser reconhecido como título de bloco
+  // Exemplos: "FORÇA", "AQUECIMENTO", "CARDIO", "WOD", "TREINO A"
+  return trimmed === trimmed.toUpperCase();
 }
 
 /**
