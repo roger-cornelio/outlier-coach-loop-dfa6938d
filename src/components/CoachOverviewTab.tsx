@@ -6,7 +6,7 @@
  * Paginação de 50 em 50 para suportar 200+ atletas
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCoachOverview, classifyRisk, type AthleteOverview, type RiskLevel } from '@/hooks/useCoachOverview';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,9 +24,10 @@ import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
 import { PeriodFilter, type DateRange } from '@/components/admin/PeriodFilter';
 import { Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getAthleteCurrentWeekStart } from '@/utils/weekCalculations';
 import {
   Users,
   TrendingUp,
