@@ -170,8 +170,8 @@ export function ResultRecording() {
                   }
                 `}
               >
-                <Check className={`w-8 h-8 ${completed === true ? 'text-status-good' : 'text-muted-foreground'}`} />
-                <span className="font-display text-xl">SIM</span>
+                <Check className={`w-6 h-6 sm:w-8 sm:h-8 ${completed === true ? 'text-status-good' : 'text-muted-foreground'}`} />
+                <span className="font-display text-lg sm:text-xl">SIM</span>
               </button>
               <button
                 onClick={() => setCompleted(false)}
