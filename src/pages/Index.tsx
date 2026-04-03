@@ -42,6 +42,8 @@ import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { useDarkMode } from "@/hooks/useDarkMode";
 import { OnboardingTour } from "@/components/OnboardingTour";
 
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { WorkoutCelebration } from './WorkoutCelebration';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore, type SessionBlockResult } from '@/store/outlierStore';
