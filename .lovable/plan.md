@@ -1,20 +1,23 @@
 
 
-## Plano: Atualizar Seção "Para Coaches" na Landing
+## Plano: Atualizar Métricas de Impacto na Landing
 
-### Mudança
+**Arquivo:** `src/pages/Landing.tsx` — array de métricas (~linhas 214-227)
 
-**Arquivo:** `src/pages/Landing.tsx` — seção "PARA COACHES"
+### Mudanças
 
-1. **Subtítulo**: Trocar "Escale sua operação sem perder a qualidade 1:1." por **"Receba novos atletas e escale sua operação com controle total."**
+1. Adicionar campo `prefix` opcional ao array de métricas
+2. Substituir os 3 cards:
 
-2. **4 bullets** — substituir pelos textos exatos:
-   - "Receba novos atletas todos os dias"
-   - "Escale sua operação sem perder qualidade"
-   - "Controle os treinos e saiba exatamente como melhorar cada atleta"
-   - "Motor de adaptação inteligente: ajusta o treino baseado nas características de cada atleta"
+| Prefix | Valor | Sufixo | Label |
+|--------|-------|--------|-------|
+| − | 14 | min | No resultado dos atletas |
+| | 92 | % | Subiram de categoria nos primeiros 6 meses |
+| | 98 | % | Precisão do diagnóstico e ajuste de treinos |
+
+3. No render, exibir `item.prefix` (quando existir) antes do `AnimatedCounter`
 
 ### Arquivo alterado
 
-1. **`src/pages/Landing.tsx`** — Subtítulo e bullets da seção "PARA COACHES"
+1. **`src/pages/Landing.tsx`** — Métricas de impacto
 
