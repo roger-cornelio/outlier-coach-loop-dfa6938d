@@ -129,7 +129,7 @@ export function ResultRecording() {
           {/* WOD Info */}
           <div className={`card-elevated p-4 sm:p-6 mb-6 sm:mb-8 border-l-4 ${isBenchmark ? 'border-l-status-excellent' : 'border-l-primary'}`}>
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-display text-xl">{mainWod.title}</h3>
+              <h3 className="font-display text-lg sm:text-xl">{mainWod.title}</h3>
               {isBenchmark && (
                 <span className="px-2 py-0.5 text-xs font-bold bg-status-excellent/20 text-status-excellent rounded">
                   BENCHMARK
