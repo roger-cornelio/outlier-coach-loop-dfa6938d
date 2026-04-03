@@ -120,6 +120,7 @@ export default function DiagnosticoGratuito() {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [gender, setGender] = useState<'M' | 'F'>('M');
   const [consentGiven, setConsentGiven] = useState(false);
+  const [telefone, setTelefone] = useState('');
   const [roxCoachDiagnosticos, setRoxCoachDiagnosticos] = useState<RoxCoachDiagnostico[]>([]);
   const [roxCoachFailed, setRoxCoachFailed] = useState(false);
   const [textoIa, setTextoIa] = useState<string | null>(null);
