@@ -151,8 +151,8 @@ export function BusinessMetricsDashboard() {
 
     athleteLinks.forEach((l: any) => {
       if (!coachMap[l.coach_id]) {
-        const p = profiles.find((p: any) => p.id === l.coach_id);
-        coachMap[l.coach_id] = { name: p?.name || "Coach", athletes: new Set(), prevAthletes: new Set() };
+        const p = profiles.find((p: any) => p.user_id === l.coach_id);
+        coachMap[l.coach_id] = { name: p?.name || l.coach_id.slice(0, 8), athletes: new Set(), prevAthletes: new Set() };
       }
       coachMap[l.coach_id].athletes.add(l.athlete_id);
     });
