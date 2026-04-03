@@ -1,32 +1,26 @@
 
 
-## Plano: Status por Atleta + Verificação de Triggers
+## Plano: Superadmin acessa Diagnóstico Gratuito logado + busca qualquer atleta
 
-### Contexto
+### Problema atual
 
-O empty state para coaches sem atletas **já existe** (linhas 756-766 do CoachOverviewTab). O único item pendente do plano de 6 gaps é o **status visual por atleta** ("Publicado / Visto / Treinou") nos cards da lista.
+1. **AppGate** redireciona usuários logados que acessam `/diagnostico-gratuito` para seus dashboards (conforme plano anterior aprovado mas ainda não implementado)
+2. **DiagnosticoGratuito** usa `isNameSimilar()` para restringir a busca ao nome do perfil logado — superadmin fica preso ao próprio nome
 
 ### O que será feito
 
-**1. Badge de status de treino semanal por atleta**
+**1. AppGate — permitir superadmin no diagnóstico**
 
-Na linha de cada atleta (entre o RiskBadge e o contador de dias inativos), adicionar um pequeno badge que mostra o status da semana atual:
+Na lógica de `/diagnostico-gratuito`, quando o usuário logado for `superadmin`, permitir acesso normalmente (não redirecionar). Outros roles (athlete, coach, admin) continuam sendo redirecionados para seus dashboards.
 
-- **"Treinou"** (verde) → Existe registro em `workout_session_feedback` esta semana
-- **"Publicado"** (azul) → Existe `athlete_plans` com status `published` para esta semana, mas sem feedback
-- **Sem badge** → Nenhum plano publicado para esta semana
+**2. DiagnosticoGratuito — bypass de validação de nome para superadmin**
 
-A lógica será calculada via uma query leve no `ExpandableAthleteRow` ao montar, consultando `athlete_plans` (publicado esta semana?) e `workout_session_feedback` (feedback esta semana?).
-
-**2. Verificar triggers de notificação**
-
-Consultar o banco para confirmar que os triggers `notify_coach_on_feedback` e `notify_coach_on_benchmark` estão ativos e vinculados às tabelas corretas. Se não estiverem, criar migração para ativá-los.
+Na função `handleQueryChange`, quando `isSuperAdmin === true`, pular a verificação `isNameSimilar()` e permitir busca de qualquer nome livremente.
 
 ### Arquivos alterados
 
-1. **`src/components/CoachOverviewTab.tsx`** — Adicionar badge de status semanal na `ExpandableAthleteRow`
+1. **`src/components/AppGate.tsx`** — Adicionar exceção: se `state === 'superadmin'` e `pathname === '/diagnostico-gratuito'`, renderizar children (não redirecionar)
+2. **`src/pages/DiagnosticoGratuito.tsx`** — Usar `isSuperAdmin` do `useAuth()` para pular validação de `isNameSimilar` e não mostrar `nameMismatchWarning`
 
-### Sem alteração no banco (exceto se triggers estiverem inativos)
-
-O badge usa queries client-side sobre tabelas já existentes.
+### Sem alteração no banco
 
