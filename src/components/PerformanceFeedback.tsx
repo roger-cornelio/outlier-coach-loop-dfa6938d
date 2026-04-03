@@ -31,10 +31,10 @@ function SessionSummary({ sessionBlockResults }: { sessionBlockResults: any[] })
         {/* Header */}
         <div className="flex items-center justify-between pb-1 border-b border-border/50">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 flex-1">Bloco</span>
-          <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-muted-foreground/60">
-            <span className="w-14 text-right">Feito</span>
-            <span className="w-14 text-right">Esper.</span>
-            <span className="w-16 text-right">Diff</span>
+          <div className="flex items-center gap-2 sm:gap-4 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+            <span className="w-12 sm:w-14 text-right">Feito</span>
+            <span className="w-12 sm:w-14 text-right">Esper.</span>
+            <span className="w-14 sm:w-16 text-right">Diff</span>
           </div>
         </div>
 
