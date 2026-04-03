@@ -695,6 +695,26 @@ export function AthleteConfig() {
         </div>
       </motion.section>
 
+      {/* Aparência */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="space-y-3"
+      >
+        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          Aparência
+        </h3>
+        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
+          <div>
+            <p className="text-sm font-medium text-foreground">Modo Escuro</p>
+            <p className="text-xs text-muted-foreground">Alterar tema do aplicativo</p>
+          </div>
+          <Switch checked={isDark} onCheckedChange={toggleDarkMode} />
+        </div>
+      </motion.section>
+
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
