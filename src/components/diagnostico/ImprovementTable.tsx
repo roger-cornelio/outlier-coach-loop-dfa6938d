@@ -81,7 +81,7 @@ export default function ImprovementTable({ diagnosticos, splits = [] }: Props) {
     const focusMap = new Map(focusResults.map(f => [f.movement, f.focusPercent]));
     rows = rows.map(d => ({
       ...d,
-      percentage: focusMap.get(d.movement) ?? 0,
+      percentage: focusMap.get(d.movement) ?? 0 as number,
     }));
   }
 
