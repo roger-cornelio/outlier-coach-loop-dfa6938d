@@ -386,7 +386,7 @@ export function AthleteConfig() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
         <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
           <User className="w-6 h-6 text-primary" />
