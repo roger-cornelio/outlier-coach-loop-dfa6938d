@@ -109,26 +109,16 @@ const Index = () => {
       return;
     }
 
-    // Superadmin pode forçar onboarding via ?force-onboarding=1
+    // Force onboarding via ?force-onboarding=1 (superadmin ou dev)
     const searchParams = new URLSearchParams(location.search);
-    if (state === 'superadmin' && searchParams.get('force-onboarding') === '1') {
-      console.log(`[NAV][Index] SUPERADMIN force-onboarding activated`);
+    const forceOnboarding = searchParams.get('force-onboarding') === '1';
+    if (forceOnboarding) {
+      console.log(`[NAV][Index] force-onboarding activated, state=${state}`);
       setCurrentView('welcome');
       initialCheckDone.current = true;
       return;
     }
 
-    const coachStyleFromProfile = profile?.coach_style;
-    const lastRoute = loadLastRoute();
-    const currentPath = `${location.pathname}${location.search}${location.hash}`;
-    const outlierWeekAnchor = localStorage.getItem('outlier_week_anchor');
-    
-    // ========== DEBUG LOG ==========
-    console.log(`[GATE][Index] currentView=${currentView} isSetupComplete=${onboardingDecision.isSetupComplete} first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} lastRoute=${lastRoute} viewRestoredFromStorage=${viewRestoredFromStorage} outlier_week_anchor=${outlierWeekAnchor} ts=${new Date().toISOString()}`);
-    // ================================
-
-    // ===== PRIORIDADE 0: SUPERADMIN FORCE ONBOARDING (mesmo com setup completo) =====
-    const forceOnboarding = searchParams.get('force-onboarding') === '1';
 
     // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
     if (onboardingDecision.isSetupComplete && !forceOnboarding) {
