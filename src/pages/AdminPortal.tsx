@@ -373,29 +373,37 @@ const AdminPortal = () => {
         )}
       >
         {/* Top Header */}
-        <header className="sticky top-0 z-40 h-16 bg-background/80 backdrop-blur-lg border-b border-border/50 flex items-center px-6">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-40 h-14 sm:h-16 bg-background/80 backdrop-blur-lg border-b border-border/50 flex items-center px-3 sm:px-6">
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors md:hidden mr-2"
+          >
             <Shield className="w-5 h-5 text-primary" />
+          </button>
+          
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-primary hidden md:block" />
             <div>
-              <h1 className="font-display text-xl font-bold tracking-wide">
+              <h1 className="font-display text-base sm:text-xl font-bold tracking-wide">
                 {currentNavItem?.label.toUpperCase() || "ADMIN PANEL"}
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
                 {currentNavItem?.description}
               </p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="ml-auto flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors text-sm"
+            className="ml-auto flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors text-xs sm:text-sm"
           >
             <LogOut className="w-4 h-4" />
-            Sair
+            <span className="hidden sm:inline">Sair</span>
           </button>
         </header>
 
         {/* Content Area */}
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={adminView}
