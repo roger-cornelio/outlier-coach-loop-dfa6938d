@@ -309,6 +309,11 @@ export function WorkoutExecution() {
     setTimeout(() => setJustCompletedBlock(null), 600);
     setInputReps('');
     
+    // Haptic feedback on block completion
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+    
     if (blockIndex === currentBlockIndex) {
       setCurrentBlockIndex(Math.min(blockIndex + 1, displayedWorkout.blocks.length - 1));
     }

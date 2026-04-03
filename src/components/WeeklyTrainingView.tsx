@@ -22,6 +22,7 @@ import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { User } from 'lucide-react';
 
 
@@ -360,10 +361,30 @@ export function WeeklyTrainingView() {
         </div>
 
 
-        {/* Loading State */}
+        {/* Loading State — Skeleton */}
         {loadingPlan && (
-          <div className="min-h-[200px] flex items-center justify-center">
-            <p className="text-muted-foreground">Carregando treinos...</p>
+          <div className="space-y-4">
+            {/* Day header skeleton */}
+            <Skeleton className="h-8 w-40" />
+            {/* Block card skeletons */}
+            {[1, 2, 3].map(i => (
+              <div key={i} className="rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-16 ml-auto rounded-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Skeleton className="h-6 w-14 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -625,35 +646,21 @@ export function WeeklyTrainingView() {
             )}
           </div>
         ) : !loadingPlan && hasAnyWorkouts ? (
-          <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 card-elevated p-8 rounded-xl">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Clock className="w-8 h-8 text-primary/60" />
-            </div>
-            <p className="text-muted-foreground text-center text-lg">
-              Nenhum treino para {DAY_NAMES[activeDay].toLowerCase()}.
-            </p>
-          </div>
+          <EmptyState
+            icon={Clock}
+            title="Dia de descanso"
+            description={`Nenhum treino programado para ${DAY_NAMES[activeDay].toLowerCase()}.`}
+          />
         ) : !loadingPlan ? (
-          <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 card-elevated p-8 rounded-xl">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Clock className="w-8 h-8 text-primary/60" />
-            </div>
-            <h3 className="font-display text-xl text-foreground">
-              📭 Nenhum treino publicado para esta semana
-            </h3>
-            <p className="text-muted-foreground text-center text-sm max-w-md">
-              {currentWeek.isFuture 
-                ? 'Seu coach ainda não publicou treinos para a próxima semana.'
-                : 'Seu coach ainda não publicou treinos para esta semana. Aguarde ou entre em contato.'}
-            </p>
-            <button
-              onClick={() => refetch()}
-              className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Atualizar
-            </button>
-          </div>
+          <EmptyState
+            icon={Clock}
+            title="Nenhum treino publicado"
+            description={currentWeek.isFuture
+              ? 'Seu coach ainda não publicou treinos para a próxima semana.'
+              : 'Seu coach ainda não publicou treinos para esta semana. Aguarde ou entre em contato.'}
+            actionLabel="Atualizar"
+            onAction={() => refetch()}
+          />
         ) : null}
       </main>
     </div>
