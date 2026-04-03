@@ -59,7 +59,7 @@ function getSortPriority(userRole: UserRole, status: string): number {
 }
 
 export function VisaoGeralTab() {
-  const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole })[]>([]);
+  const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole; coachScore: number | null })[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
