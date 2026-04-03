@@ -191,7 +191,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="w-full px-8 py-10 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-xl shadow-primary/10 mb-10"
+          className="w-full px-5 sm:px-8 py-6 sm:py-10 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-xl shadow-primary/10 mb-6 sm:mb-10"
         >
           {isLoading || isLoadingWorkouts ? (
             <div className="flex flex-col items-center gap-4">
