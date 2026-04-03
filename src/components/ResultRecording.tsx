@@ -228,7 +228,7 @@ export function ResultRecording() {
                     value={seconds}
                     onChange={(e) => setSeconds(e.target.value)}
                     placeholder="00"
-                    className="w-full px-4 py-4 rounded-lg bg-secondary border border-border text-center font-display text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 rounded-lg bg-secondary border border-border text-center font-display text-2xl sm:text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
