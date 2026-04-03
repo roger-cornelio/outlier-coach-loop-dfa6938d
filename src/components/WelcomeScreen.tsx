@@ -21,8 +21,9 @@ import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, 
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
+import { OnboardingProvaAlvo } from '@/components/OnboardingProvaAlvo';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'planSelection' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'provaAlvo' | 'profileConfig' | 'profileCta' | 'planSelection' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
@@ -1024,7 +1025,7 @@ export function WelcomeScreen() {
                   <motion.button key={opt.key}
                     onClick={() => {
                       setProfileAnswers(prev => ({ ...prev, goal: opt.key }));
-                      setTimeout(() => setStep('profileCta'), 400);
+                      setTimeout(() => setStep('provaAlvo'), 400);
                     }}
                     className={`p-5 rounded-xl border transition-all text-center group flex flex-col items-center gap-3 ${
                       selected
@@ -1280,12 +1281,20 @@ export function WelcomeScreen() {
               {isSaving ? 'CARREGANDO...' : 'QUERO MEU PLANO DE TREINO'}
             </motion.button>
 
-            <motion.button onClick={() => setStep('profileGoal')}
+            <motion.button onClick={() => setStep('provaAlvo')}
               className="mt-4 text-sm text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
               ← Voltar
             </motion.button>
           </motion.div>
+        )}
+
+        {/* ===== PROVA ALVO STEP ===== */}
+        {step === 'provaAlvo' && (
+          <OnboardingProvaAlvo
+            onNext={() => setStep('profileCta')}
+            onBack={() => setStep('profileGoal')}
+          />
         )}
 
         {/* ===== PLAN SELECTION STEP ===== */}
