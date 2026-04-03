@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
-import { computeStationEmphasis, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
+import { computeStationEmphasis, applyEmphasisToWorkouts, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
 import type { DiagnosticoMelhoria } from '@/components/diagnostico/types';
 
 import {
