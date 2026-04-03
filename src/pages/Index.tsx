@@ -109,10 +109,11 @@ const Index = () => {
       return;
     }
 
-    // Superadmin pode forçar onboarding via ?force-onboarding=1
+    // Force onboarding via ?force-onboarding=1 (superadmin ou dev)
     const searchParams = new URLSearchParams(location.search);
-    if (state === 'superadmin' && searchParams.get('force-onboarding') === '1') {
-      console.log(`[NAV][Index] SUPERADMIN force-onboarding activated`);
+    const forceOnboarding = searchParams.get('force-onboarding') === '1';
+    if (forceOnboarding) {
+      console.log(`[NAV][Index] force-onboarding activated, state=${state}`);
       setCurrentView('welcome');
       initialCheckDone.current = true;
       return;
@@ -128,7 +129,7 @@ const Index = () => {
     // ================================
 
     // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
-    if (onboardingDecision.isSetupComplete) {
+    if (onboardingDecision.isSetupComplete && !forceOnboarding) {
       // Sincronizar coach_style se necessário
       if (coachStyleFromProfile) {
         const normalized = coachStyleFromProfile as CoachStyle;
@@ -302,11 +303,12 @@ const Index = () => {
     // REGRA ABSOLUTA: Se first_setup_completed === true, NUNCA renderizar telas de setup
     // REGRA INVERSA: Se first_setup_completed !== true, NUNCA renderizar preWorkout/dashboard
     const setupComplete = onboardingDecision.isSetupComplete;
+    const isForceOnboarding = new URLSearchParams(location.search).get('force-onboarding') === '1';
     
     // Resolver view efetiva
     let effectiveView = currentView;
     
-    if (setupComplete) {
+    if (setupComplete && !isForceOnboarding) {
       // Se setup completo, redirecionar telas de setup para dashboard
       // NOTE: preWorkout foi removido como etapa intermediária
       if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'preWorkout') {
