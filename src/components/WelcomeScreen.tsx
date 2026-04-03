@@ -557,7 +557,7 @@ export function WelcomeScreen() {
           return;
         }
       }
-      setCurrentView('dashboard');
+      setCurrentView('athleteWelcome');
     } catch (err) {
       console.error('[WELCOME] handleFinish error:', err);
       toast.error('Erro inesperado. Tente novamente.');
