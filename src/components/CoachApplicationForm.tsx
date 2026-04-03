@@ -18,7 +18,8 @@ import {
   XCircle,
   Send,
   AlertCircle,
-  Lock
+  Lock,
+  Phone
 } from 'lucide-react';
 import { toast } from 'sonner';
 
