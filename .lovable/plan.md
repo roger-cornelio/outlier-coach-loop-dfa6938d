@@ -1,71 +1,53 @@
 
 
-## Plano: Checklist de QA Completo — Pré-Beta
+## Plano: QA Automatizado com Relatório
 
-Vou gerar um documento Markdown completo em `/mnt/documents/` com todos os fluxos críticos organizados por persona (Atleta, Coach, Admin) e funcionalidade.
+### O que vou fazer
 
-### Estrutura do checklist
+Rodar os testes do checklist usando browser automation + consultas ao banco, e gerar um relatório em `/mnt/documents/QA_REPORT_BETA.md` com status de cada item (PASS / FAIL / SKIP).
 
-**1. Autenticação & Onboarding**
-- Cadastro de atleta novo → tour guiado aparece
-- Login/logout/relogin → dados persistem
-- Recuperação de senha
-- Auto-confirm email (verificar se está habilitado)
-- Onboarding completo (10 etapas: busca → diagnóstico → biometria → coach → plano)
+### Pré-requisito: conta de teste
 
-**2. Fluxo do Atleta**
-- Dashboard carrega treinos do banco
-- Visualização semanal (WeekNavigator)
-- Execução de treino → registro de resultado → feedback
-- Benchmarks e evolução
-- Diagnóstico gratuito (/diagnostico-gratuito)
-- Importar prova (/importar-prova)
-- Prova alvo (/prova-alvo)
-- Simulador HYROX
-- Troca de coach (solicitação)
+Preciso criar uma conta via signup no preview. Vou:
+1. Navegar até `/login` no preview
+2. Criar conta com email de teste (ex: `qa-test-XXXX@outlier.test`)
+3. Como auto-confirm está ativo, a conta fica pronta imediatamente
 
-**3. Fluxo do Coach**
-- Login coach (/login/coach)
-- Definir senha (primeiro acesso)
-- Coach dashboard: visão geral, planilha, treinos, benchmarks, feedbacks
-- Criar/importar/publicar treino (draft → published)
-- Aprovar/rejeitar solicitações de vínculo de atleta
-- Vincular/desvincular atleta
+### Testes que posso rodar automaticamente
 
-**4. Fluxo Coach → Atleta (já documentado, expandido)**
-- Coach publica treino → atleta vê no dashboard
-- Atleta reloga → treino persiste
-- Reset blindado funciona
+| Categoria | Testes | Método |
+|---|---|---|
+| **Landing & rotas públicas** | Landing carrega, links funcionam, 404 funciona | Browser |
+| **Diagnóstico gratuito** | Busca atleta, renderização do parecer | Browser |
+| **Signup & onboarding** | Cadastro, tour guiado aparece, etapas do setup | Browser |
+| **Dashboard atleta** | Carrega após setup, navegação semanal, tabs | Browser |
+| **Login coach** | Tela carrega, validação de campos | Browser |
+| **Admin portal** | Tela carrega (se logado como superadmin) | Browser |
+| **Dados no banco** | Perfil criado, roles corretas, RLS funciona | psql |
+| **Mobile responsivo** | Principais telas em viewport 390x844 | Browser |
 
-**5. Fluxo de Aplicação para Coach**
-- Usuário submete aplicação (/coach-request)
-- Aparece como pending
-- Admin aprova → cria user com role coach
-- Coach recebe acesso e define senha
+### Testes que preciso SKIPAR (requerem ação manual)
 
-**6. Admin Portal**
-- Todas as abas funcionam (métricas, CRM, aplicações, benchmarks, etc.)
-- Filtro de período funciona em métricas
-- Gestão de usuários (suspender, roles)
+- Coach publicar treino completo (precisa de coach real com atletas)
+- Stripe/pagamento
+- Email de recuperação de senha (precisa de email real)
+- Upload de screenshot de prova
 
-**7. Diagnóstico Gratuito (Funil de Vendas)**
-- Busca por atleta na API RoxCoach
-- Parecer OUTLIER renderiza corretamente
-- Plano de Ataque com frases dinâmicas
-- CTA de conversão funciona
-- Tracking de lead (diagnostic_leads)
+### Entregável
 
-**8. Cross-cutting**
-- Mobile responsivo (principais telas)
-- Persistência localStorage por userId (tour, preferências)
-- RLS policies: atleta não vê dados de outro atleta
-- Session refresh banner funciona
-- Erros de rede mostram feedback adequado
+Arquivo `QA_REPORT_BETA.md` com:
+- Data/hora de execução
+- Cada teste com status (PASS/FAIL/SKIP)
+- Screenshots dos failures
+- Resumo final com % de aprovação
 
-### Implementação
+### Sequência de execução
 
-Um arquivo `QA_CHECKLIST_BETA.md` gerado em `/mnt/documents/` com checkboxes prontos para uso, organizados por seção, com indicação de pré-requisitos e resultados esperados.
-
-### Arquivos alterados
-- Nenhum arquivo do projeto — apenas geração de artefato em `/mnt/documents/`
+1. Consultar banco (perfis, roles, tabelas) — validações de dados
+2. Testar rotas públicas (landing, diagnóstico, 404)
+3. Criar conta de teste via signup no preview
+4. Testar onboarding completo
+5. Testar dashboard do atleta
+6. Testar responsividade mobile
+7. Gerar relatório final
 
