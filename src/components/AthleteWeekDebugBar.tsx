@@ -273,7 +273,9 @@ export const AthleteWeekDebugBar = forwardRef<HTMLDivElement, AthleteWeekDebugBa
       )}
     </div>
   );
-}
+});
+
+AthleteWeekDebugBar.displayName = 'AthleteWeekDebugBar';
 
 // Helper component for data items
 function DataItem({ 
