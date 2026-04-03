@@ -53,6 +53,7 @@ export function CoachApplicationForm() {
     if (application && status === 'rejected') {
       setFormData({
         full_name: application.full_name || profile?.name || '',
+        telefone: '',
         instagram: application.instagram || '',
         box_name: application.box_name || '',
         city: application.city || '',
