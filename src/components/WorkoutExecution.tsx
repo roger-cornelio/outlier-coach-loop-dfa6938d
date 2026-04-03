@@ -420,7 +420,7 @@ export function WorkoutExecution() {
       </div>
 
       {/* Workout Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="space-y-4 mb-8">
           {displayedWorkout.blocks.map((block, index) => {
             const isComplete = completedBlocks.includes(block.id);
