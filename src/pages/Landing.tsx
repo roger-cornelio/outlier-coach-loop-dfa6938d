@@ -210,12 +210,11 @@ export default function Landing() {
 
       {/* ══════════ NÚMEROS — MÉTRICAS DE IMPACTO ══════════ */}
       <section className="px-6 py-16 bg-card/50">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { value: 500, suffix: '+', label: 'Diagnósticos gerados' },
             { value: 12, suffix: 'min', label: 'Melhoria média identificada' },
             { value: 98, suffix: '%', label: 'Precisão do diagnóstico' },
-            { value: 3, suffix: '', label: 'Open · Pro · Elite' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-5 rounded-xl bg-card border border-border text-center"
