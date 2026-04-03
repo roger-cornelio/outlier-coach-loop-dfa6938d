@@ -367,15 +367,15 @@ export default function Landing() {
             </div>
 
             <p className="text-lg text-foreground mb-6 font-medium">
-              Escale sua operação com mais qualidade.
+              Escale sua operação sem perder a qualidade 1:1.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
-                'Novos atletas toda semana',
-                'Gestão completa de atletas',
-                'Métricas de retenção e engajamento',
-                'Publicação de treinos com 1 clique',
+                'Motor adapta volume por atleta automaticamente',
+                'Você revisa e aprova antes de publicar',
+                'Diagnóstico individual alimenta os ajustes',
+                'Publicação personalizada com 1 clique',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ChevronRight className="w-4 h-4 text-primary flex-shrink-0" />
