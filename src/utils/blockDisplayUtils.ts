@@ -612,8 +612,9 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
   const alerts: ParseAlert[] = [];
   const headerLines: string[] = [];
   const structures: WorkoutStructure[] = [];
-  
+   
   let inCommentSection = false;
+  let inFenceTrainingSection = false;
   
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const rawLine = lines[lineIndex];
@@ -621,6 +622,20 @@ export function separateBlockContent(content: string): SeparatedBlockContent {
     
     // Linha vazia - ignorar
     if (!trimmed) continue;
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FENCE TAGS: [TREINO] e [COMENTÁRIO] — delimitadores de seção
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (/^\[TREINO\]$/i.test(trimmed)) {
+      inFenceTrainingSection = true;
+      inCommentSection = false;
+      continue;
+    }
+    if (/^\[COMENT[ÁA]RIO\]$/i.test(trimmed)) {
+      inFenceTrainingSection = false;
+      inCommentSection = true;
+      continue;
+    }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // DSL EXPLÍCITO: PRIORIDADE ABSOLUTA
