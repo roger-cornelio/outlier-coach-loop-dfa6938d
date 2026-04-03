@@ -401,6 +401,19 @@ export default function DiagnosticoGratuito() {
           if (leadError) console.warn('[DIAG_FREE] Lead tracking error:', leadError);
           else console.log('[DIAG_FREE] Lead saved to CRM');
         });
+
+        // Save phone to profile + CRM sync (non-blocking)
+        if (telefone.trim().length >= 8) {
+          supabase.from('profiles').update({ telefone: telefone.trim() } as any).eq('id', user.id).then(() => {
+            console.log('[DIAG_FREE] Phone saved to profile');
+          });
+          supabase.from('crm_clientes').insert({
+            nome: result.athlete_name || profile?.name || 'Lead Diagnóstico',
+            telefone: telefone.trim(),
+          } as any).then(() => {
+            console.log('[DIAG_FREE] Phone saved to CRM');
+          });
+        }
       }
 
       // Fire AI parecer generation (non-blocking)
