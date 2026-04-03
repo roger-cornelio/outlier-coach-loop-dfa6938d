@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOutlierStore } from '@/store/outlierStore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, User, ArrowLeft, Shield, UserCog, UserPlus, AlertCircle, Phone } from 'lucide-react';
 import { CoachApplicationModal } from '@/components/CoachApplicationModal';
 import { QAActivationModal } from '@/components/QAActivationModal';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
