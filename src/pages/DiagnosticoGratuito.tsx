@@ -666,7 +666,7 @@ export default function DiagnosticoGratuito() {
         </Link>
       </header>
 
-      <div className="max-w-2xl mx-auto px-6 py-12">
+      <div className="max-w-2xl mx-auto px-3 sm:px-6 py-6 sm:py-12">
         <AnimatePresence mode="wait">
           {/* ═══ STEP: SEARCH ═══ */}
           {step === 'search' && (
