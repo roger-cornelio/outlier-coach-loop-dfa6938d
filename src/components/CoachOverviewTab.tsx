@@ -602,7 +602,7 @@ function ExpandableAthleteRow({
             </div>
 
             {/* Col 3: Feedbacks */}
-            <AthleteFeedbacksColumn athleteId={athlete.athlete_id} />
+            <AthleteFeedbacksColumn athleteId={athlete.athlete_id} dateRange={dateRange} />
 
             {/* Col 4: Ações */}
             <div className="space-y-2">
