@@ -660,6 +660,88 @@ export function PublishToAthletesModal({
           </div>
         );
 
+      case 'adaptation':
+        return (
+          <div className="space-y-4">
+            {loadingDiagnostics ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Carregando diagnósticos...</span>
+              </div>
+            ) : (
+              <>
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">
+                      Adaptação por Diagnóstico
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ajuste automático de volume baseado nos pontos fracos de cada atleta. Ligue ou desligue por atleta.
+                  </p>
+                </div>
+
+                <ScrollArea className="max-h-[300px]">
+                  <div className="space-y-3">
+                    {Array.from(athleteAdaptations.entries()).map(([athleteId, data]) => (
+                      <div
+                        key={athleteId}
+                        className="p-3 rounded-lg border border-border bg-card space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{data.athleteName}</span>
+                          </div>
+                          {data.emphasis.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`adapt-${athleteId}`} className="text-xs text-muted-foreground">
+                                {data.enabled ? 'Ativo' : 'Desligado'}
+                              </Label>
+                              <Switch
+                                id={`adapt-${athleteId}`}
+                                checked={data.enabled}
+                                onCheckedChange={() => toggleAdaptation(athleteId)}
+                              />
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              Sem diagnóstico
+                            </Badge>
+                          )}
+                        </div>
+
+                        {data.emphasis.length > 0 && data.enabled && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {data.emphasis
+                              .filter(e => e.multiplier !== 1.0)
+                              .sort((a, b) => b.multiplier - a.multiplier)
+                              .map(e => (
+                                <Badge
+                                  key={e.movement}
+                                  variant="outline"
+                                  className={cn(
+                                    "text-xs",
+                                    e.multiplier > 1
+                                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                                      : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                                  )}
+                                >
+                                  {e.movement} {e.label}
+                                </Badge>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+        );
+
       case 'confirm':
         return (
           <div className="space-y-4">
