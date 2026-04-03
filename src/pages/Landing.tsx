@@ -49,6 +49,8 @@ const transformations = [
     improvement: '14:23',
     stations: ['Sled Push', 'SkiErg', 'Wall Balls'],
     progress: 72,
+    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
+    initials: 'MO',
   },
   {
     name: 'Carolina Mendes',
@@ -58,6 +60,8 @@ const transformations = [
     improvement: '13:15',
     stations: ['Rowing', 'Burpee Broad Jump', 'Farmers Carry'],
     progress: 88,
+    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
+    initials: 'CM',
   },
   {
     name: 'Rafael Teixeira',
@@ -67,33 +71,10 @@ const transformations = [
     improvement: '16:30',
     stations: ['Sled Pull', 'SkiErg', 'Sandbag Lunges'],
     progress: 55,
-  },
-];
-
-const testimonials = [
-  {
-    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
-    name: 'Marcos O.',
-    city: 'São Paulo',
-    category: 'Open → Pro',
-    initials: 'MO',
-  },
-  {
-    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
-    name: 'Carolina M.',
-    city: 'Rio de Janeiro',
-    category: 'Pro → Elite',
-    initials: 'CM',
-  },
-  {
     quote: 'Achava que meu problema era cardio, mas o diagnóstico mostrou que eram as estações. Mudou tudo.',
-    name: 'Rafael T.',
-    city: 'Belo Horizonte',
-    category: 'Open',
     initials: 'RT',
   },
 ];
-
 export default function Landing() {
   const { user } = useAuth();
   // If logged in, diagnostic CTA goes directly; if not, goes to signup with redirect
@@ -285,45 +266,24 @@ export default function Landing() {
               <Progress value={t.progress} className="h-1.5 mb-3" />
 
               <p className="text-primary font-display text-sm tracking-wide mb-2">-{t.improvement}</p>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 mb-5">
                 {t.stations.map((s, j) => (
                   <span key={j} className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-0.5">{s}</span>
                 ))}
               </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
 
-      {/* ══════════ DEPOIMENTOS ══════════ */}
-      <section className="px-6 py-20 bg-card/50">
-        <div className="max-w-5xl mx-auto">
-          <motion.h2
-            className="font-display text-2xl md:text-4xl tracking-widest text-center text-foreground mb-16"
-            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
-          >
-            QUEM JÁ É <span className="text-primary">OUTLIER</span>
-          </motion.h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <motion.div key={i}
-                className="p-6 rounded-2xl bg-card border border-border relative"
-                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
-                <Quote className="w-8 h-8 text-primary/20 absolute top-4 right-4" />
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6 italic">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-xs">
+              <div className="border-t border-border/50 pt-4 relative">
+                <Quote className="w-6 h-6 text-primary/15 absolute top-3 right-0" />
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3 italic pr-6">"{t.quote}"</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-[10px]">
                     {t.initials}
                   </div>
-                  <div>
-                    <p className="text-sm font-display tracking-wide text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.city} · {t.category}</p>
-                  </div>
+                  <p className="text-xs text-muted-foreground">{t.name} · {t.city}</p>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
