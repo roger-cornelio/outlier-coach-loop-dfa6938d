@@ -119,6 +119,14 @@ const Index = () => {
       return;
     }
 
+    const coachStyleFromProfile = profile?.coach_style;
+    const lastRoute = loadLastRoute();
+    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    const outlierWeekAnchor = localStorage.getItem('outlier_week_anchor');
+    
+    // ========== DEBUG LOG ==========
+    console.log(`[GATE][Index] currentView=${currentView} isSetupComplete=${onboardingDecision.isSetupComplete} first_setup_completed=${onboardingDecision.firstSetupCompleted} coachStyle=${coachStyleFromProfile} lastRoute=${lastRoute} viewRestoredFromStorage=${viewRestoredFromStorage} outlier_week_anchor=${outlierWeekAnchor} ts=${new Date().toISOString()}`);
+    // ================================
 
     // ===== PRIORIDADE 1: SETUP COMPLETO (first_setup_completed === true) =====
     if (onboardingDecision.isSetupComplete && !forceOnboarding) {
