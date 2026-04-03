@@ -57,6 +57,7 @@ export function AthleteConfig() {
   const { isSetupCompleted } = useCoachStylePersistence();
   const { generateAdaptedWorkouts, hasBaseWorkouts } = useAdaptationPipeline();
   const { saveProfileConfig, updateName, isSaving: isSavingProfile, resetAthleteData } = useAthleteProfile();
+  const { isDark, toggle: toggleDarkMode } = useDarkMode();
   
   // REGRA MESTRA: Detectar primeiro setup APENAS via first_setup_completed
   // NÃO usar inferência de coach_style ou outros campos
