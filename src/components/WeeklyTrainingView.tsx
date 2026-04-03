@@ -496,7 +496,7 @@ export function WeeklyTrainingView() {
                   <div className="mb-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-2 flex-1">
-                        <h3 className="font-display text-2xl font-bold tracking-tight uppercase">
+                        <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight uppercase">
                           {getBlockDisplayTitle(block, index)}
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap">
