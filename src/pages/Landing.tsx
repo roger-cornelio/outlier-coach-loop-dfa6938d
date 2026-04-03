@@ -183,9 +183,9 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Shield, title: 'Coach dedicado com dados reais', desc: 'Seu coach recebe um mapa completo da sua performance e monta treinos que atacam exatamente seus pontos fracos.' },
-            { icon: Activity, title: 'Acompanhamento em tempo real', desc: 'Cada treino gera dados que alimentam seu diagnóstico. Seu coach e você enxergam tudo, sem achismo.' },
-            { icon: TrendingUp, title: 'Evolução visível, feedbacks precisos', desc: 'Acompanhe sua progressão semana a semana com análises baseadas nos seus splits reais, não em fórmulas genéricas.' },
+            { icon: Shield, title: 'Treino personalizado por diagnóstico', desc: 'Seu treino é adaptado automaticamente com base nos seus splits reais. Mais volume onde você precisa, menos onde já domina.' },
+            { icon: Activity, title: 'Motor de proporção inteligente', desc: 'Cada estação recebe um peso tático baseado no impacto real no seu tempo final. Não é achismo — é ciência aplicada.' },
+            { icon: TrendingUp, title: 'Coach + IA trabalhando juntos', desc: 'Seu coach revisa e aprova os ajustes antes de publicar. Você recebe o melhor dos dois mundos: tecnologia e olhar humano.' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
