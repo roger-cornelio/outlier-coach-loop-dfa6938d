@@ -726,8 +726,20 @@ export default function DiagnosticoGratuito() {
                 </span>
               </label>
 
+              {/* Phone input */}
+              <div className={`transition-opacity ${!consentGiven ? 'opacity-40 pointer-events-none' : ''}`}>
+                <Input
+                  placeholder="Telefone / WhatsApp"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  className="h-12 text-base bg-card border-border"
+                  type="tel"
+                  disabled={!consentGiven}
+                />
+              </div>
+
               {/* Search input */}
-              <div className={`relative transition-opacity ${!consentGiven ? 'opacity-40 pointer-events-none' : ''}`}>
+              <div className={`relative transition-opacity ${!consentGiven || telefone.trim().length < 8 ? 'opacity-40 pointer-events-none' : ''}`}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Digite seu nome completo..."
@@ -735,7 +747,7 @@ export default function DiagnosticoGratuito() {
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && executeSearch(searchQuery)}
                   className="pl-10 h-12 text-base bg-card border-border"
-                  disabled={!consentGiven}
+                  disabled={!consentGiven || telefone.trim().length < 8}
                 />
                 {searching && (
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
