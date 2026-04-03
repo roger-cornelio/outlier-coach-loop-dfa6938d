@@ -148,7 +148,7 @@ export default function Landing() {
           className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Receba seu diagnóstico gratuito e descubra, com clareza, onde está seu maior potencial de evolução.
+          Diagnóstico gratuito + treino personalizado por estação. Cada rep com propósito, cada sessão atacando seus pontos fracos.
         </motion.p>
 
         <motion.div
@@ -183,9 +183,9 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Shield, title: 'Coach dedicado com dados reais', desc: 'Seu coach recebe um mapa completo da sua performance e monta treinos que atacam exatamente seus pontos fracos.' },
-            { icon: Activity, title: 'Acompanhamento em tempo real', desc: 'Cada treino gera dados que alimentam seu diagnóstico. Seu coach e você enxergam tudo, sem achismo.' },
-            { icon: TrendingUp, title: 'Evolução visível, feedbacks precisos', desc: 'Acompanhe sua progressão semana a semana com análises baseadas nos seus splits reais, não em fórmulas genéricas.' },
+            { icon: Shield, title: 'Treino personalizado por diagnóstico', desc: 'Seu treino é adaptado automaticamente com base nos seus splits reais. Mais volume onde você precisa, menos onde já domina.' },
+            { icon: Activity, title: 'Motor de proporção inteligente', desc: 'Cada estação recebe um peso tático baseado no impacto real no seu tempo final. Não é achismo — é ciência aplicada.' },
+            { icon: TrendingUp, title: 'Coach + IA trabalhando juntos', desc: 'Seu coach revisa e aprova os ajustes antes de publicar. Você recebe o melhor dos dois mundos: tecnologia e olhar humano.' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors"
@@ -210,9 +210,9 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra seus pontos fracos em segundos.' },
-              { step: '02', title: 'Conecte-se a um coach', desc: 'Um coach dedicado recebe seu diagnóstico e monta treinos específicos para você.' },
-              { step: '03', title: 'Evolua com acompanhamento real', desc: 'Seu coach ajusta os treinos. Nós te damos feedback em tempo real. Você evolui com dados.' },
+              { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra exatamente quais estações estão custando mais tempo.' },
+              { step: '02', title: 'Receba treino personalizado', desc: 'O motor de proporção calcula o foco ideal por estação. Seu coach revisa e publica com um clique.' },
+              { step: '03', title: 'Evolua com dados reais', desc: 'Volume ajustado automaticamente às suas fraquezas. Feedback em tempo real. Progressão mensurável.' },
             ].map((item, i) => (
               <motion.div key={i} className="text-center"
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
@@ -339,8 +339,8 @@ export default function Landing() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { icon: Activity, label: 'Diagnóstico Gratuito' },
-            { icon: Users, label: 'Coach Dedicado' },
-            { icon: Brain, label: 'Feedback IA em Tempo Real' },
+            { icon: Target, label: 'Treino Personalizado por Estação' },
+            { icon: Brain, label: 'Motor de Adaptação Inteligente' },
             { icon: TrendingUp, label: 'Evolução Mensurável' },
           ].map((item, i) => (
             <motion.div key={i}
@@ -367,15 +367,15 @@ export default function Landing() {
             </div>
 
             <p className="text-lg text-foreground mb-6 font-medium">
-              Escale sua operação com mais qualidade.
+              Escale sua operação sem perder a qualidade 1:1.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
-                'Novos atletas toda semana',
-                'Gestão completa de atletas',
-                'Métricas de retenção e engajamento',
-                'Publicação de treinos com 1 clique',
+                'Motor adapta volume por atleta automaticamente',
+                'Você revisa e aprova antes de publicar',
+                'Diagnóstico individual alimenta os ajustes',
+                'Publicação personalizada com 1 clique',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ChevronRight className="w-4 h-4 text-primary flex-shrink-0" />

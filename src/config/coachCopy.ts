@@ -93,19 +93,19 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
-        'Exigência máxima em cada treino',
-        'Zero desculpas, foco total no resultado',
-        'Progressão implacável rumo ao pódio',
+        'Treino adaptado aos seus pontos fracos reais',
+        'Volume ajustado por estação com base no seu diagnóstico',
+        'Progressão implacável com dados, não achismo',
       ],
-      footer: 'Prepare-se. Vai doer, mas vai valer.',
-      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+      footer: 'Prepare-se. Vai doer, mas cada rep tem propósito.',
+      institutionalNote: 'Seu treino é personalizado pelo motor de proporção diagnóstica: mais volume onde você precisa, menos onde já domina. O estilo do treinador define como você recebe o feedback.',
     },
     settings: {
       coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
-      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo adaptado com base no seu diagnóstico e tempo disponível.',
     },
     dashboard: {
-      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
+      workoutAdjustedNote: 'Treino adaptado ao seu diagnóstico, nível e tempo disponível.',
     },
     workoutComments: {
       preWorkout: [
@@ -193,19 +193,19 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
-        'Consistência como chave do sucesso',
-        'Apoio constante na sua jornada',
-        'Evolução sustentável e inteligente',
+        'Treino personalizado com base nos seus dados de prova',
+        'Mais volume nas estações onde você mais precisa evoluir',
+        'Evolução sustentável e medida a cada benchmark',
       ],
-      footer: 'Um passo de cada vez. Juntos até o fim.',
-      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+      footer: 'Um passo de cada vez. Cada rep com propósito.',
+      institutionalNote: 'Seu treino é personalizado pelo motor de proporção diagnóstica: mais volume onde você precisa, menos onde já domina. O estilo do treinador define como você recebe o feedback.',
     },
     settings: {
       coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
-      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo adaptado com base no seu diagnóstico e tempo disponível.',
     },
     dashboard: {
-      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
+      workoutAdjustedNote: 'Treino adaptado ao seu diagnóstico, nível e tempo disponível.',
     },
     workoutComments: {
       preWorkout: [
@@ -293,19 +293,19 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
-        'Energia positiva em cada sessão',
-        'Criatividade para superar desafios',
-        'Diversão sem perder a intensidade',
+        'Treino feito sob medida pros seus pontos fracos',
+        'Volume inteligente: mais onde precisa, menos onde já manda',
+        'Diversão com propósito — cada rep te aproxima do pódio! 🔥',
       ],
-      footer: 'Bora fazer acontecer! 🔥',
-      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+      footer: 'Bora fazer acontecer! Cada treino é único pra você!',
+      institutionalNote: 'Seu treino é personalizado pelo motor de proporção diagnóstica: mais volume onde você precisa, menos onde já domina. O estilo do treinador define como você recebe o feedback.',
     },
     settings: {
       coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
-      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo adaptado com base no seu diagnóstico e tempo disponível.',
     },
     dashboard: {
-      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
+      workoutAdjustedNote: 'Treino adaptado ao seu diagnóstico, nível e tempo disponível.',
     },
     workoutComments: {
       preWorkout: [
