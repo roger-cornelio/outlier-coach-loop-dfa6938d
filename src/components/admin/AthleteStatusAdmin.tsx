@@ -54,9 +54,9 @@ interface AthleteSimulation {
  */
 
 const DEFAULT_LEVEL_RULES: LevelRule[] = [
-  { level_key: 'OPEN', level_order: 1, label: 'OPEN', training_min_sessions: 120, training_window_days: 99999, benchmarks_required: 3, benchmarks_source: 'ADMIN_DEFINED', official_race_required: false, cap_without_official_race_percent: 100 },
-  { level_key: 'PRO', level_order: 2, label: 'PRO', training_min_sessions: 200, training_window_days: 99999, benchmarks_required: 5, benchmarks_source: 'ADMIN_DEFINED', official_race_required: true, cap_without_official_race_percent: 100 },
-  { level_key: 'ELITE', level_order: 3, label: 'ELITE', training_min_sessions: 250, training_window_days: 99999, benchmarks_required: 8, benchmarks_source: 'ADMIN_DEFINED', official_race_required: true, cap_without_official_race_percent: 100 },
+  { level_key: 'OPEN', level_order: 1, label: 'OPEN OUTLIER', training_min_sessions: 120, training_window_days: 99999, benchmarks_required: 3, benchmarks_source: 'ADMIN_DEFINED', official_race_required: false, cap_without_official_race_percent: 100 },
+  { level_key: 'PRO', level_order: 2, label: 'PRO OUTLIER', training_min_sessions: 200, training_window_days: 99999, benchmarks_required: 5, benchmarks_source: 'ADMIN_DEFINED', official_race_required: true, cap_without_official_race_percent: 100 },
+  { level_key: 'ELITE', level_order: 3, label: 'ELITE OUTLIER', training_min_sessions: 250, training_window_days: 99999, benchmarks_required: 8, benchmarks_source: 'ADMIN_DEFINED', official_race_required: true, cap_without_official_race_percent: 100 },
 ];
 
 const LEVEL_COLORS: Record<string, string> = {
