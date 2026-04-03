@@ -90,6 +90,10 @@ export function VisaoGeralTab() {
       const profiles = profilesRes.data ?? [];
       const coachLinks = coachLinksRes.data ?? [];
       const userRoles = rolesRes.data ?? [];
+      const coachScores = coachScoresRes.data ?? [];
+
+      const scoreMap = new Map<string, number>();
+      coachScores.forEach(s => scoreMap.set(s.coach_id, s.composite_score ?? 0));
 
       const roleMap = new Map<string, UserRole>();
       for (const ur of userRoles) {
