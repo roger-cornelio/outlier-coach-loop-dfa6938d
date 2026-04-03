@@ -1,27 +1,32 @@
 
 
-## Plano: Polish Final — De 92% para 99%
+## Pull-to-Refresh — Explicação Simples
 
-### O que falta (3 ajustes identificados na auditoria)
+### O que é
 
-**1. EvolutionTab — padding inconsistente**
-- Atual: `px-4` fixo (linha 18)
-- Corrigir para: `px-3 sm:px-4` — alinha com o padrão do resto do app
+Quando o atleta estiver no celular e quiser atualizar os dados do Dashboard ou do Treino Semanal, basta **arrastar a tela para baixo** (como no Instagram ou WhatsApp). Um ícone de atualização aparece no topo, gira enquanto carrega, e os dados são atualizados.
 
-**2. PerformanceFeedback — colunas apertadas no resumo de sessão**
-- As colunas "Feito/Esper./Diff" usam `gap-4` e larguras fixas `w-14`/`w-16` que ficam apertadas em 430px
-- Reduzir `gap-4` → `gap-2 sm:gap-4` no header e nos BlockRows
-- Reduzir larguras: `w-12 sm:w-14` e `w-14 sm:w-16`
+### Como funciona
 
-**3. PerformanceFeedback — skeleton loading no carregamento da IA**
-- Atualmente usa `Loader2` spinner genérico (linha 251-258)
-- Substituir por skeleton que imita o layout real: card de tempo total + card de resumo + card de feedback
+- O atleta arrasta para baixo a partir do topo da tela
+- Ao arrastar mais de 60 pixels, aparece um ícone girando
+- O celular vibra levemente para confirmar que o gesto foi reconhecido
+- Os dados do plano de treino e diagnóstico são recarregados
+- O ícone desaparece quando a atualização termina
 
-### Arquivos alterados
+### Onde funciona
 
-1. `src/components/evolution/EvolutionTab.tsx` — padding responsivo
-2. `src/components/PerformanceFeedback.tsx` — colunas responsivas + skeleton loading
+1. **Dashboard principal** — atualiza o resumo semanal, radar de diagnóstico e streak
+2. **Treino Semanal** — atualiza os treinos publicados pelo coach
 
-### Sem alteração no banco
-100% CSS/Tailwind + componente Skeleton existente.
+### O que NÃO muda
+
+- No computador (desktop), nada muda — o gesto só funciona com toque no celular
+- Scroll normal da página continua funcionando igual
+- Nenhuma alteração no banco de dados
+
+### Arquivos envolvidos
+
+- 2 arquivos novos (o mecanismo de toque e o indicador visual)
+- 2 arquivos existentes recebem o recurso (Dashboard e Treino Semanal)
 
