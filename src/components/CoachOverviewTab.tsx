@@ -649,11 +649,25 @@ export function CoachOverviewTab({
 }) {
   const { athletes, kpis, loading, error, refetch } = useCoachOverview();
   const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
 
-  const totalPages = Math.ceil(athletes.length / PAGE_SIZE);
+  const filteredAthletes = useMemo(() => {
+    if (!searchTerm.trim()) return athletes;
+    const term = searchTerm.toLowerCase();
+    return athletes.filter(a =>
+      (a.athlete_name?.toLowerCase().includes(term)) ||
+      a.athlete_email.toLowerCase().includes(term)
+    );
+  }, [athletes, searchTerm]);
+
+  const totalPages = Math.ceil(filteredAthletes.length / PAGE_SIZE);
   const paginatedAthletes = useMemo(() =>
-    athletes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [athletes, page]
+    filteredAthletes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filteredAthletes, page]
   );
 
   const handleUnlink = useCallback((athleteId: string, name: string) => {
