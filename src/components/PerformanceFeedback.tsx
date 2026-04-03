@@ -304,7 +304,7 @@ export function PerformanceFeedback() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="card-elevated p-6"
+                className="card-elevated p-4 sm:p-6"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-primary" />
