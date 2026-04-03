@@ -59,7 +59,7 @@ function getSortPriority(userRole: UserRole, status: string): number {
 }
 
 export function VisaoGeralTab() {
-  const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole })[]>([]);
+  const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole; coachScore: number | null })[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -79,16 +79,21 @@ export function VisaoGeralTab() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profilesRes, coachLinksRes, rolesRes] = await Promise.all([
+      const [profilesRes, coachLinksRes, rolesRes, coachScoresRes] = await Promise.all([
         supabase.from("profiles").select("id, user_id, name, email, sexo, idade, peso, altura, training_level, session_duration, first_setup_completed, status, created_at, last_active_at, coach_id, onboarding_experience, onboarding_goal, onboarding_target_race, unavailable_equipment, equipment_notes").order("created_at", { ascending: false }),
         supabase.from("coach_athletes").select("athlete_id, coach_id, created_at"),
         supabase.from("user_roles").select("user_id, role"),
+        supabase.from("coach_scores").select("coach_id, composite_score, active_athletes_count, admin_rating"),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
       const profiles = profilesRes.data ?? [];
       const coachLinks = coachLinksRes.data ?? [];
       const userRoles = rolesRes.data ?? [];
+      const coachScores = coachScoresRes.data ?? [];
+
+      const scoreMap = new Map<string, number>();
+      coachScores.forEach(s => scoreMap.set(s.coach_id, s.composite_score ?? 0));
 
       const roleMap = new Map<string, UserRole>();
       for (const ur of userRoles) {
@@ -129,6 +134,7 @@ export function VisaoGeralTab() {
           computedStatus,
           leadScore: computeLeadScore(0, p.first_setup_completed, p.last_active_at, false),
           userRole,
+          coachScore: userRole === "coach" ? (scoreMap.get(p.user_id) ?? 0) : null,
         };
       });
 
@@ -136,6 +142,10 @@ export function VisaoGeralTab() {
         const pa = getSortPriority(a.userRole, a.computedStatus);
         const pb = getSortPriority(b.userRole, b.computedStatus);
         if (pa !== pb) return pa - pb;
+        // Within coaches, sort by score ascending (worst first)
+        if (a.userRole === "coach" && b.userRole === "coach") {
+          return (a.coachScore ?? 0) - (b.coachScore ?? 0);
+        }
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
@@ -256,7 +266,17 @@ export function VisaoGeralTab() {
                       ? `${coachAthleteCount.get(u.user_id) || 0} atleta(s)`
                       : u.coach_name || "—"}
                   </TableCell>
-                  <TableCell className="text-sm">{u.training_level || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {u.userRole === "coach"
+                      ? <Badge className={
+                          (u.coachScore ?? 0) >= 7 ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                          : (u.coachScore ?? 0) >= 4 ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                          : "bg-red-500/15 text-red-700 dark:text-red-400"
+                        }>
+                          {(u.coachScore ?? 0).toFixed(1)} pts
+                        </Badge>
+                      : u.training_level || "—"}
+                  </TableCell>
                   <TableCell className="text-sm">{u.first_setup_completed ? "✅" : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
