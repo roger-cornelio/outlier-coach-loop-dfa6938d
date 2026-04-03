@@ -226,7 +226,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           whileTap={!isLoading && !isLoadingWorkouts ? { scale: 0.98 } : {}}
         >
           BORA TREINAR
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </motion.button>
 
         {/* Skip to settings link */}

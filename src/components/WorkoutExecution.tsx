@@ -383,8 +383,8 @@ export function WorkoutExecution() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setCurrentView('dashboard')}
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
