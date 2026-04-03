@@ -109,6 +109,15 @@ const Index = () => {
       return;
     }
 
+    // Superadmin pode forçar onboarding via ?force-onboarding=1
+    const searchParams = new URLSearchParams(location.search);
+    if (state === 'superadmin' && searchParams.get('force-onboarding') === '1') {
+      console.log(`[NAV][Index] SUPERADMIN force-onboarding activated`);
+      setCurrentView('welcome');
+      initialCheckDone.current = true;
+      return;
+    }
+
     const coachStyleFromProfile = profile?.coach_style;
     const lastRoute = loadLastRoute();
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
