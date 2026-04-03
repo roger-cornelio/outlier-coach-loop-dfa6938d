@@ -6,6 +6,7 @@ import { ArrowLeft, Home, Zap, Loader2, TrendingUp, TrendingDown, Minus, Send, C
 import { supabase } from '@/integrations/supabase/client';
 import { getCoachLine } from '@/config/coachCopy';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useSaveSessionFeedback } from '@/hooks/useAthleteFeedbacks';
 import { useAuth } from '@/hooks/useAuth';
