@@ -6,7 +6,7 @@
  * Paginação de 50 em 50 para suportar 200+ atletas
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCoachOverview, classifyRisk, type AthleteOverview, type RiskLevel } from '@/hooks/useCoachOverview';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,9 +24,10 @@ import { CoachSuspensionActions } from '@/components/UserSuspensionActions';
 import { PeriodFilter, type DateRange } from '@/components/admin/PeriodFilter';
 import { Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getAthleteCurrentWeekStart } from '@/utils/weekCalculations';
 import {
   Users,
   TrendingUp,
@@ -195,6 +196,71 @@ function KPICard({ label, count, total, icon: Icon, colorClass, borderClass }: {
       </CardContent>
     </Card>
   );
+}
+
+// ─── Weekly Status Badge (Treinou / Publicado) ───
+type WeeklyStatus = 'trained' | 'published' | null;
+
+function WeeklyStatusBadge({ athleteId }: { athleteId: string }) {
+  const [status, setStatus] = useState<WeeklyStatus>(null);
+  const fetched = useRef(false);
+
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+
+    const weekStart = getAthleteCurrentWeekStart(new Date());
+
+    // Check feedback first (higher priority)
+    const checkStatus = async () => {
+      try {
+        // 1. Check if athlete trained this week
+        const { count: feedbackCount } = await supabase
+          .from('workout_session_feedback' as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('athlete_id', athleteId)
+          .gte('session_date', weekStart);
+
+        if (feedbackCount && feedbackCount > 0) {
+          setStatus('trained');
+          return;
+        }
+
+        // 2. Check if plan is published this week
+        const { count: planCount } = await supabase
+          .from('athlete_plans')
+          .select('id', { count: 'exact', head: true })
+          .eq('athlete_user_id', athleteId)
+          .eq('status', 'published')
+          .eq('week_start', weekStart);
+
+        if (planCount && planCount > 0) {
+          setStatus('published');
+          return;
+        }
+      } catch (err) {
+        console.error('[WeeklyStatusBadge] Error:', err);
+      }
+    };
+
+    checkStatus();
+  }, [athleteId]);
+
+  if (status === 'trained') {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0">
+        Treinou
+      </Badge>
+    );
+  }
+  if (status === 'published') {
+    return (
+      <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0">
+        Publicado
+      </Badge>
+    );
+  }
+  return null;
 }
 
 // ─── Risk badge ───
@@ -468,8 +534,9 @@ function ExpandableAthleteRow({
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <RiskBadge risk={risk} />
+              <WeeklyStatusBadge athleteId={athlete.athlete_id} />
               {athlete.training_level && (
                 <span className="text-[10px] text-muted-foreground uppercase">{athlete.training_level}</span>
               )}
