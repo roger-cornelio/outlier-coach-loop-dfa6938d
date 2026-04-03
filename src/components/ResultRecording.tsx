@@ -218,7 +218,7 @@ export function ResultRecording() {
                     className="w-full px-3 sm:px-4 py-3 sm:py-4 rounded-lg bg-secondary border border-border text-center font-display text-2xl sm:text-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-                <span className="font-display text-4xl text-muted-foreground pt-6">:</span>
+                <span className="font-display text-3xl sm:text-4xl text-muted-foreground pt-6">:</span>
                 <div className="flex-1">
                   <label className="text-sm text-muted-foreground mb-2 block">Segundos</label>
                   <input
