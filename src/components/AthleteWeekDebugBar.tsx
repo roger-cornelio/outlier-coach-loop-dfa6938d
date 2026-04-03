@@ -12,7 +12,7 @@
  * - Botões rápidos de navegação
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { Bug, ChevronLeft, ChevronRight, RotateCcw, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
