@@ -86,6 +86,7 @@ const App = () => (
           <Sonner />
           <SessionRefreshBanner />
           <DebugKeyboardToggle />
+          <ErrorBoundary fallbackTitle="Algo deu errado">
           <AppGate>
             <Routes>
               {/* Main app route (protected) */}
@@ -124,6 +125,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppGate>
+          </ErrorBoundary>
           
           {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
           <GlobalDebugBar />
