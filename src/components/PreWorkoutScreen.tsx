@@ -149,7 +149,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
       {/* Background glow effect */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
