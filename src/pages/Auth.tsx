@@ -383,7 +383,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       } else if (mode === 'signup') {
         const redirectUrl = `${window.location.origin}/`;
         
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -391,9 +391,18 @@ export default function Auth({ context = 'user' }: AuthProps) {
             data: {
               name: name.trim(),
               sexo: sexo,
+              telefone: telefone.trim(),
             },
           },
         });
+
+        if (!error && signUpData?.user) {
+          // Update profile with telefone (triggers CRM sync)
+          await supabase
+            .from('profiles')
+            .update({ telefone: telefone.trim() })
+            .eq('user_id', signUpData.user.id);
+        }
 
         if (error) {
           if (error.message.toLowerCase().includes('rate limit')) {
