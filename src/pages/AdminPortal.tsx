@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminParamsEditor } from "@/components/AdminParamsEditor";
-import { UserManagement } from "@/components/UserManagement";
+
 import { ServiceQualityDashboard } from "@/components/admin/ServiceQualityDashboard";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { EventReviewAdmin } from "@/components/admin/EventReviewAdmin";
