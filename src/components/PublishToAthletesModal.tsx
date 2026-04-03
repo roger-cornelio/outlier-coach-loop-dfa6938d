@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
-import { computeStationEmphasis, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
+import { computeStationEmphasis, applyEmphasisToWorkouts, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
 import type { DiagnosticoMelhoria } from '@/components/diagnostico/types';
 
 import {
@@ -381,9 +381,31 @@ export function PublishToAthletesModal({
         const normalizedWorkouts = normalizeWorkoutsForPersistence(workouts);
 
         // ════════════════════════════════════════════════════════════════════════
+        // ADAPTAÇÃO: Aplicar multiplicadores de ênfase se habilitado para o atleta
+        // ════════════════════════════════════════════════════════════════════════
+        const athleteAdapt = athleteAdaptations.get(athleteUserId);
+        const adaptationEnabled = athleteAdapt?.enabled && athleteAdapt.emphasis.length > 0;
+        
+        let workoutsToPublish = normalizedWorkouts;
+        let adaptationMeta: any = { adaptation_applied: false };
+
+        if (adaptationEnabled) {
+          const result = applyEmphasisToWorkouts(normalizedWorkouts, athleteAdapt.emphasis);
+          workoutsToPublish = result.workouts;
+          adaptationMeta = {
+            adaptation_applied: true,
+            emphasis_snapshot: result.emphasisSnapshot,
+            original_workouts: result.originalWorkouts,
+          };
+          console.log('[PUBLISH] Adaptation applied for athlete:', athleteUserId, {
+            multipliers: athleteAdapt.emphasis.filter(e => e.multiplier !== 1.0).map(e => `${e.movement}: ${e.label}`),
+          });
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
         // MERGE: Buscar plano existente e mesclar dias (não sobrescrever tudo)
         // ════════════════════════════════════════════════════════════════════════
-        let mergedWorkouts = normalizedWorkouts;
+        let mergedWorkouts = workoutsToPublish;
 
         const { data: existingPlan } = await supabase
           .from('athlete_plans')
@@ -399,7 +421,7 @@ export function PublishToAthletesModal({
           if (existingWorkouts.length > 0) {
             // Chaves dos dias sendo publicados agora (day + session para deduplicação)
             const newDayKeys = new Set(
-              normalizedWorkouts.map((w: any) => {
+              workoutsToPublish.map((w: any) => {
                 const dayKey = w.day || w.dayLabel || w.scheduledDate;
                 const session = w.session || 1;
                 return `${dayKey}__s${session}`;
@@ -415,7 +437,7 @@ export function PublishToAthletesModal({
               }
             );
 
-            mergedWorkouts = [...keptFromExisting, ...normalizedWorkouts];
+            mergedWorkouts = [...keptFromExisting, ...workoutsToPublish];
 
             console.log('[PUBLISH] Merge result:', {
               athleteId: athleteUserId,
@@ -432,7 +454,7 @@ export function PublishToAthletesModal({
           coach_id: profile.id,
           week_start: weekStart, // YYYY-MM-DD string (segunda-feira)
           scheduled_date: weekStart,
-          plan_json: { workouts: mergedWorkouts },
+          plan_json: { workouts: mergedWorkouts, ...adaptationMeta },
           title: title || `Treino Semana ${weekPeriodLabel}`,
           status: 'published',
           published_at: new Date().toISOString(),
@@ -766,6 +788,23 @@ export function PublishToAthletesModal({
                   {title || 'Treino sem título'}
                 </span>
               </div>
+
+              {/* Resumo de adaptação */}
+              {(() => {
+                const adaptedCount = Array.from(athleteAdaptations.values()).filter(a => a.enabled && a.emphasis.length > 0).length;
+                const noAdaptCount = selectedAthletes.size - adaptedCount;
+                if (adaptedCount > 0) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        {adaptedCount} com adaptação · {noAdaptCount} sem adaptação
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             {/* Aviso quando semana não definida */}
