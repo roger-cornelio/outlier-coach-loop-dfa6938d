@@ -95,6 +95,7 @@ export function Dashboard() {
     // Debug info
     debugInfo,
     resetToCurrentWeek,
+    refetch,
   } = useAthletePlan();
   
   // Dashboard OUTLIER hooks
