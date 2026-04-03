@@ -1,47 +1,34 @@
 
 
-## Plano: Unificar "Transformações Reais" e "Depoimentos" em uma única seção
+## Plano: Adicionar Busca por Atleta + Filtro de Período Global
 
 ### O que muda
 
-As duas seções separadas ("TRANSFORMAÇÕES REAIS" com cards de antes/depois e "QUEM JÁ É OUTLIER" com depoimentos) serão fundidas em uma única seção chamada **"TRANSFORMAÇÕES REAIS"**.
+1. **Campo de busca por atleta** no topo da lista (acima dos cards KPI ou entre KPIs e lista), com busca por nome ou email — filtra a lista em tempo real enquanto digita.
 
-Cada card passa a conter:
-- Nome, cidade, badge de nível (Open → Pro)
-- Tempos Antes / Depois com seta
-- Barra de progresso + tempo ganho (-14:23)
-- Chips das estações foco
-- **Citação do depoimento** integrada abaixo dos dados
-- Avatar com iniciais + cidade
+2. **Filtro de período global** (usando o `PeriodFilter` que já existe em `src/components/admin/PeriodFilter.tsx`) posicionado ao lado da busca. Esse range de datas é passado como prop para os feedbacks de cada atleta expandido, substituindo os date pickers individuais que existem dentro de cada `AthleteFeedbacksColumn`.
 
-### Arquivo alterado
+### Arquivos alterados
 
-**`src/pages/Landing.tsx`**
-- Unificar os arrays `transformations` e `testimonials` em um único array com todos os campos
-- Remover a seção "QUEM JÁ É OUTLIER" separada
-- No card unificado: manter o layout atual de antes/depois no topo, e adicionar a quote + avatar na parte inferior do mesmo card
-- Ícone de aspas (Quote) posicionado no canto do card como decoração
+**`src/components/CoachOverviewTab.tsx`**
+- Adicionar estado `searchTerm` com input de busca (ícone Search + placeholder "Buscar atleta...")
+- Filtrar `sortedAthletes` por `athlete_name` ou `athlete_email` contendo o termo
+- Importar e posicionar `PeriodFilter` ao lado da busca
+- Elevar estado `dateRange` para o nível do componente
+- Passar `dateRange` como prop para `AthleteFeedbacksColumn`
+- Remover os date pickers internos do `AthleteFeedbacksColumn` (já recebe range via prop)
 
-### Layout do card unificado
+### Layout (mobile 430px)
 
 ```text
-┌─────────────────────────────┐
-│ MARCOS OLIVEIRA   OPEN→PRO  │
-│ São Paulo                    │
-│                              │
-│  Antes  →  Depois            │
-│ 1:32:45   1:18:22            │
-│ ████████████░░░  -14:23      │
-│ [Sled Push] [SkiErg] [WB]   │
-│                              │
-│ "O diagnóstico mostrou..."   │
-│                              │
-│ 🟠 MO  Marcos O. · SP       │
-└─────────────────────────────┘
+[🔍 Buscar atleta...              ]
+[7d] [30d] [90d] [Este mês] [📅→📅]
+─────────────────────────────────────
+KPI Cards (como já estão)
+─────────────────────────────────────
+Lista de atletas filtrada
 ```
 
-### Resultado
-- Menos scroll na página
-- Prova social mais forte: dados + voz do atleta no mesmo card
-- Uma única seção com título "TRANSFORMAÇÕES REAIS"
+### Sem alteração no banco
+Filtro é 100% client-side sobre dados já carregados.
 
