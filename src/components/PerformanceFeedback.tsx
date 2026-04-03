@@ -99,10 +99,10 @@ function BlockRow({ result }: { result: any }) {
     return (
       <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
         <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{blockTitle}</p>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-foreground w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
-          <span className="text-xs text-muted-foreground w-14 text-right">—</span>
-          <span className="text-xs text-muted-foreground w-16 text-right">—</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="text-xs text-foreground w-12 sm:w-14 text-right">{formatSecondsToMinSec(timeInSeconds)}</span>
+          <span className="text-xs text-muted-foreground w-12 sm:w-14 text-right">—</span>
+          <span className="text-xs text-muted-foreground w-14 sm:w-16 text-right">—</span>
         </div>
       </div>
     );
