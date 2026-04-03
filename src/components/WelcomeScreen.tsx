@@ -21,8 +21,9 @@ import { LogOut, User, Loader2, ArrowRight, Search, Trophy, AlertTriangle, Zap, 
 import { Input } from '@/components/ui/input';
 import { secondsToTime } from '@/components/diagnostico/types';
 import { OnboardingCoachSelection } from '@/components/OnboardingCoachSelection';
+import { OnboardingProvaAlvo } from '@/components/OnboardingProvaAlvo';
 
-type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'profileConfig' | 'profileCta' | 'planSelection' | 'coach';
+type OnboardingStep = 'search' | 'congrats' | 'bottlenecks' | 'cta' | 'profile' | 'profileGoal' | 'provaAlvo' | 'profileConfig' | 'profileCta' | 'planSelection' | 'coach';
 
 interface ProfileAnswers {
   experience: 'never' | 'spectator' | '1race' | '2plus' | null;
