@@ -209,20 +209,21 @@ export default function Landing() {
       </section>
 
       {/* ══════════ NÚMEROS — MÉTRICAS DE IMPACTO ══════════ */}
-      <section className="px-6 py-16 bg-card/50">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="px-6 py-20">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             { prefix: '−', value: 14, suffix: 'min', label: 'No resultado dos atletas' },
             { prefix: '', value: 92, suffix: '%', label: 'Subiram de categoria nos primeiros 6 meses' },
             { prefix: '', value: 98, suffix: '%', label: 'Precisão do diagnóstico e ajuste de treinos' },
           ].map((item, i) => (
             <motion.div key={i}
-              className="p-5 rounded-xl bg-card border border-border text-center"
+              className="relative p-8 rounded-2xl bg-gradient-to-b from-card to-card/80 border border-border/60 hover:border-primary/30 text-center transition-all duration-300 group"
               initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
-              <p className="font-display text-3xl md:text-4xl text-primary">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <p className="relative font-display text-4xl md:text-5xl text-primary tracking-tight">
                 {item.prefix}<AnimatedCounter target={item.value} suffix={item.suffix} />
               </p>
-              <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">{item.label}</p>
+              <p className="relative text-sm text-muted-foreground mt-3 leading-relaxed">{item.label}</p>
             </motion.div>
           ))}
         </div>
