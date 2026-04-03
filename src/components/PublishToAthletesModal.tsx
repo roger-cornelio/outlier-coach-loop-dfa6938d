@@ -228,16 +228,84 @@ export function PublishToAthletesModal({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 'athletes' && selectedAthletes.size > 0) {
+      // Fetch diagnostics for selected athletes
+      setLoadingDiagnostics(true);
+      try {
+        const athleteIds = Array.from(selectedAthletes);
+        const { data: diagnosticos } = await supabase
+          .from('diagnostico_melhoria')
+          .select('*')
+          .in('atleta_id', athleteIds);
+        
+        const newAdaptations = new Map<string, {
+          enabled: boolean;
+          emphasis: StationEmphasis[];
+          athleteName: string;
+        }>();
+        
+        for (const athleteId of athleteIds) {
+          const athleteDiags = (diagnosticos || []).filter(d => d.atleta_id === athleteId);
+          const athlete = athletes.find(a => a.user_id === athleteId);
+          const athleteName = athlete?.name || athlete?.email || athleteId;
+          
+          if (athleteDiags.length > 0) {
+            const mapped: DiagnosticoMelhoria[] = athleteDiags.map(d => ({
+              id: d.id,
+              movement: d.movement,
+              metric: d.metric,
+              value: d.value,
+              your_score: d.your_score,
+              top_1: d.top_1,
+              improvement_value: d.improvement_value,
+              percentage: d.percentage,
+              total_improvement: d.total_improvement,
+            }));
+            const emphasis = computeStationEmphasis(mapped);
+            newAdaptations.set(athleteId, {
+              enabled: true,
+              emphasis,
+              athleteName,
+            });
+          } else {
+            newAdaptations.set(athleteId, {
+              enabled: false,
+              emphasis: [],
+              athleteName,
+            });
+          }
+        }
+        
+        setAthleteAdaptations(newAdaptations);
+      } catch (err) {
+        console.error('[PublishToAthletesModal] Error fetching diagnostics:', err);
+      } finally {
+        setLoadingDiagnostics(false);
+      }
+      setCurrentStep('adaptation');
+    } else if (currentStep === 'adaptation') {
       setCurrentStep('confirm');
     }
   };
 
   const handleBack = () => {
     if (currentStep === 'confirm') {
+      setCurrentStep('adaptation');
+    } else if (currentStep === 'adaptation') {
       setCurrentStep('athletes');
     }
+  };
+
+  const toggleAdaptation = (athleteId: string) => {
+    setAthleteAdaptations(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(athleteId);
+      if (current) {
+        newMap.set(athleteId, { ...current, enabled: !current.enabled });
+      }
+      return newMap;
+    });
   };
 
   const handlePublish = async () => {
