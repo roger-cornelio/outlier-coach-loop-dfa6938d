@@ -304,13 +304,13 @@ export default function Landing() {
             </div>
 
             <p className="text-lg text-foreground mb-6 font-medium">
-              Receba novos atletas e escale sua operação com controle total.
+              Escale sua operação sem perder qualidade.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
                 'Receba novos atletas todos os dias',
-                'Escale sua operação sem perder qualidade',
+                'Receba feedbacks diários e acompanhe a evolução',
                 'Controle os treinos e saiba exatamente como melhorar cada atleta',
                 'Motor de adaptação inteligente: ajusta o treino baseado nas características de cada atleta',
               ].map((item, i) => (
