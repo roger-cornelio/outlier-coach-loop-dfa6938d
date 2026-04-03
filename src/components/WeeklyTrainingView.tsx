@@ -271,7 +271,7 @@ export function WeeklyTrainingView() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -298,7 +298,7 @@ export function WeeklyTrainingView() {
       </header>
 
       {/* Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Week Navigator */}
         <div className="mb-6 pb-4 border-b border-border">
           <WeekNavigator
@@ -372,7 +372,7 @@ export function WeeklyTrainingView() {
           <div className="space-y-4">
             {/* Day Header */}
             <div className="mb-4">
-              <h2 className="font-display text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
+              <h2 className="font-display text-2xl sm:text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
             </div>
 
             {/* Render each session */}
@@ -488,7 +488,7 @@ export function WeeklyTrainingView() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: (index + 1) * 0.1 }}
                   className={`
-                    card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
+                    card-elevated p-4 sm:p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
                     ${isMainWod ? 'ring-1 ring-primary/30' : ''}
                   `}
                 >
@@ -496,7 +496,7 @@ export function WeeklyTrainingView() {
                   <div className="mb-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-2 flex-1">
-                        <h3 className="font-display text-2xl font-bold tracking-tight uppercase">
+                        <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight uppercase">
                           {getBlockDisplayTitle(block, index)}
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -615,7 +615,7 @@ export function WeeklyTrainingView() {
             {!isViewingHistory && (
               <motion.button
                 onClick={handleStartWorkout}
-                className="w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
+                className="w-full font-display text-lg sm:text-xl tracking-wider px-6 py-4 sm:px-8 sm:py-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
               >

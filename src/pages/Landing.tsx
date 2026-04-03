@@ -84,17 +84,17 @@ export default function Landing() {
     <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
       {/* ══════════ HEADER FIXO ══════════ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
-        <div className="max-w-7xl mx-auto px-6 py-5 md:py-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 sm:py-5 md:py-6 flex items-center justify-between">
           <OutlierWordmark size="md" />
-          <div className="flex items-center gap-4 md:gap-6">
-            <Link to="/login" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+            <Link to="/login" className="font-display text-xs sm:text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               Já Sou Outlier
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
-            <span className="h-5 border-r border-border/40" />
-            <Link to="/login/coach" className="font-display text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+            <span className="h-5 border-r border-border/40 hidden sm:inline" />
+            <Link to="/login/coach" className="font-display text-xs sm:text-sm md:text-base tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
               Sou Coach
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function Landing() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
         >
           <Link to={diagnosticHref}
-            className="font-display text-lg tracking-widest px-12 py-5 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40 flex items-center gap-3 justify-center">
+            className="font-display text-base sm:text-lg tracking-widest px-8 py-4 sm:px-12 sm:py-5 rounded-xl bg-primary text-primary-foreground hover:brightness-110 hover:scale-105 transition-all duration-200 shadow-2xl shadow-primary/50 ring-2 ring-primary/40 flex items-center gap-3 justify-center">
             <Zap className="w-6 h-6" />
             RECEBER DIAGNÓSTICO
           </Link>
@@ -321,7 +321,7 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Link to="/coach-request"
-                className="inline-flex items-center gap-3 font-display text-base tracking-widest px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
+                className="inline-flex items-center gap-3 font-display text-sm sm:text-base tracking-widest px-6 py-3 sm:px-8 sm:py-4 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-lg shadow-primary/30">
                 QUERO SER COACH OUTLIER
                 <ArrowRight className="w-5 h-5" />
               </Link>
@@ -345,7 +345,7 @@ export default function Landing() {
           </div>
 
           <Link to="/login?mode=signup"
-            className="inline-flex items-center gap-3 font-display text-xl tracking-widest px-16 py-6 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40">
+            className="inline-flex items-center gap-3 font-display text-lg sm:text-xl tracking-widest px-10 py-5 sm:px-16 sm:py-6 rounded-xl bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-xl shadow-primary/40 ring-2 ring-primary/40">
             <Zap className="w-5 h-5" />
             COMECE AGORA
           </Link>
