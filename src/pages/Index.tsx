@@ -303,11 +303,12 @@ const Index = () => {
     // REGRA ABSOLUTA: Se first_setup_completed === true, NUNCA renderizar telas de setup
     // REGRA INVERSA: Se first_setup_completed !== true, NUNCA renderizar preWorkout/dashboard
     const setupComplete = onboardingDecision.isSetupComplete;
+    const isForceOnboarding = new URLSearchParams(location.search).get('force-onboarding') === '1';
     
     // Resolver view efetiva
     let effectiveView = currentView;
     
-    if (setupComplete) {
+    if (setupComplete && !isForceOnboarding) {
       // Se setup completo, redirecionar telas de setup para dashboard
       // NOTE: preWorkout foi removido como etapa intermediária
       if (currentView === 'welcome' || currentView === 'athleteWelcome' || currentView === 'preWorkout') {
