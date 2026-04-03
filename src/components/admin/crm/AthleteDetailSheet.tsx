@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, User, Activity, Link2, Target } from "lucide-react";
+import { Loader2, User, Activity, Link2, Target, Phone, Calendar } from "lucide-react";
 import { UnifiedUser, AthleteDetail } from "./types";
 import {
   statusLabels, statusColors,
@@ -18,6 +18,40 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+// Translation maps for onboarding values
+const experienceLabels: Record<string, string> = {
+  never: "Nunca fez HYROX",
+  spectator: "Já assistiu provas",
+  "1race": "Fez 1 prova",
+  "2plus": "2+ provas realizadas",
+};
+
+const goalLabels: Record<string, string> = {
+  finish: "Completar a prova",
+  improve_time: "Melhorar tempo",
+  podium: "Pódio",
+  lifestyle: "Lifestyle / Condicionamento",
+};
+
+const trainingLevelLabels: Record<string, string> = {
+  open: "OPEN OUTLIER",
+  pro: "PRO OUTLIER",
+  elite: "ELITE OUTLIER",
+};
+
+const coachStyleLabels: Record<string, string> = {
+  IRON: "IRON (Disciplina)",
+  PULSE: "PULSE (Motivação)",
+  SPARK: "SPARK (Energia)",
+};
+
+const sessionDurationLabels: Record<string, string> = {
+  "45": "45 minutos",
+  "60": "60 minutos",
+  "75": "75 minutos",
+  "90": "90 minutos",
+};
+
 export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
   const [detail, setDetail] = useState<AthleteDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,16 +64,18 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
   async function loadDetail(u: UnifiedUser) {
     setLoading(true);
     try {
-      const [sessionsRes, benchRes, racesRes, leadsRes] = await Promise.all([
+      const [sessionsRes, benchRes, racesRes, leadsRes, targetRaceRes] = await Promise.all([
         supabase.from("workout_session_feedback").select("id", { count: "exact", head: true }).eq("athlete_id", u.user_id),
         supabase.from("benchmark_outlier_results").select("id", { count: "exact", head: true }).eq("athlete_id", u.user_id),
         supabase.from("athlete_races").select("id", { count: "exact", head: true }).eq("user_id", u.user_id),
         supabase.from("diagnostic_leads").select("athlete_name_searched, event_name, created_at").eq("user_id", u.user_id).order("created_at", { ascending: false }),
+        supabase.from("athlete_races").select("nome, race_date, categoria, race_type").eq("user_id", u.user_id).eq("race_type", "ALVO").order("race_date", { ascending: true }).limit(1),
       ]);
 
       const sessionCount = sessionsRes.count ?? 0;
       const benchmarkCount = benchRes.count ?? 0;
       const raceCount = racesRes.count ?? 0;
+      const targetRace = targetRaceRes.data?.[0] ?? null;
 
       const created = new Date(u.created_at);
       const weeksSinceSignup = Math.max(1, Math.floor((Date.now() - created.getTime()) / (7 * 24 * 60 * 60 * 1000)));
@@ -57,12 +93,18 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
         weeksSinceSignup,
         avgSessionsPerWeek,
         platformDuration: formatPlatformDuration(u.created_at),
+        targetRace,
       });
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
+  }
+
+  function translateValue(value: string | null | undefined, map: Record<string, string>): string | null {
+    if (!value) return null;
+    return map[value] ?? value;
   }
 
   return (
@@ -78,30 +120,50 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
           </div>
         ) : detail ? (
           <div className="space-y-6 mt-4">
-            {/* Section 1: Profile */}
+            {/* Section 1: Contato */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <Phone className="w-4 h-4" /> Contato
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <InfoItem label="Email" value={detail.profile.email} />
+                <InfoItem label="Telefone/WhatsApp" value={detail.profile.telefone} />
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Section 2: Perfil */}
             <section className="space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <User className="w-4 h-4" /> Perfil
               </h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <InfoItem label="Email" value={detail.profile.email} />
                 <InfoItem label="Sexo" value={detail.profile.sexo === "M" ? "Masculino" : detail.profile.sexo === "F" ? "Feminino" : "—"} />
                 <InfoItem label="Idade" value={detail.profile.idade ? `${detail.profile.idade} anos` : null} />
                 <InfoItem label="Peso" value={detail.profile.peso ? `${detail.profile.peso} kg` : null} />
                 <InfoItem label="Altura" value={detail.profile.altura ? `${detail.profile.altura} cm` : null} />
-                <InfoItem label="Nível" value={detail.profile.training_level} />
-                <InfoItem label="Duração sessão" value={detail.profile.session_duration} />
+                <InfoItem label="Nível" value={translateValue(detail.profile.training_level, trainingLevelLabels)} />
+                <InfoItem label="Estilo de Coach" value={translateValue(detail.profile.coach_style, coachStyleLabels)} />
+                <InfoItem label="Duração sessão" value={translateValue(detail.profile.session_duration, sessionDurationLabels)} />
                 <InfoItem label="Setup completo" value={detail.profile.first_setup_completed ? "Sim ✅" : "Não"} />
               </div>
-              {detail.profile.onboarding_experience && (
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p><span className="font-medium">Experiência:</span> {detail.profile.onboarding_experience}</p>
-                  {detail.profile.onboarding_goal && <p><span className="font-medium">Objetivo:</span> {detail.profile.onboarding_goal}</p>}
-                  {detail.profile.onboarding_target_race && <p><span className="font-medium">Prova alvo:</span> {detail.profile.onboarding_target_race}</p>}
+              {(detail.profile.onboarding_experience || detail.profile.onboarding_goal) && (
+                <div className="text-xs text-muted-foreground space-y-1 mt-2 p-3 rounded-md bg-muted/50">
+                  <p className="font-medium text-foreground text-xs mb-1">Respostas do Onboarding</p>
+                  {detail.profile.onboarding_experience && (
+                    <p><span className="font-medium">Experiência HYROX:</span> {translateValue(detail.profile.onboarding_experience, experienceLabels)}</p>
+                  )}
+                  {detail.profile.onboarding_goal && (
+                    <p><span className="font-medium">Objetivo:</span> {translateValue(detail.profile.onboarding_goal, goalLabels)}</p>
+                  )}
+                  {detail.profile.onboarding_target_race && (
+                    <p><span className="font-medium">Prova alvo (onboarding):</span> {detail.profile.onboarding_target_race}</p>
+                  )}
                 </div>
               )}
               {detail.profile.equipment_notes && (
-                <p className="text-xs text-muted-foreground"><span className="font-medium">Equip. indisp.:</span> {detail.profile.equipment_notes}</p>
+                <p className="text-xs text-muted-foreground"><span className="font-medium">Equip. indisponíveis:</span> {detail.profile.equipment_notes}</p>
               )}
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={statusColors[detail.profile.computedStatus]}>{statusLabels[detail.profile.computedStatus]}</Badge>
@@ -114,7 +176,24 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
 
             <Separator />
 
-            {/* Section 2: Engagement */}
+            {/* Section 3: Prova Alvo */}
+            {detail.targetRace && (
+              <>
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                    <Calendar className="w-4 h-4" /> Prova Alvo
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <InfoItem label="Evento" value={detail.targetRace.nome} />
+                    <InfoItem label="Categoria" value={detail.targetRace.categoria} />
+                    <InfoItem label="Data" value={fmtDate(detail.targetRace.race_date)} />
+                  </div>
+                </section>
+                <Separator />
+              </>
+            )}
+
+            {/* Section 4: Engagement */}
             <section className="space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <Activity className="w-4 h-4" /> Engajamento
@@ -130,7 +209,7 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
 
             <Separator />
 
-            {/* Section 3: Coach Link */}
+            {/* Section 5: Coach Link */}
             <section className="space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <Link2 className="w-4 h-4" /> Vínculo
@@ -158,7 +237,7 @@ export function AthleteDetailSheet({ user, open, onOpenChange }: Props) {
 
             <Separator />
 
-            {/* Section 4: Lead Score */}
+            {/* Section 6: Lead Score */}
             <section className="space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <Target className="w-4 h-4" /> Qualificação
