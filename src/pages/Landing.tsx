@@ -125,12 +125,17 @@ export default function Landing() {
           do comum
         </motion.p>
 
-        <motion.p
-          className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
+        <motion.div
+          className="mt-8 max-w-md mx-auto text-center"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Diagnóstico gratuito + treino personalizado por estação. Cada rep com propósito, cada sessão atacando seus pontos fracos.
-        </motion.p>
+          <p className="text-foreground font-medium text-sm md:text-base leading-relaxed">
+            Faça seu diagnóstico gratuito e descubra exatamente onde você perde tempo.
+          </p>
+          <p className="text-muted-foreground text-sm md:text-base leading-relaxed mt-2">
+            Atinja sua melhor performance — o plano ideal para um resultado fora da curva.
+          </p>
+        </motion.div>
 
         <motion.div
           className="flex justify-center mt-16"
