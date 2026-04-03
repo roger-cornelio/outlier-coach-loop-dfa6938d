@@ -329,13 +329,14 @@ export default function Auth({ context = 'user' }: AuthProps) {
       return true;
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string } = {};
+        const fieldErrors: { name?: string; email?: string; password?: string; confirmPassword?: string; sexo?: string; telefone?: string } = {};
         err.errors.forEach((error) => {
           if (error.path[0] === 'name') fieldErrors.name = error.message;
           if (error.path[0] === 'email') fieldErrors.email = error.message;
           if (error.path[0] === 'password') fieldErrors.password = error.message;
           if (error.path[0] === 'confirmPassword') fieldErrors.confirmPassword = error.message;
           if (error.path[0] === 'sexo') fieldErrors.sexo = error.message;
+          if (error.path[0] === 'telefone') fieldErrors.telefone = error.message;
         });
         setErrors(fieldErrors);
       }
