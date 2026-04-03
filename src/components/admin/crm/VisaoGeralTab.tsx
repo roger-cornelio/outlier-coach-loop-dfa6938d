@@ -142,6 +142,10 @@ export function VisaoGeralTab() {
         const pa = getSortPriority(a.userRole, a.computedStatus);
         const pb = getSortPriority(b.userRole, b.computedStatus);
         if (pa !== pb) return pa - pb;
+        // Within coaches, sort by score ascending (worst first)
+        if (a.userRole === "coach" && b.userRole === "coach") {
+          return (a.coachScore ?? 0) - (b.coachScore ?? 0);
+        }
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
