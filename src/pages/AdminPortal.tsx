@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminParamsEditor } from "@/components/AdminParamsEditor";
-import { UserManagement } from "@/components/UserManagement";
+
 import { ServiceQualityDashboard } from "@/components/admin/ServiceQualityDashboard";
 import { CoachApplicationsAdmin } from "@/components/CoachApplicationsAdmin";
 import { EventReviewAdmin } from "@/components/admin/EventReviewAdmin";
@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Loader2, 
   Shield, 
-  Users,
+  
   UserPlus, 
   Settings2, 
   Target,
@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AdminView = "params" | "users" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions" | "analytics" | "businessMetrics";
+export type AdminView = "params" | "coachPerformance" | "coachApplications" | "masterBenchmarks" | "athleteStatus" | "classification" | "outlierBenchmarks" | "eventReview" | "knowledgeBase" | "movementPatterns" | "stationValence" | "demoLevelUp" | "crm" | "exerciseSuggestions" | "analytics" | "businessMetrics";
 
 interface NavItem {
   id: AdminView;
@@ -78,13 +78,7 @@ const navItems: NavItem[] = [
     icon: <Contact className="w-5 h-5" />,
     description: "Clientes e leads"
   },
-  { 
-    id: "users", 
-    label: "Usuários", 
-    icon: <Users className="w-5 h-5" />,
-    description: "Gestão de usuários"
-  },
-  { 
+  {
     id: "coachApplications", 
     label: "Solicitações", 
     icon: <UserPlus className="w-5 h-5" />,
@@ -242,8 +236,6 @@ const AdminPortal = () => {
     switch (adminView) {
       case "params":
         return <AdminParamsEditor />;
-      case "users":
-        return <UserManagement />;
       case "coachPerformance":
         return <ServiceQualityDashboard />;
       case "coachApplications":
