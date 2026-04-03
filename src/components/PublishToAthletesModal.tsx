@@ -17,6 +17,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
+import { computeStationEmphasis, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
+import type { DiagnosticoMelhoria } from '@/components/diagnostico/types';
 
 import {
   Dialog,
@@ -30,10 +32,12 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, Send, Users, User, CheckCircle, AlertCircle, Copy, 
-  CalendarIcon 
+  CalendarIcon, Sliders, TrendingUp
 } from 'lucide-react';
 
 interface LinkedAthlete {
@@ -57,8 +61,8 @@ export interface PublishToAthletesModalProps {
   workoutId?: string | null;
 }
 
-// Step enum for the wizard - agora só 2 steps
-type PublishStep = 'athletes' | 'confirm';
+// Step enum for the wizard - 3 steps: athletes → adaptation review → confirm
+type PublishStep = 'athletes' | 'adaptation' | 'confirm';
 
 export function PublishToAthletesModal({ 
   open, 
@@ -96,7 +100,14 @@ export function PublishToAthletesModal({
   } | null>(null);
   const [publishedCount, setPublishedCount] = useState(0);
   const [athletesWithExistingPlan, setAthletesWithExistingPlan] = useState<Set<string>>(new Set());
-
+  
+  // Adaptation state
+  const [athleteAdaptations, setAthleteAdaptations] = useState<Map<string, {
+    enabled: boolean;
+    emphasis: StationEmphasis[];
+    athleteName: string;
+  }>>(new Map());
+  const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
   // Calcula o período da semana a partir de weekStart
   const weekPeriodLabel = weekStart 
     ? (() => {
@@ -217,16 +228,84 @@ export function PublishToAthletesModal({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 'athletes' && selectedAthletes.size > 0) {
+      // Fetch diagnostics for selected athletes
+      setLoadingDiagnostics(true);
+      try {
+        const athleteIds = Array.from(selectedAthletes);
+        const { data: diagnosticos } = await supabase
+          .from('diagnostico_melhoria')
+          .select('*')
+          .in('atleta_id', athleteIds);
+        
+        const newAdaptations = new Map<string, {
+          enabled: boolean;
+          emphasis: StationEmphasis[];
+          athleteName: string;
+        }>();
+        
+        for (const athleteId of athleteIds) {
+          const athleteDiags = (diagnosticos || []).filter(d => d.atleta_id === athleteId);
+          const athlete = athletes.find(a => a.user_id === athleteId);
+          const athleteName = athlete?.name || athlete?.email || athleteId;
+          
+          if (athleteDiags.length > 0) {
+            const mapped: DiagnosticoMelhoria[] = athleteDiags.map(d => ({
+              id: d.id,
+              movement: d.movement,
+              metric: d.metric,
+              value: d.value,
+              your_score: d.your_score,
+              top_1: d.top_1,
+              improvement_value: d.improvement_value,
+              percentage: d.percentage,
+              total_improvement: d.total_improvement,
+            }));
+            const emphasis = computeStationEmphasis(mapped);
+            newAdaptations.set(athleteId, {
+              enabled: true,
+              emphasis,
+              athleteName,
+            });
+          } else {
+            newAdaptations.set(athleteId, {
+              enabled: false,
+              emphasis: [],
+              athleteName,
+            });
+          }
+        }
+        
+        setAthleteAdaptations(newAdaptations);
+      } catch (err) {
+        console.error('[PublishToAthletesModal] Error fetching diagnostics:', err);
+      } finally {
+        setLoadingDiagnostics(false);
+      }
+      setCurrentStep('adaptation');
+    } else if (currentStep === 'adaptation') {
       setCurrentStep('confirm');
     }
   };
 
   const handleBack = () => {
     if (currentStep === 'confirm') {
+      setCurrentStep('adaptation');
+    } else if (currentStep === 'adaptation') {
       setCurrentStep('athletes');
     }
+  };
+
+  const toggleAdaptation = (athleteId: string) => {
+    setAthleteAdaptations(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(athleteId);
+      if (current) {
+        newMap.set(athleteId, { ...current, enabled: !current.enabled });
+      }
+      return newMap;
+    });
   };
 
   const handlePublish = async () => {
@@ -488,9 +567,10 @@ export function PublishToAthletesModal({
   const allSelected = selectedAthletes.size === athletes.length && athletes.length > 0;
   const someSelected = selectedAthletes.size > 0 && selectedAthletes.size < athletes.length;
 
-  // Step indicators - apenas 2 steps agora
+  // Step indicators - 3 steps
   const steps = [
     { key: 'athletes', label: 'Atletas', completed: selectedAthletes.size > 0 },
+    { key: 'adaptation', label: 'Adaptação', completed: currentStep === 'confirm' },
     { key: 'confirm', label: 'Confirmar', completed: publishedCount > 0 },
   ];
 
@@ -571,6 +651,88 @@ export function PublishToAthletesModal({
                             </p>
                           )}
                         </Label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+        );
+
+      case 'adaptation':
+        return (
+          <div className="space-y-4">
+            {loadingDiagnostics ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Carregando diagnósticos...</span>
+              </div>
+            ) : (
+              <>
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">
+                      Adaptação por Diagnóstico
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ajuste automático de volume baseado nos pontos fracos de cada atleta. Ligue ou desligue por atleta.
+                  </p>
+                </div>
+
+                <ScrollArea className="max-h-[300px]">
+                  <div className="space-y-3">
+                    {Array.from(athleteAdaptations.entries()).map(([athleteId, data]) => (
+                      <div
+                        key={athleteId}
+                        className="p-3 rounded-lg border border-border bg-card space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{data.athleteName}</span>
+                          </div>
+                          {data.emphasis.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`adapt-${athleteId}`} className="text-xs text-muted-foreground">
+                                {data.enabled ? 'Ativo' : 'Desligado'}
+                              </Label>
+                              <Switch
+                                id={`adapt-${athleteId}`}
+                                checked={data.enabled}
+                                onCheckedChange={() => toggleAdaptation(athleteId)}
+                              />
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              Sem diagnóstico
+                            </Badge>
+                          )}
+                        </div>
+
+                        {data.emphasis.length > 0 && data.enabled && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {data.emphasis
+                              .filter(e => e.multiplier !== 1.0)
+                              .sort((a, b) => b.multiplier - a.multiplier)
+                              .map(e => (
+                                <Badge
+                                  key={e.movement}
+                                  variant="outline"
+                                  className={cn(
+                                    "text-xs",
+                                    e.multiplier > 1
+                                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                                      : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                                  )}
+                                >
+                                  {e.movement} {e.label}
+                                </Badge>
+                              ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -692,6 +854,8 @@ export function PublishToAthletesModal({
     switch (currentStep) {
       case 'athletes':
         return selectedAthletes.size > 0 && athletes.length > 0;
+      case 'adaptation':
+        return true; // Always can proceed - adaptation is optional
       case 'confirm':
         return canPublish;
       default:
@@ -709,6 +873,7 @@ export function PublishToAthletesModal({
           </DialogTitle>
           <DialogDescription>
             {currentStep === 'athletes' && 'Selecione os atletas que receberão este treino.'}
+            {currentStep === 'adaptation' && 'Revise a adaptação de volume por diagnóstico.'}
             {currentStep === 'confirm' && 'Confirme os dados antes de publicar.'}
           </DialogDescription>
         </DialogHeader>
