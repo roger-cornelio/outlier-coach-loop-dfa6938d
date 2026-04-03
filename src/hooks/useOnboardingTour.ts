@@ -5,61 +5,85 @@
  * Uses localStorage scoped by userId to track if tour was already seen.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useAppState } from './useAppState';
 
 const TOUR_SEEN_PREFIX = 'outlier_onboarding_tour_seen_';
+
+export interface TourPreviewItem {
+  icon: string; // Lucide icon name
+  label: string;
+}
 
 export interface TourStep {
   id: string;
   title: string;
   description: string;
-  icon: string; // emoji
-  highlight?: string; // optional CSS selector to highlight
+  lucideIcon: string; // Lucide icon name
+  tabId: string; // maps to bottom nav tab
+  previewItems: TourPreviewItem[];
 }
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    id: 'welcome',
-    title: 'Bem-vindo ao OUTLIER! 🏆',
-    description: 'Esse é o seu centro de comando. Aqui seu treino é personalizado com base nos seus dados reais de prova. Vamos ver?',
-    icon: '🎯',
-  },
-  {
     id: 'dashboard',
     title: 'Dashboard Inteligente',
-    description: 'Treino do dia já adaptado aos seus pontos fracos. Radar diagnóstico, foco de evolução e status de performance — tudo conectado.',
-    icon: '📊',
+    description: 'Treino do dia adaptado aos seus dados reais. Radar diagnóstico, foco de evolução e status de performance — tudo conectado.',
+    lucideIcon: 'LayoutDashboard',
+    tabId: 'dashboard',
+    previewItems: [
+      { icon: 'Activity', label: 'Radar diagnóstico' },
+      { icon: 'Dumbbell', label: 'Treino do dia' },
+      { icon: 'TrendingUp', label: 'Status de performance' },
+    ],
   },
   {
-    id: 'weekly',
-    title: 'Treino Semanal Personalizado',
+    id: 'weeklyTraining',
+    title: 'Treino Semanal',
     description: 'Cada sessão tem volume ajustado às suas estações mais fracas. Mais reps onde você precisa, menos onde já domina.',
-    icon: '📅',
+    lucideIcon: 'Calendar',
+    tabId: 'weeklyTraining',
+    previewItems: [
+      { icon: 'ListChecks', label: 'Sessões da semana' },
+      { icon: 'Sliders', label: 'Adaptação automática' },
+      { icon: 'Clock', label: 'Tempo estimado' },
+    ],
   },
   {
-    id: 'evolution',
-    title: 'Evolução com Dados Reais',
+    id: 'benchmarks',
+    title: 'Evolução com Dados',
     description: 'Acompanhe benchmarks, compare com metas OUTLIER e veja o impacto da personalização na sua progressão.',
-    icon: '📈',
+    lucideIcon: 'TrendingUp',
+    tabId: 'benchmarks',
+    previewItems: [
+      { icon: 'BarChart3', label: 'Benchmarks OUTLIER' },
+      { icon: 'Target', label: 'Metas por nível' },
+      { icon: 'ArrowUpRight', label: 'Histórico de evolução' },
+    ],
   },
   {
-    id: 'prova',
+    id: 'prova-alvo',
     title: 'Prova Alvo',
-    description: 'Cadastre sua próxima prova e receba projeções de tempo, splits alvo e um plano de corrida baseado no seu diagnóstico.',
-    icon: '🏁',
+    description: 'Cadastre sua próxima prova e receba projeções de tempo, splits alvo e plano de corrida personalizado.',
+    lucideIcon: 'Target',
+    tabId: 'prova-alvo',
+    previewItems: [
+      { icon: 'Flag', label: 'Próxima prova' },
+      { icon: 'Timer', label: 'Splits projetados' },
+      { icon: 'Route', label: 'Plano de corrida' },
+    ],
   },
   {
     id: 'config',
     title: 'Configurações',
     description: 'Ajuste perfil, equipamentos e tempo de treino. O motor recalcula seus ajustes automaticamente.',
-    icon: '⚙️',
-  },
-  {
-    id: 'ready',
-    title: 'Tudo pronto!',
-    description: 'Seu treino já está personalizado. Cada sessão ataca seus pontos fracos. Bora ser OUTLIER! 💪',
-    icon: '🚀',
+    lucideIcon: 'Settings',
+    tabId: 'config',
+    previewItems: [
+      { icon: 'User', label: 'Perfil e biometria' },
+      { icon: 'Wrench', label: 'Equipamentos disponíveis' },
+      { icon: 'Clock', label: 'Tempo de treino' },
+    ],
   },
 ];
 
@@ -71,7 +95,6 @@ export function useOnboardingTour() {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Check if tour should show (only once per user, after setup complete)
   const shouldShowTour = useCallback(() => {
     if (!storageKey) return false;
     try {
@@ -92,9 +115,7 @@ export function useOnboardingTour() {
     if (!storageKey) return;
     try {
       localStorage.setItem(storageKey, 'true');
-    } catch {
-      // silent
-    }
+    } catch {}
   }, [storageKey]);
 
   const nextStep = useCallback(() => {
