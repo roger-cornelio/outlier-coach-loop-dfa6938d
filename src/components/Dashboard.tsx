@@ -108,6 +108,7 @@ export function Dashboard() {
   // Detectar subida de nível para exibir modal
   const { showModal: showLevelUpModal, newLevel, acknowledgeLevel } = useLevelUpDetection(status);
   const journeyProgress = useJourneyProgress();
+  const { currentStreak, isStreakActive, message: streakMessage } = useWorkoutStreak();
   
   // Estado para modal de categoria ao importar prova
   const [raceImportLevel, setRaceImportLevel] = useState<import('@/types/outlier').AthleteStatus | null>(null);
