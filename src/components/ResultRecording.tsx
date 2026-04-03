@@ -183,8 +183,8 @@ export function ResultRecording() {
                   }
                 `}
               >
-                <X className={`w-8 h-8 ${completed === false ? 'text-status-below' : 'text-muted-foreground'}`} />
-                <span className="font-display text-xl">NÃO</span>
+                <X className={`w-6 h-6 sm:w-8 sm:h-8 ${completed === false ? 'text-status-below' : 'text-muted-foreground'}`} />
+                <span className="font-display text-lg sm:text-xl">NÃO</span>
               </button>
             </div>
           </div>
