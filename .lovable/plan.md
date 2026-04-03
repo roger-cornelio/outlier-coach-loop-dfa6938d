@@ -1,54 +1,21 @@
 
 
-## O que falta para validar com 2 coaches e 10 atletas
+## Plano: Renomear níveis da jornada para "OUTLIER"
 
-### O que JA funciona
-- Cadastro de atleta com telefone + CRM
-- Onboarding completo (seleção de coach, config)
-- Coach dashboard (importar treino, publicar, ver atletas)
-- Atleta vê treino semanal, executa, registra resultado
-- Notificações coach (feedback, benchmark)
-- Sistema de aprovação de vínculo coach-atleta
-- Diagnóstico gratuito (isca de leads)
-- Troca de coach
-- Dark mode, pull-to-refresh, navegação semanal
+### Problema
+Os níveis da jornada aparecem como "HYROX OPEN / HYROX PRO / HYROX ELITE" na tela de admin e em outros locais. A jornada é do produto OUTLIER, não do HYROX. Deve ser "OPEN OUTLIER", "PRO OUTLIER", "ELITE OUTLIER".
 
-### Bloqueios criticos para validação
+### Mudanças
 
-**1. Confirmação de email bloqueia acesso imediato**
-Hoje o signup exige confirmação de email antes de logar. Para validar rápido com 10 pessoas reais, isso gera fricção desnecessaria (email cai no spam, demora, etc). Habilitar auto-confirm durante a fase de validação.
+1. **`src/types/outlier.ts`** — Atualizar `LEVEL_NAMES` para:
+   - open → "OPEN OUTLIER"
+   - pro → "PRO OUTLIER"  
+   - elite → "ELITE OUTLIER"
 
-**2. Falta telefone no Diagnóstico Gratuito**
-A página `/diagnostico-gratuito` não exige telefone. É a principal porta de entrada de leads mas não captura WhatsApp para o CRM.
+2. **`src/components/admin/AthleteStatusAdmin.tsx`** — Atualizar `DEFAULT_LEVEL_RULES` labels para "OPEN OUTLIER", "PRO OUTLIER", "ELITE OUTLIER"
 
-### Melhorias importantes (mas não bloqueantes)
+3. **Database** — Atualizar registros existentes na tabela `level_rules` (se houver) para os novos labels via migration
 
-**3. Coach não recebe notificação de novo atleta vinculado**
-Quando um atleta solicita vínculo, o coach só descobre se abrir o dashboard. Falta uma notificação push/in-app tipo "Novo atleta solicitou vínculo".
-
-**4. Falta mensagem de boas-vindas pós-vínculo**
-Quando o coach aprova o atleta, o atleta não recebe feedback visual ("Seu coach aceitou você!"). Fica confuso.
-
-**5. Empty states pouco claros**
-Quando o atleta entra e o coach ainda não publicou treino, a tela fica vazia sem orientação clara ("Seu coach ainda não publicou o treino desta semana").
-
-### Resumo priorizado
-
-| # | Item | Impacto | Esforço |
-|---|------|---------|---------|
-| 1 | Auto-confirm email (validação) | Bloqueante | 5 min |
-| 2 | Telefone no diagnóstico gratuito | Alto (leads) | 15 min |
-| 3 | Notificação de novo atleta p/ coach | Médio | 30 min |
-| 4 | Feedback visual pós-aprovação | Médio | 20 min |
-| 5 | Empty states com orientação | Médio | 20 min |
-
-### Arquivos afetados
-
-1. Config de auth (auto-confirm) — `cloud--configure_auth`
-2. `src/pages/DiagnosticoGratuito.tsx` — campo telefone
-3. `src/hooks/useNotifications.ts` + trigger SQL — notificação de link request
-4. `src/components/Dashboard.tsx` — empty state quando sem treino
-5. `src/components/CoachOverviewTab.tsx` — notificação inline de pending requests
-
-Quer que eu implemente todos na ordem ou quer priorizar algum?
+### Impacto
+Todos os componentes que usam `LEVEL_NAMES` (header do atleta, status display, benchmarks, coach dashboard) passam automaticamente a mostrar os novos nomes.
 
