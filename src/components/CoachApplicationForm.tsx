@@ -41,6 +41,7 @@ export function CoachApplicationForm() {
   
   const [formData, setFormData] = useState({
     full_name: profile?.name || '',
+    telefone: '',
     instagram: '',
     box_name: '',
     city: '',
