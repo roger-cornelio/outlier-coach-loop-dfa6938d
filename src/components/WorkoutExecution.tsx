@@ -401,9 +401,9 @@ export function WorkoutExecution() {
 
       {/* Session Stopwatch */}
       <div className="bg-card border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex flex-col items-center">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-5 flex flex-col items-center">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">TEMPO DE SESSÃO</p>
-          <p className="font-mono text-4xl md:text-5xl font-bold tracking-wider text-foreground tabular-nums">
+          <p className="font-mono text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider text-foreground tabular-nums">
             {formatStopwatch(elapsedSeconds)}
           </p>
         </div>
