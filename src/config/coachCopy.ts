@@ -293,19 +293,19 @@ export const COACH_COPY: Record<CoachStyle, CoachCopySet> = {
       subheadline: 'Pronto pra ser fora da curva?',
       coachCardIntro: 'O que você vai sentir nessa experiência:',
       bullets: [
-        'Energia positiva em cada sessão',
-        'Criatividade para superar desafios',
-        'Diversão sem perder a intensidade',
+        'Treino feito sob medida pros seus pontos fracos',
+        'Volume inteligente: mais onde precisa, menos onde já manda',
+        'Diversão com propósito — cada rep te aproxima do pódio! 🔥',
       ],
-      footer: 'Bora fazer acontecer! 🔥',
-      institutionalNote: 'O treino é definido pelo seu nível e pelo tempo que você tem. O estilo do treinador define como você recebe o feedback.',
+      footer: 'Bora fazer acontecer! Cada treino é único pra você!',
+      institutionalNote: 'Seu treino é personalizado pelo motor de proporção diagnóstica: mais volume onde você precisa, menos onde já domina. O estilo do treinador define como você recebe o feedback.',
     },
     settings: {
       coachStyleChangeNote: 'Trocar o estilo do treinador não altera o treino, apenas a forma de feedback e cobrança.',
-      coachStyleChangeSubnote: 'Seu treino continua sendo ajustado pelo seu nível e tempo.',
+      coachStyleChangeSubnote: 'Seu treino continua sendo adaptado com base no seu diagnóstico e tempo disponível.',
     },
     dashboard: {
-      workoutAdjustedNote: 'Treino ajustado pelo seu nível e pelo tempo disponível hoje.',
+      workoutAdjustedNote: 'Treino adaptado ao seu diagnóstico, nível e tempo disponível.',
     },
     workoutComments: {
       preWorkout: [

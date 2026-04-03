@@ -73,31 +73,31 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'atletas',
     title: 'Aba Atletas',
-    description: 'Aqui você gerencia sua base, aprova solicitações de vínculo e acompanha os feedbacks dos treinos.',
+    description: 'Gerencie sua base, veja diagnósticos individuais e acompanhe feedbacks. Cada atleta com dados de prova recebe adaptação automática.',
     icon: '👥',
   },
   {
     id: 'importar',
     title: 'Aba Importar',
-    description: 'Cole sua planilha de treinos e o sistema parseia automaticamente em blocos estruturados.',
+    description: 'Cole sua planilha e o sistema parseia em blocos estruturados. Na publicação, o motor adapta o volume para cada atleta.',
     icon: '📋',
   },
   {
     id: 'programacoes',
     title: 'Aba Programações',
-    description: 'Semanas salvas aparecem aqui, prontas para publicar para seus atletas com um clique.',
+    description: 'Publique com adaptação inteligente: cada atleta recebe volume ajustado aos seus pontos fracos, com um clique.',
     icon: '📅',
   },
   {
     id: 'vincular',
     title: 'Vincular Atleta',
-    description: 'Use o botão "Vincular Atleta" para convidar atletas por email e começar a gerenciar seus treinos.',
+    description: 'Convide atletas por email. Quando importarem seus resultados HYROX, o motor calcula os ajustes automaticamente.',
     icon: '🔗',
   },
   {
     id: 'ready',
     title: 'Tudo pronto!',
-    description: 'Seu painel está configurado. Importe sua primeira planilha e comece a transformar treinos! 💪',
+    description: 'Seu painel está configurado. Importe sua planilha, ative a adaptação e escale sua operação com qualidade 1:1! 💪',
     icon: '🚀',
   },
 ];

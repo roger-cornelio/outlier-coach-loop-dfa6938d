@@ -148,7 +148,7 @@ export default function Landing() {
           className="text-muted-foreground text-sm md:text-base mt-8 max-w-md mx-auto leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
-          Receba seu diagnóstico gratuito e descubra, com clareza, onde está seu maior potencial de evolução.
+          Diagnóstico gratuito + treino personalizado por estação. Cada rep com propósito, cada sessão atacando seus pontos fracos.
         </motion.p>
 
         <motion.div
