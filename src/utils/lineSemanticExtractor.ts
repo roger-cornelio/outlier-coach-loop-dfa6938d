@@ -32,8 +32,10 @@ interface MetricPattern {
 }
 
 const METRIC_PATTERNS: MetricPattern[] = [
+  // HYROX load tags — must come BEFORE generic parenthetical
+  { type: 'hyrox_load', regex: /\(carga\s+(?:pro|open)\)/gi },
+
   // Parenthetical — tudo entre parênteses
-  { type: 'parenthetical', regex: /\([^)]*\)/g },
 
   // Pace: "pace 4:30/km", "pace 5:00"
   { type: 'cadence', regex: /\bpace\s+\d{1,2}:\d{2}(?:\/km)?\b/gi },
