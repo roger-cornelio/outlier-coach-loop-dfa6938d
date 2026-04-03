@@ -17,6 +17,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { DayWorkout } from '@/types/outlier';
 import { cn } from '@/lib/utils';
 import { normalizeWorkoutsForPersistence } from '@/utils/workoutSerialization';
+import { computeStationEmphasis, type StationEmphasis } from '@/utils/diagnosticProportionEngine';
+import type { DiagnosticoMelhoria } from '@/components/diagnostico/types';
 
 import {
   Dialog,
@@ -30,10 +32,12 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, Send, Users, User, CheckCircle, AlertCircle, Copy, 
-  CalendarIcon 
+  CalendarIcon, Sliders, TrendingUp
 } from 'lucide-react';
 
 interface LinkedAthlete {
