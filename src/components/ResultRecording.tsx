@@ -81,6 +81,11 @@ export function ResultRecording() {
       bucket,
     });
 
+    // Haptic feedback on result submission
+    if ('vibrate' in navigator) {
+      navigator.vibrate([30, 20, 60]);
+    }
+
     setIsSaving(false);
     setCurrentView('feedback');
   };

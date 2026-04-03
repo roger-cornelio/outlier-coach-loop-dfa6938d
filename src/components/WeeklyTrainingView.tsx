@@ -22,6 +22,7 @@ import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
 import { UserHeader } from './UserHeader';
 import { useWeekWorkoutCompletions } from '@/hooks/useWeekWorkoutCompletions';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { User } from 'lucide-react';
 
 

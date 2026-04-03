@@ -18,6 +18,7 @@ import { useEvents } from '@/hooks/useEvents';
 import RoxCoachDashboard from './RoxCoachDashboard';
 import { ProvasTab } from './ProvasTab';
 import { SimulatorScreen } from './simulator/SimulatorScreen';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function BenchmarksScreen() {
   const {
