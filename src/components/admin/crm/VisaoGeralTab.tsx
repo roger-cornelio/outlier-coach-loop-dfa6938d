@@ -23,12 +23,31 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "suspenso", label: "Suspensos" },
 ];
 
+type UserRole = "atleta" | "coach" | "admin" | "superadmin";
+
+const roleLabels: Record<UserRole, string> = {
+  atleta: "Atleta",
+  coach: "Coach",
+  admin: "Admin",
+  superadmin: "Superadmin",
+};
+
+const roleColors: Record<UserRole, string> = {
+  atleta: "bg-muted text-muted-foreground",
+  coach: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
+  admin: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  superadmin: "bg-red-500/15 text-red-700 dark:text-red-400",
+};
+
+type RoleFilter = "todos" | UserRole;
+
 export function VisaoGeralTab() {
-  const [allUsers, setAllUsers] = useState<UnifiedUser[]>([]);
+  const [allUsers, setAllUsers] = useState<(UnifiedUser & { userRole: UserRole })[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("todos");
   const [page, setPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState<UnifiedUser | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -41,36 +60,45 @@ export function VisaoGeralTab() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch profiles (all users)
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, user_id, name, email, sexo, idade, peso, altura, training_level, session_duration, first_setup_completed, status, created_at, last_active_at, coach_id, onboarding_experience, onboarding_goal, onboarding_target_race, unavailable_equipment, equipment_notes")
-        .order("created_at", { ascending: false });
-      if (pErr) throw pErr;
+      const [profilesRes, coachLinksRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("id, user_id, name, email, sexo, idade, peso, altura, training_level, session_duration, first_setup_completed, status, created_at, last_active_at, coach_id, onboarding_experience, onboarding_goal, onboarding_target_race, unavailable_equipment, equipment_notes").order("created_at", { ascending: false }),
+        supabase.from("coach_athletes").select("athlete_id, coach_id, created_at"),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
 
-      // Fetch coach_athletes links
-      const { data: coachLinks } = await supabase
-        .from("coach_athletes")
-        .select("athlete_id, coach_id, created_at");
+      if (profilesRes.error) throw profilesRes.error;
+      const profiles = profilesRes.data ?? [];
+      const coachLinks = coachLinksRes.data ?? [];
+      const userRoles = rolesRes.data ?? [];
 
-      // Fetch coach profiles for names
-      const coachIds = [...new Set((coachLinks ?? []).map(l => l.coach_id))];
+      // Build role map: user_id -> highest role
+      const roleMap = new Map<string, UserRole>();
+      for (const ur of userRoles) {
+        const current = roleMap.get(ur.user_id);
+        const priority: Record<string, number> = { superadmin: 4, admin: 3, coach: 2, user: 1 };
+        const newPriority = priority[ur.role] ?? 0;
+        const currentPriority = current ? (priority[current === "atleta" ? "user" : current] ?? 0) : 0;
+        if (newPriority > currentPriority) {
+          roleMap.set(ur.user_id, ur.role === "user" ? "atleta" : ur.role as UserRole);
+        }
+      }
+
+      // Coach profiles
+      const coachIds = [...new Set(coachLinks.map(l => l.coach_id))];
       let coachMap = new Map<string, { name: string; email: string }>();
       if (coachIds.length > 0) {
-        const { data: coachProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, name, email")
-          .in("user_id", coachIds);
+        const { data: coachProfiles } = await supabase.from("profiles").select("user_id, name, email").in("user_id", coachIds);
         (coachProfiles ?? []).forEach(p => coachMap.set(p.user_id, { name: p.name || "—", email: p.email || "" }));
       }
 
       const linkMap = new Map<string, { coach_id: string; created_at: string }>();
-      (coachLinks ?? []).forEach(l => linkMap.set(l.athlete_id, { coach_id: l.coach_id, created_at: l.created_at }));
+      coachLinks.forEach(l => linkMap.set(l.athlete_id, { coach_id: l.coach_id, created_at: l.created_at }));
 
-      const unified: UnifiedUser[] = (profiles ?? []).map(p => {
+      const unified = profiles.map(p => {
         const link = linkMap.get(p.user_id);
         const coach = link ? coachMap.get(link.coach_id) : null;
         const computedStatus = computeUserStatus(p.last_active_at, link?.coach_id ?? p.coach_id, p.status);
+        const userRole = roleMap.get(p.user_id) ?? "atleta";
         return {
           ...p,
           coach_id: link?.coach_id ?? p.coach_id,
@@ -79,6 +107,7 @@ export function VisaoGeralTab() {
           coach_linked_at: link?.created_at ?? null,
           computedStatus,
           leadScore: computeLeadScore(0, p.first_setup_completed, p.last_active_at, false),
+          userRole,
         };
       });
 
@@ -92,9 +121,9 @@ export function VisaoGeralTab() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Filter and search
   const filtered = allUsers.filter(u => {
     if (statusFilter !== "todos" && u.computedStatus !== statusFilter) return false;
+    if (roleFilter !== "todos" && u.userRole !== roleFilter) return false;
     if (debouncedSearch.trim()) {
       const term = debouncedSearch.toLowerCase();
       if (!u.name?.toLowerCase().includes(term) && !u.email?.toLowerCase().includes(term)) return false;
@@ -110,18 +139,20 @@ export function VisaoGeralTab() {
       {/* Status filter chips */}
       <div className="flex flex-wrap gap-2">
         {FILTER_OPTIONS.map(f => (
-          <Button
-            key={f.value}
-            variant={statusFilter === f.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => { setStatusFilter(f.value); setPage(0); }}
-          >
+          <Button key={f.value} variant={statusFilter === f.value ? "default" : "outline"} size="sm" onClick={() => { setStatusFilter(f.value); setPage(0); }}>
             {f.label}
-            {f.value !== "todos" && (
-              <span className="ml-1 text-xs opacity-70">
-                ({allUsers.filter(u => u.computedStatus === f.value).length})
-              </span>
-            )}
+            {f.value !== "todos" && <span className="ml-1 text-xs opacity-70">({allUsers.filter(u => u.computedStatus === f.value).length})</span>}
+          </Button>
+        ))}
+      </div>
+
+      {/* Role filter chips */}
+      <div className="flex flex-wrap gap-2">
+        <span className="text-xs text-muted-foreground self-center mr-1">Tipo:</span>
+        {(["todos", "atleta", "coach", "admin", "superadmin"] as RoleFilter[]).map(r => (
+          <Button key={r} variant={roleFilter === r ? "default" : "outline"} size="sm" onClick={() => { setRoleFilter(r); setPage(0); }}>
+            {r === "todos" ? "Todos" : roleLabels[r]}
+            {r !== "todos" && <span className="ml-1 text-xs opacity-70">({allUsers.filter(u => u.userRole === r).length})</span>}
           </Button>
         ))}
       </div>
@@ -132,21 +163,16 @@ export function VisaoGeralTab() {
         </p>
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou email..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Buscar por nome ou email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Coach</TableHead>
               <TableHead>Nível</TableHead>
@@ -157,24 +183,12 @@ export function VisaoGeralTab() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
             ) : paged.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  Nenhum usuário encontrado.
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</TableCell></TableRow>
             ) : (
               paged.map(u => (
-                <TableRow
-                  key={u.id}
-                  className="cursor-pointer"
-                  onClick={() => { setSelectedUser(u); setSheetOpen(true); }}
-                >
+                <TableRow key={u.id} className="cursor-pointer" onClick={() => { setSelectedUser(u); setSheetOpen(true); }}>
                   <TableCell>
                     <div>
                       <span className="font-medium">{u.name || "Sem nome"}</span>
@@ -182,19 +196,16 @@ export function VisaoGeralTab() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={statusColors[u.computedStatus]}>
-                      {statusLabels[u.computedStatus]}
-                    </Badge>
+                    <Badge className={roleColors[u.userRole]}>{roleLabels[u.userRole]}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={statusColors[u.computedStatus]}>{statusLabels[u.computedStatus]}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">{u.coach_name || "—"}</TableCell>
                   <TableCell className="text-sm">{u.training_level || "—"}</TableCell>
                   <TableCell className="text-sm">{u.first_setup_completed ? "✅" : "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {u.last_active_at ? fmtDate(u.last_active_at) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
-                    {fmtDate(u.created_at)}
-                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -202,17 +213,12 @@ export function VisaoGeralTab() {
         </Table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {page + 1} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-              <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-              Próximo <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft className="w-4 h-4 mr-1" /> Anterior</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo <ChevronRight className="w-4 h-4 ml-1" /></Button>
           </div>
         </div>
       )}
