@@ -157,8 +157,8 @@ export function ResultRecording() {
           </div>
 
           {/* Completed Question */}
-          <div className="mb-8">
-            <h2 className="font-display text-2xl mb-4">COMPLETOU O TREINO?</h2>
+          <div className="mb-6 sm:mb-8">
+            <h2 className="font-display text-xl sm:text-2xl mb-4">COMPLETOU O TREINO?</h2>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setCompleted(true)}
