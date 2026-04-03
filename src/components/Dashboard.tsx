@@ -340,8 +340,14 @@ export function Dashboard() {
   // Calorias totais
   const totalCalories = workoutEstimation?.totals.estimatedKcalTotal || 0;
 
+  const handlePullRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+  const { containerRef: pullRef, isRefreshing: isPullRefreshing, pullProgress, pullDistance } = usePullToRefresh(handlePullRefresh);
+
   return (
-    <div className="min-h-screen">
+    <div ref={pullRef} className="min-h-screen">
+      <PullToRefreshIndicator pullDistance={pullDistance} pullProgress={pullProgress} isRefreshing={isPullRefreshing} />
       {/* Content - Dashboard OUTLIER */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         
