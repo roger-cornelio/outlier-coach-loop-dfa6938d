@@ -310,7 +310,7 @@ export default function Landing() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               {[
                 'Receba novos atletas todos os dias',
-                'Escale sua operação sem perder qualidade',
+                'Receba feedbacks diários e acompanhe a evolução',
                 'Controle os treinos e saiba exatamente como melhorar cada atleta',
                 'Motor de adaptação inteligente: ajusta o treino baseado nas características de cada atleta',
               ].map((item, i) => (
