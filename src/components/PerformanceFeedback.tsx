@@ -245,7 +245,7 @@ export function PerformanceFeedback() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-3 sm:px-6 py-4 sm:py-8">
         <div className="max-w-md mx-auto">
           {isLoading ? (
             <motion.div
