@@ -263,7 +263,7 @@ export function ResultRecording() {
             onClick={handleSubmit}
             disabled={completed === null || (timeRequired && !isValidTime()) || isSaving}
             className={`
-              w-full font-display text-xl tracking-wider px-8 py-5 rounded-lg transition-all flex items-center justify-center gap-3
+              w-full font-display text-lg sm:text-xl tracking-wider px-6 py-4 sm:px-8 sm:py-5 rounded-lg transition-all flex items-center justify-center gap-3
               ${completed !== null && (!timeRequired || isValidTime()) && !isSaving
                 ? 'bg-primary text-primary-foreground hover:opacity-90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'

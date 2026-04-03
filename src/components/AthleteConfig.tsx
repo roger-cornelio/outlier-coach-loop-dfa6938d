@@ -388,8 +388,8 @@ export function AthleteConfig() {
         transition={{ delay: 0.05 }}
         className="mb-6 sm:mb-8"
       >
-        <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
-          <User className="w-6 h-6 text-primary" />
+        <h2 className="font-display text-xl sm:text-2xl mb-3 sm:mb-4 flex items-center gap-2">
+          <User className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
           PERFIL
         </h2>
         <div className="max-w-md">

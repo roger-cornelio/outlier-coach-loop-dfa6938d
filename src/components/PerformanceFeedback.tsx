@@ -365,7 +365,7 @@ export function PerformanceFeedback() {
               >
                 <button
                   onClick={handleGoToDashboard}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-primary text-primary-foreground font-display text-lg hover:opacity-90 transition-opacity"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-lg bg-primary text-primary-foreground font-display text-base sm:text-lg hover:opacity-90 transition-opacity"
                 >
                   <Home className="w-5 h-5" />
                   DASHBOARD
