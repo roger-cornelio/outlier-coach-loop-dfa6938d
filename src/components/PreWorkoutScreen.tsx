@@ -171,7 +171,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
             repeat: Infinity,
             repeatDelay: 2
           }}
-          className="mb-6 p-6 rounded-full bg-primary/20 ring-4 ring-primary/30 shadow-lg shadow-primary/20"
+          className="mb-4 sm:mb-6 p-4 sm:p-6 rounded-full bg-primary/20 ring-4 ring-primary/30 shadow-lg shadow-primary/20"
         >
           <CoachIcon className="w-12 h-12 text-primary" />
         </motion.div>
