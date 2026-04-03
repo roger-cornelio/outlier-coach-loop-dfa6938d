@@ -374,6 +374,19 @@ export function Dashboard() {
           <WeeklySummaryCard />
         </section>
 
+        {/* Empty state when athlete has coach but no workouts */}
+        {hasCoach && !hasAnyWorkouts && !loadingPlan && (
+          <section className="mb-6">
+            <div className="flex flex-col items-center justify-center py-10 px-6 text-center rounded-2xl border border-dashed border-border bg-muted/30">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <CalendarDays className="w-7 h-7 text-primary/60" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">Seu coach ainda não publicou o treino desta semana</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">Fique tranquilo — assim que o plano for publicado, ele aparecerá aqui automaticamente.</p>
+            </div>
+          </section>
+        )}
+
         <section className="mb-6">
           <DiagnosticRadarBlock
             scores={diagnosticScores.scores}
