@@ -212,7 +212,7 @@ export default function Landing() {
       <section className="px-6 py-16 bg-card/50">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { value: 500, suffix: '+', label: 'Diagnósticos gerados' },
+            { value: 500, suffix: '', label: 'Diagnósticos gerados' },
             { value: 12, suffix: 'min', label: 'Melhoria média identificada' },
             { value: 98, suffix: '%', label: 'Precisão do diagnóstico' },
           ].map((item, i) => (
