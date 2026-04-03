@@ -49,6 +49,8 @@ const transformations = [
     improvement: '14:23',
     stations: ['Sled Push', 'SkiErg', 'Wall Balls'],
     progress: 72,
+    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
+    initials: 'MO',
   },
   {
     name: 'Carolina Mendes',
@@ -58,6 +60,8 @@ const transformations = [
     improvement: '13:15',
     stations: ['Rowing', 'Burpee Broad Jump', 'Farmers Carry'],
     progress: 88,
+    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
+    initials: 'CM',
   },
   {
     name: 'Rafael Teixeira',
@@ -67,33 +71,10 @@ const transformations = [
     improvement: '16:30',
     stations: ['Sled Pull', 'SkiErg', 'Sandbag Lunges'],
     progress: 55,
-  },
-];
-
-const testimonials = [
-  {
-    quote: 'O diagnóstico mostrou exatamente onde eu estava perdendo tempo. Em 3 meses, cortei 14 minutos do meu tempo.',
-    name: 'Marcos O.',
-    city: 'São Paulo',
-    category: 'Open → Pro',
-    initials: 'MO',
-  },
-  {
-    quote: 'Meu coach recebeu o mapa completo e montou treinos cirúrgicos. Nunca evoluí tão rápido.',
-    name: 'Carolina M.',
-    city: 'Rio de Janeiro',
-    category: 'Pro → Elite',
-    initials: 'CM',
-  },
-  {
     quote: 'Achava que meu problema era cardio, mas o diagnóstico mostrou que eram as estações. Mudou tudo.',
-    name: 'Rafael T.',
-    city: 'Belo Horizonte',
-    category: 'Open',
     initials: 'RT',
   },
 ];
-
 export default function Landing() {
   const { user } = useAuth();
   // If logged in, diagnostic CTA goes directly; if not, goes to signup with redirect
