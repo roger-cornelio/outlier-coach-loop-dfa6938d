@@ -339,8 +339,8 @@ export default function Landing() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { icon: Activity, label: 'Diagnóstico Gratuito' },
-            { icon: Users, label: 'Coach Dedicado' },
-            { icon: Brain, label: 'Feedback IA em Tempo Real' },
+            { icon: Target, label: 'Treino Personalizado por Estação' },
+            { icon: Brain, label: 'Motor de Adaptação Inteligente' },
             { icon: TrendingUp, label: 'Evolução Mensurável' },
           ].map((item, i) => (
             <motion.div key={i}
