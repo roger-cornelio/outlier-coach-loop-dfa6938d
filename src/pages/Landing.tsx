@@ -197,7 +197,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { step: '01', title: 'Faça o diagnóstico grátis', desc: 'Importe seu resultado HYROX e descubra exatamente quais estações estão custando mais tempo.' },
-              { step: '02', title: 'Receba treino personalizado', desc: 'O motor de proporção calcula o foco ideal por estação. Seu coach revisa e publica com um clique.' },
+              { step: '02', title: 'Receba treino personalizado', desc: 'Seu coach monta um treino específico para você, usando dados reais das suas fraquezas. Cada sessão é pensada para atacar onde você mais precisa evoluir.' },
               { step: '03', title: 'Evolua com dados reais', desc: 'Volume ajustado automaticamente às suas fraquezas. Feedback em tempo real. Progressão mensurável.' },
             ].map((item, i) => (
               <motion.div key={i} className="text-center"
