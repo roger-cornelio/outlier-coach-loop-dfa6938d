@@ -132,9 +132,6 @@ export default function Landing() {
           <p className="text-foreground font-medium text-sm md:text-base leading-relaxed">
             Faça seu diagnóstico gratuito e descubra exatamente onde você perde tempo.
           </p>
-          <p className="text-muted-foreground text-sm md:text-base leading-relaxed mt-2">
-            Atinja sua melhor performance — o plano ideal para um resultado fora da curva.
-          </p>
         </motion.div>
 
         <motion.div
