@@ -717,12 +717,28 @@ export function CoachOverviewTab({
       {/* Pending Link Requests */}
       <PendingRequestsSection />
 
+      {/* Search + Period Filter */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar atleta por nome ou email..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+        <PeriodFilter value={dateRange} onChange={setDateRange} />
+      </div>
+
       {/* List header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Users className="w-4 h-4 text-primary" />
           Atletas
-          <span className="text-muted-foreground font-normal">({athletes.length})</span>
+          <span className="text-muted-foreground font-normal">
+            ({filteredAthletes.length}{searchTerm ? ` de ${athletes.length}` : ''})
+          </span>
         </h2>
         <div className="flex items-center gap-2">
           {onShowLinkModal && (
@@ -737,11 +753,13 @@ export function CoachOverviewTab({
       </div>
 
       {/* Athletes list */}
-      {athletes.length === 0 ? (
+      {filteredAthletes.length === 0 ? (
         <div className="text-center py-12">
           <Users className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum atleta vinculado.</p>
-          {onShowLinkModal && (
+          <p className="text-sm text-muted-foreground">
+            {searchTerm ? 'Nenhum atleta encontrado.' : 'Nenhum atleta vinculado.'}
+          </p>
+          {!searchTerm && onShowLinkModal && (
             <Button variant="outline" size="sm" className="mt-4" onClick={onShowLinkModal}>
               <UserPlus className="w-4 h-4 mr-1.5" /> Vincular primeiro atleta
             </Button>
@@ -755,6 +773,7 @@ export function CoachOverviewTab({
               athlete={athlete}
               onUnlink={handleUnlink}
               onAthleteChanged={handleChanged}
+              dateRange={dateRange}
             />
           ))}
         </div>
