@@ -231,7 +231,7 @@ export function PerformanceFeedback() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto px-6 py-4">
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={handleGoToDashboard}
