@@ -488,7 +488,7 @@ export function WeeklyTrainingView() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: (index + 1) * 0.1 }}
                   className={`
-                    card-elevated p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
+                    card-elevated p-4 sm:p-6 border-l-4 ${blockTypeColors[block.type] || 'border-l-border'}
                     ${isMainWod ? 'ring-1 ring-primary/30' : ''}
                   `}
                 >
