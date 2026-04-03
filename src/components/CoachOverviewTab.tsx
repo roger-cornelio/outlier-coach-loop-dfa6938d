@@ -431,10 +431,12 @@ function ExpandableAthleteRow({
   athlete,
   onUnlink,
   onAthleteChanged,
+  dateRange,
 }: {
   athlete: AthleteOverview;
   onUnlink: (id: string, name: string) => void;
   onAthleteChanged: () => void;
+  dateRange: DateRange;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const risk = classifyRisk(athlete);
