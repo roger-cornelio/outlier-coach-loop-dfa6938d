@@ -212,15 +212,15 @@ export default function Landing() {
       <section className="px-6 py-16 bg-card/50">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { value: 500, suffix: '', label: 'Diagnósticos gerados' },
-            { value: 12, suffix: 'min', label: 'Melhoria média identificada' },
-            { value: 98, suffix: '%', label: 'Precisão do diagnóstico' },
+            { prefix: '−', value: 14, suffix: 'min', label: 'No resultado dos atletas' },
+            { prefix: '', value: 92, suffix: '%', label: 'Subiram de categoria nos primeiros 6 meses' },
+            { prefix: '', value: 98, suffix: '%', label: 'Precisão do diagnóstico e ajuste de treinos' },
           ].map((item, i) => (
             <motion.div key={i}
               className="p-5 rounded-xl bg-card border border-border text-center"
               initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
               <p className="font-display text-3xl md:text-4xl text-primary">
-                <AnimatedCounter target={item.value} suffix={item.suffix} />
+                {item.prefix}<AnimatedCounter target={item.value} suffix={item.suffix} />
               </p>
               <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">{item.label}</p>
             </motion.div>
