@@ -215,7 +215,7 @@ export function PreWorkoutScreen({ onContinue }: PreWorkoutScreenProps) {
           onClick={handleContinue}
           disabled={isLoading || isLoadingWorkouts}
           className={`
-            font-display text-xl md:text-2xl tracking-widest px-12 py-5 rounded-xl
+            font-display text-lg sm:text-xl md:text-2xl tracking-widest px-8 sm:px-12 py-4 sm:py-5 rounded-xl
             transition-all duration-300 flex items-center justify-center gap-3
             ${!isLoading && !isLoadingWorkouts
               ? 'bg-primary text-primary-foreground hover:brightness-110 shadow-xl shadow-primary/40 ring-2 ring-primary/40' 
