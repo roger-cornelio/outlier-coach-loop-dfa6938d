@@ -251,10 +251,37 @@ export function PerformanceFeedback() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center gap-4 py-20"
+              className="space-y-6"
             >
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="text-muted-foreground">Analisando sua sessão...</p>
+              {/* Skeleton: tempo total */}
+              <div className="card-elevated p-5 space-y-3">
+                <Skeleton className="h-3 w-32 mx-auto" />
+                <Skeleton className="h-10 w-28 mx-auto" />
+                <Skeleton className="h-3 w-20 mx-auto" />
+              </div>
+              {/* Skeleton: resumo sessão */}
+              <div className="card-elevated p-4 space-y-3">
+                <Skeleton className="h-3 w-36" />
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-24" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-14" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Skeleton: feedback coach */}
+              <div className="card-elevated p-4 sm:p-6 space-y-3">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
             </motion.div>
           ) : (
             <motion.div
