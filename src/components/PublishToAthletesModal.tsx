@@ -567,9 +567,10 @@ export function PublishToAthletesModal({
   const allSelected = selectedAthletes.size === athletes.length && athletes.length > 0;
   const someSelected = selectedAthletes.size > 0 && selectedAthletes.size < athletes.length;
 
-  // Step indicators - apenas 2 steps agora
+  // Step indicators - 3 steps
   const steps = [
     { key: 'athletes', label: 'Atletas', completed: selectedAthletes.size > 0 },
+    { key: 'adaptation', label: 'Adaptação', completed: currentStep === 'confirm' },
     { key: 'confirm', label: 'Confirmar', completed: publishedCount > 0 },
   ];
 
