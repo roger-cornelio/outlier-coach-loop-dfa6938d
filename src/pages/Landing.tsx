@@ -239,28 +239,24 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {transformations.map((t, i) => (
             <motion.div key={i}
-              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors flex flex-col"
+              className="p-7 rounded-2xl bg-card border border-border/60 hover:border-primary/20 transition-all duration-300 flex flex-col gap-5"
               initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}>
               
-              <div className="flex items-baseline justify-between mb-6">
-                <div>
-                  <p className="font-display text-sm tracking-wide text-foreground">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.city}</p>
-                </div>
-                <span className="text-[10px] font-display tracking-wider text-primary bg-primary/10 px-2 py-1 rounded-md">
+              <div className="flex items-start justify-between">
+                <p className="font-display text-sm tracking-wide text-foreground">{t.name}</p>
+                <span className="text-[10px] font-display tracking-wider text-primary/80 border border-primary/20 px-2 py-0.5 rounded">
                   {t.from.level} → {t.to.level}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-display text-xl text-muted-foreground/60 line-through">{t.from.time}</p>
-                <ArrowRight className="w-4 h-4 text-primary/40 flex-shrink-0" />
-                <p className="font-display text-xl text-foreground">{t.to.time}</p>
+              <div className="flex items-baseline justify-between">
+                <span className="font-display text-2xl text-muted-foreground/40 line-through">{t.from.time}</span>
+                <span className="font-display text-2xl text-foreground">{t.to.time}</span>
               </div>
 
-              <p className="text-primary font-display text-xs tracking-widest mb-6">-{t.improvement}</p>
+              <span className="text-primary font-display text-xs tracking-[0.2em]">−{t.improvement} mais rápido</span>
 
-              <p className="text-sm text-muted-foreground/70 leading-relaxed italic flex-1">"{t.quote}"</p>
+              <p className="text-[13px] text-muted-foreground/60 leading-relaxed italic">"{t.quote}"</p>
             </motion.div>
           ))}
         </div>
