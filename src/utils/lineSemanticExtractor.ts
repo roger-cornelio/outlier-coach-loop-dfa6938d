@@ -13,7 +13,8 @@ export type SemanticType =
   | 'load' 
   | 'intensity' 
   | 'cadence' 
-  | 'parenthetical';
+  | 'parenthetical'
+  | 'hyrox_load';
 
 export interface SemanticSegment {
   type: SemanticType;
