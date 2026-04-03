@@ -217,6 +217,7 @@ function ApplicationFormFields({
 }: {
   formData: {
     full_name: string;
+    telefone: string;
     instagram: string;
     box_name: string;
     city: string;
