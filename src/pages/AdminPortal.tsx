@@ -236,8 +236,6 @@ const AdminPortal = () => {
     switch (adminView) {
       case "params":
         return <AdminParamsEditor />;
-      case "users":
-        return <UserManagement />;
       case "coachPerformance":
         return <ServiceQualityDashboard />;
       case "coachApplications":
