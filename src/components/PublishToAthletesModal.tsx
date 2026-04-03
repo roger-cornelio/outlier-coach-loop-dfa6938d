@@ -805,6 +805,7 @@ export function PublishToAthletesModal({
                 }
                 return null;
               })()}
+            </div>
 
             {/* Aviso quando semana não definida */}
             {!weekStart && (
