@@ -371,8 +371,13 @@ export function WorkoutExecution() {
     };
     addWorkoutResult(sessionResult);
     console.log('[JOURNEY] Training session registered:', sessionResult, 'totalSeconds:', totalSeconds);
-    setCurrentView('feedback');
+    setShowCelebration(true);
   };
+
+  const handleCelebrationComplete = useCallback(() => {
+    setShowCelebration(false);
+    setCurrentView('feedback');
+  }, [setCurrentView]);
   
   const formatStopwatch = (s: number) => {
     const h = Math.floor(s / 3600);
