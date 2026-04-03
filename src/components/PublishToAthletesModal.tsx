@@ -381,9 +381,31 @@ export function PublishToAthletesModal({
         const normalizedWorkouts = normalizeWorkoutsForPersistence(workouts);
 
         // ════════════════════════════════════════════════════════════════════════
+        // ADAPTAÇÃO: Aplicar multiplicadores de ênfase se habilitado para o atleta
+        // ════════════════════════════════════════════════════════════════════════
+        const athleteAdapt = athleteAdaptations.get(athleteUserId);
+        const adaptationEnabled = athleteAdapt?.enabled && athleteAdapt.emphasis.length > 0;
+        
+        let workoutsToPublish = normalizedWorkouts;
+        let adaptationMeta: any = { adaptation_applied: false };
+
+        if (adaptationEnabled) {
+          const result = applyEmphasisToWorkouts(normalizedWorkouts, athleteAdapt.emphasis);
+          workoutsToPublish = result.workouts;
+          adaptationMeta = {
+            adaptation_applied: true,
+            emphasis_snapshot: result.emphasisSnapshot,
+            original_workouts: result.originalWorkouts,
+          };
+          console.log('[PUBLISH] Adaptation applied for athlete:', athleteUserId, {
+            multipliers: athleteAdapt.emphasis.filter(e => e.multiplier !== 1.0).map(e => `${e.movement}: ${e.label}`),
+          });
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
         // MERGE: Buscar plano existente e mesclar dias (não sobrescrever tudo)
         // ════════════════════════════════════════════════════════════════════════
-        let mergedWorkouts = normalizedWorkouts;
+        let mergedWorkouts = workoutsToPublish;
 
         const { data: existingPlan } = await supabase
           .from('athlete_plans')
@@ -399,7 +421,7 @@ export function PublishToAthletesModal({
           if (existingWorkouts.length > 0) {
             // Chaves dos dias sendo publicados agora (day + session para deduplicação)
             const newDayKeys = new Set(
-              normalizedWorkouts.map((w: any) => {
+              workoutsToPublish.map((w: any) => {
                 const dayKey = w.day || w.dayLabel || w.scheduledDate;
                 const session = w.session || 1;
                 return `${dayKey}__s${session}`;
@@ -415,7 +437,7 @@ export function PublishToAthletesModal({
               }
             );
 
-            mergedWorkouts = [...keptFromExisting, ...normalizedWorkouts];
+            mergedWorkouts = [...keptFromExisting, ...workoutsToPublish];
 
             console.log('[PUBLISH] Merge result:', {
               athleteId: athleteUserId,
