@@ -355,7 +355,7 @@ export function AthleteConfig() {
           </button>
         )}
         <div>
-          <h1 className="font-display text-4xl">{isFirstSetup ? 'CONFIGURE SEU TREINO' : 'CONFIGURAÇÃO'}</h1>
+          <h1 className="font-display text-2xl sm:text-4xl">{isFirstSetup ? 'CONFIGURE SEU TREINO' : 'CONFIGURAÇÃO'}</h1>
           <p className="text-muted-foreground">{isFirstSetup ? 'Personalize sua experiência' : 'Ajuste seu treino'}</p>
         </div>
       </motion.div>
