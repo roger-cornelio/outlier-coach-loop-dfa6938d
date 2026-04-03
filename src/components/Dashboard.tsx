@@ -6,7 +6,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History, CalendarDays } from 'lucide-react';
 import { calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { deduplicateRaceName } from '@/utils/raceNameDedup';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
@@ -373,6 +373,19 @@ export function Dashboard() {
         <section className="mb-6">
           <WeeklySummaryCard />
         </section>
+
+        {/* Empty state when athlete has coach but no workouts */}
+        {hasCoach && !hasAnyWorkouts && !loadingPlan && (
+          <section className="mb-6">
+            <div className="flex flex-col items-center justify-center py-10 px-6 text-center rounded-2xl border border-dashed border-border bg-muted/30">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <CalendarDays className="w-7 h-7 text-primary/60" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">Seu coach ainda não publicou o treino desta semana</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">Fique tranquilo — assim que o plano for publicado, ele aparecerá aqui automaticamente.</p>
+            </div>
+          </section>
+        )}
 
         <section className="mb-6">
           <DiagnosticRadarBlock
