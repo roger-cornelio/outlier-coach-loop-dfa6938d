@@ -10,6 +10,7 @@ import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import { GlobalDebugBar } from "@/components/GlobalDebugBar";
 import { useParamsSync } from "@/hooks/useParamsSync";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CoachAuth from "./pages/CoachAuth";
