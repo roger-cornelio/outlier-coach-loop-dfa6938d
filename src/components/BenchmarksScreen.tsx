@@ -32,6 +32,7 @@ export function BenchmarksScreen() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
+  const [activeTab, setActiveTab] = useState('diagnostico');
   const { trackEvent } = useEvents();
 
   // Sync local refreshKey with global store (e.g. after import from dashboard CTA)
@@ -40,6 +41,13 @@ export function BenchmarksScreen() {
       setRefreshKey(prev => prev + 1);
     }
   }, [externalResultsRefreshKey]);
+
+  // Listen for open-simulator event
+  useEffect(() => {
+    const handler = () => setActiveTab('simulados');
+    window.addEventListener('outlier:open-simulator', handler);
+    return () => window.removeEventListener('outlier:open-simulator', handler);
+  }, []);
 
   const handleResultAdded = () => {
     trackEvent('benchmark_completed');
@@ -136,7 +144,7 @@ export function BenchmarksScreen() {
 
           {/* Tabs: Todos | Simulados | Provas | Diagnóstico */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Tabs defaultValue="diagnostico" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-6">
                 <TabsTrigger value="diagnostico" className="gap-1 text-xs sm:text-sm sm:gap-2">
                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

@@ -248,6 +248,13 @@ const Index = () => {
     }
   }, [state, currentView, isCoach, canManageWorkouts, setCurrentView]);
 
+  // Listen for simulator CTA → navigate to benchmarks (simulator tab)
+  useEffect(() => {
+    const handler = () => setCurrentView('benchmarks');
+    window.addEventListener('outlier:open-simulator', handler);
+    return () => window.removeEventListener('outlier:open-simulator', handler);
+  }, [setCurrentView]);
+
   // Show loading while checking auth/profile (não navegar enquanto carrega)
   // Também bloqueia render enquanto decisão de onboarding não é determinística
   // Rotating loading phrases

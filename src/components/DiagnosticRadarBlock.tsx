@@ -111,6 +111,7 @@ function ImportProvaInlineCTA() {
   const { athleteConfig, triggerExternalResultsRefresh } = useOutlierStore();
   const [state, setState] = useState<'idle' | 'searching' | 'importing' | 'done' | 'error' | 'no-race'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [onboardingExperience, setOnboardingExperience] = useState<string | null>(null);
   const [importedResult, setImportedResult] = useState<{
     eventName: string;
     totalSeconds: number;
@@ -118,6 +119,24 @@ function ImportProvaInlineCTA() {
   } | null>(null);
 
   const profileName = profile?.name || '';
+
+  // Fetch onboarding_experience from profile
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('profiles')
+      .select('onboarding_experience')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.onboarding_experience) {
+          setOnboardingExperience(data.onboarding_experience);
+        }
+      });
+  }, [user?.id]);
+
+  // Athletes without race experience → show simulator CTA
+  const hasNoRaceExperience = !onboardingExperience || onboardingExperience === 'never' || onboardingExperience === 'spectator';
 
   async function handleClick() {
     if (!profileName || profileName.length < 2) {
@@ -311,14 +330,12 @@ function ImportProvaInlineCTA() {
       }
 
       // FIX 2: Save diagnostic data WITHOUT deleting all history
-      // Insert new diagnostic linked to this specific result, don't wipe previous ones
       const diagData = diagResult?.data;
       if (diagData && diagData.ok !== false) {
         try {
           const { parseDiagnosticResponse, hasDiagnosticData } = await import('@/utils/diagnosticParser');
           const parsed = parseDiagnosticResponse(diagData, user.id, roxCoachUrl);
           if (hasDiagnosticData(parsed)) {
-            // Check if diagnostic already exists for this source_url
             const { data: existingDiag } = await supabase
               .from('diagnostico_resumo')
               .select('id')
@@ -327,7 +344,6 @@ function ImportProvaInlineCTA() {
               .limit(1);
 
             if (!existingDiag || existingDiag.length === 0) {
-              // Insert new resumo and get its id to link melhoria/splits
               const { data: insertedResumo } = await supabase
                 .from('diagnostico_resumo')
                 .insert(parsed.resumoRow)
@@ -352,13 +368,11 @@ function ImportProvaInlineCTA() {
         }
       }
 
-      // FIX 3: Set state to 'done' with result data
       setImportedResult({ eventName, totalSeconds, raceCategory });
       triggerExternalResultsRefresh();
       toast.success('Dados da prova atualizados.');
       setState('done');
       
-      // Dispatch event to trigger category modal in Dashboard
       window.dispatchEvent(new CustomEvent('outlier:race-imported', { 
         detail: { status: raceCategory.toLowerCase() } 
       }));
@@ -369,7 +383,7 @@ function ImportProvaInlineCTA() {
     }
   }
 
-  // FIX 3: Show imported result instead of CTA
+  // Show imported result
   if (state === 'done' && importedResult) {
     const hrs = Math.floor(importedResult.totalSeconds / 3600);
     const mins = Math.floor((importedResult.totalSeconds % 3600) / 60);
@@ -401,6 +415,31 @@ function ImportProvaInlineCTA() {
   }
 
   if (state === 'no-race') {
+    // If athlete has no race experience, suggest simulator instead of dead-end
+    if (hasNoRaceExperience) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-primary/15 border border-primary/30 rounded-xl p-4 cursor-pointer hover:bg-primary/20 transition-colors"
+          onClick={() => window.dispatchEvent(new CustomEvent('outlier:open-simulator'))}
+        >
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">Avalie seu nível OUTLIER</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Faça um simulado para descobrir sua classificação</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+            <Info className="w-3 h-3 inline mr-1 text-amber-400" />
+            Sem prova oficial? O simulado define seu nível provisório
+          </p>
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -438,6 +477,31 @@ function ImportProvaInlineCTA() {
   }
 
   const isLoading = state === 'searching' || state === 'importing';
+
+  // Athletes without race experience → show simulator CTA directly (skip search)
+  if (hasNoRaceExperience && state === 'idle') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-primary/15 border border-primary/30 rounded-xl p-4 cursor-pointer hover:bg-primary/20 transition-colors"
+        onClick={() => window.dispatchEvent(new CustomEvent('outlier:open-simulator'))}
+      >
+        <div className="flex items-center gap-3">
+          <Zap className="w-5 h-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">Avalie seu nível OUTLIER</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Faça um simulado para descobrir sua classificação</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+          <Info className="w-3 h-3 inline mr-1 text-amber-400" />
+          Sem prova oficial? O simulado define seu nível provisório
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
