@@ -144,7 +144,7 @@ export function BenchmarksScreen() {
 
           {/* Tabs: Todos | Simulados | Provas | Diagnóstico */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Tabs defaultValue="diagnostico" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-6">
                 <TabsTrigger value="diagnostico" className="gap-1 text-xs sm:text-sm sm:gap-2">
                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
