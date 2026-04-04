@@ -51,8 +51,18 @@ export function useSaveSessionFeedback() {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[useSaveSessionFeedback] Error:', err);
-      return false;
+      console.error('[useSaveSessionFeedback] Error, enqueuing offline:', err);
+      enqueue('workout_session_feedback', {
+        athlete_id: (await supabase.auth.getUser()).data.user?.id,
+        coach_id: params.coachProfileId || null,
+        workout_day: params.workoutDay,
+        workout_stimulus: params.workoutStimulus || null,
+        block_results: params.blockResults,
+        athlete_comment: params.athleteComment || null,
+        ai_feedback: params.aiFeedback || null,
+      });
+      toast.warning('Feedback salvo offline — será enviado quando a conexão voltar');
+      return true;
     } finally {
       setIsSaving(false);
     }
