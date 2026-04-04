@@ -433,8 +433,11 @@ export default function Auth({ context = 'user' }: AuthProps) {
           });
         }
       } else if (mode === 'forgot-password') {
+        const resetOrigin = window.location.origin.includes('lovable.app') || window.location.origin.includes('outlier.run')
+          ? window.location.origin
+          : 'https://outlierdev.lovable.app';
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/login?mode=reset`,
+          redirectTo: `${resetOrigin}/login?mode=reset`,
         });
 
         if (error) {
