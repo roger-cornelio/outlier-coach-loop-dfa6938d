@@ -435,7 +435,7 @@ export default function Auth({ context = 'user' }: AuthProps) {
       } else if (mode === 'forgot-password') {
         const resetOrigin = window.location.origin.includes('lovable.app') || window.location.origin.includes('outlier.run')
           ? window.location.origin
-          : 'https://outlierdev.lovable.app';
+          : 'https://app.outlier.run';
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${resetOrigin}/login?mode=reset`,
         });
