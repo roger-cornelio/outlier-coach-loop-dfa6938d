@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { initAutoFlush } from "@/lib/offlineQueue";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import { GlobalDebugBar } from "@/components/GlobalDebugBar";
 import { SuperadminBadge } from "@/components/SuperadminBadge";
+import { OfflineQueueIndicator } from "@/components/OfflineQueueIndicator";
 import { useParamsSync } from "@/hooks/useParamsSync";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import Index from "./pages/Index";
@@ -73,6 +75,10 @@ function LastRoutePersistor() {
 
 function ParamsSyncProvider({ children }: { children: React.ReactNode }) {
   useParamsSync();
+  useEffect(() => {
+    const cleanup = initAutoFlush();
+    return cleanup;
+  }, []);
   return <>{children}</>;
 }
 
@@ -131,6 +137,7 @@ const App = () => (
           {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
           <GlobalDebugBar />
           <SuperadminBadge />
+          <OfflineQueueIndicator />
           </ParamsSyncProvider>
         </AuthProvider>
       </TooltipProvider>
