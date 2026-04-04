@@ -1,32 +1,82 @@
 
 
-## Plano: Corrigir email de recuperação de senha vazio
+## Plano: Alerta automático para vendedor quando lead completa diagnóstico
 
 ### Problema
-O email de reset de senha chega sem conteúdo visível — sem botão, sem link. O template padrão do sistema de autenticação não está renderizando o link de recuperação corretamente.
+Hoje o lead completa o diagnóstico e os dados são salvos silenciosamente na tabela `diagnostic_leads`. O vendedor só descobre quando abre manualmente o CRM. Isso atrasa o follow-up e reduz a conversão.
 
 ### Solução
-Configurar templates de email de autenticação personalizados para o projeto. Isso substitui o template genérico por um email com branding OUTLIER que inclui corretamente o botão de redefinição de senha.
+Criar um sistema de notificação automática via WhatsApp (ou webhook genérico) que dispara em tempo real quando um novo lead é inserido na tabela `diagnostic_leads`, enviando os dados relevantes para o vendedor agir em menos de 2 horas.
+
+### Arquitetura
+
+```text
+Lead completa diagnóstico
+        │
+        ▼
+INSERT diagnostic_leads  ──►  DB Trigger  ──►  Edge Function
+                                                    │
+                                                    ▼
+                                            Webhook (WhatsApp/
+                                            Slack/URL genérica)
+                                                    │
+                                                    ▼
+                                            Vendedor recebe alerta
+                                            com dados do lead
+```
 
 ### Passos
 
-1. **Verificar se já existe domínio de email configurado** — checar o status atual da infraestrutura de email do projeto
+**1. Adicionar colunas úteis à tabela `diagnostic_leads`**
+- `telefone` (text) — salvar telefone do lead direto na tabela para o vendedor ter na mão
+- `total_time_seconds` (integer) — tempo total da prova para contexto
+- `notified` (boolean, default false) — controle de envio
 
-2. **Se não houver domínio configurado** — iniciar o setup de domínio de email para que os emails venham do domínio do app (em vez de `no-reply@auth.lovable.cloud`)
+**2. Atualizar `DiagnosticoGratuito.tsx`**
+- Incluir `telefone` e `total_time_seconds` no INSERT da `diagnostic_leads`
+- Dados já estão disponíveis no momento do insert (variáveis `telefone` e `scrapeData.time_in_seconds`)
 
-3. **Criar templates de email de autenticação** — gerar templates personalizados com:
-   - Logo e branding OUTLIER (cores, fontes do app)
-   - Botão funcional de "Redefinir Senha" com o link correto
-   - Texto em português
-   - Templates para todos os tipos de email de auth (reset, verificação, magic link, etc.)
+**3. Criar Edge Function `notify-new-diagnostic-lead`**
+- Recebe os dados do lead (nome, evento, divisão, telefone, tempo)
+- Envia para um webhook configurável (URL armazenada como secret `DIAGNOSTIC_WEBHOOK_URL`)
+- Formato: POST JSON com dados formatados para fácil leitura
+- Inclui link direto para WhatsApp do lead (`https://wa.me/55{telefone}`)
 
-4. **Deploy dos templates** — publicar as funções de email para que entrem em vigor
+**4. Criar DB Trigger na tabela `diagnostic_leads`**
+- `AFTER INSERT` dispara a edge function via `pg_net`
+- Passa os dados do novo lead como payload
+- Trigger marca `notified = true` após envio
+
+**5. Melhorar a tab "Leads Diagnóstico" no CRM**
+- Adicionar coluna de telefone com botão de WhatsApp direto
+- Adicionar coluna de tempo total da prova
+- Badge visual "Novo" para leads das últimas 2h (não notificados/não vistos)
+- Ordenação padrão: mais recentes primeiro (já existe)
+
+**6. Secret de configuração**
+- Pedir ao usuário a URL do webhook (`DIAGNOSTIC_WEBHOOK_URL`) — pode ser:
+  - Webhook do n8n que envia WhatsApp
+  - URL de um bot no Telegram
+  - Webhook do Slack
+  - Qualquer endpoint HTTP POST
+
+### Payload do webhook
+```json
+{
+  "lead_name": "João Silva",
+  "event": "HYROX São Paulo 2026",
+  "division": "Men Pro",
+  "total_time": "1:12:34",
+  "telefone": "(11) 99999-0000",
+  "whatsapp_link": "https://wa.me/5511999990000",
+  "diagnostic_url": "https://results.hyrox.com/...",
+  "created_at": "2026-04-04T14:30:00Z"
+}
+```
 
 ### Resultado
-- Email de recuperação chega com visual OUTLIER e botão funcional de "Redefinir Senha"
-- Link no botão aponta para `app.outlier.run` com o fluxo correto
-- Todos os emails de autenticação ficam com branding consistente
-
-### Pré-requisito
-Será necessário configurar um domínio de email (ex: `outlier.run`) para envio. Caso não queira configurar domínio agora, uma alternativa mais simples é verificar se o template padrão do sistema pode ser ajustado para incluir o link corretamente.
+- Vendedor recebe alerta instantâneo com todos os dados do lead
+- Link de WhatsApp pronto para ligar/enviar mensagem
+- CRM mostra visualmente quais leads são novos e precisam de ação
+- Webhook genérico permite conectar com qualquer ferramenta de automação
 
