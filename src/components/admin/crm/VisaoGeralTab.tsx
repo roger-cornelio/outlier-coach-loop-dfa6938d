@@ -283,19 +283,33 @@ export function VisaoGeralTab() {
                   <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {u.userRole === "coach" && (
+                    <div className="flex items-center justify-end gap-1">
+                      {u.userRole === "coach" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeactivateTarget({ userId: u.user_id, name: u.name || "Coach" });
+                          }}
+                        >
+                          <ShieldOff className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive/70 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeactivateTarget({ userId: u.user_id, name: u.name || "Coach" });
+                          setDeleteTarget({ userId: u.user_id, name: u.name || "Sem nome", email: u.email || "—" });
                         }}
+                        title="Remover definitivamente"
                       >
-                        <ShieldOff className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
