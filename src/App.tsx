@@ -75,6 +75,10 @@ function LastRoutePersistor() {
 
 function ParamsSyncProvider({ children }: { children: React.ReactNode }) {
   useParamsSync();
+  useEffect(() => {
+    const cleanup = initAutoFlush();
+    return cleanup;
+  }, []);
   return <>{children}</>;
 }
 
