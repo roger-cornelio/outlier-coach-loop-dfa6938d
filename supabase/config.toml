@@ -1,8 +1,9 @@
 project_id = "hfcpwmzmymkibrvsbgry"
 
 [auth]
-site_url = "https://outlierdev.lovable.app"
+site_url = "https://app.outlier.run"
 additional_redirect_urls = [
+  "https://app.outlier.run",
   "https://outlierdev.lovable.app",
   "https://id-preview--bc76e8d6-7b7d-4407-b167-518b120beb0a.lovable.app"
 ]
