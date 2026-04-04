@@ -177,6 +177,26 @@ export function VisaoGeralTab() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { target_user_id: deleteTarget.userId, confirm_deletion: true },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
+      toast.success(`Usuário ${deleteTarget.name} removido definitivamente`);
+      const deletedId = deleteTarget.userId;
+      setDeleteTarget(null);
+      setAllUsers(prev => prev.filter(u => u.user_id !== deletedId));
+    } catch (err: any) {
+      toast.error("Erro ao remover usuário: " + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const filtered = allUsers.filter(u => {
     if (statusFilter !== "todos" && u.computedStatus !== statusFilter) return false;
     if (roleFilter !== "todos" && u.userRole !== roleFilter) return false;
