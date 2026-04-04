@@ -78,7 +78,7 @@ export function useCoachOverview() {
         const athleteIds = links.map(l => l.athlete_id);
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, name, email, sexo, status, last_active_at, peso, altura, training_level, created_at, session_duration')
+          .select('user_id, name, email, sexo, status, last_active_at, peso, altura, training_level, created_at, session_duration, onboarding_experience, onboarding_goal, onboarding_target_race, unavailable_equipment, equipment_notes')
           .in('user_id', athleteIds);
 
         const fallbackAthletes: AthleteOverview[] = (profiles || []).map(p => ({
