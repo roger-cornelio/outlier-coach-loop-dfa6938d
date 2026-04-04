@@ -32,6 +32,7 @@ export function BenchmarksScreen() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
+  const [activeTab, setActiveTab] = useState('diagnostico');
   const { trackEvent } = useEvents();
 
   // Sync local refreshKey with global store (e.g. after import from dashboard CTA)
@@ -40,6 +41,13 @@ export function BenchmarksScreen() {
       setRefreshKey(prev => prev + 1);
     }
   }, [externalResultsRefreshKey]);
+
+  // Listen for open-simulator event
+  useEffect(() => {
+    const handler = () => setActiveTab('simulados');
+    window.addEventListener('outlier:open-simulator', handler);
+    return () => window.removeEventListener('outlier:open-simulator', handler);
+  }, []);
 
   const handleResultAdded = () => {
     trackEvent('benchmark_completed');
