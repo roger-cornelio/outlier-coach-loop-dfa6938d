@@ -2434,6 +2434,9 @@ export type Database = {
           equipment_notes: string
           has_plan_this_week: number
           last_active_at: string
+          onboarding_experience: string
+          onboarding_goal: string
+          onboarding_target_race: string
           peso: number
           sexo: string
           total_benchmarks: number
