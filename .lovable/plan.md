@@ -1,30 +1,65 @@
 
 
-## Plano: Corrigir bug da RPC `get_coach_overview`
+## Plano: Retry automático offline-first para feedback e resultados
 
 ### Problema
-A view `coach_athlete_overview` tem 19 colunas (incluindo `onboarding_experience`, `onboarding_goal`, `onboarding_target_race`) mas a função RPC `get_coach_overview` só declara 16 colunas no RETURNS TABLE. O PostgreSQL mapeia por posição, então a coluna 13 (que na view é `onboarding_experience` tipo `text`) é esperada como `integer` (`days_inactive`) pela função — causando erro de tipo.
+Se a conexão falhar durante `saveFeedback` ou `saveBenchmarkResult`, os dados são perdidos silenciosamente. Para um piloto com atletas reais, isso é inaceitável.
 
-### Correção
+### Solução
+Criar uma fila persistente em localStorage que armazena operações falhadas e as reenvia automaticamente quando a conexão voltar.
 
-**1. Migration** — Recriar a função `get_coach_overview` com as 3 colunas faltantes:
-```sql
-CREATE OR REPLACE FUNCTION public.get_coach_overview(_coach_id uuid)
-RETURNS TABLE(
-  coach_id uuid, athlete_id uuid, athlete_name text, athlete_email text,
-  sexo text, account_status text, last_active_at timestamptz,
-  peso numeric, altura integer, training_level text,
-  unavailable_equipment jsonb, equipment_notes text,
-  onboarding_experience text, onboarding_goal text, onboarding_target_race text,
-  days_inactive integer, workouts_last_7_days integer,
-  has_plan_this_week integer, total_benchmarks integer
-) ...
+### Arquitetura
+
+```text
+Atleta salva resultado/feedback
+        │
+        ▼
+  Tenta enviar ao backend
+        │
+   ┌────┴────┐
+   │ Sucesso │  → ✅ fim
+   └─────────┘
+   │ Falha   │  → Salva em localStorage (offline queue)
+   └─────────┘
+        │
+        ▼
+  Listener: navigator.onLine + visibilitychange
+        │
+        ▼
+  Flush queue → tenta reenviar cada item
+        │
+   ┌────┴────┐
+   │ Sucesso │  → Remove do queue
+   │ Falha   │  → Mantém, tenta novamente depois
+   └─────────┘
 ```
 
-**2. `src/hooks/useCoachOverview.ts`** — Adicionar os 3 campos ao interface `AthleteOverview` (já existem mas o fallback não os popula — ajustar fallback também).
+### Implementação
 
-**3. `src/components/CoachOverviewTab.tsx`** — Sem mudanças necessárias (os campos extras já são usados via fallback).
+**1. Novo utilitário `src/lib/offlineQueue.ts`**
+- Classe `OfflineQueue` com métodos `enqueue(operation)`, `flush()`, `getPendingCount()`
+- Cada item: `{ id, table, payload, createdAt, retryCount }`
+- Persiste em `localStorage` key `outlier_offline_queue`
+- `flush()`: itera itens, tenta `supabase.from(table).insert(payload)`, remove se sucesso
+- Auto-flush em `window.addEventListener('online')` e `document.visibilitychange`
+- Limite de 3 retries por item, depois marca como `failed`
+
+**2. Atualizar `src/hooks/useAthleteFeedbacks.ts`**
+- No `catch` de `saveFeedback`, ao invés de só logar erro, chamar `offlineQueue.enqueue({ table: 'workout_session_feedback', payload })`
+- Mostrar toast amarelo "Feedback salvo offline — será enviado quando a conexão voltar"
+
+**3. Atualizar `src/hooks/useBenchmarkResults.ts`**
+- Mesma lógica para resultados de benchmark que falhem ao salvar
+
+**4. Componente `OfflineQueueIndicator`** (opcional, leve)
+- Pequeno badge no canto mostrando "X pendentes" quando há itens na fila
+- Renderizado no `Dashboard` ou `AppGate`
+
+**5. Auto-flush no App.tsx**
+- `useEffect` no nível do app que inicializa os listeners de `online`/`visibilitychange`
 
 ### Resultado
-A RPC passa a funcionar sem fallback, retornando dados completos incluindo onboarding para o dashboard do coach.
+- Atleta nunca perde dados de treino, mesmo com conexão instável
+- Toast informativo quando salva offline
+- Reenvio automático transparente
 
