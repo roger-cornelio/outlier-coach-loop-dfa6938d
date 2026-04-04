@@ -92,11 +92,11 @@ export function useCoachOverview() {
           peso: p.peso ? Number(p.peso) : null,
           altura: p.altura,
           training_level: p.training_level,
-          unavailable_equipment: null,
-          equipment_notes: null,
-          onboarding_experience: null,
-          onboarding_goal: null,
-          onboarding_target_race: null,
+          unavailable_equipment: (p as any).unavailable_equipment ?? null,
+          equipment_notes: (p as any).equipment_notes ?? null,
+          onboarding_experience: (p as any).onboarding_experience ?? null,
+          onboarding_goal: (p as any).onboarding_goal ?? null,
+          onboarding_target_race: (p as any).onboarding_target_race ?? null,
           session_duration: (p as any).session_duration ?? null,
           days_inactive: p.last_active_at 
             ? Math.floor((Date.now() - new Date(p.last_active_at).getTime()) / 86400000)
