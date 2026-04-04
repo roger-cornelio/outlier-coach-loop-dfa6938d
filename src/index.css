@@ -100,99 +100,18 @@ html, body {
      COACH IRON THEME - Military, Serious, Sharp
      ============================================ */
   .theme-iron {
-    --background: 220 15% 6%;
-    --foreground: 220 10% 95%;
-
-    --card: 220 15% 9%;
-    --card-foreground: 220 10% 95%;
-
-    --popover: 220 15% 9%;
-    --popover-foreground: 220 10% 95%;
-
-    /* Steel Blue Primary */
-    --primary: 210 40% 50%;
-    --primary-foreground: 220 10% 98%;
-
-    --secondary: 220 15% 14%;
-    --secondary-foreground: 220 10% 95%;
-
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 55%;
-
-    /* Cold accent */
-    --accent: 200 50% 45%;
-    --accent-foreground: 220 10% 98%;
-
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 220 10% 98%;
-
-    --border: 220 15% 20%;
-    --input: 220 15% 15%;
-    --ring: 210 40% 50%;
-
-    /* Status colors - muted */
-    --status-excellent: 210 40% 50%;
-    --status-good: 160 40% 40%;
-    --status-attention: 45 60% 45%;
-    --status-below: 0 50% 45%;
-
-    /* Typography */
+    /* Typography only — brand colors stay OUTLIER */
     --font-display: 'Oswald', sans-serif;
     --font-body: 'Inter', sans-serif;
-
-    /* Gradients */
-    --gradient-fire: linear-gradient(135deg, hsl(210 40% 50%) 0%, hsl(200 50% 45%) 100%);
-    --shadow-glow: 0 0 40px hsl(210 40% 50% / 0.2);
   }
 
   /* ============================================
      COACH SPARK THEME - Energetic, Fun, Vibrant
      ============================================ */
   .theme-spark {
-    --background: 30 20% 5%;
-    --foreground: 45 100% 98%;
-
-    --card: 30 20% 8%;
-    --card-foreground: 45 100% 98%;
-
-    --popover: 30 20% 8%;
-    --popover-foreground: 45 100% 98%;
-
-    /* Vibrant Yellow/Orange */
-    --primary: 45 100% 55%;
-    --primary-foreground: 30 20% 8%;
-
-    --secondary: 30 20% 14%;
-    --secondary-foreground: 45 100% 98%;
-
-    --muted: 30 15% 18%;
-    --muted-foreground: 30 20% 60%;
-
-    /* Hot Orange accent */
-    --accent: 25 100% 55%;
-    --accent-foreground: 30 20% 8%;
-
-    --destructive: 0 85% 55%;
-    --destructive-foreground: 45 100% 98%;
-
-    --border: 30 15% 22%;
-    --input: 30 15% 15%;
-    --ring: 45 100% 55%;
-
-    /* Status colors - vibrant */
-    --status-excellent: 45 100% 55%;
-    --status-good: 120 70% 50%;
-    --status-attention: 35 100% 55%;
-    --status-below: 0 85% 55%;
-
-    /* Typography */
+    /* Typography + radius only — brand colors stay OUTLIER */
     --font-display: 'Fredoka', sans-serif;
     --font-body: 'Fredoka', sans-serif;
-
-    /* Gradients */
-    --gradient-fire: linear-gradient(135deg, hsl(45 100% 55%) 0%, hsl(25 100% 55%) 100%);
-    --shadow-glow: 0 0 60px hsl(45 100% 55% / 0.35);
-
     --radius: 1rem;
   }
 
