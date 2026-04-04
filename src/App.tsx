@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { initAutoFlush } from "@/lib/offlineQueue";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
