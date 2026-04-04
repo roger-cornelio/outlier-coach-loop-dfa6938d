@@ -100,49 +100,9 @@ html, body {
      COACH IRON THEME - Military, Serious, Sharp
      ============================================ */
   .theme-iron {
-    --background: 220 15% 6%;
-    --foreground: 220 10% 95%;
-
-    --card: 220 15% 9%;
-    --card-foreground: 220 10% 95%;
-
-    --popover: 220 15% 9%;
-    --popover-foreground: 220 10% 95%;
-
-    /* Steel Blue Primary */
-    --primary: 210 40% 50%;
-    --primary-foreground: 220 10% 98%;
-
-    --secondary: 220 15% 14%;
-    --secondary-foreground: 220 10% 95%;
-
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 55%;
-
-    /* Cold accent */
-    --accent: 200 50% 45%;
-    --accent-foreground: 220 10% 98%;
-
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 220 10% 98%;
-
-    --border: 220 15% 20%;
-    --input: 220 15% 15%;
-    --ring: 210 40% 50%;
-
-    /* Status colors - muted */
-    --status-excellent: 210 40% 50%;
-    --status-good: 160 40% 40%;
-    --status-attention: 45 60% 45%;
-    --status-below: 0 50% 45%;
-
-    /* Typography */
+    /* Typography only — brand colors stay OUTLIER */
     --font-display: 'Oswald', sans-serif;
     --font-body: 'Inter', sans-serif;
-
-    /* Gradients */
-    --gradient-fire: linear-gradient(135deg, hsl(210 40% 50%) 0%, hsl(200 50% 45%) 100%);
-    --shadow-glow: 0 0 40px hsl(210 40% 50% / 0.2);
   }
 
   /* ============================================
