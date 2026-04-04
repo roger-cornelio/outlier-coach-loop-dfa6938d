@@ -842,7 +842,10 @@ export type Database = {
           division: string | null
           event_name: string | null
           id: string
+          notified: boolean
           result_url: string | null
+          telefone: string | null
+          total_time_seconds: number | null
           user_id: string
         }
         Insert: {
@@ -852,7 +855,10 @@ export type Database = {
           division?: string | null
           event_name?: string | null
           id?: string
+          notified?: boolean
           result_url?: string | null
+          telefone?: string | null
+          total_time_seconds?: number | null
           user_id: string
         }
         Update: {
@@ -862,7 +868,10 @@ export type Database = {
           division?: string | null
           event_name?: string | null
           id?: string
+          notified?: boolean
           result_url?: string | null
+          telefone?: string | null
+          total_time_seconds?: number | null
           user_id?: string
         }
         Relationships: []
