@@ -365,6 +365,13 @@ const Index = () => {
     return <Screen />;
   };
 
+  // Listen for simulator CTA → navigate to benchmarks (simulator tab)
+  useEffect(() => {
+    const handler = () => setCurrentView('benchmarks');
+    window.addEventListener('outlier:open-simulator', handler);
+    return () => window.removeEventListener('outlier:open-simulator', handler);
+  }, [setCurrentView]);
+
 
 
   // Determine if sidebar should be visible (only for main app views, not onboarding)
