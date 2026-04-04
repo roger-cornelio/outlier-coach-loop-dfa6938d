@@ -397,7 +397,9 @@ export default function DiagnosticoGratuito() {
           event_name: result.event_name,
           division: result.division,
           result_url: result.result_url,
-        }).then(({ error: leadError }) => {
+          telefone: telefone.trim() || null,
+          total_time_seconds: scrapeData?.time_in_seconds || null,
+        } as any).then(({ error: leadError }) => {
           if (leadError) console.warn('[DIAG_FREE] Lead tracking error:', leadError);
           else console.log('[DIAG_FREE] Lead saved to CRM');
         });
