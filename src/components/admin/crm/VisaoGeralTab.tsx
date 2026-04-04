@@ -70,6 +70,8 @@ export function VisaoGeralTab() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ userId: string; name: string } | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string; email: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 300);
