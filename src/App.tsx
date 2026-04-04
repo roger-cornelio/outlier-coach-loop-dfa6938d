@@ -11,6 +11,7 @@ import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
 import { GlobalDebugBar } from "@/components/GlobalDebugBar";
 import { SuperadminBadge } from "@/components/SuperadminBadge";
+import { OfflineQueueIndicator } from "@/components/OfflineQueueIndicator";
 import { useParamsSync } from "@/hooks/useParamsSync";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import Index from "./pages/Index";
