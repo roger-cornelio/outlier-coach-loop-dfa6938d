@@ -353,6 +353,38 @@ export function VisaoGeralTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Remover Definitivamente</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a remover <strong>{deleteTarget?.name}</strong> ({deleteTarget?.email}) de forma <strong className="text-destructive">permanente</strong>.
+                </p>
+                <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-sm">
+                  <p className="font-medium text-destructive mb-1">Esta ação irá apagar:</p>
+                  <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                    <li>Conta de acesso</li>
+                    <li>Perfil e configurações</li>
+                    <li>Histórico de treinos e resultados</li>
+                    <li>Vínculos com coaches</li>
+                  </ul>
+                </div>
+                <p className="text-destructive font-medium">⚠️ Esta ação NÃO pode ser desfeita!</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Sim, remover definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
