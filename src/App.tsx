@@ -137,6 +137,7 @@ const App = () => (
           {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
           <GlobalDebugBar />
           <SuperadminBadge />
+          <OfflineQueueIndicator />
           </ParamsSyncProvider>
         </AuthProvider>
       </TooltipProvider>
