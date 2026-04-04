@@ -1,24 +1,32 @@
 
 
-## Plano: Corrigir redirect da recuperação de senha
+## Plano: Corrigir email de recuperação de senha vazio
 
-### Situação atual
-O código usa `window.location.origin` para montar o `redirectTo` do reset de senha. O problema é que o backend de autenticação só redireciona para URLs que estão na lista de URLs permitidas. Se a URL do app não está nessa lista, o usuário cai na página genérica do Lovable.
+### Problema
+O email de reset de senha chega sem conteúdo visível — sem botão, sem link. O template padrão do sistema de autenticação não está renderizando o link de recuperação corretamente.
 
-### O que precisa ser feito
+### Solução
+Configurar templates de email de autenticação personalizados para o projeto. Isso substitui o template genérico por um email com branding OUTLIER que inclui corretamente o botão de redefinição de senha.
 
-**1. Definir a URL correta do app**
-- Se `app.outlier.run` já está configurado como domínio customizado → usar essa URL
-- Se ainda não está configurado → configurar em Settings → Domains primeiro, ou usar `outlierdev.lovable.app`
+### Passos
 
-**2. Registrar URLs permitidas no backend de autenticação**
-- Adicionar as URLs do app (domínio customizado + lovable.app + preview) à lista de redirect URLs permitidas
-- Isso garante que o link no email leve para o app correto
+1. **Verificar se já existe domínio de email configurado** — checar o status atual da infraestrutura de email do projeto
 
-**3. Ajustar o código do reset de senha** (`src/pages/Auth.tsx` e `src/pages/CoachAuth.tsx`)
-- Usar a URL publicada/customizada como fallback em vez de depender apenas de `window.location.origin`
-- Isso cobre cenários onde o usuário está acessando de uma URL diferente da principal
+2. **Se não houver domínio configurado** — iniciar o setup de domínio de email para que os emails venham do domínio do app (em vez de `no-reply@auth.lovable.cloud`)
+
+3. **Criar templates de email de autenticação** — gerar templates personalizados com:
+   - Logo e branding OUTLIER (cores, fontes do app)
+   - Botão funcional de "Redefinir Senha" com o link correto
+   - Texto em português
+   - Templates para todos os tipos de email de auth (reset, verificação, magic link, etc.)
+
+4. **Deploy dos templates** — publicar as funções de email para que entrem em vigor
 
 ### Resultado
-O link de recuperação de senha no email abre a tela do OUTLIER (com logo e branding corretos) em vez da página do Lovable.
+- Email de recuperação chega com visual OUTLIER e botão funcional de "Redefinir Senha"
+- Link no botão aponta para `app.outlier.run` com o fluxo correto
+- Todos os emails de autenticação ficam com branding consistente
+
+### Pré-requisito
+Será necessário configurar um domínio de email (ex: `outlier.run`) para envio. Caso não queira configurar domínio agora, uma alternativa mais simples é verificar se o template padrão do sistema pode ser ajustado para incluir o link corretamente.
 
