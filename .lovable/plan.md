@@ -1,18 +1,30 @@
 
 
-## Plano: Adicionar sub-slogan na tela de boas-vindas
+## Plano: Adaptar CTA de nível para atletas sem prova
 
-### Mudança
+### Problema
+Atletas que indicaram no onboarding que nunca fizeram HYROX veem o botão "Descubra seu nível OUTLIER — Importamos automaticamente sua última prova HYROX", que vai falhar e mostrar "Faça uma prova HYROX para desbloquear". Isso é frustrante e inútil.
 
-No `AthleteWelcomeScreen.tsx`, inserir duas linhas de sub-slogan entre o headline ("VOCÊ ESTÁ PRESTES A SE TORNAR OUTLIER.") e o card do coach:
+### Solução
+Substituir o CTA por uma versão contextual:
+- **Com prova** (onboarding_experience = `1race` ou `2plus`): mantém o CTA atual de importação
+- **Sem prova** (experience = `never` ou `spectator`, ou sem dados): mostrar CTA alternativo que direciona ao **Simulador HYROX** para estabelecer um nível OUTLIER provisório baseado no simulado
 
-**Linha 1:** "Treino comum não é mais uma opção."
-**Linha 2:** "Pronto para ser fora da curva?"
+### Mudanças
 
-### Estilo
-- `text-muted-foreground`, itálico, `text-lg md:text-xl`
-- Fade-in animado (delay após headline)
+**1. `src/components/DiagnosticRadarBlock.tsx`**
+- No componente `ImportProvaInlineCTA`, ler `profile.onboarding_experience` do `useAuth()`
+- Se `experience` for `never` ou `spectator` (ou null): renderizar CTA alternativo:
+  - Ícone: `Zap` ou `Timer`
+  - Título: **"Avalie seu nível OUTLIER"**
+  - Subtítulo: "Faça um simulado para descobrir sua classificação"
+  - Nota: "Sem prova oficial? O simulado define seu nível provisório"
+  - Ao clicar: disparar evento `outlier:open-simulator` (ou navegar para aba do simulador)
+- Se `experience` for `1race` ou `2plus`: manter CTA atual de importação
 
-### Arquivo alterado
-1. **`src/components/AthleteWelcomeScreen.tsx`** — Inserir `<motion.p>` com as duas linhas entre o headline (linha ~93) e o card do coach (linha ~96)
+**2. Dashboard (listener)** — Garantir que o clique no CTA alternativo abre o simulador (já existe `SimulatorScreen` no app)
+
+### Resultado
+- Atleta sem prova → vê CTA para simulado → faz simulado → recebe nível provisório
+- Atleta com prova → fluxo atual de importação automática
 
