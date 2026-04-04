@@ -1,65 +1,24 @@
 
 
-## Plano: Retry automático offline-first para feedback e resultados
+## Plano: Corrigir redirect da recuperação de senha
 
-### Problema
-Se a conexão falhar durante `saveFeedback` ou `saveBenchmarkResult`, os dados são perdidos silenciosamente. Para um piloto com atletas reais, isso é inaceitável.
+### Situação atual
+O código usa `window.location.origin` para montar o `redirectTo` do reset de senha. O problema é que o backend de autenticação só redireciona para URLs que estão na lista de URLs permitidas. Se a URL do app não está nessa lista, o usuário cai na página genérica do Lovable.
 
-### Solução
-Criar uma fila persistente em localStorage que armazena operações falhadas e as reenvia automaticamente quando a conexão voltar.
+### O que precisa ser feito
 
-### Arquitetura
+**1. Definir a URL correta do app**
+- Se `app.outlier.run` já está configurado como domínio customizado → usar essa URL
+- Se ainda não está configurado → configurar em Settings → Domains primeiro, ou usar `outlierdev.lovable.app`
 
-```text
-Atleta salva resultado/feedback
-        │
-        ▼
-  Tenta enviar ao backend
-        │
-   ┌────┴────┐
-   │ Sucesso │  → ✅ fim
-   └─────────┘
-   │ Falha   │  → Salva em localStorage (offline queue)
-   └─────────┘
-        │
-        ▼
-  Listener: navigator.onLine + visibilitychange
-        │
-        ▼
-  Flush queue → tenta reenviar cada item
-        │
-   ┌────┴────┐
-   │ Sucesso │  → Remove do queue
-   │ Falha   │  → Mantém, tenta novamente depois
-   └─────────┘
-```
+**2. Registrar URLs permitidas no backend de autenticação**
+- Adicionar as URLs do app (domínio customizado + lovable.app + preview) à lista de redirect URLs permitidas
+- Isso garante que o link no email leve para o app correto
 
-### Implementação
-
-**1. Novo utilitário `src/lib/offlineQueue.ts`**
-- Classe `OfflineQueue` com métodos `enqueue(operation)`, `flush()`, `getPendingCount()`
-- Cada item: `{ id, table, payload, createdAt, retryCount }`
-- Persiste em `localStorage` key `outlier_offline_queue`
-- `flush()`: itera itens, tenta `supabase.from(table).insert(payload)`, remove se sucesso
-- Auto-flush em `window.addEventListener('online')` e `document.visibilitychange`
-- Limite de 3 retries por item, depois marca como `failed`
-
-**2. Atualizar `src/hooks/useAthleteFeedbacks.ts`**
-- No `catch` de `saveFeedback`, ao invés de só logar erro, chamar `offlineQueue.enqueue({ table: 'workout_session_feedback', payload })`
-- Mostrar toast amarelo "Feedback salvo offline — será enviado quando a conexão voltar"
-
-**3. Atualizar `src/hooks/useBenchmarkResults.ts`**
-- Mesma lógica para resultados de benchmark que falhem ao salvar
-
-**4. Componente `OfflineQueueIndicator`** (opcional, leve)
-- Pequeno badge no canto mostrando "X pendentes" quando há itens na fila
-- Renderizado no `Dashboard` ou `AppGate`
-
-**5. Auto-flush no App.tsx**
-- `useEffect` no nível do app que inicializa os listeners de `online`/`visibilitychange`
+**3. Ajustar o código do reset de senha** (`src/pages/Auth.tsx` e `src/pages/CoachAuth.tsx`)
+- Usar a URL publicada/customizada como fallback em vez de depender apenas de `window.location.origin`
+- Isso cobre cenários onde o usuário está acessando de uma URL diferente da principal
 
 ### Resultado
-- Atleta nunca perde dados de treino, mesmo com conexão instável
-- Toast informativo quando salva offline
-- Reenvio automático transparente
+O link de recuperação de senha no email abre a tela do OUTLIER (com logo e branding corretos) em vez da página do Lovable.
 
