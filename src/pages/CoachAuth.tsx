@@ -343,8 +343,11 @@ export default function CoachAuth() {
                     return;
                   }
                   try {
+                    const resetOrigin = window.location.origin.includes('lovable.app') || window.location.origin.includes('outlier.run')
+                      ? window.location.origin
+                      : 'https://outlierdev.lovable.app';
                     await supabase.auth.resetPasswordForEmail(trimmed, {
-                      redirectTo: `${window.location.origin}/coach/redefinir-senha`,
+                      redirectTo: `${resetOrigin}/coach/redefinir-senha`,
                     });
                     toast({ title: 'Link de recuperação enviado para seu email' });
                   } catch {
