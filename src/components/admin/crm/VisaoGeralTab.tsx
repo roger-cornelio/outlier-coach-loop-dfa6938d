@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Loader2, ChevronLeft, ChevronRight, ShieldOff } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, ShieldOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,8 @@ export function VisaoGeralTab() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ userId: string; name: string } | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string; email: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 300);
@@ -172,6 +174,26 @@ export function VisaoGeralTab() {
       toast.error("Erro ao desativar coach: " + err.message);
     } finally {
       setDeactivating(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { target_user_id: deleteTarget.userId, confirm_deletion: true },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
+      toast.success(`Usuário ${deleteTarget.name} removido definitivamente`);
+      const deletedId = deleteTarget.userId;
+      setDeleteTarget(null);
+      setAllUsers(prev => prev.filter(u => u.user_id !== deletedId));
+    } catch (err: any) {
+      toast.error("Erro ao remover usuário: " + err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -281,19 +303,33 @@ export function VisaoGeralTab() {
                   <TableCell className="text-sm text-muted-foreground">{u.last_active_at ? fmtDate(u.last_active_at) : "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {u.userRole === "coach" && (
+                    <div className="flex items-center justify-end gap-1">
+                      {u.userRole === "coach" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeactivateTarget({ userId: u.user_id, name: u.name || "Coach" });
+                          }}
+                        >
+                          <ShieldOff className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive/70 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeactivateTarget({ userId: u.user_id, name: u.name || "Coach" });
+                          setDeleteTarget({ userId: u.user_id, name: u.name || "Sem nome", email: u.email || "—" });
                         }}
+                        title="Remover definitivamente"
                       >
-                        <ShieldOff className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -333,6 +369,38 @@ export function VisaoGeralTab() {
             <AlertDialogAction onClick={handleDeactivateCoach} disabled={deactivating} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deactivating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Desativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Remover Definitivamente</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a remover <strong>{deleteTarget?.name}</strong> ({deleteTarget?.email}) de forma <strong className="text-destructive">permanente</strong>.
+                </p>
+                <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-sm">
+                  <p className="font-medium text-destructive mb-1">Esta ação irá apagar:</p>
+                  <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                    <li>Conta de acesso</li>
+                    <li>Perfil e configurações</li>
+                    <li>Histórico de treinos e resultados</li>
+                    <li>Vínculos com coaches</li>
+                  </ul>
+                </div>
+                <p className="text-destructive font-medium">⚠️ Esta ação NÃO pode ser desfeita!</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Sim, remover definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
