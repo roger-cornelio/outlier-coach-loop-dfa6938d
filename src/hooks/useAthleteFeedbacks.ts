@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { enqueue } from '@/lib/offlineQueue';
+import { toast } from 'sonner';
 
 export interface SessionFeedbackRecord {
   id: string;
