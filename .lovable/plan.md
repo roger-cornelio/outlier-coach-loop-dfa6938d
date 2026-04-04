@@ -1,30 +1,30 @@
 
 
-## Plano: Adaptar CTA de nível para atletas sem prova
+## Plano: Corrigir bug da RPC `get_coach_overview`
 
 ### Problema
-Atletas que indicaram no onboarding que nunca fizeram HYROX veem o botão "Descubra seu nível OUTLIER — Importamos automaticamente sua última prova HYROX", que vai falhar e mostrar "Faça uma prova HYROX para desbloquear". Isso é frustrante e inútil.
+A view `coach_athlete_overview` tem 19 colunas (incluindo `onboarding_experience`, `onboarding_goal`, `onboarding_target_race`) mas a função RPC `get_coach_overview` só declara 16 colunas no RETURNS TABLE. O PostgreSQL mapeia por posição, então a coluna 13 (que na view é `onboarding_experience` tipo `text`) é esperada como `integer` (`days_inactive`) pela função — causando erro de tipo.
 
-### Solução
-Substituir o CTA por uma versão contextual:
-- **Com prova** (onboarding_experience = `1race` ou `2plus`): mantém o CTA atual de importação
-- **Sem prova** (experience = `never` ou `spectator`, ou sem dados): mostrar CTA alternativo que direciona ao **Simulador HYROX** para estabelecer um nível OUTLIER provisório baseado no simulado
+### Correção
 
-### Mudanças
+**1. Migration** — Recriar a função `get_coach_overview` com as 3 colunas faltantes:
+```sql
+CREATE OR REPLACE FUNCTION public.get_coach_overview(_coach_id uuid)
+RETURNS TABLE(
+  coach_id uuid, athlete_id uuid, athlete_name text, athlete_email text,
+  sexo text, account_status text, last_active_at timestamptz,
+  peso numeric, altura integer, training_level text,
+  unavailable_equipment jsonb, equipment_notes text,
+  onboarding_experience text, onboarding_goal text, onboarding_target_race text,
+  days_inactive integer, workouts_last_7_days integer,
+  has_plan_this_week integer, total_benchmarks integer
+) ...
+```
 
-**1. `src/components/DiagnosticRadarBlock.tsx`**
-- No componente `ImportProvaInlineCTA`, ler `profile.onboarding_experience` do `useAuth()`
-- Se `experience` for `never` ou `spectator` (ou null): renderizar CTA alternativo:
-  - Ícone: `Zap` ou `Timer`
-  - Título: **"Avalie seu nível OUTLIER"**
-  - Subtítulo: "Faça um simulado para descobrir sua classificação"
-  - Nota: "Sem prova oficial? O simulado define seu nível provisório"
-  - Ao clicar: disparar evento `outlier:open-simulator` (ou navegar para aba do simulador)
-- Se `experience` for `1race` ou `2plus`: manter CTA atual de importação
+**2. `src/hooks/useCoachOverview.ts`** — Adicionar os 3 campos ao interface `AthleteOverview` (já existem mas o fallback não os popula — ajustar fallback também).
 
-**2. Dashboard (listener)** — Garantir que o clique no CTA alternativo abre o simulador (já existe `SimulatorScreen` no app)
+**3. `src/components/CoachOverviewTab.tsx`** — Sem mudanças necessárias (os campos extras já são usados via fallback).
 
 ### Resultado
-- Atleta sem prova → vê CTA para simulado → faz simulado → recebe nível provisório
-- Atleta com prova → fluxo atual de importação automática
+A RPC passa a funcionar sem fallback, retornando dados completos incluindo onboarding para o dashboard do coach.
 
