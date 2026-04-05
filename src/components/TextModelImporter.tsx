@@ -1637,10 +1637,10 @@ BLOCO: DESCANSO
                   Edição do Treino
                 </CardTitle>
               </div>
-              {/* Badge de cobertura — clicável, abre modal de detalhes */}
+              {/* Badge de cobertura + legenda — clicável, abre modal de detalhes */}
               {coverageReport && coverageReport.totalExercises > 0 && (
-                <>
-                  <Badge 
+                <div className="flex items-center gap-2">
+                  <Badge
                     variant="outline" 
                     className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
                       coverageReport.successRate === 100
