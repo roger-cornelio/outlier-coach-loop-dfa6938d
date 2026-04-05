@@ -278,6 +278,7 @@ You MUST follow these rules to avoid double-counting:
 
 ### CARDIO:
 - Return durationSeconds and/or distanceMeters as written. No changes.
+- **DURATION FORMAT**: "X min corrida/remo/ski/bike" = durationSeconds: X*60. Pace ranges like "07:15–05:36" go in notes as "Pace 07:15–05:36". Zone indicators like "Z1", "Z2" → intensityType: "zone", intensityValue: number.
 
 ## GENERAL RULES:
 
@@ -393,6 +394,9 @@ Output: [{"slug":"double_db_shoulder_press","name":"Double DB Shoulder Press","m
 
 Input block title: "Aquecimento 5x 2' On / 1' Off", content: "5-10 Strict Pullup\\nMax Farmer Carry 32/32"
 Output: [{"slug":"strict_pullup","name":"Strict Pull-up","movementPatternSlug":"pull","sets":1,"reps":5,"notes":"Rep range: 5-10"},{"slug":"farmers_carry","name":"Farmer Carry","movementPatternSlug":"carry","sets":1,"loadKg":32,"notes":"Max, 32/32"}]
+
+Input block title: "Corrida", content: "5 min corrida 07:15–05:36 Z1\\n20 min corrida 05:31–04:54 Z2\\n20 min corrida 04:50–04:36 Z3\\n5 min corrida 07:15–05:36 Z1"
+Output: [{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"},{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":2,"notes":"Pace 05:31–04:54"},{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":3,"notes":"Pace 04:50–04:36"},{"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"}]
 
 ## OUTPUT FORMAT:
 Return a JSON object with tool calling. For each block, return the blockId and parsedExercises array.`;
