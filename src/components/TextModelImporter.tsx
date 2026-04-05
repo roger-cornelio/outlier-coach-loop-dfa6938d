@@ -2338,9 +2338,6 @@ BLOCO: DESCANSO
 
         {/* STICKY ACTION BAR — Glassmorphism */}
         <div className="sticky bottom-0 z-10 px-4 py-3 -mx-4 backdrop-blur-md bg-background/80 border-t border-border/50">
-          <div className="flex items-center justify-between mb-2">
-            <MetricsLegend />
-          </div>
           <div className="flex gap-3 max-w-full">
             <Button variant="outline" onClick={goBackToImport} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
