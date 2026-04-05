@@ -244,3 +244,16 @@ export const TRAINING_LEVEL_NAMES: Record<TrainingLevel, string> = {
 export const DIFFICULTY_NAMES = TRAINING_LEVEL_NAMES;
 
 export const STATUS_ORDER: AthleteStatus[] = ['open', 'pro', 'elite'];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SemanticOverride: Correção manual de métrica pelo coach no gabarito
+// ═══════════════════════════════════════════════════════════════════════════
+export type SemanticOverrideType = 'movement' | 'duration' | 'distance' | 'reps' | 'load' | 'intensity' | 'cadence' | 'parenthetical' | 'hyrox_load';
+
+export interface SemanticOverride {
+  index: number;
+  type: SemanticOverrideType;
+  text: string;
+  isAdded?: boolean;
+  isRemoved?: boolean;
+}
