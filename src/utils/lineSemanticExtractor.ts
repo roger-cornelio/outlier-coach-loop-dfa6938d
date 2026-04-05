@@ -37,15 +37,19 @@ const METRIC_PATTERNS: MetricPattern[] = [
 
   // Parenthetical — tudo entre parênteses
 
+  // Pace range: "07:15–05:36" (must come BEFORE individual duration MM:SS)
+  { type: 'cadence', regex: /\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/g },
+
   // Pace: "pace 4:30/km", "pace 5:00"
   { type: 'cadence', regex: /\bpace\s+\d{1,2}:\d{2}(?:\/km)?\b/gi },
 
   // Cadence: "60-70 rpm", "80 rpm", "25 km/h"
   { type: 'cadence', regex: /\d+(?:\s*[-–]\s*\d+)?\s*(?:rpm|km\/h|min\/km)\b/gi },
 
-  // Intensity: PSE/RPE/Zona/FC/HR/Max
+  // Intensity: PSE/RPE/Zona/FC/HR/Max + shorthand Z1-Z5
   { type: 'intensity', regex: /\b(?:pse|rpe)\s*[:=]?\s*\d+/gi },
   { type: 'intensity', regex: /\b(?:zona|zone)\s*\d+/gi },
+  { type: 'intensity', regex: /\bZ[1-5]\b/g },
   { type: 'intensity', regex: /\b(?:fc|hr)\s*[:=]?\s*\d+/gi },
   { type: 'intensity', regex: /\bmax\b/gi },
 
@@ -127,6 +131,16 @@ export function extractLineSemantics(line: string): SemanticSegment[] {
       }
 
       if (match[0].length === 0) { regex.lastIndex++; }
+    }
+  }
+
+  // Post-filter: reclassify pace range as duration if no cardio context
+  const CARDIO_CONTEXT = /\b(corrida|run|running|remo|row|rowing|bike|ski|erg|assault|progressivo|intervalado|tiro|sprint|trote|caminhada|walk)\b/i;
+  for (const range of matchedRanges) {
+    if (range.type === 'cadence' && /\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/.test(range.text)) {
+      if (!CARDIO_CONTEXT.test(cleanedLine)) {
+        range.type = 'duration';
+      }
     }
   }
 
