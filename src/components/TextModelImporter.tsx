@@ -1819,7 +1819,8 @@ BLOCO: DESCANSO
                       </div>
                     </DialogContent>
                   </Dialog>
-                </>
+                  <MetricsLegend />
+                </div>
               )}
 
               {/* Badge de precisão do motor movido para Preview */}
