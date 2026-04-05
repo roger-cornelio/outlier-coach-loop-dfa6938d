@@ -134,6 +134,16 @@ export function extractLineSemantics(line: string): SemanticSegment[] {
     }
   }
 
+  // Post-filter: reclassify pace range as duration if no cardio context
+  const CARDIO_CONTEXT = /\b(corrida|run|running|remo|row|rowing|bike|ski|erg|assault|progressivo|intervalado|tiro|sprint|trote|caminhada|walk)\b/i;
+  for (const range of matchedRanges) {
+    if (range.type === 'cadence' && /\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/.test(range.text)) {
+      if (!CARDIO_CONTEXT.test(cleanedLine)) {
+        range.type = 'duration';
+      }
+    }
+  }
+
   // Sort by start position
   matchedRanges.sort((a, b) => a.start - b.start);
 
