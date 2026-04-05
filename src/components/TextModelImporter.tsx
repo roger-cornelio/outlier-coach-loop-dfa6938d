@@ -40,6 +40,8 @@ import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
 import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge, SemanticExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { extractMovementName } from '@/utils/lineSemanticExtractor';
+import { MetricsGabarito } from './MetricsGabarito';
+import type { SemanticOverride } from '@/types/outlier';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { getBlockDisplayTitle, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
