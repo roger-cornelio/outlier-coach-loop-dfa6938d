@@ -5,7 +5,7 @@
  * Uses localStorage scoped by userId to track if tour was already seen.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppState } from './useAppState';
 
 const TOUR_SEEN_PREFIX = 'outlier_onboarding_tour_seen_';
