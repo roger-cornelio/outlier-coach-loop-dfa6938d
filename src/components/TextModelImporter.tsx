@@ -2238,7 +2238,23 @@ BLOCO: DESCANSO
                                               </div>
                                             );
                                           }
-                                          return <SemanticExerciseLine key={idx} line={line} className="truncate" />;
+                                          return (
+                                            <div key={idx}>
+                                              <SemanticExerciseLine line={line} className="truncate" />
+                                              {showGabarito && (
+                                                <MetricsGabarito
+                                                  line={line}
+                                                  overrides={lineOverrides[`${dayIndex}-${blockIndex}-${idx}`] || []}
+                                                  onChange={(ovr) => {
+                                                    setLineOverrides(prev => ({
+                                                      ...prev,
+                                                      [`${dayIndex}-${blockIndex}-${idx}`]: ovr,
+                                                    }));
+                                                  }}
+                                                />
+                                              )}
+                                            </div>
+                                          );
                                         })}
 
                                         
