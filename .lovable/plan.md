@@ -1,72 +1,78 @@
 
 
-## Plano: Filtro de sessão com métricas por bloco, por sessão e total do dia
+## Plano: Gabarito de métricas editável por linha no modo edição
+
+### Ideia
+Abaixo de cada linha de exercício no editor (modo edição), mostrar uma barra compacta com os badges semânticos extraídos (reps, carga, duração, intensidade, cadência, distância). O coach vê exatamente o que o parser entendeu e pode **clicar para corrigir** qualquer valor errado.
 
 ### UI
 
 ```text
-┌─────────────────────────────────────────────────┐
-│  SEG   TER   QUA   QUI   SEX   SAB   DOM       │  ← sem badge ×2
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│  [ Todas ]  [ Sessão 1 · Manhã ]  [ Sessão 2 ] │  ← só quando dual session
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│  ⏱ ~85min (total dia)  🔥 ~620 kcal (total dia)│  ← filtro "Todas"
-│  ──────── ou ────────                           │
-│  ⏱ ~50min (sessão 1)   🔥 ~398 kcal (sessão 1) │  ← filtro "Sessão 1"
-└─────────────────────────────────────────────────┘
-
-│  📦 Bloco: Corrida         ⏱ 50min  🔥 398kcal │  ← métricas por bloco
-│  📦 Bloco: Conditioning    ⏱ 20min  🔥 145kcal │     (já existe, mas só
-│  📦 Bloco: Core            ⏱ 15min  🔥  77kcal │      pra sessão 1)
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ 5 min corrida 07:15–05:36 Z1                             │  ← linha normal
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ 🟡 5 reps  🔵 5 min  🟣 07:15–05:36  🔴 Z1         │ │  ← gabarito (badges)
+│ │         [editar]                                     │ │  ← clicável
+│ └──────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Problema atual
-- `blockMetricsMap` calcula métricas **só para `currentWorkout`** (sessão 1)
-- Sessão 2 mostra `0 kcal / 0 min` nos blocos (linhas 501-503: `sessionIdx === 0` check)
-- Header de tempo/kcal só aparece na sessão 1 (linhas 445-462)
+Cada badge usa as cores já definidas em `SEMANTIC_COLORS`:
+- **Reps** (amber) — repetições, calorias
+- **Carga** (vermelho) — kg, lb, %
+- **Duração** (azul) — min, seg, MM:SS
+- **Intensidade** (vermelho escuro) — Z1-Z5, PSE, RPE, Max
+- **Cadência** (roxo) — pace, rpm, km/h
+- **Distância** (verde) — m, km
 
-### Implementação — arquivo único: `WeeklyTrainingView.tsx`
+### Comportamento
+1. **Gabarito aparece SOMENTE no modo edição** (nunca no preview nem para atleta)
+2. Cada badge é clicável → abre um **popover inline** com:
+   - Campo de texto para corrigir o valor
+   - Dropdown para mudar o tipo (ex: "duração" → "cadência")
+   - Botão excluir (remove métrica)
+3. Botão "+ Métrica" no final da barra para adicionar métrica que o parser não pegou
+4. Correções são salvas como **overrides** no objeto da linha (não altera rawText)
+5. Override fica persistido no draft via `editedDays`
 
-**1. Computar métricas para TODAS as sessões**
-- Trocar `blockMetricsMap` de `useMemo` baseado em `currentWorkout` para um mapa indexado por sessão
-- Novo shape: `Map<sessionIdx, { perBlock[], totalTime, totalCalories }>`
-- Cada sessão computa seus blocos independentemente com `computeBlockMetrics` + fallback `estimateBlock`
+### Implementação
 
-**2. Calcular totais do dia**
-- `dayTotalTime` = soma dos `totalTime` de todas as sessões
-- `dayTotalCalories` = soma dos `totalCalories` de todas as sessões
+**1. Novo componente: `src/components/MetricsGabarito.tsx`**
+- Recebe: `line: string`, `overrides?: SemanticOverride[]`, `onChange: (overrides) => void`
+- Extrai segmentos via `extractLineSemantics(line)`
+- Mescla com overrides (override tem prioridade)
+- Renderiza barra de badges clicáveis com popover de edição
 
-**3. Adicionar estado de filtro de sessão**
-- `activeSession: null | 1 | 2` (null = "Todas")
-- Reset para `null` quando `activeDay` muda
+**2. Tipo `SemanticOverride` em `src/types/outlier.ts`**
+```typescript
+interface SemanticOverride {
+  index: number;        // posição do segmento
+  type: SemanticType;   // tipo corrigido
+  text: string;         // valor corrigido
+  isAdded?: boolean;    // métrica adicionada manualmente
+  isRemoved?: boolean;  // métrica removida
+}
+```
 
-**4. Remover badge ×2** (linhas 357-359)
+**3. Integrar no `TextModelImporter.tsx`**
+- Abaixo de cada `<SemanticExerciseLine>` no modo edição, renderizar `<MetricsGabarito>`
+- Toggle de visibilidade (coach pode esconder/mostrar o gabarito por bloco)
 
-**5. Renderizar barra de filtro** (entre day tabs e conteúdo)
-- 3 pills: "Todas", "Sessão 1 · {label}", "Sessão 2 · {label}"
-- Cada pill mostra subtotal: `⏱ Xmin · 🔥 Y kcal`
-- Pill ativa: `bg-primary text-primary-foreground`
+**4. Propagar overrides para cálculos**
+- `computeBlockMetrics` e `buildSemanticSummary` consultam overrides antes dos segmentos brutos
+- Garante que tempo/kcal e prompts de IA usem os valores corrigidos
 
-**6. Header de stats dinâmico**
-- Filtro "Todas" → mostra `dayTotalTime` e `dayTotalCalories`
-- Filtro "Sessão N" → mostra total daquela sessão
-- Remove o check `sessionIdx === 0` que bloqueava stats da sessão 2
-
-**7. Métricas por bloco em ambas sessões**
-- Remove guard `sessionIdx === 0` (linhas 501-503) que zerava métricas da sessão 2
-- Usa o mapa indexado por sessão para cada bloco
-
-**8. Filtrar sessões exibidas**
-- `displayedSessions = activeSession ? dayWorkouts.filter(w => w.session === activeSession) : dayWorkouts`
+### Arquivos alterados
+- `src/components/MetricsGabarito.tsx` (novo)
+- `src/types/outlier.ts` — tipo SemanticOverride
+- `src/components/TextModelImporter.tsx` — integrar gabarito no modo edição
+- `src/utils/lineSemanticExtractor.ts` — função `mergeOverrides()` 
+- `src/utils/computeBlockKcalFromParsed.ts` — consultar overrides
+- `src/utils/workoutSemanticSummary.ts` — consultar overrides
 
 ### Resultado
-- Cada bloco mostra tempo e kcal corretos (ambas sessões)
-- Subtotal por sessão visível nas pills do filtro
-- Total do dia agregado quando "Todas" está selecionado
-- Navegação intuitiva entre sessões
+- Coach vê exatamente o que o parser detectou em cada linha
+- Pode corrigir tipo e valor de qualquer métrica com 1 clique
+- Correções propagam para cálculos de tempo, calorias e prompts de IA
+- Zero impacto no preview e na visão do atleta
 
