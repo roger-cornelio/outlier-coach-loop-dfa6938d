@@ -94,6 +94,12 @@ export function useOnboardingTour() {
 
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const hasCheckedRef = useRef(false);
+
+  // Reset check flag when storageKey changes (user switch)
+  useEffect(() => {
+    hasCheckedRef.current = false;
+  }, [storageKey]);
 
   const shouldShowTour = useCallback(() => {
     if (!storageKey) return false;
