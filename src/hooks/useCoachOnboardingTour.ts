@@ -8,7 +8,7 @@
  * Both persisted via localStorage scoped by userId.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAppState } from './useAppState';
 
 const ONBOARDING_SEEN_PREFIX = 'outlier_coach_onboarding_seen_';
@@ -145,16 +145,28 @@ export function useCoachOnboardingTour() {
   const onboardingKey = userId ? `${ONBOARDING_SEEN_PREFIX}${userId}` : null;
   const tourKey = userId ? `${TOUR_SEEN_PREFIX}${userId}` : null;
 
-  // Onboarding state
-  const [onboardingActive, setOnboardingActive] = useState(() => {
-    if (!onboardingKey) return false;
-    try { return !localStorage.getItem(onboardingKey); } catch { return false; }
-  });
+  // Onboarding state — re-evaluate when userId becomes available
+  const [onboardingActive, setOnboardingActive] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // Tour state
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+
+  // Re-check localStorage when userId becomes available
+  useEffect(() => {
+    if (!onboardingKey || onboardingChecked) return;
+    try {
+      const seen = localStorage.getItem(onboardingKey);
+      if (!seen) {
+        setOnboardingActive(true);
+      }
+      setOnboardingChecked(true);
+    } catch {
+      setOnboardingChecked(true);
+    }
+  }, [onboardingKey, onboardingChecked]);
 
   // ── Onboarding controls ──
   const completeOnboarding = useCallback(() => {
