@@ -1,42 +1,72 @@
 
 
-## Plano: Corrigir cálculo de tempo/calorias para blocos de corrida por zona
+## Plano: Filtro de sessão com métricas por bloco, por sessão e total do dia
 
-### Problema
-O bloco de corrida com formato "5 min corrida 07:15–05:36 Z1" mostra **2 min / ~9 kcal** em vez de **50 min / ~398 kcal**. São dois problemas em cadeia:
+### UI
 
-1. **IA não reconhece o formato**: O prompt do parser tem exemplo para "Corrida contínua 30min Z2" mas não para "5 min corrida 07:15–05:36 Z1". A IA provavelmente não extrai `durationSeconds` corretamente dessas 4 linhas.
+```text
+┌─────────────────────────────────────────────────┐
+│  SEG   TER   QUA   QUI   SEX   SAB   DOM       │  ← sem badge ×2
+└─────────────────────────────────────────────────┘
 
-2. **Estimador de texto falha**: O fallback (`estimateWorkoutTime`) busca distâncias em metros ("400m corrida") mas não reconhece duração em minutos ("5 min corrida"), então retorna ~0.
+┌─────────────────────────────────────────────────┐
+│  [ Todas ]  [ Sessão 1 · Manhã ]  [ Sessão 2 ] │  ← só quando dual session
+└─────────────────────────────────────────────────┘
 
-### Solução
+┌─────────────────────────────────────────────────┐
+│  ⏱ ~85min (total dia)  🔥 ~620 kcal (total dia)│  ← filtro "Todas"
+│  ──────── ou ────────                           │
+│  ⏱ ~50min (sessão 1)   🔥 ~398 kcal (sessão 1) │  ← filtro "Sessão 1"
+└─────────────────────────────────────────────────┘
 
-**1. Adicionar few-shot example ao prompt da IA** (`supabase/functions/parse-workout-blocks/index.ts`)
-
-Adicionar exemplo para corrida por zona com pace range:
+│  📦 Bloco: Corrida         ⏱ 50min  🔥 398kcal │  ← métricas por bloco
+│  📦 Bloco: Conditioning    ⏱ 20min  🔥 145kcal │     (já existe, mas só
+│  📦 Bloco: Core            ⏱ 15min  🔥  77kcal │      pra sessão 1)
+└─────────────────────────────────────────────────┘
 ```
-Input block title: "Corrida", content:
-"5 min corrida 07:15–05:36 Z1\n20 min corrida 05:31–04:54 Z2\n20 min corrida 04:50–04:36 Z3\n5 min corrida 07:15–05:36 Z1"
 
-Output: [
-  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"},
-  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":2,"notes":"Pace 05:31–04:54"},
-  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":3,"notes":"Pace 04:50–04:36"},
-  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"}
-]
-```
+### Problema atual
+- `blockMetricsMap` calcula métricas **só para `currentWorkout`** (sessão 1)
+- Sessão 2 mostra `0 kcal / 0 min` nos blocos (linhas 501-503: `sessionIdx === 0` check)
+- Header de tempo/kcal só aparece na sessão 1 (linhas 445-462)
 
-Também adicionar regra geral no prompt: "X min corrida/remo/ski" = `durationSeconds: X*60`, pace ranges (07:15–05:36) vão em `notes`.
+### Implementação — arquivo único: `WeeklyTrainingView.tsx`
 
-**2. Melhorar estimador de texto** (`src/utils/estimateWorkoutTime.ts`)
+**1. Computar métricas para TODAS as sessões**
+- Trocar `blockMetricsMap` de `useMemo` baseado em `currentWorkout` para um mapa indexado por sessão
+- Novo shape: `Map<sessionIdx, { perBlock[], totalTime, totalCalories }>`
+- Cada sessão computa seus blocos independentemente com `computeBlockMetrics` + fallback `estimateBlock`
 
-Adicionar detecção de padrão "X min corrida/run/remo/ski" para o fallback funcionar quando a IA não está disponível.
+**2. Calcular totais do dia**
+- `dayTotalTime` = soma dos `totalTime` de todas as sessões
+- `dayTotalCalories` = soma dos `totalCalories` de todas as sessões
 
-### Arquivos alterados
-- `supabase/functions/parse-workout-blocks/index.ts` — novo example + regra de duração
-- `src/utils/estimateWorkoutTime.ts` — regex para "X min corrida"
+**3. Adicionar estado de filtro de sessão**
+- `activeSession: null | 1 | 2` (null = "Todas")
+- Reset para `null` quando `activeDay` muda
+
+**4. Remover badge ×2** (linhas 357-359)
+
+**5. Renderizar barra de filtro** (entre day tabs e conteúdo)
+- 3 pills: "Todas", "Sessão 1 · {label}", "Sessão 2 · {label}"
+- Cada pill mostra subtotal: `⏱ Xmin · 🔥 Y kcal`
+- Pill ativa: `bg-primary text-primary-foreground`
+
+**6. Header de stats dinâmico**
+- Filtro "Todas" → mostra `dayTotalTime` e `dayTotalCalories`
+- Filtro "Sessão N" → mostra total daquela sessão
+- Remove o check `sessionIdx === 0` que bloqueava stats da sessão 2
+
+**7. Métricas por bloco em ambas sessões**
+- Remove guard `sessionIdx === 0` (linhas 501-503) que zerava métricas da sessão 2
+- Usa o mapa indexado por sessão para cada bloco
+
+**8. Filtrar sessões exibidas**
+- `displayedSessions = activeSession ? dayWorkouts.filter(w => w.session === activeSession) : dayWorkouts`
 
 ### Resultado
-- Bloco de corrida por zona calcula corretamente: ~50 min, ~398 kcal
-- Funciona tanto com IA quanto com fallback de texto
+- Cada bloco mostra tempo e kcal corretos (ambas sessões)
+- Subtotal por sessão visível nas pills do filtro
+- Total do dia agregado quando "Todas" está selecionado
+- Navegação intuitiva entre sessões
 
