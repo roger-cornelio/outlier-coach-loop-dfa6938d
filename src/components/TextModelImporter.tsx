@@ -1637,10 +1637,10 @@ BLOCO: DESCANSO
                   Edição do Treino
                 </CardTitle>
               </div>
-              {/* Badge de cobertura — clicável, abre modal de detalhes */}
+              {/* Badge de cobertura + legenda — clicável, abre modal de detalhes */}
               {coverageReport && coverageReport.totalExercises > 0 && (
-                <>
-                  <Badge 
+                <div className="flex items-center gap-2">
+                  <Badge
                     variant="outline" 
                     className={`text-xs px-3 py-1 cursor-pointer transition-colors ${
                       coverageReport.successRate === 100
@@ -1819,7 +1819,8 @@ BLOCO: DESCANSO
                       </div>
                     </DialogContent>
                   </Dialog>
-                </>
+                  <MetricsLegend />
+                </div>
               )}
 
               {/* Badge de precisão do motor movido para Preview */}
@@ -2338,9 +2339,6 @@ BLOCO: DESCANSO
 
         {/* STICKY ACTION BAR — Glassmorphism */}
         <div className="sticky bottom-0 z-10 px-4 py-3 -mx-4 backdrop-blur-md bg-background/80 border-t border-border/50">
-          <div className="flex items-center justify-between mb-2">
-            <MetricsLegend />
-          </div>
           <div className="flex gap-3 max-w-full">
             <Button variant="outline" onClick={goBackToImport} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
