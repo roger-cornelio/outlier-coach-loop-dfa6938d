@@ -228,6 +228,30 @@ function extractPatterns(text: string): ExtractedItem[] {
     }
   }
 
+  // Padrão de duração em minutos: "5 min corrida", "20min remo", "30 min run"
+  const durationPatterns = [
+    { regex: /(\d+)\s*(?:min|minutos?|')\s*(corrida|run|running)/gi, type: 'corrida' },
+    { regex: /(\d+)\s*(?:min|minutos?|')\s*(remo|row|rowing)/gi, type: 'remo' },
+    { regex: /(\d+)\s*(?:min|minutos?|')\s*(skierg|ski\s*erg|ski)/gi, type: 'skierg' },
+    { regex: /(\d+)\s*(?:min|minutos?|')\s*(bike|assault\s*bike|air\s*bike|echo\s*bike)/gi, type: 'bike' },
+  ];
+
+  for (const pattern of durationPatterns) {
+    let match;
+    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+    while ((match = regex.exec(text)) !== null) {
+      const minutes = parseInt(match[1], 10);
+      if (!isNaN(minutes) && minutes > 0) {
+        items.push({
+          type: pattern.type,
+          value: minutes,
+          unit: 'min',
+          seconds: minutes * 60 + TRANSITION_TIME,
+        });
+      }
+    }
+  }
+
   // Padrão genérico de reps: "15 reps", "20 repetições"
   const genericRepRegex = /(\d+)\s*(reps?|repetições?|repetições)/gi;
   let genericMatch;
