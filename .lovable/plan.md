@@ -1,25 +1,42 @@
 
 
-## Plano: Adicionar botão de excluir usuário no CRM
+## Plano: Corrigir cálculo de tempo/calorias para blocos de corrida por zona
 
-### O que muda
-Adicionar um botão de lixeira (Trash2) na coluna "Ações" de cada linha do CRM, ao lado do botão existente de desativar coach. Ao clicar, abre um diálogo de confirmação e chama a Edge Function `delete-user` que já existe e já faz a exclusão completa (dados, perfil, auth).
+### Problema
+O bloco de corrida com formato "5 min corrida 07:15–05:36 Z1" mostra **2 min / ~9 kcal** em vez de **50 min / ~398 kcal**. São dois problemas em cadeia:
 
-### Implementação
+1. **IA não reconhece o formato**: O prompt do parser tem exemplo para "Corrida contínua 30min Z2" mas não para "5 min corrida 07:15–05:36 Z1". A IA provavelmente não extrai `durationSeconds` corretamente dessas 4 linhas.
 
-**Arquivo: `src/components/admin/crm/VisaoGeralTab.tsx`**
+2. **Estimador de texto falha**: O fallback (`estimateWorkoutTime`) busca distâncias em metros ("400m corrida") mas não reconhece duração em minutos ("5 min corrida"), então retorna ~0.
 
-1. Importar o ícone `Trash2` do lucide-react
-2. Adicionar estado `deleteTarget` (similar ao `deactivateTarget` existente) e `deletingUser`
-3. Na coluna de Ações, adicionar botão de lixeira para **todos os usuários** (não apenas coaches)
-4. Adicionar um segundo `AlertDialog` de confirmação com aviso de que a exclusão é permanente
-5. No handler, chamar `supabase.functions.invoke('delete-user', { body: { target_user_id } })` e atualizar a lista local ao confirmar
+### Solução
 
-### Segurança
-A Edge Function `delete-user` já valida que apenas **superadmins** podem excluir. Usuários sem permissão receberão erro 403.
+**1. Adicionar few-shot example ao prompt da IA** (`supabase/functions/parse-workout-blocks/index.ts`)
+
+Adicionar exemplo para corrida por zona com pace range:
+```
+Input block title: "Corrida", content:
+"5 min corrida 07:15–05:36 Z1\n20 min corrida 05:31–04:54 Z2\n20 min corrida 04:50–04:36 Z3\n5 min corrida 07:15–05:36 Z1"
+
+Output: [
+  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"},
+  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":2,"notes":"Pace 05:31–04:54"},
+  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":1200,"intensityType":"zone","intensityValue":3,"notes":"Pace 04:50–04:36"},
+  {"slug":"running","name":"Running","movementPatternSlug":"distance_cardio","sets":1,"durationSeconds":300,"intensityType":"zone","intensityValue":1,"notes":"Pace 07:15–05:36"}
+]
+```
+
+Também adicionar regra geral no prompt: "X min corrida/remo/ski" = `durationSeconds: X*60`, pace ranges (07:15–05:36) vão em `notes`.
+
+**2. Melhorar estimador de texto** (`src/utils/estimateWorkoutTime.ts`)
+
+Adicionar detecção de padrão "X min corrida/run/remo/ski" para o fallback funcionar quando a IA não está disponível.
+
+### Arquivos alterados
+- `supabase/functions/parse-workout-blocks/index.ts` — novo example + regra de duração
+- `src/utils/estimateWorkoutTime.ts` — regex para "X min corrida"
 
 ### Resultado
-- Botão de excluir visível em cada linha do CRM
-- Confirmação obrigatória antes de excluir
-- Exclusão completa via Edge Function existente (perfil, dados, auth)
+- Bloco de corrida por zona calcula corretamente: ~50 min, ~398 kcal
+- Funciona tanto com IA quanto com fallback de texto
 
