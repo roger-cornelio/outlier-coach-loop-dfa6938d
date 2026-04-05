@@ -5,7 +5,7 @@
  * Uses Lucide icons and OUTLIER color palette throughout.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, X, LayoutDashboard, Calendar, TrendingUp, Target, Settings, icons } from 'lucide-react';
 import { Button } from '@/components/ui/button';
