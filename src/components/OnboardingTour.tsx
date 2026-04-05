@@ -5,7 +5,7 @@
  * Uses Lucide icons and OUTLIER color palette throughout.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, X, LayoutDashboard, Calendar, TrendingUp, Target, Settings, icons } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,8 +43,11 @@ export function OnboardingTour() {
 
   const { isSetupComplete } = useOnboardingDecision();
 
+  const tourStartedRef = useRef(false);
+
   useEffect(() => {
-    if (isSetupComplete && shouldShowTour() && !isActive) {
+    if (isSetupComplete && shouldShowTour() && !isActive && !tourStartedRef.current) {
+      tourStartedRef.current = true;
       const timer = setTimeout(() => startTour(), 1500);
       return () => clearTimeout(timer);
     }

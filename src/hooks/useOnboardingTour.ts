@@ -5,7 +5,7 @@
  * Uses localStorage scoped by userId to track if tour was already seen.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppState } from './useAppState';
 
 const TOUR_SEEN_PREFIX = 'outlier_onboarding_tour_seen_';
@@ -94,6 +94,12 @@ export function useOnboardingTour() {
 
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const hasCheckedRef = useRef(false);
+
+  // Reset check flag when storageKey changes (user switch)
+  useEffect(() => {
+    hasCheckedRef.current = false;
+  }, [storageKey]);
 
   const shouldShowTour = useCallback(() => {
     if (!storageKey) return false;
