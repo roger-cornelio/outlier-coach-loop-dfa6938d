@@ -473,6 +473,17 @@ export default function CoachDashboard() {
             </div>
             <div className="flex items-center gap-2">
               <NotificationBell />
+              {!coachTour.onboardingActive && !coachTour.tourActive && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={coachTour.startTour}
+                  className="h-9 w-9 text-muted-foreground hover:text-primary"
+                  title="Tour guiado"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -488,19 +499,6 @@ export default function CoachDashboard() {
                 {isLoggingOut ? 'Saindo...' : 'Sair'}
               </Button>
             </div>
-
-            {/* Help button to re-trigger tour */}
-            {!coachTour.onboardingActive && !coachTour.tourActive && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={coachTour.startTour}
-                className="h-9 w-9 text-muted-foreground hover:text-primary"
-                title="Tour guiado"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
-            )}
           </div>
         </div>
       </header>
