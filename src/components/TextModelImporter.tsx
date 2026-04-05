@@ -40,6 +40,8 @@ import { autoFormatDSL, previewAutoFormatChanges } from '@/utils/dslAutoFormat';
 import { StructureBadge, CommentSubBlock, CategoryChip, ExerciseLine, IntensityBadge, SemanticExerciseLine } from './DSLBlockRenderer';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal } from '@/utils/workoutEstimation';
 import { extractMovementName } from '@/utils/lineSemanticExtractor';
+import { MetricsGabarito } from './MetricsGabarito';
+import type { SemanticOverride } from '@/types/outlier';
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { getBlockTimeMeta } from '@/utils/timeValidation';
 import { getBlockDisplayTitle, STRUCT_LINE_PREFIX, INTENSITY_LINE_PREFIX } from '@/utils/blockDisplayUtils';
@@ -586,6 +588,8 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
   const [showCoverageModal, setShowCoverageModal] = useState(false);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [exerciseTypoWarnings, setExerciseTypoWarnings] = useState<ExerciseTypoWarning[]>([]);
+  const [showGabarito, setShowGabarito] = useState(true);
+  const [lineOverrides, setLineOverrides] = useState<Record<string, SemanticOverride[]>>({});
   
 
   // Recalcula cobertura quando a biblioteca de exercícios atualiza (ex: admin aprovou exercício novo)
@@ -2234,7 +2238,23 @@ BLOCO: DESCANSO
                                               </div>
                                             );
                                           }
-                                          return <SemanticExerciseLine key={idx} line={line} className="truncate" />;
+                                          return (
+                                            <div key={idx}>
+                                              <SemanticExerciseLine line={line} className="truncate" />
+                                              {showGabarito && (
+                                                <MetricsGabarito
+                                                  line={line}
+                                                  overrides={lineOverrides[`${dayIndex}-${blockIndex}-${idx}`] || []}
+                                                  onChange={(ovr) => {
+                                                    setLineOverrides(prev => ({
+                                                      ...prev,
+                                                      [`${dayIndex}-${blockIndex}-${idx}`]: ovr,
+                                                    }));
+                                                  }}
+                                                />
+                                              )}
+                                            </div>
+                                          );
                                         })}
 
                                         
@@ -2335,6 +2355,15 @@ BLOCO: DESCANSO
 
         {/* STICKY ACTION BAR — Glassmorphism */}
         <div className="sticky bottom-0 z-10 px-4 py-3 -mx-4 backdrop-blur-md bg-background/80 border-t border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={() => setShowGabarito(!showGabarito)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              {showGabarito ? '🔍 Gabarito visível' : '🔍 Mostrar gabarito'}
+            </button>
+          </div>
           <div className="flex gap-3 max-w-full">
             <Button variant="outline" onClick={goBackToImport} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
