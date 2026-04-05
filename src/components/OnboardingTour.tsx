@@ -43,8 +43,11 @@ export function OnboardingTour() {
 
   const { isSetupComplete } = useOnboardingDecision();
 
+  const tourStartedRef = useRef(false);
+
   useEffect(() => {
-    if (isSetupComplete && shouldShowTour() && !isActive) {
+    if (isSetupComplete && shouldShowTour() && !isActive && !tourStartedRef.current) {
+      tourStartedRef.current = true;
       const timer = setTimeout(() => startTour(), 1500);
       return () => clearTimeout(timer);
     }
