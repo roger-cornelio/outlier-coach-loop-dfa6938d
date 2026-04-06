@@ -239,7 +239,7 @@ serve(async (req) => {
     console.log("[generate-workout-feedback] Authenticated user:", user.id);
     // ========== END AUTHENTICATION ==========
 
-    const { coachStyle, blocks, dayName, intensity, sex }: RequestBody = await req.json();
+    const { coachStyle, blocks, dayName, intensity, sex, intensityScore, intensityLabel, estimatedMinutes }: RequestBody = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -248,7 +248,7 @@ serve(async (req) => {
 
     // Auto-detect intensity if not provided
     const detectedIntensity = intensity || detectIntensity(blocks);
-    console.log(`Using intensity: ${detectedIntensity}, sex: ${sex || 'not specified'}`);
+    console.log(`Using intensity: ${detectedIntensity}, sex: ${sex || 'not specified'}, score: ${intensityScore}, label: ${intensityLabel}`);
 
     // Build workout summary for context
     const blockTypes = blocks.map(b => b.type);
@@ -258,16 +258,34 @@ serve(async (req) => {
     // Get coach prompts based on athlete sex
     const coachPrompts = getCoachPrompts(sex);
     const systemPrompt = coachPrompts[coachStyle] || coachPrompts.PULSE;
+
+    // Build difficulty context line
+    let difficultyLine = '';
+    if (intensityScore && intensityLabel) {
+      difficultyLine = `\nDificuldade relativa na semana: ${intensityScore} de 10 (${intensityLabel}). Inclua isso naturalmente na sua fala — diga o número e contextualize se é pesado, médio ou leve comparado aos outros dias.`;
+    }
+
+    // Build estimated time line
+    let timeLine = '';
+    if (estimatedMinutes && estimatedMinutes > 0) {
+      timeLine = `\nTempo estimado da sessão: ~${estimatedMinutes} minutos. Mencione isso de forma natural.`;
+    }
     
     const userPrompt = `O atleta vai fazer o treino de ${dayName}. O treino tem esses blocos: ${blockTitles}.
 
 Tipos: ${[...new Set(blockTypes)].join(', ')}
 
 Intensidade: ${intensityContext}
+${difficultyLine}
+${timeLine}
+
+Conteúdo dos blocos (exercícios reais):
+${blocks.map(b => `[${b.title}]: ${b.content.substring(0, 300)}`).join('\n')}
 
 Fale com o atleta ANTES do treino começar. Como se você estivesse ao lado dele no box.
-- Diga o que ele vai enfrentar hoje (cite algo específico do treino)
-- Diga o que isso vai exigir dele
+- Cite pelo menos 1 exercício ESPECÍFICO do treino pelo nome
+- Diga o que vai ser mais exigente
+- Contextualize a dificuldade na semana (use o score x/10 e diga se é o mais pesado, mais leve, etc.)
 - Dê uma direção clara pro treino
 
 2-3 frases no máximo. Linguagem simples, como gente fala. PROIBIDO usar: "estímulo", "valência", "performance", "sistema", "neuromuscular", "aeróbico", "anaeróbico", "vamos lá", "bom treino", "continue evoluindo".
