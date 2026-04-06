@@ -10,6 +10,8 @@ import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek, type DayWorkout } from '@/types/outlier';
 import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, Activity } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DailyBriefingCard } from './DailyBriefingCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
