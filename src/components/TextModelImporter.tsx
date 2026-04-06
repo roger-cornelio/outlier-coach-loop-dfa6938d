@@ -1203,6 +1203,61 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setDeleteConfirm(null);
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // DRAG & DROP — Reordenar blocos dentro do dia ou mover entre dias
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    if (!parseResult || mode !== 'edit') return;
+
+    const from = parseDraggableId(String(active.id));
+    const to = parseDraggableId(String(over.id));
+    if (!from || !to) return;
+
+    const updated = { ...parseResult, days: parseResult.days.map(d => ({ ...d, blocks: [...d.blocks] })) };
+
+    if (from.dayIndex === to.dayIndex) {
+      const blocks = updated.days[from.dayIndex].blocks;
+      const [moved] = blocks.splice(from.blockIndex, 1);
+      blocks.splice(to.blockIndex, 0, moved);
+    } else {
+      const srcBlocks = updated.days[from.dayIndex].blocks;
+      const dstBlocks = updated.days[to.dayIndex].blocks;
+      const [moved] = srcBlocks.splice(from.blockIndex, 1);
+      dstBlocks.splice(to.blockIndex, 0, moved);
+    }
+
+    updateParseResult(updated);
+
+    updateEdited((days) => {
+      if (from.dayIndex === to.dayIndex) {
+        const blocks = days[from.dayIndex]?.blocks;
+        if (!blocks) return;
+        const [moved] = blocks.splice(from.blockIndex, 1);
+        blocks.splice(to.blockIndex, 0, moved);
+      } else {
+        const srcBlocks = days[from.dayIndex]?.blocks;
+        const dstBlocks = days[to.dayIndex]?.blocks;
+        if (!srcBlocks || !dstBlocks) return;
+        const [moved] = srcBlocks.splice(from.blockIndex, 1);
+        dstBlocks.splice(to.blockIndex, 0, moved);
+      }
+    });
+  };
+
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
     if (!parseResult || mode !== 'edit') return;
 
