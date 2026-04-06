@@ -32,6 +32,22 @@ import {
   Wand2, Send, Clock, Flame, ChevronDown, ChevronUp,
   CopyPlus, Merge
 } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { DraggableBlock, parseDraggableId, makeDraggableId } from './DraggableBlock';
 import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
@@ -1187,6 +1203,61 @@ export function TextModelImporter({ onSaveAndGoToPrograms, isSaving = false, ini
     setDeleteConfirm(null);
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // DRAG & DROP — Reordenar blocos dentro do dia ou mover entre dias
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    if (!parseResult || mode !== 'edit') return;
+
+    const from = parseDraggableId(String(active.id));
+    const to = parseDraggableId(String(over.id));
+    if (!from || !to) return;
+
+    const updated = { ...parseResult, days: parseResult.days.map(d => ({ ...d, blocks: [...d.blocks] })) };
+
+    if (from.dayIndex === to.dayIndex) {
+      const blocks = updated.days[from.dayIndex].blocks;
+      const [moved] = blocks.splice(from.blockIndex, 1);
+      blocks.splice(to.blockIndex, 0, moved);
+    } else {
+      const srcBlocks = updated.days[from.dayIndex].blocks;
+      const dstBlocks = updated.days[to.dayIndex].blocks;
+      const [moved] = srcBlocks.splice(from.blockIndex, 1);
+      dstBlocks.splice(to.blockIndex, 0, moved);
+    }
+
+    updateParseResult(updated);
+
+    updateEdited((days) => {
+      if (from.dayIndex === to.dayIndex) {
+        const blocks = days[from.dayIndex]?.blocks;
+        if (!blocks) return;
+        const [moved] = blocks.splice(from.blockIndex, 1);
+        blocks.splice(to.blockIndex, 0, moved);
+      } else {
+        const srcBlocks = days[from.dayIndex]?.blocks;
+        const dstBlocks = days[to.dayIndex]?.blocks;
+        if (!srcBlocks || !dstBlocks) return;
+        const [moved] = srcBlocks.splice(from.blockIndex, 1);
+        dstBlocks.splice(to.blockIndex, 0, moved);
+      }
+    });
+  };
+
   const saveBlockLines = (dayIndex: number, blockIndex: number, newLines: any[]) => {
     if (!parseResult || mode !== 'edit') return;
 
@@ -1902,8 +1973,14 @@ BLOCO: DESCANSO
             </div>
 
             {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
             <TooltipProvider>
-              <Accordion 
+              <Accordion
                 type="single" 
                 collapsible 
                 className="space-y-4"
@@ -2031,6 +2108,10 @@ BLOCO: DESCANSO
                                 />
                               </div>
                             )}
+                            <SortableContext
+                              items={day.blocks.map((_, bi) => makeDraggableId(dayIndex, bi))}
+                              strategy={verticalListSortingStrategy}
+                            >
                             {day.blocks.map((block, blockIndex) => {
                               // Normalizar título (remover prefixo "BLOCO:" se existir)
                               const rawTitle = block.title?.trim() || '';
@@ -2088,17 +2169,18 @@ BLOCO: DESCANSO
                                 if (!commentText.trim()) return null;
                                 
                                 return (
-                                  <div
-                                    key={blockIndex}
-                                    className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
-                                  >
-                                    <div className="flex items-start gap-2">
-                                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                        {commentText}
-                                      </p>
+                                  <DraggableBlock key={blockIndex} id={makeDraggableId(dayIndex, blockIndex)}>
+                                    <div
+                                      className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                          {commentText}
+                                        </p>
+                                      </div>
                                     </div>
-                                  </div>
+                                  </DraggableBlock>
                                 );
                               }
                               
@@ -2106,8 +2188,8 @@ BLOCO: DESCANSO
                               // TREINO: Bloco funcional completo com header e ações
                               // ═══════════════════════════════════════════════════════════
                               return (
+                                <DraggableBlock key={blockIndex} id={makeDraggableId(dayIndex, blockIndex)}>
                                 <div 
-                                  key={blockIndex}
                                   id={`block-${dayIndex}-${blockIndex}`}
                                   className={`p-4 rounded-2xl transition-all ${
                                     hasValidationErrors
@@ -2287,8 +2369,10 @@ BLOCO: DESCANSO
                                     </div>
                                   )}
                                 </div>
+                                </DraggableBlock>
                               );
                             })}
+                            </SortableContext>
                           </div>
                         )}
                       </AccordionContent>
@@ -2297,6 +2381,7 @@ BLOCO: DESCANSO
                 })}
               </Accordion>
             </TooltipProvider>
+            </DndContext>
 
             {/* SEMANA DE REFERÊNCIA — abaixo dos blocos */}
             <div className="space-y-2 pt-2">
