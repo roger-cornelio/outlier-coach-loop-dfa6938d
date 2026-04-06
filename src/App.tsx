@@ -9,7 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SessionRefreshBanner } from "@/components/SessionRefreshBanner";
 import { AppGate } from "@/components/AppGate";
 import { DebugKeyboardToggle } from "@/components/DebugKeyboardToggle";
-import { GlobalDebugBar } from "@/components/GlobalDebugBar";
+
 import { SuperadminBadge } from "@/components/SuperadminBadge";
 import { OfflineQueueIndicator } from "@/components/OfflineQueueIndicator";
 import { useParamsSync } from "@/hooks/useParamsSync";
@@ -23,8 +23,6 @@ import CoachPending from "./pages/CoachPending";
 import CoachRequest from "./pages/CoachRequest";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminPortal from "./pages/AdminPortal";
-import Nutricao from "./pages/Nutricao";
-import MedicinaDoEsporte from "./pages/MedicinaDoEsporte";
 import ProvaAlvo from "./pages/ProvaAlvo";
 import ImportarProva from "./pages/ImportarProva";
 import NotFound from "./pages/NotFound";
@@ -114,8 +112,6 @@ const App = () => (
 
               {/* === PROTECTED DASHBOARDS === */}
               <Route path="/painel-admin" element={<AdminPortal />} />
-              <Route path="/nutricao" element={<Nutricao />} />
-              <Route path="/medicina-do-esporte" element={<MedicinaDoEsporte />} />
               <Route path="/prova-alvo" element={<ProvaAlvo />} />
               <Route path="/importar-prova" element={<ImportarProva />} />
               
@@ -134,8 +130,6 @@ const App = () => (
           </AppGate>
           </ErrorBoundary>
           
-          {/* Global Debug Bar - rendered OUTSIDE AppGate, at root level */}
-          <GlobalDebugBar />
           <SuperadminBadge />
           <OfflineQueueIndicator />
           </ParamsSyncProvider>

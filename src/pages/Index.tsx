@@ -34,7 +34,7 @@ import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
 import { WeeklyTrainingView } from "@/components/WeeklyTrainingView";
 import { EvolutionTab } from "@/components/evolution/EvolutionTab";
-import { DebugPanel } from "@/components/DebugPanel";
+
 import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
 import { useLevelTheme } from "@/hooks/useLevelTheme";
@@ -410,22 +410,6 @@ const Index = () => {
         {showSidebar && <OnboardingTour />}
 
 
-        {/* Debug Panel - only in development */}
-        <DebugPanel
-          state={{
-            authStatus: onboardingDecision.authStatus,
-            userId: onboardingDecision.userId,
-            profileLoaded: onboardingDecision.profileLoaded,
-            profileCoachStyle: onboardingDecision.profileCoachStyle,
-            firstSetupCompleted: onboardingDecision.firstSetupCompleted,
-            isSetupComplete: onboardingDecision.isSetupComplete,
-            localCoachStyle: onboardingDecision.localCoachStyle,
-            shouldShowOnboarding: onboardingDecision.shouldShowOnboarding,
-            currentRoute: '/app',
-            currentView: currentView,
-            lastRedirectReason: onboardingDecision.lastRedirectReason,
-          }}
-        />
       </div>
     </SidebarProvider>
   );
