@@ -18,6 +18,9 @@ interface RequestBody {
   dayName: string;
   intensity?: 'easy' | 'medium' | 'hard';
   sex?: 'Masculino' | 'Feminino';
+  intensityScore?: number;
+  intensityLabel?: string;
+  estimatedMinutes?: number;
 }
 
 const INTENSITY_CONTEXT = {

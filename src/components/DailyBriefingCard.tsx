@@ -249,6 +249,19 @@ const MESSAGE_BUILDERS: Record<CoachStyle, (data: BriefingData) => string> = {
 };
 
 // ============================================
+// HELPERS: intensity label for AI
+// ============================================
+
+function getIntensityLabel(score: number): string {
+  if (score >= 9) return 'o mais pesado da semana';
+  if (score >= 7) return 'dos mais pesados da semana';
+  if (score <= 2) return 'o mais leve da semana';
+  if (score <= 3) return 'dos mais leves da semana';
+  if (score === 5) return 'intermediário na semana';
+  return score >= 6 ? 'acima da média na semana' : 'abaixo da média na semana';
+}
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -270,7 +283,8 @@ export function DailyBriefingCard({ workout: workoutProp, allWorkouts: allWorkou
   // Use prop workout if provided, otherwise fallback to today
   const todayWorkout = workoutProp || fallbackWorkouts.find(w => w.day === getCurrentDayOfWeek());
   
-  const message = useMemo(() => {
+  // Compute briefing data (used for local template + AI call)
+  const briefingData = useMemo(() => {
     const isRestDay = !todayWorkout || todayWorkout.isRestDay || todayWorkout.blocks.length === 0;
     
     const data: BriefingData = {
@@ -282,26 +296,83 @@ export function DailyBriefingCard({ workout: workoutProp, allWorkouts: allWorkou
     };
     
     if (!isRestDay && todayWorkout) {
-      // Use totalMinutes from parent (same source as the view) when available
       if (totalMinutes && totalMinutes > 0) {
         data.estimatedMinutes = totalMinutes;
       } else {
         const est = estimateWorkout(todayWorkout, athleteConfig || null, 'open' as any);
         data.estimatedMinutes = Math.round(est?.totals.estimatedMinutesTotal || 0);
       }
-      
-      // Main block
       data.mainBlockDesc = getMainBlockDescription(todayWorkout.blocks);
-      
-      // Intensity vs week
       if (displayWorkouts.length > 0) {
         data.intensityScore = calculateIntensityScore(todayWorkout, displayWorkouts, athleteConfig, 'open');
       }
     }
     
+    return data;
+  }, [todayWorkout, displayWorkouts, athleteConfig, totalMinutes]);
+
+  // Local template message (instant fallback)
+  const localMessage = useMemo(() => {
     const builder = MESSAGE_BUILDERS[currentCoachStyle];
-    return builder(data);
-  }, [todayWorkout, displayWorkouts, athleteConfig, currentCoachStyle, totalMinutes]);
+    return builder(briefingData);
+  }, [briefingData, currentCoachStyle]);
+
+  // AI-generated message (async, replaces local when ready)
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const cacheRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    if (briefingData.isRestDay || !todayWorkout || todayWorkout.blocks.length === 0) {
+      setAiMessage(null);
+      return;
+    }
+
+    const dayKey = `${todayWorkout.day}-${getWeekNumber()}`;
+    if (cacheRef.current[dayKey]) {
+      setAiMessage(cacheRef.current[dayKey]);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    (async () => {
+      try {
+        const blocks = todayWorkout.blocks
+          .filter(b => b.type !== 'notas')
+          .map(b => ({ type: b.type, title: b.title || '', content: b.content }));
+
+        const sex = athleteConfig?.sexo || undefined;
+        const intensityLabel = getIntensityLabel(briefingData.intensityScore);
+
+        const { data, error } = await supabase.functions.invoke('generate-workout-feedback', {
+          body: {
+            coachStyle: currentCoachStyle,
+            blocks,
+            dayName: todayWorkout.day,
+            sex,
+            intensityScore: briefingData.intensityScore,
+            intensityLabel,
+            estimatedMinutes: briefingData.estimatedMinutes,
+          },
+        });
+
+        if (!cancelled && data?.feedback && !data.fallback) {
+          cacheRef.current[dayKey] = data.feedback;
+          setAiMessage(data.feedback);
+        }
+      } catch {
+        // keep local template
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    })();
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [todayWorkout?.day, briefingData.isRestDay, briefingData.intensityScore, currentCoachStyle]);
+
+  const message = aiMessage || localMessage;
   
   // Don't show if no workouts at all
   if (displayWorkouts.length === 0) return null;
