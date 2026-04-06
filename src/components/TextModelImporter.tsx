@@ -2108,6 +2108,10 @@ BLOCO: DESCANSO
                                 />
                               </div>
                             )}
+                            <SortableContext
+                              items={day.blocks.map((_, bi) => makeDraggableId(dayIndex, bi))}
+                              strategy={verticalListSortingStrategy}
+                            >
                             {day.blocks.map((block, blockIndex) => {
                               // Normalizar título (remover prefixo "BLOCO:" se existir)
                               const rawTitle = block.title?.trim() || '';
