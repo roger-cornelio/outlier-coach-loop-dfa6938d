@@ -19,7 +19,7 @@ import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
-import { buildSemanticSummary } from '@/utils/workoutSemanticSummary';
+
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
