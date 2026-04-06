@@ -415,12 +415,13 @@ export function WeeklyTrainingView() {
                     <button
                       key={`filter-${sessionNum}`}
                       onClick={() => setActiveSession(sessionNum as 1 | 2)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                         activeSession === sessionNum
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                          ? 'bg-primary/10 text-primary border border-primary/20'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-transparent'
                       }`}
                     >
+                      <Zap className="w-3.5 h-3.5" />
                       {label}
                     </button>
                   );
@@ -437,17 +438,6 @@ export function WeeklyTrainingView() {
               return (
                 <div key={`session-${sessionWorkout.session || sessionIdx}`} className="space-y-4">
                   {/* Session Header */}
-                  {sessionLabel && (
-                    <div className="flex items-center gap-3 pt-2">
-                      <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                        <Zap className="w-4 h-4 text-primary" />
-                        <span className="font-display text-sm font-bold text-primary uppercase tracking-wider">
-                          {sessionLabel}
-                        </span>
-                      </div>
-                      <div className="flex-1 h-px bg-border/50" />
-                    </div>
-                  )}
 
               {/* Rest Day */}
               {sessionWorkout.isRestDay && (
