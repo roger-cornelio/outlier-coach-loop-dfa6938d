@@ -294,7 +294,6 @@ const Index = () => {
     athleteWelcome: AthleteWelcomeScreen,
     config: AthleteConfig,
     dashboard: Dashboard,
-    dashboard: Dashboard,
     weeklyTraining: WeeklyTrainingView,
     workout: WorkoutExecution,
     result: ResultRecording,
