@@ -21,7 +21,7 @@ import { useEvents } from "@/hooks/useEvents";
 import { useOnboardingDecision } from "@/hooks/useOnboardingDecision";
 import type { CoachStyle } from "@/types/outlier";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
-import { PreWorkoutScreen } from "@/components/PreWorkoutScreen";
+
 import { AthleteWelcomeScreen } from "@/components/AthleteWelcomeScreen";
 import { AthleteConfig } from "@/components/AthleteConfig";
 import { Dashboard } from "@/components/Dashboard";
@@ -293,7 +293,6 @@ const Index = () => {
     welcome: WelcomeScreen,
     athleteWelcome: AthleteWelcomeScreen,
     config: AthleteConfig,
-    preWorkout: PreWorkoutScreen,
     dashboard: Dashboard,
     weeklyTraining: WeeklyTrainingView,
     workout: WorkoutExecution,
