@@ -2374,6 +2374,7 @@ BLOCO: DESCANSO
                 })}
               </Accordion>
             </TooltipProvider>
+            </DndContext>
 
             {/* SEMANA DE REFERÊNCIA — abaixo dos blocos */}
             <div className="space-y-2 pt-2">
