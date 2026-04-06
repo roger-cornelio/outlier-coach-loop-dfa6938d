@@ -47,7 +47,7 @@ import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { AthleteHeroIdentity } from './AthleteHeroIdentity';
 import { WeeklySummaryCard } from './WeeklySummaryCard';
 import { useWorkoutStreak } from '@/hooks/useWorkoutStreak';
-import { DailyBriefingCard } from './DailyBriefingCard';
+
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -358,10 +358,6 @@ export function Dashboard() {
             BLOCO 1 — PERFIL DE PERFORMANCE COMPLETO
             (Diagnóstico + Limitador + Impacto + Projeção + CTA)
             ============================================ */}
-        {/* Daily Briefing Card — fala do coach */}
-        <section className="mb-4">
-          <DailyBriefingCard />
-        </section>
 
         {/* Streak Badge */}
         {isStreakActive && currentStreak >= 2 && (

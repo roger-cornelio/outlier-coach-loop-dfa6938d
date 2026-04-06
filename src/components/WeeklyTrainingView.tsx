@@ -8,17 +8,18 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek, type DayWorkout } from '@/types/outlier';
-import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, MessageSquareText, Activity } from 'lucide-react';
+import { Clock, Zap, ChevronRight, Flame, History, ArrowLeft, CheckCircle2, RefreshCw, Activity } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DailyBriefingCard } from './DailyBriefingCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthletePlan } from '@/hooks/useAthletePlan';
 import { WeekNavigator } from './WeekNavigator';
 import { getBlockDisplayTitle, getBlockDisplayDataFromParsed } from '@/utils/blockDisplayUtils';
 import { CategoryChip, StructureBadge, CommentSubBlock, ExerciseLine, IntensityBadge } from './DSLBlockRenderer';
 import { estimateBlock, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
-import { buildSemanticSummary } from '@/utils/workoutSemanticSummary';
+
 import { computeBlockMetrics } from '@/utils/computeBlockKcalFromParsed';
 import { identifyMainBlock } from '@/utils/mainBlockIdentifier';
 import { OutlierWordmark } from '@/components/ui/OutlierWordmark';
@@ -239,56 +240,6 @@ export function WeeklyTrainingView() {
     ? (displayedSessions[0]?.metrics.totalCalories ?? 0)
     : dayTotalCalories;
 
-  // ====== AI Daily Summary ======
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
-  const aiCacheRef = useRef<Map<string, string>>(new Map());
-
-  const buildWorkoutSummaryText = useCallback((workout: typeof currentWorkout) => {
-    if (!workout || workout.isRestDay) return '';
-    return buildSemanticSummary(workout.blocks as any);
-  }, []);
-
-  useEffect(() => {
-    if (!currentWorkout || currentWorkout.isRestDay) {
-      setAiSummary(null);
-      return;
-    }
-
-    const cacheKey = `${currentWeek.start}_${activeDay}`;
-    if (aiCacheRef.current.has(cacheKey)) {
-      setAiSummary(aiCacheRef.current.get(cacheKey)!);
-      return;
-    }
-
-    let cancelled = false;
-    const fetchSummary = async () => {
-      setAiSummaryLoading(true);
-      try {
-        const summaryText = buildWorkoutSummaryText(currentWorkout);
-        const coachStyle = profile?.coach_style || 'PULSE';
-        const { data, error } = await supabase.functions.invoke('generate-preworkout-message', {
-          body: {
-            mode: 'daily_summary',
-            coachStyle,
-            workoutSummary: summaryText,
-            hasWorkout: true,
-            sex: athleteConfig?.sexo || undefined,
-          },
-        });
-        if (!cancelled && data?.message) {
-          setAiSummary(data.message);
-          aiCacheRef.current.set(cacheKey, data.message);
-        }
-      } catch (e) {
-        console.error('AI summary error:', e);
-      } finally {
-        if (!cancelled) setAiSummaryLoading(false);
-      }
-    };
-    fetchSummary();
-    return () => { cancelled = true; };
-  }, [activeDay, currentWorkout?.day, currentWeek.start]);
 
   const handleStartWorkout = () => {
     if (currentWorkout) {
@@ -535,30 +486,9 @@ export function WeeklyTrainingView() {
                 </div>
               )}
 
-            {/* AI Daily Summary — only on first session block rendered */}
-            {sessionIdx === 0 && !sessionWorkout.isRestDay && (aiSummaryLoading || aiSummary) && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-xl bg-secondary/50 border border-border"
-              >
-                <div className="flex items-start gap-3">
-                  <MessageSquareText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-primary mb-1.5 block">
-                      Coach {(profile?.coach_style || 'PULSE')}
-                    </span>
-                    {aiSummaryLoading ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-foreground/90 leading-relaxed">{aiSummary}</p>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
+            {/* Daily Briefing — fala do coach (apenas na primeira sessão) */}
+            {sessionIdx === 0 && !sessionWorkout.isRestDay && (
+              <DailyBriefingCard />
             )}
 
             {/* Workout Blocks */}
