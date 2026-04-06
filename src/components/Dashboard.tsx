@@ -378,14 +378,17 @@ export function Dashboard() {
         </section>
 
         {/* Empty state when athlete has coach but no workouts */}
-        {hasCoach && !hasAnyWorkouts && !loadingPlan && (
-          <section className="mb-6">
-            <div className="flex flex-col items-center justify-center py-10 px-6 text-center rounded-2xl border border-dashed border-border bg-muted/30">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <CalendarDays className="w-7 h-7 text-primary/60" />
+        {hasCoach && !hasAnyWorkouts && !loadingPlan && !dismissedNoWorkouts && (
+          <section className="mb-4">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-muted/20">
+              <CalendarDays className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Treino desta semana ainda não foi publicado</p>
+                <p className="text-xs text-muted-foreground">Aparecerá aqui quando seu coach publicar</p>
               </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">Seu coach ainda não publicou o treino desta semana</h3>
-              <p className="text-sm text-muted-foreground max-w-xs">Fique tranquilo — assim que o plano for publicado, ele aparecerá aqui automaticamente.</p>
+              <button onClick={() => setDismissedNoWorkouts(true)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </section>
         )}
