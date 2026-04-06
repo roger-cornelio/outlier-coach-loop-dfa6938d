@@ -33,7 +33,7 @@ import { BenchmarksScreen } from "@/components/BenchmarksScreen";
 import { CoachPerformance } from "@/components/CoachPerformance";
 import { CoachApplicationPage } from "@/components/CoachApplicationPage";
 import { WeeklyTrainingView } from "@/components/WeeklyTrainingView";
-import { EvolutionTab } from "@/components/evolution/EvolutionTab";
+
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCoachTheme } from "@/hooks/useCoachTheme";
