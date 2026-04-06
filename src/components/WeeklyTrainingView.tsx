@@ -381,6 +381,15 @@ export function WeeklyTrainingView() {
               <h2 className="font-display text-2xl sm:text-3xl mb-2">{DAY_NAMES[currentWorkout.day]}</h2>
             </div>
 
+            {/* Daily Briefing — fala do coach */}
+            {!currentWorkout.isRestDay && dayWorkouts[0] && (
+              <DailyBriefingCard 
+                workout={dayWorkouts[0]} 
+                allWorkouts={displayWorkouts} 
+                totalMinutes={displayTotalTime}
+              />
+            )}
+
             {/* Day-level stats (when no dual sessions, or "Todas" selected) */}
             {!currentWorkout.isRestDay && (
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
@@ -459,14 +468,6 @@ export function WeeklyTrainingView() {
                 </div>
               )}
 
-            {/* Daily Briefing — fala do coach (apenas na primeira sessão) */}
-            {sessionIdx === 0 && !sessionWorkout.isRestDay && (
-              <DailyBriefingCard 
-                workout={sessionWorkout} 
-                allWorkouts={displayWorkouts} 
-                totalMinutes={displayTotalTime}
-              />
-            )}
 
             {/* Workout Blocks */}
             {sessionWorkout.blocks.map((block, index) => {
