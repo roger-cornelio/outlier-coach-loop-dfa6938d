@@ -2188,8 +2188,8 @@ BLOCO: DESCANSO
                               // TREINO: Bloco funcional completo com header e ações
                               // ═══════════════════════════════════════════════════════════
                               return (
+                                <DraggableBlock key={blockIndex} id={makeDraggableId(dayIndex, blockIndex)}>
                                 <div 
-                                  key={blockIndex}
                                   id={`block-${dayIndex}-${blockIndex}`}
                                   className={`p-4 rounded-2xl transition-all ${
                                     hasValidationErrors
