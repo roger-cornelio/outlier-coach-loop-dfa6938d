@@ -405,6 +405,29 @@ export function WeeklyTrainingView() {
               </div>
             )}
 
+            {/* Session Filter Bar — below stats, only when dual sessions */}
+            {hasDualSessions && (
+              <div className="flex gap-2 pt-1">
+                {dayWorkouts.map((sw, idx) => {
+                  const sessionNum = sw.session || idx + 1;
+                  const label = sw.sessionLabel || `Sessão ${sessionNum}`;
+                  return (
+                    <button
+                      key={`filter-${sessionNum}`}
+                      onClick={() => setActiveSession(sessionNum as 1 | 2)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                        activeSession === sessionNum
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Render each displayed session */}
             {displayedSessions.map(({ workout: sessionWorkout, metrics: sessionMet, originalIdx: sessionIdx }) => {
               const sessionLabel = hasDualSessions
