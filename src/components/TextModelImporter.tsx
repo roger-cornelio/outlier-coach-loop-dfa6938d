@@ -1973,8 +1973,14 @@ BLOCO: DESCANSO
             </div>
 
             {/* Accordion de dias - COM CONTROLES DE EDIÇÃO */}
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
             <TooltipProvider>
-              <Accordion 
+              <Accordion
                 type="single" 
                 collapsible 
                 className="space-y-4"
