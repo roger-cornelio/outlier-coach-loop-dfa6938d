@@ -274,7 +274,7 @@ export function DailyBriefingCard() {
     
     if (!isRestDay && todayWorkout) {
       // Estimate time
-      const est = estimateWorkout(todayWorkout, athleteConfig, 'open');
+      const est = estimateWorkout(todayWorkout, athleteConfig || null, 'open' as any);
       data.estimatedMinutes = Math.round(est?.totals.estimatedMinutesTotal || 0);
       
       // Main block
