@@ -2370,6 +2370,7 @@ BLOCO: DESCANSO
                                 </div>
                               );
                             })}
+                            </SortableContext>
                           </div>
                         )}
                       </AccordionContent>
