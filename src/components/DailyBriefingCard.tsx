@@ -251,15 +251,23 @@ const MESSAGE_BUILDERS: Record<CoachStyle, (data: BriefingData) => string> = {
 // COMPONENT
 // ============================================
 
-export function DailyBriefingCard() {
+interface DailyBriefingCardProps {
+  workout?: DayWorkout;
+  allWorkouts?: DayWorkout[];
+  totalMinutes?: number;
+}
+
+export function DailyBriefingCard({ workout: workoutProp, allWorkouts: allWorkoutsProp, totalMinutes }: DailyBriefingCardProps) {
   const { baseWorkouts, adaptedWorkouts, athleteConfig, coachStyle: storeCoachStyle } = useOutlierStore();
   
   const currentCoachStyle: CoachStyle = (athleteConfig?.coachStyle || storeCoachStyle || 'PULSE') as CoachStyle;
   const CoachIcon = coachIcons[currentCoachStyle];
   
-  const displayWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
-  const currentDay = getCurrentDayOfWeek();
-  const todayWorkout = displayWorkouts.find(w => w.day === currentDay);
+  const fallbackWorkouts = adaptedWorkouts.length > 0 ? adaptedWorkouts : baseWorkouts;
+  const displayWorkouts = allWorkoutsProp || fallbackWorkouts;
+  
+  // Use prop workout if provided, otherwise fallback to today
+  const todayWorkout = workoutProp || fallbackWorkouts.find(w => w.day === getCurrentDayOfWeek());
   
   const message = useMemo(() => {
     const isRestDay = !todayWorkout || todayWorkout.isRestDay || todayWorkout.blocks.length === 0;
@@ -273,9 +281,13 @@ export function DailyBriefingCard() {
     };
     
     if (!isRestDay && todayWorkout) {
-      // Estimate time
-      const est = estimateWorkout(todayWorkout, athleteConfig || null, 'open' as any);
-      data.estimatedMinutes = Math.round(est?.totals.estimatedMinutesTotal || 0);
+      // Use totalMinutes from parent (same source as the view) when available
+      if (totalMinutes && totalMinutes > 0) {
+        data.estimatedMinutes = totalMinutes;
+      } else {
+        const est = estimateWorkout(todayWorkout, athleteConfig || null, 'open' as any);
+        data.estimatedMinutes = Math.round(est?.totals.estimatedMinutesTotal || 0);
+      }
       
       // Main block
       data.mainBlockDesc = getMainBlockDescription(todayWorkout.blocks);
@@ -288,7 +300,7 @@ export function DailyBriefingCard() {
     
     const builder = MESSAGE_BUILDERS[currentCoachStyle];
     return builder(data);
-  }, [todayWorkout, displayWorkouts, athleteConfig, currentCoachStyle]);
+  }, [todayWorkout, displayWorkouts, athleteConfig, currentCoachStyle, totalMinutes]);
   
   // Don't show if no workouts at all
   if (displayWorkouts.length === 0) return null;
