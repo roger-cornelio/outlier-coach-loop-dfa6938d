@@ -1,28 +1,13 @@
 
 
-## Plano: Filtro de sessões simplificado com label do coach
+## Plano: Adicionar ícone ⚡ nos pills do filtro e remover header redundante
 
-### O que muda
+### Alterações em `src/components/WeeklyTrainingView.tsx`
 
-O filtro de sessões (pills acima dos blocos de treino) será simplificado:
+1. **Nos pills do filtro de sessão**: adicionar o ícone `⚡` (Zap) antes do label, ficando ex: "⚡ Sessão 1" / "⚡ MANHÃ"
+2. **Remover o header decorativo** (linhas ~440-449) que aparece abaixo dos pills com o mesmo texto — fica redundante
 
-- **Default sempre Sessão 1** ao abrir qualquer dia
-- **Só 2 pills**: sem botão "Todas"
-- **Sem métricas nos pills**: sem tempo e calorias duplicados
-- **Label inteligente**: mostra o nome que o coach definiu para a sessão (ex: "Manhã", "Tarde"). Se não definiu, mostra "Sessão 1" / "Sessão 2"
-- **Posição**: filtro aparece abaixo do header de tempo total e calorias
-- **Sem toggle**: sempre uma sessão ativa, clicar alterna entre elas
-
-### Alterações técnicas
-
-**Arquivo: `src/components/WeeklyTrainingView.tsx`**
-
-1. Mudar estado inicial de `activeSession` de `null` para `1`
-2. No `useEffect` de troca de dia, resetar para `1` em vez de `null`
-3. Remover o pill "Todas" (linhas ~352-365)
-4. Remover métricas (`⏱ / 🔥`) dos pills restantes — manter só o label
-5. Mover o bloco de filtro para depois do header de stats (tempo + calorias)
-6. Remover lógica de toggle para `null` — clicar seleciona aquela sessão diretamente
-
-Label do pill usa: `sessionLabel || 'Sessão ${num}'` (já existe no código)
+### Resultado
+- Pills com visual "⚡ SESSÃO 2" igual ao header atual
+- Sem duplicação de informação
 
