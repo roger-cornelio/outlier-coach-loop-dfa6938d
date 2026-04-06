@@ -18,8 +18,6 @@ import {
   Settings, 
   LogOut,
   Loader2,
-  Apple,
-  Stethoscope,
   Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -61,16 +59,6 @@ const navItems: NavItem[] = [
     title: 'Prova Alvo',
     route: '/prova-alvo',
     icon: Target
-  },
-  { 
-    title: 'Nutrição', 
-    route: '/nutricao', 
-    icon: Apple
-  },
-  { 
-    title: 'Medicina do Esporte', 
-    route: '/medicina-do-esporte', 
-    icon: Stethoscope
   },
   { 
     title: 'Evolução', 

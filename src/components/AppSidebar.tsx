@@ -17,8 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Apple,
-  Stethoscope,
   Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -73,16 +71,6 @@ export function AppSidebar() {
       title: 'Prova Alvo',
       route: '/prova-alvo',
       icon: Target
-    },
-    { 
-      title: 'Nutrição', 
-      route: '/nutricao', 
-      icon: Apple
-    },
-    { 
-      title: 'Medicina do Esporte', 
-      route: '/medicina-do-esporte', 
-      icon: Stethoscope
     },
     { 
     title: 'Evolução', 

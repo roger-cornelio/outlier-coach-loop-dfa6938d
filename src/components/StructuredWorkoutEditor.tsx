@@ -32,7 +32,7 @@ import {
   isBlockValid,
 } from "./StructuredBlockEditor";
 import { WeekPeriodSelector, WeekPeriod } from "./WeekPeriodSelector";
-import { StructuredEditorDebugBar } from "./StructuredEditorDebugBar";
+
 import { identifyMainBlock } from "@/utils/mainBlockIdentifier";
 import type { DayOfWeek, DayWorkout, WorkoutBlock } from "@/types/outlier";
 import { useExerciseLibrary } from "@/hooks/useExerciseLibrary";
@@ -414,18 +414,7 @@ export function StructuredWorkoutEditor({
   const totalBlocks = days.reduce((acc, day) => acc + day.blocks.length, 0);
 
   return (
-    <div className="space-y-6 pb-16">
-      {" "}
-      {/* pb-16 para dar espaço à DebugBar */}
-      {/* DEBUG BAR TEMPORÁRIA */}
-      <StructuredEditorDebugBar
-        mode="edit"
-        isStructured={true}
-        daysCount={days.length}
-        selectedDayId={selectedDayId}
-        editorRendered={days.length > 0}
-        blocksCount={totalBlocks}
-      />
+    <div className="space-y-6">
       {/* Mensagens */}
       <AnimatePresence>
         {error && (
