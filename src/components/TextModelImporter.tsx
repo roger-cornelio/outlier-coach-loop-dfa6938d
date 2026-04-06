@@ -2169,17 +2169,18 @@ BLOCO: DESCANSO
                                 if (!commentText.trim()) return null;
                                 
                                 return (
-                                  <div
-                                    key={blockIndex}
-                                    className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
-                                  >
-                                    <div className="flex items-start gap-2">
-                                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                        {commentText}
-                                      </p>
+                                  <DraggableBlock key={blockIndex} id={makeDraggableId(dayIndex, blockIndex)}>
+                                    <div
+                                      className="mt-2 ml-2 pl-3 py-2 border-l-2 border-muted-foreground/30 bg-muted/30 rounded-r-md"
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                          {commentText}
+                                        </p>
+                                      </div>
                                     </div>
-                                  </div>
+                                  </DraggableBlock>
                                 );
                               }
                               
