@@ -2369,6 +2369,7 @@ BLOCO: DESCANSO
                                     </div>
                                   )}
                                 </div>
+                                </DraggableBlock>
                               );
                             })}
                             </SortableContext>
