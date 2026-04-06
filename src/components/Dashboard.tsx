@@ -358,6 +358,11 @@ export function Dashboard() {
             BLOCO 1 — PERFIL DE PERFORMANCE COMPLETO
             (Diagnóstico + Limitador + Impacto + Projeção + CTA)
             ============================================ */}
+        {/* Daily Briefing Card — fala do coach */}
+        <section className="mb-4">
+          <DailyBriefingCard />
+        </section>
+
         {/* Streak Badge */}
         {isStreakActive && currentStreak >= 2 && (
           <section className="mb-4">
