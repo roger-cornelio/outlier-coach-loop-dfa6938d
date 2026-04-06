@@ -6,7 +6,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useOutlierStore } from '@/store/outlierStore';
 import { DAY_NAMES, type DayOfWeek } from '@/types/outlier';
-import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History, CalendarDays } from 'lucide-react';
+import { Settings, Clock, Zap, ChevronRight, FileEdit, Flame, ArrowLeft, Loader2, LogIn, LogOut, Trophy, AlertCircle, RefreshCcw, Info, Scale, Target, TrendingUp, History, CalendarDays, X } from 'lucide-react';
 import { calculateProvaAlvoTarget } from '@/utils/evolutionTimeframe';
 import { deduplicateRaceName } from '@/utils/raceNameDedup';
 import { estimateWorkout, formatEstimatedTime, formatEstimatedKcal, getUserBiometrics } from '@/utils/workoutEstimation';
