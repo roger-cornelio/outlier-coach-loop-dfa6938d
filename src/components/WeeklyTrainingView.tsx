@@ -185,12 +185,12 @@ export function WeeklyTrainingView() {
     return days[today] || 'seg';
   });
 
-  // Session filter state
-  const [activeSession, setActiveSession] = useState<null | 1 | 2>(null);
+  // Session filter state — default to session 1
+  const [activeSession, setActiveSession] = useState<null | 1 | 2>(1);
 
   // Reset session filter when day changes
   useEffect(() => {
-    setActiveSession(null);
+    setActiveSession(1);
   }, [activeDay]);
 
   // Dados de conclusão do dia ativo
@@ -346,47 +346,7 @@ export function WeeklyTrainingView() {
           })}
         </div>
 
-        {/* Session Filter Bar — only when dual sessions */}
-        {hasDualSessions && !loadingPlan && (
-          <div className="flex gap-2 py-3 mb-4 overflow-x-auto">
-            {/* "Todas" pill */}
-            <button
-              onClick={() => setActiveSession(null)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                activeSession === null
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              <span>Todas</span>
-              <span className="text-xs opacity-80">
-                ⏱ {dayTotalTime}min · 🔥 {dayTotalCalories} kcal
-              </span>
-            </button>
-
-            {dayWorkouts.map((sw, idx) => {
-              const sessionNum = sw.session || idx + 1;
-              const label = sw.sessionLabel || `Sessão ${sessionNum}`;
-              const met = allSessionMetrics[idx];
-              return (
-                <button
-                  key={`filter-${sessionNum}`}
-                  onClick={() => setActiveSession(sessionNum as 1 | 2)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    activeSession === sessionNum
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  <span>{label}</span>
-                  <span className="text-xs opacity-80">
-                    ⏱ {met?.totalTime || 0}min · 🔥 {met?.totalCalories || 0} kcal
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Session Filter is now rendered below the day stats header */}
 
         {/* Loading State — Skeleton */}
         {loadingPlan && (
@@ -442,6 +402,29 @@ export function WeeklyTrainingView() {
                     <span className="text-xs text-muted-foreground/60">(estimado)</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Session Filter Bar — below stats, only when dual sessions */}
+            {hasDualSessions && (
+              <div className="flex gap-2 pt-1">
+                {dayWorkouts.map((sw, idx) => {
+                  const sessionNum = sw.session || idx + 1;
+                  const label = sw.sessionLabel || `Sessão ${sessionNum}`;
+                  return (
+                    <button
+                      key={`filter-${sessionNum}`}
+                      onClick={() => setActiveSession(sessionNum as 1 | 2)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                        activeSession === sessionNum
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
