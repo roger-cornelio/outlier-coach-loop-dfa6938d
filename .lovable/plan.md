@@ -1,63 +1,42 @@
 
 
-## Plano: Drag & Drop de blocos no editor do coach
+## Plano: Remover placeholders e debug bars de produção
 
-### Problema
-Hoje os blocos dentro de um dia/sessão são fixos — não há como reordenar, mover entre dias ou entre sessões.
+### O que será removido
 
-### Solução
-Usar a biblioteca **@dnd-kit** (leve, acessível, bem mantida) para permitir arrastar blocos dentro do mesmo dia e entre dias/sessões diferentes.
+**1. Nutrição e Medicina do Esporte** — páginas placeholder sem funcionalidade
 
-### UI
+**2. 3 barras de debug** — visíveis em produção, poluem a UI
 
-```text
-┌─ SEGUNDA ──────────────────────────────┐
-│  ⠿ Aquecimento         [≡ drag handle] │  ← arrastar para reordenar
-│  ⠿ WOD Principal       [≡ drag handle] │
-│  ⠿ Core                [≡ drag handle] │
-└─────────────────────────────────────────┘
+### Alterações
 
-┌─ TERÇA ────────────────────────────────┐
-│  ⠿ Corrida             [≡ drag handle] │  ← pode soltar bloco aqui
-│  ⠿ Força               [≡ drag handle] │
-└─────────────────────────────────────────┘
-```
+**Deletar arquivos (4):**
+- `src/pages/Nutricao.tsx`
+- `src/pages/MedicinaDoEsporte.tsx`
+- `src/components/DebugPanel.tsx`
+- `src/components/StructuredEditorDebugBar.tsx`
 
-- Ícone `GripVertical` (já importado) como handle de arraste
-- Ao arrastar entre dias, o bloco é removido do dia de origem e inserido no destino
-- Feedback visual: placeholder com borda tracejada no ponto de destino
+**Editar `src/App.tsx`:**
+- Remover imports de `Nutricao`, `MedicinaDoEsporte`, `GlobalDebugBar`
+- Remover as 2 rotas (`/nutricao`, `/medicina-do-esporte`)
+- Remover `<GlobalDebugBar />`
 
-### Implementação
+**Editar `src/components/AppSidebar.tsx`:**
+- Remover itens "Nutrição" e "Medicina do Esporte" do array de navegação
+- Remover imports de `Apple` e `Stethoscope`
 
-**1. Instalar @dnd-kit**
-- `npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`
+**Editar `src/components/MobileNav.tsx`:**
+- Remover itens "Nutrição" e "Medicina do Esporte" do array de navegação
+- Remover imports de `Apple` e `Stethoscope`
 
-**2. Criar componente wrapper `src/components/DraggableBlock.tsx`**
-- Wrapper com `useSortable` do dnd-kit
-- Recebe children e renderiza com handle + transform styles
-- Cada bloco tem ID composto: `day-{dayIndex}-block-{blockIndex}`
+**Editar `src/pages/Index.tsx`:**
+- Remover import e uso de `<DebugPanel />`
 
-**3. Editar `src/components/TextModelImporter.tsx`**
-- Envolver a lista de dias com `DndContext` + `DragOverlay`
-- Cada dia é um `SortableContext` (droppable zone)
-- O `blocks.map()` (linha ~2034) renderiza cada bloco dentro de `<DraggableBlock>`
-- Handler `onDragEnd`: detecta origem e destino, atualiza o array `parsedDays` movendo o bloco
-- Se origem e destino são o mesmo dia: reordenar array de blocks
-- Se são dias diferentes: splice do origem, splice no destino
-- O `GripVertical` já existe no código — será reutilizado como handle
-
-**4. Lógica de move (`handleBlockMove`)**
-- Extrair `dayIndex` e `blockIndex` do ID composto
-- Atualizar estado `parsedDays` via `setParsedDays` (ou equivalente no estado atual)
-- Recalcular métricas do dia afetado
-
-### Arquivos
-- **Instalar**: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
-- **Criar**: `src/components/DraggableBlock.tsx`
-- **Editar**: `src/components/TextModelImporter.tsx` — DndContext + SortableContext + handler
+**Editar `src/components/StructuredWorkoutEditor.tsx`:**
+- Remover import e uso de `<StructuredEditorDebugBar />`
 
 ### Resultado
-- Coach arrasta blocos para reordenar dentro do dia
-- Coach arrasta blocos entre dias/sessões diferentes
-- Métricas de tempo e calorias recalculam automaticamente
+- Sidebar e mobile nav ficam mais limpos (sem itens "em breve")
+- Zero barras de debug em produção
+- 4 arquivos a menos no projeto
 
