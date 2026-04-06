@@ -116,6 +116,7 @@ export function Dashboard() {
   
   // Estado para modal de categoria ao importar prova
   const [raceImportLevel, setRaceImportLevel] = useState<import('@/types/outlier').AthleteStatus | null>(null);
+  const [dismissedNoWorkouts, setDismissedNoWorkouts] = useState(false);
   
   const navigate = useNavigate();
   
