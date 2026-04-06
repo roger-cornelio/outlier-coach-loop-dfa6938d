@@ -488,7 +488,11 @@ export function WeeklyTrainingView() {
 
             {/* Daily Briefing — fala do coach (apenas na primeira sessão) */}
             {sessionIdx === 0 && !sessionWorkout.isRestDay && (
-              <DailyBriefingCard />
+              <DailyBriefingCard 
+                workout={sessionWorkout} 
+                allWorkouts={displayWorkouts} 
+                totalMinutes={displayTotalTime}
+              />
             )}
 
             {/* Workout Blocks */}
