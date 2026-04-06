@@ -5,9 +5,10 @@
  * Calcula: tipo do treino, tempo estimado, bloco mais pesado, nota na semana.
  * Monta frase natural no tom do coach + frase final rotativa.
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Heart, Zap } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useOutlierStore } from '@/store/outlierStore';
 import type { CoachStyle, DayOfWeek, DayWorkout, WorkoutBlock } from '@/types/outlier';
 import { identifyMainBlock, estimateBlockDuration } from '@/utils/mainBlockIdentifier';
