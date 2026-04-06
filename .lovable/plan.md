@@ -1,31 +1,63 @@
 
 
-## Plano: Mover Legenda para junto do badge "100% interpretado" + enriquecer conteúdo
+## Plano: Drag & Drop de blocos no editor do coach
 
-### O que muda
+### Problema
+Hoje os blocos dentro de um dia/sessão são fixos — não há como reordenar, mover entre dias ou entre sessões.
 
-**1. Mover o botão Legenda** do toolbar inferior para ao lado do badge "🎯 100% interpretado" no header do editor (linha ~1663 do TextModelImporter).
+### Solução
+Usar a biblioteca **@dnd-kit** (leve, acessível, bem mantida) para permitir arrastar blocos dentro do mesmo dia e entre dias/sessões diferentes.
 
-**2. Enriquecer o conteúdo da Legenda** com mais informações explicativas:
-- Adicionar seção introdutória explicando como funciona a interpretação automática
-- Para cada métrica, incluir mais exemplos de formatos válidos
-- Adicionar dicas de como escrever para o parser interpretar melhor (ex: "sempre use unidade após número: 60kg, não apenas 60")
-- Incluir seção "Como funciona" explicando que o sistema lê o texto e identifica automaticamente cada tipo de métrica pela cor
-
-### Arquivos
-- **`src/components/TextModelImporter.tsx`**: mover `<MetricsLegend />` do toolbar inferior para ao lado do badge de cobertura (linha ~1663), remover do toolbar inferior
-- **`src/components/MetricsLegend.tsx`**: expandir conteúdo com mais exemplos, dicas de escrita e seção explicativa
-
-### UI resultado
+### UI
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│ ← Edição do Treino    [🎯 100% interpretado] [🎨 Legenda]│
-└─────────────────────────────────────────────────────────┘
+┌─ SEGUNDA ──────────────────────────────┐
+│  ⠿ Aquecimento         [≡ drag handle] │  ← arrastar para reordenar
+│  ⠿ WOD Principal       [≡ drag handle] │
+│  ⠿ Core                [≡ drag handle] │
+└─────────────────────────────────────────┘
+
+┌─ TERÇA ────────────────────────────────┐
+│  ⠿ Corrida             [≡ drag handle] │  ← pode soltar bloco aqui
+│  ⠿ Força               [≡ drag handle] │
+└─────────────────────────────────────────┘
 ```
 
-O coach clica em "Legenda" e vê:
-- Como o sistema interpreta (explicação curta)
-- Tabela de cores com exemplos expandidos e dicas de formato
-- Nota sobre como melhorar a precisão da interpretação
+- Ícone `GripVertical` (já importado) como handle de arraste
+- Ao arrastar entre dias, o bloco é removido do dia de origem e inserido no destino
+- Feedback visual: placeholder com borda tracejada no ponto de destino
+
+### Implementação
+
+**1. Instalar @dnd-kit**
+- `npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`
+
+**2. Criar componente wrapper `src/components/DraggableBlock.tsx`**
+- Wrapper com `useSortable` do dnd-kit
+- Recebe children e renderiza com handle + transform styles
+- Cada bloco tem ID composto: `day-{dayIndex}-block-{blockIndex}`
+
+**3. Editar `src/components/TextModelImporter.tsx`**
+- Envolver a lista de dias com `DndContext` + `DragOverlay`
+- Cada dia é um `SortableContext` (droppable zone)
+- O `blocks.map()` (linha ~2034) renderiza cada bloco dentro de `<DraggableBlock>`
+- Handler `onDragEnd`: detecta origem e destino, atualiza o array `parsedDays` movendo o bloco
+- Se origem e destino são o mesmo dia: reordenar array de blocks
+- Se são dias diferentes: splice do origem, splice no destino
+- O `GripVertical` já existe no código — será reutilizado como handle
+
+**4. Lógica de move (`handleBlockMove`)**
+- Extrair `dayIndex` e `blockIndex` do ID composto
+- Atualizar estado `parsedDays` via `setParsedDays` (ou equivalente no estado atual)
+- Recalcular métricas do dia afetado
+
+### Arquivos
+- **Instalar**: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+- **Criar**: `src/components/DraggableBlock.tsx`
+- **Editar**: `src/components/TextModelImporter.tsx` — DndContext + SortableContext + handler
+
+### Resultado
+- Coach arrasta blocos para reordenar dentro do dia
+- Coach arrasta blocos entre dias/sessões diferentes
+- Métricas de tempo e calorias recalculam automaticamente
 
