@@ -165,7 +165,7 @@ function getMainBlockDescription(blocks: WorkoutBlock[]): string | null {
   const result = identifyMainBlock(blocks);
   if (!result.block) return null;
   
-  const title = getBlockDisplayTitle(result.block);
+  const title = getBlockDisplayTitle(result.block, result.blockIndex);
   const content = result.block.content;
   
   // Try to extract meaningful details from content

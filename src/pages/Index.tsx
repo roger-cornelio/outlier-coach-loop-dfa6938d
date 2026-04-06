@@ -293,7 +293,7 @@ const Index = () => {
     welcome: WelcomeScreen,
     athleteWelcome: AthleteWelcomeScreen,
     config: AthleteConfig,
-    preWorkout: PreWorkoutScreen,
+    dashboard: Dashboard,
     dashboard: Dashboard,
     weeklyTraining: WeeklyTrainingView,
     workout: WorkoutExecution,
