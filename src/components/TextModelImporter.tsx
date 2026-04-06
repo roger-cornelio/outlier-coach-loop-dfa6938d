@@ -32,6 +32,22 @@ import {
   Wand2, Send, Clock, Flame, ChevronDown, ChevronUp,
   CopyPlus, Merge
 } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { DraggableBlock, parseDraggableId, makeDraggableId } from './DraggableBlock';
 import { useExerciseSuggestionSubmit } from '@/hooks/useExerciseSuggestions';
 import { BlockEditorModal } from './BlockEditorModal';
 import { useToast } from '@/hooks/use-toast';
