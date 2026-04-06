@@ -47,7 +47,7 @@ import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { AthleteHeroIdentity } from './AthleteHeroIdentity';
 import { WeeklySummaryCard } from './WeeklySummaryCard';
 import { useWorkoutStreak } from '@/hooks/useWorkoutStreak';
-import { DailyBriefingCard } from './DailyBriefingCard';
+
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
