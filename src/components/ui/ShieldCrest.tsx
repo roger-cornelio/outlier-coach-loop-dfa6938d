@@ -6,12 +6,12 @@
 import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 
 const SHIELD_URLS: Record<string, string> = {
-  'OPEN-active': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_destravado.png',
-  'OPEN-locked': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_travado.png',
-  'PRO-active': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_destravado.png',
-  'PRO-locked': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_travado.png',
-  'ELITE-active': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_destravado.png',
-  'ELITE-locked': 'https://snvsmdwapplhmzvqcyun.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_travado.png',
+  'OPEN-active': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_destravado.png',
+  'OPEN-locked': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/open_outlier_travado.png',
+  'PRO-active': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_destravado.png',
+  'PRO-locked': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/pro_outlier_travado.png',
+  'ELITE-active': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_destravado.png',
+  'ELITE-locked': 'https://njbxytpilqxozznlbspa.supabase.co/storage/v1/object/public/slug_avancos_conquistas/elite_outlier_travado.png',
 };
 
 interface ShieldCrestProps {
