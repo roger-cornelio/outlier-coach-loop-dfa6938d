@@ -201,27 +201,12 @@ export default function CoachSetPassword() {
         return;
       }
 
-      // STEP 3: Grant coach role via edge function (uses service role)
-      console.log('[CoachSetPassword] Granting coach role via edge function');
-      
-      if (applicationId) {
-        // Call edge function to ensure coach role
-        await supabase.functions.invoke('create-coach-user', {
-          body: {
-            email,
-            application_id: applicationId,
-          },
-        });
-      }
+      // STEP 3: Ensure session exists BEFORE calling edge function
+      // (signUp may not return a session if email confirm is required, or there's a race)
+      let { data: sessionData } = await supabase.auth.getSession();
 
-      // STEP 4: Login (session may already exist from signUp)
-      await refreshSession();
-      
-      // Check if session exists
-      const { data: sessionData } = await supabase.auth.getSession();
-      
       if (!sessionData.session) {
-        // Need to login
+        console.log('[CoachSetPassword] No session after signUp, signing in explicitly');
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -229,19 +214,25 @@ export default function CoachSetPassword() {
 
         if (loginError) {
           console.error('[CoachSetPassword] Login error:', loginError);
-          // Conta criada mas login falhou - tentar refresh novamente
-          await refreshSession();
-          const { data: retrySession } = await supabase.auth.getSession();
-          if (!retrySession.session) {
-            toast({
-              title: 'Conta criada!',
-              description: 'Use a nova senha para entrar.',
-            });
-            // Não redirecionar para /login/coach para evitar loop
-            // O usuário já está na página correta ou pode clicar voltar
-            setIsSubmitting(false);
-            return;
-          }
+          toast({
+            title: 'Conta criada!',
+            description: 'Use a nova senha para entrar.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        ({ data: sessionData } = await supabase.auth.getSession());
+      }
+
+      // STEP 4: Now grant coach role via edge function (session token available)
+      console.log('[CoachSetPassword] Granting coach role via edge function');
+      if (applicationId && sessionData.session) {
+        const { error: fnError } = await supabase.functions.invoke('create-coach-user', {
+          body: { email, application_id: applicationId },
+        });
+        if (fnError) {
+          console.error('[CoachSetPassword] create-coach-user error:', fnError);
         }
       }
 
