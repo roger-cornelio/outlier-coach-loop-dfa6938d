@@ -377,6 +377,93 @@ export function Dashboard() {
           </section>
         )}
 
+        {/* ============================================
+            IDENTIDADE DO ATLETA — Nome + Status (OPEN/PRO/ELITE)
+            ============================================ */}
+        <section className="mb-4">
+          <AthleteHeroIdentity
+            name={profile?.full_name || profile?.email?.split('@')[0] || 'Atleta'}
+            status={status}
+          />
+        </section>
+
+        {/* ============================================
+            JORNADA OUTLIER — 3 Escudos (OPEN / PRO / ELITE)
+            ============================================ */}
+        <section className="mb-6">
+          <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                  Jornada Outlier
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {journeyProgress.outlierTitle ?? `Caminho até OUTLIER ${journeyProgress.targetLevelKey}`}
+                </p>
+              </div>
+              {!journeyProgress.loading && (
+                <span className="text-xs font-semibold text-primary tabular-nums">
+                  {journeyProgress.progressToTarget}%
+                </span>
+              )}
+            </div>
+
+            <TooltipProvider delayDuration={200}>
+              <div className="grid grid-cols-3 gap-3 sm:gap-6">
+                {(['OPEN', 'PRO', 'ELITE'] as ExtendedLevelKey[]).map((lvl) => {
+                  const levelOrder: Record<ExtendedLevelKey, number> = { OPEN: 1, PRO: 2, ELITE: 3 };
+                  const currentOrder = levelOrder[journeyProgress.category];
+                  const thisOrder = levelOrder[lvl];
+                  // Active = athlete reached OUTLIER status at this level
+                  const active = journeyProgress.isOutlier && currentOrder >= thisOrder;
+                  const isCurrent = journeyProgress.category === lvl;
+
+                  const tooltipText = active
+                    ? `OUTLIER ${lvl} conquistado`
+                    : isCurrent
+                      ? `Faltam: ${journeyProgress.missingRequirements.join(' • ') || 'completar requisitos'}`
+                      : `Conquiste primeiro o nível anterior via prova oficial`;
+
+                  return (
+                    <Tooltip key={lvl}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={cn(
+                            'flex flex-col items-center gap-2 p-3 rounded-xl transition-all cursor-help',
+                            isCurrent && 'bg-primary/5 ring-2 ring-primary/40',
+                            !active && !isCurrent && 'opacity-60'
+                          )}
+                        >
+                          <ShieldCrest
+                            level={lvl}
+                            active={active}
+                            className={cn(
+                              'w-16 h-16 sm:w-20 sm:h-20 transition-all',
+                              isCurrent && 'drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]',
+                              !active && 'grayscale'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'text-xs font-bold tracking-wider',
+                              active ? 'text-foreground' : 'text-muted-foreground'
+                            )}
+                          >
+                            {lvl}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">
+                        {tooltipText}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
+          </div>
+        </section>
+
         <section className="mb-6">
           <WeeklySummaryCard />
         </section>
