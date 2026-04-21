@@ -47,6 +47,10 @@ import { useDiagnosticScores } from '@/hooks/useDiagnosticScores';
 import { AthleteHeroIdentity } from './AthleteHeroIdentity';
 import { WeeklySummaryCard } from './WeeklySummaryCard';
 import { useWorkoutStreak } from '@/hooks/useWorkoutStreak';
+import { ShieldCrest } from '@/components/ui/ShieldCrest';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import type { ExtendedLevelKey } from '@/hooks/useJourneyProgress';
 
 
 const dayTabs: DayOfWeek[] = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
