@@ -20,6 +20,12 @@ function normalizeAthleteName(name?: string): string {
   return normalized || raw;
 }
 
+function stripDiacritics(name?: string): string {
+  const raw = name?.trim() ?? '';
+  if (!raw) return '';
+  return raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function buildExternalUrl(paramsInput: {
   athleteName?: string;
   eventName?: string;
