@@ -441,6 +441,57 @@ export function CoachApplicationsAdmin() {
             </DialogFooter>
           </DialogContent>
       </Dialog>
+
+      {/* Reset password result */}
+      <Dialog open={!!resetResult} onOpenChange={(open) => !open && setResetResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Senha redefinida</DialogTitle>
+            <DialogDescription>
+              Envie estas credenciais ao coach por canal seguro (WhatsApp/Instagram). Esta senha não será exibida novamente.
+            </DialogDescription>
+          </DialogHeader>
+          {resetResult && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Email</p>
+                <div className="flex gap-2">
+                  <Input readOnly value={resetResult.email} />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.email);
+                      toast.success('Email copiado');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Senha</p>
+                <div className="flex gap-2">
+                  <Input readOnly value={resetResult.password} className="font-mono" />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.password);
+                      toast.success('Senha copiada');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setResetResult(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
