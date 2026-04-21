@@ -20,6 +20,12 @@ function normalizeAthleteName(name?: string): string {
   return normalized || raw;
 }
 
+function stripDiacritics(name?: string): string {
+  const raw = name?.trim() ?? '';
+  if (!raw) return '';
+  return raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function buildExternalUrl(paramsInput: {
   athleteName?: string;
   eventName?: string;
@@ -189,12 +195,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    const rawName = athlete_name?.trim() || '';
     const athleteNameCandidates = Array.from(
       new Set([
+        rawName,
+        stripDiacritics(rawName),
         normalizeAthleteName(athlete_name),
-        athlete_name?.trim() || '',
+        stripDiacritics(normalizeAthleteName(athlete_name)),
       ].filter(Boolean)),
     );
+
+    // Final fallback: try with no athlete_name (relies on idp/event)
+    if (idp && eventCode) athleteNameCandidates.push('');
 
     if (athleteNameCandidates.length === 0) athleteNameCandidates.push('');
 
