@@ -195,12 +195,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    const rawName = athlete_name?.trim() || '';
     const athleteNameCandidates = Array.from(
       new Set([
+        rawName,
+        stripDiacritics(rawName),
         normalizeAthleteName(athlete_name),
-        athlete_name?.trim() || '',
+        stripDiacritics(normalizeAthleteName(athlete_name)),
       ].filter(Boolean)),
     );
+
+    // Final fallback: try with no athlete_name (relies on idp/event)
+    if (idp && eventCode) athleteNameCandidates.push('');
 
     if (athleteNameCandidates.length === 0) athleteNameCandidates.push('');
 
