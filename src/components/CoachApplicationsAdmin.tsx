@@ -44,6 +44,40 @@ export function CoachApplicationsAdmin() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  const [customPwd, setCustomPwd] = useState('');
+
+  const handleResetPassword = async (app: CoachApplication, useCustom: boolean) => {
+    if (!app.email) {
+      toast.error('Aplicação sem email');
+      return;
+    }
+    if (useCustom && customPwd.trim().length < 8) {
+      toast.error('Senha precisa ter no mínimo 8 caracteres');
+      return;
+    }
+    setResetting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-coach-password', {
+        body: {
+          email: app.email,
+          ...(useCustom ? { password: customPwd.trim() } : {}),
+        },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || error?.message || 'Erro ao resetar senha');
+        return;
+      }
+      setResetResult({ email: data.email, password: data.password });
+      setCustomPwd('');
+      toast.success('Senha redefinida');
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro inesperado');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Filter applications
   const filteredApps = applications.filter(app => {
