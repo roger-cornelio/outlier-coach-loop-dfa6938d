@@ -430,7 +430,9 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">Diagnóstico detalhado pendente</p>
-                <p className="text-xs text-muted-foreground">A análise detalhada não estava disponível no momento da importação.</p>
+                <p className="text-xs text-muted-foreground">
+                  {retryReason ?? 'A análise detalhada não estava disponível no momento da importação.'}
+                </p>
               </div>
               <Button
                 variant="outline"
