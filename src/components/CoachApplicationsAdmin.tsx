@@ -328,6 +328,49 @@ export function CoachApplicationsAdmin() {
                   </div>
                 )}
 
+                {selectedApp.status === 'approved' && (
+                  <div className="p-3 rounded-lg bg-secondary/40 border border-border space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <KeyRound className="w-4 h-4 text-primary" />
+                      Acesso do Coach
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Defina uma senha personalizada ou gere uma aleatória. Use quando o email de recuperação não chega.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Senha personalizada (mín. 8)"
+                        value={customPwd}
+                        onChange={(e) => setCustomPwd(e.target.value)}
+                        disabled={resetting}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleResetPassword(selectedApp, true)}
+                        disabled={resetting || customPwd.trim().length < 8}
+                      >
+                        Definir
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => handleResetPassword(selectedApp, false)}
+                      disabled={resetting}
+                    >
+                      {resetting ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <KeyRound className="w-4 h-4 mr-2" />
+                      )}
+                      Gerar senha aleatória
+                    </Button>
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground">
                   Enviado em {new Date(selectedApp.created_at).toLocaleString('pt-BR')}
                 </p>
