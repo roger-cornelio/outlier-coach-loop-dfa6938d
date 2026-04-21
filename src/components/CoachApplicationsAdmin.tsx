@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +27,9 @@ import {
   MessageSquare,
   Loader2,
   AlertCircle,
-  Filter
+  Filter,
+  KeyRound,
+  Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,6 +44,40 @@ export function CoachApplicationsAdmin() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  const [customPwd, setCustomPwd] = useState('');
+
+  const handleResetPassword = async (app: CoachApplication, useCustom: boolean) => {
+    if (!app.email) {
+      toast.error('Aplicação sem email');
+      return;
+    }
+    if (useCustom && customPwd.trim().length < 8) {
+      toast.error('Senha precisa ter no mínimo 8 caracteres');
+      return;
+    }
+    setResetting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-coach-password', {
+        body: {
+          email: app.email,
+          ...(useCustom ? { password: customPwd.trim() } : {}),
+        },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || error?.message || 'Erro ao resetar senha');
+        return;
+      }
+      setResetResult({ email: data.email, password: data.password });
+      setCustomPwd('');
+      toast.success('Senha redefinida');
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro inesperado');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Filter applications
   const filteredApps = applications.filter(app => {
@@ -290,6 +328,49 @@ export function CoachApplicationsAdmin() {
                   </div>
                 )}
 
+                {selectedApp.status === 'approved' && (
+                  <div className="p-3 rounded-lg bg-secondary/40 border border-border space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <KeyRound className="w-4 h-4 text-primary" />
+                      Acesso do Coach
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Defina uma senha personalizada ou gere uma aleatória. Use quando o email de recuperação não chega.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Senha personalizada (mín. 8)"
+                        value={customPwd}
+                        onChange={(e) => setCustomPwd(e.target.value)}
+                        disabled={resetting}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleResetPassword(selectedApp, true)}
+                        disabled={resetting || customPwd.trim().length < 8}
+                      >
+                        Definir
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => handleResetPassword(selectedApp, false)}
+                      disabled={resetting}
+                    >
+                      {resetting ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <KeyRound className="w-4 h-4 mr-2" />
+                      )}
+                      Gerar senha aleatória
+                    </Button>
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground">
                   Enviado em {new Date(selectedApp.created_at).toLocaleString('pt-BR')}
                 </p>
@@ -359,6 +440,57 @@ export function CoachApplicationsAdmin() {
               </Button>
             </DialogFooter>
           </DialogContent>
+      </Dialog>
+
+      {/* Reset password result */}
+      <Dialog open={!!resetResult} onOpenChange={(open) => !open && setResetResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Senha redefinida</DialogTitle>
+            <DialogDescription>
+              Envie estas credenciais ao coach por canal seguro (WhatsApp/Instagram). Esta senha não será exibida novamente.
+            </DialogDescription>
+          </DialogHeader>
+          {resetResult && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Email</p>
+                <div className="flex gap-2">
+                  <Input readOnly value={resetResult.email} />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.email);
+                      toast.success('Email copiado');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Senha</p>
+                <div className="flex gap-2">
+                  <Input readOnly value={resetResult.password} className="font-mono" />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.password);
+                      toast.success('Senha copiada');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setResetResult(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
