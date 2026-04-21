@@ -387,18 +387,25 @@ export default function CoachAuth() {
           </Link>
         </motion.div>
 
-        {/* Athlete link */}
+        {/* Cross-portal links */}
         <motion.div 
-          className="mt-3 text-center"
+          className="mt-3 text-center flex items-center justify-center gap-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
         >
           <Link
             to="/login"
-            className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground text-xs transition-colors"
           >
             Sou atleta
+          </Link>
+          <span className="text-muted-foreground/30 text-xs">·</span>
+          <Link
+            to="/login/admin"
+            className="text-muted-foreground/50 hover:text-muted-foreground text-xs transition-colors"
+          >
+            Admin
           </Link>
         </motion.div>
       </motion.div>

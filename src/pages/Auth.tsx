@@ -1135,14 +1135,27 @@ export default function Auth({ context = 'user' }: AuthProps) {
               </div>
             </>
           )}
-          {mode === 'login' && context !== 'user' && (
-            <Link
-              to="/login"
-              className="text-muted-foreground/30 hover:text-muted-foreground/50 text-xs transition-colors flex items-center gap-1 justify-center"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Voltar
-            </Link>
+          {mode === 'login' && context === 'coach' && (
+            <div className="flex items-center justify-center gap-4">
+              <Link to="/login" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Sou atleta
+              </Link>
+              <span className="text-muted-foreground/30">·</span>
+              <Link to="/login/admin" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Admin
+              </Link>
+            </div>
+          )}
+          {mode === 'login' && context === 'admin' && (
+            <div className="flex items-center justify-center gap-4">
+              <Link to="/login" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Sou atleta
+              </Link>
+              <span className="text-muted-foreground/30">·</span>
+              <Link to="/login/coach" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Coach
+              </Link>
+            </div>
           )}
           {mode === 'signup' && (
             <div className="flex flex-col items-center gap-2">
