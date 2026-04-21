@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +27,9 @@ import {
   MessageSquare,
   Loader2,
   AlertCircle,
-  Filter
+  Filter,
+  KeyRound,
+  Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 
