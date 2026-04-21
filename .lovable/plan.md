@@ -1,64 +1,64 @@
 
 
-## Caminho confirmado para acesso admin de `roger@outlier.run`
+## Diagnóstico — Por que não puxa dados nem gera IA
 
-Sim, o caminho que você descreveu é o correto neste backend atual. Confirmação detalhada e plano de execução em duas fases.
+### A API do RoxCoach está **funcionando** (HTTP 200, 0.6s de resposta). O problema é outro.
 
-### Confirmação ponto a ponto
+**Causa raiz #1 — Nome do atleta não bate com o cadastro oficial HYROX**
 
-**1. Criação da conta pelo fluxo normal — CORRETO**
-Este backend não tem fluxo de auto-provisionamento de admin. A única forma segura de criar a conta `roger@outlier.run` é pelo cadastro padrão no app (`/login/admin` ou `/login`), que executa `supabase.auth.signUp()` corretamente: gera hash de senha, cria o registro em `auth.users`, dispara as triggers de criação de `profiles`, e mantém a integridade do sistema de autenticação. Nenhum atalho via SQL deve ser usado aqui.
+A API externa retorna **HTTP 500** com a mensagem:
+> `"Falha ao extrair: Atleta 'Roger Cornélio' não encontrado na lista de classificação."`
 
-**2. Promoção via INSERT pontual em `user_roles` — CORRETO**
-O `AppGate.tsx` e o hook `useAppState` decidem permissão **exclusivamente** com base em `user_roles`. A função `has_role(auth.uid(), 'admin'::app_role)` é o que destrava acesso a `/painel-admin` e a todas as policies administrativas. Insert idempotente com `ON CONFLICT DO NOTHING` garante segurança e reversibilidade.
+A HYROX cadastrou o atleta com a grafia **"CORNELIO"** (sem acento) — vi isso no próprio link de resultado: `search[name]=CORNELIO&search[firstname]=ROGER`. Mas o nosso proxy envia `Roger Cornélio` (com acento), e a API externa faz match exato com a lista de classificação oficial.
 
-**3. `admin_allowlist` como preparação — CORRETO e útil**
-A allowlist sozinha não destrava acesso (o `AppGate` não a consulta diretamente), mas tem dois valores reais:
-- Aparece imediatamente no painel `AdminAllowlistManager` como autorização registrada (auditoria visual).
-- Várias policies sensíveis (ex.: `benchmark_master`, `benchmark_overrides`, `benchmark_deltas`) usam a allowlist como critério adicional de permissão, **independente** do `user_roles`. Ou seja: estar na allowlist destrava manipulação de benchmarks via RLS, o que `user_roles = 'admin'` sozinho não faz para essas tabelas específicas.
+Resultado: a IA nunca é chamada, porque o `proxy-roxcoach` falha antes — e o código de import trata isso como "diagnóstico opcional, segue sem texto IA". Por isso aparece **"Diagnóstico detalhado pendente"** + **"Ainda não temos dados de diagnóstico suficientes"**.
 
-Conclusão: ambos (allowlist + user_roles) são complementares e necessários para acesso administrativo completo neste sistema.
+**Causa raiz #2 — generate-diagnostic-ai nunca foi executada** (logs vazios)
 
-### Plano de execução em 2 fases
+Confirma: a IA nem é chamada porque o passo anterior (proxy-roxcoach) sempre retorna sem dados utilizáveis para esse atleta.
 
-**FASE 1 — AGORA (preparação, sem depender da conta existir)**
+### Plano de correção
 
-Inserir `roger@outlier.run` em `admin_allowlist` com `status = 'approved'`, idempotente:
-- Se já existir, não duplica.
-- Não toca em outros registros.
-- Não cria/altera tabelas.
-- Não mexe em auth.
-- Reversível com um único DELETE.
+**Fase 1 — Normalizar acentos na chamada da API externa**
 
-**FASE 2 — DEPOIS você criar a conta pelo `/login/admin`**
+Em `supabase/functions/proxy-roxcoach/index.ts`, expandir a lista `athleteNameCandidates` para tentar 3 variações em sequência:
 
-Você me avisa que cadastrou `roger@outlier.run`. Eu então:
-1. Executo verificação read-only confirmando que a conta existe em `auth.users`.
-2. Insiro role `admin` em `user_roles` com `ON CONFLICT (user_id, role) DO NOTHING`, vinculado pelo `user_id` correspondente ao email.
-3. Confirmo via SELECT que a role foi atribuída.
-4. Roger faz logout/login e tem acesso administrativo funcional imediato.
+1. Nome original (`Roger Cornélio`)
+2. Nome sem acentos (`Roger Cornelio`) — **desbloqueia esse caso**
+3. Nome invertido normalizado (já existe)
 
-### Operações envolvidas
+Implementação: aplicar `.normalize('NFD').replace(/[\u0300-\u036f]/g, '')` para gerar a variante sem diacríticos. O loop existente já tenta cada candidato — só preciso adicionar a variante.
 
-| Fase | Operação | Tabela | Tipo |
-|------|----------|--------|------|
-| 1 | INSERT condicional | `admin_allowlist` | Idempotente (NOT EXISTS) |
-| 2a | SELECT verificação | `auth.users` | Read-only |
-| 2b | INSERT condicional | `user_roles` | Idempotente (ON CONFLICT) |
-| 2c | SELECT verificação | `user_roles` | Read-only |
+**Fase 2 — Fallback inteligente quando nome falha mas o link tem `idp`**
 
-### Reversão
+Quando todos os candidatos de nome falham mas o link contém `idp` + `event`, chamar a API só com `idp`/`event_code` (sem `athlete_name`), porque a API consegue extrair pelo ID único do resultado. Hoje o código já passa esses parâmetros, mas a API rejeita porque o nome não bate antes.
 
-- Fase 1: `DELETE FROM admin_allowlist WHERE lower(email) = 'roger@outlier.run';`
-- Fase 2: `DELETE FROM user_roles WHERE user_id = (SELECT id FROM auth.users WHERE lower(email) = 'roger@outlier.run') AND role = 'admin';`
+Vou validar esse fallback testando o endpoint só com `idp` antes de implementar.
 
-### Riscos
+**Fase 3 — Mostrar erro claro pro usuário (não silencioso)**
 
-- **Fase 1**: zero risco. Operação isolada em uma única linha de uma tabela administrativa. Não afeta nenhum usuário existente, não muda comportamento do app.
-- **Fase 2**: risco mínimo. Conceder role admin a um único usuário identificado por email exato. Nenhuma policy é alterada. Reversível.
-- **Pendência**: enquanto você não criar a conta, Fase 2 fica em espera — sem prejuízo ao sistema.
+Hoje o erro do diagnóstico é engolido com `.catch(() => ({ data: null }))`. Vou:
+- Logar o motivo no console (já tem)
+- Adicionar um banner discreto na tela do resultado: **"Diagnóstico não disponível para este resultado: [motivo]"** com botão **"Tentar novamente"** (que já existe na tela — só precisa funcionar).
 
-### Próximo passo
+**Fase 4 — Botão "Tentar novamente" funcional**
 
-Aprove esta proposta e eu executo apenas a **Fase 1** agora (insert em `admin_allowlist`). Depois você cadastra `roger@outlier.run` pelo `/login/admin` e me avisa para executar a Fase 2.
+Hoje o botão "Tentar novamente" no banner laranja (que aparece na sua screenshot) provavelmente não dispara nada útil. Vou conectá-lo para:
+1. Re-chamar `proxy-roxcoach` com o `source_url` salvo
+2. Se vier dados, chamar `generate-diagnostic-ai`
+3. Atualizar a tela sem precisar reimportar
+
+### O que NÃO vou mexer
+
+- A API externa em si (`api-outlier.onrender.com`) — está saudável.
+- Tabela `percentile_bands` — já populada na correção anterior.
+- Lógica de scrape do HYROX (`scrape-hyrox-result`) — funciona, é dela que vem o tempo `01:19:57` que aparece na tela.
+
+### Resultado esperado
+
+Depois das correções, ao clicar **"Tentar novamente"** no banner do Roger:
+- Proxy tenta `Roger Cornélio` → 500
+- Proxy tenta `Roger Cornelio` (sem acento) → 200 com dados completos
+- IA gera o parecer
+- Tela atualiza com splits + parecer Outlier
 
