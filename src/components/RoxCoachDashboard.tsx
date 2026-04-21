@@ -194,6 +194,7 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
   async function handleRetryDiagnostic() {
     if (!user || !selectedResumo) return;
     setRetrying(true);
+    setRetryReason(null);
     try {
       const proxyResult = await supabase.functions.invoke('proxy-roxcoach', {
         body: {
@@ -208,13 +209,23 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
       if (proxyResult.error) throw new Error(proxyResult.error.message);
       const proxyData = proxyResult.data;
       if (proxyData?.ok === false) {
-        toast.error('Diagnóstico detalhado ainda indisponível. Tente novamente mais tarde.');
+        const detail = String(proxyData.upstream_error_detail || '');
+        let friendly = 'Diagnóstico detalhado ainda indisponível. Tente novamente mais tarde.';
+        if (/não encontrado na lista de classificação/i.test(detail)) {
+          friendly = 'A base oficial HYROX ainda não indexou este resultado para análise detalhada. Tente novamente em algumas horas.';
+        } else if (/Faltam parâmetros/i.test(detail)) {
+          friendly = 'Faltam dados do resultado para gerar a análise. Reimporte a prova pelo link oficial.';
+        }
+        setRetryReason(friendly);
+        toast.error(friendly);
         return;
       }
 
       const parsed = parseDiagnosticResponse(proxyData, user.id, selectedResumo.source_url || '');
       if (!hasDiagnosticData(parsed)) {
-        toast.error('Diagnóstico detalhado ainda indisponível.');
+        const msg = 'A base externa retornou dados vazios para este resultado.';
+        setRetryReason(msg);
+        toast.error(msg);
         return;
       }
 
@@ -240,11 +251,14 @@ export default function RoxCoachDashboard({ refreshKey = 0 }: RoxCoachDashboardP
         await supabase.from('tempos_splits').insert(rows);
       }
 
-      toast.success('Diagnóstico detalhado carregado com sucesso! 🔥');
+      setRetryReason(null);
+      toast.success('Diagnóstico detalhado carregado com sucesso!');
       setLocalRefresh(v => v + 1);
     } catch (err: any) {
       console.error('Retry diagnostic error:', err);
-      toast.error('Erro ao tentar carregar diagnóstico. Tente novamente mais tarde.');
+      const msg = 'Erro de rede ao tentar carregar diagnóstico. Verifique sua conexão.';
+      setRetryReason(msg);
+      toast.error(msg);
     } finally {
       setRetrying(false);
     }
