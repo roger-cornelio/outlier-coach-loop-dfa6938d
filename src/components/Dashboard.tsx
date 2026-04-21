@@ -382,7 +382,7 @@ export function Dashboard() {
             ============================================ */}
         <section className="mb-4">
           <AthleteHeroIdentity
-            name={profile?.full_name || profile?.email?.split('@')[0] || 'Atleta'}
+            name={profile?.name || profile?.email?.split('@')[0] || 'Atleta'}
             status={status}
           />
         </section>
